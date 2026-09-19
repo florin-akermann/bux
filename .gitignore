@@ -13,3 +13,6 @@ CLAUDE.md
 
 # Python bytecode from `uv run` dev tooling
 __pycache__/
+
+# hegeltest regression corpora, rebuilt by a run; nothing in this repo reads them
+.hegel/
