@@ -6,14 +6,6 @@
 
 ## Open
 
-## 🟢 Item 005: Executable-example harness
-**Depends on:** Item 004 — a compile-fail example asserts on rendered diagnostics.
-`tests/spec/<area>/*.lm` files are the language specification (`docs/implementation.md` section 7).
-A `// expect-error: <text>` header marks a compile-fail example; the rest must compile.
-[005][a] - Spec first in `docs/specs/executable-examples.md`: file layout and expectation syntax.
-[005][b] - One test binary walks `tests/spec/`, runs each file, and names the failing example.
-[005][c] - Run-time examples are skipped with a named reason until Item 010 lands.
-
 ## 🔴 Item 006: Name resolution and basic modules
 **Depends on:** Item 002 — resolution consumes the untyped AST.
 A `resolver` crate produces a `ResolvedAst` where every name points at its definition.
