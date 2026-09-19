@@ -4,6 +4,7 @@
 
 mod building;
 mod common;
+mod example_program;
 mod examples;
 mod formatting;
 mod running;

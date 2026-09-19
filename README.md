@@ -37,3 +37,15 @@ cargo build
 cargo nextest run
 git config core.hooksPath .githooks
 ```
+
+## The example program
+
+`example/main.lm` is everyday Lumen in one screen: a record, an ADT, a `match`, and a `for` loop.
+
+```sh
+cargo run --bin lumen -- run example/main.lm
+```
+
+It ends normally and exits `0`, which is the whole of what it shows.
+Version 0.1 has no way to write a line out, so a run that reaches the end is the observation.
+`docs/specs/example-program.md` says what the directory holds and why that is enough.

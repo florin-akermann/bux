@@ -1,0 +1,47 @@
+// The first Lumen program, and the one the README points at.
+// It is everyday Lumen: a record, an algebraic data type, a `match`, and a `for` loop.
+// Unplaced is printed, because version 0.1 has no way to write a line out.
+// Running to the end is what it shows, and `docs/specs/example-program.md` says why.
+// A file reads top down, so what a name is comes below the first line that uses it.
+fn main() -> () {
+    ordered := Placed(Basket { apples: 3, pears: 4 })
+    each := shared(picked(ordered) + picked(Unplaced), 2)
+    ()
+}
+
+/// What each of `people` gets, which is nothing when there is nobody to give it to.
+fn shared(total: Int, people: Int) -> Int {
+    or(total / people, 0)
+}
+
+/// The fullest of the baskets, which is how a `for` loop reads.
+///
+/// Unplaced calls this: version 0.1 has no syntax that builds a `List`, so `main` has none to
+/// hand it. It is compiled and held to canonical form like the rest of the file.
+fn fullest(baskets: List<Basket>) -> Int {
+    var most = 0
+    for basket in baskets {
+        held := picked(Placed(basket))
+        if held > most {
+            most = held
+        }
+    }
+    most
+}
+
+/// How much an order comes to, which is nothing at all when nothing was ordered.
+fn picked(order: Order) -> Int {
+    match order {
+        Unplaced => 0
+        Placed(basket) => basket.apples + basket.pears
+    }
+}
+
+type Order =
+    | Unplaced
+    | Placed(Basket)
+
+type Basket = {
+    apples: Int
+    pears: Int
+}
