@@ -16,7 +16,7 @@ The examples run with the test suite, so a signature never drifts from the evide
 [015][d] - Executable examples: a public function without one fails to compile.
 
 
-## 🟡 Item 017: A parameter is never a bare `Bool`
+## 🟢 Item 017: A parameter is never a bare `Bool`
 **Depends on:** Item 016 — the rule shares its spec and its error voice with named arguments.
 mycs lints `Flag Argument`; the language removes it by refusing a `Bool` parameter outright.
 A two-variant ADT takes its place, so `open(ReadOnly)` reads where `open(true)` did not.
