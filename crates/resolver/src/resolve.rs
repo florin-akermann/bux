@@ -337,7 +337,6 @@ impl Resolver {
     }
 }
 
-/// What a name in `scope` means, recorded against where it is written.
 /// What a name in `scope` means, recorded against the namespace and the place it is written.
 fn use_name(scope: &Scope, found: &mut Definitions, name: &Name) -> Resolved {
     let Some(definition) = scope.look_up(&name.text) else {

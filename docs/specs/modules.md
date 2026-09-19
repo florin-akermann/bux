@@ -87,4 +87,6 @@ Resolution stops at the first error, as parsing does.
 These hold and are checked with property-based tests:
 
 1. Resolving a program never panics and is deterministic.
-2. Every name a resolved program reports a definition for lies within the source.
+2. A module built of pieces that each resolve resolves.
+3. A refusal points at a non-empty span that lies within the source.
+4. Every name a module declares reports a definition declared at that name.

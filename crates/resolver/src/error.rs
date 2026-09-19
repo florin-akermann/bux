@@ -2,10 +2,10 @@
 
 use std::fmt;
 
-use crate::definition::Namespace;
 use lumen_ast::{Name, Span};
 use lumen_diagnostics::{Code, Diagnostic};
 
+use crate::definition::Namespace;
 use crate::scope::Clash;
 
 /// Why resolution failed, and where.
