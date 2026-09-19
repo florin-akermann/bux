@@ -190,9 +190,11 @@ The writer marks class and fields so, and a test holds every generated class ins
 
 ## 🔴 Item 028: Every generated class is a value class
 **Depends on:** Item 027 — the flag is set only on a class already inside the shape.
-The JDK the project targets decides when this item can start, and nothing lands before it can.
-Once the target JDK accepts the class-file flag, the writer sets it on every generated class.
-A preview feature pins a class file to one JDK, which the single-JDK rule already accepts.
-[028][a] - `docs/implementation.md` names the JDK that ships the flag, and its preview standing.
+JDK 28 ships value classes, and the project targets JDK 28 or later from now on.
+The writer moves to class-file version 72 and marks every generated class as a value class.
+If 28 still holds value classes in preview, the class file says so and `lumen run` enables it.
+Nothing waits for a later JDK; readiness is the flag being set today, on an early-access build.
+[028][a] - `docs/implementation.md` names JDK 28 as the floor, and settles the preview question.
 [028][b] - The writer sets the flag, test-first against the bytes the class-file spec names.
-[028][c] - A run-time example under the flag, skipped with a named reason when the JDK lacks it.
+[028][c] - `lumen run` passes what a preview class file needs, if 28 needs it, test-first.
+[028][d] - A run-time example on a record, skipped with a named reason below JDK 28.

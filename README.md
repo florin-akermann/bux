@@ -16,19 +16,19 @@ Four things set the everyday code apart:
 - Values, not objects: nothing has identity, and `Int` is no more special than a type you declare.
 
 The JVM is a target, not a model: none of its constraints is kept, its object model least of all.
-Every type is shaped as a Valhalla value class: identity-free, null-free, equal by its state.
+Every type is a Valhalla value class from day one: identity-free, null-free, equal by state.
 
 The language is specified in `docs/design.md`.
 The compiler and roadmap are in `docs/implementation.md`; the principles in `docs/principles.md`.
-Only the current JDK release is targeted.
+JDK 28 or later is targeted, early access until it ships; that is where value classes live.
 Agent and contributor guidelines are in `AGENTS.md`; the backlog is `TODOS.md`.
 
 ## Prerequisites
 
 - Rust stable, with `cargo-nextest` and `cargo-audit` installed
 - `mycs` on the `PATH` for the pre-commit sweep
-- The current JDK, only to run compiled programs; every compiler phase is tested without one
-- On macOS: `brew install openjdk`, then export `JAVA_HOME` as its `Contents/Home` directory
+- JDK 28 or later, only to run compiled programs; every compiler phase is tested without one
+- Until JDK 28 ships, an early-access build of it; export `JAVA_HOME` as its `Contents/Home`
 
 ## Build
 

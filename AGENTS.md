@@ -25,9 +25,9 @@ This file is that anchor; consistency is the throughline, and the bar is Code He
 - Equality is opt-in: `==` needs `Eq`, which a type derives, and compares what a value holds.
 - **No built-in type is special.** `Int`, `Bool`, and `String` are types like any declared one.
 - Boxing and the primitive/reference split live inside the compiler; no program can observe them.
-- **Every type is shaped as a Valhalla value class**: identity-free, null-free, equal by its state.
+- **Every type is a Valhalla value class** from day one: identity-free, null-free, equal by state.
 - Version 0.1 is `docs/implementation.md` section 9; nothing from a later version lands earlier.
-- **Only the current JDK release is targeted.** No older class-file version, no compatibility matrix.
+- **JDK 28 or later is targeted**, early access until it ships; no older class-file version, ever.
 
 ## Agent TL;DR
 - **Code Health is authoritative** — the single source of truth for maintainability.
