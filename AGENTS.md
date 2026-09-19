@@ -40,9 +40,9 @@ This file is that anchor; consistency is the throughline, and the bar is Code He
 - A JDK is needed only to run compiled programs; every compiler phase is tested without one.
 
 ## BDD Workflow
-- Behaviour first: a `docs/specs/` spec with Gherkin scenarios names what the change must do.
-- Tests come early and first: write them from the scenarios, then implement until they pass.
-- No red/green micro-cycle is required; a behaviour, its tests, and its code land together.
+- Behaviour first: a `docs/specs/` spec states in prose what the change must observably do.
+- Tests come early and first: plain test code that reads as the behaviour, then code to pass it.
+- No Gherkin and no red/green micro-cycle; a behaviour, its tests, and its code land together.
 - Every phase gets property-based tests (`hegeltest`) for its invariants; examples are not enough.
 - Round trips are the first properties: print-then-parse, format idempotence, spans covering input.
 - Each crate has one integration-test binary, `tests/integration/main.rs`, declaring `mod` per file.
