@@ -5,7 +5,7 @@ use lumen_lexer::Punct;
 
 use crate::cursor::Cursor;
 use crate::error::{Expected, ParseError};
-use crate::list::comma_separated;
+use crate::list::{Emptiness, comma_separated};
 
 /// `Int`, `List<User>`, or `()`.
 pub(crate) fn type_ref(cursor: &mut Cursor) -> Result<TypeRef, ParseError> {
@@ -30,7 +30,7 @@ fn type_arguments(cursor: &mut Cursor) -> Result<Vec<TypeRef>, ParseError> {
     if cursor.eat_punct(Punct::Lt).is_none() {
         return Ok(Vec::new());
     }
-    comma_separated(cursor, Punct::Gt, type_ref)
+    cursor.nested(|cursor| comma_separated(cursor, Punct::Gt, Emptiness::Forbidden, type_ref))
 }
 
 /// The `<T, E>` after a type or function name, naming the types it is generic over.
@@ -38,7 +38,7 @@ pub(crate) fn type_parameters(cursor: &mut Cursor) -> Result<Vec<lumen_ast::Name
     if cursor.eat_punct(Punct::Lt).is_none() {
         return Ok(Vec::new());
     }
-    comma_separated(cursor, Punct::Gt, |cursor| {
+    comma_separated(cursor, Punct::Gt, Emptiness::Forbidden, |cursor| {
         cursor.expect_name(Expected::Name)
     })
 }

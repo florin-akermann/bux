@@ -47,6 +47,7 @@ pub(crate) enum ParseErrorKind {
     IntegerTooLarge,
     UnknownEscape(char),
     ChainedComparison,
+    NestingTooDeep,
 }
 
 impl ParseErrorKind {
@@ -62,6 +63,7 @@ impl ParseErrorKind {
                 Some("the escapes are `\\\"`, `\\\\`, `\\n`, `\\t`, and `\\r`")
             }
             Self::ChainedComparison => Some("compare twice and join the two with `&&`"),
+            Self::NestingTooDeep => Some("brackets nest at most 32 deep; name a part of it"),
             _ => None,
         }
     }
@@ -76,6 +78,7 @@ impl fmt::Display for ParseErrorKind {
             Self::IntegerTooLarge => write!(f, "this number does not fit in a whole number"),
             Self::UnknownEscape(escaped) => write!(f, "`\\{escaped}` is not an escape"),
             Self::ChainedComparison => write!(f, "comparisons do not chain"),
+            Self::NestingTooDeep => write!(f, "this nests too deeply to parse"),
         }
     }
 }

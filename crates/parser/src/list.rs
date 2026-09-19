@@ -3,7 +3,17 @@
 use lumen_lexer::Punct;
 
 use crate::cursor::Cursor;
-use crate::error::ParseError;
+use crate::error::{Expected, ParseError};
+
+/// Whether the grammar lets a comma-separated list hold nothing at all.
+///
+/// A call and a record literal may be empty; a type argument list, a type parameter list, and a
+/// pattern's payload may not, and each names what it wanted instead of accepting `<>` or `()`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum Emptiness {
+    Allowed,
+    Forbidden,
+}
 
 /// Elements up to and including `close`, separated by commas and free to span lines.
 ///
@@ -12,11 +22,12 @@ use crate::error::ParseError;
 pub(crate) fn comma_separated<T>(
     cursor: &mut Cursor,
     close: Punct,
+    emptiness: Emptiness,
     mut element: impl FnMut(&mut Cursor) -> Result<T, ParseError>,
 ) -> Result<Vec<T>, ParseError> {
     let mut elements = Vec::new();
     cursor.skip_newline();
-    if cursor.eat_punct(close).is_some() {
+    if emptiness == Emptiness::Allowed && cursor.eat_punct(close).is_some() {
         return Ok(elements);
     }
     loop {
@@ -45,7 +56,7 @@ pub(crate) fn newline_separated<T>(
             return Ok(elements);
         }
         if cursor.at_end() {
-            return Err(cursor.error(crate::error::Expected::Punct(close)));
+            return Err(cursor.error(Expected::Punct(close)));
         }
         elements.push(element(cursor)?);
         if !cursor.at_punct(close) {

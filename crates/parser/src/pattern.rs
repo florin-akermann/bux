@@ -5,7 +5,7 @@ use lumen_lexer::{Punct, TokenKind};
 
 use crate::cursor::Cursor;
 use crate::error::{Expected, ParseError};
-use crate::list::comma_separated;
+use crate::list::{Emptiness, comma_separated};
 use crate::literal::{Literal, eat_literal};
 
 pub(crate) fn pattern(cursor: &mut Cursor) -> Result<Pattern, ParseError> {
@@ -39,14 +39,13 @@ fn of_literal(literal: Literal) -> PatternKind {
 fn named(cursor: &mut Cursor) -> Result<PatternKind, ParseError> {
     let name = cursor.expect_name(Expected::Pattern)?;
     if cursor.eat_punct(Punct::LParen).is_some() {
-        if cursor.at_punct(Punct::RParen) {
-            return Err(cursor.error(Expected::Pattern));
-        }
-        let elements = comma_separated(cursor, Punct::RParen, pattern)?;
+        let elements = cursor.nested(|cursor| {
+            comma_separated(cursor, Punct::RParen, Emptiness::Forbidden, pattern)
+        })?;
         return Ok(PatternKind::Tuple { name, elements });
     }
     if cursor.eat_punct(Punct::LBrace).is_some() {
-        let fields = comma_separated(cursor, Punct::RBrace, |cursor| {
+        let fields = comma_separated(cursor, Punct::RBrace, Emptiness::Forbidden, |cursor| {
             cursor.expect_name(Expected::Name)
         })?;
         return Ok(PatternKind::Record { name, fields });

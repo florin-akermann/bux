@@ -9,12 +9,12 @@ use lumen_lexer::Punct;
 use crate::cursor::Cursor;
 use crate::error::{Expected, ParseError};
 use crate::expr::{RecordLiterals, expression};
-use crate::list::comma_separated;
+use crate::list::{Emptiness, comma_separated};
 
 /// The `{ … }` after a base name, whose opening brace has not been consumed.
 pub(crate) fn record_literal(cursor: &mut Cursor, base: Name) -> Result<ExprKind, ParseError> {
     cursor.expect_punct(Punct::LBrace)?;
-    let fields = comma_separated(cursor, Punct::RBrace, field_value)?;
+    let fields = comma_separated(cursor, Punct::RBrace, Emptiness::Allowed, field_value)?;
     Ok(ExprKind::Record { base, fields })
 }
 

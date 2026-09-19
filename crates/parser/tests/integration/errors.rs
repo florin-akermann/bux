@@ -124,6 +124,37 @@ fn a_variant_that_carries_nothing_is_written_without_parentheses() {
 }
 
 #[test]
+fn a_type_argument_list_holds_at_least_one_type() {
+    assert_eq!(
+        message("type T = { ids: List<> }"),
+        "expected a type, found `>`"
+    );
+    assert_eq!(message("fn f<>() {\n}"), "expected a name, found `>`");
+}
+
+#[test]
+fn a_record_pattern_names_at_least_one_field() {
+    assert_eq!(
+        message("fn f() {\n    match a {\n        P {} => 1\n    }\n}"),
+        "expected a name, found `}`"
+    );
+}
+
+#[test]
+fn a_program_that_nests_deeper_than_the_parser_descends_is_an_error() {
+    let deep = format!(
+        "fn f() {{\n    {}a{}\n}}",
+        "(".repeat(20_000),
+        ")".repeat(20_000)
+    );
+    assert_eq!(message(&deep), "this nests too deeply to parse");
+    assert_eq!(
+        help(&deep).as_deref(),
+        Some("brackets nest at most 32 deep; name a part of it")
+    );
+}
+
+#[test]
 fn an_error_points_at_the_token_that_failed() {
     assert_eq!(
         render_error("import 1"),

@@ -94,7 +94,7 @@ const IN: TokenKind = TokenKind::Keyword(Keyword::In);
 pub(crate) fn block(cursor: &mut Cursor) -> Result<Block, ParseError> {
     let start = cursor.offset();
     cursor.expect_punct(Punct::LBrace)?;
-    let statements = newline_separated(cursor, Punct::RBrace, statement)?;
+    let statements = cursor.nested(|cursor| newline_separated(cursor, Punct::RBrace, statement))?;
     Ok(Block {
         statements,
         span: cursor.span_since(start),

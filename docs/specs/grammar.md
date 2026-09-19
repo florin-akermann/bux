@@ -40,9 +40,13 @@ The grammar is newline-sensitive, as Go's is, and follows Go's rule for which ne
 
 A newline is **significant** when the token before it can end a statement, a field, or an arm:
 an identifier, an integer, a string, `true`, `false`, `break`, `continue`, `return`, `?`,
-`)`, `]`, or `}`.
+`)`, `]`, `}`, or `>`.
 Every other newline is dropped before parsing begins, so an expression continues across a line
 break after an operator, a comma, `=`, `:=`, `+=`, `->`, `=>`, `|`, or an opening bracket.
+
+`>` is in that list because it closes a type argument list, which is how `ids: List<Int>` ends.
+It is also the greater-than operator, so that one operator is never the last token of a line.
+Canonical form never writes one there, and every other operator still continues a line below it.
 Comments are dropped first, so a trailing comment never changes whether a newline is significant.
 Consecutive significant newlines collapse: a blank line separates nothing extra.
 
@@ -106,6 +110,14 @@ pattern        := Name [ "(" pattern { "," pattern } ")" | "{" Name { "," Name }
 A comparison does not chain: `a < b < c` is a parse error, as it is in Go.
 Every other binary operator is left-associative.
 
+A list the grammar writes with at least one element is not accepted empty.
+`List<>`, `fn f<>()`, `Failed()`, and the pattern `P {}` each name what was wanted instead.
+A call, a parameter list, and a record literal are the three lists the grammar writes as optional.
+
+Brackets nest at most 32 deep, which no program a person or the formatter writes comes near.
+The budget is what makes "parsing never panics" true of generated input: the parser reports an
+error where it would otherwise recurse until the stack is gone.
+
 A record literal is not parsed where a block would follow an expression, as in Go.
 Those places are the condition of an `if`, the header of a `for`, and the scrutinee of a `match`.
 Writing one there needs parentheses: `if (user { active: true }).active { … }`.
@@ -116,7 +128,9 @@ The lexer hands over the text of a literal; the parser decodes it.
 
 An integer literal decodes to a signed 64-bit value, and one too large to fit is an error.
 A `-` straight before the digits is part of the number, so the smallest whole number can be
-written; a `-` before anything else is the prefix operator.
+written; a `-` before anything else, a blank included, is the prefix operator.
+`-5` is one literal and `- 5` is a negated `5`, so the tree always says what the source says.
+A postfix operator then applies to the literal: `-5.abs()` reads the field of `-5`.
 A leading zero decodes fine and is not canonical form, so Item 003's gate is what rejects it.
 
 A string literal decodes its escapes: `\"`, `\\`, `\n`, `\t`, and `\r`.
@@ -140,7 +154,7 @@ The expectation names a thing the reader writes, never a parser state: `a name`,
 `an import, a type, or a function`, or the exact token, as in `` `)` ``.
 The found part names what is there the same way, or `the end of the file`.
 
-Six failures are not about which token was found, and have their own words:
+Seven failures are not about which token was found, and have their own words:
 
 | Error                | Message                                        | Help                               |
 |----------------------|------------------------------------------------|------------------------------------|
@@ -150,6 +164,7 @@ Six failures are not about which token was found, and have their own words:
 | unknown escape       | `` `\q` `` is not an escape                     | the escapes the language knows     |
 | number too large     | this number does not fit in a whole number     | the largest whole number           |
 | chained comparison   | comparisons do not chain                       | compare twice and join with `&&`   |
+| nesting too deep     | this nests too deeply to parse                 | how deep brackets may nest         |
 
 ## Executable examples
 

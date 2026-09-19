@@ -27,6 +27,20 @@ fn a_minus_straight_before_the_digits_is_part_of_the_number() {
 }
 
 #[test]
+fn a_minus_with_a_blank_after_it_is_the_prefix_operator() {
+    assert_eq!(in_function("- 5"), ["unary Negate", "  integer 5"]);
+}
+
+#[test]
+fn a_postfix_operator_applies_to_a_negative_number() {
+    assert_eq!(
+        in_function("-5.abs()"),
+        ["call", "  field abs", "    integer -5"]
+    );
+    assert_eq!(in_function("-5?"), ["try", "  integer -5"]);
+}
+
+#[test]
 fn a_string_literal_is_decoded() {
     assert_eq!(in_function(r#""hello""#), [r#"string "hello""#]);
     assert_eq!(in_function(r#""a\"b""#), [r#"string "a\"b""#]);

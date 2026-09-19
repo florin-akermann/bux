@@ -6,7 +6,7 @@ use lumen_lexer::{Keyword, Punct, TokenKind};
 
 use crate::cursor::Cursor;
 use crate::error::{Expected, ParseError};
-use crate::list::{comma_separated, newline_separated};
+use crate::list::{Emptiness, comma_separated, newline_separated};
 use crate::stmt::block;
 use crate::type_ref::{type_parameters, type_ref};
 
@@ -98,10 +98,8 @@ fn variant_payload(cursor: &mut Cursor) -> Result<VariantPayload, ParseError> {
     if cursor.eat_punct(Punct::LParen).is_none() {
         return Ok(VariantPayload::None);
     }
-    if cursor.at_punct(Punct::RParen) {
-        return Err(cursor.error(Expected::Type));
-    }
-    comma_separated(cursor, Punct::RParen, type_ref).map(VariantPayload::Tuple)
+    comma_separated(cursor, Punct::RParen, Emptiness::Forbidden, type_ref)
+        .map(VariantPayload::Tuple)
 }
 
 /// `{ name: Type … }`, one field per line.
@@ -128,7 +126,7 @@ fn function(cursor: &mut Cursor) -> Result<Function, ParseError> {
     let name = cursor.expect_name(Expected::FunctionName)?;
     let type_parameters = type_parameters(cursor)?;
     cursor.expect_punct(Punct::LParen)?;
-    let parameters = comma_separated(cursor, Punct::RParen, parameter)?;
+    let parameters = comma_separated(cursor, Punct::RParen, Emptiness::Allowed, parameter)?;
     let result = result_type(cursor)?;
     let body = block(cursor)?;
     Ok(Function {

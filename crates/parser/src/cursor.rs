@@ -10,10 +10,20 @@ use lumen_lexer::{Keyword, Punct, Token, TokenKind, lex};
 
 use crate::error::{Expected, Found, ParseError, ParseErrorKind, token_error};
 
+/// How deeply brackets may nest before the parser refuses the input.
+///
+/// Recursive descent recurses once per level of nesting, so without a budget a generated file
+/// of twenty thousand nested parentheses overflows the stack and aborts the process instead of
+/// reporting an error. An unoptimised build spends some eighteen kilobytes of stack per level,
+/// and the smallest stack the toolchain runs on is the two megabytes a test thread gets, so
+/// this budget leaves a threefold margin there. Canonical form never comes near it.
+const MAX_NESTING: usize = 32;
+
 pub(crate) struct Cursor<'a> {
     source: &'a str,
     tokens: Vec<Token>,
     position: usize,
+    depth: usize,
 }
 
 impl<'a> Cursor<'a> {
@@ -22,11 +32,29 @@ impl<'a> Cursor<'a> {
             source,
             tokens: significant_tokens(source),
             position: 0,
+            depth: 0,
         }
     }
 
     pub(crate) const fn source(&self) -> &'a str {
         self.source
+    }
+
+    /// Parses one level deeper, spending a level of the nesting budget for the duration.
+    ///
+    /// Every edge on which the grammar recurses goes through here, so the budget bounds how far
+    /// the parser can descend however the nesting is written.
+    pub(crate) fn nested<T>(
+        &mut self,
+        parse: impl FnOnce(&mut Self) -> Result<T, ParseError>,
+    ) -> Result<T, ParseError> {
+        if self.depth == MAX_NESTING {
+            return Err(self.error_kind(ParseErrorKind::NestingTooDeep));
+        }
+        self.depth += 1;
+        let parsed = parse(self);
+        self.depth -= 1;
+        parsed
     }
 
     /// The identifier at the cursor, as a name.
@@ -148,7 +176,8 @@ impl<'a> Cursor<'a> {
         self.tokens.get(self.position).copied()
     }
 
-    fn previous_end(&self) -> usize {
+    /// Where the last consumed token ended, which is where an adjacent token would start.
+    pub(crate) fn previous_end(&self) -> usize {
         self.position
             .checked_sub(1)
             .map_or(0, |index| self.tokens[index].span.end())
