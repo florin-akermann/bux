@@ -4,7 +4,8 @@ use lumen_ast::{FieldValue, Name, Span};
 use lumen_resolver::DefinitionKind;
 
 use crate::error::{TypeError, TypeErrorKind};
-use crate::infer::{Inference, Lookup, labelled, miscounted};
+use crate::infer::settle::Lookup;
+use crate::infer::{Inference, labelled, miscounted};
 use crate::types::Type;
 
 impl Inference<'_> {

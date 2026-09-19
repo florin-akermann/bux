@@ -135,3 +135,21 @@ fn a_field_reached_through_a_name_bound_to_a_field_is_found() {
 
     assert_eq!(inferred_type(source, "held.depth", 1), "Int");
 }
+
+#[test]
+fn the_three_types_the_library_ships_an_eq_for_are_compared() {
+    let source = concat!(
+        "fn same(left: String, right: String) -> Bool {\n",
+        "    1 == 2 && true == false && left == right\n",
+        "}\n"
+    );
+
+    assert_eq!(inferred_type(source, "left == right", 1), "Bool");
+}
+
+#[test]
+fn a_comparison_of_two_numbers_nothing_else_pins_down_is_a_comparison_of_ints() {
+    let source = "fn same(left: Int) -> Bool {\n    left == 1\n}\n";
+
+    assert_eq!(inferred_type(source, "1", 1), "Int");
+}

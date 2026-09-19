@@ -69,3 +69,13 @@ fn a_function_with_no_signature_is_generalised_over_what_its_body_left_free() {
     assert_eq!(inferred_type(source, "same(1)", 1), "Int");
     assert_eq!(inferred_type(source, "same(\"two\")", 1), "String");
 }
+
+#[test]
+fn a_type_parameter_has_no_eq_because_nothing_says_the_type_it_stands_for_has_one() {
+    let source = "fn same<T>(left: T, right: T) -> Bool {\n    left == right\n}\n";
+
+    assert_eq!(
+        refusal(source).message(),
+        "`T` has no `Eq`, so two of them cannot be compared"
+    );
+}

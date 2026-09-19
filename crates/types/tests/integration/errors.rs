@@ -190,3 +190,49 @@ fn a_field_used_where_another_type_is_needed_is_refused_where_the_other_is_writt
 
     assert_eq!(refusal(source).message(), "expected `String`, found `Int`");
 }
+
+#[test]
+fn a_record_has_no_eq_so_two_of_them_are_not_compared() {
+    let source = concat!(
+        "fn same(left: User, right: User) -> Bool {\n    left == right\n}\n\n",
+        "type User = {\n    id: Int\n}\n"
+    );
+
+    assert_eq!(
+        refusal(source).message(),
+        "`User` has no `Eq`, so two of them cannot be compared"
+    );
+}
+
+#[test]
+fn a_refused_comparison_points_at_the_whole_comparison_rather_than_at_one_side() {
+    let source = concat!(
+        "fn same(left: User, right: User) -> Bool {\n    left == right\n}\n\n",
+        "type User = {\n    id: Int\n}\n"
+    );
+
+    assert_eq!(refusal(source).span().text(source), "left == right");
+}
+
+#[test]
+fn a_variant_has_no_eq_either() {
+    let source = concat!(
+        "fn same(left: Payment, right: Payment) -> Bool {\n    left != right\n}\n\n",
+        "type Payment =\n    | Pending\n    | Failed(String)\n"
+    );
+
+    assert_eq!(
+        refusal(source).message(),
+        "`Payment` has no `Eq`, so two of them cannot be compared"
+    );
+}
+
+#[test]
+fn a_unit_has_no_eq_because_no_instance_ships_for_it() {
+    let source = "fn same(left: (), right: ()) -> Bool {\n    left == right\n}\n";
+
+    assert_eq!(
+        refusal(source).message(),
+        "`()` has no `Eq`, so two of them cannot be compared"
+    );
+}

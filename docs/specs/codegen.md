@@ -109,9 +109,11 @@ a pattern written inside another one is tested the same way against what was rea
 Exhaustiveness has already proved that some arm answers for every value, so falling past the last
 arm cannot happen, and the method throws there rather than running on into the next thing.
 
-Two values are compared by what they hold rather than by being one object.
-`User { id: 1 }` equals another `User` built the same way, which identity would deny, so every
-class a module writes declares the `equals` that `==` and a literal pattern call.
+No class a module writes declares a method of its own beyond its constructor.
+`==` is `Eq`, which version 0.1 gives to `Int`, `Bool`, and `String` alone, so nothing asks a
+record or a variant whether it is the same as another one.
+A literal pattern tests a whole number, a truth value, or a string, and each of those is compared
+by what it holds rather than by being one object.
 
 ## What the bytes look like
 

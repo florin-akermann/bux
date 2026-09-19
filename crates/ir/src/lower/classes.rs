@@ -1,20 +1,13 @@
 //! The classes a module's type declarations become.
 //!
 //! A record is one class holding its fields; an algebraic data type is a base holding the tag
-//! and one class per variant holding what that variant carries. Each of them is given the
-//! `equals` that `==` calls, because two records that hold the same values are the same value.
+//! and one class per variant holding what that variant carries. A class declares its constructor
+//! and nothing else, because `==` is `Eq` and version 0.1 gives no declared type an instance.
 
 use crate::class::{Class, Extending, Field, Method, Reached};
-use crate::code::{Body, Comparison, FieldRef, Instruction, Label, MethodRef};
+use crate::code::{Body, FieldRef, Instruction, MethodRef};
 use crate::descriptor::{ClassName, Descriptor, MethodDescriptor};
-use crate::lower::equality::compared;
-use crate::lower::shape::{CONSTRUCTOR, Declared, Shape, Shapes, TAG, object};
-
-/// Where the `equals` a `==` of two references calls ends up, whatever the two are.
-const EQUALS: &str = "equals";
-
-/// The one place a comparison lands when it has found the two values to differ.
-const DIFFERENT: Label = Label(0);
+use crate::lower::shape::{CONSTRUCTOR, Declared, Shape, Shapes, TAG};
 
 impl Shapes {
     /// Every class the declarations become, in the order the module declares them.
@@ -41,7 +34,7 @@ impl Shapes {
 fn record_class(shape: &Shape) -> Class {
     let mut class = Class::new(shape.class.clone());
     class.fields = held(shape);
-    class.methods = vec![constructor(shape, &object_class()), equals(shape)];
+    class.methods = vec![constructor(shape, &object_class())];
     class
 }
 
@@ -62,7 +55,7 @@ fn variant_class(shape: &Shape, base: &ClassName) -> Class {
     let mut class = Class::new(shape.class.clone());
     class.extends = base.clone();
     class.fields = held(shape);
-    class.methods = vec![constructor(shape, base), equals(shape)];
+    class.methods = vec![constructor(shape, base)];
     class
 }
 
@@ -126,61 +119,6 @@ fn base_constructor(base: &ClassName) -> Method {
     ];
     let descriptor = MethodDescriptor::new(vec![Descriptor::Integer], None);
     instance_method(CONSTRUCTOR, descriptor, instructions, 0)
-}
-
-/// Two values of the class are the same when they hold the same values, field by field.
-fn equals(shape: &Shape) -> Method {
-    let descriptor = MethodDescriptor::new(vec![object()], Some(Descriptor::Boolean));
-    instance_method(EQUALS, descriptor, equals_body(shape), 1)
-}
-
-/// The body of `equals`: the other value is of this class, and holds what this one holds.
-fn equals_body(shape: &Shape) -> Vec<Instruction> {
-    let mut instructions = vec![
-        Instruction::Load {
-            slot: 1,
-            of: object(),
-        },
-        Instruction::InstanceOf(shape.class.clone()),
-        Instruction::JumpIfFalse(DIFFERENT),
-        Instruction::Load {
-            slot: 1,
-            of: object(),
-        },
-        Instruction::Cast(shape.class.clone()),
-        Instruction::Store {
-            slot: 2,
-            of: Descriptor::Reference(shape.class.clone()),
-        },
-    ];
-    for field in held(shape) {
-        instructions.extend(field_compared(shape, &field));
-    }
-    instructions.extend([
-        Instruction::Boolean(true),
-        Instruction::Return(Some(Descriptor::Boolean)),
-        Instruction::Label(DIFFERENT),
-        Instruction::Boolean(false),
-        Instruction::Return(Some(Descriptor::Boolean)),
-    ]);
-    instructions
-}
-
-/// One field of both values, compared, leaving the comparison to go on when they agree.
-fn field_compared(shape: &Shape, field: &Field) -> Vec<Instruction> {
-    let this = Descriptor::Reference(shape.class.clone());
-    let mut instructions = vec![
-        Instruction::Load {
-            slot: 0,
-            of: this.clone(),
-        },
-        Instruction::GetField(reached(shape, field)),
-        Instruction::Load { slot: 2, of: this },
-        Instruction::GetField(reached(shape, field)),
-    ];
-    instructions.extend(compared(Some(&field.of), Comparison::Equal));
-    instructions.push(Instruction::JumpIfFalse(DIFFERENT));
-    instructions
 }
 
 /// A method reached through an instance, which every method a type declaration writes is.

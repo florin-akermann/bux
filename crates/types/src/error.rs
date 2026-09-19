@@ -69,6 +69,7 @@ pub(crate) enum TypeErrorKind {
     Infinite,
     MissingField { of: String, field: String },
     FieldWrittenTwice { of: String, field: String },
+    NotEquatable(Type),
 }
 
 impl TypeErrorKind {
@@ -85,6 +86,7 @@ impl TypeErrorKind {
             Self::Infinite => Code::InfiniteType,
             Self::MissingField { .. } => Code::MissingField,
             Self::FieldWrittenTwice { .. } => Code::FieldWrittenTwice,
+            Self::NotEquatable(_) => Code::NotEquatable,
         }
     }
 
@@ -110,6 +112,9 @@ impl TypeErrorKind {
                 "building a record gives every field a value; update one to change only some"
             }
             Self::FieldWrittenTwice { .. } => "a record gives each of its fields one value",
+            Self::NotEquatable(_) => {
+                "`==` and `!=` need `Eq`, which version 0.1 gives to `Int`, `Bool`, and `String`"
+            }
         }
     }
 }
@@ -142,6 +147,12 @@ impl fmt::Display for TypeErrorKind {
             }
             Self::FieldWrittenTwice { of, field } => {
                 write!(f, "`{of}` is given `{field}` twice")
+            }
+            Self::NotEquatable(found) => {
+                write!(
+                    f,
+                    "`{found}` has no `Eq`, so two of them cannot be compared"
+                )
             }
         }
     }

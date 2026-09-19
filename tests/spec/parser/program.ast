@@ -31,7 +31,7 @@ type Payment 325..432
       named-type String 399..405
   variant Failed 418..432
     named-type String 425..431
-function count_active 434..893
+function count_active 434..894
   type-parameter T 450..451
   parameter users 453..470
     named-type List 460..470
@@ -42,7 +42,7 @@ function count_active 434..893
     named-type Result 487..506
       named-type Int 494..497
       named-type String 499..505
-  block 507..893
+  block 507..894
     binding Mutable total 513..526
       integer 0 525..526
     for-in user 531..731
@@ -80,62 +80,74 @@ function count_active 434..893
         call 745..762
           name first_user 745..755
           name users 756..761
-    if 768..830
-      branch 768..830
-        binary Equal 771..793
-          field id 771..779
-            name first 771..776
-          call 783..793
-            name UserId 783..789
-            integer -7 790..792
-        block 794..830
-          return 804..824
-            call 811..824
-              name Err 811..814
-              string "bad id" 815..823
-    binding Immutable renamed 835..869
-      record first 846..869
-        field-value active 854..867
-          bool false 862..867
-    call 874..891
-      name Ok 874..876
-      binary Subtract 877..890
-        binary Divide 877..886
-          name total 877..882
-          integer 1 885..886
-        integer 0 889..890
-function first_user 895..1029
-  parameter users 909..926
-    named-type List 916..926
-      named-type User 921..925
+    if 768..831
+      branch 768..831
+        binary Equal 771..794
+          call 771..788
+            name identifier 771..781
+            name first 782..787
+          integer -7 792..794
+        block 795..831
+          return 805..825
+            call 812..825
+              name Err 812..815
+              string "bad id" 816..824
+    binding Immutable renamed 836..870
+      record first 847..870
+        field-value active 855..868
+          bool false 863..868
+    call 875..892
+      name Ok 875..877
+      binary Subtract 878..891
+        binary Divide 878..887
+          name total 878..883
+          integer 1 886..887
+        integer 0 890..891
+function identifier 896..985
+  parameter user 910..920
+    named-type User 916..920
   result
-    named-type Result 931..951
-      named-type User 938..942
-      named-type String 944..950
-  block 952..1029
-    for-in user 958..1007
-      name users 970..975
-      block 976..1007
-        return 986..1001
-          call 993..1001
-            name Ok 993..995
-            name user 996..1000
-    call 1012..1027
-      name Err 1012..1015
-      string "no users" 1016..1026
-type User 1031..1078
-  field id 1049..1059
-    named-type UserId 1053..1059
-  field active 1064..1076
-    named-type Bool 1072..1076
-type UserId 1080..1105
-  variant UserId 1094..1105
-    named-type Int 1101..1104
-function forever 1107..1163
+    named-type Int 925..928
+  block 929..985
+    match 935..983
+      field id 941..948
+        name user 941..945
+      arm 959..977
+        pattern-tuple UserId 959..970
+          pattern raw 966..969
+        name raw 974..977
+function first_user 987..1121
+  parameter users 1001..1018
+    named-type List 1008..1018
+      named-type User 1013..1017
   result
-    unit-type 1123..1125
-  block 1126..1163
-    for 1132..1161
-      block 1136..1161
-        return 1146..1155
-          unit 1153..1155
+    named-type Result 1023..1043
+      named-type User 1030..1034
+      named-type String 1036..1042
+  block 1044..1121
+    for-in user 1050..1099
+      name users 1062..1067
+      block 1068..1099
+        return 1078..1093
+          call 1085..1093
+            name Ok 1085..1087
+            name user 1088..1092
+    call 1104..1119
+      name Err 1104..1107
+      string "no users" 1108..1118
+type User 1123..1170
+  field id 1141..1151
+    named-type UserId 1145..1151
+  field active 1156..1168
+    named-type Bool 1164..1168
+type UserId 1172..1197
+  variant UserId 1186..1197
+    named-type Int 1193..1196
+function forever 1199..1255
+  result
+    unit-type 1215..1217
+  block 1218..1255
+    for 1224..1253
+      block 1228..1253
+        return 1238..1247
+          unit 1245..1247

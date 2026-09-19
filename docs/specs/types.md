@@ -51,7 +51,7 @@ The operators are fixed:
 +                        Int + Int, or String + String
 - * / %                  Int
 < <= > >=                Int
-== !=                    two values of one type
+== !=                    two values of one type that has `Eq`
 && ||  and prefix !      Bool
 prefix -                 Int
 ```
@@ -59,6 +59,16 @@ prefix -                 Int
 An addition whose type is still unknown when its function has been inferred is an addition of
 `Int`s.
 This is the one default in the language, and it is here because version 0.1 has no typeclasses.
+A comparison whose type is still unknown at that point is a comparison of `Int`s for the same
+reason.
+
+`==` and `!=` compare two values of a type that has `Eq`.
+Version 0.1 has no `derive`, so the types that have `Eq` are the three the library ships: `Int`,
+`Bool`, and `String`.
+Comparing two values of any other type is refused, and stays refused until version 0.2 lets a
+type derive `Eq`.
+The check runs once the function the comparison is written in has been inferred, so the type it
+names is the settled one.
 
 A block's type is the type of its last statement when that statement is an expression, and `()`
 otherwise.
@@ -120,6 +130,7 @@ the value it was given.
 | infinite type     | `L0403` | this would have a type that contains itself      |
 | missing field     | `L0404` | `User` needs a field named `id`                  |
 | field given twice | `L0405` | `User` is given `id` twice                       |
+| not equatable     | `L0406` | `User` has no `Eq`, so two of them cannot be compared |
 
 `L0400` also says `` `Bool` cannot be added `` when `+` is given something that is neither `Int`
 nor `String`.

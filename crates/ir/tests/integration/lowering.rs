@@ -183,23 +183,42 @@ fn the_prelude_types_are_written_with_every_module() {
 }
 
 #[test]
-fn every_class_a_module_writes_is_the_same_as_another_holding_the_same_values() {
+fn a_record_class_declares_its_constructor_and_nothing_else() {
     let lowered = common::lowered("type User = {\n    id: Int\n}\n");
 
-    let equals = common::method_of(
-        common::class_of(&lowered, &ClassName::new("demo/User")),
-        "equals",
-    );
+    let user = common::class_of(&lowered, &ClassName::new("demo/User"));
 
-    assert_eq!(equals.descriptor.to_string(), "(Ljava/lang/Object;)Z");
-    assert_eq!(equals.reached, Reached::ThroughAnInstance);
-    assert!(
-        equals
-            .body
-            .instructions
-            .contains(&Instruction::InstanceOf(ClassName::new("demo/User"))),
-        "a value of another class is another value"
+    assert_eq!(
+        names_of(user),
+        ["<init>"],
+        "`==` is `Eq`, which `User` has not"
     );
+}
+
+#[test]
+fn no_class_a_module_writes_declares_a_method_beyond_its_constructor() {
+    let lowered = common::lowered(concat!(
+        "type User = {\n    id: Int\n}\n\n",
+        "type Payment =\n    | Pending\n    | Failed(String)\n"
+    ));
+
+    for class in &lowered.classes {
+        let declared = names_of(class);
+        assert!(
+            declared.iter().all(|name| *name == "<init>"),
+            "{} declares {declared:?}",
+            class.name.written()
+        );
+    }
+}
+
+/// The names of the methods `class` declares, in the order it declares them.
+fn names_of(class: &lumen_ir::Class) -> Vec<&str> {
+    class
+        .methods
+        .iter()
+        .map(|method| method.name.as_str())
+        .collect()
 }
 
 #[test]

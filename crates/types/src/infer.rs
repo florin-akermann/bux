@@ -2,6 +2,7 @@
 
 mod pattern;
 mod record;
+mod settle;
 
 use std::collections::HashMap;
 use std::mem;
@@ -13,6 +14,7 @@ use lumen_resolver::{Definition, DefinitionKind, Namespace, ResolvedProgram};
 
 use crate::environment::{Environment, Key};
 use crate::error::{Count, TypeError, TypeErrorKind};
+use crate::infer::settle::Lookup;
 use crate::scheme::{Quantified, Scheme};
 use crate::table::Table;
 use crate::types::{Type, TypeVar};
@@ -34,6 +36,7 @@ pub(crate) fn infer(resolved: &ResolvedProgram) -> Result<HashMap<Span, Type>, T
         result: Type::Unit,
         introduced: Vec::new(),
         additions: Vec::new(),
+        equalities: Vec::new(),
         lookups: Vec::new(),
     };
     inference.module()?;
@@ -52,6 +55,8 @@ struct Inference<'a> {
     introduced: Vec<Key>,
     /// The additions of the current function, which are `Int` unless something says otherwise.
     additions: Vec<(Type, Span)>,
+    /// The comparisons of the current function, each waiting to be of a type that has `Eq`.
+    equalities: Vec<(Type, Span)>,
     /// The fields of the current function, each waiting on the type it is reached through.
     lookups: Vec<Lookup>,
 }
@@ -87,6 +92,7 @@ impl Inference<'_> {
         self.look_up_fields()?;
         self.expect(&(*result).clone(), &body, function.body.span)?;
         self.settle_additions()?;
+        self.settle_equalities()?;
         for gone in mem::take(&mut self.introduced) {
             self.environment.unbind(&gone);
         }
@@ -200,7 +206,12 @@ impl Inference<'_> {
                 operator,
                 left,
                 right,
-            } => self.binary(*operator, left, right),
+            } => self.binary(&Binary {
+                operator: *operator,
+                left,
+                right,
+                at: expr.span,
+            }),
             ExprKind::Call { callee, arguments } => self.call(callee, arguments, expr.span),
             ExprKind::Field { receiver, name } => self.field(receiver, name),
             ExprKind::Try(inner) => self.propagated(inner, expr.span),
@@ -220,12 +231,13 @@ impl Inference<'_> {
         Ok(wanted)
     }
 
-    fn binary(
-        &mut self,
-        operator: BinaryOperator,
-        left: &Expr,
-        right: &Expr,
-    ) -> Result<Type, TypeError> {
+    fn binary(&mut self, written: &Binary<'_>) -> Result<Type, TypeError> {
+        let Binary {
+            operator,
+            left,
+            right,
+            at,
+        } = *written;
         let found = self.expr(left)?;
         let other = self.expr(right)?;
         match operator {
@@ -236,6 +248,7 @@ impl Inference<'_> {
             }
             BinaryOperator::Equal | BinaryOperator::NotEqual => {
                 self.expect(&found, &other, right.span)?;
+                self.equalities.push((found, at));
                 Ok(Type::boolean())
             }
             BinaryOperator::Less
@@ -350,53 +363,6 @@ impl Inference<'_> {
         self.expect(&Type::boolean(), &found, condition.span)
     }
 
-    /// The fields of one function, now that its body has said what they are reached through.
-    ///
-    /// They settle before the body meets the declared result, so a field that disagrees with what
-    /// its record declares is reported where it is written rather than as a body of the wrong type.
-    fn look_up_fields(&mut self) -> Result<(), TypeError> {
-        for lookup in mem::take(&mut self.lookups) {
-            self.look_up(lookup)?;
-        }
-        Ok(())
-    }
-
-    /// The additions of one function, each an addition of `Int`s unless something said otherwise.
-    ///
-    /// They settle last, after the declared result has had its say, because the result is often
-    /// the only thing that says an addition joins two `String`s.
-    fn settle_additions(&mut self) -> Result<(), TypeError> {
-        for (added, at) in mem::take(&mut self.additions) {
-            let found = self.table.shallow(&added);
-            if matches!(found, Type::Var(_)) {
-                self.expect(&Type::int(), &added, at)?;
-            } else if found != Type::int() && found != Type::string() {
-                let kind = TypeErrorKind::NotAddable(self.table.solved(&found));
-                return Err(TypeError::at(at, kind));
-            }
-        }
-        Ok(())
-    }
-
-    fn look_up(&mut self, lookup: Lookup) -> Result<(), TypeError> {
-        let through = self.table.solved(&lookup.through);
-        let field = lookup.field;
-        let Type::Named { name, .. } = &through else {
-            return Err(unreachable_field(&through, &field));
-        };
-        let Some(key) = self.environment.record(name).cloned() else {
-            return Err(unreachable_field(&through, &field));
-        };
-        let labels = self.environment.labels(&key).to_vec();
-        let scheme = self.scheme(&key);
-        let Type::Function { parameters, result } = scheme.instantiate(&mut self.table) else {
-            return Err(unreachable_field(&through, &field));
-        };
-        self.expect(&through, &result, field.span)?;
-        let index = labelled(&labels, &field, &self.table.solved(&result))?;
-        self.expect(&lookup.found, &parameters[index].clone(), field.span)
-    }
-
     /// Makes `expected` and `found` one type, or says which of the two the source wrote.
     fn expect(&mut self, expected: &Type, found: &Type, at: Span) -> Result<(), TypeError> {
         match unify(&mut self.table, expected, found) {
@@ -496,6 +462,9 @@ impl Inference<'_> {
         for (added, _) in &self.additions {
             self.table.unsettled(added, &mut held);
         }
+        for (compared, _) in &self.equalities {
+            self.table.unsettled(compared, &mut held);
+        }
         free.retain(|var| !held.contains(var));
         free
     }
@@ -509,11 +478,14 @@ impl Inference<'_> {
     }
 }
 
-/// A field waiting on the type it is reached through.
-struct Lookup {
-    through: Type,
-    field: Name,
-    found: Type,
+/// A binary expression as inference reads it: the operator, its two operands, and its span.
+#[derive(Clone, Copy)]
+struct Binary<'a> {
+    operator: BinaryOperator,
+    left: &'a Expr,
+    right: &'a Expr,
+    /// The whole expression, which is what a refused comparison points the reader at.
+    at: Span,
 }
 
 /// The index `field` is at, or the report that nothing of that name is there.
@@ -528,24 +500,6 @@ fn labelled(labels: &[String], field: &Name, of: &Type) -> Result<usize, TypeErr
             };
             TypeError::at(field.span, kind)
         })
-}
-
-/// A field reached through something that has no fields, or through a type nothing settled.
-fn unreachable_field(through: &Type, field: &Name) -> TypeError {
-    let kind = if let Type::Module(module) = through {
-        TypeErrorKind::InModule {
-            module: module.clone(),
-            name: field.text.clone(),
-        }
-    } else if matches!(through, Type::Var(_)) {
-        TypeErrorKind::UnknownReceiver(field.text.clone())
-    } else {
-        TypeErrorKind::UnknownField {
-            of: through.clone(),
-            field: field.text.clone(),
-        }
-    };
-    TypeError::at(field.span, kind)
 }
 
 fn miscounted(name: &Name, takes: usize, given: usize) -> TypeError {

@@ -1,8 +1,9 @@
-//! What makes two values the same value, which is one answer for `==`, `match`, and `equals`.
+//! What makes two values the same value, which is one answer for `==` and for a literal pattern.
 //!
-//! Two whole numbers or two truth values are the same when the JVM says they are. Two references
-//! are the same when what they hold is the same, so `User { id: 1 }` equals another one built the
-//! same way; identity would make two of one record different, which Lumen never means.
+//! `==` is `Eq`, and version 0.1 ships `Int`, `Bool`, and `String`, so this settles those three
+//! and nothing else. Two whole numbers or two truth values are the same when the JVM says they
+//! are, and two strings are the same when they hold the same characters rather than when they are
+//! one object; identity is never what Lumen asks about.
 
 use crate::code::{Comparison, Instruction, MethodRef};
 use crate::descriptor::{ClassName, Descriptor, MethodDescriptor};
@@ -21,12 +22,16 @@ pub(crate) fn compared(held: Option<&Descriptor>, how: Comparison) -> Vec<Instru
     }
 }
 
-/// Two references, compared by what they hold, which is what `Objects.equals` does.
+/// Two strings, compared by the characters they hold rather than by being one object.
+///
+/// The call is on `String` itself and not on `Object`, so a reference of any other class reaching
+/// here writes a class file the verifier refuses. The identity `Object.equals` would answer with
+/// is then unreachable by construction rather than by the type checker alone.
 fn by_value(how: Comparison) -> Vec<Instruction> {
-    let mut instructions = vec![Instruction::InvokeStatic(MethodRef {
-        class: ClassName::new("java/util/Objects"),
+    let mut instructions = vec![Instruction::InvokeVirtual(MethodRef {
+        class: ClassName::new("java/lang/String"),
         name: "equals".to_owned(),
-        descriptor: MethodDescriptor::new(vec![object(), object()], Some(Descriptor::Boolean)),
+        descriptor: MethodDescriptor::new(vec![object()], Some(Descriptor::Boolean)),
     })];
     if how != Comparison::Equal {
         instructions.push(Instruction::Not);

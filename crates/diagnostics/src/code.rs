@@ -82,6 +82,8 @@ catalogue! {
     MissingField => "L0404",
     /// A record is written with one of its fields given a value twice.
     FieldWrittenTwice => "L0405",
+    /// `==` or `!=` is written between two values of a type that has no `Eq`.
+    NotEquatable => "L0406",
     /// A `match` leaves a value of the type it matches unanswered.
     NonExhaustiveMatch => "L0500",
     /// A `match` lists its arms in an order the type does not declare its variants in.
