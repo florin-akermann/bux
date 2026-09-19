@@ -141,7 +141,7 @@ An optimization earns its place by measurement, so the item starts with a number
 [026][c] - The lowering, test-first: such a record emits no `new`, asserted on the instructions.
 [026][d] - A property test: the scalarized program computes what the allocating one computes.
 
-## 🔴 Item 027: Every generated class keeps the shape of a value class
+## 🟡 Item 027: Every generated class keeps the shape of a value class
 **Depends on:** Item 022, Item 023 — a value class has no identity, which those two make true.
 Valhalla flattens a class that has no identity, no null, and equality by state.
 Lumen's types have all three by design, so readiness is a matter of never drifting from it.
