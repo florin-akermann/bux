@@ -24,7 +24,7 @@ fn count_active<T>(users: List<User>, limit: Int) -> Result<Int, String> {
         } else {
             total += 1
         }
-        if total * 2 % 3 != 1 {
+        if or(total * 2 % 3, 0) != 1 {
             break
         }
     }
@@ -33,7 +33,7 @@ fn count_active<T>(users: List<User>, limit: Int) -> Result<Int, String> {
         return Err("bad id")
     }
     renamed := first { active: false }
-    Ok(total / 1 - 0)
+    Ok(or(total / 1, 0) - 0)
 }
 
 fn identifier(user: User) -> Int {

@@ -1,0 +1,20 @@
+// expect-run
+// `/` and `%` give an `Option<Int>`, so a zero divisor is answered rather than thrown.
+// Nothing here is asserted. `expect-run` judges an example by its exit status, and no Lumen
+// program can fail at runtime, so running every path a division has to the end is what this
+// shows. Item 031 is what will let it state the answers it works out.
+fn main() -> () {
+    answers := quotient(17, 5) + quotient(17, 0) + leftover(17, 5) + leftover(17, 0)
+    ()
+}
+
+fn quotient(a: Int, b: Int) -> Int {
+    match a / b {
+        Some(answer) => answer
+        None => -1
+    }
+}
+
+fn leftover(a: Int, b: Int) -> Int {
+    or(a % b, -1)
+}

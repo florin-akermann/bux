@@ -153,3 +153,24 @@ fn a_comparison_of_two_numbers_nothing_else_pins_down_is_a_comparison_of_ints() 
 
     assert_eq!(inferred_type(source, "1", 1), "Int");
 }
+
+#[test]
+fn a_division_is_an_option_because_a_zero_divisor_has_no_answer() {
+    let source = "fn share(total: Int, count: Int) -> Option<Int> {\n    total / count\n}\n";
+
+    assert_eq!(inferred_type(source, "total / count", 1), "Option<Int>");
+}
+
+#[test]
+fn a_remainder_is_an_option_for_the_same_reason() {
+    let source = "fn left(total: Int, count: Int) -> Option<Int> {\n    total % count\n}\n";
+
+    assert_eq!(inferred_type(source, "total % count", 1), "Option<Int>");
+}
+
+#[test]
+fn or_gives_back_what_the_option_it_is_handed_holds() {
+    let source = "fn share(total: Int, count: Int) -> Int {\n    or(total / count, 0)\n}\n";
+
+    assert_eq!(inferred_type(source, "or(total / count, 0)", 1), "Int");
+}

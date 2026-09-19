@@ -8,3 +8,6 @@ pub(crate) const TYPES: [&str; 6] = ["Bool", "Int", "List", "Option", "Result", 
 
 /// The constructors the prelude supplies.
 pub(crate) const CONSTRUCTORS: [&str; 4] = ["Err", "None", "Ok", "Some"];
+
+/// The functions the prelude supplies, which are the total ways to get a value out.
+pub(crate) const FUNCTIONS: [&str; 1] = ["or"];

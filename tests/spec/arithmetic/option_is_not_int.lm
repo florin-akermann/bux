@@ -1,0 +1,5 @@
+// expect-error: L0400
+// `/` gives an `Option<Int>`, which is not an `Int` however the answer is held.
+fn go(total: Int, count: Int) -> Int {
+    total / count + 1
+}

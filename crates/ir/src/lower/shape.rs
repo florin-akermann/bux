@@ -30,6 +30,12 @@ pub(crate) const TAG: &str = "tag";
 /// What the JVM calls a constructor.
 pub(crate) const CONSTRUCTOR: &str = "<init>";
 
+/// The variant of `Option` a division with an answer builds.
+pub(crate) const SOME: &str = "Some";
+
+/// The variant of `Option` a division by zero builds.
+pub(crate) const NONE: &str = "None";
+
 /// The variant of `Result` a `?` reads the value out of.
 pub(crate) const OK: &str = "Ok";
 

@@ -90,6 +90,8 @@ catalogue! {
     FieldWrittenTwice => "L0405",
     /// `==` or `!=` is written between two values of a type that has no `Eq`.
     NotEquatable => "L0406",
+    /// A divisor is written as zero, which the compiler can see has no answer.
+    DivisorIsZero => "L0407",
     /// A `match` leaves a value of the type it matches unanswered.
     NonExhaustiveMatch => "L0500",
     /// A `match` lists its arms in an order the type does not declare its variants in.

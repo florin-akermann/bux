@@ -88,7 +88,7 @@ impl Environment {
             Quantified::Parameter(value.clone()),
             Quantified::Parameter(error.clone()),
         ];
-        let carried = Type::Parameter(value);
+        let carried = Type::Parameter(value.clone());
         environment.bind(
             Key::prelude("None"),
             Scheme::over(over_value.clone(), option.clone()),
@@ -111,6 +111,7 @@ impl Environment {
                 Type::function(vec![Type::Parameter(error)], result),
             ),
         );
+        environment.bind(Key::prelude("or"), or(&value));
         environment
     }
 
@@ -358,4 +359,16 @@ fn parameter_of(definition: Definition, name: &Name) -> TypeParameter {
         name: name.text.clone(),
         origin: definition.origin,
     }
+}
+
+/// `or(maybe, fallback)`: what an `Option` holds, or the fallback when it holds nothing.
+///
+/// `Result` has no `or` yet, because two functions of one name wait on typeclasses, which
+/// `docs/implementation.md` section 9 leaves out of version 0.1.
+fn or(value: &TypeParameter) -> Scheme {
+    let held = Type::Parameter(value.clone());
+    Scheme::over(
+        vec![Quantified::Parameter(value.clone())],
+        Type::function(vec![Type::option(held.clone()), held.clone()], held),
+    )
 }

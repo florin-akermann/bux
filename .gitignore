@@ -16,3 +16,6 @@ __pycache__/
 
 # hegeltest regression corpora, rebuilt by a run; nothing in this repo reads them
 .hegel/
+
+# class files a `lumen build` writes beside an example; the example is the source of truth
+tests/spec/**/*.class

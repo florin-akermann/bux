@@ -18,23 +18,17 @@ pub(crate) struct Scope {
 
 impl Scope {
     /// A scope holding the prelude's `supplied` names and nothing else.
-    pub(crate) fn of_prelude(
-        namespace: Namespace,
-        supplied: &[&str],
-        kind: DefinitionKind,
-    ) -> Self {
-        let prelude = supplied
-            .iter()
-            .map(|name| {
-                (
-                    (*name).to_owned(),
-                    Definition {
-                        kind,
-                        origin: Origin::Prelude,
-                    },
-                )
-            })
-            .collect();
+    pub(crate) fn of_prelude(namespace: Namespace, supplied: &[(&[&str], DefinitionKind)]) -> Self {
+        let mut prelude = HashMap::new();
+        for (names, kind) in supplied {
+            for name in *names {
+                let definition = Definition {
+                    kind: *kind,
+                    origin: Origin::Prelude,
+                };
+                prelude.insert((*name).to_owned(), definition);
+            }
+        }
         Self {
             namespace,
             layers: vec![prelude],

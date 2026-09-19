@@ -75,11 +75,13 @@ type Definitions = HashMap<(Namespace, Span), Definition>;
 impl Resolver {
     fn new() -> Self {
         Self {
-            types: Scope::of_prelude(Namespace::Type, &prelude::TYPES, DefinitionKind::Type),
+            types: Scope::of_prelude(Namespace::Type, &[(&prelude::TYPES, DefinitionKind::Type)]),
             values: Scope::of_prelude(
                 Namespace::Value,
-                &prelude::CONSTRUCTORS,
-                DefinitionKind::Constructor,
+                &[
+                    (&prelude::CONSTRUCTORS, DefinitionKind::Constructor),
+                    (&prelude::FUNCTIONS, DefinitionKind::Function),
+                ],
             ),
             definitions: HashMap::new(),
         }

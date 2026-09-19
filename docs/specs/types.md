@@ -131,6 +131,7 @@ the value it was given.
 | missing field     | `L0404` | `User` needs a field named `id`                  |
 | field given twice | `L0405` | `User` is given `id` twice                       |
 | not equatable     | `L0406` | `User` has no `Eq`, so two of them cannot be compared |
+| zero divisor      | `L0407` | this divisor is zero, so there is no answer      |
 
 `L0400` also says `` `Bool` cannot be added `` when `+` is given something that is neither `Int`
 nor `String`.
@@ -138,6 +139,10 @@ nor `String`.
 It also says that a module is what was reached through, because nothing may reach inside one yet.
 A variant that carries its values in order has no field to write against, so that is `L0402` too.
 `L0401` counts the arguments of a written type as well as those of a call.
+`L0407` is raised where a division is written with a `0` the compiler can already see.
+
+`/` and `%` give back `Option<Int>` rather than `Int`, which `docs/specs/arithmetic.md` states.
+`L0400` is what an `Option<Int>` met where an `Int` belongs is refused with, as anything else is.
 
 Inference stops at the first error it reaches, which is the one lowest in the file.
 

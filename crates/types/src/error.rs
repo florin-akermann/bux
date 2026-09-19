@@ -70,6 +70,7 @@ pub(crate) enum TypeErrorKind {
     MissingField { of: String, field: String },
     FieldWrittenTwice { of: String, field: String },
     NotEquatable(Type),
+    DivisorIsZero,
 }
 
 impl TypeErrorKind {
@@ -87,6 +88,7 @@ impl TypeErrorKind {
             Self::MissingField { .. } => Code::MissingField,
             Self::FieldWrittenTwice { .. } => Code::FieldWrittenTwice,
             Self::NotEquatable(_) => Code::NotEquatable,
+            Self::DivisorIsZero => Code::DivisorIsZero,
         }
     }
 
@@ -115,6 +117,7 @@ impl TypeErrorKind {
             Self::NotEquatable(_) => {
                 "`==` and `!=` need `Eq`, which version 0.1 gives to `Int`, `Bool`, and `String`"
             }
+            Self::DivisorIsZero => "a zero written here is never anything else; drop the division",
         }
     }
 }
@@ -154,6 +157,7 @@ impl fmt::Display for TypeErrorKind {
                     "`{found}` has no `Eq`, so two of them cannot be compared"
                 )
             }
+            Self::DivisorIsZero => write!(f, "this divisor is zero, so there is no answer"),
         }
     }
 }

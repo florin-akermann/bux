@@ -100,6 +100,7 @@ Type inference raises these, in `crates/types/src/error.rs`:
 - `L0404` — a record is built without one of the fields it declares.
 - `L0405` — a record is written with one of its fields given a value twice.
 - `L0406` — `==` or `!=` is written between two values of a type that has no `Eq`.
+- `L0407` — a division is written with a divisor of zero, which has no answer.
 
 Exhaustiveness raises these, in `crates/exhaustiveness/src/error.rs`:
 

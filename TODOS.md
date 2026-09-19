@@ -120,6 +120,30 @@ An optimization earns its place by measurement, so the item starts with a number
 [026][c] - The lowering, test-first: such a record emits no `new`, asserted on the instructions.
 [026][d] - A property test: the scalarized program computes what the allocating one computes.
 
+## 🔴 Item 032: A record field of record type is laid out flat
+**Depends on:** Item 026 — the same measurement, on a record that holds a record.
+`docs/design.md` section 1 promises a record laid out flat wherever the JVM can flatten one.
+A JVM decides a field's layout when it loads the class, before the field's own class is loaded.
+JEP 401's `LoadableDescriptors` attribute names the classes a class file wants loaded first.
+Without it a `User` holding an `Address` keeps a reference where the JVM would have flattened.
+An optimization earns its place by measurement, so the item starts with a number.
+[032][a] - A measured baseline: a loop reading a record held in a record, timed with the JDK.
+[032][b] - `docs/specs/codegen.md` states which descriptors the attribute names, and on which class.
+[032][c] - The writer emits the attribute, test-first; a test on the bytes asserts what it names.
+[032][d] - The measurement again, and the number beside the baseline in the item's commit.
+
+## 🔴 Item 031: An executable example asserts what a program writes out
+**Depends on:** Item 029 — no Lumen program can fail at runtime, so an exit status proves little.
+`// expect-run` judges an example by its exit status, which is `0` for every program that runs.
+Now that no operation throws, an example cannot show that a value is the one the spec claims.
+An example gains a way to state the output it must produce, and the harness compares it.
+`17 / 5` being `Some(3)` is then checked rather than asserted in prose.
+`io.println` is named in a help line and implemented nowhere, so writing out comes first.
+[031][a] - A program has a way to write a line out, which version 0.1 has nowhere yet.
+[031][b] - `docs/specs/executable-examples.md` states the header and what is compared.
+[031][c] - The harness compares the output, test-first; a mismatch names the file and both texts.
+[031][d] - `tests/spec/arithmetic/division.lm` writes its answers out and states them.
+
 ## 🟡 Item 029: No exceptions and no `unwrap`; every operation is total
 **Depends on:** Item 007 — a total `/` needs the type of what it returns.
 The non-goals name only checked exceptions; nothing says a Lumen program never throws or catches.

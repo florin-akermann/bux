@@ -1,0 +1,5 @@
+// expect-error: L0407
+// A divisor written as zero is refused, because the compiler can already see the answer.
+fn go(total: Int) -> Option<Int> {
+    total / 0
+}

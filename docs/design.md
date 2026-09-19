@@ -116,7 +116,7 @@ In particular, the language should initially avoid:
 * inheritance
 * class hierarchies
 * null
-* checked exceptions
+* exceptions, checked or otherwise
 * macros
 * complicated metaprogramming
 * implicit runtime magic
@@ -288,6 +288,27 @@ fn load_user(id: UserId) -> Result<User, Error> {
 ```
 
 The `?` operator propagates an error.
+
+**No program throws, catches, or observes an exception, and no operation is partial**.
+An operation without an answer for some of its input says so in its type rather than at runtime.
+That holds for an operator as much as for a function.
+An operator is a function with other syntax, and syntax buys no exemption from the type.
+
+So every operator that can fail gives back an `Option` or a `Result`, and never a bare answer.
+`/` and `%` are the ones version 0.1 has, and `17 / 0` is `None` rather than a crash.
+A divisor is never a hazard a reader has to spot.
+An operator with an answer for every input keeps its plain type, which is why `+` stays `Int`.
+Wrapping on overflow is a defined answer, and there is no whole number equal to `x / 0`.
+
+Which of the two an operation reaches for is settled by what the failure has to say.
+`Option` is for the case that explains itself, where the absence is the whole story.
+An error type there would carry nothing the caller is not already holding.
+`Result` is for the failure with something to say that the caller could not work out.
+`?` propagates a `Result`.
+`docs/specs/arithmetic.md` works the choice through for `/` and `%`.
+
+There is no `unwrap` and no `expect`, in the prelude or anywhere else.
+`or(maybe, fallback)` is the total default, named for what it does rather than for what it is not.
 
 ---
 

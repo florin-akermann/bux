@@ -48,7 +48,11 @@ Every module has these names in scope without importing anything:
 ```text
 types:        Bool  Int  List  Option  Result  String
 constructors: Err  None  Ok  Some
+functions:    or
 ```
+
+`or(maybe, fallback)` is what an `Option` holds, or the fallback when it holds nothing, and
+`docs/specs/arithmetic.md` says why it is the only function here.
 
 They are ordinary declarations of a module the compiler supplies, not keywords.
 The prelude becomes Lumen source once a module can be loaded; until then this list is the prelude.

@@ -264,6 +264,14 @@ impl Inference<'_> {
                 self.additions.push((found.clone(), left.span));
                 Ok(found)
             }
+            BinaryOperator::Divide | BinaryOperator::Remainder => {
+                self.expect(&Type::int(), &found, left.span)?;
+                self.expect(&Type::int(), &other, right.span)?;
+                if right.kind == ExprKind::Integer(0) {
+                    return Err(TypeError::at(right.span, TypeErrorKind::DivisorIsZero));
+                }
+                Ok(Type::option(Type::int()))
+            }
             _ => {
                 self.expect(&Type::int(), &found, left.span)?;
                 self.expect(&Type::int(), &other, right.span)?;

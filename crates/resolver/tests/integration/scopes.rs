@@ -104,6 +104,19 @@ fn the_prelude_is_in_scope_without_an_import() {
 }
 
 #[test]
+fn the_prelude_supplies_or_as_a_function_rather_than_a_constructor() {
+    let source = "fn share(total: Int, count: Int) -> Int {\n    or(total / count, 0)\n}\n";
+
+    assert_eq!(
+        meaning(source, Value, "or", 1),
+        Some(Definition {
+            kind: DefinitionKind::Function,
+            origin: Origin::Prelude
+        })
+    );
+}
+
+#[test]
 fn an_imported_module_is_in_scope_under_its_own_name() {
     let source = "import io\n\nfn greet() {\n    io.print(\"hi\")\n}\n";
 

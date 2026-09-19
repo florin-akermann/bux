@@ -233,3 +233,30 @@ fn a_unit_has_no_eq_because_no_instance_ships_for_it() {
         "`()` has no `Eq`, so two of them cannot be compared"
     );
 }
+
+#[test]
+fn a_divisor_written_as_zero_is_refused_rather_than_answered_with_none() {
+    let source = "fn share(total: Int) -> Option<Int> {\n    total / 0\n}\n";
+
+    assert_eq!(
+        refusal(source).message(),
+        "this divisor is zero, so there is no answer"
+    );
+}
+
+#[test]
+fn a_refused_divisor_points_at_the_zero_rather_than_at_the_division() {
+    let source = "fn share(total: Int) -> Option<Int> {\n    total / 0\n}\n";
+
+    assert_eq!(refusal(source).span().text(source), "0");
+}
+
+#[test]
+fn a_division_where_a_whole_number_belongs_is_an_ordinary_mismatch() {
+    let source = "fn share(total: Int, count: Int) -> Int {\n    total / count\n}\n";
+
+    assert_eq!(
+        refusal(source).message(),
+        "expected `Int`, found `Option<Int>`"
+    );
+}
