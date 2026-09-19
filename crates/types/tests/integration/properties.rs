@@ -6,7 +6,7 @@ use lumen_parser::parse;
 use lumen_resolver::resolve;
 use lumen_types::check;
 
-use crate::common::{expressions, inferred_type};
+use crate::common::{expressions, inferred_type, refusal};
 
 /// The pieces a generated module is built from, each inferring on its own and declaring its own
 /// names, so any set of them is a module that infers.
@@ -192,6 +192,17 @@ fn accepts(source: &str) -> bool {
     check(resolved).is_ok()
 }
 
+/// A value of each type a parameter may have, with the type it has.
+///
+/// `Bool` is not among them: `docs/specs/arguments.md` refuses a bare `Bool` parameter, so a
+/// generated declaration that took one would be refused for a reason these properties are not
+/// about.
+const PASSABLE: [(&str, &str); 3] = [
+    ("1", "Int"),
+    ("\"two\"", "String"),
+    ("Some(1)", "Option<Int>"),
+];
+
 /// A declaration taking `first` and `second`, beside a call of it passing `values` those types.
 ///
 /// `docs/specs/arguments.md` is about the types a declaration repeats, so the generator varies
@@ -205,7 +216,7 @@ fn taking(first: &str, second: &str, call: &str) -> String {
 
 #[hegel::test]
 fn a_declaration_that_repeats_a_type_is_called_by_name_and_not_in_order(tc: TestCase) {
-    let (value, of_type) = tc.draw(gs::sampled_from(&VALUES));
+    let (value, of_type) = tc.draw(gs::sampled_from(&PASSABLE));
 
     let named = format!("takes(first: {value}, second: {value})");
     let in_order = format!("takes({value}, {value})");
@@ -216,8 +227,8 @@ fn a_declaration_that_repeats_a_type_is_called_by_name_and_not_in_order(tc: Test
 
 #[hegel::test]
 fn a_declaration_whose_parameter_types_differ_is_called_either_way(tc: TestCase) {
-    let (first, first_type) = tc.draw(gs::sampled_from(&VALUES));
-    let (second, second_type) = tc.draw(gs::sampled_from(&VALUES));
+    let (first, first_type) = tc.draw(gs::sampled_from(&PASSABLE));
+    let (second, second_type) = tc.draw(gs::sampled_from(&PASSABLE));
     if first_type == second_type {
         return;
     }
@@ -234,8 +245,8 @@ fn a_declaration_whose_parameter_types_differ_is_called_either_way(tc: TestCase)
 
 #[hegel::test]
 fn a_call_that_compiles_still_compiles_with_its_arguments_named(tc: TestCase) {
-    let (first, first_type) = tc.draw(gs::sampled_from(&VALUES));
-    let (second, second_type) = tc.draw(gs::sampled_from(&VALUES));
+    let (first, first_type) = tc.draw(gs::sampled_from(&PASSABLE));
+    let (second, second_type) = tc.draw(gs::sampled_from(&PASSABLE));
     let in_order = format!("takes({first}, {second})");
     if !accepts(&taking(first_type, second_type, &in_order)) {
         return;
@@ -244,4 +255,58 @@ fn a_call_that_compiles_still_compiles_with_its_arguments_named(tc: TestCase) {
     let named = format!("takes(first: {first}, second: {second})");
 
     assert!(accepts(&taking(first_type, second_type, &named)), "{named}");
+}
+
+/// A signature built out of `Bool` and one other type, which is what the flag rule reads.
+const EITHER: [&str; 2] = ["Bool", "Int"];
+
+/// What a declaration takes and what it gives back, which is all the flag rule reads.
+struct Signature<'a> {
+    takes: Vec<&'a str>,
+    gives: &'a str,
+}
+
+impl Signature<'_> {
+    /// The declaration written out, with a body of `todo` so its signature is all that varies.
+    fn declaration(&self) -> String {
+        let written: Vec<String> = self
+            .takes
+            .iter()
+            .enumerate()
+            .map(|(position, one)| format!("p{position}: {one}"))
+            .collect();
+        format!(
+            "fn open({}) -> {} {{\n    todo(\"the body is not the point\")\n}}\n",
+            written.join(", "),
+            self.gives
+        )
+    }
+
+    /// Whether `docs/specs/arguments.md` refuses it, read as the spec states it.
+    ///
+    /// A parameter that is a `Bool` is a flag unless every type the signature mentions is `Bool`,
+    /// which is the boolean operation the spec carves out.
+    fn takes_a_flag(&self) -> bool {
+        let mentioned = self.takes.iter().chain([&self.gives]);
+        self.takes.contains(&"Bool") && !mentioned.into_iter().all(|one| *one == "Bool")
+    }
+}
+
+/// What `L0412` tells an author to write instead, which is how a refusal is told from any other.
+const FLAG_HELP: &str =
+    "declare a two-variant type and take that instead, so the call says which of the two";
+
+#[hegel::test]
+fn a_bool_parameter_compiles_only_where_the_whole_signature_is_bool(tc: TestCase) {
+    let signature = Signature {
+        takes: tc.draw(gs::vecs(gs::sampled_from(&EITHER))),
+        gives: tc.draw(gs::sampled_from(&EITHER)),
+    };
+    let source = signature.declaration();
+
+    if signature.takes_a_flag() {
+        assert_eq!(refusal(&source).help(), FLAG_HELP, "{source}");
+    } else {
+        assert!(accepts(&source), "{source}");
+    }
 }

@@ -12,8 +12,8 @@ const RESULTS: [&str; 5] = ["Int", "String", "Bool", "Option<Int>", "List<Int>"]
 const PLACES: [&str; 4] = [
     "fn go() -> {result} {\n    {}\n}\n",
     "fn go() -> {result} {\n    held := {}\n    held\n}\n",
-    "fn go(flag: Bool) -> {result} {\n    if flag {\n        return {}\n    }\n    {}\n}\n",
-    "fn go(flag: Bool) -> {result} {\n    match flag {\n        true => {}\n        false => {}\n    }\n}\n",
+    "fn go(count: Int) -> {result} {\n    if count > 1 {\n        return {}\n    }\n    {}\n}\n",
+    "fn go(count: Int) -> {result} {\n    match count > 1 {\n        true => {}\n        false => {}\n    }\n}\n",
 ];
 
 /// The modules a property is checked over, none of which holds a hole.

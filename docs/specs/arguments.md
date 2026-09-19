@@ -136,6 +136,77 @@ error[L0108]: this call names some of its arguments and not others
 help: a call names all of its arguments or none of them
 ```
 
+## A parameter is never a bare `Bool`
+
+`open(true)` says nothing.
+The reader has to find the declaration to learn what is true, and `open(false)` is one keystroke
+away from a program that does the other thing without looking wrong.
+
+```text
+fn open(path: String, read_only: Bool) -> File {
+```
+
+That parameter is `L0412`.
+A two-variant type takes its place, and the call then says which of the two it means:
+
+```text
+type Mode =
+    | ReadOnly
+    | ReadWrite
+
+fn open(path: String, mode: Mode) -> File {
+```
+
+`open(path, ReadOnly)` reads where `open(path, true)` did not, and a third mode is a variant
+rather than a second flag.
+`docs/specs/exhaustiveness.md` then makes every `match` on it answer for the new one.
+
+The rule is the same shape as the naming rule above: a mistake a type system can make unwriteable
+belongs in the language rather than in a linter, and mycs lints `Flag Argument` after the fact.
+
+### The one carve-out
+
+A function whose parameters are all `Bool` and whose result is `Bool` is a boolean operation, and
+its parameters stay writable.
+
+```text
+fn implies(first: Bool, second: Bool) -> Bool {
+    !first || second
+}
+```
+
+`Bool` is what such a function is about, rather than something it is told.
+Nothing else is carved out: `fn spoken(loudly: Bool) -> String` takes a flag however its parameter
+is named, because what comes back is not a `Bool` and so the `Bool` was a choice, not an operand.
+
+The types read are the ones inference settled, as the naming rule reads them, so a parameter the
+author left untyped is held to whatever type it turned out to have.
+A type parameter is not a `Bool`: `fn pick<T>(value: T)` is untouched however a call instantiates
+it, because the rule is about the signature.
+A parameter the body never constrains turned out to be a type parameter rather than a `Bool`,
+so a call of it passes `true` as freely as it passes anything else.
+That also settles what a generic declaration means once typeclasses land: an instance written
+out for `Bool` is a declaration like any other, and its parameters are held to this rule.
+
+A record field, a variant payload, a binding, and a result type may each be `Bool`.
+The rule is about what a call passes, which is the one place a bare `true` loses its meaning.
+
+`L0412` is the refusal:
+
+```text
+error[L0412]: this parameter is a `Bool`, so a call of `open` passes `true` and says no more
+  --> demo.lm:1:23
+
+  1 | fn open(path: String, read_only: Bool) -> File {
+    |                       ^^^^^^^^^^^^^^^
+
+help: declare a two-variant type and take that instead, so the call says which of the two
+```
+
+It is raised where the parameter is written, because the declaration is what changes.
+It is reached after the body, because the type it reads is the one inference settled.
+A body that does not typecheck is `L0400` first, as it is before every rule here.
+
 ## Properties
 
 These hold and are checked with property-based tests:
@@ -144,3 +215,5 @@ These hold and are checked with property-based tests:
    when it passes them positionally.
 2. A call of a declaration whose parameter types all differ compiles either way.
 3. A call that compiles passing its arguments in order still compiles naming them in that order.
+4. A function with a `Bool` parameter compiles when every parameter and the result is `Bool`, and
+   does not when anything else about the signature differs.

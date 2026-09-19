@@ -604,6 +604,33 @@ A variant whose values want names declares them as fields and is built as a reco
 
 `docs/specs/arguments.md` is the specification.
 
+### A parameter is never a bare `Bool`
+
+`open(true)` says nothing.
+The reader has to find the declaration to learn what is true, and `open(false)` is one keystroke
+away from a program that does the other thing without looking wrong.
+
+A parameter of type `Bool` is refused.
+A two-variant type takes its place, and the call then says which of the two it means:
+
+```text
+type Mode =
+    | ReadOnly
+    | ReadWrite
+
+fn open(path: String, mode: Mode) -> File {
+```
+
+`open(path, ReadOnly)` reads where `open(path, true)` did not, and a third mode is a variant
+rather than a second flag.
+
+A function whose parameters are all `Bool` and whose result is `Bool` is the one carve-out.
+`Bool` is what such a function is about, rather than something it is told, so its operands stay
+writable.
+
+A record field, a variant payload, a binding, and a result type may each be `Bool`.
+The rule is about what a call passes, which is the one place a bare `true` loses its meaning.
+
 ### The entry point
 
 A program starts at `main`:

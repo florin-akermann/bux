@@ -21,8 +21,8 @@ type Payment =
     }
     | Failed(String)
 
-fn spoken(flag: Bool) -> String {
-    match flag {
+fn spoken(count: Int) -> String {
+    match count > 1 {
         true => "yes"
         false => "no"
     }

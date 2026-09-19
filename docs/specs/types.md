@@ -139,6 +139,7 @@ the value it was given.
 | unnamed arguments | `L0409` | `rename` gives two parameters the type `String`, so this call names its arguments |
 | misnamed argument | `L0410` | this argument is named `to`, and the parameter here is `from` |
 | no names to write | `L0411` | `Span` is a constructor, so it carries its values in order and names none |
+| flag parameter    | `L0412` | this parameter is a `Bool`, so a call of `open` passes `true` and says no more |
 
 `L0400` also says `` `Bool` cannot be added `` when `+` is given something that is neither `Int`
 nor `String`.
@@ -152,6 +153,10 @@ A variant that carries its values in order has no field to write against, so tha
 All three are reached after `L0401` and after the arguments have met the parameter types, because
 how many there are and what they are is each settled before which of them is which.
 `L0411` also says a name was written on a call of the prelude, which declares none to check.
+`L0412` is a parameter that is a bare `Bool`, which `docs/specs/arguments.md` states as well.
+It is raised where the parameter is written, because the declaration is what changes.
+It is reached after the body, because the type it reads is the one inference settled.
+A function whose parameters and result are all `Bool` is about `Bool`, and is the one carve-out.
 
 `/` and `%` give back `Option<Int>` rather than `Int`, which `docs/specs/arithmetic.md` states.
 `L0400` is what an `Option<Int>` met where an `Int` belongs is refused with, as anything else is.

@@ -102,6 +102,8 @@ pub(crate) enum TypeErrorKind {
     NamedConstructor(String),
     /// A call of a prelude function names its arguments, which this module cannot check.
     NamedPrelude(String),
+    /// A parameter is a bare `Bool`, so a call of it passes `true` and says no more.
+    FlagParameter(String),
 }
 
 impl TypeErrorKind {
@@ -124,6 +126,7 @@ impl TypeErrorKind {
             Self::Unnamed { .. } => Code::Unnamed,
             Self::Misnamed { .. } => Code::Misnamed,
             Self::NamedConstructor(_) | Self::NamedPrelude(_) => Code::Unnameable,
+            Self::FlagParameter(_) => Code::FlagParameter,
         }
     }
 
@@ -165,6 +168,9 @@ impl TypeErrorKind {
             }
             Self::NamedPrelude(_) => {
                 "only a call of a function this module declares names its arguments"
+            }
+            Self::FlagParameter(_) => {
+                "declare a two-variant type and take that instead, so the call says which of the two"
             }
         }
     }
@@ -230,6 +236,12 @@ impl fmt::Display for TypeErrorKind {
                 write!(
                     f,
                     "`{called}` comes from the prelude, which declares no parameter names to write"
+                )
+            }
+            Self::FlagParameter(function) => {
+                write!(
+                    f,
+                    "this parameter is a `Bool`, so a call of `{function}` passes `true` and says no more"
                 )
             }
         }

@@ -1,0 +1,9 @@
+// expect-error: L0412
+// `open(true)` says nothing, so a two-variant type takes the flag's place.
+fn main() -> String {
+    open("notes.txt", true)
+}
+
+fn open(path: String, read_only: Bool) -> String {
+    path
+}

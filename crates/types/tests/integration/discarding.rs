@@ -75,9 +75,10 @@ fn a_for_body_that_ends_in_unit_is_accepted() {
 
 #[test]
 fn a_discarded_if_is_refused_once_rather_than_once_per_branch() {
-    let branched = "    if ready {\n        save(1)\n    } else {\n        save(2)\n    }\n    ()";
+    let branched =
+        "    if count > 1 {\n        save(1)\n    } else {\n        save(2)\n    }\n    ()";
 
-    let error = refusal(&module("ready: Bool", NOTHING, branched));
+    let error = refusal(&module("count: Int", NOTHING, branched));
 
     assert_eq!(error.message(), LEFT_BEHIND);
 }

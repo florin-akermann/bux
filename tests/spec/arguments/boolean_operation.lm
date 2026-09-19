@@ -1,0 +1,18 @@
+// expect-run
+// A function whose parameters and result are all `Bool` is about `Bool`, so its operands stay.
+fn main() -> () {
+    if implies(first: true, second: true) && both(left: true, right: true) {
+        return ()
+    }
+    ()
+}
+
+/// Every parameter and the result is `Bool`, so these are operands rather than choices.
+fn implies(first: Bool, second: Bool) -> Bool {
+    !first || second
+}
+
+/// The carve-out is about the signature, so a repeated type still asks the call for names.
+fn both(left: Bool, right: Bool) -> Bool {
+    left && right
+}

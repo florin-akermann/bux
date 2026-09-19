@@ -106,6 +106,7 @@ Type inference raises these, in `crates/types/src/error.rs`:
 - `L0409` — a call passes its arguments in order where the declaration repeats a type.
 - `L0410` — an argument is named something other than the parameter it is passed for.
 - `L0411` — a call names the arguments of something that has no parameter names.
+- `L0412` — a parameter is a bare `Bool` outside a function that is about `Bool`.
 
 Exhaustiveness raises these, in `crates/exhaustiveness/src/error.rs`:
 

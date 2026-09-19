@@ -1,0 +1,17 @@
+// expect-run
+// The two-variant type the flag rule asks for, and the call that reads because of it.
+fn main() -> () {
+    _ = open("notes.txt", ReadOnly)
+    ()
+}
+
+fn open(path: String, mode: Mode) -> String {
+    match mode {
+        ReadOnly => path
+        ReadWrite => path
+    }
+}
+
+type Mode =
+    | ReadOnly
+    | ReadWrite

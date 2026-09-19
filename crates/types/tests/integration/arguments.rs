@@ -147,14 +147,14 @@ const NESTED: [&str; 8] = [
     "    rename(\"old\", \"new\") + \"\"",
     "    if true {\n        rename(\"old\", \"new\")\n    } else {\n        \"\"\n    }",
     "    for word in words {\n        _ = rename(word, \"new\")\n    }\n    \"\"",
-    "    match ready {\n        true => rename(\"old\", \"new\")\n        false => \"\"\n    }",
+    "    match count > 1 {\n        true => rename(\"old\", \"new\")\n        false => \"\"\n    }",
 ];
 
 #[test]
 fn a_call_is_held_to_the_rule_wherever_the_body_writes_it() {
     for body in NESTED {
         let source = format!(
-            "fn main(ready: Bool, words: List<String>) -> String {{\n{body}\n}}\n\n\
+            "fn main(count: Int, words: List<String>) -> String {{\n{body}\n}}\n\n\
              fn rename(from: String, to: String) -> String {{\n    from + to\n}}\n"
         );
 

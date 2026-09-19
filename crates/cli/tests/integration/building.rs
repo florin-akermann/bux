@@ -82,7 +82,7 @@ fn build_reports_a_file_it_cannot_read_without_saying_anything_about_a_program()
 }
 
 /// A module reaching every construct whose lowering the verifier has something to say about.
-const EVERYTHING: &str = "fn walked(counts: List<Int>) -> Int {\n    var total = 0\n    for count in counts {\n        total += identity(count)\n    }\n    total\n}\n\nfn joined(word: String) -> String {\n    identity(word) + \"!\"\n}\n\nfn compared(count: Int) -> Bool {\n    identity(count) < 2\n}\n\nfn negated(flag: Bool) -> Bool {\n    !identity(flag)\n}\n\nfn picked(flag: Bool) -> Int {\n    if identity(flag) {\n        1\n    } else {\n        2\n    }\n}\n\nfn identity<T>(value: T) -> T {\n    value\n}\n";
+const EVERYTHING: &str = "fn walked(counts: List<Int>) -> Int {\n    var total = 0\n    for count in counts {\n        total += identity(count)\n    }\n    total\n}\n\nfn joined(word: String) -> String {\n    identity(word) + \"!\"\n}\n\nfn compared(count: Int) -> Bool {\n    identity(count) < 2\n}\n\nfn negated(flag: Bool) -> Bool {\n    !identity(flag)\n}\n\nfn picked(count: Int) -> Int {\n    if identity(count > 1) {\n        1\n    } else {\n        2\n    }\n}\n\nfn identity<T>(value: T) -> T {\n    value\n}\n";
 
 #[test]
 fn every_class_build_writes_is_one_a_jvm_loads_and_verifies() {

@@ -103,12 +103,12 @@ fn a_newtype_is_the_type_it_declares_and_not_the_one_it_wraps() {
 
 #[test]
 fn an_if_with_an_else_is_the_type_both_of_its_branches_have() {
-    let source = "fn pick(first: Bool) -> Int {\n    if first {\n        1\n    } else {\n        2\n    }\n}\n";
+    let source = "fn pick(count: Int) -> Int {\n    if count > 1 {\n        1\n    } else {\n        2\n    }\n}\n";
 
     assert_eq!(
         inferred_type(
             source,
-            "if first {\n        1\n    } else {\n        2\n    }",
+            "if count > 1 {\n        1\n    } else {\n        2\n    }",
             1
         ),
         "Int"

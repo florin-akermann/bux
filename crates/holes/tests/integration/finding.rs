@@ -32,8 +32,8 @@ fn a_hole_takes_whatever_type_the_place_it_is_written_in_expects() {
 #[test]
 fn every_hole_is_found_in_the_order_it_is_written() {
     let source = concat!(
-        "fn go(flag: Bool) -> Int {\n",
-        "    if flag {\n        return todo(\"the first\")\n    }\n",
+        "fn go(count: Int) -> Int {\n",
+        "    if count > 1 {\n        return todo(\"the first\")\n    }\n",
         "    total := todo(\"the second\")\n",
         "    total + todo(\"the third\")\n}\n"
     );

@@ -92,8 +92,8 @@ fn a_match_on_a_record_type_is_covered_by_its_one_constructor() {
 #[test]
 fn a_match_on_a_bool_needs_both_of_its_values() {
     let source = concat!(
-        "fn describe(flag: Bool) -> String {\n",
-        "    match flag {\n        true => \"yes\"\n    }\n}\n"
+        "fn describe(count: Int) -> String {\n",
+        "    match count > 1 {\n        true => \"yes\"\n    }\n}\n"
     );
 
     assert_eq!(
@@ -105,8 +105,8 @@ fn a_match_on_a_bool_needs_both_of_its_values() {
 #[test]
 fn a_match_on_a_bool_that_writes_both_of_its_values_covers_it() {
     let source = concat!(
-        "fn describe(flag: Bool) -> String {\n",
-        "    match flag {\n        true => \"yes\"\n        false => \"no\"\n    }\n}\n"
+        "fn describe(count: Int) -> String {\n",
+        "    match count > 1 {\n        true => \"yes\"\n        false => \"no\"\n    }\n}\n"
     );
 
     covers_everything(source);
@@ -239,9 +239,9 @@ fn a_match_written_in_a_loop_is_checked_too() {
 #[test]
 fn the_first_match_that_leaves_a_value_uncovered_is_the_one_reported() {
     let source = concat!(
-        "fn describe(first: Bool, second: Bool) -> Int {\n",
-        "    earlier := match first {\n        true => 1\n    }\n",
-        "    later := match second {\n        false => 2\n    }\n",
+        "fn describe(first: Int, second: Int) -> Int {\n",
+        "    earlier := match first > 1 {\n        true => 1\n    }\n",
+        "    later := match second > 1 {\n        false => 2\n    }\n",
         "    earlier + later\n}\n"
     );
 
@@ -254,8 +254,8 @@ fn the_first_match_that_leaves_a_value_uncovered_is_the_one_reported() {
 #[test]
 fn a_refusal_reads_as_the_diagnostic_it_is() {
     let source = concat!(
-        "fn describe(flag: Bool) -> String {\n",
-        "    match flag {\n        true => \"yes\"\n    }\n}\n"
+        "fn describe(count: Int) -> String {\n",
+        "    match count > 1 {\n        true => \"yes\"\n    }\n}\n"
     );
 
     assert_eq!(
@@ -264,8 +264,8 @@ fn a_refusal_reads_as_the_diagnostic_it_is() {
             "error[L0500]: this `match` does not cover `false`\n",
             "  --> demo.lm:2:5\n",
             "\n",
-            "  2 |     match flag {\n",
-            "    |     ^^^^^^^^^^^^ this runs on to line 4\n",
+            "  2 |     match count > 1 {\n",
+            "    |     ^^^^^^^^^^^^^^^^^ this runs on to line 4\n",
             "\n",
             "help: every value has an arm, or a name that binds whatever the arms before it did not\n",
         )

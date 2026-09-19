@@ -102,6 +102,8 @@ catalogue! {
     Misnamed => "L0410",
     /// A call names the arguments of something that has no parameter names to write.
     Unnameable => "L0411",
+    /// A parameter is a bare `Bool`, so a call of it passes `true` and says no more.
+    FlagParameter => "L0412",
     /// A `match` leaves a value of the type it matches unanswered.
     NonExhaustiveMatch => "L0500",
     /// A `match` lists its arms in an order the type does not declare its variants in.

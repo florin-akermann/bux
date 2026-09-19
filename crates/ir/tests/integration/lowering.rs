@@ -29,12 +29,20 @@ fn a_function_is_reached_through_the_module_class_and_never_an_instance() {
 
 #[test]
 fn a_signature_says_what_each_lumen_type_is_carried_by() {
-    let source = "fn held(count: Int, active: Bool, name: String) -> Bool {\n    active\n}\n";
+    let source = "fn held(count: Int, name: String) -> Bool {\n    count > 1\n}\n\n\
+                  fn negated(flag: Bool) -> Bool {\n    !flag\n}\n";
 
     let lowered = common::lowered(source);
 
-    let held = common::method_of(common::class_of(&lowered, &ClassName::new("demo")), "held");
-    assert_eq!(held.descriptor.to_string(), "(JZLjava/lang/String;)Z");
+    let demo = common::class_of(&lowered, &ClassName::new("demo"));
+    assert_eq!(
+        common::method_of(demo, "held").descriptor.to_string(),
+        "(JLjava/lang/String;)Z"
+    );
+    assert_eq!(
+        common::method_of(demo, "negated").descriptor.to_string(),
+        "(Z)Z"
+    );
 }
 
 #[test]
@@ -347,7 +355,7 @@ const ERASED: &str = "\nfn identity<T>(value: T) -> T {\n    value\n}\n";
 #[test]
 fn a_condition_whose_type_was_erased_is_read_back_as_a_truth_value() {
     let source = format!(
-        "fn picked(flag: Bool) -> Int {{\n    if identity(flag) {{\n        1\n    }} else {{\n        2\n    }}\n}}\n{ERASED}"
+        "fn picked(count: Int) -> Int {{\n    if identity(count > 1) {{\n        1\n    }} else {{\n        2\n    }}\n}}\n{ERASED}"
     );
 
     let lowered = common::lowered(&source);

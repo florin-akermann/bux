@@ -78,8 +78,8 @@ fn a_literal_arm_is_placed_by_nothing_because_no_declaration_writes_its_values_d
 #[test]
 fn the_two_values_of_a_bool_are_written_either_way() {
     let source = concat!(
-        "fn spoken(flag: Bool) -> String {\n",
-        "    match flag {\n        true => \"yes\"\n        false => \"no\"\n    }\n}\n"
+        "fn spoken(count: Int) -> String {\n",
+        "    match count > 1 {\n        true => \"yes\"\n        false => \"no\"\n    }\n}\n"
     );
 
     covers_everything(source);

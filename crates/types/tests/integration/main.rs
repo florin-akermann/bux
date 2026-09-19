@@ -6,6 +6,7 @@ mod arguments;
 mod common;
 mod discarding;
 mod errors;
+mod flags;
 mod generics;
 mod inference;
 mod properties;

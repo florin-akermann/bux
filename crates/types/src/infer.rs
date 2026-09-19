@@ -1,6 +1,7 @@
 //! The walk: every expression of a module given the type it has.
 
 mod arguments;
+mod flags;
 mod pattern;
 mod record;
 mod settle;
@@ -100,6 +101,7 @@ impl Inference<'_> {
         self.settle_additions()?;
         self.settle_equalities()?;
         self.settle_discards()?;
+        self.settle_parameters(function)?;
         for gone in mem::take(&mut self.introduced) {
             self.environment.unbind(&gone);
         }
