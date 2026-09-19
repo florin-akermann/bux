@@ -1,2 +1,2 @@
-63..64 expected a function name, found `(`
+86..87 expected a function name, found `(`
 help: every function has a name; Lumen has no anonymous functions

@@ -1,2 +1,4 @@
-// expect-error: unexpected character `@`
-x := 1 @ 2
+// expect-error: L0102
+fn f() {
+    x := 1 @ 2
+}

@@ -1,3 +1,4 @@
+// expect-error: L0105
 fn ordered(a: Int, b: Int, c: Int) -> Bool {
     a < b < c
 }

@@ -126,11 +126,10 @@ nothing.
 A sibling `<name>.unformatted` file, where there is one, formats to the `.lm` file beside it.
 The format crate's integration tests walk that directory and name the failing example.
 
-Every `.lm` file under `tests/spec/` that parses is in canonical form, and one test asserts it
-of all of them.
+Every `.lm` file under `tests/spec/` is in canonical form unless it says which diagnostic refuses
+it, which `docs/specs/executable-examples.md` describes and the harness in `crates/cli` holds
+every example to.
 The language's own examples are then the largest evidence that the printer is right.
-A `.lm` file that does not parse is a compile-fail example, and canonical form says nothing about
-one.
 
 ## Properties
 

@@ -209,6 +209,8 @@ rather than one mutable AST that means different things at different stages.
 
 Compiler development should be heavily specification-driven.
 
+`docs/specs/executable-examples.md` says what an example file is and what it expects.
+
 Tests should cover:
 
 ```text

@@ -176,6 +176,7 @@ Seven failures are not about which token was found, and have their own words:
 A `<name>.ast` file holds the parse tree, one node per line, `<indent><node> <start>..<end>`.
 A `<name>.error` file holds `<start>..<end> <message>`, then a `help: <text>` line if there is one.
 A `.lm` file has exactly one of the two, and the parser crate's tests name the failing example.
+An example is a whole program held to `docs/specs/executable-examples.md`, not a fragment.
 
 ## Properties
 

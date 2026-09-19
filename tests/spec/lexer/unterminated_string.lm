@@ -1,2 +1,4 @@
-// expect-error: unterminated string
-name := "Alice
+// expect-error: L0101
+fn f() {
+    name := "Alice
+}
