@@ -100,7 +100,7 @@ fn an_option_is_written_the_way_the_prelude_declares_it() {
 
 #[test]
 fn two_arms_that_reach_inside_one_variant_are_in_order_with_each_other() {
-    let source = outcomes(&concat!(
+    let source = outcomes(concat!(
         "        Some(Ok(value)) => \"ok\"\n",
         "        Some(Err(problem)) => problem\n",
         "        None => \"nothing\"\n"
@@ -111,7 +111,7 @@ fn two_arms_that_reach_inside_one_variant_are_in_order_with_each_other() {
 
 #[test]
 fn two_arms_that_reach_inside_one_variant_out_of_order_are_refused() {
-    let source = outcomes(&concat!(
+    let source = outcomes(concat!(
         "        Some(Err(problem)) => problem\n",
         "        Some(Ok(value)) => \"ok\"\n",
         "        None => \"nothing\"\n"
@@ -125,7 +125,7 @@ fn two_arms_that_reach_inside_one_variant_out_of_order_are_refused() {
 
 #[test]
 fn a_refusal_from_inside_a_variant_points_at_the_whole_arm_that_is_out_of_place() {
-    let source = outcomes(&concat!(
+    let source = outcomes(concat!(
         "        Some(Err(problem)) => problem\n",
         "        Some(Ok(value)) => \"ok\"\n",
         "        None => \"nothing\"\n"
@@ -140,7 +140,7 @@ fn a_refusal_from_inside_a_variant_points_at_the_whole_arm_that_is_out_of_place(
 
 #[test]
 fn the_variant_an_arm_answers_for_places_it_before_what_it_reaches_for_does() {
-    let source = outcomes(&concat!(
+    let source = outcomes(concat!(
         "        None => \"nothing\"\n",
         "        Some(Ok(value)) => \"ok\"\n",
         "        Some(Err(problem)) => problem\n"
@@ -154,7 +154,7 @@ fn the_variant_an_arm_answers_for_places_it_before_what_it_reaches_for_does() {
 
 #[test]
 fn a_name_that_binds_inside_a_variant_stops_the_arm_being_placed_any_deeper() {
-    let source = outcomes(&concat!(
+    let source = outcomes(concat!(
         "        Some(Err(problem)) => problem\n",
         "        Some(inner) => \"something\"\n",
         "        None => \"nothing\"\n"

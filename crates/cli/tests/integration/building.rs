@@ -39,7 +39,11 @@ fn every_class_build_writes_begins_with_the_class_file_magic() {
         .beside("example.class")
         .expect("the module is written");
     assert_eq!(&bytes[..4], &[0xCA, 0xFE, 0xBA, 0xBE]);
-    assert_eq!(&bytes[4..8], &[0xFF, 0xFF, 0, 72], "JDK 28's version, marked preview");
+    assert_eq!(
+        &bytes[4..8],
+        &[0xFF, 0xFF, 0, 72],
+        "JDK 28's version, marked preview"
+    );
 }
 
 #[test]
