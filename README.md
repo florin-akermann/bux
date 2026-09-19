@@ -23,7 +23,8 @@ Agent and contributor guidelines are in `AGENTS.md`; the backlog is `TODOS.md`.
 
 - Rust stable, with `cargo-nextest` and `cargo-audit` installed
 - `mycs` on the `PATH` for the pre-commit sweep
-- A JDK, only to run compiled programs; every compiler phase is tested without one
+- The current JDK, only to run compiled programs; every compiler phase is tested without one
+- On macOS: `brew install openjdk`, then export `JAVA_HOME` as its `Contents/Home` directory
 
 ## Build
 
