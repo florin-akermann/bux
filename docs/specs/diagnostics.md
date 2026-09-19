@@ -107,6 +107,10 @@ Exhaustiveness raises these, in `crates/exhaustiveness/src/error.rs`:
 - `L0500` — a `match` leaves a value of the type it matches unanswered.
 - `L0501` — a `match` lists its arms in an order the type does not declare its variants in.
 
+`lumen build` raises this one, in `crates/holes/src/hole.rs`:
+
+- `L0600` — a hole is still in the program, and a hole has nothing to compile.
+
 ## `lumen explain`
 
 `lumen explain <code>` prints the long form of one code and exits `0`.

@@ -10,9 +10,11 @@ mod classes;
 mod equality;
 mod expr;
 mod pattern;
+mod prelude;
 mod shape;
 
 use lumen_ast::{Function, Item, Span};
+use lumen_holes::Whole;
 use lumen_types::{Type, TypedProgram};
 
 use crate::Lowered;
@@ -25,9 +27,13 @@ use crate::lower::shape::Shapes;
 /// What Lumen calls the function a program starts at, and what a JVM calls the method it does.
 const START: &str = "main";
 
-/// Lowers `typed` to the classes a JVM loads, as a module of the name `module`.
+/// Lowers `whole` to the classes a JVM loads, as a module of the name `module`.
+///
+/// A [`Whole`] is a module that holds no hole, which is the only kind there is anything to
+/// lower: `docs/specs/holes.md` states what a build does with the other kind.
 #[must_use]
-pub fn lower(typed: &TypedProgram, module: &str) -> Lowered {
+pub fn lower(whole: &Whole<'_>, module: &str) -> Lowered {
+    let typed = whole.typed();
     let lowering = Lowering {
         typed,
         shapes: Shapes::of(typed.resolved(), module),

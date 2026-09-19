@@ -3,6 +3,7 @@
 //! A behaviour is stated as the Lumen source it is about, run through every phase before this
 //! one, because what the lowering says is only ever about a module the compiler has accepted.
 
+use lumen_holes::Whole;
 use lumen_ir::{Body, Class, ClassName, Instruction, Lowered, Method, MethodRef, lower};
 
 /// The classes `source` becomes, as a module named `demo`.
@@ -10,7 +11,8 @@ pub fn lowered(source: &str) -> Lowered {
     let program = lumen_parser::parse(source).expect("the example parses");
     let resolved = lumen_resolver::resolve(program).expect("every name of the example resolves");
     let typed = lumen_types::check(resolved).expect("every expression of the example has a type");
-    lower(&typed, "demo")
+    let whole = Whole::of_module(&typed).expect("the example holds no hole");
+    lower(&whole, "demo")
 }
 
 /// The body of the function `name` of the module.

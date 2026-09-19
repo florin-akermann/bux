@@ -8,7 +8,7 @@
 A small, statically typed language for building practical software.
 It is built on Valhalla, the JVM's value classes, and every Lumen value is a value.
 Nothing has identity, and equality is by state, only where a type asks for it.
-No built-in type is special.
+No built-in type is special: a type a library declares can do everything `Int` can.
 It inherits neither Java's object model, Rust's ownership model, nor Haskell's complexity.
 
 The compiler is written in Rust and targets JVM bytecode, on JDK 28 or later.
@@ -197,9 +197,18 @@ without an explicit conversion.
 
 This makes domain concepts first-class types.
 
-`Int` is the one whole number type, and it is 64 bits wide.
+`Int` is the one whole number type the prelude supplies, and it is 64 bits wide.
 A language with several of them asks every author to choose a width that almost never matters.
-A program that needs another width says so with a type of its own, which is what a newtype is for.
+A program that needs another width declares one, and the type it declares is no lesser than `Int`.
+
+That last sentence is a promise the language is held to, and it has three parts.
+A declared type can be written as a literal, so `let x: Int32 = 1` is as plain as `let x = 1`.
+A declared type can own an operator, so `a + b` over two `Int32`s is what its library says it is.
+A declared type has `Eq` when it says so, and `Int` has `Eq` for the same reason and no other.
+Section 8 gives the mechanism for all three: an operator is a trait method, and so is a literal.
+`Int`, `Bool`, and `String` reach the operators through library instances, exactly as `Int32` does.
+A capability given to a prelude type and withheld from a declared type is a leak.
+`docs/principles.md` asks every feature whether it opens one.
 
 ---
 
@@ -297,8 +306,10 @@ An operator is a function with other syntax, and syntax buys no exemption from t
 So every operator that can fail gives back an `Option` or a `Result`, and never a bare answer.
 `/` and `%` are the ones version 0.1 has, and `17 / 0` is `None` rather than a crash.
 A divisor is never a hazard a reader has to spot.
-An operator with an answer for every input keeps its plain type, which is why `+` stays `Int`.
+An operator with an answer for every input keeps its plain type, which is why `Int + Int` is `Int`.
 Wrapping on overflow is a defined answer, and there is no whole number equal to `x / 0`.
+An operator is a trait method, and section 8 says so; the rule binds every instance alike.
+A type whose `/` has an answer for every divisor may give a plain result, and `Int`'s does not.
 
 Which of the two an operation reaches for is settled by what the failure has to say.
 `Option` is for the case that explains itself, where the absence is the whole story.
@@ -309,6 +320,12 @@ An error type there would carry nothing the caller is not already holding.
 
 There is no `unwrap` and no `expect`, in the prelude or anywhere else.
 `or(maybe, fallback)` is the total default, named for what it does rather than for what it is not.
+
+**An unfinished body says so in the language**, with `todo("a reason")` where a value belongs.
+A hole takes whatever type is expected of it, so the work around it is typed like finished work.
+`lumen check` accepts a hole and `lumen build` refuses every one it finds, naming each.
+Incompleteness is then greppable and gated, rather than filled in with plausible wrong code.
+`docs/specs/holes.md` states what the two commands do.
 
 ---
 
@@ -395,6 +412,22 @@ fn contains<T: Eq<T>>(
 `==` is `Eq`: a type is compared only when it has an instance, and a built-in type is no exception.
 Version 0.1 has no `derive`, so the library ships the three instances: `Int`, `Bool`, and `String`.
 `==` on a record or a variant is refused until its type derives `Eq`, which version 0.2 allows.
+
+Every operator is a trait method, and `==` is only the first to be written that way.
+`+` is `Add`, `-` is `Sub`, `*` is `Mul`, `/` is `Div`, `%` is `Rem`, and prefix `-` is `Neg`.
+`<`, `<=`, `>`, and `>=` are `Ord`, and `&&`, `||`, and `!` stay `Bool`'s alone: they short-circuit.
+An operator's type is its instance's type: `Div<Int>` gives `Option<Int>`, `Add<Int>` an `Int`.
+The library ships the instances for `Int` and `String`; a declared type writes its own the same way.
+A type without an instance has no operator, so `a + b` over two `UserId`s is refused, as it is now.
+Version 0.1 wires `Int` and `String` to the operators directly, because it has no typeclasses.
+That wiring is the degenerate case of this design, not a design of its own, and 0.2 replaces it.
+
+A literal is a trait method too, so a declared type can be written as plainly as `Int` can.
+A whole-number literal takes the type the context expects, provided that type has `IntegerLiteral`.
+A literal that does not fit its type is a compile error where it is written.
+It is never a wrapped value and never a runtime failure, because a literal is no exception.
+A literal whose type nothing settles is an `Int`, which is the one default the language keeps.
+The spec that lands the trait settles how an instance states what fits.
 
 Standard traits should include concepts such as:
 

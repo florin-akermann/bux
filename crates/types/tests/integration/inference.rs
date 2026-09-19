@@ -169,7 +169,7 @@ fn a_remainder_is_an_option_for_the_same_reason() {
 }
 
 #[test]
-fn or_gives_back_what_the_option_it_is_handed_holds() {
+fn a_call_of_or_gives_back_what_the_option_it_is_handed_holds() {
     let source = "fn share(total: Int, count: Int) -> Int {\n    or(total / count, 0)\n}\n";
 
     assert_eq!(inferred_type(source, "or(total / count, 0)", 1), "Int");

@@ -1,0 +1,5 @@
+// expect-error: L0400
+// A hole names its reason in words, so a whole number is not one.
+fn total() -> Int {
+    todo(7)
+}

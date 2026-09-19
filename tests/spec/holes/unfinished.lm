@@ -1,0 +1,13 @@
+// A hole is well typed, so `lumen check` accepts this file.
+// `lumen build` refuses it, which `crates/cli/tests/integration/building.rs` holds it to.
+fn total(users: List<User>) -> Int {
+    todo("count them once the walk is written")
+}
+
+fn named(user: User) -> String {
+    todo("read the name off the record")
+}
+
+type User = {
+    id: Int
+}

@@ -1,6 +1,6 @@
 [package]
-name = "lumen-jvm"
-description = "Writing class files: a lowered module as the bytes a JVM loads"
+name = "lumen-holes"
+description = "Holes: the unfinished bodies a build refuses and a check accepts"
 version.workspace = true
 edition.workspace = true
 
@@ -12,14 +12,14 @@ name = "integration"
 path = "tests/integration/main.rs"
 
 [dependencies]
-lumen-ir = { path = "../ir" }
+lumen-ast = { path = "../ast" }
+lumen-diagnostics = { path = "../diagnostics" }
+lumen-resolver = { path = "../resolver" }
+lumen-types = { path = "../types" }
 
 [dev-dependencies]
 hegeltest = "0.23" # approved: property-based testing, required by AGENTS.md for every phase
-lumen-holes = { path = "../holes" }
 lumen-parser = { path = "../parser" }
-lumen-resolver = { path = "../resolver" }
-lumen-types = { path = "../types" }
 
 [lints]
 workspace = true

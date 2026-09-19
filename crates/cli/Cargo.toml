@@ -16,6 +16,7 @@ path = "tests/integration/main.rs"
 lumen-diagnostics = { path = "../diagnostics" }
 lumen-exhaustiveness = { path = "../exhaustiveness" }
 lumen-format = { path = "../format" }
+lumen-holes = { path = "../holes" }
 lumen-ir = { path = "../ir" }
 lumen-jvm = { path = "../jvm" }
 lumen-parser = { path = "../parser" }

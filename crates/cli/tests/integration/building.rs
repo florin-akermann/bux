@@ -145,3 +145,73 @@ fn build_refuses_a_file_whose_name_is_not_one_a_class_may_have() {
     assert!(run.stderr.contains("my.app.lm"), "{}", run.stderr);
     assert!(example.beside("my.app.class").is_none());
 }
+
+/// `tests/spec/holes/unfinished.lm`, which the example harness holds `lumen check` to.
+const UNFINISHED: &str = concat!(
+    "fn total(users: List<User>) -> Int {\n    todo(\"count them once the walk is written\")\n}\n\n",
+    "fn named(user: User) -> String {\n    todo(\"read the name off the record\")\n}\n\n",
+    "type User = {\n    id: Int\n}\n"
+);
+
+#[test]
+fn build_refuses_a_module_that_holds_a_hole() {
+    let example = Example::new(UNFINISHED);
+
+    let run = lumen(&["build", example.path.to_str().expect("a UTF-8 path")]);
+
+    assert_eq!(run.code, 1, "{}", run.stdout);
+    assert!(
+        run.stderr
+            .starts_with("error[L0600]: this hole is not compiled\n"),
+        "{}",
+        run.stderr
+    );
+}
+
+#[test]
+fn build_names_every_hole_rather_than_the_first() {
+    let example = Example::new(UNFINISHED);
+
+    let run = lumen(&["build", example.path.to_str().expect("a UTF-8 path")]);
+
+    assert_eq!(
+        run.stderr.matches("error[L0600]").count(),
+        2,
+        "a build is how a reader learns what is left:\n{}",
+        run.stderr
+    );
+}
+
+#[test]
+fn a_blank_line_keeps_two_refused_holes_two_blocks() {
+    let example = Example::new(UNFINISHED);
+
+    let run = lumen(&["build", example.path.to_str().expect("a UTF-8 path")]);
+
+    assert!(
+        run.stderr.contains("holds none\n\nerror[L0600]"),
+        "one block ends and the next begins:\n{}",
+        run.stderr
+    );
+}
+
+#[test]
+fn build_writes_nothing_when_a_module_holds_a_hole() {
+    let example = Example::new(UNFINISHED);
+
+    lumen(&["build", example.path.to_str().expect("a UTF-8 path")]);
+
+    assert!(
+        example.beside("example.class").is_none(),
+        "a hole has nothing to run, so there is nothing to write"
+    );
+}
+
+#[test]
+fn check_accepts_the_very_module_build_refuses() {
+    let example = Example::new(UNFINISHED);
+
+    let run = lumen(&["check", example.path.to_str().expect("a UTF-8 path")]);
+
+    assert_eq!(run.code, 0, "{}", run.stderr);
+}

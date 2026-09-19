@@ -1,0 +1,5 @@
+// expect-error: L0401
+// A hole takes the one reason it is for, so writing none is an ordinary arity mismatch.
+fn total() -> Int {
+    todo()
+}

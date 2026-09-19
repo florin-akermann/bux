@@ -112,6 +112,7 @@ impl Environment {
             ),
         );
         environment.bind(Key::prelude("or"), or(&value));
+        environment.bind(Key::prelude("todo"), todo(&value));
         environment
     }
 
@@ -370,5 +371,16 @@ fn or(value: &TypeParameter) -> Scheme {
     Scheme::over(
         vec![Quantified::Parameter(value.clone())],
         Type::function(vec![Type::option(held.clone()), held.clone()], held),
+    )
+}
+
+/// `todo(reason)`: a hole, which is whatever type the place it is written in expects.
+///
+/// `docs/specs/holes.md` states what it is for. It gives back a type nothing constrains, so a
+/// hole unifies with whatever belongs where it is written.
+fn todo(value: &TypeParameter) -> Scheme {
+    Scheme::over(
+        vec![Quantified::Parameter(value.clone())],
+        Type::function(vec![Type::string()], Type::Parameter(value.clone())),
     )
 }

@@ -13,6 +13,7 @@ path = "tests/integration/main.rs"
 
 [dependencies]
 lumen-ast = { path = "../ast" }
+lumen-holes = { path = "../holes" }
 lumen-resolver = { path = "../resolver" }
 lumen-types = { path = "../types" }
 

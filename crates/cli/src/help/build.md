@@ -21,5 +21,10 @@ to run what is written, not to write it.
 A module is named after its file, so the file's name has to be one a class may have: a name
 holding `.`, `;`, `[` or `/` is refused rather than written out as a class no JVM would load.
 
+A hole is refused here. `todo("a reason")` is what an unfinished body is written as, and a hole
+has nothing to run, so there is nothing for a build to write. Every hole in the module is named
+rather than the first, because a build is how a reader learns what is left; nothing is written
+when a module holds one. `lumen check` is the command that accepts a hole.
+
 Exit codes: 0 when the class files are written, 1 when the compiler refuses the program, and 2
 when a file cannot be read or written, or is named something no class can be called.

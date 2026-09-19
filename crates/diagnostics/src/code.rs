@@ -96,6 +96,8 @@ catalogue! {
     NonExhaustiveMatch => "L0500",
     /// A `match` lists its arms in an order the type does not declare its variants in.
     ArmOutOfOrder => "L0501",
+    /// A hole is still in the program, and a hole has nothing to compile.
+    HoleBuilt => "L0600",
 }
 
 impl Code {

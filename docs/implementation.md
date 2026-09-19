@@ -183,6 +183,7 @@ crates/
     resolver/
     types/
     exhaustiveness/
+    holes/
     hir/
     ir/
     jvm/
@@ -340,6 +341,8 @@ Add:
 * typeclasses
 * traits/constraints
 * derived implementations
+* every operator a trait method, with the `Int` and `String` instances moved into the library
+* a whole-number literal typed by what its context expects, refused where it does not fit
 * collections
 * richer pattern matching
 * Java interop

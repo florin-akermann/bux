@@ -26,5 +26,9 @@ but lists its arms in an order the type does not declare its variants in is refu
 variant has exactly one place to be handled. `lumen explain` says more about any code that is
 printed.
 
+A hole is accepted. `todo("a reason")` stands where a value belongs and takes whatever type is
+expected there, so an unfinished body is still resolved, typed, and checked like finished work.
+`lumen build` is what refuses a hole, so this is the command to run while one is still there.
+
 Exit codes: 0 when the compiler has nothing to say, 1 when it refuses the program, and 2 when the
 file cannot be read.

@@ -13,6 +13,7 @@ use clap::{Parser, Subcommand};
 use lumen_diagnostics::{Code, Diagnostic, render};
 use lumen_exhaustiveness::check as exhaustive;
 use lumen_format::format;
+use lumen_holes::{Hole, Whole};
 use lumen_ir::{is_a_program, lower};
 use lumen_jvm::ClassFile;
 use lumen_parser::parse;
@@ -120,6 +121,10 @@ fn built(path: &Path) -> Result<Built, Outcome> {
         Ok(typed) => typed,
         Err(diagnostic) => return Err(refuse(&diagnostic, &source, path)),
     };
+    let whole = match Whole::of_module(&typed) {
+        Ok(whole) => whole,
+        Err(holes) => return Err(refuse_each(&holes, &source, path)),
+    };
     let Some(module) = module_of(path) else {
         eprintln!(
             "error: {}: a module is named by its file, and a class name holds none of {UNUSABLE_IN_A_NAME:?}",
@@ -127,7 +132,7 @@ fn built(path: &Path) -> Result<Built, Outcome> {
         );
         return Err(Outcome::Unusable);
     };
-    let lowered = lower(&typed, &module);
+    let lowered = lower(&whole, &module);
     match written(&lumen_jvm::write(&lowered), path) {
         Outcome::Done => Ok(Built {
             module,
@@ -284,6 +289,20 @@ fn rewrite(path: &Path, canonical: &str) -> Outcome {
             Outcome::Unusable
         }
     }
+}
+
+/// Refuses every hole rather than the first, because a build is how a reader learns what is left.
+///
+/// `docs/specs/holes.md` says why this is the one refusal that does not stop at the first, and
+/// the blank line between two blocks is what keeps them two blocks.
+fn refuse_each(holes: &[Hole], source: &str, path: &Path) -> Outcome {
+    for (written, hole) in holes.iter().enumerate() {
+        if written > 0 {
+            eprintln!();
+        }
+        refuse(&hole.diagnostic(), source, path);
+    }
+    Outcome::Refused
 }
 
 /// Reports why a file will not do, in the layout of `docs/specs/diagnostics.md`.
