@@ -19,6 +19,7 @@ This file is that anchor; consistency is the throughline, and the bar is Code He
 - Plain loops are the default idiom; higher-order functions are library, not a second paradigm.
 - **Non-goals** — never implement, suggest, or plan: ownership, borrowing, lifetimes, inheritance.
 - Likewise null, checked exceptions, macros, implicit runtime magic, or Java's type system.
+- **Concurrency is Go's**: spawn, channels, blocking calls. No async/await, no function colouring.
 - The JVM is the implementation target, not the semantic model; no JVM detail leaks into Lumen.
 - Version 0.1 is `docs/implementation.md` section 9; nothing from a later version lands earlier.
 - **Only the current JDK release is targeted.** No older class-file version, no compatibility matrix.

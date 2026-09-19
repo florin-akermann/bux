@@ -316,7 +316,6 @@ Do **not** implement initially:
 * concurrency
 * advanced Java interop
 * macros
-* async/await
 * advanced type-level programming
 
 Get the core type system correct first.

@@ -105,6 +105,7 @@ In particular, the language should initially avoid:
 * implicit runtime magic
 * excessive syntax
 * anonymous functions
+* async/await, or any other function colouring
 
 The guiding principle is:
 
@@ -552,7 +553,10 @@ This feature should come after the basic language and type system are working.
 
 ## 15. Concurrency
 
-Concurrency should be inspired by Go rather than Java's traditional threading APIs.
+Lumen adopts Go's concurrency model whole: spawned functions, channels, and blocking calls.
+**There is no `async`/`await` and no function colouring.**
+A function that blocks is an ordinary function, called like any other; there is one kind of function.
+The JVM's virtual threads make blocking cheap, so the language never needs a second kind.
 
 Conceptually:
 
