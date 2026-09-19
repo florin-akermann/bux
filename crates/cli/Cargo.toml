@@ -1,0 +1,15 @@
+[package]
+name = "lumen"
+description = "The Lumen compiler: Go's simplicity, Haskell's types, the JVM's runtime"
+version.workspace = true
+edition.workspace = true
+
+[[bin]]
+name = "lumen"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] } # approved: argument parsing, help and version rendering
+
+[lints]
+workspace = true

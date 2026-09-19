@@ -1,0 +1,9 @@
+[markdown]
+# One sentence per line, at most 100 characters; AGENTS.md states the rule and is capped at 150.
+sentence_max_len = 100
+governance_max_lines = 150
+
+[scan]
+default_skip = [
+    ".claude/**",
+]

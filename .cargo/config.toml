@@ -1,0 +1,5 @@
+# Deny warnings for every cargo invocation in this repo — development builds and the pre-commit
+# hook alike. One shared RUSTFLAGS value means both produce artifacts with the same fingerprint,
+# so the hook reuses whatever a normal `cargo build` already compiled instead of rebuilding.
+[build]
+rustflags = ["-D", "warnings"]

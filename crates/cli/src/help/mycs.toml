@@ -1,0 +1,9 @@
+# CLI help topics are terminal-formatted prose surfaced via include_str!: hard-wrapped at the
+# terminal width, several sentences to a line. The three brevity rules misfit that shape by design.
+# Every other rule still reads these files.
+[disable]
+categories = [
+    "Sentence Too Long",
+    "Sentence Wrapped",
+    "Multiple Sentences Per Line",
+]

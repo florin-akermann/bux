@@ -1,0 +1,15 @@
+/target
+CLAUDE.md
+
+# transient /code-review pre-commit gate file
+.review-passed
+
+# dev-team plugin exhaust: metrics, scratch memory, review reports. Disposable;
+# nothing in this repo reads it.
+.claude/metrics/
+.claude/memory/
+.claude/agent-memory/
+.dev-team-reports/
+
+# Python bytecode from `uv run` dev tooling
+__pycache__/

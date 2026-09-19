@@ -1,0 +1,15 @@
+# Dependency-advisory policy for the pre-commit gate (`cargo audit`).
+# The advisory database is read from the local cache (~/.cargo/advisory-db) and never fetched, so
+# the gate is deterministic and works offline. Populate the cache once with `cargo audit fetch`.
+[database]
+fetch = false
+stale = true
+
+[advisories]
+ignore = []
+
+[output]
+# Vulnerabilities block. Informational warnings (unmaintained, unsound, yanked) are surfaced but
+# do not block; add a class here (e.g. "unmaintained") to make it a hard failure.
+deny = []
+quiet = false

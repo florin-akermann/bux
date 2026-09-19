@@ -1,0 +1,8 @@
+[profile.default]
+test-threads = "num-cpus"
+
+# Every test has a wall of 10 s. A test that needs longer gets its own override, above this
+# catch-all, naming the test and the reason.
+[[profile.default.overrides]]
+filter = "all()"
+slow-timeout = { period = "10s", terminate-after = 1 }
