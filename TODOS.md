@@ -6,7 +6,7 @@
 
 ## Open
 
-## 🔴 Item 005: Executable-example harness
+## 🟡 Item 005: Executable-example harness
 **Depends on:** Item 004 — a compile-fail example asserts on rendered diagnostics.
 `tests/spec/<area>/*.lm` files are the language specification (`docs/implementation.md` section 7).
 A `// expect-error: <text>` header marks a compile-fail example; the rest must compile.
