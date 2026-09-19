@@ -2,4 +2,6 @@
 //!
 //! Every test file is a module declared here; shared helpers go in a `common` module.
 
+mod common;
+mod formatting;
 mod version;

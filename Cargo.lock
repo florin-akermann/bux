@@ -413,6 +413,7 @@ name = "lumen"
 version = "0.1.0"
 dependencies = [
  "clap",
+ "lumen-format",
 ]
 
 [[package]]
@@ -420,6 +421,16 @@ name = "lumen-ast"
 version = "0.1.0"
 dependencies = [
  "lumen-lexer",
+]
+
+[[package]]
+name = "lumen-format"
+version = "0.1.0"
+dependencies = [
+ "hegeltest",
+ "lumen-ast",
+ "lumen-lexer",
+ "lumen-parser",
 ]
 
 [[package]]

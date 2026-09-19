@@ -13,7 +13,7 @@ pub struct Expr {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ExprKind {
     Name(Name),
-    /// A decoded integer literal; `-7` is `Unary` applied to `7`.
+    /// A decoded integer literal; a `-` before the digits belongs to it, so `-7` is one of these.
     Integer(i64),
     /// A string literal with its escapes decoded.
     String(String),

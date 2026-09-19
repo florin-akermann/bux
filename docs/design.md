@@ -503,9 +503,14 @@ The compiler reports the first deviation as an error, in the same voice as any o
 `lumen fmt` rewrites a file into canonical form; `lumen build` refuses a file that is not in it.
 
 The formatter is therefore part of the compiler front end, and the pretty-printer is its definition.
-Compilation requires `format(parse(source)) == source`, byte for byte.
+Compilation requires `format(source) == source`, byte for byte.
+
+The printer reads the source and not the tree alone, because comments are not part of the tree.
+Formatting preserves the tree all the same: `parse(format(source))` equals `parse(source)`.
 
 The formatter has no options.
+`docs/specs/formatting.md` states the canonical form it writes, construct by construct.
+The snippets in this document illustrate the shape of each feature, not its canonical spelling.
 
 ---
 
@@ -555,7 +560,8 @@ This feature should come after the basic language and type system are working.
 
 Lumen adopts Go's concurrency model whole: spawned functions, channels, and blocking calls.
 **There is no `async`/`await` and no function colouring.**
-A function that blocks is an ordinary function, called like any other; there is one kind of function.
+A function that blocks is an ordinary function, called like any other.
+There is one kind of function, and no caller ever has to ask which kind it holds.
 The JVM's virtual threads make blocking cheap, so the language never needs a second kind.
 
 Conceptually:

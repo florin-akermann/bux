@@ -107,10 +107,10 @@ fn unary(cursor: &mut Cursor, records: RecordLiterals) -> Result<Expr, ParseErro
     })
 }
 
-/// A `-` straight before a number spells one number, so the smallest whole number can be written.
+/// A `-` before a number is part of that number, so the smallest whole number can be written.
 ///
-/// "Straight before" is meant literally: `-5` is one literal, and `- 5` is the prefix operator
-/// applied to `5`, so the tree always says what the source says.
+/// Whatever blanks sit between the two, `- 5` and `-5` are the same number, which is what lets
+/// the formatter write the one canonical spelling of it without changing what the source says.
 fn negated_number(
     cursor: &mut Cursor,
     operator: UnaryOperator,
@@ -119,14 +119,9 @@ fn negated_number(
     if operator != UnaryOperator::Negate {
         return Ok(None);
     }
-    let minus_end = cursor.previous_end();
-    let adjacent = cursor
-        .peek()
-        .filter(|token| token.kind == TokenKind::Integer && token.span.start() == minus_end);
-    let Some(token) = adjacent else {
+    let Some(token) = cursor.eat(TokenKind::Integer) else {
         return Ok(None);
     };
-    cursor.advance();
     let negated = format!("-{}", token.span.text(cursor.source()));
     decode_integer(&negated, cursor.span_since(start)).map(Some)
 }

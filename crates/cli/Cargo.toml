@@ -8,7 +8,12 @@ edition.workspace = true
 name = "lumen"
 path = "src/main.rs"
 
+[[test]]
+name = "integration"
+path = "tests/integration/main.rs"
+
 [dependencies]
+lumen-format = { path = "../format" }
 clap = { version = "4", features = ["derive"] } # approved: argument parsing, help and version rendering
 
 [lints]

@@ -17,14 +17,9 @@ type User = {
 
 fn describe(payment: Payment) -> String {
     match payment {
-        Pending =>
-            "Waiting"
-
-        Authorized { authorization_id } =>
-            "Authorized: " + authorization_id
-
-        Failed(reason) =>
-            "Failed: \"" + reason + "\""
+        Pending => "Waiting"
+        Authorized { authorization_id } => "Authorized: " + authorization_id
+        Failed(reason) => "Failed: \"" + reason + "\""
     }
 }
 

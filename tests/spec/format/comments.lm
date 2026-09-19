@@ -1,0 +1,15 @@
+// What this file is for.
+import io
+
+fn f() {
+    // start at nothing
+    total := 0
+    // around again
+    for {
+        break
+        // nothing more
+    }
+    total
+}
+
+// that is all

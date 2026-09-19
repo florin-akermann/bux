@@ -91,7 +91,7 @@ and            := comparison { "&&" comparison }
 comparison     := sum [ ( "==" | "!=" | "<" | "<=" | ">" | ">=" ) sum ]
 sum            := product { ( "+" | "-" ) product }
 product        := unary { ( "*" | "/" | "%" ) unary }
-unary          := [ "!" | "-" ] postfix
+unary          := [ "!" | "-" ] unary | postfix
 postfix        := primary { "(" [ arguments ] ")" | "." Name | "?" }
 arguments      := expression { "," expression }
 primary        := Name [ record_literal ] | Integer | String | "true" | "false"
@@ -127,10 +127,11 @@ Writing one there needs parentheses: `if (user { active: true }).active { … }`
 The lexer hands over the text of a literal; the parser decodes it.
 
 An integer literal decodes to a signed 64-bit value, and one too large to fit is an error.
-A `-` straight before the digits is part of the number, so the smallest whole number can be
-written; a `-` before anything else, a blank included, is the prefix operator.
-`-5` is one literal and `- 5` is a negated `5`, so the tree always says what the source says.
-A postfix operator then applies to the literal: `-5.abs()` reads the field of `-5`.
+A `-` before a number is part of that number, so the smallest whole number can be written; a `-`
+before anything else is the prefix operator.
+Blanks make no difference: `- 5` and `-5` are the same number, which is what lets the formatter
+write the one canonical spelling of it without changing what the source says.
+A postfix operator applies to the literal, so `-5.abs()` reads the field of `-5`.
 A leading zero decodes fine and is not canonical form, so Item 003's gate is what rejects it.
 
 A string literal decodes its escapes: `\"`, `\\`, `\n`, `\t`, and `\r`.

@@ -1,0 +1,26 @@
+import   io
+import files
+type Payment = | Pending | Authorized { id: String } | Failed(String)
+type User = { id:UserId
+active:Bool }
+fn describe(payment:Payment)->String{
+
+    match payment{
+        Pending =>
+            "Waiting"
+
+        Authorized{id} => "Authorized: "+id
+        Failed(reason)=>reason
+    }
+
+}
+fn total(users:List<User>,limit:Int)->Int{
+var seen=0
+for user in users{
+if !user.active||seen>=limit{continue}else{seen+=1}
+}
+if (user { active: true }).active {
+seen = (seen + 1) * 2
+}
+seen
+}
