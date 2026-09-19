@@ -11,6 +11,7 @@ use crate::common::formatted;
 #[test]
 fn every_unformatted_example_formats_to_the_file_beside_it() {
     let directory = spec_directory().join("format");
+    let mut checked = 0;
     for path in read_dir_sorted(&directory) {
         if path.extension().is_none_or(|kind| kind != "unformatted") {
             continue;
@@ -18,7 +19,9 @@ fn every_unformatted_example_formats_to_the_file_beside_it() {
         let source = read_to_string(&path).expect("an example is readable");
         let canonical = read_to_string(path.with_extension("lm")).expect("a sibling `.lm`");
         assert_eq!(formatted(&source), canonical, "{}", path.display());
+        checked += 1;
     }
+    assert!(checked > 0, "tests/spec/format holds at least one example");
 }
 
 /// `tests/spec/`, reached from this crate.
