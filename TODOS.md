@@ -85,17 +85,6 @@ A public name is a word rather than an initial, and a `Bool` function reads as a
 [019][c] - The predicate-prefix rule, test-first, over functions whose return type is `Bool`.
 [019][d] - Executable examples under `tests/spec/format/`.
 
-## 🟢 Item 021: `example/` holds a runnable program
-A newcomer's first Lumen program lives at `example/`, and `lumen run example/main.lm` runs it.
-The tree holds spec files and compiler tests; none of them is a program somebody would write.
-This one is everyday Lumen: a record, an ADT, a `match`, and a `for` loop, read in one screen.
-There is no printing yet, so the program is observed by ending normally rather than by output.
-A test runs it with the suite, so the one program the README promises can never rot.
-[021][a] - `docs/specs/example-program.md` states what the directory holds and what running it does.
-[021][b] - `example/main.lm` itself, in canonical form and held by `lumen check` like any source.
-[021][c] - An integration test runs it through the CLI, skipped with a named reason when no JDK.
-[021][d] - README names the one command that runs it; class files beside it are ignored by git.
-
 ## 🔴 Item 025: Generics are specialized, never erased
 `docs/specs/codegen.md` erases a type parameter to `java.lang.Object`, boxing an `Int` across it.
 That is the one place a program can tell `Int` from a declared type, and the one place it boxes.
