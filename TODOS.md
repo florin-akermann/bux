@@ -6,13 +6,6 @@
 
 ## Open
 
-## 🟢 Item 008: Exhaustiveness checking
-**Depends on:** Item 007 — patterns are checked against their inferred types.
-An `exhaustiveness` crate rejects a non-exhaustive `match` and names the missing patterns.
-[008][a] - Spec first in `docs/specs/exhaustiveness.md`: the algorithm and the error text.
-[008][b] - The usefulness algorithm, test-first, over ADTs, records, and literals.
-[008][c] - Executable examples under `tests/spec/exhaustiveness/`.
-
 ## 🔴 Item 009: Lowering and JVM bytecode emission
 **Depends on:** Item 008 — only checked programs are lowered.
 `ir` and `jvm` crates lower the typed AST to a JVM IR and write class files in plain Rust.
