@@ -15,7 +15,7 @@ The examples run with the test suite, so a signature never drifts from the evide
 [015][c] - `lumen test` runs them; a failing example names the function it documents.
 [015][d] - Executable examples: a public function without one fails to compile.
 
-## 🔴 Item 016: Named arguments where a signature repeats a type
+## 🟡 Item 016: Named arguments where a signature repeats a type
 **Depends on:** Item 007 — the rule is checked once parameter types are known.
 A structural smell a type system can make unrepresentable belongs in the language, not in a linter.
 mycs reports a swappable pair of arguments after the fact; Lumen refuses the call instead.
