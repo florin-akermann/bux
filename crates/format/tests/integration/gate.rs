@@ -3,7 +3,7 @@
 //! Everything it refuses goes out as a diagnostic, so these tests read as the text the author
 //! sees. `docs/specs/diagnostics.md` states that layout.
 
-use lumen_diagnostics::render;
+use lumen_diagnostics::{Fix, render};
 use lumen_format::{CheckError, check};
 
 /// The diagnostic `check` refuses `source` with, rendered as the author sees it.
@@ -148,4 +148,28 @@ fn a_file_whose_imports_are_first_and_sorted_passes() {
         check("import files\n\nimport io\n\nfn f() -> Int {\n    1\n}\n"),
         Ok(())
     );
+}
+
+#[test]
+fn the_edit_answers_canonical_form_and_leaves_the_order_to_the_author() {
+    let written = "fn f() -> Int {\n     1\n}\n\nimport io\n";
+    let Err(error @ CheckError::NotCanonical { .. }) = check(written) else {
+        panic!("{written:?} is not in canonical form")
+    };
+
+    let fixed = edit_of(&error).applied_to(written);
+
+    assert!(
+        matches!(check(&fixed), Err(CheckError::OutOfOrder(_))),
+        "{fixed:?}"
+    );
+}
+
+/// The edit `error` carries, which canonical form is the one refusal to have.
+fn edit_of(error: &CheckError) -> Fix {
+    error
+        .diagnostic()
+        .fix()
+        .expect("canonical form carries the edit that ends the departure")
+        .clone()
 }

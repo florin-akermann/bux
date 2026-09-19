@@ -2,7 +2,7 @@
 
 use hegel::TestCase;
 use hegel::generators as gs;
-use lumen_format::format;
+use lumen_format::{CheckError, check, format};
 
 use crate::common::tree;
 
@@ -74,6 +74,48 @@ fn every_comment_survives_in_source_order(tc: TestCase) {
     let canonical = format(&source).expect("a generated program parses");
     assert_eq!(comment_lines(&canonical), comment_lines(&source));
 }
+
+#[hegel::test]
+fn applying_the_fix_of_a_file_that_departs_from_canonical_form_makes_it_canonical(tc: TestCase) {
+    let written = spelled_as_a_person_might(&tc);
+    let Err(error @ CheckError::NotCanonical { .. }) = check(&written) else {
+        panic!("{written:?} is spelled wrongly somewhere, so canonical form refuses it")
+    };
+    let diagnostic = error.diagnostic();
+    let fix = diagnostic
+        .fix()
+        .expect("a file that departs from canonical form carries the edit that ends the departure");
+
+    let fixed = fix.applied_to(&written);
+
+    assert_eq!(format(&fixed).as_deref(), Ok(fixed.as_str()), "{written:?}");
+}
+
+/// A generated program written the way a person writes one, which is never canonical form.
+///
+/// Blank lines and indentation are what a person gets wrong, so they are what the generator gets
+/// wrong, at any line break and not only the first: a run of blank lines deep in a file is the
+/// case one edit at a time would not answer. One break is always spelled wrongly, so the program
+/// that comes back always departs from canonical form and the property is never vacuous.
+fn spelled_as_a_person_might(tc: &TestCase) -> String {
+    let program = program(tc);
+    let lines: Vec<&str> = program.split('\n').collect();
+    let breaks: Vec<usize> = (1..lines.len()).collect();
+    let always_wrong = tc.draw(gs::sampled_from(&breaks));
+    let mut written = String::with_capacity(program.len());
+    for (index, line) in lines.iter().enumerate() {
+        if index == always_wrong {
+            written.push_str(tc.draw(gs::sampled_from(&SPACING[1..])));
+        } else if index > 0 {
+            written.push_str(tc.draw(gs::sampled_from(&SPACING)));
+        }
+        written.push_str(line);
+    }
+    written
+}
+
+/// What a person writes where canonical form writes one line break, the first being the right one.
+const SPACING: [&str; 6] = ["\n", "\n\n", "\n\n\n", "\n   \n", "  \n", "\n\t"];
 
 /// The comment lines of a text, in order and without their indentation.
 fn comment_lines(text: &str) -> Vec<&str> {

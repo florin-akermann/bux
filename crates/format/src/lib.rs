@@ -22,7 +22,7 @@ mod type_ref;
 use std::fmt;
 
 use lumen_ast::TypeDeclaration;
-use lumen_diagnostics::{Code, Diagnostic};
+use lumen_diagnostics::{Code, Diagnostic, Fix};
 use lumen_lexer::Span;
 use lumen_parser::{ParseError, parse};
 
@@ -41,9 +41,10 @@ pub fn check(source: &str) -> Result<(), CheckError> {
     item::program(&mut printer, &program, source.len());
     let canonical = printer.finish();
     if canonical != source {
-        return Err(CheckError::NotCanonical(first_deviation(
-            source, &canonical,
-        )));
+        return Err(CheckError::NotCanonical {
+            deviation: first_deviation(source, &canonical),
+            fix: Fix::new(Span::new(0, source.len()), canonical),
+        });
     }
     order::out_of_order(&program).map_or(Ok(()), |out| Err(CheckError::OutOfOrder(out)))
 }
@@ -75,7 +76,12 @@ pub fn type_declaration(declared: &TypeDeclaration) -> String {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum CheckError {
     Parse(ParseError),
-    NotCanonical(Deviation),
+    NotCanonical {
+        /// Where the file first departs from canonical form, which is what the reader is shown.
+        deviation: Deviation,
+        /// The edit that answers it: the canonical text, in place of the whole file.
+        fix: Fix,
+    },
     /// An import is written somewhere canonical form does not put it.
     OutOfOrder(OutOfOrder),
 }
@@ -86,12 +92,13 @@ impl CheckError {
     pub fn diagnostic(&self) -> Diagnostic {
         match self {
             Self::Parse(error) => error.diagnostic(),
-            Self::NotCanonical(deviation) => Diagnostic::new(
+            Self::NotCanonical { deviation, fix } => Diagnostic::new(
                 Code::NotCanonical,
                 deviation.to_string(),
                 deviation.span(),
                 Some(deviation.help()),
-            ),
+            )
+            .fixed_by(fix.clone()),
             Self::OutOfOrder(out) => Diagnostic::new(
                 Code::ImportOutOfOrder,
                 out.to_string(),
@@ -106,7 +113,7 @@ impl fmt::Display for CheckError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Parse(error) => write!(f, "{}", error.message()),
-            Self::NotCanonical(deviation) => write!(f, "{deviation}"),
+            Self::NotCanonical { deviation, .. } => write!(f, "{deviation}"),
             Self::OutOfOrder(out) => write!(f, "{out}"),
         }
     }

@@ -30,5 +30,20 @@ A hole is accepted. `todo("a reason")` stands where a value belongs and takes wh
 expected there, so an unfinished body is still resolved, typed, and checked like finished work.
 `lumen build` is what refuses a hole, so this is the command to run while one is still there.
 
+`--json` writes the refusal as data rather than as a page to read. One diagnostic is one JSON
+object on one line: the file, the code, the message, and the span as byte offsets, with the
+advice and the edit where there is either. It goes to standard output, because with the flag the
+diagnostic is what was asked for, and standard error stays empty so a run can be piped straight
+into a tool. A file the compiler accepts writes nothing at all, and a file that cannot be read at
+all is said on standard error and exits 2, with the flag exactly as without it.
+
+Canonical form is the one refusal that carries an edit, because it is the one whose answer the
+compiler already knows. That edit is the whole file, and it is exactly the text `lumen fmt`
+writes, so a tool applies the compiler's own repair rather than reformatting by hand. Where a
+declaration belongs, what a name should have been, and which variant a `match` is missing are all
+the author's to decide, so those carry advice and no edit. Applying the edit answers the refusal it
+came with and not every refusal the file holds: a file whose imports are also out of order is told
+about canonical form first, and checking the repaired file then reports that.
+
 Exit codes: 0 when the compiler has nothing to say, 1 when it refuses the program, and 2 when the
 file cannot be read.

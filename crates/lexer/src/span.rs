@@ -24,6 +24,12 @@ impl Span {
         self.start
     }
 
+    /// How many bytes the span covers, which is what a tool reading it as data is given.
+    #[must_use]
+    pub const fn bytes(self) -> usize {
+        self.len
+    }
+
     /// The source text the span names.
     #[must_use]
     pub fn text(self, source: &str) -> &str {

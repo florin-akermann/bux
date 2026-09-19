@@ -10,7 +10,7 @@ use std::path::{Path, PathBuf};
 use std::process::exit;
 
 use clap::{Parser, Subcommand};
-use lumen_diagnostics::{Code, Diagnostic, render};
+use lumen_diagnostics::{Code, Diagnostic, json, render};
 use lumen_exhaustiveness::check as exhaustive;
 use lumen_format::format;
 use lumen_holes::{Hole, Whole};
@@ -35,7 +35,12 @@ enum Command {
     Fmt { file: PathBuf },
     /// Report the first thing about a source file the compiler will not have
     #[command(long_about = include_str!("help/check.md"))]
-    Check { file: PathBuf },
+    Check {
+        file: PathBuf,
+        /// Write the refusal as one line of JSON on standard output, edit included
+        #[arg(long)]
+        json: bool,
+    },
     /// Compile a source file to the class files a JVM loads
     #[command(long_about = include_str!("help/build.md"))]
     Build { file: PathBuf },
@@ -58,7 +63,7 @@ fn main() {
 fn run(command: &Command) -> Outcome {
     match command {
         Command::Fmt { file } => fmt(file),
-        Command::Check { file } => check(file),
+        Command::Check { file, json } => check(file, *json),
         Command::Build { file } => build(file),
         Command::Run { file } => started(file),
         Command::Api { file } => api(file),
@@ -79,14 +84,24 @@ fn fmt(path: &Path) -> Outcome {
 }
 
 /// Reports the first thing about `path` the compiler will not have.
-fn check(path: &Path) -> Outcome {
+///
+/// `as_data` asks for the refusal as JSON rather than as a page to read, which
+/// `docs/specs/diagnostics.md` states field for field.
+fn check(path: &Path, as_data: bool) -> Outcome {
     let Some(source) = source_of(path) else {
         return Outcome::Unusable;
     };
     match accepted(&source) {
         Ok(_) => Outcome::Done,
+        Err(diagnostic) if as_data => written_as_data(&diagnostic, path),
         Err(diagnostic) => refuse(&diagnostic, &source, path),
     }
+}
+
+/// Writes the refusal to standard output as data, because with `--json` that is what was asked for.
+fn written_as_data(diagnostic: &Diagnostic, path: &Path) -> Outcome {
+    print!("{}", json(diagnostic, &path.display().to_string()));
+    Outcome::Refused
 }
 
 /// Prints every name `path` declares at the top level, with the type it has.

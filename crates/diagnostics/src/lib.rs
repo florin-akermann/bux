@@ -8,11 +8,15 @@
 //! No diagnostic mentions the JVM, a class file, or a stack frame.
 
 mod code;
+mod fix;
+mod json;
 mod render;
 
 use lumen_lexer::Span;
 
 pub use crate::code::{CODES, Code};
+pub use crate::fix::Fix;
+pub use crate::json::json;
 pub use crate::render::render;
 
 /// One thing the compiler refuses, in the words the reader sees.
@@ -22,6 +26,9 @@ pub struct Diagnostic {
     message: String,
     span: Span,
     help: Option<String>,
+    /// The edit that answers it, where the compiler knows one; `docs/specs/diagnostics.md` says
+    /// which refusals have one and why the rest do not.
+    fix: Option<Fix>,
 }
 
 impl Diagnostic {
@@ -33,6 +40,22 @@ impl Diagnostic {
             message,
             span,
             help,
+            fix: None,
         }
+    }
+
+    /// The same diagnostic, carrying the edit that answers it.
+    #[must_use]
+    pub fn fixed_by(self, fix: Fix) -> Self {
+        Self {
+            fix: Some(fix),
+            ..self
+        }
+    }
+
+    /// The edit that answers it, which most diagnostics do not have.
+    #[must_use]
+    pub const fn fix(&self) -> Option<&Fix> {
+        self.fix.as_ref()
     }
 }

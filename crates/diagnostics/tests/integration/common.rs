@@ -13,11 +13,15 @@ pub fn rendered(source: &str, about: &str, help: Option<&str>) -> String {
     let start = source
         .find(about)
         .expect("the source says what it is about");
-    let diagnostic = Diagnostic::new(
+    render(&chained(Span::new(start, about.len()), help), source, FILE)
+}
+
+/// The one diagnostic these tests are written about, pointing at `span`.
+pub fn chained(span: Span, help: Option<&str>) -> Diagnostic {
+    Diagnostic::new(
         Code::ChainedComparison,
         "comparisons do not chain".to_owned(),
-        Span::new(start, about.len()),
+        span,
         help.map(str::to_owned),
-    );
-    render(&diagnostic, source, FILE)
+    )
 }

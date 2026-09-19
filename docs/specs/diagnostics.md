@@ -111,6 +111,61 @@ Exhaustiveness raises these, in `crates/exhaustiveness/src/error.rs`:
 
 - `L0600` — a hole is still in the program, and a hole has nothing to compile.
 
+## As data
+
+`lumen check --json <file>` writes the refusal as data rather than as a page to read.
+
+A tool that wants to apply the compiler's own edit should not have to read the rendered form back.
+The rendered form is written for a person, and rewording it is free; the data form is written for
+a program, and every field of it is named.
+
+One diagnostic is one JSON object on one line, and the line ends with a newline.
+`lumen check` stops at the first refusal, so there is at most one line.
+A file the compiler accepts is nothing at all: no output, and the exit code says it went well.
+
+```text
+{"file":"demo.lm","code":"L0200","message":"this line is not in canonical form","span":{"start":9,"len":10},"help":"canonical form writes `    a < b`","fix":{"start":0,"len":22,"text":"fn f() {\n    a < b\n}\n"}}
+```
+
+`file` is the path as it was given on the command line.
+`code` is the code, written the way `lumen explain` takes it.
+`message` is the same one line the rendered form opens with.
+`span` is where in the file the diagnostic points, as byte offsets: `start` and `len`.
+A byte offset is what an editor and a language server both work in, and a line and a column are
+both worked out from it, so the data form carries the one and not the other.
+
+`help` is the advice, and it is left out when there is none rather than written as `null`.
+`fix` is left out the same way, and it is there only where the compiler knows the edit to make.
+
+The data form goes to standard output, because with `--json` the diagnostic is what was asked for.
+Standard error stays empty, so a run can be piped straight into a tool.
+That is about refusals, which are the only thing the data form is for.
+A file that cannot be read at all is not a diagnostic about a program: it is said on standard
+error and exits `2`, with the flag exactly as without it.
+
+## The edit
+
+`fix` is an edit: replace the `len` bytes at `start` with `text`.
+
+Applying it is a byte splice and nothing more, so a tool needs no knowledge of the language.
+An edit need not cover the bytes `span` covers: `span` is where the reader is pointed, and `fix`
+is what answers the refusal, which is not always the same place.
+
+Canonical form is the one thing the compiler carries an edit for, because it is the one refusal
+whose answer the compiler already knows: `lumen fmt` writes exactly that text.
+Where a declaration belongs, what a name should have been, and which variant a `match` is missing
+are all the author's to decide, so those carry a `help` and no `fix`.
+
+That edit is the whole file, and it is what `lumen fmt` would write.
+One line at a time would not do: a file with a line too many has every line after it disagreeing,
+and rewriting one of them where it stands leaves text that is no longer a program.
+One edit that replaces the file always lands, and applying it is `lumen fmt` by another route.
+
+Applying the edit answers the refusal it came with, not every refusal the file holds.
+A file whose imports are also out of order is told about canonical form first, because the text is
+held to canonical form before the order is looked at; applying the edit and checking again then
+reports `L0201`, which is the author's to answer and carries no edit of its own.
+
 ## `lumen explain`
 
 `lumen explain <code>` prints the long form of one code and exits `0`.
@@ -134,6 +189,9 @@ These hold and are checked with property-based tests:
 
 1. A rendering names a line and a column that lie inside the source.
 2. A rendering opens with its code and ends with a newline, for any span at all.
+3. A data form is one line, whatever text the diagnostic holds.
+4. Text a data form writes reads back as the text it was given.
+5. Applying the fix of a file that departs from canonical form makes it its own canonical text.
 
 A code without an explanation, and two codes written the same way, are unwriteable rather than
 checked.

@@ -4,5 +4,6 @@
 
 mod catalogue;
 mod common;
+mod data;
 mod properties;
 mod rendering;
