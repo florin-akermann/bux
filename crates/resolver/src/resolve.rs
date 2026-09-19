@@ -249,7 +249,7 @@ impl Resolver {
             }
             ExprKind::Call { callee, arguments } => {
                 self.written(callee, Position::Callee)?;
-                self.each(arguments)
+                self.each(&arguments.values())
             }
             ExprKind::Field { receiver, .. } => self.written(receiver, Position::Receiver),
             ExprKind::Try(inner) => self.expr(inner),
@@ -305,7 +305,7 @@ impl Resolver {
         }
     }
 
-    fn each(&mut self, exprs: &[Expr]) -> Resolved {
+    fn each(&mut self, exprs: &[&Expr]) -> Resolved {
         for expr in exprs {
             self.expr(expr)?;
         }

@@ -95,6 +95,8 @@ product        := unary { ( "*" | "/" | "%" ) unary }
 unary          := [ "!" | "-" ] unary | postfix
 postfix        := primary { "(" [ arguments ] ")" | "." Name | "?" }
 arguments      := expression { "," expression }
+                | named_argument { "," named_argument }
+named_argument := Name ":" expression
 primary        := Name [ record_literal ] | Integer | String | "true" | "false"
                 | "(" ")" | "(" expression ")" | if | match
 record_literal := "{" [ field_value { "," field_value } ] "}"
@@ -114,6 +116,11 @@ Every other binary operator is left-associative.
 A list the grammar writes with at least one element is not accepted empty.
 `List<>`, `fn f<>()`, `Failed()`, and the pattern `P {}` each name what was wanted instead.
 A call, a parameter list, and a record literal are the three lists the grammar writes as optional.
+
+A call names all of its arguments or none of them, which the two alternatives above say.
+A name followed by `:` opens a named argument, so the first argument settles which list follows.
+`rename(from: old, new)` and `rename(old, to: new)` are each `L0108`.
+Which of the two forms a call may use is type inference's to say, in `docs/specs/arguments.md`.
 
 Brackets nest at most 32 deep, which no program a person or the formatter writes comes near.
 The budget is what makes "parsing never panics" true of generated input: the parser reports an
@@ -159,7 +166,7 @@ The found part names what is there the same way, or `the end of the file`.
 Every parse error carries a code, and `docs/specs/diagnostics.md` is the catalogue of them.
 An `expected <what>, found <what>` error is `L0100`, whatever it expected.
 
-Eight failures are not about which token was found, and have their own words:
+Nine failures are not about which token was found, and have their own words:
 
 | Error               | Code    | Message                                    | Help                        |
 |---------------------|---------|--------------------------------------------|-----------------------------|
@@ -171,6 +178,7 @@ Eight failures are not about which token was found, and have their own words:
 | chained comparison  | `L0105` | comparisons do not chain                   | compare twice, join with `&&` |
 | nesting too deep    | `L0106` | this nests too deeply to parse             | how deep brackets may nest  |
 | assigned to a value | `L0107` | only a name is assigned to                 | build the value it becomes  |
+| partly named call   | `L0108` | this call names some of its arguments and not others | all of them or none |
 
 An assignment names a name, which `docs/design.md` section 10 states.
 `user.name = "Bob"` and `first(users).id = 1` are `L0107`, pointing at what was written there.

@@ -577,6 +577,33 @@ Nothing then reaches code generation that it has no way to write.
 
 A name forces the author to say what the function is for, and gives the reader a word to search.
 
+### Named arguments
+
+A call passes its arguments in order.
+Where the order is the only thing holding them apart, the call writes the parameter names too.
+
+```text
+rename(from: old, to: new)
+```
+
+A name is written before its value and joined by `:`, exactly as a record writes a field.
+The names run in the order the declaration lists the parameters.
+Naming reorders nothing; it says what the order already is.
+A call names all of its arguments or none of them.
+
+A call must name them when the declaration gives two of its parameters one type.
+`add(a: Int, b: Int)` above is one, so `add(1, 2)` is refused and `add(a: 1, b: 2)` is not.
+Nothing else tells two of one type apart.
+`rename(old, new)` and `rename(new, old)` both typecheck, and one of them is wrong.
+A mistake a type system can make unwriteable belongs in the language rather than in a linter.
+
+The types compared are the ones inference settled: an unwritten signature counts as a written one.
+A type parameter counts as a type.
+A constructor carries its values in order and has no names to write, so naming them is refused.
+A variant whose values want names declares them as fields and is built as a record.
+
+`docs/specs/arguments.md` is the specification.
+
 ### The entry point
 
 A program starts at `main`:

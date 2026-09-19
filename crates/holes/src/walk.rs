@@ -94,7 +94,7 @@ impl Walk<'_> {
             ExprKind::Name(name) if self.is_the_hole(name) => found.push(Hole::at(whole.span)),
             _ => self.expr(callee, found),
         }
-        for argument in arguments {
+        for argument in arguments.values() {
             self.expr(argument, found);
         }
     }

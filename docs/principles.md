@@ -49,6 +49,14 @@ If yes, reconsider the abstraction.
 `docs/design.md` section 2 states the rule this asks against: the JVM is a target, not a model.
 Identity, `equals` on everything, boxing a program can see, and a special `int` are all leaks.
 
+### 7. Can the mistake be made unwriteable?
+
+A feature that catches a mistake is weighed against a shape that leaves the mistake unwriteable.
+A linter reports a swappable pair of arguments after the fact, and the call still compiles.
+`docs/design.md` section 11 states what the language does instead.
+Where order alone holds two arguments apart, the call names them, and a swapped pair is refused.
+Elegance leaves the invalid case unwriteable; adequacy writes it and rejects it afterwards.
+
 ---
 
 ## 2. The central trade-off

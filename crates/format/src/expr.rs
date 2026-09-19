@@ -1,6 +1,7 @@
 //! Expressions as canonical form writes them, always on one line.
 
-use lumen_ast::{BinaryOperator, Expr, ExprKind, FieldValue, UnaryOperator};
+use lumen_ast::{Arguments, BinaryOperator, Expr, ExprKind, FieldValue};
+use lumen_ast::{NamedArgument, UnaryOperator};
 
 use crate::control::{if_expr, match_expr};
 use crate::literal::{integer, string};
@@ -159,16 +160,36 @@ fn binary(printer: &mut Printer, infix: Infix, records: Records) {
     operand(printer, infix.right, level + 1, records);
 }
 
-fn call(printer: &mut Printer, callee: &Expr, arguments: &[Expr], records: Records) {
+fn call(printer: &mut Printer, callee: &Expr, arguments: &Arguments, records: Records) {
     operand(printer, callee, POSTFIX, records);
     printer.word("(");
-    for (position, argument) in arguments.iter().enumerate() {
+    match arguments {
+        Arguments::Positional(values) => passed(printer, values),
+        Arguments::Named(written) => named(printer, written),
+    }
+    printer.word(")");
+}
+
+/// `old, new`: the values alone, which the parameter types hold apart.
+fn passed(printer: &mut Printer, values: &[Expr]) {
+    for (position, value) in values.iter().enumerate() {
         if position > 0 {
             printer.word(", ");
         }
-        operand(printer, argument, 0, Records::Allowed);
+        operand(printer, value, 0, Records::Allowed);
     }
-    printer.word(")");
+}
+
+/// `from: old, to: new`: each value with the parameter it is passed for, spaced as a field is.
+fn named(printer: &mut Printer, written: &[NamedArgument]) {
+    for (position, argument) in written.iter().enumerate() {
+        if position > 0 {
+            printer.word(", ");
+        }
+        printer.word(&argument.name.text);
+        printer.word(": ");
+        operand(printer, &argument.value, 0, Records::Allowed);
+    }
 }
 
 /// `User { id: id }`, or `User {}` when it names no field.

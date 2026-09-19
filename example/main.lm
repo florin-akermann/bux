@@ -5,7 +5,7 @@
 // A file reads top down, so what a name is comes below the first line that uses it.
 fn main() -> () {
     ordered := Placed(Basket { apples: 3, pears: 4 })
-    each := shared(picked(ordered) + picked(Unplaced), 2)
+    each := shared(total: picked(ordered) + picked(Unplaced), people: 2)
     ()
 }
 

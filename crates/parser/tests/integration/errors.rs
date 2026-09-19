@@ -119,6 +119,20 @@ fn a_mutable_binding_is_joined_by_an_equals_sign_rather_than_a_walrus() {
 }
 
 #[test]
+fn a_call_names_all_of_its_arguments_or_none_of_them() {
+    let half_named = "fn f() {\n    rename(from: old, new)\n}";
+    let half_positional = "fn f() {\n    rename(old, to: new)\n}";
+    let refusal = "this call names some of its arguments and not others";
+
+    assert_eq!(message(half_named), refusal);
+    assert_eq!(message(half_positional), refusal);
+    assert_eq!(
+        help(half_named).as_deref(),
+        Some("a call names all of its arguments or none of them")
+    );
+}
+
+#[test]
 fn a_variant_that_carries_nothing_is_written_without_parentheses() {
     assert_eq!(message("type T = Failed()"), "expected a type, found `)`");
 }

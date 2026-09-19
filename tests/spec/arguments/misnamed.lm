@@ -1,0 +1,9 @@
+// expect-error: L0410
+// Naming reorders nothing: the names say what order the call already passes its arguments in.
+fn main() -> String {
+    rename(to: "new", from: "old")
+}
+
+fn rename(from: String, to: String) -> String {
+    from + to
+}

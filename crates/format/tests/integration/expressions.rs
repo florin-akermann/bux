@@ -3,7 +3,7 @@
 use crate::common::in_function;
 
 /// A source expression beside the canonical text of the same expression.
-const SPACING: [(&str, &str); 10] = [
+const SPACING: [(&str, &str); 12] = [
     ("a+b", "a + b"),
     ("a&&b||c", "a && b || c"),
     ("!a", "!a"),
@@ -11,6 +11,8 @@ const SPACING: [(&str, &str); 10] = [
     ("a . b", "a.b"),
     ("f ( a , b )", "f(a, b)"),
     ("f()", "f()"),
+    ("f ( a : b , c : d )", "f(a: b, c: d)"),
+    ("f(a:b)", "f(a: b)"),
     ("a ?", "a?"),
     ("User{id:id}", "User { id: id }"),
     ("User{}", "User {}"),
@@ -63,6 +65,10 @@ fn a_string_is_written_with_its_escapes_back_in() {
 #[test]
 fn a_call_and_a_record_literal_stay_on_one_line_however_long_they_run() {
     assert_eq!(in_function("save(\n    user,\n    1\n)"), ["save(user, 1)"]);
+    assert_eq!(
+        in_function("rename(\n    from: old,\n    to: new\n)"),
+        ["rename(from: old, to: new)"]
+    );
     assert_eq!(
         in_function("User {\n    id: id,\n    name: name\n}"),
         ["User { id: id, name: name }"]

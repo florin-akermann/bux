@@ -60,6 +60,8 @@ catalogue! {
     NestingTooDeep => "L0106",
     /// Something other than a name is written on the left of `=` or `+=`.
     AssignedToValue => "L0107",
+    /// A call names some of its arguments and not others.
+    PartlyNamedCall => "L0108",
     /// The file is not in canonical form.
     NotCanonical => "L0200",
     /// An import is written after a declaration, or two imports are out of sort.
@@ -94,6 +96,12 @@ catalogue! {
     DivisorIsZero => "L0407",
     /// A statement leaves a value behind and nothing takes it.
     Discarded => "L0408",
+    /// A call passes its arguments positionally where the declaration repeats a type.
+    Unnamed => "L0409",
+    /// An argument is named something other than the parameter it is passed for.
+    Misnamed => "L0410",
+    /// A call names the arguments of something that has no parameter names to write.
+    Unnameable => "L0411",
     /// A `match` leaves a value of the type it matches unanswered.
     NonExhaustiveMatch => "L0500",
     /// A `match` lists its arms in an order the type does not declare its variants in.

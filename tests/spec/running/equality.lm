@@ -1,7 +1,8 @@
 // expect-run
 // `Eq` is what `==` is, and version 0.1 ships it for `Int`, `Bool`, and `String`.
 fn main() -> () {
-    if same(7, 7) && matching("one", "one") && agreeing(true, true) {
+    numbers := same(left: 7, right: 7)
+    if numbers && matching(left: "one", right: "one") && agreeing(left: true, right: true) {
         return ()
     }
     ()

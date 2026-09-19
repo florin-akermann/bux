@@ -2,7 +2,7 @@
 // A list and its items are not the same type, so nothing finite is both.
 fn go(items) -> Int {
     for item in items {
-        return counted(item, items)
+        return counted(one: item, other: items)
     }
     0
 }

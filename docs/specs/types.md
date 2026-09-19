@@ -136,6 +136,9 @@ the value it was given.
 | not equatable     | `L0406` | `User` has no `Eq`, so two of them cannot be compared |
 | zero divisor      | `L0407` | this divisor is zero, so there is no answer      |
 | value discarded   | `L0408` | `Result<(), Error>` is left here and nothing takes it |
+| unnamed arguments | `L0409` | `rename` gives two parameters the type `String`, so this call names its arguments |
+| misnamed argument | `L0410` | this argument is named `to`, and the parameter here is `from` |
+| no names to write | `L0411` | `Span` is a constructor, so it carries its values in order and names none |
 
 `L0400` also says `` `Bool` cannot be added `` when `+` is given something that is neither `Int`
 nor `String`.
@@ -144,6 +147,11 @@ It also says that a module is what was reached through, because nothing may reac
 A variant that carries its values in order has no field to write against, so that is `L0402` too.
 `L0401` counts the arguments of a written type as well as those of a call.
 `L0407` is raised where a division is written with a `0` the compiler can already see.
+`L0409`, `L0410`, and `L0411` are about how a call passes its arguments, which
+`docs/specs/arguments.md` states.
+All three are reached after `L0401` and after the arguments have met the parameter types, because
+how many there are and what they are is each settled before which of them is which.
+`L0411` also says a name was written on a call of the prelude, which declares none to check.
 
 `/` and `%` give back `Option<Int>` rather than `Int`, which `docs/specs/arithmetic.md` states.
 `L0400` is what an `Option<Int>` met where an `Int` belongs is refused with, as anything else is.

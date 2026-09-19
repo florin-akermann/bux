@@ -9,6 +9,45 @@ pub struct Expr {
     pub span: Span,
 }
 
+/// What a call passes: the values in order, or each value with the parameter it is passed for.
+///
+/// A call names all of its arguments or none of them, which `docs/specs/arguments.md` states, so
+/// the two are separate shapes rather than one name that may or may not be written.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Arguments {
+    /// `rename(old, new)`, whose arguments the parameter types hold apart.
+    Positional(Vec<Expr>),
+    /// `rename(from: old, to: new)`, whose arguments the names hold apart.
+    Named(Vec<NamedArgument>),
+}
+
+impl Arguments {
+    /// The values passed, in the order they are written.
+    #[must_use]
+    pub fn values(&self) -> Vec<&Expr> {
+        match self {
+            Self::Positional(values) => values.iter().collect(),
+            Self::Named(written) => written.iter().map(|one| &one.value).collect(),
+        }
+    }
+}
+
+/// One argument written with the parameter it is passed for, as `from: old`.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct NamedArgument {
+    pub name: Name,
+    pub value: Expr,
+}
+
+impl NamedArgument {
+    /// The source the whole argument covers, from its name through its value.
+    #[must_use]
+    pub fn span(&self) -> Span {
+        let start = self.name.span.start();
+        Span::new(start, self.value.span.end() - start)
+    }
+}
+
 /// The expression forms of version 0.1.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ExprKind {
@@ -31,7 +70,7 @@ pub enum ExprKind {
     },
     Call {
         callee: Box<Expr>,
-        arguments: Vec<Expr>,
+        arguments: Arguments,
     },
     /// `user.name`, which is also how a method is reached before it is called.
     Field {

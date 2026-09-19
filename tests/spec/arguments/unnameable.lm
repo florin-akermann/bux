@@ -1,0 +1,7 @@
+// expect-error: L0411
+// A constructor carries its values in order, so names here would promise what nothing checks.
+fn main() -> Range {
+    Range(len: 10, start: 0)
+}
+
+type Range = Range(Int, Int)

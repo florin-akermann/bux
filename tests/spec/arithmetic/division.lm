@@ -4,17 +4,18 @@
 // program can fail at runtime, so running every path a division has to the end is what this
 // shows. Item 031 is what will let it state the answers it works out.
 fn main() -> () {
-    answers := quotient(17, 5) + quotient(17, 0) + leftover(17, 5) + leftover(17, 0)
+    first := quotient(of: 17, by: 5) + quotient(of: 17, by: 0)
+    answers := first + leftover(of: 17, by: 5) + leftover(of: 17, by: 0)
     ()
 }
 
-fn quotient(a: Int, b: Int) -> Int {
-    match a / b {
+fn quotient(of: Int, by: Int) -> Int {
+    match of / by {
         Some(answer) => answer
         None => -1
     }
 }
 
-fn leftover(a: Int, b: Int) -> Int {
-    or(a % b, -1)
+fn leftover(of: Int, by: Int) -> Int {
+    or(of % by, -1)
 }

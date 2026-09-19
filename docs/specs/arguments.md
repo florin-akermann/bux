@@ -1,0 +1,146 @@
+# Arguments
+
+A call passes its arguments in order, and where the order is the only thing holding them apart,
+the call writes the parameter names too.
+
+## Intent
+
+`rename(a, b)` and `rename(b, a)` both compile when `a` and `b` are both `String`s, and one of
+them is wrong.
+The type system has nothing to say, because the types agree; the mistake shows up when the program
+runs, or never.
+
+mycs lints a swappable pair of arguments after the fact.
+A structural mistake a type system can make unwriteable belongs in the language rather than in a
+linter, so Lumen refuses the call instead.
+
+## The rule
+
+A call names all of its arguments or none of them.
+
+```text
+rename(from: old, to: new)
+```
+
+A name is written before its value, joined by `:`, exactly as a record writes a field.
+
+The names are written in the order the declaration lists the parameters.
+Naming does not reorder anything: the call still passes its arguments in order, and the names say
+which order that is.
+A swapped pair is then `L0410` where it is written rather than a wrong answer where it is read.
+
+A call must name its arguments when the declaration gives two of its parameters one type.
+Nothing else tells those two apart, so the call says which is which or does not compile.
+
+```text
+fn rename(from: String, to: String) -> String {
+    from + to
+}
+```
+
+`rename(old, new)` is `L0409`, and `rename(from: old, to: new)` is how it is written.
+
+A call whose parameters all have different types may be written either way.
+The types already hold the arguments apart, so naming them is the author's to choose.
+
+## Which types count as one
+
+The types compared are the ones inference settled for the declaration, so a signature the author
+left unwritten counts exactly as one they wrote out.
+
+A type parameter counts as a type: `fn pair<T>(first: T, second: T)` gives two parameters one
+type, and a call of it names them.
+`fn apply<T, U>(value: T, other: U)` does not, however a call happens to instantiate `T` and `U`.
+The rule is about the signature, so it reads the same at every call site.
+
+## What has no names to write
+
+A constructor carries its values in order and has no names to write for them.
+
+```text
+type Span = Span(Int, Int)
+```
+
+`Span(0, 10)` is a call of a constructor, not of a function, so it is positional however its types
+run.
+`Span(len: 10, start: 0)` is `L0411`: the names look as though they say where each value lands,
+and a constructor has nothing to check them against, so they would read as a promise nothing keeps.
+A variant that wants its values named declares them as fields, which a record variant does, and
+then it is written `Span { start: 0, len: 10 }` and the names are the fields'.
+
+The rule is about the functions a module declares.
+Version 0.1's prelude declares `or` and `todo`, which take parameters of different types, so no
+call of either is ever asked to name one.
+Neither is declared here, so neither has parameter names to hold a call to, and naming the
+arguments of one is `L0411` as well.
+
+## The errors
+
+`L0409` is a call that must name its arguments and does not:
+
+```text
+error[L0409]: `rename` gives two parameters the type `String`, so this call names its arguments
+  --> demo.lm:2:5
+
+  2 |     rename(old, new)
+    |     ^^^^^^^^^^^^^^^^
+
+help: a call names its arguments when the declaration gives two parameters one type
+```
+
+`L0410` is an argument named something other than the parameter it is passed for:
+
+```text
+error[L0410]: this argument is named `to`, and the parameter here is `from`
+  --> demo.lm:2:12
+
+  2 |     rename(to: new, from: old)
+    |            ^^^^^^^
+
+help: arguments are named in the order the declaration lists its parameters
+```
+
+`L0411` is a call that names arguments where what it calls has no names to hold them to:
+
+```text
+error[L0411]: `Span` is a constructor, so it carries its values in order and names none
+  --> demo.lm:2:5
+
+  2 |     Span(len: 10, start: 0)
+    |     ^^^^^^^^^^^^^^^^^^^^^^^
+
+help: a variant whose values want names declares them as fields and is built as a record
+```
+
+All three are raised in `crates/types/src/infer/arguments.rs`, as inference reaches the call.
+A module is inferred bottom up, so a declaration has the types it has before anything calls it.
+
+Three refusals come before them, because each settles something they take for granted.
+A call with the wrong number of arguments is `L0401`: how many there are is settled before which
+of them is which.
+An argument of the wrong type is `L0400`: what the arguments are is settled before whether the
+call has to name them.
+A swapped pair of one type is unaffected by that order, because a pair of one type never clashes,
+which is the whole reason the rule exists.
+
+A call that names some of its arguments and not others is neither of these: it is `L0108`, and the
+parser refuses it, because the two forms are two shapes of the grammar rather than one.
+
+```text
+error[L0108]: this call names some of its arguments and not others
+  --> demo.lm:2:23
+
+  2 |     rename(from: old, new)
+    |                       ^^^
+
+help: a call names all of its arguments or none of them
+```
+
+## Properties
+
+These hold and are checked with property-based tests:
+
+1. A call of a declaration that repeats a type compiles when it names its arguments, and does not
+   when it passes them positionally.
+2. A call of a declaration whose parameter types all differ compiles either way.
+3. A call that compiles passing its arguments in order still compiles naming them in that order.

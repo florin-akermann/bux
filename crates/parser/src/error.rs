@@ -61,6 +61,7 @@ pub(crate) enum ParseErrorKind {
     ChainedComparison,
     NestingTooDeep,
     AssignedToValue,
+    PartlyNamedCall,
 }
 
 impl ParseErrorKind {
@@ -75,6 +76,7 @@ impl ParseErrorKind {
             Self::ChainedComparison => Code::ChainedComparison,
             Self::NestingTooDeep => Code::NestingTooDeep,
             Self::AssignedToValue => Code::AssignedToValue,
+            Self::PartlyNamedCall => Code::PartlyNamedCall,
         }
     }
 
@@ -92,6 +94,7 @@ impl ParseErrorKind {
             Self::ChainedComparison => Some("compare twice and join the two with `&&`"),
             Self::NestingTooDeep => Some("brackets nest at most 32 deep; name a part of it"),
             Self::AssignedToValue => Some("build the value it becomes: `user { name: \"Bob\" }`"),
+            Self::PartlyNamedCall => Some("a call names all of its arguments or none of them"),
             _ => None,
         }
     }
@@ -108,6 +111,9 @@ impl fmt::Display for ParseErrorKind {
             Self::ChainedComparison => write!(f, "comparisons do not chain"),
             Self::NestingTooDeep => write!(f, "this nests too deeply to parse"),
             Self::AssignedToValue => write!(f, "only a name is assigned to"),
+            Self::PartlyNamedCall => {
+                write!(f, "this call names some of its arguments and not others")
+            }
         }
     }
 }

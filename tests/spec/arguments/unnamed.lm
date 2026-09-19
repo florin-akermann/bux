@@ -1,0 +1,9 @@
+// expect-error: L0409
+// `rename` gives both parameters the type `String`, so nothing but the names holds them apart.
+fn main() -> String {
+    rename("old", "new")
+}
+
+fn rename(from: String, to: String) -> String {
+    from + to
+}

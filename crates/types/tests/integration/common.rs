@@ -93,7 +93,7 @@ fn from_expr<'a>(expr: &'a Expr, into: &mut Vec<&'a Expr>) {
         }
         ExprKind::Call { callee, arguments } => {
             from_expr(callee, into);
-            for argument in arguments {
+            for argument in arguments.values() {
                 from_expr(argument, into);
             }
         }

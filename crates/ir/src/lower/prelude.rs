@@ -25,7 +25,7 @@ impl Builder<'_> {
     pub(crate) fn supplied(
         &mut self,
         name: &Name,
-        arguments: &[Expr],
+        arguments: &[&Expr],
         written: Span,
     ) -> Option<Descriptor> {
         assert!(

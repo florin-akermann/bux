@@ -80,7 +80,7 @@ impl Walk<'_> {
             }
             ExprKind::Call { callee, arguments } => {
                 self.expr(callee)?;
-                self.each(arguments.iter())
+                self.each(arguments.values().into_iter())
             }
             ExprKind::Record { fields, .. } => self.each(fields.iter().map(|field| &field.value)),
             ExprKind::If(branching) => self.if_expr(branching),

@@ -28,7 +28,7 @@ const REFUSALS: [&str; 4] = [
 ];
 
 #[hegel::test]
-fn inferring_never_panics_and_is_deterministic(tc: TestCase) {
+fn an_inference_never_panics_and_is_deterministic(tc: TestCase) {
     let source = tc.draw(gs::text());
     let Ok(program) = parse(&source) else {
         return;
@@ -190,4 +190,58 @@ fn accepts(source: &str) -> bool {
         return false;
     };
     check(resolved).is_ok()
+}
+
+/// A declaration taking `first` and `second`, beside a call of it passing `values` those types.
+///
+/// `docs/specs/arguments.md` is about the types a declaration repeats, so the generator varies
+/// exactly that: two parameters of one type, or two parameters of two.
+fn taking(first: &str, second: &str, call: &str) -> String {
+    format!(
+        "fn main() -> Int {{\n    {call}\n}}\n\n\
+         fn takes(first: {first}, second: {second}) -> Int {{\n    1\n}}\n"
+    )
+}
+
+#[hegel::test]
+fn a_declaration_that_repeats_a_type_is_called_by_name_and_not_in_order(tc: TestCase) {
+    let (value, of_type) = tc.draw(gs::sampled_from(&VALUES));
+
+    let named = format!("takes(first: {value}, second: {value})");
+    let in_order = format!("takes({value}, {value})");
+
+    assert!(accepts(&taking(of_type, of_type, &named)), "{named}");
+    assert!(!accepts(&taking(of_type, of_type, &in_order)), "{in_order}");
+}
+
+#[hegel::test]
+fn a_declaration_whose_parameter_types_differ_is_called_either_way(tc: TestCase) {
+    let (first, first_type) = tc.draw(gs::sampled_from(&VALUES));
+    let (second, second_type) = tc.draw(gs::sampled_from(&VALUES));
+    if first_type == second_type {
+        return;
+    }
+
+    let named = format!("takes(first: {first}, second: {second})");
+    let in_order = format!("takes({first}, {second})");
+
+    assert!(accepts(&taking(first_type, second_type, &named)), "{named}");
+    assert!(
+        accepts(&taking(first_type, second_type, &in_order)),
+        "{in_order}"
+    );
+}
+
+#[hegel::test]
+fn a_call_that_compiles_still_compiles_with_its_arguments_named(tc: TestCase) {
+    let (first, first_type) = tc.draw(gs::sampled_from(&VALUES));
+    let (second, second_type) = tc.draw(gs::sampled_from(&VALUES));
+    let in_order = format!("takes({first}, {second})");
+    if !accepts(&taking(first_type, second_type, &in_order)) {
+        return;
+    }
+
+    let named = format!("takes(first: {first}, second: {second})");
+
+    assert!(accepts(&taking(first_type, second_type, &named)), "{named}");
 }

@@ -88,6 +88,20 @@ pub(crate) enum TypeErrorKind {
     DivisorIsZero,
     /// A statement leaves a value behind and nothing takes it.
     Discarded(Type),
+    /// A call passes its arguments positionally where the declaration repeats a type.
+    Unnamed {
+        function: String,
+        repeated: Type,
+    },
+    /// An argument is named something other than the parameter it is passed for.
+    Misnamed {
+        written: String,
+        parameter: String,
+    },
+    /// A constructor call names its arguments, and a constructor has no names to write.
+    NamedConstructor(String),
+    /// A call of a prelude function names its arguments, which this module cannot check.
+    NamedPrelude(String),
 }
 
 impl TypeErrorKind {
@@ -107,6 +121,9 @@ impl TypeErrorKind {
             Self::NotEquatable(_) => Code::NotEquatable,
             Self::DivisorIsZero => Code::DivisorIsZero,
             Self::Discarded(_) => Code::Discarded,
+            Self::Unnamed { .. } => Code::Unnamed,
+            Self::Misnamed { .. } => Code::Misnamed,
+            Self::NamedConstructor(_) | Self::NamedPrelude(_) => Code::Unnameable,
         }
     }
 
@@ -137,6 +154,18 @@ impl TypeErrorKind {
             }
             Self::DivisorIsZero => "a zero written here is never anything else; drop the division",
             Self::Discarded(_) => "write `_ = ` in front of it to throw the value away on purpose",
+            Self::Unnamed { .. } => {
+                "a call names its arguments when the declaration gives two parameters one type"
+            }
+            Self::Misnamed { .. } => {
+                "arguments are named in the order the declaration lists its parameters"
+            }
+            Self::NamedConstructor(_) => {
+                "a variant whose values want names declares them as fields and is built as a record"
+            }
+            Self::NamedPrelude(_) => {
+                "only a call of a function this module declares names its arguments"
+            }
         }
     }
 }
@@ -178,6 +207,31 @@ impl fmt::Display for TypeErrorKind {
             }
             Self::DivisorIsZero => write!(f, "this divisor is zero, so there is no answer"),
             Self::Discarded(left) => write!(f, "`{left}` is left here and nothing takes it"),
+            Self::Unnamed { function, repeated } => {
+                write!(
+                    f,
+                    "`{function}` gives two parameters the type `{repeated}`, \
+                     so this call names its arguments"
+                )
+            }
+            Self::Misnamed { written, parameter } => {
+                write!(
+                    f,
+                    "this argument is named `{written}`, and the parameter here is `{parameter}`"
+                )
+            }
+            Self::NamedConstructor(called) => {
+                write!(
+                    f,
+                    "`{called}` is a constructor, so it carries its values in order and names none"
+                )
+            }
+            Self::NamedPrelude(called) => {
+                write!(
+                    f,
+                    "`{called}` comes from the prelude, which declares no parameter names to write"
+                )
+            }
         }
     }
 }

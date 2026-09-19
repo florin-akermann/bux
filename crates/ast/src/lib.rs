@@ -13,8 +13,9 @@ mod pattern;
 mod stmt;
 mod type_ref;
 
-pub use expr::{BinaryOperator, Branch, Expr, ExprKind, FieldValue, IfExpr, UnaryOperator};
+pub use expr::{Arguments, BinaryOperator, Branch, Expr, ExprKind, FieldValue, IfExpr};
 pub use expr::{MatchArm, MatchExpr};
+pub use expr::{NamedArgument, UnaryOperator};
 pub use item::{Function, Import, Item, Parameter, Program, RecordField, TypeDeclaration};
 pub use item::{TypeDefinition, Variant, VariantPayload};
 pub use name::Name;

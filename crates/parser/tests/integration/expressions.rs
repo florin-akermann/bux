@@ -124,6 +124,21 @@ fn a_call_carries_its_arguments_in_order() {
 }
 
 #[test]
+fn a_named_call_carries_each_argument_with_the_parameter_it_is_passed_for() {
+    assert_eq!(
+        in_function("rename(from: old, to: new)"),
+        [
+            "call",
+            "  name rename",
+            "  argument from",
+            "    name old",
+            "  argument to",
+            "    name new",
+        ]
+    );
+}
+
+#[test]
 fn a_record_literal_carries_its_fields_in_order() {
     assert_eq!(
         in_function(r#"User { id: id, name: "Alice" }"#),

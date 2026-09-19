@@ -3,12 +3,12 @@
 //! An operator's operand lives here rather than in `expr`, so that the precedence chain reads
 //! top down in one file and the recursion back into an expression crosses a module boundary.
 
-use lumen_ast::{Expr, ExprKind};
+use lumen_ast::{Arguments, Expr, ExprKind, NamedArgument};
 use lumen_lexer::{Keyword, Punct, TokenKind};
 
 use crate::control::{if_expression, match_expression};
 use crate::cursor::Cursor;
-use crate::error::{Expected, ParseError};
+use crate::error::{Expected, ParseError, ParseErrorKind};
 use crate::expr::{RecordLiterals, expression};
 use crate::list::{Emptiness, comma_separated};
 use crate::literal::{Literal, eat_literal};
@@ -50,10 +50,57 @@ pub(crate) fn postfix_chain(
     }
 }
 
-fn arguments(cursor: &mut Cursor) -> Result<Vec<Expr>, ParseError> {
-    comma_separated(cursor, Punct::RParen, Emptiness::Allowed, |cursor| {
-        expression(cursor, RecordLiterals::Allowed)
+/// What a call passes, which is its values alone or each value with the parameter it is for.
+///
+/// The first argument settles which, because a call names all of its arguments or none of them.
+/// Every argument after it is then held to the shape the first one chose, so `rename(old, to: new)`
+/// and `rename(from: old, new)` are each refused here rather than carried on as something else.
+/// `docs/specs/arguments.md` states the rule and `docs/specs/grammar.md` writes the two lists.
+fn arguments(cursor: &mut Cursor) -> Result<Arguments, ParseError> {
+    if names_them(cursor) {
+        let written = comma_separated(cursor, Punct::RParen, Emptiness::Allowed, named_argument)?;
+        return Ok(Arguments::Named(written));
+    }
+    let values = comma_separated(
+        cursor,
+        Punct::RParen,
+        Emptiness::Allowed,
+        positional_argument,
+    )?;
+    Ok(Arguments::Positional(values))
+}
+
+/// `from: old`: the parameter the value is passed for, and the value.
+///
+/// The first argument settled that this call names them, so one written without a name is the
+/// half-named call of `docs/specs/arguments.md` rather than the start of an expression.
+fn named_argument(cursor: &mut Cursor) -> Result<NamedArgument, ParseError> {
+    if !names_them(cursor) {
+        return Err(cursor.error_kind(ParseErrorKind::PartlyNamedCall));
+    }
+    let name = cursor.expect_name(Expected::Name)?;
+    cursor.expect_punct(Punct::Colon)?;
+    Ok(NamedArgument {
+        name,
+        value: expression(cursor, RecordLiterals::Allowed)?,
     })
+}
+
+/// `old`: the value alone, the first argument having settled that this call names none of them.
+fn positional_argument(cursor: &mut Cursor) -> Result<Expr, ParseError> {
+    if names_them(cursor) {
+        return Err(cursor.error_kind(ParseErrorKind::PartlyNamedCall));
+    }
+    expression(cursor, RecordLiterals::Allowed)
+}
+
+/// Whether the call writes the parameter names, which the first argument says.
+///
+/// A `:` after a name opens a record field and nothing else, so a name followed by one here is
+/// the parameter a value is passed for rather than the start of an expression.
+fn names_them(cursor: &Cursor) -> bool {
+    cursor.peek_kind(0) == Some(TokenKind::Identifier)
+        && cursor.peek_kind(1) == Some(TokenKind::Punct(Punct::Colon))
 }
 
 /// One value, and the level the nesting budget is spent at.

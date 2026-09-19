@@ -1,0 +1,9 @@
+// expect-error: L0108
+// Half of this call says which parameter its value is passed for and half of it does not.
+fn main() -> String {
+    rename(from: "old", "new")
+}
+
+fn rename(from: String, to: String) -> String {
+    from + to
+}

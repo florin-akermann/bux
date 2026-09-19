@@ -6,7 +6,7 @@
 
 use std::fmt::Write as _;
 
-use lumen_ast::{Block, Expr, ExprKind, IfExpr, Item, MatchExpr, Pattern, PatternKind};
+use lumen_ast::{Arguments, Block, Expr, ExprKind, IfExpr, Item, MatchExpr, Pattern, PatternKind};
 use lumen_ast::{Function, Import, RecordField, TypeDeclaration, Variant, VariantPayload};
 use lumen_ast::{Span, Statement, StatementKind, TypeDefinition, TypeRef, TypeRefKind};
 use lumen_parser::{ParseError, parse};
@@ -288,9 +288,7 @@ fn expr_node(tree: &mut Tree, depth: usize, expr: &Expr) {
         ExprKind::Call { callee, arguments } => {
             tree.node(depth, "call", span);
             expr_node(tree, depth + 1, callee);
-            for argument in arguments {
-                expr_node(tree, depth + 1, argument);
-            }
+            argument_nodes(tree, depth + 1, arguments);
         }
         ExprKind::Field { receiver, name } => {
             tree.node(depth, &format!("field {}", name.text), span);
@@ -313,6 +311,24 @@ fn expr_node(tree: &mut Tree, depth: usize, expr: &Expr) {
         }
         ExprKind::If(if_expr) => if_node(tree, depth, span, if_expr),
         ExprKind::Match(match_expr) => match_node(tree, depth, span, match_expr),
+    }
+}
+
+/// What a call passes, with each name printed where the call writes one.
+fn argument_nodes(tree: &mut Tree, depth: usize, arguments: &Arguments) {
+    match arguments {
+        Arguments::Positional(values) => {
+            for value in values {
+                expr_node(tree, depth, value);
+            }
+        }
+        Arguments::Named(written) => {
+            for argument in written {
+                let label = format!("argument {}", argument.name.text);
+                tree.node(depth, &label, argument.span());
+                expr_node(tree, depth + 1, &argument.value);
+            }
+        }
     }
 }
 

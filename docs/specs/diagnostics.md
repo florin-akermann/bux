@@ -71,6 +71,7 @@ The grammar raises these, in `crates/parser/src/error.rs`:
 - `L0105` — comparisons are chained.
 - `L0106` — brackets nest deeper than the parser descends.
 - `L0107` — something other than a name is written on the left of `=` or `+=`.
+- `L0108` — a call names some of its arguments and not others.
 
 Canonical form raises these, in `crates/format/src/lib.rs`:
 
@@ -102,6 +103,9 @@ Type inference raises these, in `crates/types/src/error.rs`:
 - `L0406` — `==` or `!=` is written between two values of a type that has no `Eq`.
 - `L0407` — a division is written with a divisor of zero, which has no answer.
 - `L0408` — a statement leaves a value behind and nothing takes it.
+- `L0409` — a call passes its arguments in order where the declaration repeats a type.
+- `L0410` — an argument is named something other than the parameter it is passed for.
+- `L0411` — a call names the arguments of something that has no parameter names.
 
 Exhaustiveness raises these, in `crates/exhaustiveness/src/error.rs`:
 

@@ -32,7 +32,9 @@ impl Builder<'_> {
                 left,
                 right,
             } => self.binary(*operator, left, right),
-            ExprKind::Call { callee, arguments } => self.call(callee, arguments, expr.span),
+            ExprKind::Call { callee, arguments } => {
+                self.call(callee, &arguments.values(), expr.span)
+            }
             ExprKind::Field { receiver, name } => self.field(receiver, name),
             ExprKind::Try(inner) => self.propagated(inner, expr.span),
             ExprKind::Record { base, fields } => Some(self.record(base, fields)),
@@ -226,7 +228,7 @@ impl Builder<'_> {
         held
     }
 
-    fn call(&mut self, callee: &Expr, arguments: &[Expr], at: Span) -> Option<Descriptor> {
+    fn call(&mut self, callee: &Expr, arguments: &[&Expr], at: Span) -> Option<Descriptor> {
         let ExprKind::Name(name) = &callee.kind else {
             unreachable!("version 0.1 calls a name, which is a function or a constructor")
         };
@@ -237,7 +239,7 @@ impl Builder<'_> {
     }
 
     /// A call of a function of the module, which is a static method of the module class.
-    fn invoked(&mut self, name: &Name, arguments: &[Expr], written: Span) -> Option<Descriptor> {
+    fn invoked(&mut self, name: &Name, arguments: &[&Expr], written: Span) -> Option<Descriptor> {
         let Origin::Declared(at) = self.definition(name).origin else {
             return self.supplied(name, arguments, written);
         };
@@ -255,7 +257,7 @@ impl Builder<'_> {
     }
 
     /// Builds what a constructor builds, out of the values it is given in order.
-    fn built(&mut self, name: &Name, arguments: &[Expr]) -> Descriptor {
+    fn built(&mut self, name: &Name, arguments: &[&Expr]) -> Descriptor {
         let shape = self.lowering.shapes.built(&name.text).clone();
         self.emit(Instruction::New(shape.class.clone()));
         self.emit(Instruction::Copy);

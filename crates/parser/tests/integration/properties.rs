@@ -28,12 +28,13 @@ fn an_error_span_is_non_empty_and_lies_within_the_source(tc: TestCase) {
 }
 
 /// The item shapes a generated program is built from, each one line of source.
-const ITEMS: [&str; 8] = [
+const ITEMS: [&str; 9] = [
     "import io",
     "type UserId = UserId(Int)",
     "type User = {\n    id: UserId\n}",
     "type Payment =\n    | Pending\n    | Failed(String)",
     "fn identity(x) {\n    x\n}",
+    "fn named(a: Int) -> Int {\n    joined(first: a, second: a)\n}",
     "fn total(users: List<User>) -> Int {\n    var total = 0\n    for user in users {\n        total += 1\n    }\n    total\n}",
     "fn describe(p: Payment) -> String {\n    match p {\n        Pending =>\n            \"waiting\"\n\n        Failed(reason) =>\n            reason\n    }\n}",
     "fn pick(a: Int) -> Int {\n    if a > 1 {\n        return a\n    } else {\n        return 0\n    }\n}",

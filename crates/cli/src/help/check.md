@@ -22,6 +22,15 @@ well, because a dropped `Result` is a swallowed failure; `_ = save(user)` throws
 purpose and says so. Inside a function the types are inferred, so a signature is written where it
 documents a boundary rather than on every line.
 
+How a call passes its arguments is settled here too. A call names all of its arguments or none of
+them, written `rename(from: old, to: new)` as a record writes a field, and the names run in the
+order the declaration lists the parameters. Where the declaration gives two of its parameters one
+type, nothing but the names holds those arguments apart, so the call writes them or is refused:
+`rename(old, new)` and `rename(new, old)` both have the types the declaration asks for, and one of
+them is wrong. Where the parameter types all differ, either way is allowed and the choice is the
+author's. A constructor carries its values in order and has no names, and so does a function the
+prelude supplies, so naming the arguments of either is refused rather than read in order.
+
 Exhaustiveness comes last. A `match` that leaves a value of the type it matches unanswered is
 refused, and the refusal names a value it does not cover. A `match` that answers for everything
 but lists its arms in an order the type does not declare its variants in is refused too, so a new

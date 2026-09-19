@@ -1,5 +1,6 @@
 //! The walk: every expression of a module given the type it has.
 
+mod arguments;
 mod pattern;
 mod record;
 mod settle;
@@ -7,7 +8,8 @@ mod settle;
 use std::collections::HashMap;
 use std::mem;
 
-use lumen_ast::{AssignOperator, BinaryOperator, Block, Expr, ExprKind, ForHeader};
+use lumen_ast::ForHeader;
+use lumen_ast::{Arguments, AssignOperator, BinaryOperator, Block, Expr, ExprKind};
 use lumen_ast::{ForLoop, Function, IfExpr, Item, MatchExpr, Mutability, Name};
 use lumen_ast::{Span, Statement, StatementKind, UnaryOperator};
 use lumen_resolver::{Definition, DefinitionKind, Namespace, ResolvedProgram};
@@ -309,10 +311,11 @@ impl Inference<'_> {
         }
     }
 
-    fn call(&mut self, callee: &Expr, arguments: &[Expr], at: Span) -> Result<Type, TypeError> {
+    fn call(&mut self, callee: &Expr, arguments: &Arguments, at: Span) -> Result<Type, TypeError> {
         let signature = self.expr(callee)?;
+        let passed = arguments.values();
         let mut given = Vec::new();
-        for argument in arguments {
+        for argument in &passed {
             given.push(self.expr(argument)?);
         }
         let Type::Function { parameters, result } = self.table.shallow(&signature) else {
@@ -324,9 +327,10 @@ impl Inference<'_> {
                 None => self.applied(&signature, given, at),
             };
         }
-        for ((wanted, found), argument) in parameters.iter().zip(&given).zip(arguments) {
+        for ((wanted, found), argument) in parameters.iter().zip(&given).zip(&passed) {
             self.expect(wanted, found, argument.span)?;
         }
+        self.named_as_declared(callee, arguments, at)?;
         Ok(*result)
     }
 
