@@ -24,7 +24,7 @@ A type's constructors are the ones its declaration writes:
 a record type          the one constructor of the record's own name
 an algebraic data type one constructor per variant
 Bool                   true and false
-Option<T>              None and Some
+Option<T>              Some and None
 Result<T, E>           Ok and Err
 Int, String            more than a match can write down
 ```
@@ -64,18 +64,46 @@ of it is wrong.
 
 Checking stops at the first match it refuses, as inference does.
 
+## The order of the arms
+
+A `match` lists its arms in the order the type declares its variants.
+`docs/design.md` section 13 asks for it so that a new variant has exactly one place to be handled,
+and so that no diff is ever reorder-only.
+
+The rule is checked here because this is the phase that knows the variant list.
+An arm written above one the type declares above it is refused, pointing at the arm out of place.
+
+```text
+error[L0501]: this `match` writes `Pending` after `Failed`
+```
+
+An arm is placed by the constructors it writes, read left to right and outermost first.
+Two arms that reach inside one variant therefore answer to that variant first and to what they
+reach for second: `Some(Ok(_))` is written above `Some(Err(_))`, and both above `None`.
+
+Placing stops at the first thing no declaration writes down.
+A name that binds, a number, and a string are each written where the author put them, and so is
+everything the arm writes after one of them.
+`true` and `false` are literals too, so the two values of a `Bool` are written either way,
+whether they stand alone or inside a variant.
+
+Coverage is decided first: a `match` that leaves a value unanswered is refused for that, because
+adding the missing arm is what settles where the arms go.
+
 ## The errors
 
 | name                 | code    | message                                          |
 |----------------------|---------|--------------------------------------------------|
 | non-exhaustive match | `L0500` | this `match` does not cover `Failed(_)`          |
+| arm out of order     | `L0501` | this `match` writes `Pending` after `Failed`     |
 
 ## Properties
 
 These hold and are checked with property-based tests:
 
 1. Checking a typed program never panics and is deterministic.
-2. A match whose arms cover every constructor of its scrutinee is accepted.
+2. A match whose arms cover every constructor of its scrutinee, in order, is accepted.
 3. A match with any one of its arms removed is refused, when every arm named a constructor.
 4. A match with an arm that binds a name is accepted, whatever else it writes.
 5. A refusal points at a non-empty span that lies within the source.
+6. A match whose arms are rotated out of the declared order is refused.

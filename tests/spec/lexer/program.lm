@@ -1,17 +1,6 @@
 // Every token class of the version 0.1 surface, in a program shape.
 import io
 
-type UserId = UserId(Int)
-
-type Payment =
-    | Pending
-    | Failed(String)
-
-type User = {
-    id: UserId
-    active: Bool
-}
-
 fn describe(payment: Payment) -> String {
     match payment {
         Pending => "Waiting"
@@ -19,12 +8,9 @@ fn describe(payment: Payment) -> String {
     }
 }
 
-fn first_user(users: List<User>) -> Result<User, String> {
-    for user in users {
-        return Ok(user)
-    }
-    Err("no users")
-}
+type Payment =
+    | Pending
+    | Failed(String)
 
 fn count_active(users: List<User>, limit: Int) -> Result<Int, String> {
     var total = 0
@@ -45,9 +31,23 @@ fn count_active(users: List<User>, limit: Int) -> Result<Int, String> {
     Ok(total / 1 - 0)
 }
 
+fn first_user(users: List<User>) -> Result<User, String> {
+    for user in users {
+        return Ok(user)
+    }
+    Err("no users")
+}
+
 fn active(user: User) -> Bool {
     if user.active {
         return true
     }
     false
 }
+
+type User = {
+    id: UserId
+    active: Bool
+}
+
+type UserId = UserId(Int)

@@ -101,8 +101,10 @@ That is what makes `fn identity<T>(value: T) -> T { 1 }` a mismatch rather than 
 
 A function with no signature to read is inferred from its body, and is then generalised over the
 variables that body left free.
-Functions are inferred in the order they are declared, so a call to a function declared later uses
-that function's signature rather than its inferred type.
+Functions are inferred bottom up, which is the order a module is read in reverse.
+A declaration sits below what uses it, which `docs/specs/modules.md` requires, so walking upwards
+reaches a function before anything that calls it and a body with no signature has been given one
+by the time a call reads it.
 
 `total := count(users)` generalises what it binds, so a name bound this way is as polymorphic as
 the value it was given.
@@ -126,7 +128,7 @@ It also says that a module is what was reached through, because nothing may reac
 A variant that carries its values in order has no field to write against, so that is `L0402` too.
 `L0401` counts the arguments of a written type as well as those of a call.
 
-Inference stops at the first error, as resolution does.
+Inference stops at the first error it reaches, which is the one lowest in the file.
 
 ## Properties
 

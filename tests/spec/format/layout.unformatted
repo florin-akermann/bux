@@ -1,9 +1,5 @@
-import   io
 import files
-type UserId=UserId(Int)
-type Payment = | Pending | Authorized { id: String } | Failed(String)
-type User = { id:UserId
-active:Bool }
+import   io
 fn describe(payment:Payment)->String{
 
     match payment{
@@ -15,6 +11,7 @@ fn describe(payment:Payment)->String{
     }
 
 }
+type Payment = | Pending | Authorized { id: String } | Failed(String)
 fn total(users:List<User>,limit:Int,current:User)->Int{
 var seen=0
 for user in users{
@@ -25,3 +22,6 @@ seen = (seen + 1) * 2
 }
 seen
 }
+type User = { id:UserId
+active:Bool }
+type UserId=UserId(Int)

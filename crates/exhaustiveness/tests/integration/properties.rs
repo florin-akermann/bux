@@ -30,13 +30,21 @@ fn checking_never_panics_and_is_deterministic(tc: TestCase) {
     assert_eq!(check(&inferred).is_ok(), check(&inferred).is_ok());
 }
 
+/// Every other order is refused, which is what makes a new variant have one place to be handled.
 #[hegel::test]
-fn a_match_on_every_variant_covers_whatever_order_the_arms_are_written_in(tc: TestCase) {
+fn a_match_whose_arms_are_rotated_out_of_the_declared_order_is_refused(tc: TestCase) {
+    let rotation = tc.draw(gs::sampled_from(&[1_usize, 2]));
     let mut arms: Vec<&str> = ARMS.to_vec();
-    let order = tc.draw(gs::sampled_from(&[0_usize, 1, 2]));
-    arms.rotate_left(order);
+    arms.rotate_left(rotation);
+    let source = payments(&matching(&arms));
 
-    covers_everything(&payments(&matching(&arms)));
+    let refusal = check(&typed(&source)).expect_err(&format!("{source:?} is refused"));
+
+    assert!(
+        refusal.message().starts_with("this `match` writes "),
+        "{}",
+        refusal.message()
+    );
 }
 
 #[hegel::test]

@@ -12,11 +12,11 @@ use crate::common::{expressions, inferred_type};
 /// names, so any set of them is a module that infers.
 const PIECES: [&str; 6] = [
     "type UserId = UserId(Int)",
-    "type User = {\n    id: Int\n    active: Bool\n}\n\nfn open(user: User) -> Bool {\n    user.active\n}",
+    "fn open(user: User) -> Bool {\n    user.active\n}\n\ntype User = {\n    id: Int\n    active: Bool\n}\n",
     "fn identity<T>(value: T) -> T {\n    value\n}",
     "fn total(counts: List<Int>) -> Int {\n    var sum = 0\n    for count in counts {\n        sum += count\n    }\n    sum\n}",
     "fn shout(word: String) -> String {\n    word + \"!\"\n}",
-    "type Payment =\n    | Pending\n    | Failed(String)\n\nfn describe(payment: Payment) -> String {\n    match payment {\n        Pending => \"waiting\"\n        Failed(reason) => reason\n    }\n}",
+    "fn describe(payment: Payment) -> String {\n    match payment {\n        Pending => \"waiting\"\n        Failed(reason) => reason\n    }\n}\n\ntype Payment =\n    | Pending\n    | Failed(String)\n",
 ];
 
 /// The pieces that are refused however sound the module around them is.
@@ -111,8 +111,8 @@ fn a_generic_function_is_general_enough_for_any_two_uses(tc: TestCase) {
     let (first, first_type) = tc.draw(gs::sampled_from(&VALUES));
     let (second, second_type) = tc.draw(gs::sampled_from(&VALUES));
     let source = format!(
-        "fn given<T>(value: T) -> T {{\n    value\n}}\n\n\
-         fn go() -> {second_type} {{\n    one := given({first})\n    two := given({second})\n    two\n}}\n"
+        "fn go() -> {second_type} {{\n    one := given({first})\n    two := given({second})\n    two\n}}\n\n\
+         fn given<T>(value: T) -> T {{\n    value\n}}\n"
     );
 
     assert_eq!(

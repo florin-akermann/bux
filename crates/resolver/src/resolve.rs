@@ -8,6 +8,7 @@ use lumen_ast::{TypeDeclaration, TypeDefinition, TypeRef, TypeRefKind, Variant, 
 
 use crate::definition::{Definition, DefinitionKind, Namespace, Origin};
 use crate::error::{ResolveError, ResolveErrorKind};
+use crate::order;
 use crate::prelude;
 use crate::scope::Scope;
 
@@ -17,13 +18,18 @@ use crate::scope::Scope;
 ///
 /// # Errors
 ///
-/// Returns the first name that names nothing, is declared twice, or hides something in scope.
+/// Returns the first name that names nothing, is declared twice, or hides something in scope,
+/// and then the first declaration written above something that uses it.
 pub fn resolve(program: Program) -> Result<ResolvedProgram, ResolveError> {
     let mut resolver = Resolver::new();
     resolver.module(&program)?;
+    let definitions = resolver.definitions;
+    if let Some(error) = order::out_of_order(&program, &definitions) {
+        return Err(error);
+    }
     Ok(ResolvedProgram {
         program,
-        definitions: resolver.definitions,
+        definitions,
     })
 }
 

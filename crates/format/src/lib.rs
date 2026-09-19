@@ -13,6 +13,7 @@ mod expr;
 mod item;
 mod literal;
 mod operand;
+mod order;
 mod pattern;
 mod printer;
 mod stmt;
@@ -24,22 +25,26 @@ use lumen_diagnostics::{Code, Diagnostic};
 use lumen_lexer::Span;
 use lumen_parser::{ParseError, parse};
 
+pub use crate::order::OutOfOrder;
 use crate::printer::Printer;
 
 /// Whether `source` is in canonical form already.
 ///
 /// # Errors
 ///
-/// Returns the parse error when `source` is not a program, and the first deviation when it is a
-/// program that is not written canonically.
+/// Returns the parse error when `source` is not a program, the first deviation when it is a
+/// program that is not written canonically, and the first import that is out of place.
 pub fn check(source: &str) -> Result<(), CheckError> {
-    let canonical = format(source).map_err(CheckError::Parse)?;
-    if canonical == source {
-        return Ok(());
+    let program = parse(source).map_err(CheckError::Parse)?;
+    let mut printer = Printer::new(source);
+    item::program(&mut printer, &program, source.len());
+    let canonical = printer.finish();
+    if canonical != source {
+        return Err(CheckError::NotCanonical(first_deviation(
+            source, &canonical,
+        )));
     }
-    Err(CheckError::NotCanonical(first_deviation(
-        source, &canonical,
-    )))
+    order::out_of_order(&program).map_or(Ok(()), |out| Err(CheckError::OutOfOrder(out)))
 }
 
 /// The canonical text of `source`.
@@ -59,6 +64,8 @@ pub fn format(source: &str) -> Result<String, ParseError> {
 pub enum CheckError {
     Parse(ParseError),
     NotCanonical(Deviation),
+    /// An import is written somewhere canonical form does not put it.
+    OutOfOrder(OutOfOrder),
 }
 
 impl CheckError {
@@ -73,6 +80,12 @@ impl CheckError {
                 deviation.span(),
                 Some(deviation.help()),
             ),
+            Self::OutOfOrder(out) => Diagnostic::new(
+                Code::ImportOutOfOrder,
+                out.to_string(),
+                out.span(),
+                Some(out.help()),
+            ),
         }
     }
 }
@@ -82,6 +95,7 @@ impl fmt::Display for CheckError {
         match self {
             Self::Parse(error) => write!(f, "{}", error.message()),
             Self::NotCanonical(deviation) => write!(f, "{deviation}"),
+            Self::OutOfOrder(out) => write!(f, "{out}"),
         }
     }
 }

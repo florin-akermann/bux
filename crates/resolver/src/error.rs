@@ -64,6 +64,11 @@ pub(crate) enum ResolveErrorKind {
     NoType(String),
     DeclaredTwice(String),
     Shadowed(String),
+    /// A declaration written above one that uses it, named in that order.
+    WrittenAbove {
+        declared: String,
+        used_by: String,
+    },
 }
 
 impl ResolveErrorKind {
@@ -72,6 +77,14 @@ impl ResolveErrorKind {
         match namespace {
             Namespace::Value => Self::NoValue(text.to_owned()),
             Namespace::Type => Self::NoType(text.to_owned()),
+        }
+    }
+
+    /// The failure a declaration written above something using it amounts to.
+    pub(crate) fn written_above(declared: &str, used_by: &str) -> Self {
+        Self::WrittenAbove {
+            declared: declared.to_owned(),
+            used_by: used_by.to_owned(),
         }
     }
 
@@ -89,6 +102,7 @@ impl ResolveErrorKind {
             Self::NoValue(_) | Self::NoType(_) => Code::UnresolvedName,
             Self::DeclaredTwice(_) => Code::NameDeclaredTwice,
             Self::Shadowed(_) => Code::NameShadowed,
+            Self::WrittenAbove { .. } => Code::DefinitionBeforeUse,
         }
     }
 
@@ -99,6 +113,7 @@ impl ResolveErrorKind {
             }
             Self::DeclaredTwice(_) => "one name has one definition; rename one of the two",
             Self::Shadowed(_) => "rename the inner one; Lumen never hides a name",
+            Self::WrittenAbove { .. } => "a file reads top down: move it below what uses it",
         }
     }
 }
@@ -110,6 +125,12 @@ impl fmt::Display for ResolveErrorKind {
             Self::NoType(text) => write!(f, "there is no type named `{text}`"),
             Self::DeclaredTwice(text) => write!(f, "`{text}` is declared twice in this module"),
             Self::Shadowed(text) => write!(f, "`{text}` is already in scope here"),
+            Self::WrittenAbove { declared, used_by } => {
+                write!(
+                    f,
+                    "`{declared}` is written above `{used_by}`, which uses it"
+                )
+            }
         }
     }
 }

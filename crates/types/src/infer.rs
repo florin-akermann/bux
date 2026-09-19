@@ -57,10 +57,14 @@ struct Inference<'a> {
 }
 
 impl Inference<'_> {
-    /// Each function in the order it is declared, so a call reads a signature already inferred.
+    /// Each function bottom up, so a call reads a signature already inferred.
+    ///
+    /// A module is written top down: a definition sits below what uses it, which `docs/design.md`
+    /// section 13 requires. Walking the other way is therefore walking uses last, and a function
+    /// that declares no signature has been given one by the time anything calls it.
     fn module(&mut self) -> Result<(), TypeError> {
         let resolved = self.resolved;
-        for item in &resolved.program().items {
+        for item in resolved.program().items.iter().rev() {
             if let Item::Function(function) = item {
                 self.function(function)?;
             }

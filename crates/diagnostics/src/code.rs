@@ -60,12 +60,16 @@ catalogue! {
     NestingTooDeep => "L0106",
     /// The file is not in canonical form.
     NotCanonical => "L0200",
+    /// An import is written after a declaration, or two imports are out of sort.
+    ImportOutOfOrder => "L0201",
     /// Nothing in scope has this name.
     UnresolvedName => "L0300",
     /// A module declares the same name twice.
     NameDeclaredTwice => "L0301",
     /// A declaration or a binding hides a name that is already in scope.
     NameShadowed => "L0302",
+    /// A declaration is written above something that uses it.
+    DefinitionBeforeUse => "L0303",
     /// A type met a type it does not match.
     TypeMismatch => "L0400",
     /// A call passes more or fewer arguments than the function takes.
@@ -80,6 +84,8 @@ catalogue! {
     FieldWrittenTwice => "L0405",
     /// A `match` leaves a value of the type it matches unanswered.
     NonExhaustiveMatch => "L0500",
+    /// A `match` lists its arms in an order the type does not declare its variants in.
+    ArmOutOfOrder => "L0501",
 }
 
 impl Code {

@@ -15,7 +15,12 @@ about layout.
 
 Formatting preserves meaning: `parse(format(source))` equals `parse(source)`, always.
 The printer therefore never reorders, adds, or drops anything the parse tree holds.
-Sequence is not part of canonical form in version 0.1; Item 011 is where order joins it.
+
+Sequence is part of canonical form, and the printer is not what enforces it.
+`docs/design.md` section 13 puts imports first and sorted, a declaration above what uses it, and a
+match arm in the order the type declares its variants.
+Order is checked and never rewritten: `lumen fmt` repairs whitespace, which is nobody's decision,
+while where a declaration belongs is the author's.
 
 The formatter reads the source, not only the tree, because comments are not part of the tree.
 `docs/specs/grammar.md` drops comment tokens before parsing, and the printer puts them back from
@@ -113,6 +118,8 @@ A file that does not parse is reported as the parse error, by both commands, and
 Exit codes are `0` for a file in canonical form, `1` for one that is not, and `2` for one that
 cannot be read.
 A refusal is rendered as a diagnostic, which `docs/specs/diagnostics.md` lays out, under `L0200`.
+An import written after a declaration, or two imports out of sort, is `L0201` instead, and its
+`help:` says where the import belongs.
 
 A deviation points at the line it is about, and its `help:` names the text canonical form writes
 there.
@@ -130,6 +137,16 @@ Every `.lm` file under `tests/spec/` is in canonical form unless it says which d
 it, which `docs/specs/executable-examples.md` describes and the harness in `crates/cli` holds
 every example to.
 The language's own examples are then the largest evidence that the printer is right.
+
+## Where each order rule is checked
+
+A rule is checked by the phase that holds the information it needs, and no earlier.
+
+Import order is syntax, so `lumen-format` checks it alongside canonical form and raises `L0201`.
+Whether a declaration is written above what uses it needs to know which name means which
+declaration, so `lumen-resolver` checks it and raises `L0303`; `docs/specs/modules.md` states it.
+Arm order needs the variant list, so `lumen-exhaustiveness` checks it and raises `L0501`;
+`docs/specs/exhaustiveness.md` states it.
 
 ## Properties
 

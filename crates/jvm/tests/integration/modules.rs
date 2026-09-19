@@ -12,7 +12,7 @@ const PUBLIC_STATIC: u16 = 0x0009;
 const PUBLIC_FINAL: u16 = 0x0011;
 
 /// A module of one function over a record and one over an algebraic data type.
-const MODULE: &str = "type User = {\n    id: Int\n    active: Bool\n}\n\ntype Payment =\n    | Pending\n    | Failed(String)\n\nfn told(payment: Payment) -> String {\n    match payment {\n        Pending => \"waiting\"\n        Failed(reason) => reason\n    }\n}\n\nfn counted(users: List<User>) -> Int {\n    var total = 0\n    for user in users {\n        total += 1\n    }\n    total\n}\n";
+const MODULE: &str = "fn counted(users: List<User>) -> Int {\n    var total = 0\n    for user in users {\n        total += 1\n    }\n    total\n}\n\nfn told(payment: Payment) -> String {\n    match payment {\n        Pending => \"waiting\"\n        Failed(reason) => reason\n    }\n}\n\ntype Payment =\n    | Pending\n    | Failed(String)\n\ntype User = {\n    id: Int\n    active: Bool\n}\n";
 
 #[test]
 fn every_function_of_a_module_is_a_public_static_method_of_the_module_class() {
@@ -25,13 +25,13 @@ fn every_function_of_a_module_is_a_public_static_method_of_the_module_class() {
         .iter()
         .map(|method| method.name.as_str())
         .collect();
-    assert_eq!(named, ["told", "counted"], "in the order they are written");
+    assert_eq!(named, ["counted", "told"], "in the order they are written");
     assert_eq!(module.methods[0].access, PUBLIC_STATIC);
+    assert_eq!(module.methods[0].descriptor, "(Ljava/util/List;)J");
     assert_eq!(
-        module.methods[0].descriptor,
+        module.methods[1].descriptor,
         "(Ldemo/Payment;)Ljava/lang/String;"
     );
-    assert_eq!(module.methods[1].descriptor, "(Ljava/util/List;)J");
 }
 
 #[test]

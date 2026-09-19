@@ -20,7 +20,7 @@ fn a_type_that_is_not_declared_is_refused() {
 
 #[test]
 fn a_module_may_not_declare_one_name_twice() {
-    let error = refusal("fn f() -> Int {\n    1\n}\n\nfn f() -> Int {\n    2\n}\n");
+    let error = refusal("fn f() -> Int {\n    2\n}\n\nfn f() -> Int {\n    1\n}\n");
 
     assert_eq!(error.message(), "`f` is declared twice in this module");
 }
@@ -64,7 +64,7 @@ fn a_loop_binding_is_gone_once_the_loop_ends() {
 
 #[test]
 fn a_pattern_binding_is_gone_once_its_arm_ends() {
-    let source = "type Payment =\n    | Pending\n    | Failed(String)\n\nfn describe(payment: Payment) -> String {\n    match payment {\n        Pending => reason\n        Failed(reason) => reason\n    }\n}\n";
+    let source = "fn describe(payment: Payment) -> String {\n    match payment {\n        Pending => reason\n        Failed(reason) => reason\n    }\n}\n\ntype Payment =\n    | Pending\n    | Failed(String)\n";
 
     assert_eq!(refusal(source).message(), "there is nothing named `reason`");
 }
@@ -92,7 +92,7 @@ fn a_refusal_reads_as_the_diagnostic_it_is() {
 fn each_kind_of_refusal_carries_its_own_code() {
     assert_eq!(opening("fn f() -> Int {\n    missing\n}\n"), "error[L0300]");
     assert_eq!(
-        opening("fn f() -> Int {\n    1\n}\n\nfn f() -> Int {\n    2\n}\n"),
+        opening("fn f() -> Int {\n    2\n}\n\nfn f() -> Int {\n    1\n}\n"),
         "error[L0301]"
     );
     assert_eq!(opening("fn Ok() -> Int {\n    1\n}\n"), "error[L0302]");

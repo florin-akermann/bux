@@ -13,7 +13,11 @@ Every comment survives. A comment written at the end of a line moves to a line o
 directly above it; a comment already alone on its line stays where it is.
 
 Formatting never changes what a program says: the tree parsed from the canonical text is the
-tree parsed from the original.
+tree parsed from the original. That is also why `lumen fmt` does not put a file in order.
+Canonical form covers sequence too — imports come first and sorted, a declaration is written
+below what uses it, and a `match` lists its arms in the order the type declares its variants —
+but where a declaration belongs is the author's decision, so `lumen check` says where it goes
+rather than moving it there.
 
 A file that does not parse is reported as a diagnostic, and nothing is written.
 

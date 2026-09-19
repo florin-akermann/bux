@@ -1,0 +1,7 @@
+// expect-error: L0303
+// A file reads top down, so a declaration is written below what uses it.
+type UserId = UserId(Int)
+
+fn wrap(raw: Int) -> UserId {
+    UserId(raw)
+}

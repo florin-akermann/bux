@@ -54,7 +54,7 @@ fn a_for_loop_binds_the_item_of_the_list_it_walks() {
 #[test]
 fn a_field_is_the_type_the_record_declares_it() {
     let source =
-        "type User = {\n    active: Bool\n}\n\nfn open(user: User) -> Bool {\n    user.active\n}\n";
+        "fn open(user: User) -> Bool {\n    user.active\n}\n\ntype User = {\n    active: Bool\n}\n";
 
     assert_eq!(inferred_type(source, "user.active", 1), "Bool");
 }
@@ -62,14 +62,14 @@ fn a_field_is_the_type_the_record_declares_it() {
 #[test]
 fn a_record_is_built_at_the_type_it_declares() {
     let source =
-        "type User = {\n    active: Bool\n}\n\nfn make() -> User {\n    User { active: true }\n}\n";
+        "fn make() -> User {\n    User { active: true }\n}\n\ntype User = {\n    active: Bool\n}\n";
 
     assert_eq!(inferred_type(source, "User { active: true }", 1), "User");
 }
 
 #[test]
 fn a_record_update_has_the_type_it_already_had() {
-    let source = "type User = {\n    active: Bool\n}\n\nfn close(user: User) -> User {\n    user { active: false }\n}\n";
+    let source = "fn close(user: User) -> User {\n    user { active: false }\n}\n\ntype User = {\n    active: Bool\n}\n";
 
     assert_eq!(inferred_type(source, "user { active: false }", 1), "User");
 }
@@ -77,8 +77,8 @@ fn a_record_update_has_the_type_it_already_had() {
 #[test]
 fn a_question_mark_gives_the_ok_and_leaves_with_the_error() {
     let source = concat!(
-        "fn find(id: Int) -> Result<String, Int> {\n    Ok(\"found\")\n}\n\n",
-        "fn load(id: Int) -> Result<String, Int> {\n    name := find(id)?\n    Ok(name)\n}\n"
+        "fn load(id: Int) -> Result<String, Int> {\n    name := find(id)?\n    Ok(name)\n}\n\n",
+        "fn find(id: Int) -> Result<String, Int> {\n    Ok(\"found\")\n}\n"
     );
 
     assert_eq!(inferred_type(source, "find(id)?", 1), "String");
@@ -87,9 +87,8 @@ fn a_question_mark_gives_the_ok_and_leaves_with_the_error() {
 #[test]
 fn a_match_arm_binds_what_its_variant_carries() {
     let source = concat!(
-        "type Payment =\n    | Pending\n    | Failed(String)\n\n",
-        "fn describe(payment: Payment) -> String {\n    match payment {\n",
-        "        Pending => \"waiting\"\n        Failed(reason) => reason\n    }\n}\n"
+        "fn describe(payment: Payment) -> String {\n    match payment {\n        Pending => \"waiting\"\n        Failed(reason) => reason\n    }\n}\n\n",
+        "type Payment =\n    | Pending\n    | Failed(String)\n"
     );
 
     assert_eq!(inferred_type(source, "reason", 2), "String");
@@ -97,7 +96,7 @@ fn a_match_arm_binds_what_its_variant_carries() {
 
 #[test]
 fn a_newtype_is_the_type_it_declares_and_not_the_one_it_wraps() {
-    let source = "type UserId = UserId(Int)\n\nfn wrap(raw: Int) -> UserId {\n    UserId(raw)\n}\n";
+    let source = "fn wrap(raw: Int) -> UserId {\n    UserId(raw)\n}\n\ntype UserId = UserId(Int)\n";
 
     assert_eq!(inferred_type(source, "UserId(raw)", 1), "UserId");
 }
@@ -119,8 +118,8 @@ fn an_if_with_an_else_is_the_type_both_of_its_branches_have() {
 #[test]
 fn a_name_bound_to_a_field_keeps_the_type_the_record_declares() {
     let source = concat!(
-        "type User = {\n    name: String\n}\n\n",
-        "fn go(user: User) -> String {\n    found := user.name\n    found\n}\n"
+        "fn go(user: User) -> String {\n    found := user.name\n    found\n}\n\n",
+        "type User = {\n    name: String\n}\n"
     );
 
     assert_eq!(inferred_type(source, "found", 2), "String");
@@ -129,9 +128,9 @@ fn a_name_bound_to_a_field_keeps_the_type_the_record_declares() {
 #[test]
 fn a_field_reached_through_a_name_bound_to_a_field_is_found() {
     let source = concat!(
-        "type Inner = {\n    depth: Int\n}\n\n",
+        "fn go(outer: Outer) -> Int {\n    held := outer.inner\n    held.depth\n}\n\n",
         "type Outer = {\n    inner: Inner\n}\n\n",
-        "fn go(outer: Outer) -> Int {\n    held := outer.inner\n    held.depth\n}\n"
+        "type Inner = {\n    depth: Int\n}\n"
     );
 
     assert_eq!(inferred_type(source, "held.depth", 1), "Int");

@@ -1,21 +1,14 @@
 // A record and an algebraic data type, each declared over a type parameter of its own.
-type Box<T> = {
-    value: T
-}
-
-type Tree<T> =
-    | Leaf
-    | Branch {
-        value: T
-        left: Tree<T>
-    }
-
 fn unwrap(boxed: Box<Int>) -> Int {
     boxed.value
 }
 
 fn refill(boxed: Box<String>) -> Box<String> {
     boxed { value: "new" }
+}
+
+type Box<T> = {
+    value: T
 }
 
 fn root(tree: Tree<Int>) -> Int {
@@ -28,3 +21,10 @@ fn root(tree: Tree<Int>) -> Int {
 fn planted(word: String) -> Tree<String> {
     Branch { value: word, left: Leaf }
 }
+
+type Tree<T> =
+    | Leaf
+    | Branch {
+        value: T
+        left: Tree<T>
+    }

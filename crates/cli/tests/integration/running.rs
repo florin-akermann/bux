@@ -5,7 +5,7 @@ use std::path::Path;
 use crate::common::{Example, jdk, lumen, lumen_finding};
 
 /// A program: a module declaring the `main` a run starts at, over a type and a loop.
-const PROGRAM: &str = "type User = {\n    id: Int\n    active: Bool\n}\n\nfn counted(users: List<User>) -> Int {\n    var total = 0\n    for user in users {\n        if user.active {\n            total += 1\n        }\n    }\n    total\n}\n\nfn main() -> () {\n    ()\n}\n";
+const PROGRAM: &str = "fn main() -> () {\n    ()\n}\n\nfn counted(users: List<User>) -> Int {\n    var total = 0\n    for user in users {\n        if user.active {\n            total += 1\n        }\n    }\n    total\n}\n\ntype User = {\n    id: Int\n    active: Bool\n}\n";
 
 /// A library: a module the compiler accepts, and that a run has nothing to start.
 const LIBRARY: &str = "fn counted() -> Int {\n    2\n}\n";

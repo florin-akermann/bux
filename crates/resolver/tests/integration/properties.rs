@@ -14,7 +14,7 @@ const PIECES: [&str; 6] = [
     "type User = {\n    id: Int\n}",
     "fn identity<T>(value: T) -> T {\n    value\n}",
     "fn total(counts: List<Int>) -> Int {\n    var sum = 0\n    for count in counts {\n        sum += 1\n    }\n    sum\n}",
-    "type Payment =\n    | Pending\n    | Failed(String)\n\nfn describe(payment: Payment) -> String {\n    match payment {\n        Pending => \"waiting\"\n        Failed(reason) => reason\n    }\n}",
+    "fn describe(payment: Payment) -> String {\n    match payment {\n        Pending => \"waiting\"\n        Failed(reason) => reason\n    }\n}\n\ntype Payment =\n    | Pending\n    | Failed(String)\n",
 ];
 
 #[hegel::test]

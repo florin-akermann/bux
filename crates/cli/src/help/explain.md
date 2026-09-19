@@ -7,7 +7,7 @@ test, or a note to a colleague can cite the code and stay right however the word
 `lumen explain <code>` prints what the code means, why the language refuses it, and what to
 write instead, at more length than the one `help:` line of a diagnostic has room for.
 
-The codes are grouped by the phase that raises them: the grammar writes L01xx, and canonical
-form writes L02xx.
+The codes are grouped by the phase that raises them: the grammar writes L01xx, canonical form
+L02xx, name resolution L03xx, type inference L04xx, and exhaustiveness L05xx.
 
 Exit codes: 0 when the code is one the compiler can raise, and 2 when it is not.

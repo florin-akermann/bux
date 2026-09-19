@@ -53,6 +53,10 @@ constructors: Err  None  Ok  Some
 They are ordinary declarations of a module the compiler supplies, not keywords.
 The prelude becomes Lumen source once a module can be loaded; until then this list is the prelude.
 
+`Option` declares `Some` and then `None`, and `Result` declares `Ok` and then `Err`.
+That order is the one a `match` lists its arms in, which `docs/specs/exhaustiveness.md` requires,
+and it is the order `docs/specs/codegen.md` counts a tag in.
+
 ## What is not resolved here
 
 A record field is looked up in the record's type, so `user.name` resolves `user` and leaves `name`.
@@ -62,17 +66,36 @@ A name written after `.` is never a name in scope, whether the receiver is a rec
 A bare name in a pattern is a use when it names a variant in scope, and a binding otherwise.
 That choice is the resolver's, which is why the parser writes both as the same node.
 
+## Where a declaration belongs
+
+A file reads top down: the reader meets the intent before the detail.
+A declaration is therefore written below what uses it, which `docs/design.md` section 13 requires,
+and a declaration written above something that uses it is refused.
+
+The rule is checked here because this is the phase that knows which name means which declaration.
+Nothing is moved: the refusal says where the declaration belongs and the author moves it.
+
+Two declarations that use each other are written either way, because no order undoes a cycle.
+A use is out of order only when what it uses cannot reach back to it, so recursion is never
+reported and neither is a pair that calls each other.
+
+An import is not placed by what uses it.
+Canonical form puts every import first and sorted, which settles where it goes without asking;
+`docs/specs/formatting.md` states that rule and `L0201` is what refuses it.
+
 ## The errors
 
-| name            | code    | message                              |
-|-----------------|---------|--------------------------------------|
-| unresolved name | `L0300` | there is nothing named `x`           |
-| declared twice  | `L0301` | `x` is declared twice in this module |
-| shadowed name   | `L0302` | `x` is already in scope here         |
+| name              | code    | message                                         |
+|-------------------|---------|-------------------------------------------------|
+| unresolved name   | `L0300` | there is nothing named `x`                      |
+| declared twice    | `L0301` | `x` is declared twice in this module            |
+| shadowed name     | `L0302` | `x` is already in scope here                    |
+| written above use | `L0303` | `x` is written above `y`, which uses it         |
 
 `L0300` helps with `a name is declared in this file, imported, or supplied by the prelude`.
 `L0301` helps with `one name has one definition; rename one of the two`.
 `L0302` helps with `rename the inner one; Lumen never hides a name`.
+`L0303` helps with `a file reads top down: move it below what uses it`.
 
 A name written where a type belongs and found only in the value scope is still `L0300`, with a
 message saying there is no type of that name.

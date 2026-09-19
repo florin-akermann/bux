@@ -109,3 +109,43 @@ fn a_file_that_does_not_parse_is_reported_as_the_parse_error() {
         )
     );
 }
+
+#[test]
+fn an_import_written_after_a_declaration_is_sent_to_the_top() {
+    assert_eq!(
+        refusal("fn f() -> Int {\n    1\n}\n\nimport io\n"),
+        concat!(
+            "error[L0201]: `import io` is written after a declaration\n",
+            "  --> demo.lm:5:1\n",
+            "\n",
+            "  5 | import io\n",
+            "    | ^^^^^^^^^\n",
+            "\n",
+            "help: imports come first, before every declaration\n",
+        )
+    );
+}
+
+#[test]
+fn two_imports_out_of_sort_name_the_one_that_belongs_first() {
+    assert_eq!(
+        refusal("import io\n\nimport files\n"),
+        concat!(
+            "error[L0201]: `import files` is written after `import io`\n",
+            "  --> demo.lm:3:1\n",
+            "\n",
+            "  3 | import files\n",
+            "    | ^^^^^^^^^^^^\n",
+            "\n",
+            "help: `files` sorts before `io`\n",
+        )
+    );
+}
+
+#[test]
+fn a_file_whose_imports_are_first_and_sorted_passes() {
+    assert_eq!(
+        check("import files\n\nimport io\n\nfn f() -> Int {\n    1\n}\n"),
+        Ok(())
+    );
+}

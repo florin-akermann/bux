@@ -71,18 +71,22 @@ The grammar raises these, in `crates/parser/src/error.rs`:
 - `L0105` — comparisons are chained.
 - `L0106` — brackets nest deeper than the parser descends.
 
-Canonical form raises this one, in `crates/format/src/lib.rs`:
+Canonical form raises these, in `crates/format/src/lib.rs`:
 
 - `L0200` — the file is not in canonical form.
+- `L0201` — an import is written after a declaration, or two imports are out of sort.
 
-One code covers all three ways a file departs from canonical form, because they are one problem
+One code covers all three ways a file departs from whitespace form, because they are one problem
 and `lumen fmt` is the one answer to it.
+Order is its own code because `lumen fmt` is not the answer to it: where a declaration belongs is
+the author's decision, so the compiler says where rather than moving it.
 
 Name resolution raises these, in `crates/resolver/src/error.rs`:
 
 - `L0300` — nothing in scope has this name.
 - `L0301` — a module declares the same name twice.
 - `L0302` — a declaration or a binding hides a name that is already in scope.
+- `L0303` — a declaration is written above something that uses it.
 
 Type inference raises these, in `crates/types/src/error.rs`:
 
@@ -93,9 +97,10 @@ Type inference raises these, in `crates/types/src/error.rs`:
 - `L0404` — a record is built without one of the fields it declares.
 - `L0405` — a record is written with one of its fields given a value twice.
 
-Exhaustiveness raises this one, in `crates/exhaustiveness/src/error.rs`:
+Exhaustiveness raises these, in `crates/exhaustiveness/src/error.rs`:
 
 - `L0500` — a `match` leaves a value of the type it matches unanswered.
+- `L0501` — a `match` lists its arms in an order the type does not declare its variants in.
 
 ## `lumen explain`
 

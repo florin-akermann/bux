@@ -1,20 +1,6 @@
 // The version 0.1 grammar in a program shape: items, types, matching, and loops.
 import io
 
-type UserId = UserId(Int)
-
-type Payment =
-    | Pending
-    | Authorized {
-        authorization_id: String
-    }
-    | Failed(String)
-
-type User = {
-    id: UserId
-    active: Bool
-}
-
 fn describe(payment: Payment) -> String {
     match payment {
         Pending => "Waiting"
@@ -23,12 +9,12 @@ fn describe(payment: Payment) -> String {
     }
 }
 
-fn first_user(users: List<User>) -> Result<User, String> {
-    for user in users {
-        return Ok(user)
+type Payment =
+    | Pending
+    | Authorized {
+        authorization_id: String
     }
-    Err("no users")
-}
+    | Failed(String)
 
 fn count_active<T>(users: List<User>, limit: Int) -> Result<Int, String> {
     var total = 0
@@ -49,6 +35,20 @@ fn count_active<T>(users: List<User>, limit: Int) -> Result<Int, String> {
     renamed := first { active: false }
     Ok(total / 1 - 0)
 }
+
+fn first_user(users: List<User>) -> Result<User, String> {
+    for user in users {
+        return Ok(user)
+    }
+    Err("no users")
+}
+
+type User = {
+    id: UserId
+    active: Bool
+}
+
+type UserId = UserId(Int)
 
 fn forever() -> () {
     for {

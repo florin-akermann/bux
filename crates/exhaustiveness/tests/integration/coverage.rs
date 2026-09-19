@@ -82,9 +82,8 @@ fn a_refusal_points_at_the_whole_match() {
 #[test]
 fn a_match_on_a_record_type_is_covered_by_its_one_constructor() {
     let source = concat!(
-        "type User = {\n    name: String\n}\n\n",
-        "fn named(user: User) -> String {\n",
-        "    match user {\n        User { name } => name\n    }\n}\n"
+        "fn named(user: User) -> String {\n    match user {\n        User { name } => name\n    }\n}\n\n",
+        "type User = {\n    name: String\n}\n"
     );
 
     covers_everything(source);
@@ -276,9 +275,8 @@ fn a_refusal_reads_as_the_diagnostic_it_is() {
 #[test]
 fn a_value_left_uncovered_under_an_arm_is_named_alongside_the_variants_with_no_arm() {
     let source = concat!(
-        "type Held =\n    | Wrapping(Option<Int>)\n    | Empty\n\n",
-        "fn describe(held: Held) -> Int {\n",
-        "    match held {\n        Wrapping(Some(value)) => value\n    }\n}\n"
+        "fn describe(held: Held) -> Int {\n    match held {\n        Wrapping(Some(value)) => value\n    }\n}\n\n",
+        "type Held =\n    | Wrapping(Option<Int>)\n    | Empty\n"
     );
 
     assert_eq!(
@@ -303,8 +301,8 @@ fn a_bool_left_uncovered_under_an_arm_is_named_where_it_is_uncovered() {
 #[test]
 fn a_constructor_carrying_more_than_one_value_names_a_stand_in_for_each() {
     let source = concat!(
-        "type Pair =\n    | Both(Int, Int)\n    | Neither\n\n",
-        "fn first(pair: Pair) -> Int {\n    match pair {\n        Neither => 0\n    }\n}\n"
+        "fn first(pair: Pair) -> Int {\n    match pair {\n        Neither => 0\n    }\n}\n\n",
+        "type Pair =\n    | Both(Int, Int)\n    | Neither\n"
     );
 
     assert_eq!(

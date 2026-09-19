@@ -8,11 +8,11 @@ use crate::common;
 /// The modules a property is checked over, each written in one construct or another.
 const SOURCES: [&str; 7] = [
     "fn answer() -> Int {\n    7\n}\n",
-    "type User = {\n    id: Int\n    active: Bool\n}\n\nfn held(user: User) -> Int {\n    user.id\n}\n",
-    "type Payment =\n    | Pending\n    | Failed(String)\n\nfn told(payment: Payment) -> String {\n    match payment {\n        Pending => \"waiting\"\n        Failed(reason) => reason\n    }\n}\n",
+    "fn held(user: User) -> Int {\n    user.id\n}\n\ntype User = {\n    id: Int\n    active: Bool\n}\n",
+    "fn told(payment: Payment) -> String {\n    match payment {\n        Pending => \"waiting\"\n        Failed(reason) => reason\n    }\n}\n\ntype Payment =\n    | Pending\n    | Failed(String)\n",
     "fn walked(counts: List<Int>) -> Int {\n    var total = 0\n    for count in counts {\n        total += count\n    }\n    total\n}\n",
-    "fn held() -> Result<Int, String> {\n    Ok(1)\n}\n\nfn used() -> Result<Int, String> {\n    value := held()?\n    Ok(value + 1)\n}\n",
-    "fn identity<T>(value: T) -> T {\n    value\n}\n\nfn wrapped() -> Option<Int> {\n    Some(identity(2))\n}\n",
+    "fn used() -> Result<Int, String> {\n    value := held()?\n    Ok(value + 1)\n}\n\nfn held() -> Result<Int, String> {\n    Ok(1)\n}\n",
+    "fn wrapped() -> Option<Int> {\n    Some(identity(2))\n}\n\nfn identity<T>(value: T) -> T {\n    value\n}\n",
     "fn counted() -> Int {\n    2\n}\n\nfn main() -> () {\n    ()\n}\n",
 ];
 

@@ -1,11 +1,4 @@
 // Every shape of match that covers the type it matches.
-type Payment =
-    | Pending
-    | Authorized {
-        authorization_id: String
-    }
-    | Failed(String)
-
 fn describe(payment: Payment) -> String {
     match payment {
         Pending => "waiting"
@@ -20,6 +13,13 @@ fn settled(payment: Payment) -> Bool {
         other => true
     }
 }
+
+type Payment =
+    | Pending
+    | Authorized {
+        authorization_id: String
+    }
+    | Failed(String)
 
 fn spoken(flag: Bool) -> String {
     match flag {

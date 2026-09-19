@@ -1,10 +1,10 @@
 // expect-error: L0404
 // Building a record gives a value to every field it declares.
+fn go() -> User {
+    User { id: 1 }
+}
+
 type User = {
     id: Int
     active: Bool
-}
-
-fn go() -> User {
-    User { id: 1 }
 }

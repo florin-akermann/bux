@@ -310,7 +310,7 @@ Support:
 * `Result`
 * generics
 * type inference
-* canonical formatting as a compile gate
+* canonical formatting as a compile gate, sequence included
 * basic modules
 * JVM bytecode generation
 

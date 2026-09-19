@@ -1,18 +1,4 @@
 // Every expression form of version 0.1, each with the type inference gives it.
-type UserId = UserId(Int)
-
-type User = {
-    id: UserId
-    active: Bool
-}
-
-type Payment =
-    | Pending
-    | Authorized {
-        authorization_id: String
-    }
-    | Failed(String)
-
 fn describe(payment: Payment) -> String {
     match payment {
         Pending => "waiting"
@@ -21,12 +7,12 @@ fn describe(payment: Payment) -> String {
     }
 }
 
-fn first_user(users: List<User>) -> Result<User, String> {
-    for user in users {
-        return Ok(user)
+type Payment =
+    | Pending
+    | Authorized {
+        authorization_id: String
     }
-    Err("no users")
-}
+    | Failed(String)
 
 fn count_active(users: List<User>, limit: Int) -> Result<Int, String> {
     var total = 0
@@ -47,3 +33,17 @@ fn count_active(users: List<User>, limit: Int) -> Result<Int, String> {
     }
     Ok(total)
 }
+
+fn first_user(users: List<User>) -> Result<User, String> {
+    for user in users {
+        return Ok(user)
+    }
+    Err("no users")
+}
+
+type User = {
+    id: UserId
+    active: Bool
+}
+
+type UserId = UserId(Int)

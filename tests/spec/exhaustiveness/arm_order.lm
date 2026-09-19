@@ -1,0 +1,12 @@
+// expect-error: L0501
+// A `match` lists its arms in the order the type declares its variants.
+fn describe(payment: Payment) -> String {
+    match payment {
+        Failed(reason) => reason
+        Pending => "waiting"
+    }
+}
+
+type Payment =
+    | Pending
+    | Failed(String)

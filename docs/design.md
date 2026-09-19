@@ -532,6 +532,23 @@ The formatter has no options.
 `docs/specs/formatting.md` states the canonical form it writes, construct by construct.
 The snippets in this document illustrate the shape of each feature, not its canonical spelling.
 
+### Order
+
+Canonical form covers sequence, not only whitespace.
+
+**Imports come first**, before every declaration, sorted by the module they name.
+
+**A declaration is written above what it uses**, so a helper sits below the thing it helps.
+A file reads top down: the reader meets the intent before the detail.
+Two declarations that use each other are written either way, because no order undoes a cycle.
+
+**A `match` lists its arms in the order the type declares its variants**.
+A new variant then has exactly one place to be handled, and no diff is ever reorder-only.
+
+Order is checked and never rewritten.
+`lumen fmt` repairs whitespace, which is nobody's decision.
+Where a declaration belongs is the author's, so the compiler says where rather than moving it.
+
 ---
 
 ## 14. Effects

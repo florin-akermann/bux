@@ -1,4 +1,17 @@
 // Parametric polymorphism: one declaration used at a type of its own each time.
+fn go(words: List<String>) -> String {
+    number := identity(1)
+    word := identity("two")
+    nothing := none_of()
+    counted := unwrap_or(nothing, number)
+    named := unwrap_or(nothing, word)
+    found := unwrap_or(first_of(words), named)
+    if counted > 0 {
+        return found
+    }
+    word
+}
+
 fn identity<T>(value: T) -> T {
     value
 }
@@ -19,17 +32,4 @@ fn first_of<T>(items: List<T>) -> Option<T> {
         return Some(item)
     }
     None
-}
-
-fn go(words: List<String>) -> String {
-    number := identity(1)
-    word := identity("two")
-    nothing := none_of()
-    counted := unwrap_or(nothing, number)
-    named := unwrap_or(nothing, word)
-    found := unwrap_or(first_of(words), named)
-    if counted > 0 {
-        return found
-    }
-    word
 }

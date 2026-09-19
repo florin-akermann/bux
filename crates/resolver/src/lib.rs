@@ -7,6 +7,7 @@
 
 mod definition;
 mod error;
+mod order;
 mod prelude;
 mod resolve;
 mod scope;

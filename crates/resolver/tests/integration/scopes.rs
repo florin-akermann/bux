@@ -7,7 +7,7 @@ use crate::common::{meaning, resolved};
 
 #[test]
 fn a_use_points_at_the_declaration_it_means() {
-    let source = "fn one() -> Int {\n    1\n}\n\nfn two() -> Int {\n    one()\n}\n";
+    let source = "fn two() -> Int {\n    one()\n}\n\nfn one() -> Int {\n    1\n}\n";
 
     let declared = meaning(source, Value, "one", 1).expect("the declaration names itself");
     assert_eq!(declared.kind, DefinitionKind::Function);
@@ -26,7 +26,7 @@ fn a_function_may_call_one_declared_below_it() {
 
 #[test]
 fn a_newtype_names_a_type_and_a_constructor_without_the_two_clashing() {
-    let source = "type UserId = UserId(Int)\n\nfn wrap(raw: Int) -> UserId {\n    UserId(raw)\n}\n";
+    let source = "fn wrap(raw: Int) -> UserId {\n    UserId(raw)\n}\n\ntype UserId = UserId(Int)\n";
 
     assert_eq!(kind(source, Type, "UserId", 3), Some(DefinitionKind::Type));
     assert_eq!(
@@ -37,11 +37,11 @@ fn a_newtype_names_a_type_and_a_constructor_without_the_two_clashing() {
 
 #[test]
 fn a_record_type_declares_a_type_and_the_value_it_is_built_with_at_one_place() {
-    let source = "type User = {\n    id: Int\n}\n\nfn make() -> User {\n    User { id: 1 }\n}\n";
+    let source = "fn make() -> User {\n    User { id: 1 }\n}\n\ntype User = {\n    id: Int\n}\n";
 
-    assert_eq!(kind(source, Type, "User", 1), Some(DefinitionKind::Type));
+    assert_eq!(kind(source, Type, "User", 3), Some(DefinitionKind::Type));
     assert_eq!(
-        kind(source, Value, "User", 1),
+        kind(source, Value, "User", 3),
         Some(DefinitionKind::Constructor)
     );
 }
@@ -109,14 +109,14 @@ fn a_name_written_after_a_dot_is_not_looked_up_here() {
 
 #[test]
 fn a_field_of_a_record_literal_is_not_looked_up_here() {
-    let source = "type User = {\n    id: Int\n}\n\nfn make() -> User {\n    User { id: 1 }\n}\n";
+    let source = "fn make() -> User {\n    User { id: 1 }\n}\n\ntype User = {\n    id: Int\n}\n";
 
     assert_eq!(meaning(source, Value, "id", 2), None);
 }
 
 #[test]
 fn a_bare_pattern_that_names_a_variant_is_a_use_and_not_a_binding() {
-    let source = "type Payment =\n    | Pending\n    | Failed(String)\n\nfn describe(payment: Payment) -> String {\n    match payment {\n        Pending => \"waiting\"\n        Failed(reason) => reason\n    }\n}\n";
+    let source = "fn describe(payment: Payment) -> String {\n    match payment {\n        Pending => \"waiting\"\n        Failed(reason) => reason\n    }\n}\n\ntype Payment =\n    | Pending\n    | Failed(String)\n";
 
     assert_eq!(
         kind(source, Value, "Pending", 2),
@@ -130,7 +130,7 @@ fn a_bare_pattern_that_names_a_variant_is_a_use_and_not_a_binding() {
 
 #[test]
 fn a_record_pattern_binds_each_field_it_names() {
-    let source = "type Payment =\n    | Pending\n    | Authorized {\n        id: String\n    }\n\nfn describe(payment: Payment) -> String {\n    match payment {\n        Pending => \"waiting\"\n        Authorized { id } => id\n    }\n}\n";
+    let source = "fn describe(payment: Payment) -> String {\n    match payment {\n        Pending => \"waiting\"\n        Authorized { id } => id\n    }\n}\n\ntype Payment =\n    | Pending\n    | Authorized {\n        id: String\n    }\n";
 
     assert_eq!(kind(source, Value, "id", 2), Some(DefinitionKind::Local));
 }

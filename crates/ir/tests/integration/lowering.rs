@@ -149,8 +149,8 @@ fn the_prelude_types_are_written_with_every_module() {
         [
             "demo",
             "lumen/Option",
-            "lumen/Option$None",
             "lumen/Option$Some",
+            "lumen/Option$None",
             "lumen/Result",
             "lumen/Result$Ok",
             "lumen/Result$Err",
@@ -247,7 +247,7 @@ fn a_for_in_counts_through_the_list_it_was_given() {
 
 #[test]
 fn a_record_update_builds_another_one_out_of_the_fields_it_is_not_given() {
-    let source = "type User = {\n    id: Int\n    active: Bool\n}\n\nfn renamed(user: User) -> User {\n    user { active: false }\n}\n";
+    let source = "fn renamed(user: User) -> User {\n    user { active: false }\n}\n\ntype User = {\n    id: Int\n    active: Bool\n}\n";
 
     let lowered = common::lowered(source);
 
@@ -269,7 +269,7 @@ fn a_record_update_builds_another_one_out_of_the_fields_it_is_not_given() {
 
 #[test]
 fn a_question_mark_gives_back_the_error_it_was_handed() {
-    let source = "fn held() -> Result<Int, String> {\n    Ok(1)\n}\n\nfn used() -> Result<Int, String> {\n    value := held()?\n    Ok(value)\n}\n";
+    let source = "fn used() -> Result<Int, String> {\n    value := held()?\n    Ok(value)\n}\n\nfn held() -> Result<Int, String> {\n    Ok(1)\n}\n";
 
     let lowered = common::lowered(source);
 
@@ -291,18 +291,20 @@ fn a_question_mark_gives_back_the_error_it_was_handed() {
 
 #[test]
 fn two_lowerings_of_one_source_are_the_same() {
-    let source = "type User = {\n    id: Int\n}\n\nfn held(user: User) -> Int {\n    user.id\n}\n";
+    let source = "fn held(user: User) -> Int {\n    user.id\n}\n\ntype User = {\n    id: Int\n}\n";
 
     assert_eq!(common::lowered(source), common::lowered(source));
 }
 
 /// A function whose result is a type parameter, so every use of it leaves a reference behind.
-const ERASED: &str = "fn identity<T>(value: T) -> T {\n    value\n}\n\n";
+///
+/// It is written below the function that uses it, which is where a definition belongs.
+const ERASED: &str = "\nfn identity<T>(value: T) -> T {\n    value\n}\n";
 
 #[test]
 fn a_condition_whose_type_was_erased_is_read_back_as_a_truth_value() {
     let source = format!(
-        "{ERASED}fn picked(flag: Bool) -> Int {{\n    if identity(flag) {{\n        1\n    }} else {{\n        2\n    }}\n}}\n"
+        "fn picked(flag: Bool) -> Int {{\n    if identity(flag) {{\n        1\n    }} else {{\n        2\n    }}\n}}\n{ERASED}"
     );
 
     let lowered = common::lowered(&source);
@@ -317,7 +319,7 @@ fn a_condition_whose_type_was_erased_is_read_back_as_a_truth_value() {
 
 #[test]
 fn the_operand_of_not_is_read_back_before_it_is_flipped() {
-    let source = format!("{ERASED}fn negated(flag: Bool) -> Bool {{\n    !identity(flag)\n}}\n");
+    let source = format!("fn negated(flag: Bool) -> Bool {{\n    !identity(flag)\n}}\n{ERASED}");
 
     let lowered = common::lowered(&source);
 
@@ -329,7 +331,7 @@ fn the_operand_of_not_is_read_back_before_it_is_flipped() {
 #[test]
 fn an_operand_whose_type_was_erased_is_read_back_before_the_operator_works_on_it() {
     let source =
-        format!("{ERASED}fn compared(count: Int) -> Bool {{\n    identity(count) < 2\n}}\n");
+        format!("fn compared(count: Int) -> Bool {{\n    identity(count) < 2\n}}\n{ERASED}");
 
     let lowered = common::lowered(&source);
 

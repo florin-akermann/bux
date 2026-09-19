@@ -31,15 +31,26 @@ pub fn typed(source: &str) -> TypedProgram {
         .unwrap_or_else(|error| panic!("{source:?} infers: {}", error.message()))
 }
 
+/// A module matching on a nested value, with `arms` as the arms of the one `match`.
+///
+/// `Option<Result<Int, String>>` is the smallest type whose values name two declarations, so an
+/// arm of it is placed by the variant it answers for and then by what it reaches for.
+pub fn outcomes(arms: &str) -> String {
+    format!(
+        concat!(
+            "fn described(outcome: Option<Result<Int, String>>) -> String {{\n",
+            "    match outcome {{\n{arms}    }}\n}}\n"
+        ),
+        arms = arms
+    )
+}
+
 /// A module declaring the payment type of `docs/design.md`, with `body` as the one function.
 pub fn payments(body: &str) -> String {
     format!(
         concat!(
-            "type Payment =\n",
-            "    | Pending\n",
-            "    | Authorized {{\n        authorization_id: String\n    }}\n",
-            "    | Failed(String)\n\n",
-            "fn describe(payment: Payment) -> String {{\n{body}\n}}\n"
+            "fn describe(payment: Payment) -> String {{\n{body}\n}}\n\n",
+            "type Payment =\n    | Pending\n    | Authorized {{\n        authorization_id: String\n    }}\n    | Failed(String)\n"
         ),
         body = body
     )

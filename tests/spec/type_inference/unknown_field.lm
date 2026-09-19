@@ -1,9 +1,9 @@
 // expect-error: L0402
 // A field is looked up in the record its type declares, and nowhere else.
-type User = {
-    active: Bool
-}
-
 fn go(user: User) -> Bool {
     user.busy
+}
+
+type User = {
+    active: Bool
 }

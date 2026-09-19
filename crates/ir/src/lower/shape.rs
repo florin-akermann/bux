@@ -17,7 +17,7 @@ use crate::descriptor::{ClassName, Descriptor, MethodDescriptor};
 ///
 /// The order is the order a tag counts in, and it is the order exhaustiveness lists them in.
 const PRELUDE: [(&str, [(&str, usize); 2]); 2] = [
-    ("Option", [("None", 0), ("Some", 1)]),
+    ("Option", [("Some", 1), ("None", 0)]),
     ("Result", [("Ok", 1), ("Err", 1)]),
 ];
 

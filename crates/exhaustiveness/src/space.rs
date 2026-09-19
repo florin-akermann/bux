@@ -29,7 +29,7 @@ impl Space {
     pub(crate) fn of(program: &Program) -> Self {
         let mut space = Self::default();
         space.declare(vec![signature("false", 0), signature("true", 0)]);
-        space.declare(vec![signature("None", 0), signature("Some", 1)]);
+        space.declare(vec![signature("Some", 1), signature("None", 0)]);
         space.declare(vec![signature("Ok", 1), signature("Err", 1)]);
         for item in &program.items {
             if let Item::Type(declaration) = item {
@@ -44,6 +44,13 @@ impl Space {
         self.siblings(constructor)
             .and_then(|siblings| siblings.iter().find(|one| one.name == constructor))
             .map_or(0, |found| found.carries)
+    }
+
+    /// Where `constructor` sits among the constructors its type declares.
+    pub(crate) fn declared_at(&self, constructor: &str) -> Option<usize> {
+        self.siblings(constructor)?
+            .iter()
+            .position(|one| one.name == constructor)
     }
 
     /// The constructors of the type `constructor` belongs to, when a type declares them.

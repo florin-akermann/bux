@@ -5,6 +5,7 @@ use lumen_ast::{Block, Expr, ExprKind, ForHeader, ForLoop, IfExpr, Item, MatchEx
 use lumen_ast::{Span, Statement, StatementKind};
 
 use crate::error::MatchError;
+use crate::order::out_of_order;
 use crate::pattern::Reading;
 use crate::space::Space;
 use crate::usefulness::uncovered;
@@ -108,7 +109,10 @@ impl Walk<'_> {
             .collect();
         let left = uncovered(self.space, &rows, 1);
         if !left.is_empty() {
-            return Err(MatchError::at(at, &left));
+            return Err(MatchError::not_covered(at, &left));
+        }
+        if let Some(out) = out_of_order(matching, self.reading, self.space) {
+            return Err(MatchError::out_of_order(out));
         }
         self.each(matching.arms.iter().map(|arm| &arm.body))
     }

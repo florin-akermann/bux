@@ -75,7 +75,7 @@ impl<'a> Reading<'a> {
     }
 
     /// Whether the name binds rather than naming a constructor, which resolution has decided.
-    fn binds(&self, name: &Name) -> bool {
+    pub(crate) fn binds(&self, name: &Name) -> bool {
         self.resolved
             .definition(Namespace::Value, name)
             .is_none_or(|definition| definition.kind != DefinitionKind::Constructor)

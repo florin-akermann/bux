@@ -1,9 +1,9 @@
 // expect-error: L0401
 // A call passes one argument for each the declaration lists.
-fn twice(value: Int) -> Int {
-    value + value
-}
-
 fn go() -> Int {
     twice(1, 2)
+}
+
+fn twice(value: Int) -> Int {
+    value + value
 }

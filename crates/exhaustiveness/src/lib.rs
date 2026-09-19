@@ -6,6 +6,7 @@
 //! compiler at every match which has not been told what to do with it.
 
 mod error;
+mod order;
 mod pattern;
 mod space;
 mod usefulness;
