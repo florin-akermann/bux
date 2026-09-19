@@ -1,0 +1,10 @@
+//! The names every module has in scope without importing anything.
+//!
+//! `docs/specs/modules.md` lists them. They become Lumen source once a module can be loaded;
+//! until then this is the prelude.
+
+/// The types the prelude supplies.
+pub(crate) const TYPES: [&str; 7] = ["Bool", "Int", "Int64", "List", "Option", "Result", "String"];
+
+/// The constructors the prelude supplies.
+pub(crate) const CONSTRUCTORS: [&str; 4] = ["Err", "None", "Ok", "Some"];

@@ -11,6 +11,8 @@ use std::process::exit;
 use clap::{Parser, Subcommand};
 use lumen_diagnostics::{Code, Diagnostic, render};
 use lumen_format::format;
+use lumen_parser::parse;
+use lumen_resolver::resolve;
 
 /// The Lumen compiler.
 #[derive(Parser)]
@@ -25,7 +27,7 @@ enum Command {
     /// Rewrite a source file in canonical form
     #[command(long_about = include_str!("help/fmt.md"))]
     Fmt { file: PathBuf },
-    /// Report the first line of a source file that is not in canonical form
+    /// Report the first thing about a source file the compiler will not have
     #[command(long_about = include_str!("help/check.md"))]
     Check { file: PathBuf },
     /// Print the long form of one diagnostic code
@@ -58,15 +60,23 @@ fn fmt(path: &Path) -> Outcome {
     }
 }
 
-/// Reports the first line of `path` that canonical form writes differently.
+/// Reports the first thing about `path` the compiler will not have.
 fn check(path: &Path) -> Outcome {
     let Some(source) = source_of(path) else {
         return Outcome::Unusable;
     };
-    match lumen_format::check(&source) {
+    match accepted(&source) {
         Ok(()) => Outcome::Done,
-        Err(error) => refuse(&error.diagnostic(), &source, path),
+        Err(diagnostic) => refuse(&diagnostic, &source, path),
     }
+}
+
+/// Every phase the front end has, run in order, stopping at the first refusal.
+fn accepted(source: &str) -> Result<(), Diagnostic> {
+    lumen_format::check(source).map_err(|error| error.diagnostic())?;
+    let program = parse(source).map_err(|error| error.diagnostic())?;
+    resolve(program).map_err(|error| error.diagnostic())?;
+    Ok(())
 }
 
 /// Prints what one diagnostic code means, at more length than its `help:` line has room for.

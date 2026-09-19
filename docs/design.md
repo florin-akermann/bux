@@ -592,3 +592,44 @@ The language should hide most JVM concurrency boilerplate.
 
 Eventually, channel types and concurrency primitives may gain additional static guarantees.
 
+
+---
+
+## 16. Modules and names
+
+One file is one module, and the module is named by its file.
+There is no module declaration: the file is the declaration, and every name it declares is public.
+A module is one file and a file is small, so a private declaration waits for a case that needs one.
+
+`import io` brings the module `io` into scope, and its names are reached through it:
+
+```text
+import io
+
+fn greet(name: String) {
+    io.print("Hello, " + name)
+}
+```
+
+A reader who meets `io.print` knows where to look without knowing what else the file imports.
+An unqualified import would take that away, so Lumen has none.
+
+**One name has one definition**.
+No two declarations of a module share a name, and no binding hides a name already in scope.
+There is no overloading: within a module a name is one thing wherever it is written.
+Searching for a name then finds its definition and its uses, with nothing else mixed in.
+
+Types and values are named separately, which is what makes a newtype ordinary:
+
+```text
+type UserId = UserId(Int64)
+```
+
+`UserId` names the type where a type is written and the constructor where a value is written.
+The compiler never has to guess which of the two was meant.
+
+A field of a record and a name of an imported module are each reached through something else.
+Neither is a name in scope.
+`user.name` is looked up in the record and `io.print` in the module, never in the file.
+
+`docs/specs/modules.md` states the scopes, the prelude every module has, and the errors.

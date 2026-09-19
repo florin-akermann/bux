@@ -1,0 +1,6 @@
+// expect-error: L0302
+// A binding never hides a name already in scope, not even a parameter's.
+fn total(seen: Int) -> Int {
+    seen := 1
+    seen
+}

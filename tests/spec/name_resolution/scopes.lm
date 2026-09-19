@@ -1,0 +1,42 @@
+// Every scope of `docs/specs/modules.md`, in a module that resolves.
+import io
+
+type UserId = UserId(Int64)
+
+type Payment =
+    | Pending
+    | Failed(String)
+
+type User = {
+    id: UserId
+    active: Bool
+}
+
+fn describe(payment: Payment) -> String {
+    match payment {
+        Pending => waiting()
+        Failed(reason) => reason
+    }
+}
+
+fn waiting() -> String {
+    "waiting"
+}
+
+fn count_active(users: List<User>, limit: Int) -> Int {
+    var total = 0
+    for user in users {
+        if user.active && total < limit {
+            total += 1
+        }
+    }
+    total
+}
+
+fn identity<T>(value: T) -> T {
+    value
+}
+
+fn announce(payment: Payment) {
+    io.print(describe(payment))
+}

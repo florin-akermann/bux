@@ -1,5 +1,6 @@
 import   io
 import files
+type UserId=UserId(Int64)
 type Payment = | Pending | Authorized { id: String } | Failed(String)
 type User = { id:UserId
 active:Bool }
@@ -14,12 +15,12 @@ fn describe(payment:Payment)->String{
     }
 
 }
-fn total(users:List<User>,limit:Int)->Int{
+fn total(users:List<User>,limit:Int,current:User)->Int{
 var seen=0
 for user in users{
 if !user.active||seen>=limit{continue}else{seen+=1}
 }
-if (user { active: true }).active {
+if (current { active: true }).active {
 seen = (seen + 1) * 2
 }
 seen

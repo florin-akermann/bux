@@ -1,0 +1,5 @@
+// expect-error: L0300
+// Nothing declares `missing`, and no import can have brought it in unqualified.
+fn total() -> Int {
+    missing + 1
+}

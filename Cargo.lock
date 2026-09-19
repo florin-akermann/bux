@@ -415,6 +415,8 @@ dependencies = [
  "clap",
  "lumen-diagnostics",
  "lumen-format",
+ "lumen-parser",
+ "lumen-resolver",
 ]
 
 [[package]]
@@ -458,6 +460,16 @@ dependencies = [
  "lumen-ast",
  "lumen-diagnostics",
  "lumen-lexer",
+]
+
+[[package]]
+name = "lumen-resolver"
+version = "0.1.0"
+dependencies = [
+ "hegeltest",
+ "lumen-ast",
+ "lumen-diagnostics",
+ "lumen-parser",
 ]
 
 [[package]]

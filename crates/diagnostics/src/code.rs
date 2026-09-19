@@ -60,6 +60,12 @@ catalogue! {
     NestingTooDeep => "L0106",
     /// The file is not in canonical form.
     NotCanonical => "L0200",
+    /// Nothing in scope has this name.
+    UnresolvedName => "L0300",
+    /// A module declares the same name twice.
+    NameDeclaredTwice => "L0301",
+    /// A declaration or a binding hides a name that is already in scope.
+    NameShadowed => "L0302",
 }
 
 impl Code {

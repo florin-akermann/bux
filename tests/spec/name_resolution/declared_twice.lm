@@ -1,0 +1,9 @@
+// expect-error: L0301
+// One name has one definition, so a module never declares the same name twice.
+fn total() -> Int {
+    1
+}
+
+fn total() -> Int {
+    2
+}

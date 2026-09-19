@@ -5,7 +5,7 @@ Source that is not in canonical form does not compile: run `lumen fmt` first.
 
 Commands:
   fmt       Rewrite a source file in canonical form
-  check     Report the first line of a source file that is not in canonical form
+  check     Report the first thing about a source file the compiler will not have
   explain   Print the long form of one diagnostic code
 
 Run `lumen help <command>` for the long form of any of them.

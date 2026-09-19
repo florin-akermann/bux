@@ -41,8 +41,8 @@ An example may carry ordinary comments; only the first line is read as an expect
 
 ## Compiling an example
 
-An example compiles when `lumen check` accepts it, which today means it parses and is already in
-canonical form.
+An example compiles when `lumen check` accepts it.
+Today that means it parses, is in canonical form already, and has a definition for every name.
 Every phase the compiler grows joins that check, so an example that compiles today keeps having to
 compile.
 

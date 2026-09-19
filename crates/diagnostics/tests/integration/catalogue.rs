@@ -34,9 +34,10 @@ fn a_code_is_found_by_the_way_it_is_written() {
 }
 
 #[test]
-fn the_grammars_codes_and_canonical_forms_codes_sit_in_their_own_ranges() {
+fn each_phase_of_the_compiler_has_its_own_range_of_codes() {
     assert_eq!(Code::ChainedComparison.number(), "L0105");
     assert_eq!(Code::NotCanonical.number(), "L0200");
+    assert_eq!(Code::UnresolvedName.number(), "L0300");
 }
 
 #[test]

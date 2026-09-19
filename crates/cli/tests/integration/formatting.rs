@@ -125,3 +125,26 @@ fn a_refusal_points_at_the_file_it_was_given() {
         run.stderr
     );
 }
+
+#[test]
+fn check_refuses_a_name_that_has_no_definition() {
+    let example = Example::new("fn total() -> Int {\n    missing\n}\n");
+    let run = lumen(&["check", example.path.to_str().expect("a UTF-8 path")]);
+
+    assert_eq!(run.code, 1);
+    assert!(
+        run.stderr
+            .starts_with("error[L0300]: there is nothing named `missing`"),
+        "{}",
+        run.stderr
+    );
+}
+
+#[test]
+fn check_holds_a_file_to_canonical_form_before_it_resolves_a_name() {
+    let example = Example::new("fn total() -> Int {\n  missing\n}\n");
+    let run = lumen(&["check", example.path.to_str().expect("a UTF-8 path")]);
+
+    assert_eq!(run.code, 1);
+    assert!(run.stderr.starts_with("error[L0200]:"), "{}", run.stderr);
+}
