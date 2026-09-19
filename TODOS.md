@@ -206,9 +206,11 @@ Today `/` and `%` lower to `LDIV` and `LREM`, so a zero divisor throws `Arithmet
 The rule: no program can throw, catch, or observe an exception, and no operation is partial.
 A partial function is written as `Option` or `Result` and taken apart only by `match` or `?`.
 The prelude never gains `unwrap` or `expect`; there is no way to turn `None` into a crash.
+Rust's `unwrap_or` shares its stem with a partial function it has nothing in common with.
+The total default is named for what it does: `or(maybe, fallback)`, and `Result` has the same.
 The one throw the compiler emits, after an exhaustive `match`, stays unreachable by construction.
 [029][a] - `docs/design.md` section 5 states the rule, and the non-goals name exceptions outright.
 [029][b] - `docs/specs/arithmetic.md` settles what `/` and `%` do on a zero divisor, with no throw.
 [029][c] - Lowering of `/` and `%` follows the spec, test-first; no generated method can throw.
-[029][d] - `docs/specs/modules.md` states that the prelude takes `Option` apart only by `match`.
+[029][d] - `docs/specs/modules.md` names `or` in the prelude; `Option` comes apart only by `match`.
 [029][e] - Executable examples under `tests/spec/arithmetic/`, including the zero-divisor case.
