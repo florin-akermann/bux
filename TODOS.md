@@ -16,7 +16,7 @@ Nothing downstream reformats a file by hand to satisfy the gate.
 [013][c] - Formatting deviations emit the canonical replacement for their span.
 [013][d] - Help topic for `--json` in `crates/cli/src/help/`.
 
-## 🔴 Item 014: `lumen api` prints a module's public surface
+## 🟡 Item 014: `lumen api` prints a module's public surface
 **Depends on:** Item 007 — the surface is printed from the typed AST.
 `lumen api <file>` prints the public names of a module with their types, and nothing else.
 One page then replaces reading a file to learn a signature, and inferred types are shown.
