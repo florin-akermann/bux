@@ -6,13 +6,6 @@
 
 ## Open
 
-## 🟢 Item 010: Running programs
-**Depends on:** Item 009 — there must be bytecode to run.
-`lumen run <file>` builds and runs on the JDK found via `JAVA_HOME`; missing JDK is a clear error.
-[010][a] - Spec first in `docs/specs/run.md`: JDK discovery, exit codes, and the missing-JDK text.
-[010][b] - `lumen run`, test-first; run-time executable examples are enabled in the harness.
-[010][c] - The harness skips run-time examples with a named reason when no JDK is present.
-
 ## 🔴 Item 011: Canonical order as part of the compile gate
 **Depends on:** Item 003, Item 008 — order is a formatter check, and arm order needs the variants.
 Canonical form covers sequence, not only whitespace.
