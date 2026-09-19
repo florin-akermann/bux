@@ -6,17 +6,6 @@
 
 ## Open
 
-## 🟢 Item 004: Diagnostics rendering
-**Depends on:** Item 002 — the first diagnostics are parse errors.
-A `diagnostics` crate renders `error[L0142]:`, the source line, a caret span, and a `help:`.
-The voice is `docs/implementation.md` section 8; no diagnostic ever mentions the JVM.
-Every diagnostic has a stable code with one home; specs and tests cite the code, never the prose.
-[004][a] - Spec first in `docs/specs/diagnostics.md`: the layout and the exit code.
-[004][b] - Rendering, test-first, against golden text for one-line and multi-line spans.
-[004][c] - Parse and formatting errors flow through it from `lumen check`.
-[004][d] - The code catalogue, test-first: one home per code, and no code is ever reused.
-[004][e] - `lumen explain <code>` prints the long form; help topic added.
-
 ## 🔴 Item 005: Executable-example harness
 **Depends on:** Item 004 — a compile-fail example asserts on rendered diagnostics.
 `tests/spec/<area>/*.lm` files are the language specification (`docs/implementation.md` section 7).
