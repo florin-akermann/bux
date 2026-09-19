@@ -6,7 +6,7 @@
 
 ## Open
 
-## 🔴 Item 001: Lexer for the version 0.1 surface
+## 🟡 Item 001: Lexer for the version 0.1 surface
 A `lexer` crate turns source text into tokens with byte spans, for the version 0.1 surface.
 Tokens: identifiers, keywords, integer and string literals, operators, punctuation, and `:=`.
 An unknown character is a token in its own right, so the lexer never fails; the parser reports it.
