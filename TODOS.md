@@ -106,17 +106,6 @@ A test runs it with the suite, so the one program the README promises can never 
 [021][c] - An integration test runs it through the CLI, skipped with a named reason when no JDK.
 [021][d] - README names the one command that runs it; class files beside it are ignored by git.
 
-## 🟡 Item 023: Identity is never observable
-**Depends on:** Item 022, Item 024 — the rule lands in the section Item 024 writes.
-Nothing in Lumen asks whether two values are one object, and nothing ever should.
-The JVM gives every object a header, `hashCode`, `getClass`, and `toString`, which Lumen hides.
-A generated class still inherits `Object.equals`, so dropping the generated one leaves identity.
-Writing the rule down and guarding it stops a later phase reaching for an inherited method.
-[023][a] - `docs/design.md` section 2 lists identity among the non-goals, beside the object model.
-[023][b] - `docs/specs/codegen.md` states that no generated class declares an inherited method.
-[023][c] - A test over the lowered classes: none declares `hashCode`, `getClass`, or `toString`.
-[023][d] - A test that no lowering emits a reference comparison, so identity has no opcode either.
-
 ## 🔴 Item 025: Generics are specialized, never erased
 `docs/specs/codegen.md` erases a type parameter to `java.lang.Object`, boxing an `Int` across it.
 That is the one place a program can tell `Int` from a declared type, and the one place it boxes.
