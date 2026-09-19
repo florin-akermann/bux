@@ -6,15 +6,6 @@
 
 ## Open
 
-## 🟢 Item 001: Lexer for the version 0.1 surface
-A `lexer` crate turns source text into tokens with byte spans, for the version 0.1 surface.
-Tokens: identifiers, keywords, integer and string literals, operators, punctuation, and `:=`.
-An unknown character is a token in its own right, so the lexer never fails; the parser reports it.
-[001][a] - Spec first in `docs/specs/lexer.md`: the token set, spans, and the bad-character token.
-[001][b] - The token type and `lex(source) -> Vec<Token>`, test-first per token class.
-[001][c] - Property tests: spans are contiguous and cover the input; lexing is total on any text.
-[001][d] - Executable examples under `tests/spec/lexer/`.
-
 ## 🔴 Item 002: Parser and untyped AST
 **Depends on:** Item 001 — the parser consumes its tokens.
 `ast` and `parser` crates: functions, `:=` bindings, `var`, `if`, `for`, `match`, records, ADTs.
