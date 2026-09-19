@@ -1,0 +1,261 @@
+//! What each instruction becomes, and what it leaves on the stack.
+
+use lumen_ir::{Arithmetic, Comparison, Descriptor, FieldRef, Instruction, Label, MethodRef};
+
+use crate::code::{Assembling, Context};
+use crate::frame::Held;
+use crate::opcode;
+
+impl Assembling {
+    /// Writes `instruction`, and follows what it does to the stack and the locals.
+    pub(crate) fn write(&mut self, instruction: &Instruction, context: &mut Context<'_>) {
+        match instruction {
+            Instruction::Label(_) => {}
+            Instruction::Long(value) => self.long(*value, context),
+            Instruction::Boolean(held) => self.integer(i32::from(*held), context),
+            Instruction::Integer(value) => self.integer(*value, context),
+            Instruction::Text(value) => self.text(value, context),
+            Instruction::Load { slot, of } => self.load(*slot, of),
+            Instruction::Store { slot, of } => self.store(*slot, of),
+            Instruction::Drop(of) => self.drop_one(of),
+            Instruction::Copy => self.copy(),
+            Instruction::Arithmetic(what) => self.arithmetic(*what),
+            Instruction::Concat => self.concat(context),
+            Instruction::CompareLongs(how) => self.compare_longs(*how, context),
+            Instruction::CompareIntegers(how) => self.compare_integers(*how, context),
+            Instruction::CompareReferences(how) => self.compare_references(*how, context),
+            Instruction::Not => self.not(),
+            Instruction::Jump(label) => self.jump(*label, context),
+            Instruction::JumpIfFalse(label) => self.jump_if_false(*label, context),
+            Instruction::Switch { cases, fallback } => self.switch(cases, *fallback, context),
+            Instruction::New(class) => self.new_instance(class, context),
+            Instruction::Construct(method) => self.construct(method, context),
+            Instruction::GetField(field) => self.get_field(field, context),
+            Instruction::PutField(field) => self.put_field(field, context),
+            Instruction::InvokeStatic(method) => self.invoke_static(method, context),
+            Instruction::InvokeVirtual(method) => self.invoke_virtual(method, context),
+            Instruction::Cast(class) => self.cast(class, context),
+            Instruction::Return(of) => self.leave(of.as_ref()),
+        }
+    }
+
+    fn long(&mut self, value: i64, context: &mut Context<'_>) {
+        let held = context.pool.long(value);
+        self.byte(opcode::LDC2_W);
+        self.short(held);
+        self.push(Held::Long);
+    }
+
+    fn integer(&mut self, value: i32, context: &mut Context<'_>) {
+        match (i8::try_from(value), i16::try_from(value)) {
+            _ if value == 0 => self.byte(opcode::ICONST_0),
+            _ if value == 1 => self.byte(opcode::ICONST_1),
+            (Ok(narrow), _) => {
+                self.byte(opcode::BIPUSH);
+                self.byte(narrow.cast_unsigned());
+            }
+            (_, Ok(short)) => {
+                self.byte(opcode::SIPUSH);
+                self.short(short.cast_unsigned());
+            }
+            _ => self.constant(context.pool.integer(value)),
+        }
+        self.push(Held::Integer);
+    }
+
+    fn text(&mut self, value: &str, context: &mut Context<'_>) {
+        let held = context.pool.text(value);
+        self.constant(held);
+        self.push(Held::of(&Descriptor::reference("java/lang/String")));
+    }
+
+    /// Pushes what the pool holds at `held`, which is one word wide wherever this is used.
+    fn constant(&mut self, held: u16) {
+        if let Ok(narrow) = u8::try_from(held) {
+            self.byte(opcode::LDC);
+            self.byte(narrow);
+        } else {
+            self.byte(opcode::LDC_W);
+            self.short(held);
+        }
+    }
+
+    fn load(&mut self, slot: u16, of: &Descriptor) {
+        let opcode = match of {
+            Descriptor::Long => opcode::LLOAD,
+            Descriptor::Boolean | Descriptor::Integer => opcode::ILOAD,
+            Descriptor::Reference(_) => opcode::ALOAD,
+        };
+        self.indexed(opcode, slot);
+        self.push(Held::of(of));
+    }
+
+    fn store(&mut self, slot: u16, of: &Descriptor) {
+        let opcode = match of {
+            Descriptor::Long => opcode::LSTORE,
+            Descriptor::Boolean | Descriptor::Integer => opcode::ISTORE,
+            Descriptor::Reference(_) => opcode::ASTORE,
+        };
+        self.indexed(opcode, slot);
+        self.pop();
+        self.hold(slot, of);
+    }
+
+    fn drop_one(&mut self, of: &Descriptor) {
+        self.byte(if of.is_wide() {
+            opcode::POP2
+        } else {
+            opcode::POP
+        });
+        self.pop();
+    }
+
+    fn copy(&mut self) {
+        let Some(top) = self.top() else {
+            return;
+        };
+        self.byte(if top.is_wide() {
+            opcode::DUP2
+        } else {
+            opcode::DUP
+        });
+        self.push(top);
+    }
+
+    fn arithmetic(&mut self, what: Arithmetic) {
+        let opcode = match what {
+            Arithmetic::Add => opcode::LADD,
+            Arithmetic::Subtract => opcode::LSUB,
+            Arithmetic::Multiply => opcode::LMUL,
+            Arithmetic::Divide => opcode::LDIV,
+            Arithmetic::Remainder => opcode::LREM,
+            Arithmetic::Negate => opcode::LNEG,
+        };
+        self.byte(opcode);
+        if what != Arithmetic::Negate {
+            self.pop();
+        }
+    }
+
+    fn concat(&mut self, context: &mut Context<'_>) {
+        let joining = MethodRef {
+            class: lumen_ir::ClassName::new("java/lang/String"),
+            name: "concat".to_owned(),
+            descriptor: lumen_ir::MethodDescriptor::new(
+                vec![Descriptor::reference("java/lang/String")],
+                Some(Descriptor::reference("java/lang/String")),
+            ),
+        };
+        self.invoke_virtual(&joining, context);
+    }
+
+    fn compare_longs(&mut self, how: Comparison, context: &mut Context<'_>) {
+        self.byte(opcode::LCMP);
+        self.pop();
+        self.pop();
+        self.push(Held::Integer);
+        self.truth(opcode::IFEQ + opcode::step(how), 1, context);
+    }
+
+    fn compare_integers(&mut self, how: Comparison, context: &mut Context<'_>) {
+        self.truth(opcode::IF_ICMPEQ + opcode::step(how), 2, context);
+    }
+
+    fn compare_references(&mut self, how: Comparison, context: &mut Context<'_>) {
+        self.truth(opcode::IF_ACMPEQ + opcode::step(how), 2, context);
+    }
+
+    fn not(&mut self) {
+        self.byte(opcode::ICONST_1);
+        self.byte(opcode::IXOR);
+    }
+
+    fn new_instance(&mut self, class: &lumen_ir::ClassName, context: &mut Context<'_>) {
+        let named = context.pool.class(class);
+        let at = self.offset();
+        self.byte(opcode::NEW);
+        self.short(named);
+        self.push(Held::Uninitialised(at));
+    }
+
+    fn construct(&mut self, method: &MethodRef, context: &mut Context<'_>) {
+        let named = context.pool.method(method);
+        self.byte(opcode::INVOKESPECIAL);
+        self.short(named);
+        for _ in &method.descriptor.parameters {
+            self.pop();
+        }
+        if let Some(Held::Uninitialised(at)) = self.pop() {
+            self.initialised(at, &method.class);
+        }
+    }
+
+    fn get_field(&mut self, field: &FieldRef, context: &mut Context<'_>) {
+        let named = context.pool.field(field);
+        self.byte(opcode::GETFIELD);
+        self.short(named);
+        self.pop();
+        self.push(Held::of(&field.of));
+    }
+
+    fn put_field(&mut self, field: &FieldRef, context: &mut Context<'_>) {
+        let named = context.pool.field(field);
+        self.byte(opcode::PUTFIELD);
+        self.short(named);
+        self.pop();
+        self.pop();
+    }
+
+    fn invoke_static(&mut self, method: &MethodRef, context: &mut Context<'_>) {
+        let named = context.pool.method(method);
+        self.byte(opcode::INVOKESTATIC);
+        self.short(named);
+        self.called(method, 0);
+    }
+
+    fn invoke_virtual(&mut self, method: &MethodRef, context: &mut Context<'_>) {
+        let named = context.pool.method(method);
+        self.byte(opcode::INVOKEVIRTUAL);
+        self.short(named);
+        self.called(method, 1);
+    }
+
+    /// What a call leaves: its arguments gone, the receiver too, and its result on top.
+    fn called(&mut self, method: &MethodRef, receivers: usize) {
+        for _ in 0..method.descriptor.parameters.len() + receivers {
+            self.pop();
+        }
+        if let Some(result) = &method.descriptor.result {
+            self.push(Held::of(result));
+        }
+    }
+
+    fn cast(&mut self, class: &lumen_ir::ClassName, context: &mut Context<'_>) {
+        let named = context.pool.class(class);
+        self.byte(opcode::CHECKCAST);
+        self.short(named);
+        self.pop();
+        self.push(Held::Object(class.clone()));
+    }
+
+    fn leave(&mut self, of: Option<&Descriptor>) {
+        let opcode = match of {
+            None => opcode::RETURN,
+            Some(Descriptor::Long) => opcode::LRETURN,
+            Some(Descriptor::Boolean | Descriptor::Integer) => opcode::IRETURN,
+            Some(Descriptor::Reference(_)) => opcode::ARETURN,
+        };
+        self.byte(opcode);
+        self.unreachable();
+    }
+
+    fn jump(&mut self, label: Label, context: &mut Context<'_>) {
+        self.branch(opcode::GOTO, label, context);
+        self.unreachable();
+    }
+
+    fn jump_if_false(&mut self, label: Label, context: &mut Context<'_>) {
+        self.pop();
+        self.branch(opcode::IFEQ, label, context);
+    }
+}

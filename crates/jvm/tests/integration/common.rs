@@ -1,0 +1,45 @@
+//! Helpers shared by the class-file writer's behaviour tests.
+//!
+//! A behaviour is stated as the lowered class it is about, because that is what the writer takes.
+
+use lumen_ir::Reached;
+use lumen_ir::{
+    Body, Class, ClassName, Descriptor, Instruction, Lowered, Method, MethodDescriptor,
+};
+
+use crate::reader::{self, ClassFile};
+
+/// The one class `classes` writes, read back.
+pub fn written(class: Class) -> ClassFile {
+    let lowered = Lowered {
+        classes: vec![class],
+    };
+    let files = lumen_jvm::write(&lowered);
+    assert_eq!(files.len(), 1, "one class is one file");
+    reader::read(&files[0].bytes)
+}
+
+/// A class named `demo` holding one static method built from `instructions`.
+pub fn module_with(name: &str, descriptor: MethodDescriptor, body: Body) -> Class {
+    let mut class = Class::new(ClassName::new("demo"));
+    class.methods.push(Method {
+        name: name.to_owned(),
+        descriptor,
+        reached: Reached::ThroughTheClass,
+        body,
+    });
+    class
+}
+
+/// A body of `instructions` using no locals beyond the parameters.
+pub fn body(instructions: Vec<Instruction>) -> Body {
+    Body {
+        instructions,
+        locals: 0,
+    }
+}
+
+/// The descriptor of a method taking `parameters` and giving back `result`.
+pub fn taking(parameters: Vec<Descriptor>, result: Option<Descriptor>) -> MethodDescriptor {
+    MethodDescriptor::new(parameters, result)
+}

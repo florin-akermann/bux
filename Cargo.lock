@@ -460,6 +460,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "lumen-ir"
+version = "0.1.0"
+dependencies = [
+ "hegeltest",
+]
+
+[[package]]
+name = "lumen-jvm"
+version = "0.1.0"
+dependencies = [
+ "hegeltest",
+ "lumen-ir",
+]
+
+[[package]]
 name = "lumen-lexer"
 version = "0.1.0"
 dependencies = [

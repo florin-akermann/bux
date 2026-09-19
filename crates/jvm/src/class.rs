@@ -1,0 +1,141 @@
+//! One class, as the bytes a JVM loads.
+
+use lumen_ir::{Class, Extending, Method, Reached};
+
+use crate::bytes::Bytes;
+use crate::code::{Assembled, Context, assemble};
+use crate::frame::Hierarchy;
+use crate::pool::Pool;
+
+/// The class-file version of the JDK this targets, which is the current one and no other.
+const VERSION: (u16, u16) = (0, 71);
+
+/// `ACC_PUBLIC` and `ACC_SUPER`, which every class a module writes has.
+const CLASS_ACCESS: u16 = 0x0001 | 0x0020;
+const FINAL: u16 = 0x0010;
+const ABSTRACT: u16 = 0x0400;
+const FIELD_ACCESS: u16 = 0x0001 | FINAL;
+const METHOD_ACCESS: u16 = 0x0001;
+const STATIC: u16 = 0x0008;
+
+/// Writes `class` as the bytes a JVM loads.
+pub(crate) fn write(class: &Class, hierarchy: &Hierarchy) -> Vec<u8> {
+    let mut pool = Pool::new();
+    let mut context = Context {
+        pool: &mut pool,
+        hierarchy,
+    };
+    let named = context.pool.class(&class.name);
+    let extends = context.pool.class(&class.extends);
+    let fields = written_fields(class, &mut context);
+    let methods = written_methods(class, &mut context);
+    let mut bytes = Bytes::default();
+    bytes.u4(0xCAFE_BABE);
+    bytes.u2(VERSION.0);
+    bytes.u2(VERSION.1);
+    bytes.u2(pool.count());
+    pool.write(&mut bytes);
+    bytes.u2(CLASS_ACCESS | extending(class.extending));
+    bytes.u2(named);
+    bytes.u2(extends);
+    bytes.u2(0);
+    bytes.all(&fields);
+    bytes.all(&methods);
+    bytes.u2(0);
+    bytes.taken()
+}
+
+const fn extending(extending: Extending) -> u16 {
+    match extending {
+        Extending::Never => FINAL,
+        Extending::ByItsVariants => ABSTRACT,
+    }
+}
+
+fn written_fields(class: &Class, context: &mut Context<'_>) -> Vec<u8> {
+    let mut bytes = Bytes::default();
+    bytes.u2(u16::try_from(class.fields.len()).unwrap_or_default());
+    for field in &class.fields {
+        let name = context.pool.utf8(&field.name);
+        let descriptor = context.pool.utf8(&field.of.to_string());
+        bytes.u2(FIELD_ACCESS);
+        bytes.u2(name);
+        bytes.u2(descriptor);
+        bytes.u2(0);
+    }
+    bytes.taken()
+}
+
+fn written_methods(class: &Class, context: &mut Context<'_>) -> Vec<u8> {
+    let mut bytes = Bytes::default();
+    bytes.u2(u16::try_from(class.methods.len()).unwrap_or_default());
+    for method in &class.methods {
+        written_method(method, class, context, &mut bytes);
+    }
+    bytes.taken()
+}
+
+fn written_method(method: &Method, class: &Class, context: &mut Context<'_>, bytes: &mut Bytes) {
+    let name = context.pool.utf8(&method.name);
+    let descriptor = context.pool.utf8(&method.descriptor.to_string());
+    let code = written_code(method, class, context);
+    bytes.u2(METHOD_ACCESS | reached(method.reached));
+    bytes.u2(name);
+    bytes.u2(descriptor);
+    bytes.u2(1);
+    bytes.all(&code);
+}
+
+const fn reached(reached: Reached) -> u16 {
+    match reached {
+        Reached::ThroughTheClass => STATIC,
+        Reached::ThroughAnInstance => 0,
+    }
+}
+
+/// The `Code` attribute of one method, with the stack map its branches need.
+fn written_code(method: &Method, class: &Class, context: &mut Context<'_>) -> Vec<u8> {
+    let receiver = match method.reached {
+        Reached::ThroughTheClass => None,
+        Reached::ThroughAnInstance => Some(class.name.clone()),
+    };
+    let assembled = assemble(&method.body, &method.descriptor, receiver.as_ref(), context);
+    let map = written_map(&assembled, context.pool);
+    let named = context.pool.utf8("Code");
+    let mut bytes = Bytes::default();
+    bytes.u2(assembled.max_stack);
+    bytes.u2(assembled.max_locals);
+    bytes.u4(u32::try_from(assembled.code.len()).unwrap_or_default());
+    bytes.all(&assembled.code);
+    bytes.u2(0);
+    bytes.u2(u16::from(!map.is_empty()));
+    bytes.all(&map);
+    let body = bytes.taken();
+    let mut attribute = Bytes::default();
+    attribute.u2(named);
+    attribute.u4(u32::try_from(body.len()).unwrap_or_default());
+    attribute.all(&body);
+    attribute.taken()
+}
+
+/// The `StackMapTable` attribute, which is left out when nothing branches.
+fn written_map(assembled: &Assembled, pool: &mut Pool) -> Vec<u8> {
+    if assembled.frames.is_empty() {
+        return Vec::new();
+    }
+    let mut entries = Bytes::default();
+    entries.u2(u16::try_from(assembled.frames.len()).unwrap_or_default());
+    let mut previous: Option<u16> = None;
+    for (at, frame) in &assembled.frames {
+        let delta = previous.map_or(*at, |last| at - last - 1);
+        frame.write(delta, pool, &mut entries);
+        previous = Some(*at);
+    }
+    let written = entries.taken();
+    let named = pool.utf8("StackMapTable");
+    let mut bytes = Bytes::default();
+    bytes.u2(named);
+    bytes.u4(u32::try_from(written.len()).unwrap_or_default());
+    bytes.all(&written);
+    bytes.taken()
+}
