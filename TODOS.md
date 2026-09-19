@@ -145,3 +145,14 @@ The one throw the compiler emits, after an exhaustive `match`, stays unreachable
 [029][c] - Lowering of `/` and `%` follows the spec, test-first; no generated method can throw.
 [029][d] - `docs/specs/modules.md` names `or` in the prelude; `Option` comes apart only by `match`.
 [029][e] - Executable examples under `tests/spec/arithmetic/`, including the zero-divisor case.
+
+## 🔴 Item 030: An assignment names a mutable binding
+**Depends on:** Item 020 — the target is a name now, and what that name may be is still open.
+`total := 0` binds a name never assigned to again, and `var total = 0` binds one that may be.
+Nothing enforces it: `total := 0` followed by `total = 2` compiles, so `:=` promises nothing.
+A constructor is worse than wrong — `Marker = Marker` compiles, stores nothing, and says nothing.
+Lowering drops the store because the name has no slot, so the program runs and does not do it.
+[030][a] - `docs/design.md` section 10 states that only a `var` binding is assigned to.
+[030][b] - `docs/specs/modules.md` gains the refusal and the words it prints.
+[030][c] - The resolver refuses a target that is not a `var` binding, test-first, with a new code.
+[030][d] - Executable examples: an immutable binding and a constructor, each refused.
