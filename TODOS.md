@@ -117,18 +117,6 @@ Writing the rule down and guarding it stops a later phase reaching for an inheri
 [023][c] - A test over the lowered classes: none declares `hashCode`, `getClass`, or `toString`.
 [023][d] - A test that no lowering emits a reference comparison, so identity has no opcode either.
 
-## 🔴 Item 024: The JVM is a target, not a model
-The JVM is where Lumen compiles first, and that is the whole of its authority over the language.
-`AGENTS.md` and the README state it; `docs/design.md`, which they cite, has one buried clause.
-`docs/principles.md` asks it as a question, so each JVM habit still gets argued from scratch.
-The object model is the standing instance: identity, `equals`, `hashCode`, and a root class.
-The eight special primitives are the other: in Lumen no built-in type is special.
-Stated once as a rule, every later question about a JVM habit is settled by citing it.
-[024][a] - `docs/design.md` section 2 gains the rule as prose, not as one more item in a list.
-[024][b] - The rule names what Lumen declines: the object model, boxing, and special primitives.
-[024][c] - The rule states the model adopted instead: value semantics, in Valhalla's shape.
-[024][d] - `docs/principles.md` question 6 points at the rule rather than restating it.
-
 ## 🔴 Item 025: Generics are specialized, never erased
 `docs/specs/codegen.md` erases a type parameter to `java.lang.Object`, boxing an `Int` across it.
 That is the one place a program can tell `Int` from a declared type, and the one place it boxes.
@@ -162,17 +150,6 @@ The writer marks class and fields so, and a test holds every generated class ins
 [027][a] - `docs/specs/codegen.md` states the shape every generated class keeps, and why.
 [027][b] - Every generated field is `final` and every concrete class is `final`, held by a test.
 [027][c] - A test that no generated method is `synchronized`, which a value class cannot lock on.
-
-## 🔴 Item 028: Every generated class is a value class
-**Depends on:** Item 027 — the flag is set only on a class already inside the shape.
-JDK 28 ships value classes, and the project targets JDK 28 or later from now on.
-The writer moves to class-file version 72 and marks every generated class as a value class.
-If 28 still holds value classes in preview, the class file says so and `lumen run` enables it.
-Nothing waits for a later JDK; readiness is the flag being set today, on an early-access build.
-[028][a] - `docs/implementation.md` names JDK 28 as the floor, and settles the preview question.
-[028][b] - The writer sets the flag, test-first against the bytes the class-file spec names.
-[028][c] - `lumen run` passes what a preview class file needs, if 28 needs it, test-first.
-[028][d] - A run-time example on a record, skipped with a named reason below JDK 28.
 
 ## 🔴 Item 029: No exceptions and no `unwrap`; every operation is total
 **Depends on:** Item 007 — a total `/` needs the type of what it returns.
