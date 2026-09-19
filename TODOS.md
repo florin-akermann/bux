@@ -6,16 +6,6 @@
 
 ## Open
 
-## 🟢 Item 002: Parser and untyped AST
-**Depends on:** Item 001 — the parser consumes its tokens.
-`ast` and `parser` crates: functions, `:=` bindings, `var`, `if`, `for`, `match`, records, ADTs.
-The AST is untyped and immutable; every later phase produces a new representation.
-There are no anonymous functions in the grammar; a function is named or it is a parse error.
-[002][a] - Spec first in `docs/specs/grammar.md`: the grammar, and the parse-error voice.
-[002][b] - Recursive-descent parser, test-first per production, with span-carrying errors.
-[002][c] - Property test: a printed AST parses back to an equal AST (with Item 003's printer).
-[002][d] - Executable examples under `tests/spec/parser/`, including parse-fail examples.
-
 ## 🔴 Item 003: Canonical formatting as a compile gate
 **Depends on:** Item 002 — the formatter is the AST pretty-printer.
 A `format` crate prints the one canonical form of an AST; `docs/design.md` section 13 is the rule.
