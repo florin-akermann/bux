@@ -28,9 +28,9 @@ pub enum StatementKind {
         name: Name,
         value: Expr,
     },
-    /// `total = 1` or `total += 1`.
+    /// `total = 1` or `total += 1`, which names the one name whose value changes.
     Assign {
-        target: Expr,
+        target: Name,
         operator: AssignOperator,
         value: Expr,
     },

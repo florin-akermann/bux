@@ -161,3 +161,46 @@ fn an_error_points_at_the_token_that_failed() {
         "7..8 expected a name, found a number\n"
     );
 }
+
+#[test]
+fn only_a_name_is_assigned_to() {
+    for written in [
+        "    user.name = \"Bob\"",
+        "    first(users).id = 1",
+        "    2 + 2 = 4",
+    ] {
+        let source = format!("fn f() {{\n{written}\n}}");
+        assert_eq!(
+            message(&source),
+            "only a name is assigned to",
+            "{written} is refused"
+        );
+    }
+}
+
+#[test]
+fn a_refused_assignment_names_the_one_way_to_change_a_value() {
+    let source = "fn f() {\n    user.name = \"Bob\"\n}";
+    assert_eq!(
+        help(source).as_deref(),
+        Some("build the value it becomes: `user { name: \"Bob\" }`")
+    );
+}
+
+#[test]
+fn the_refused_assignment_points_at_what_was_written_on_the_left() {
+    let source = "fn f() {\n    user.name = 1\n}";
+    let start = source.find("user").expect("the source writes the target");
+    let expected = format!("{start}..{}", start + "user.name".len());
+    let rendered = render_error(source);
+    let span = rendered
+        .lines()
+        .next()
+        .and_then(|line| line.split_once(' '))
+        .expect("a rendered error opens with its span")
+        .0;
+    assert_eq!(
+        span, expected,
+        "the span covers the target, not the whole line"
+    );
+}

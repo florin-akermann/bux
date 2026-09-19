@@ -37,14 +37,6 @@ fn an_assignment_replaces_or_adds_to_what_a_name_holds() {
 }
 
 #[test]
-fn a_field_may_be_the_target_of_an_assignment() {
-    assert_eq!(
-        in_function("    user.name = 1"),
-        ["assign Set", "  field name", "    name user", "  integer 1"]
-    );
-}
-
-#[test]
 fn return_carries_a_value_or_nothing() {
     assert_eq!(in_function("    return 1"), ["return", "  integer 1"]);
     assert_eq!(in_function("    return"), ["return"]);

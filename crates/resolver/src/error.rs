@@ -69,6 +69,10 @@ pub(crate) enum ResolveErrorKind {
         declared: String,
         used_by: String,
     },
+    /// A function name written as anything but the name of a call.
+    NotCalled(String),
+    /// A module name written as a value rather than as what a name is reached through.
+    NotReachedThrough(String),
 }
 
 impl ResolveErrorKind {
@@ -103,6 +107,7 @@ impl ResolveErrorKind {
             Self::DeclaredTwice(_) => Code::NameDeclaredTwice,
             Self::Shadowed(_) => Code::NameShadowed,
             Self::WrittenAbove { .. } => Code::DefinitionBeforeUse,
+            Self::NotCalled(_) | Self::NotReachedThrough(_) => Code::NotAValue,
         }
     }
 
@@ -114,6 +119,10 @@ impl ResolveErrorKind {
             Self::DeclaredTwice(_) => "one name has one definition; rename one of the two",
             Self::Shadowed(_) => "rename the inner one; Lumen never hides a name",
             Self::WrittenAbove { .. } => "a file reads top down: move it below what uses it",
+            Self::NotCalled(_) => "version 0.1 reaches a function by calling it; write the call",
+            Self::NotReachedThrough(_) => {
+                "a module is what a name is reached through, as `io.println` is"
+            }
         }
     }
 }
@@ -129,6 +138,15 @@ impl fmt::Display for ResolveErrorKind {
                 write!(
                     f,
                     "`{declared}` is written above `{used_by}`, which uses it"
+                )
+            }
+            Self::NotCalled(text) => {
+                write!(f, "`{text}` is a function, so it is written as a call")
+            }
+            Self::NotReachedThrough(text) => {
+                write!(
+                    f,
+                    "`{text}` is a module, so a name inside it is what is written"
                 )
             }
         }

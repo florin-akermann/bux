@@ -40,11 +40,9 @@ impl Walk<'_> {
 
     fn statement(&self, statement: &Statement) -> Checked {
         match &statement.kind {
-            StatementKind::Binding { value, .. } | StatementKind::Expr(value) => self.expr(value),
-            StatementKind::Assign { target, value, .. } => {
-                self.expr(target)?;
-                self.expr(value)
-            }
+            StatementKind::Binding { value, .. }
+            | StatementKind::Assign { value, .. }
+            | StatementKind::Expr(value) => self.expr(value),
             StatementKind::Return(returned) => match returned {
                 Some(value) => self.expr(value),
                 None => Ok(()),

@@ -82,7 +82,7 @@ block          := "{" { statement } "}"
 statement      := binding | assignment | "return" [ expression ]
                 | "break" | "continue" | for | expression
 binding        := Name ":=" expression | "var" Name "=" expression
-assignment     := expression ( "=" | "+=" ) expression
+assignment     := Name ( "=" | "+=" ) expression
 for            := "for" [ Name "in" expression | expression ] block
 
 expression     := or
@@ -158,7 +158,7 @@ The found part names what is there the same way, or `the end of the file`.
 Every parse error carries a code, and `docs/specs/diagnostics.md` is the catalogue of them.
 An `expected <what>, found <what>` error is `L0100`, whatever it expected.
 
-Seven failures are not about which token was found, and have their own words:
+Eight failures are not about which token was found, and have their own words:
 
 | Error               | Code    | Message                                    | Help                        |
 |---------------------|---------|--------------------------------------------|-----------------------------|
@@ -169,6 +169,11 @@ Seven failures are not about which token was found, and have their own words:
 | unknown escape      | `L0104` | `` `\q` `` is not an escape                | the escapes the language knows |
 | chained comparison  | `L0105` | comparisons do not chain                   | compare twice, join with `&&` |
 | nesting too deep    | `L0106` | this nests too deeply to parse             | how deep brackets may nest  |
+| assigned to a value | `L0107` | only a name is assigned to                 | build the value it becomes  |
+
+An assignment names a name, which `docs/design.md` section 10 states.
+`user.name = "Bob"` and `first(users).id = 1` are `L0107`, pointing at what was written there.
+A value is changed by building the one it becomes rather than by reaching inside it.
 
 ## Executable examples
 

@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 
-use lumen_ast::{AssignOperator, Block, Expr, ExprKind, ForHeader, ForLoop, Function, Name, Span};
+use lumen_ast::{AssignOperator, Block, Expr, ForHeader, ForLoop, Function, Name, Span};
 use lumen_ast::{Statement, StatementKind};
 use lumen_resolver::{Definition, Namespace, Origin};
 
@@ -140,10 +140,7 @@ impl<'a> Builder<'a> {
         self.stored(name, left);
     }
 
-    fn assign(&mut self, target: &Expr, operator: AssignOperator, value: &Expr) {
-        let ExprKind::Name(name) = &target.kind else {
-            unreachable!("version 0.1 assigns to a name, which is the only thing a body binds")
-        };
+    fn assign(&mut self, name: &Name, operator: AssignOperator, value: &Expr) {
         let left = match (operator, self.local(name)) {
             (AssignOperator::Add, Some(slot)) => Some(self.added_to(&slot, value)),
             (AssignOperator::Set | AssignOperator::Add, _) => self.expr(value),

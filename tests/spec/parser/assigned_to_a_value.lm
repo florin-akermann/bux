@@ -1,0 +1,10 @@
+// expect-error: L0107
+// An assignment names a name; a value is changed by building the one it becomes.
+fn rename(user: User) -> User {
+    user.name = "Bob"
+    user
+}
+
+type User = {
+    name: String
+}

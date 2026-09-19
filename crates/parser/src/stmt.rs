@@ -1,10 +1,13 @@
 //! Blocks, and the statements inside them.
 
-use lumen_ast::{AssignOperator, Block, ForHeader, ForLoop, Mutability, Statement, StatementKind};
+use lumen_ast::{
+    AssignOperator, Block, Expr, ExprKind, ForHeader, ForLoop, Mutability, Name, Statement,
+    StatementKind,
+};
 use lumen_lexer::{Keyword, Punct, TokenKind};
 
 use crate::cursor::Cursor;
-use crate::error::{Expected, ParseError};
+use crate::error::{Expected, ParseError, ParseErrorKind};
 use crate::expr::{RecordLiterals, expression};
 use crate::list::newline_separated;
 
@@ -103,15 +106,29 @@ pub(crate) fn block(cursor: &mut Cursor) -> Result<Block, ParseError> {
 
 /// An expression, which becomes an assignment when `=` or `+=` follows it.
 fn expression_statement(cursor: &mut Cursor) -> Result<StatementKind, ParseError> {
-    let target = expression(cursor, RecordLiterals::Allowed)?;
+    let written = expression(cursor, RecordLiterals::Allowed)?;
     let Some(operator) = eat_assign_operator(cursor) else {
-        return Ok(StatementKind::Expr(target));
+        return Ok(StatementKind::Expr(written));
     };
     Ok(StatementKind::Assign {
-        target,
+        target: assigned_to(written)?,
         operator,
         value: expression(cursor, RecordLiterals::Allowed)?,
     })
+}
+
+/// The name an assignment changes, which is all the left of `=` or `+=` may be.
+///
+/// `user.name = "Bob"` reaches inside a value, and a value is changed by building the one it
+/// becomes, so anything but a bare name is refused here rather than carried further.
+fn assigned_to(written: Expr) -> Result<Name, ParseError> {
+    match written.kind {
+        ExprKind::Name(name) => Ok(name),
+        _ => Err(ParseError::new(
+            ParseErrorKind::AssignedToValue,
+            written.span,
+        )),
+    }
 }
 
 fn eat_assign_operator(cursor: &mut Cursor) -> Option<AssignOperator> {

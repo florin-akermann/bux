@@ -200,7 +200,7 @@ impl Resolver {
                 self.introduce_value(name, DefinitionKind::Local)
             }
             StatementKind::Assign { target, value, .. } => {
-                self.expr(target)?;
+                self.named(target, Position::Value)?;
                 self.expr(value)
             }
             StatementKind::Return(value) => match value {
@@ -230,7 +230,7 @@ impl Resolver {
 
     fn expr(&mut self, expr: &Expr) -> Resolved {
         match &expr.kind {
-            ExprKind::Name(name) => self.use_value(name),
+            ExprKind::Name(name) => self.named(name, Position::Value),
             ExprKind::Integer(_) | ExprKind::String(_) | ExprKind::Bool(_) | ExprKind::Unit => {
                 Ok(())
             }
@@ -240,10 +240,10 @@ impl Resolver {
                 self.expr(right)
             }
             ExprKind::Call { callee, arguments } => {
-                self.expr(callee)?;
+                self.written(callee, Position::Callee)?;
                 self.each(arguments)
             }
-            ExprKind::Field { receiver, .. } => self.expr(receiver),
+            ExprKind::Field { receiver, .. } => self.written(receiver, Position::Receiver),
             ExprKind::Try(inner) => self.expr(inner),
             ExprKind::Record { base, fields } => {
                 self.use_value(base)?;
@@ -254,6 +254,33 @@ impl Resolver {
             }
             ExprKind::If(chain) => self.if_expr(chain),
             ExprKind::Match(match_expr) => self.match_expr(match_expr),
+        }
+    }
+
+    /// An expression in a position that takes more than a value, when it is a bare name.
+    fn written(&mut self, expr: &Expr, position: Position) -> Resolved {
+        match &expr.kind {
+            ExprKind::Name(name) => self.named(name, position),
+            _ => self.expr(expr),
+        }
+    }
+
+    /// Resolves `name`, then refuses it when what it names is no value and the position wants one.
+    ///
+    /// Version 0.1 has no type and no shape for a function or a module held as a value, so there
+    /// is nothing for lowering to write. The name says what it is here, so here is where it goes.
+    fn named(&mut self, name: &Name, position: Position) -> Resolved {
+        self.use_value(name)?;
+        let Some(found) = self.values.look_up(&name.text) else {
+            return Ok(());
+        };
+        if Some(found.kind) == position.also_takes() {
+            return Ok(());
+        }
+        match found.kind {
+            DefinitionKind::Function => Err(refused(name, ResolveErrorKind::NotCalled)),
+            DefinitionKind::Module => Err(refused(name, ResolveErrorKind::NotReachedThrough)),
+            _ => Ok(()),
         }
     }
 
@@ -344,6 +371,33 @@ impl Resolver {
 }
 
 /// What a name in `scope` means, recorded against the namespace and the place it is written.
+/// Where a name is written, which is what decides whether it must name a value.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Position {
+    /// Anywhere a value belongs, which is neither a function nor a module.
+    Value,
+    /// The name of a call, which is the one place a function name is written.
+    Callee,
+    /// The left of a `.`, which is the one place a module name is written.
+    Receiver,
+}
+
+impl Position {
+    /// The one kind this position takes beyond a value, when it takes one at all.
+    const fn also_takes(self) -> Option<DefinitionKind> {
+        match self {
+            Self::Value => None,
+            Self::Callee => Some(DefinitionKind::Function),
+            Self::Receiver => Some(DefinitionKind::Module),
+        }
+    }
+}
+
+/// The failure `name` is refused with, worded by what the name is.
+fn refused(name: &Name, worded: fn(String) -> ResolveErrorKind) -> ResolveError {
+    ResolveError::at(name, worded(name.text.clone()))
+}
+
 fn use_name(scope: &Scope, found: &mut Definitions, name: &Name) -> Resolved {
     let Some(definition) = scope.look_up(&name.text) else {
         let kind = ResolveErrorKind::missing(scope.namespace(), &name.text);

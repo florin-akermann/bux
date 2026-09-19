@@ -1,0 +1,8 @@
+// expect-error: L0304
+// A module is what a name is reached through, so its own name is never held as a value.
+import io
+
+fn go() -> Int {
+    held := io
+    1
+}

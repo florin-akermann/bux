@@ -319,6 +319,7 @@ Support:
 
 Do **not** implement initially:
 
+* a function passed as a value; version 0.1 reaches a function by calling it
 * typeclasses
 * effects
 * concurrency

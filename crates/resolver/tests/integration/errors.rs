@@ -2,7 +2,7 @@
 
 use lumen_diagnostics::render;
 
-use crate::common::refusal;
+use crate::common::{refusal, resolved};
 
 #[test]
 fn a_name_with_no_definition_is_refused() {
@@ -105,4 +105,94 @@ fn opening(source: &str) -> String {
         .split_once(']')
         .map(|(opening, _)| format!("{opening}]"))
         .expect("a rendering opens with its code")
+}
+
+#[test]
+fn a_function_name_written_as_anything_but_a_call_is_refused() {
+    let source = concat!(
+        "fn go() -> Int {\n    held := helper\n    1\n}\n\n",
+        "fn helper() -> Int {\n    1\n}\n"
+    );
+    let error = refusal(source);
+
+    assert_eq!(
+        error.message(),
+        "`helper` is a function, so it is written as a call"
+    );
+    assert_eq!(
+        error.help(),
+        "version 0.1 reaches a function by calling it; write the call"
+    );
+    assert_eq!(error.span().text(source), "helper");
+}
+
+#[test]
+fn a_function_name_is_refused_wherever_a_value_is_written() {
+    let places = [
+        "    return helper\n",
+        "    helper + 1\n",
+        "    take(helper)\n",
+        "    match helper {\n        _ => 1\n    }\n",
+    ];
+    for place in places {
+        let source = format!(
+            concat!(
+                "fn go() -> Int {{\n{place}}}\n\n",
+                "fn take(value: Int) -> Int {{\n    value\n}}\n\n",
+                "fn helper() -> Int {{\n    1\n}}\n"
+            ),
+            place = place
+        );
+
+        assert_eq!(
+            refusal(&source).message(),
+            "`helper` is a function, so it is written as a call",
+            "{place} is refused"
+        );
+    }
+}
+
+#[test]
+fn a_function_name_on_the_left_of_an_assignment_is_refused_like_any_other_value() {
+    let source = concat!(
+        "fn go() -> Int {\n    helper = 1\n    helper()\n}\n\n",
+        "fn helper() -> Int {\n    1\n}\n"
+    );
+
+    assert_eq!(
+        refusal(source).message(),
+        "`helper` is a function, so it is written as a call"
+    );
+}
+
+#[test]
+fn a_module_name_written_as_a_value_is_refused() {
+    let source = "import io\n\nfn go() -> Int {\n    held := io\n    1\n}\n";
+    let error = refusal(source);
+
+    assert_eq!(
+        error.message(),
+        "`io` is a module, so a name inside it is what is written"
+    );
+    assert_eq!(
+        error.help(),
+        "a module is what a name is reached through, as `io.println` is"
+    );
+}
+
+#[test]
+fn a_module_name_left_of_a_dot_is_resolved_rather_than_refused() {
+    let source = "import io\n\nfn go() -> Int {\n    io.count\n}\n";
+
+    resolved(source);
+}
+
+#[test]
+fn a_function_called_by_its_name_is_resolved_rather_than_refused() {
+    let source = concat!(
+        "fn go() -> Int {\n    helper()\n}\n\n",
+        "fn helper() -> Int {\n    1\n}\n"
+    );
+
+    resolved(source);
 }

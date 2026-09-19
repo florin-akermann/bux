@@ -126,11 +126,8 @@ fn every_refusal_carries_the_help_line_its_code_has() {
 }
 
 #[test]
-fn a_field_assigned_a_value_of_the_wrong_type_is_refused() {
-    let source = concat!(
-        "fn rename(user: User) -> Int {\n    user.id = \"one\"\n    user.id\n}\n\n",
-        "type User = {\n    id: Int\n}\n"
-    );
+fn a_name_assigned_a_value_of_the_wrong_type_is_refused() {
+    let source = "fn count() -> Int {\n    var total = 0\n    total = \"one\"\n    total\n}\n";
 
     assert_eq!(refusal(source).message(), "expected `Int`, found `String`");
 }

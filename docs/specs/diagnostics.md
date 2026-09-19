@@ -70,6 +70,7 @@ The grammar raises these, in `crates/parser/src/error.rs`:
 - `L0104` — a backslash is followed by something that is not an escape.
 - `L0105` — comparisons are chained.
 - `L0106` — brackets nest deeper than the parser descends.
+- `L0107` — something other than a name is written on the left of `=` or `+=`.
 
 Canonical form raises these, in `crates/format/src/lib.rs`:
 
@@ -87,6 +88,7 @@ Name resolution raises these, in `crates/resolver/src/error.rs`:
 - `L0301` — a module declares the same name twice.
 - `L0302` — a declaration or a binding hides a name that is already in scope.
 - `L0303` — a declaration is written above something that uses it.
+- `L0304` — a name that is not a value, such as a function or a module, is written as one.
 
 Type inference raises these, in `crates/types/src/error.rs`:
 
@@ -96,6 +98,7 @@ Type inference raises these, in `crates/types/src/error.rs`:
 - `L0403` — a type would have to contain itself.
 - `L0404` — a record is built without one of the fields it declares.
 - `L0405` — a record is written with one of its fields given a value twice.
+- `L0406` — `==` or `!=` is written between two values of a type that has no `Eq`.
 
 Exhaustiveness raises these, in `crates/exhaustiveness/src/error.rs`:
 

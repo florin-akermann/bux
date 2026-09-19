@@ -61,7 +61,7 @@ fn statement(printer: &mut Printer, written: &Statement) {
             operator,
             value,
         } => {
-            operand(printer, target, 0, Records::Allowed);
+            printer.word(&target.text);
             printer.word(match operator {
                 AssignOperator::Set => " = ",
                 AssignOperator::Add => " += ",

@@ -60,6 +60,7 @@ pub(crate) enum ParseErrorKind {
     UnknownEscape(char),
     ChainedComparison,
     NestingTooDeep,
+    AssignedToValue,
 }
 
 impl ParseErrorKind {
@@ -73,6 +74,7 @@ impl ParseErrorKind {
             Self::UnknownEscape(_) => Code::UnknownEscape,
             Self::ChainedComparison => Code::ChainedComparison,
             Self::NestingTooDeep => Code::NestingTooDeep,
+            Self::AssignedToValue => Code::AssignedToValue,
         }
     }
 
@@ -89,6 +91,7 @@ impl ParseErrorKind {
             }
             Self::ChainedComparison => Some("compare twice and join the two with `&&`"),
             Self::NestingTooDeep => Some("brackets nest at most 32 deep; name a part of it"),
+            Self::AssignedToValue => Some("build the value it becomes: `user { name: \"Bob\" }`"),
             _ => None,
         }
     }
@@ -104,6 +107,7 @@ impl fmt::Display for ParseErrorKind {
             Self::UnknownEscape(escaped) => write!(f, "`\\{escaped}` is not an escape"),
             Self::ChainedComparison => write!(f, "comparisons do not chain"),
             Self::NestingTooDeep => write!(f, "this nests too deeply to parse"),
+            Self::AssignedToValue => write!(f, "only a name is assigned to"),
         }
     }
 }

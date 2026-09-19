@@ -1,0 +1,10 @@
+// expect-error: L0304
+// Version 0.1 reaches a function by calling it, so its name is written with its arguments.
+fn go() -> Int {
+    held := helper
+    held
+}
+
+fn helper() -> Int {
+    1
+}

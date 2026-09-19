@@ -148,11 +148,11 @@ impl Inference<'_> {
 
     fn assign(
         &mut self,
-        target: &Expr,
+        target: &Name,
         operator: AssignOperator,
         value: &Expr,
     ) -> Result<Type, TypeError> {
-        let assigned = self.expr(target)?;
+        let assigned = self.value(target);
         let found = self.expr(value)?;
         self.expect(&assigned, &found, value.span)?;
         if operator == AssignOperator::Add {

@@ -56,7 +56,10 @@ impl Builder<'_> {
             | DefinitionKind::Module
             | DefinitionKind::Type
             | DefinitionKind::TypeParameter => {
-                unreachable!("version 0.1 reaches a function by calling it and nothing else")
+                unreachable!(
+                    "`{}` is not a value, and the front end refused it as one",
+                    name.text
+                )
             }
         }
     }

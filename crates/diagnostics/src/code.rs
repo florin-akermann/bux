@@ -58,6 +58,8 @@ catalogue! {
     ChainedComparison => "L0105",
     /// Brackets nest deeper than the parser descends.
     NestingTooDeep => "L0106",
+    /// Something other than a name is written on the left of `=` or `+=`.
+    AssignedToValue => "L0107",
     /// The file is not in canonical form.
     NotCanonical => "L0200",
     /// An import is written after a declaration, or two imports are out of sort.
@@ -70,6 +72,8 @@ catalogue! {
     NameShadowed => "L0302",
     /// A declaration is written above something that uses it.
     DefinitionBeforeUse => "L0303",
+    /// A name that is not a value, such as a function or a module, is written as one.
+    NotAValue => "L0304",
     /// A type met a type it does not match.
     TypeMismatch => "L0400",
     /// A call passes more or fewer arguments than the function takes.

@@ -91,17 +91,27 @@ Canonical form puts every import first and sorted, which settles where it goes w
 | declared twice    | `L0301` | `x` is declared twice in this module            |
 | shadowed name     | `L0302` | `x` is already in scope here                    |
 | written above use | `L0303` | `x` is written above `y`, which uses it         |
+| name that is no value | `L0304` | `x` is a function, so it is written as a call |
 
 `L0300` helps with `a name is declared in this file, imported, or supplied by the prelude`.
 `L0301` helps with `one name has one definition; rename one of the two`.
 `L0302` helps with `rename the inner one; Lumen never hides a name`.
 `L0303` helps with `a file reads top down: move it below what uses it`.
+`L0304` helps with `version 0.1 reaches a function by calling it; write the call`.
 
 A name written where a type belongs and found only in the value scope is still `L0300`, with a
 message saying there is no type of that name.
 Two parameters of one function sharing a name are declared twice; a binding that hides a parameter
 is shadowed.
 A declaration that hides a prelude name is shadowed, because the prelude is already in scope.
+
+Version 0.1 reaches a function by calling it, which `docs/design.md` section 11 states.
+A function name is `L0304` wherever it is written but as the name of a call.
+`held := helper`, `helper = 1`, and `filter(users, is_active)` are each refused at the name.
+A module name is `L0304` wherever it is written but on the left of a `.`, with the message
+`x` is a module, so a name inside it is what is written.
+It helps with `a module is what a name is reached through, as `io.println` is`.
+Neither has a type or a shape in version 0.1, so nothing reaches code generation it cannot write.
 
 Resolution stops at the first error, as parsing does.
 

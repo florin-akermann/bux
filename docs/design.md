@@ -470,6 +470,11 @@ counter += 1
 
 The distinction should be obvious in source code.
 
+**An assignment names a name**.
+`counter = 1` and `counter += 1` are the whole of it; `user.name = "Bob"` is not written.
+A record is updated by building the value it becomes, which the paragraph above shows.
+There is then one way to change what a name holds, and none to reach inside a value.
+
 ---
 
 ## 11. Functions
@@ -499,6 +504,12 @@ active_names := map(filter(users, is_active), user_name)
 **There are no anonymous functions**.
 Every function has a name, and the name is written where the function is used.
 Nested named functions may be declared inside a function body when they are local to it.
+
+**Version 0.1 reaches a function by calling it, and no other way**.
+The snippet above is where the language is going, not what version 0.1 compiles.
+Passing `is_active` to `filter` waits on a function value having a type and a shape.
+A function name written as anything but the name of a call is refused rather than lowered.
+Nothing then reaches code generation that it has no way to write.
 
 A name forces the author to say what the function is for, and gives the reader a word to search.
 

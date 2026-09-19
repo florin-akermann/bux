@@ -57,9 +57,7 @@ fn from_block<'a>(block: &'a Block, into: &mut Vec<&'a Expr>) {
 
 fn from_statement<'a>(statement: &'a Statement, into: &mut Vec<&'a Expr>) {
     match &statement.kind {
-        StatementKind::Binding { value, .. } => from_expr(value, into),
-        StatementKind::Assign { target, value, .. } => {
-            from_expr(target, into);
+        StatementKind::Binding { value, .. } | StatementKind::Assign { value, .. } => {
             from_expr(value, into);
         }
         StatementKind::Return(value) => {

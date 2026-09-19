@@ -1,0 +1,2 @@
+141..150 only a name is assigned to
+help: build the value it becomes: `user { name: "Bob" }`

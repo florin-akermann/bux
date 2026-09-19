@@ -229,7 +229,7 @@ fn statement_node(tree: &mut Tree, depth: usize, statement: &Statement) {
             value,
         } => {
             tree.node(depth, &format!("assign {operator:?}"), span);
-            expr_node(tree, depth + 1, target);
+            tree.node(depth + 1, &format!("name {}", target.text), target.span);
             expr_node(tree, depth + 1, value);
         }
         StatementKind::Return(value) => {
