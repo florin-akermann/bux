@@ -6,18 +6,6 @@
 
 ## Open
 
-## 🟢 Item 009: Lowering and JVM bytecode emission
-**Depends on:** Item 008 — only checked programs are lowered.
-`ir` and `jvm` crates lower the typed AST to a JVM IR and write class files in plain Rust.
-Records and ADT variants become final classes; functions become static methods.
-The class-file version is the current JDK's; no older JVM is supported.
-Output is byte-reproducible: nothing depends on iteration order, a timestamp, or a build path.
-[009][a] - Spec first in `docs/specs/codegen.md`: the class layout and the calling convention.
-[009][b] - A class-file writer with a constant pool and stack-map frames, test-first per shape.
-[009][c] - Lowering of each construct, test-first, verified with a class-file reader in tests.
-[009][d] - `lumen build <file>` writes the class files; help topic added.
-[009][e] - A property test: compiling the same source twice gives byte-identical class files.
-
 ## 🔴 Item 010: Running programs
 **Depends on:** Item 009 — there must be bytecode to run.
 `lumen run <file>` builds and runs on the JDK found via `JAVA_HOME`; missing JDK is a clear error.
