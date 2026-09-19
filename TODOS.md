@@ -6,7 +6,7 @@
 
 ## Open
 
-## 🟡 Item 009: Lowering and JVM bytecode emission
+## 🟢 Item 009: Lowering and JVM bytecode emission
 **Depends on:** Item 008 — only checked programs are lowered.
 `ir` and `jvm` crates lower the typed AST to a JVM IR and write class files in plain Rust.
 Records and ADT variants become final classes; functions become static methods.
