@@ -198,3 +198,17 @@ Nothing waits for a later JDK; readiness is the flag being set today, on an earl
 [028][b] - The writer sets the flag, test-first against the bytes the class-file spec names.
 [028][c] - `lumen run` passes what a preview class file needs, if 28 needs it, test-first.
 [028][d] - A run-time example on a record, skipped with a named reason below JDK 28.
+
+## 🔴 Item 029: No exceptions and no `unwrap`; every operation is total
+**Depends on:** Item 007 — a total `/` needs the type of what it returns.
+The non-goals name only checked exceptions; nothing says a Lumen program never throws or catches.
+Today `/` and `%` lower to `LDIV` and `LREM`, so a zero divisor throws `ArithmeticException`.
+The rule: no program can throw, catch, or observe an exception, and no operation is partial.
+A partial function is written as `Option` or `Result` and taken apart only by `match` or `?`.
+The prelude never gains `unwrap` or `expect`; there is no way to turn `None` into a crash.
+The one throw the compiler emits, after an exhaustive `match`, stays unreachable by construction.
+[029][a] - `docs/design.md` section 5 states the rule, and the non-goals name exceptions outright.
+[029][b] - `docs/specs/arithmetic.md` settles what `/` and `%` do on a zero divisor, with no throw.
+[029][c] - Lowering of `/` and `%` follows the spec, test-first; no generated method can throw.
+[029][d] - `docs/specs/modules.md` states that the prelude takes `Option` apart only by `match`.
+[029][e] - Executable examples under `tests/spec/arithmetic/`, including the zero-divisor case.
