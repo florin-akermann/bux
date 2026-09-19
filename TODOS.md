@@ -6,7 +6,7 @@
 
 ## Open
 
-## 🟡 Item 008: Exhaustiveness checking
+## 🟢 Item 008: Exhaustiveness checking
 **Depends on:** Item 007 — patterns are checked against their inferred types.
 An `exhaustiveness` crate rejects a non-exhaustive `match` and names the missing patterns.
 [008][a] - Spec first in `docs/specs/exhaustiveness.md`: the algorithm and the error text.
