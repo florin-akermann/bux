@@ -36,15 +36,6 @@ The project already prefers one sum type over a pair of flags; this makes it the
 [017][c] - The check after inference, test-first; the `help:` names the two-variant ADT to write.
 [017][d] - Executable examples under `tests/spec/arguments/`, including the compile-fail case.
 
-## 🟢 Item 018: A discarded value is a compile error
-**Depends on:** Item 007 — knowing that a value is discarded needs its type.
-mycs lints `Swallowed Exception`; Lumen has no exceptions, but a `Result` can still be dropped.
-Every expression statement is of type `()`, so a dropped `Result` or `Option` cannot compile.
-Discarding is written, never implied: `_ = f(x)` says the value is deliberately thrown away.
-[018][a] - `docs/design.md` section 5 states the rule; `docs/specs/discarding.md` gives the error.
-[018][b] - The check over the typed AST, test-first; `_ =` is the one way to discard a value.
-[018][c] - Executable examples under `tests/spec/type_inference/`, including the compile-fail case.
-
 ## 🔴 Item 019: Canonical naming as part of canonical form
 **Depends on:** Item 003, Item 007 — casing is a formatter rule; the predicate rule needs types.
 mycs reports `Cryptic Public Identifier`, `Acronym Casing`, and `Boolean Predicate Prefix`.
