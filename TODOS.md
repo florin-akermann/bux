@@ -6,7 +6,7 @@
 
 ## Open
 
-## 🟡 Item 007: Type inference
+## 🟢 Item 007: Type inference
 **Depends on:** Item 006 — inference runs on the resolved AST.
 A `types` crate does Hindley-Milner inference with let-polymorphism over the version 0.1 types.
 `Option` and `Result` are ordinary ADTs in a prelude; `?` desugars to a match on `Result`.
