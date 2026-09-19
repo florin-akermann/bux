@@ -6,7 +6,7 @@
 
 ## Open
 
-## 🔴 Item 011: Canonical order as part of the compile gate
+## 🟡 Item 011: Canonical order as part of the compile gate
 **Depends on:** Item 003, Item 008 — order is a formatter check, and arm order needs the variants.
 Canonical form covers sequence, not only whitespace.
 Imports sort, top-level declarations follow one order, and a definition precedes its use.
