@@ -111,11 +111,19 @@ a pattern written inside another one is tested the same way against what was rea
 Exhaustiveness has already proved that some arm answers for every value, so falling past the last
 arm cannot happen, and the method throws there rather than running on into the next thing.
 
-No class a module writes declares a method of its own beyond its constructor.
+A class written for a type declares its constructor and nothing else.
+No class a module writes, that one or the module class, declares a method a JVM class inherits:
+not `equals`, not `hashCode`, not `getClass`, not `toString`, and none of the rest of them.
+Declaring one would put the object model back inside a Lumen value, and `docs/design.md`
+section 2 declines the object model outright.
 `==` is `Eq`, which version 0.1 gives to `Int`, `Bool`, and `String` alone, so nothing asks a
 record or a variant whether it is the same as another one.
 A literal pattern tests a whole number, a truth value, or a string, and each of those is compared
 by what it holds rather than by being one object.
+
+Nothing a module writes asks whether two references are one object.
+There is no reference comparison to emit: the one equality a lowering calls is the one `String`
+declares, and `Object.equals`, which answers by identity, is never reached.
 
 ## What the bytes look like
 
@@ -148,3 +156,5 @@ These hold and are checked with property-based tests:
 5. Every constant pool entry a method refers to is within the pool.
 6. No two classes of one module share a name.
 7. Every method of every class ends by leaving it.
+8. No class a module writes declares a method a JVM class inherits.
+9. The one `equals` a module calls is the one `String` declares.

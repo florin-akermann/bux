@@ -18,8 +18,16 @@ pub(crate) fn compared(held: Option<&Descriptor>, how: Comparison) -> Vec<Instru
         None => vec![Instruction::Boolean(how == Comparison::Equal)],
         Some(Descriptor::Long) => vec![Instruction::CompareLongs(how)],
         Some(Descriptor::Boolean | Descriptor::Integer) => vec![Instruction::CompareIntegers(how)],
-        Some(Descriptor::Reference(_) | Descriptor::Array(_)) => by_value(how),
+        Some(Descriptor::Reference(class)) if class == &string_class() => by_value(how),
+        Some(held) => {
+            unreachable!("`{held}` has no `Eq`, so inference refused the comparison of two of them")
+        }
     }
+}
+
+/// The one class a comparison of references is ever between, which is the one that has `Eq`.
+fn string_class() -> ClassName {
+    ClassName::new("java/lang/String")
 }
 
 /// Two strings, compared by the characters they hold rather than by being one object.
@@ -29,7 +37,7 @@ pub(crate) fn compared(held: Option<&Descriptor>, how: Comparison) -> Vec<Instru
 /// is then unreachable by construction rather than by the type checker alone.
 fn by_value(how: Comparison) -> Vec<Instruction> {
     let mut instructions = vec![Instruction::InvokeVirtual(MethodRef {
-        class: ClassName::new("java/lang/String"),
+        class: string_class(),
         name: "equals".to_owned(),
         descriptor: MethodDescriptor::new(vec![object()], Some(Descriptor::Boolean)),
     })];

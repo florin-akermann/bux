@@ -3,7 +3,7 @@
 //! A behaviour is stated as the Lumen source it is about, run through every phase before this
 //! one, because what the lowering says is only ever about a module the compiler has accepted.
 
-use lumen_ir::{Body, Class, ClassName, Instruction, Lowered, Method, lower};
+use lumen_ir::{Body, Class, ClassName, Instruction, Lowered, Method, MethodRef, lower};
 
 /// The classes `source` becomes, as a module named `demo`.
 pub fn lowered(source: &str) -> Lowered {
@@ -38,16 +38,21 @@ pub fn method_of<'a>(class: &'a Class, name: &str) -> &'a Method {
 
 /// Whether the body calls the method `name` of `class`, however it reaches it.
 pub fn calls(body: &Body, class: &ClassName, name: &str) -> bool {
-    body.instructions.iter().any(|instruction| {
-        let (Instruction::InvokeStatic(called)
-        | Instruction::InvokeVirtual(called)
-        | Instruction::InvokeInterface(called)
-        | Instruction::Construct(called)) = instruction
-        else {
-            return false;
-        };
-        &called.class == class && called.name == name
-    })
+    body.instructions
+        .iter()
+        .filter_map(called)
+        .any(|reference| &reference.class == class && reference.name == name)
+}
+
+/// The method an instruction names, when the instruction is a call at all.
+pub fn called(instruction: &Instruction) -> Option<&MethodRef> {
+    match instruction {
+        Instruction::Construct(reference)
+        | Instruction::InvokeStatic(reference)
+        | Instruction::InvokeVirtual(reference)
+        | Instruction::InvokeInterface(reference) => Some(reference),
+        _ => None,
+    }
 }
 
 /// The names of the classes the module writes, in the order it writes them.
