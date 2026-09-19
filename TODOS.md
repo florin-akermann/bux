@@ -105,3 +105,14 @@ Neither rule is written down and neither is refused, so a program can reach lowe
 [020][c] - The front end refuses an assignment whose target is not a name, test-first.
 [020][d] - The front end refuses a function name used as anything but the callee, test-first.
 [020][e] - Executable examples for both refusals, each naming its code on its first line.
+
+## 🔴 Item 021: `example/` holds a runnable program
+A newcomer's first Lumen program lives at `example/`, and `lumen run example/main.lm` runs it.
+The tree holds spec files and compiler tests; none of them is a program somebody would write.
+This one is everyday Lumen: a record, an ADT, a `match`, and a `for` loop, read in one screen.
+There is no printing yet, so the program is observed by ending normally rather than by output.
+A test runs it with the suite, so the one program the README promises can never rot.
+[021][a] - `docs/specs/example-program.md` states what the directory holds and what running it does.
+[021][b] - `example/main.lm` itself, in canonical form and held by `lumen check` like any source.
+[021][c] - An integration test runs it through the CLI, skipped with a named reason when no JDK.
+[021][d] - README names the one command that runs it; class files beside it are ignored by git.
