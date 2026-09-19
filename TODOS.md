@@ -6,17 +6,6 @@
 
 ## Open
 
-## 🟡 Item 011: Canonical order as part of the compile gate
-**Depends on:** Item 003, Item 008 — order is a formatter check, and arm order needs the variants.
-Canonical form covers sequence, not only whitespace.
-Imports sort, top-level declarations follow one order, and a definition precedes its use.
-A `match` lists its arms in the order the variants are declared.
-A new arm then has exactly one legal position, so no diff is ever reorder-only.
-[011][a] - `docs/design.md` section 13 states the order rules before any of them is enforced.
-[011][b] - Import and declaration order, and definition before use, checked by the formatter.
-[011][c] - Arm order checked where the variant list is known, beside exhaustiveness, test-first.
-[011][d] - Executable examples under `tests/spec/format/` and `tests/spec/exhaustiveness/`.
-
 ## 🔴 Item 012: `todo` as an explicit hole
 **Depends on:** Item 007, Item 009 — a hole needs a type, and `lumen build` is what refuses it.
 An unfinished body writes `todo("reason")`, which takes whatever type the context expects.
