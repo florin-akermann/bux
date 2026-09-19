@@ -628,6 +628,24 @@ The purpose is to let the compiler distinguish pure domain logic from operations
 
 This feature should come after the basic language and type system are working.
 
+### Resources are the same feature
+
+A scoped resource, a file or a connection, needs two guarantees.
+It is released on every exit path, and it is never used after release.
+Go's `defer` and Java's try-with-resources give only the first; a closed handle can still escape.
+The second needs the type system; the classic answer is linear types, which are ownership's family.
+The intended answer is instead an escape check.
+A resource-typed value may be passed as an argument but not returned, stored in a field, or sent.
+It therefore cannot outlive the block that opened it.
+An effect is a capability passed the same way, so effects and resources are one mechanism, not two.
+Elsewhere most of the cost of such a check is closures, which capture capabilities silently.
+Lumen has no anonymous functions, and a named function cannot capture a local.
+The escape routes are therefore enumerable, and the rule stays one paragraph.
+That is a standing reason to keep the no-closures rule when it feels inconvenient.
+No syntax is committed.
+The block that opens a resource compiles to try/finally, and `AutoCloseable` never surfaces.
+It is a JVM interface, and the JVM is a target, not a model.
+
 ---
 
 ## 15. Concurrency
