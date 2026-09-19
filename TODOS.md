@@ -16,7 +16,7 @@ The examples run with the test suite, so a signature never drifts from the evide
 [015][d] - Executable examples: a public function without one fails to compile.
 
 
-## 🔴 Item 019: Canonical naming as part of canonical form
+## 🟡 Item 019: Canonical naming as part of canonical form
 **Depends on:** Item 003, Item 007 — casing is a formatter rule; the predicate rule needs types.
 mycs reports `Cryptic Public Identifier`, `Acronym Casing`, and `Boolean Predicate Prefix`.
 Canonical form makes them errors: `snake_case` functions and `PascalCase` types.
