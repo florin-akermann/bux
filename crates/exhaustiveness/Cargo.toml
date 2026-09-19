@@ -1,0 +1,25 @@
+[package]
+name = "lumen-exhaustiveness"
+description = "Exhaustiveness: every `match` answers for every value it may meet"
+version.workspace = true
+edition.workspace = true
+
+[lib]
+path = "src/lib.rs"
+
+[[test]]
+name = "integration"
+path = "tests/integration/main.rs"
+
+[dependencies]
+lumen-ast = { path = "../ast" }
+lumen-diagnostics = { path = "../diagnostics" }
+lumen-resolver = { path = "../resolver" }
+lumen-types = { path = "../types" }
+
+[dev-dependencies]
+hegeltest = "0.23" # approved: property-based testing, required by AGENTS.md for every phase
+lumen-parser = { path = "../parser" }
+
+[lints]
+workspace = true

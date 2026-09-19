@@ -78,6 +78,8 @@ catalogue! {
     MissingField => "L0404",
     /// A record is written with one of its fields given a value twice.
     FieldWrittenTwice => "L0405",
+    /// A `match` leaves a value of the type it matches unanswered.
+    NonExhaustiveMatch => "L0500",
 }
 
 impl Code {

@@ -1,0 +1,15 @@
+// expect-error: L0500
+// A match that has not been told what to do with a variant is refused.
+type Payment =
+    | Pending
+    | Authorized {
+        authorization_id: String
+    }
+    | Failed(String)
+
+fn describe(payment: Payment) -> String {
+    match payment {
+        Pending => "waiting"
+        Authorized { authorization_id } => "authorized: " + authorization_id
+    }
+}

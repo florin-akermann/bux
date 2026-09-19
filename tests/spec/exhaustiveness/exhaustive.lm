@@ -1,0 +1,44 @@
+// Every shape of match that covers the type it matches.
+type Payment =
+    | Pending
+    | Authorized {
+        authorization_id: String
+    }
+    | Failed(String)
+
+fn describe(payment: Payment) -> String {
+    match payment {
+        Pending => "waiting"
+        Authorized { authorization_id } => "authorized: " + authorization_id
+        Failed(reason) => "failed: " + reason
+    }
+}
+
+fn settled(payment: Payment) -> Bool {
+    match payment {
+        Pending => false
+        other => true
+    }
+}
+
+fn spoken(flag: Bool) -> String {
+    match flag {
+        true => "yes"
+        false => "no"
+    }
+}
+
+fn counted(count: Int) -> String {
+    match count {
+        0 => "none"
+        other => "some"
+    }
+}
+
+fn unwrapped(outcome: Option<Result<Int, String>>) -> Int {
+    match outcome {
+        Some(Ok(value)) => value
+        Some(Err(problem)) => 0
+        None => 0
+    }
+}

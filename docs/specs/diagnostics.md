@@ -55,6 +55,7 @@ A span that ends on a later line carets the rest of its first line and says wher
 
 A code is `L` and four digits, grouped by the phase that raises it.
 The grammar writes `L01xx`, canonical form `L02xx`, name resolution `L03xx`, and inference `L04xx`.
+Exhaustiveness writes `L05xx`.
 
 Every number and every long form lives in `crates/diagnostics/src/code.rs`, which declares them
 together so that neither can be added without the other.
@@ -91,6 +92,10 @@ Type inference raises these, in `crates/types/src/error.rs`:
 - `L0403` — a type would have to contain itself.
 - `L0404` — a record is built without one of the fields it declares.
 - `L0405` — a record is written with one of its fields given a value twice.
+
+Exhaustiveness raises this one, in `crates/exhaustiveness/src/error.rs`:
+
+- `L0500` — a `match` leaves a value of the type it matches unanswered.
 
 ## `lumen explain`
 
