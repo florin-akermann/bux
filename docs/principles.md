@@ -46,6 +46,8 @@ Prefer libraries over language features where possible.
 ### 6. Does the JVM implementation leak into the language?
 
 If yes, reconsider the abstraction.
+`docs/design.md` section 2 states the rule this asks against: the JVM is a target, not a model.
+Identity, `equals` on everything, boxing a program can see, and a special `int` are all leaks.
 
 ---
 

@@ -2,10 +2,10 @@
 
 > Go's simplicity.
 > Haskell's types.
-> The JVM's runtime.
+> Valhalla's values.
 > A Rust compiler.
 
-Lumen is a small, statically typed language for practical software; its first target is the JVM.
+Lumen is a small, statically typed language for practical software, built on Valhalla.
 Its compiler is written in Rust and emits JVM bytecode.
 
 Four things set the everyday code apart:

@@ -2,13 +2,17 @@
 
 > Go's simplicity.
 > Haskell's type system.
-> The JVM's runtime.
+> Valhalla's values.
 > A compiler written in Rust.
 
-A small, statically typed language for building practical software on the JVM.
+A small, statically typed language for building practical software.
+It is built on Valhalla, the JVM's value classes, and every Lumen value is a value.
+Nothing has identity, and equality is by state, only where a type asks for it.
+No built-in type is special.
 It inherits neither Java's object model, Rust's ownership model, nor Haskell's complexity.
 
-The compiler is written in Rust and initially targets JVM bytecode.
+The compiler is written in Rust and targets JVM bytecode, on JDK 28 or later.
+The JVM is the first compilation target and nothing more; section 2 says what that rules out.
 
 This document is the language specification; every change to the language is a change here first.
 How the compiler is built and what ships when is in `docs/implementation.md`.
@@ -18,7 +22,7 @@ The questions every proposed feature must answer are in `docs/principles.md`.
 
 ## 1. Goals
 
-The language combines four properties.
+The language combines five properties.
 
 ### Go
 
@@ -65,6 +69,19 @@ Use the JVM for:
 
 The JVM is an implementation target, not the semantic model of the language.
 
+### Valhalla
+
+Build every type on the JVM's value classes, so that:
+
+* a value has no identity, and two built alike are one value
+* equality is by state, and only where a type says it is
+* a record or a variant is laid out flat wherever the JVM can flatten one
+* a built-in type and a declared type are the same kind of thing
+* boxing is the compiler's business and never a program's
+
+Valhalla's data model is the one part of the JVM Lumen adopts whole, because it is Lumen's own.
+Every class the compiler writes is a value class, from the first release on.
+
 ### Rust
 
 Write the compiler in Rust to benefit from:
@@ -106,6 +123,19 @@ In particular, the language should initially avoid:
 * excessive syntax
 * anonymous functions
 * async/await, or any other function colouring
+* identity, or an equality every type has whether or not it asked for one
+* boxing a program can observe, or a built-in type that is special
+
+### The JVM is a target, not a model
+
+The JVM is where Lumen compiles first, and that is the whole of its authority over the language.
+None of its constraints is inherited.
+Not the object model: no identity, no `equals` on everything, no `hashCode`, no root class.
+Not the eight primitive types that are special against every other; `Int` is a type like `User`.
+Not boxing, which a program never observes, and not erasure, which is why a generic boxes.
+What Lumen adopts instead is value semantics, in the shape Valhalla gives a value class.
+That shape is no identity, no null, and equality by state, and every Lumen type already has it.
+`docs/principles.md` asks of every feature whether the JVM leaks through it; this is the rule.
 
 The guiding principle is:
 
@@ -341,6 +371,10 @@ fn contains<T: Eq<T>>(
 }
 ```
 
+`==` is `Eq`: a type is compared only when it has an instance, and a built-in type is no exception.
+Version 0.1 has no `derive`, so the library ships the three instances: `Int`, `Bool`, and `String`.
+`==` on a record or a variant is refused until its type derives `Eq`, which version 0.2 allows.
+
 Standard traits should include concepts such as:
 
 ```text
@@ -363,6 +397,9 @@ Advanced type-level machinery should not be introduced until there is a concrete
 ## 9. Records
 
 Records should be lightweight and pleasant to use.
+
+A record is a value with no identity: nothing can ask whether two of them are one object.
+Two records holding the same fields are one value, which is what a Valhalla value class makes true.
 
 ```text
 type User = {

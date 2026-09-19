@@ -8,7 +8,7 @@ AI agents write most of the code, and agents drift without a fixed anchor.
 This file is that anchor; consistency is the throughline, and the bar is Code Health 10.0.
 
 ## Project Scope
-- **Goal**: Go's simplicity, Haskell's types, the JVM's runtime, a Rust compiler.
+- **Goal**: Go's simplicity, Haskell's types, Valhalla's values, a Rust compiler.
 - Everyday Lumen code reads like Go: basically a bunch of `for` loops, plus ADTs and `match`.
 - **Dogfood as early and as much as possible.** Lumen replaces Rust wherever Lumen can express it.
 - The end state is self-hosting: the compiler and the whole toolchain are written in Lumen.

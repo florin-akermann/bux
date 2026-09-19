@@ -4,11 +4,14 @@ The language is specified in `docs/design.md`; this document covers how it is bu
 
 ## 1. JVM target
 
-The JVM is the initial and primary runtime target.
+The JVM is the initial and primary runtime target, and Valhalla is what Lumen is built on.
 
-**Only the current JDK release is targeted**.
-The emitted class-file version is the current one, and no older JVM is supported or tested.
-Modern JVM features are used freely: invokedynamic, records, sealed classes, value types.
+**JDK 28 or later is targeted**, early access until it ships.
+The emitted class-file version is 72, and no older JVM is supported or tested.
+Every class the compiler writes is a value class, which JDK 28 holds in preview.
+A preview class file carries minor version 65535, and a JVM loads one only when told to.
+`lumen run` starts the JVM with `--enable-preview`, so a run needs nothing the reader must know.
+Modern JVM features are used freely: invokedynamic, records, sealed classes, value classes.
 A release of the JDK moves the target with it; there is no compatibility matrix and never will be.
 
 The compiler should emit JVM bytecode directly or through a suitable intermediate representation.
