@@ -141,16 +141,6 @@ An optimization earns its place by measurement, so the item starts with a number
 [026][c] - The lowering, test-first: such a record emits no `new`, asserted on the instructions.
 [026][d] - A property test: the scalarized program computes what the allocating one computes.
 
-## 🟡 Item 027: Every generated class keeps the shape of a value class
-**Depends on:** Item 022, Item 023 — a value class has no identity, which those two make true.
-Valhalla flattens a class that has no identity, no null, and equality by state.
-Lumen's types have all three by design, so readiness is a matter of never drifting from it.
-A value class is `final` with `final` fields, and declares nothing a value class may not.
-The writer marks class and fields so, and a test holds every generated class inside the shape.
-[027][a] - `docs/specs/codegen.md` states the shape every generated class keeps, and why.
-[027][b] - Every generated field is `final` and every concrete class is `final`, held by a test.
-[027][c] - A test that no generated method is `synchronized`, which a value class cannot lock on.
-
 ## 🔴 Item 029: No exceptions and no `unwrap`; every operation is total
 **Depends on:** Item 007 — a total `/` needs the type of what it returns.
 The non-goals name only checked exceptions; nothing says a Lumen program never throws or catches.
