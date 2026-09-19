@@ -1,0 +1,6 @@
+LineComment 0..36 "// expect-error: unterminated string"
+Newline 36..37 "\n"
+Identifier 37..41 "name"
+Punct(Walrus) 42..44 ":="
+UnterminatedString 45..51 "\"Alice"
+Newline 51..52 "\n"

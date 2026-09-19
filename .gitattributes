@@ -1,0 +1,3 @@
+# Executable examples carry byte offsets into their source; line endings must not shift them.
+*.lm text eol=lf
+*.tokens text eol=lf

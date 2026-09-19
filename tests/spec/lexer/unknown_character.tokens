@@ -1,0 +1,8 @@
+LineComment 0..41 "// expect-error: unexpected character `@`"
+Newline 41..42 "\n"
+Identifier 42..43 "x"
+Punct(Walrus) 44..46 ":="
+Integer 47..48 "1"
+Unknown 49..50 "@"
+Integer 51..52 "2"
+Newline 52..53 "\n"

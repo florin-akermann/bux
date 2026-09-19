@@ -1,0 +1,18 @@
+[package]
+name = "lumen-lexer"
+description = "Lexer: source text to tokens with byte spans"
+version.workspace = true
+edition.workspace = true
+
+[lib]
+path = "src/lib.rs"
+
+[[test]]
+name = "integration"
+path = "tests/integration/main.rs"
+
+[dev-dependencies]
+hegeltest = "0.23" # approved: property-based testing, required by AGENTS.md for every phase
+
+[lints]
+workspace = true
