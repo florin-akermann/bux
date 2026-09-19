@@ -90,6 +90,8 @@ A Lumen value has no identity to begin with, which `docs/design.md` section 2 st
 is lost and the JVM is free to lay the value out flat wherever it can.
 Every field of a value class is `final` and strict: the constructor writes each field before it
 hands itself up to its base, and the value is whole by the time anything above it runs.
+No method a module writes is `synchronized`, because locking is done on an object and a value
+has no identity to be locked on; a JVM refuses a `monitorenter` on a value outright.
 
 A record type is a `final` value class with one field per field it declares, in the order it
 declares them, and one constructor taking them in that order.

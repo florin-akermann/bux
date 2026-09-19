@@ -1,6 +1,7 @@
 //! What a whole module looks like once it is written, read back out of the bytes.
 
 use crate::common;
+use crate::reader;
 
 /// `ACC_PUBLIC` and `ACC_FINAL`, and no identity bit: a value class nothing extends.
 const FINAL_CLASS: u16 = 0x0011;
@@ -12,6 +13,9 @@ const PUBLIC_STATIC: u16 = 0x0009;
 
 /// `ACC_PUBLIC`, `ACC_FINAL`, and `ACC_STRICT_INIT`, which every field of a value class has.
 const PUBLIC_FINAL_STRICT: u16 = 0x0811;
+
+/// `ACC_SYNCHRONIZED`, which locks on an object, and a value has no identity to be locked on.
+const SYNCHRONIZED: u16 = 0x0020;
 
 /// A module of one function over a record and one over an algebraic data type.
 const MODULE: &str = "fn counted(users: List<User>) -> Int {\n    var total = 0\n    for user in users {\n        total += 1\n    }\n    total\n}\n\nfn told(payment: Payment) -> String {\n    match payment {\n        Pending => \"waiting\"\n        Failed(reason) => reason\n    }\n}\n\ntype Payment =\n    | Pending\n    | Failed(String)\n\ntype User = {\n    id: Int\n    active: Bool\n}\n";
@@ -88,4 +92,24 @@ fn the_prelude_is_written_with_the_module_so_that_a_build_is_self_contained() {
     assert!(written.contains(&"lumen/Option.class"), "{written:?}");
     assert!(written.contains(&"lumen/Option$Some.class"));
     assert!(written.contains(&"lumen/Result$Err.class"));
+}
+
+/// The writer fixes its method access today, so this holds the rule rather than exercising it.
+///
+/// It is the guard for the day something computes a method's flags: a value class cannot be
+/// locked on, so `ACC_SYNCHRONIZED` is a bit no class Lumen writes may ever carry.
+#[test]
+fn no_method_a_module_writes_is_synchronized_because_a_value_cannot_be_locked_on() {
+    for file in common::compiled(MODULE) {
+        let class = reader::read(&file.bytes);
+        for method in &class.methods {
+            assert_eq!(
+                method.access & SYNCHRONIZED,
+                0,
+                "{} declares `{}` synchronized",
+                file.path,
+                method.name
+            );
+        }
+    }
 }
