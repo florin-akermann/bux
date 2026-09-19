@@ -16,15 +16,6 @@ Nothing downstream reformats a file by hand to satisfy the gate.
 [013][c] - Formatting deviations emit the canonical replacement for their span.
 [013][d] - Help topic for `--json` in `crates/cli/src/help/`.
 
-## 🟢 Item 014: `lumen api` prints a module's public surface
-**Depends on:** Item 007 — the surface is printed from the typed AST.
-`lumen api <file>` prints the public names of a module with their types, and nothing else.
-One page then replaces reading a file to learn a signature, and inferred types are shown.
-[014][a] - Spec first in `docs/specs/api-surface.md`: what is public, the order, and the layout.
-[014][b] - The printer over the typed AST, test-first; its output is itself in canonical form.
-[014][c] - Help topic for `api` in `crates/cli/src/help/`.
-[014][d] - Executable examples under `tests/spec/api/`.
-
 ## 🔴 Item 015: An executable example per public function
 **Depends on:** Item 005, Item 010 — the harness runs the examples, and running them needs a JDK.
 A public function carries at least one executable example, or the module does not compile.
