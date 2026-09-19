@@ -90,6 +90,10 @@ A Lumen value has no identity to begin with, which `docs/design.md` section 2 st
 is lost and the JVM is free to lay the value out flat wherever it can.
 Every field of a value class is `final` and strict: the constructor writes each field before it
 hands itself up to its base, and the value is whole by the time anything above it runs.
+Strict is `ACC_STRICT_INIT`, which JEP 539 defines and JEP 401 asks of every value-class field.
+The verifier holds a constructor to that order.
+A branch before the call up would need a stack map frame listing the fields still unset.
+No constructor written branches, so no such frame is written.
 No method a module writes is `synchronized`, because locking is done on an object and a value
 has no identity to be locked on; a JVM refuses a `monitorenter` on a value outright.
 

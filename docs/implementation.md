@@ -9,6 +9,8 @@ The JVM is the initial and primary runtime target, and Valhalla is what Lumen is
 **JDK 28 or later is targeted**, early access until it ships.
 The emitted class-file version is 72, and no older JVM is supported or tested.
 Every class the compiler writes is a value class, which JDK 28 holds in preview.
+That preview is JEP 401, Value Classes and Objects, with JEP 539, Strict Field Initialization.
+Every field the compiler writes is strict, which JEP 401 asks of every value class.
 A preview class file carries minor version 65535, and a JVM loads one only when told to.
 `lumen run` starts the JVM with `--enable-preview`, so a run needs nothing the reader must know.
 Modern JVM features are used freely: invokedynamic, records, sealed classes, value classes.
