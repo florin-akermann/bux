@@ -36,7 +36,7 @@ The project already prefers one sum type over a pair of flags; this makes it the
 [017][c] - The check after inference, test-first; the `help:` names the two-variant ADT to write.
 [017][d] - Executable examples under `tests/spec/arguments/`, including the compile-fail case.
 
-## 🟡 Item 018: A discarded value is a compile error
+## 🟢 Item 018: A discarded value is a compile error
 **Depends on:** Item 007 — knowing that a value is discarded needs its type.
 mycs lints `Swallowed Exception`; Lumen has no exceptions, but a `Result` can still be dropped.
 Every expression statement is of type `()`, so a dropped `Result` or `Option` cannot compile.
