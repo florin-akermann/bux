@@ -1,13 +1,32 @@
 //! Helpers shared by the class-file writer's behaviour tests.
 //!
-//! A behaviour is stated as the lowered class it is about, because that is what the writer takes.
+//! A behaviour is stated as the lowered class it is about, because that is what the writer takes,
+//! or as the Lumen source it is about, where the behaviour is one a whole module has.
 
 use lumen_ir::Reached;
 use lumen_ir::{
     Body, Class, ClassName, Descriptor, Instruction, Lowered, Method, MethodDescriptor,
 };
+use lumen_jvm::ClassFile as Written;
 
 use crate::reader::{self, ClassFile};
+
+/// The class files `source` becomes, as a module named `demo`.
+pub fn compiled(source: &str) -> Vec<Written> {
+    let program = lumen_parser::parse(source).expect("the example parses");
+    let resolved = lumen_resolver::resolve(program).expect("every name of the example resolves");
+    let typed = lumen_types::check(resolved).expect("every expression of the example has a type");
+    lumen_jvm::write(&lumen_ir::lower(&typed, "demo"))
+}
+
+/// The class written to `path`, read back.
+pub fn one_of(files: &[Written], path: &str) -> ClassFile {
+    let file = files
+        .iter()
+        .find(|file| file.path == path)
+        .unwrap_or_else(|| panic!("the module writes {path}"));
+    reader::read(&file.bytes)
+}
 
 /// The one class `classes` writes, read back.
 pub fn written(class: Class) -> ClassFile {

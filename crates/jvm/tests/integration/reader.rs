@@ -37,6 +37,10 @@ pub enum Constant {
         class: u16,
         member: u16,
     },
+    InterfaceMethod {
+        class: u16,
+        member: u16,
+    },
     /// The index a whole number leaves unusable behind it.
     Unusable,
 }
@@ -77,6 +81,14 @@ impl ClassFile {
             Constant::Class(written) => self.utf8(*written),
             other => panic!("{held} holds {other:?}, not a class"),
         }
+    }
+
+    /// The field of this class written as `name`.
+    pub fn field(&self, name: &str) -> &Member {
+        self.fields
+            .iter()
+            .find(|field| field.name == name)
+            .unwrap_or_else(|| panic!("this class writes a field named {name}"))
     }
 
     /// The method of this class written as `name`.
@@ -159,6 +171,10 @@ impl Reading<'_> {
                 member: self.u2(),
             },
             10 => Constant::Method {
+                class: self.u2(),
+                member: self.u2(),
+            },
+            11 => Constant::InterfaceMethod {
                 class: self.u2(),
                 member: self.u2(),
             },

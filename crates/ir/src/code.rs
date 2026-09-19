@@ -79,8 +79,6 @@ pub enum Instruction {
     CompareLongs(Comparison),
     /// Compares two small whole numbers or truth values, leaving a truth value.
     CompareIntegers(Comparison),
-    /// Compares two references for being the same object, leaving a truth value.
-    CompareReferences(Comparison),
     /// Turns a truth value into the other one.
     Not,
     /// Names a place a jump lands.
@@ -88,11 +86,6 @@ pub enum Instruction {
     Jump(Label),
     /// Jumps when the truth value on the stack is false.
     JumpIfFalse(Label),
-    /// Jumps to the place a small whole number selects, or to `fallback`.
-    Switch {
-        cases: Vec<(i32, Label)>,
-        fallback: Label,
-    },
     /// Makes an uninitialised instance, which a constructor then takes.
     New(ClassName),
     /// Runs a constructor over the values above the instance it initialises.
@@ -103,10 +96,20 @@ pub enum Instruction {
     PutField(FieldRef),
     InvokeStatic(MethodRef),
     InvokeVirtual(MethodRef),
+    /// Calls a method of an interface, which is how a `for … in` walks a list.
+    InvokeInterface(MethodRef),
     /// Refuses the value on the stack unless it is an instance of the class.
     Cast(ClassName),
+    /// Asks whether the value on the stack is an instance of the class, leaving a truth value.
+    InstanceOf(ClassName),
+    /// Adds one to the small whole number a local holds, which is the count a `for … in` keeps.
+    Increment {
+        slot: u16,
+    },
     /// Leaves the method, giving back the top of the stack when there is one.
     Return(Option<Descriptor>),
+    /// Leaves the method by throwing what is on the stack, which nothing catches.
+    Throw,
 }
 
 /// A method body: what it does, and the locals it does it with.

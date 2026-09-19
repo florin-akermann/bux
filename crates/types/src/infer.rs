@@ -71,6 +71,7 @@ impl Inference<'_> {
     fn function(&mut self, function: &Function) -> Result<(), TypeError> {
         let key = Key::at(&function.name);
         let scheme = self.scheme(&key);
+        self.types.insert(function.name.span, scheme.body().clone());
         let Type::Function { parameters, result } = scheme.body().clone() else {
             unreachable!("a function is declared with a function type")
         };
@@ -414,7 +415,9 @@ impl Inference<'_> {
         scheme.instantiate(&mut self.table)
     }
 
+    /// Binds `name` to `scheme`, and records the type at the name, which is where it is declared.
     fn introduce(&mut self, name: &Name, scheme: Scheme) {
+        self.types.insert(name.span, scheme.body().clone());
         let key = Key::at(name);
         self.environment.bind(key.clone(), scheme);
         self.introduced.push(key);

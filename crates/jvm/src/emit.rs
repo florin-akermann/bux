@@ -23,19 +23,21 @@ impl Assembling {
             Instruction::Concat => self.concat(context),
             Instruction::CompareLongs(how) => self.compare_longs(*how, context),
             Instruction::CompareIntegers(how) => self.compare_integers(*how, context),
-            Instruction::CompareReferences(how) => self.compare_references(*how, context),
             Instruction::Not => self.not(),
             Instruction::Jump(label) => self.jump(*label, context),
             Instruction::JumpIfFalse(label) => self.jump_if_false(*label, context),
-            Instruction::Switch { cases, fallback } => self.switch(cases, *fallback, context),
             Instruction::New(class) => self.new_instance(class, context),
             Instruction::Construct(method) => self.construct(method, context),
             Instruction::GetField(field) => self.get_field(field, context),
             Instruction::PutField(field) => self.put_field(field, context),
             Instruction::InvokeStatic(method) => self.invoke_static(method, context),
             Instruction::InvokeVirtual(method) => self.invoke_virtual(method, context),
+            Instruction::InvokeInterface(method) => self.invoke_interface(method, context),
             Instruction::Cast(class) => self.cast(class, context),
+            Instruction::InstanceOf(class) => self.instance_of(class, context),
+            Instruction::Increment { slot } => self.increment(*slot),
             Instruction::Return(of) => self.leave(of.as_ref()),
+            Instruction::Throw => self.throw(),
         }
     }
 
@@ -161,13 +163,11 @@ impl Assembling {
         self.truth(opcode::IF_ICMPEQ + opcode::step(how), 2, context);
     }
 
-    fn compare_references(&mut self, how: Comparison, context: &mut Context<'_>) {
-        self.truth(opcode::IF_ACMPEQ + opcode::step(how), 2, context);
-    }
-
     fn not(&mut self) {
         self.byte(opcode::ICONST_1);
+        self.push(Held::Integer);
         self.byte(opcode::IXOR);
+        self.pop();
     }
 
     fn new_instance(&mut self, class: &lumen_ir::ClassName, context: &mut Context<'_>) {
@@ -220,6 +220,21 @@ impl Assembling {
         self.called(method, 1);
     }
 
+    fn invoke_interface(&mut self, method: &MethodRef, context: &mut Context<'_>) {
+        let named = context.pool.interface_method(method);
+        let taken: u16 = method
+            .descriptor
+            .parameters
+            .iter()
+            .map(Descriptor::width)
+            .sum();
+        self.byte(opcode::INVOKEINTERFACE);
+        self.short(named);
+        self.byte(u8::try_from(taken + 1).unwrap_or(u8::MAX));
+        self.byte(0);
+        self.called(method, 1);
+    }
+
     /// What a call leaves: its arguments gone, the receiver too, and its result on top.
     fn called(&mut self, method: &MethodRef, receivers: usize) {
         for _ in 0..method.descriptor.parameters.len() + receivers {
@@ -227,6 +242,28 @@ impl Assembling {
         }
         if let Some(result) = &method.descriptor.result {
             self.push(Held::of(result));
+        }
+    }
+
+    fn instance_of(&mut self, class: &lumen_ir::ClassName, context: &mut Context<'_>) {
+        let named = context.pool.class(class);
+        self.byte(opcode::INSTANCEOF);
+        self.short(named);
+        self.pop();
+        self.push(Held::Integer);
+    }
+
+    /// The count a `for … in` keeps is a local of its own, so this leaves the stack alone.
+    fn increment(&mut self, slot: u16) {
+        if let Ok(narrow) = u8::try_from(slot) {
+            self.byte(opcode::IINC);
+            self.byte(narrow);
+            self.byte(1);
+        } else {
+            self.byte(opcode::WIDE);
+            self.byte(opcode::IINC);
+            self.short(slot);
+            self.short(1);
         }
     }
 
@@ -246,6 +283,12 @@ impl Assembling {
             Some(Descriptor::Reference(_)) => opcode::ARETURN,
         };
         self.byte(opcode);
+        self.unreachable();
+    }
+
+    fn throw(&mut self) {
+        self.byte(opcode::ATHROW);
+        self.pop();
         self.unreachable();
     }
 

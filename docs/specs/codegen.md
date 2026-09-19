@@ -20,14 +20,20 @@ one source must produce the same bytes.
 A module is one source file, so `demo.lm` yields these:
 
 ```text
-demo.class          the module: one static method per function
-demo/User.class     one class per type the module declares
-lumen/Option.class  the prelude types, which every module may reach
+demo.class                 the module: one static method per function
+demo/User.class            one class per type the module declares
+demo/Payment$Failed.class  one class per variant of an algebraic data type
+lumen/Option.class         the prelude types, which every module may reach
 ```
 
+The module class is named after the file, so a file whose name is not one a class may have is
+refused before anything is written: `.`, `;`, `[` and `/` each mean something else to a JVM.
+
 A type declared in the module is a class in a package named after the module.
-A variant of an algebraic data type is a class of that package too, named after the variant,
-which name resolution has already made unique within the module.
+A variant of an algebraic data type is a class of that package too, named after its type and
+then after itself, the way a nested class of Java is.
+A type and one of its variants may share a name, so the type's name is part of every variant's
+name and not only of the one that would otherwise clash with its own type.
 
 The prelude types are written on every build, in the package `lumen`.
 They are `Option` with `Some` and `None`, and `Result` with `Ok` and `Err`.
@@ -81,9 +87,17 @@ Each variant is a `final` class extending it, whose constructor passes the varia
 the declaration as the tag, and which declares one `final` field per value the variant carries.
 A variant that carries values positionally names them `value0`, `value1`, and so on.
 
-`match` reads the tag and switches on it.
-An arm that binds what a variant carries casts to the variant's class and reads its fields.
-A `match` on a `Bool` switches on the value, and one on an `Int` or a `String` compares.
+`match` tries each arm in the order it is written.
+An arm tests what it must — a tag, a whole number, a string — and falls to the next arm as soon
+as one of those tests fails.
+An arm that binds what a variant carries casts to the variant's class and reads its fields, and
+a pattern written inside another one is tested the same way against what was read.
+Exhaustiveness has already proved that some arm answers for every value, so falling past the last
+arm cannot happen, and the method throws there rather than running on into the next thing.
+
+Two values are compared by what they hold rather than by being one object.
+`User { id: 1 }` equals another `User` built the same way, which identity would deny, so every
+class a module writes declares the `equals` that `==` and a literal pattern call.
 
 ## What the bytes look like
 
@@ -111,3 +125,5 @@ These hold and are checked with property-based tests:
 3. Every class written begins with the class-file magic and the current version.
 4. Every method a module declares is written as a static method of the module class.
 5. Every constant pool entry a method refers to is within the pool.
+6. No two classes of one module share a name.
+7. Every method of every class ends by leaving it.

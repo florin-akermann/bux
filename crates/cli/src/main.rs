@@ -4,7 +4,7 @@
 //! lives in the per-phase crates under `crates/`, what canonical form is belongs to
 //! `lumen-format`, and how a refusal reads belongs to `lumen-diagnostics`.
 
-use std::fs::{read_to_string, write};
+use std::fs::{create_dir_all, read_to_string, write};
 use std::path::{Path, PathBuf};
 use std::process::exit;
 
@@ -12,9 +12,11 @@ use clap::{Parser, Subcommand};
 use lumen_diagnostics::{Code, Diagnostic, render};
 use lumen_exhaustiveness::check as exhaustive;
 use lumen_format::format;
+use lumen_ir::lower;
+use lumen_jvm::ClassFile;
 use lumen_parser::parse;
 use lumen_resolver::resolve;
-use lumen_types::check as inferred;
+use lumen_types::{TypedProgram, check as inferred};
 
 /// The Lumen compiler.
 #[derive(Parser)]
@@ -32,6 +34,9 @@ enum Command {
     /// Report the first thing about a source file the compiler will not have
     #[command(long_about = include_str!("help/check.md"))]
     Check { file: PathBuf },
+    /// Compile a source file to the class files a JVM loads
+    #[command(long_about = include_str!("help/build.md"))]
+    Build { file: PathBuf },
     /// Print the long form of one diagnostic code
     #[command(long_about = include_str!("help/explain.md"))]
     Explain { code: String },
@@ -46,6 +51,7 @@ fn run(command: &Command) -> Outcome {
     match command {
         Command::Fmt { file } => fmt(file),
         Command::Check { file } => check(file),
+        Command::Build { file } => build(file),
         Command::Explain { code } => explain(code),
     }
 }
@@ -68,19 +74,71 @@ fn check(path: &Path) -> Outcome {
         return Outcome::Unusable;
     };
     match accepted(&source) {
-        Ok(()) => Outcome::Done,
+        Ok(_) => Outcome::Done,
         Err(diagnostic) => refuse(&diagnostic, &source, path),
     }
 }
 
+/// Writes the class files of `path` beside it, one per class the module becomes.
+fn build(path: &Path) -> Outcome {
+    let Some(source) = source_of(path) else {
+        return Outcome::Unusable;
+    };
+    let typed = match accepted(&source) {
+        Ok(typed) => typed,
+        Err(diagnostic) => return refuse(&diagnostic, &source, path),
+    };
+    let Some(module) = module_of(path) else {
+        eprintln!(
+            "error: {}: a module is named by its file, and a class name holds none of {UNUSABLE_IN_A_NAME:?}",
+            path.display()
+        );
+        return Outcome::Unusable;
+    };
+    let lowered = lower(&typed, &module);
+    written(&lumen_jvm::write(&lowered), path)
+}
+
 /// Every phase the front end has, run in order, stopping at the first refusal.
-fn accepted(source: &str) -> Result<(), Diagnostic> {
+fn accepted(source: &str) -> Result<TypedProgram, Diagnostic> {
     lumen_format::check(source).map_err(|error| error.diagnostic())?;
     let program = parse(source).map_err(|error| error.diagnostic())?;
     let resolved = resolve(program).map_err(|error| error.diagnostic())?;
     let typed = inferred(resolved).map_err(|error| error.diagnostic())?;
     exhaustive(&typed).map_err(|error| error.diagnostic())?;
-    Ok(())
+    Ok(typed)
+}
+
+/// What a class name cannot hold, because the JVM's internal form gives each of them a meaning.
+const UNUSABLE_IN_A_NAME: [char; 4] = ['.', ';', '[', '/'];
+
+/// The name the module takes, which is the name of the file it is written in.
+///
+/// A module class is named after the file, so a file whose name is not one a class may have
+/// leaves nothing to write: a JVM would refuse to load what came out.
+fn module_of(path: &Path) -> Option<String> {
+    let stem = path.file_stem()?.to_string_lossy().into_owned();
+    let usable = !stem.is_empty() && !stem.contains(UNUSABLE_IN_A_NAME);
+    usable.then_some(stem)
+}
+
+/// Writes each class beside the source file, in the package its name gives it.
+fn written(classes: &[ClassFile], path: &Path) -> Outcome {
+    let beside = path.parent().unwrap_or(Path::new("."));
+    for class in classes {
+        let written = beside.join(&class.path);
+        if let Some(package) = written.parent()
+            && let Err(error) = create_dir_all(package)
+        {
+            eprintln!("error: {}: {error}", package.display());
+            return Outcome::Unusable;
+        }
+        if let Err(error) = write(&written, &class.bytes) {
+            eprintln!("error: {}: {error}", written.display());
+            return Outcome::Unusable;
+        }
+    }
+    Outcome::Done
 }
 
 /// Prints what one diagnostic code means, at more length than its `help:` line has room for.

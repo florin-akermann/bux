@@ -16,6 +16,9 @@ lumen-ir = { path = "../ir" }
 
 [dev-dependencies]
 hegeltest = "0.23" # approved: property-based testing, required by AGENTS.md for every phase
+lumen-parser = { path = "../parser" }
+lumen-resolver = { path = "../resolver" }
+lumen-types = { path = "../types" }
 
 [lints]
 workspace = true

@@ -9,7 +9,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 /// A source file of `content`, in a directory no other test writes to.
 pub struct Example {
-    directory: PathBuf,
+    pub directory: PathBuf,
     pub path: PathBuf,
 }
 
@@ -29,6 +29,11 @@ impl Example {
     /// What the file holds now.
     pub fn content(&self) -> String {
         std::fs::read_to_string(&self.path).expect("an example is readable")
+    }
+
+    /// What was written beside the example at `path`, when anything was.
+    pub fn beside(&self, path: &str) -> Option<Vec<u8>> {
+        std::fs::read(self.directory.join(path)).ok()
     }
 }
 

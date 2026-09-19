@@ -9,9 +9,6 @@ use crate::frame::{Frame, Held, Hierarchy};
 use crate::opcode;
 use crate::pool::Pool;
 
-/// A switch's cases begin at the next four-byte boundary of the body, which is what it pads to.
-const ALIGNMENT: usize = 4;
-
 /// A body's bytes, with everything the `Code` attribute is written from.
 pub(crate) struct Assembled {
     pub(crate) code: Vec<u8>,
@@ -76,7 +73,6 @@ impl Assembling {
             return;
         }
         self.write(instruction, context);
-        self.deepest = self.deepest.max(self.frame.depth());
     }
 
     fn finish(mut self, slots: u16) -> Assembled {
@@ -85,13 +81,8 @@ impl Assembling {
             let away = i64::from(landing) - i64::from(patch.from);
             // A body too large for a branch to reach across is written out of range on purpose:
             // the JVM refuses the class, which says so where a truncated offset would not.
-            if patch.wide {
-                let away = i32::try_from(away).unwrap_or(i32::MAX);
-                self.bytes.patch_u4(patch.at, away.cast_unsigned());
-            } else {
-                let away = i16::try_from(away).unwrap_or(i16::MAX);
-                self.bytes.patch_u2(patch.at, away.cast_unsigned());
-            }
+            let away = i16::try_from(away).unwrap_or(i16::MAX);
+            self.bytes.patch_u2(patch.at, away.cast_unsigned());
         }
         let frames = self.written_frames();
         Assembled {
@@ -136,31 +127,6 @@ impl Assembling {
         self.landing(done, context);
     }
 
-    /// Jumps to the place a small whole number selects, which is how a `match` reads a tag.
-    pub(crate) fn switch(
-        &mut self,
-        cases: &[(i32, Label)],
-        fallback: Label,
-        context: &mut Context<'_>,
-    ) {
-        self.pop();
-        let from = self.offset();
-        self.bytes.u1(opcode::LOOKUPSWITCH);
-        while !self.bytes.len().is_multiple_of(ALIGNMENT) {
-            self.bytes.u1(0);
-        }
-        let mut sorted: Vec<(i32, Label)> = cases.to_vec();
-        sorted.sort_by_key(|(key, _)| *key);
-        self.wide_branch(fallback, from, context);
-        self.bytes
-            .u4(u32::try_from(sorted.len()).unwrap_or_default());
-        for (key, label) in sorted {
-            self.bytes.u4(key.cast_unsigned());
-            self.wide_branch(label, from, context);
-        }
-        self.unreachable();
-    }
-
     /// Records where a label lands, and what holds there.
     pub(crate) fn landing(&mut self, label: Label, context: &mut Context<'_>) {
         if self.reachable {
@@ -183,6 +149,7 @@ impl Assembling {
 
     pub(crate) fn push(&mut self, held: Held) {
         self.frame.stack.push(held);
+        self.deepest = self.deepest.max(self.frame.depth());
     }
 
     pub(crate) fn pop(&mut self) -> Option<Held> {
@@ -235,20 +202,8 @@ impl Assembling {
             at: self.bytes.len(),
             label,
             from,
-            wide: false,
         });
         self.bytes.u2(0);
-    }
-
-    fn wide_branch(&mut self, label: Label, from: u16, context: &mut Context<'_>) {
-        self.expect(label, context);
-        self.pending.push(Patch {
-            at: self.bytes.len(),
-            label,
-            from,
-            wide: true,
-        });
-        self.bytes.u4(0);
     }
 
     /// Says that control may reach `label` holding what it holds now.
@@ -272,5 +227,4 @@ struct Patch {
     label: Label,
     /// The offset the branch is measured from, which is where its opcode sits.
     from: u16,
-    wide: bool,
 }

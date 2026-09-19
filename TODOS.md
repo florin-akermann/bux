@@ -114,3 +114,13 @@ A public name is a word rather than an initial, and a `Bool` function reads as a
 [019][b] - Casing, acronym, and length rules, test-first; the `help:` prints the canonical spelling.
 [019][c] - The predicate-prefix rule, test-first, over functions whose return type is `Bool`.
 [019][d] - Executable examples under `tests/spec/format/`.
+
+## 🔴 Item 020: The two rules lowering already assumes
+**Depends on:** Item 007, Item 009 — lowering asserts both, and nothing refuses either today.
+Lowering assumes an assignment names a name, and that a function is reached only by calling it.
+Neither rule is written down and neither is refused, so a program can reach lowering and panic.
+[020][a] - `docs/design.md` states both rules where assignment and functions are described.
+[020][b] - `docs/specs/` gains the two refusals in prose, with the error each one prints.
+[020][c] - The front end refuses an assignment whose target is not a name, test-first.
+[020][d] - The front end refuses a function name used as anything but the callee, test-first.
+[020][e] - Executable examples for both refusals, each naming its code on its first line.

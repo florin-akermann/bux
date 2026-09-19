@@ -31,7 +31,7 @@ pub fn check(resolved: ResolvedProgram) -> Result<TypedProgram, TypeError> {
     Ok(TypedProgram { resolved, types })
 }
 
-/// A program whose every expression has the type it was inferred to have.
+/// A program whose every expression, and every name that declares one, has the type it has.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TypedProgram {
     resolved: ResolvedProgram,
@@ -45,9 +45,12 @@ impl TypedProgram {
         &self.resolved
     }
 
-    /// The type of the expression written at `at`, which every expression of one has.
+    /// The type of what is written at `at`.
+    ///
+    /// Every expression has one, and so does every name that declares something: a function, a
+    /// parameter, and each name a binding or a pattern introduces.
     #[must_use]
-    pub fn type_of(&self, expression: Span) -> Option<&Type> {
-        self.types.get(&expression)
+    pub fn type_of(&self, written: Span) -> Option<&Type> {
+        self.types.get(&written)
     }
 }

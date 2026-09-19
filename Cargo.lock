@@ -416,6 +416,8 @@ dependencies = [
  "lumen-diagnostics",
  "lumen-exhaustiveness",
  "lumen-format",
+ "lumen-ir",
+ "lumen-jvm",
  "lumen-parser",
  "lumen-resolver",
  "lumen-types",
@@ -464,6 +466,10 @@ name = "lumen-ir"
 version = "0.1.0"
 dependencies = [
  "hegeltest",
+ "lumen-ast",
+ "lumen-parser",
+ "lumen-resolver",
+ "lumen-types",
 ]
 
 [[package]]
@@ -472,6 +478,9 @@ version = "0.1.0"
 dependencies = [
  "hegeltest",
  "lumen-ir",
+ "lumen-parser",
+ "lumen-resolver",
+ "lumen-types",
 ]
 
 [[package]]

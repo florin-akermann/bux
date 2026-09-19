@@ -31,11 +31,6 @@ impl Bytes {
         self.0[at..at + 2].copy_from_slice(&value.to_be_bytes());
     }
 
-    /// Replaces the four bytes at `at`, which is how a switch learns where a case lands.
-    pub(crate) fn patch_u4(&mut self, at: usize, value: u32) {
-        self.0[at..at + 4].copy_from_slice(&value.to_be_bytes());
-    }
-
     pub(crate) fn taken(self) -> Vec<u8> {
         self.0
     }

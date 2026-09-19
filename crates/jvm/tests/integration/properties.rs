@@ -7,7 +7,48 @@ use lumen_ir::{
 };
 use lumen_ir::{Label, Reached};
 
+use crate::common;
 use crate::reader::read;
+
+/// The modules the whole-compiler properties are checked over.
+const SOURCES: [&str; 5] = [
+    "fn answer() -> Int {\n    7\n}\n",
+    "type User = {\n    id: Int\n}\n\nfn held(user: User) -> Int {\n    user.id\n}\n",
+    "type Payment =\n    | Pending\n    | Failed(String)\n\nfn told(payment: Payment) -> String {\n    match payment {\n        Pending => \"waiting\"\n        Failed(reason) => reason\n    }\n}\n",
+    "fn walked(counts: List<Int>) -> Int {\n    var total = 0\n    for count in counts {\n        total += count\n    }\n    total\n}\n",
+    "fn held() -> Result<Int, String> {\n    Ok(1)\n}\n\nfn used() -> Result<Int, String> {\n    value := held()?\n    Ok(value + 1)\n}\n",
+];
+
+#[hegel::test]
+fn compiling_one_source_twice_gives_byte_identical_class_files(tc: TestCase) {
+    let source = tc.draw(gs::sampled_from(&SOURCES));
+
+    assert_eq!(common::compiled(source), common::compiled(source));
+}
+
+#[hegel::test]
+fn every_class_a_module_compiles_to_begins_with_the_magic_and_the_current_version(tc: TestCase) {
+    let source = tc.draw(gs::sampled_from(&SOURCES));
+
+    for file in common::compiled(source) {
+        let written = read(&file.bytes);
+        assert_eq!(written.magic, 0xCAFE_BABE, "{}", file.path);
+        assert_eq!(written.major, 71);
+        assert_eq!(written.minor, 0);
+    }
+}
+
+#[hegel::test]
+fn every_constant_a_compiled_class_names_is_one_its_own_pool_holds(tc: TestCase) {
+    let source = tc.draw(gs::sampled_from(&SOURCES));
+
+    for file in common::compiled(source) {
+        let written = read(&file.bytes);
+        let held = written.pool.len();
+        assert!(written.this as usize <= held, "{}", file.path);
+        assert!(written.extends as usize <= held);
+    }
+}
 
 /// Which body a generated method is built from.
 const BODIES: [usize; 4] = [0, 1, 2, 3];

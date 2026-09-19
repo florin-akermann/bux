@@ -17,6 +17,7 @@ enum Entry {
     NameAndType { name: u16, descriptor: u16 },
     Field { class: u16, member: u16 },
     Method { class: u16, member: u16 },
+    InterfaceMethod { class: u16, member: u16 },
 }
 
 /// Everything one class file names.
@@ -55,6 +56,13 @@ impl Pool {
         let class = self.class(&method.class);
         let member = self.name_and_type(&method.name, &method.descriptor.to_string());
         self.add(Entry::Method { class, member })
+    }
+
+    /// A method of an interface, which a class file names apart from a method of a class.
+    pub(crate) fn interface_method(&mut self, method: &MethodRef) -> u16 {
+        let class = self.class(&method.class);
+        let member = self.name_and_type(&method.name, &method.descriptor.to_string());
+        self.add(Entry::InterfaceMethod { class, member })
     }
 
     fn name_and_type(&mut self, name: &str, descriptor: &str) -> u16 {
@@ -144,6 +152,11 @@ fn write_entry(entry: &Entry, bytes: &mut Bytes) {
         }
         Entry::Method { class, member } => {
             bytes.u1(10);
+            bytes.u2(*class);
+            bytes.u2(*member);
+        }
+        Entry::InterfaceMethod { class, member } => {
+            bytes.u1(11);
             bytes.u2(*class);
             bytes.u2(*member);
         }
