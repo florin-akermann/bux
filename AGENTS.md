@@ -11,7 +11,9 @@ This file is that anchor; consistency is the throughline, and the bar is Code He
 - **Goal**: Go's simplicity, Haskell's types, the JVM's runtime, a Rust compiler.
 - Everyday Lumen code reads like Go: basically a bunch of `for` loops, plus ADTs and `match`.
 - **Dogfood as early and as much as possible.** Lumen replaces Rust wherever Lumen can express it.
-- The end state is self-hosting: the Rust compiler is the bootstrap, and no Rust code remains.
+- The end state is self-hosting: the compiler and the whole toolchain are written in Lumen.
+- The Rust compiler is only the bootstrap; no Rust remains once Lumen can compile itself.
+- The self-hosted toolchain preferably ships as native binaries via GraalVM native-image.
 - **Formatting is a compile error.** Source that is not in canonical form does not compile.
 - **No anonymous functions.** Every function has a name; functions are first-class by name.
 - Plain loops are the default idiom; higher-order functions are library, not a second paradigm.
