@@ -6,7 +6,7 @@
 
 ## Open
 
-## 🟡 Item 010: Running programs
+## 🟢 Item 010: Running programs
 **Depends on:** Item 009 — there must be bytecode to run.
 `lumen run <file>` builds and runs on the JDK found via `JAVA_HOME`; missing JDK is a clear error.
 [010][a] - Spec first in `docs/specs/run.md`: JDK discovery, exit codes, and the missing-JDK text.
