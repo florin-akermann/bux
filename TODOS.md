@@ -6,16 +6,6 @@
 
 ## Open
 
-## 🟢 Item 012: `todo` as an explicit hole
-**Depends on:** Item 007, Item 009 — a hole needs a type, and `lumen build` is what refuses it.
-An unfinished body writes `todo("reason")`, which takes whatever type the context expects.
-`lumen check` accepts a hole; `lumen build` refuses one, naming every hole and its reason.
-Incompleteness is then greppable and gated, instead of filled in with plausible wrong code.
-[012][a] - `docs/design.md` gains the hole; `docs/specs/holes.md` states the two behaviours.
-[012][b] - Parsing and typing of `todo`, test-first; a hole unifies with any expected type.
-[012][c] - `lumen build` refuses a program containing a hole, through the diagnostics renderer.
-[012][d] - Executable examples: one file passes `check`, and the same file fails `build`.
-
 ## 🔴 Item 013: Machine-applicable diagnostics
 **Depends on:** Item 003, Item 004 — the first fixes are the formatter's own repairs.
 `lumen check --json` writes diagnostics as data: code, message, byte span, and a fix where known.
