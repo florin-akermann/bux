@@ -61,7 +61,7 @@ one level in, and closes with `}` alone at the level of the line that opened it.
 A record type with no fields still spans those two lines.
 
 A **variant list** of one variant is written on the `type` line without a bar, as
-`type UserId = UserId(Int64)`.
+`type UserId = UserId(Int)`.
 A list of two or more writes `type Name =`, then one `| Variant` per line, one level in.
 A variant's record payload opens on that variant's line and closes at that variant's level.
 

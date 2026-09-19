@@ -26,8 +26,7 @@ fn a_function_may_call_one_declared_below_it() {
 
 #[test]
 fn a_newtype_names_a_type_and_a_constructor_without_the_two_clashing() {
-    let source =
-        "type UserId = UserId(Int64)\n\nfn wrap(raw: Int64) -> UserId {\n    UserId(raw)\n}\n";
+    let source = "type UserId = UserId(Int)\n\nfn wrap(raw: Int) -> UserId {\n    UserId(raw)\n}\n";
 
     assert_eq!(kind(source, Type, "UserId", 3), Some(DefinitionKind::Type));
     assert_eq!(
@@ -38,7 +37,7 @@ fn a_newtype_names_a_type_and_a_constructor_without_the_two_clashing() {
 
 #[test]
 fn a_record_type_declares_a_type_and_the_value_it_is_built_with_at_one_place() {
-    let source = "type User = {\n    id: Int64\n}\n\nfn make() -> User {\n    User { id: 1 }\n}\n";
+    let source = "type User = {\n    id: Int\n}\n\nfn make() -> User {\n    User { id: 1 }\n}\n";
 
     assert_eq!(kind(source, Type, "User", 1), Some(DefinitionKind::Type));
     assert_eq!(

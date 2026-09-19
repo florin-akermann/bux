@@ -13,6 +13,7 @@ use lumen_diagnostics::{Code, Diagnostic, render};
 use lumen_format::format;
 use lumen_parser::parse;
 use lumen_resolver::resolve;
+use lumen_types::check as inferred;
 
 /// The Lumen compiler.
 #[derive(Parser)]
@@ -75,7 +76,8 @@ fn check(path: &Path) -> Outcome {
 fn accepted(source: &str) -> Result<(), Diagnostic> {
     lumen_format::check(source).map_err(|error| error.diagnostic())?;
     let program = parse(source).map_err(|error| error.diagnostic())?;
-    resolve(program).map_err(|error| error.diagnostic())?;
+    let resolved = resolve(program).map_err(|error| error.diagnostic())?;
+    inferred(resolved).map_err(|error| error.diagnostic())?;
     Ok(())
 }
 

@@ -1,7 +1,7 @@
 // The version 0.1 grammar in a program shape: items, types, matching, and loops.
 import io
 
-type UserId = UserId(Int64)
+type UserId = UserId(Int)
 
 type Payment =
     | Pending

@@ -1,6 +1,6 @@
 import   io
 import files
-type UserId=UserId(Int64)
+type UserId=UserId(Int)
 type Payment = | Pending | Authorized { id: String } | Failed(String)
 type User = { id:UserId
 active:Bool }

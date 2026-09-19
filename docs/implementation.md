@@ -63,7 +63,7 @@ Programmers should not think about:
 
 The compiler may optimize representations where possible.
 
-For example, `type UserId = UserId(Int64)` has compile-time semantics distinct from `Int64`.
+For example, `type UserId = UserId(Int)` has compile-time semantics distinct from `Int`.
 The compiler may still represent it as a JVM primitive or value type.
 
 Project Valhalla/value types should be considered when targeting modern JVMs.
@@ -250,7 +250,7 @@ And compile-fail tests:
 ```text
 // mismatched_types.lm
 
-type UserId = UserId(Int64)
+type UserId = UserId(Int)
 
 fn load(id: UserId) {
     ...
@@ -259,7 +259,7 @@ fn load(id: UserId) {
 load(42)
 ```
 
-The compiler must say that `Int64` cannot be used where `UserId` is expected.
+The compiler must say that `Int` cannot be used where `UserId` is expected.
 
 ---
 
@@ -270,7 +270,7 @@ Compiler errors should be a major design priority.
 Prefer:
 
 ```text
-error: expected UserId, found Int64
+error: expected UserId, found Int
 
   12 | load_user(42)
      |           ^^

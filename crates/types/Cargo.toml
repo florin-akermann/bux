@@ -1,0 +1,24 @@
+[package]
+name = "lumen-types"
+description = "Type inference: every expression of a module given the type it has"
+version.workspace = true
+edition.workspace = true
+
+[lib]
+path = "src/lib.rs"
+
+[[test]]
+name = "integration"
+path = "tests/integration/main.rs"
+
+[dependencies]
+lumen-ast = { path = "../ast" }
+lumen-diagnostics = { path = "../diagnostics" }
+lumen-resolver = { path = "../resolver" }
+
+[dev-dependencies]
+hegeltest = "0.23" # approved: property-based testing, required by AGENTS.md for every phase
+lumen-parser = { path = "../parser" }
+
+[lints]
+workspace = true

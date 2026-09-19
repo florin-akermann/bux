@@ -118,7 +118,7 @@ The guiding principle is:
 A program should look approximately like this:
 
 ```text
-type UserId = UserId(Int64)
+type UserId = UserId(Int)
 
 type Email = Email(String)
 
@@ -146,7 +146,7 @@ UserId
 from:
 
 ```text
-Int64
+Int
 ```
 
 even though they may have essentially the same runtime representation.
@@ -166,6 +166,10 @@ String
 without an explicit conversion.
 
 This makes domain concepts first-class types.
+
+`Int` is the one whole number type, and it is 64 bits wide.
+A language with several of them asks every author to choose a width that almost never matters.
+A program that needs another width says so with a type of its own, which is what a newtype is for.
 
 ---
 
@@ -559,7 +563,7 @@ This feature should come after the basic language and type system are working.
 ## 15. Concurrency
 
 Lumen adopts Go's concurrency model whole: spawned functions, channels, and blocking calls.
-**There is no `async`/`await` and no function colouring.**
+There is no **`async`/`await`** and no function colouring.
 A function that blocks is an ordinary function, called like any other.
 There is one kind of function, and no caller ever has to ask which kind it holds.
 The JVM's virtual threads make blocking cheap, so the language never needs a second kind.
@@ -622,7 +626,7 @@ Searching for a name then finds its definition and its uses, with nothing else m
 Types and values are named separately, which is what makes a newtype ordinary:
 
 ```text
-type UserId = UserId(Int64)
+type UserId = UserId(Int)
 ```
 
 `UserId` names the type where a type is written and the constructor where a value is written.

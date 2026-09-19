@@ -66,6 +66,18 @@ catalogue! {
     NameDeclaredTwice => "L0301",
     /// A declaration or a binding hides a name that is already in scope.
     NameShadowed => "L0302",
+    /// A type met a type it does not match.
+    TypeMismatch => "L0400",
+    /// A call passes more or fewer arguments than the function takes.
+    WrongArgumentCount => "L0401",
+    /// A field is reached that the type reached through does not have.
+    UnknownField => "L0402",
+    /// A type would have to contain itself.
+    InfiniteType => "L0403",
+    /// A record is built without one of the fields it declares.
+    MissingField => "L0404",
+    /// A record is written with one of its fields given a value twice.
+    FieldWrittenTwice => "L0405",
 }
 
 impl Code {

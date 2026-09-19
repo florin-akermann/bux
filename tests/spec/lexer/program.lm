@@ -1,7 +1,7 @@
 // Every token class of the version 0.1 surface, in a program shape.
 import io
 
-type UserId = UserId(Int64)
+type UserId = UserId(Int)
 
 type Payment =
     | Pending

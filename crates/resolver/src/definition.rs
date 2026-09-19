@@ -29,7 +29,7 @@ pub enum DefinitionKind {
 }
 
 /// Where a definition came from.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Origin {
     /// Declared in this module, at the span of the name that declares it.
     Declared(Span),
@@ -39,7 +39,7 @@ pub enum Origin {
 
 /// Which of the two scopes a name was written in.
 ///
-/// They never mix, which is what lets `type UserId = UserId(Int64)` declare a type and a
+/// They never mix, which is what lets `type UserId = UserId(Int)` declare a type and a
 /// constructor of one name; `docs/specs/modules.md` states the rule.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Namespace {

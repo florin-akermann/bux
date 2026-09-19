@@ -1,0 +1,12 @@
+// expect-error: L0403
+// A list and its items are not the same type, so nothing finite is both.
+fn go(items) -> Int {
+    for item in items {
+        return counted(item, items)
+    }
+    0
+}
+
+fn counted<T>(one: T, other: T) -> Int {
+    1
+}

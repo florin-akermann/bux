@@ -1,0 +1,9 @@
+//! The one integration-test binary of the `lumen-types` crate.
+//!
+//! Every test file is a module declared here; shared helpers go in a `common` module.
+
+mod common;
+mod errors;
+mod generics;
+mod inference;
+mod properties;

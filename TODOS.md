@@ -10,7 +10,7 @@
 **Depends on:** Item 006 — inference runs on the resolved AST.
 A `types` crate does Hindley-Milner inference with let-polymorphism over the version 0.1 types.
 `Option` and `Result` are ordinary ADTs in a prelude; `?` desugars to a match on `Result`.
-A newtype such as `UserId(Int64)` is never unified with its representation.
+A newtype such as `UserId(Int)` is never unified with its representation.
 [007][a] - Spec first in `docs/specs/types.md`: the types, generalisation, and the mismatch error.
 [007][b] - Unification and generalisation, test-first, producing a `TypedAst`.
 [007][c] - Records, ADTs, generics, and `?`, each test-first.

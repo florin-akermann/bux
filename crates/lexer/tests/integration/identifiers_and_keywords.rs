@@ -48,7 +48,7 @@ fn a_word_that_merely_starts_with_a_keyword_is_an_identifier() {
 #[test]
 fn the_type_names_of_the_prelude_are_ordinary_identifiers() {
     assert_eq!(
-        kinds("Option Result Int64 String"),
+        kinds("Option Result Int String"),
         [TokenKind::Identifier; 4]
     );
 }

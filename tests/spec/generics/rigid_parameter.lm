@@ -1,0 +1,5 @@
+// expect-error: L0400
+// A declared type parameter is a type of its own, which no body may fix.
+fn identity<T>(value: T) -> T {
+    1
+}

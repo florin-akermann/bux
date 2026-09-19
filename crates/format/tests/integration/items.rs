@@ -35,8 +35,8 @@ fn a_record_type_with_no_fields_still_spans_two_lines() {
 #[test]
 fn a_single_variant_is_written_on_the_type_line_without_a_bar() {
     assert_eq!(
-        formatted("type UserId =\n| UserId(Int64)\n"),
-        "type UserId = UserId(Int64)\n"
+        formatted("type UserId =\n| UserId(Int)\n"),
+        "type UserId = UserId(Int)\n"
     );
 }
 

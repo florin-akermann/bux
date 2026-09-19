@@ -38,6 +38,7 @@ fn each_phase_of_the_compiler_has_its_own_range_of_codes() {
     assert_eq!(Code::ChainedComparison.number(), "L0105");
     assert_eq!(Code::NotCanonical.number(), "L0200");
     assert_eq!(Code::UnresolvedName.number(), "L0300");
+    assert_eq!(Code::TypeMismatch.number(), "L0400");
 }
 
 #[test]

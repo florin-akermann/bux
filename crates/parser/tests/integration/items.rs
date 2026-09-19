@@ -18,8 +18,8 @@ fn a_file_holds_its_items_in_source_order() {
 #[test]
 fn a_newtype_is_a_single_variant_carrying_one_type() {
     assert_eq!(
-        shape("type UserId = UserId(Int64)"),
-        ["type UserId", "  variant UserId", "    named-type Int64"]
+        shape("type UserId = UserId(Int)"),
+        ["type UserId", "  variant UserId", "    named-type Int"]
     );
 }
 

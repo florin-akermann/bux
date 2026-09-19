@@ -10,8 +10,8 @@ use lumen_resolver::{Namespace, Origin, resolve};
 /// names, so any set of them is a module that resolves.
 const PIECES: [&str; 6] = [
     "import io",
-    "type UserId = UserId(Int64)",
-    "type User = {\n    id: Int64\n}",
+    "type UserId = UserId(Int)",
+    "type User = {\n    id: Int\n}",
     "fn identity<T>(value: T) -> T {\n    value\n}",
     "fn total(counts: List<Int>) -> Int {\n    var sum = 0\n    for count in counts {\n        sum += 1\n    }\n    sum\n}",
     "type Payment =\n    | Pending\n    | Failed(String)\n\nfn describe(payment: Payment) -> String {\n    match payment {\n        Pending => \"waiting\"\n        Failed(reason) => reason\n    }\n}",

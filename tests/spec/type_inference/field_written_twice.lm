@@ -1,0 +1,10 @@
+// expect-error: L0405
+// A record gives each of its fields one value, whether it is built or updated.
+type User = {
+    id: Int
+    active: Bool
+}
+
+fn go(user: User) -> User {
+    user { active: true, active: false }
+}

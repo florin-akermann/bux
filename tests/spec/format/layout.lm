@@ -2,7 +2,7 @@ import io
 
 import files
 
-type UserId = UserId(Int64)
+type UserId = UserId(Int)
 
 type Payment =
     | Pending

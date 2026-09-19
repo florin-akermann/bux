@@ -27,7 +27,7 @@ loaded.
 
 Names live in two scopes that never mix: a type scope and a value scope.
 A type scope is searched where a type is written, and a value scope everywhere else.
-`type UserId = UserId(Int64)` therefore declares a type and a constructor without a collision.
+`type UserId = UserId(Int)` therefore declares a type and a constructor without a collision.
 
 A module's type scope holds the prelude's types and every type the file declares.
 A module's value scope holds the prelude's constructors, every variant the file declares, every
@@ -46,7 +46,7 @@ A `for … in` binding is in scope in the loop body, and a pattern's bindings in
 Every module has these names in scope without importing anything:
 
 ```text
-types:        Bool  Int  Int64  List  Option  Result  String
+types:        Bool  Int  List  Option  Result  String
 constructors: Err  None  Ok  Some
 ```
 

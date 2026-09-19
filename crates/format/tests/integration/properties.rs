@@ -9,7 +9,7 @@ use crate::common::tree;
 /// The item shapes a generated program is built from, each already in canonical form.
 const ITEMS: [&str; 6] = [
     "import io",
-    "type UserId = UserId(Int64)",
+    "type UserId = UserId(Int)",
     "type User = {\n    id: UserId\n}",
     "type Payment =\n    | Pending\n    | Failed(String)",
     "fn f(a: Int) -> Int {\n    // why this is here\n    a + 1 * (2 - 3)\n}",

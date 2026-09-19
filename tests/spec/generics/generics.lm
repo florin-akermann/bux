@@ -1,0 +1,35 @@
+// Parametric polymorphism: one declaration used at a type of its own each time.
+fn identity<T>(value: T) -> T {
+    value
+}
+
+fn none_of<T>() -> Option<T> {
+    None
+}
+
+fn unwrap_or<T>(value: Option<T>, fallback: T) -> T {
+    match value {
+        Some(inner) => inner
+        None => fallback
+    }
+}
+
+fn first_of<T>(items: List<T>) -> Option<T> {
+    for item in items {
+        return Some(item)
+    }
+    None
+}
+
+fn go(words: List<String>) -> String {
+    number := identity(1)
+    word := identity("two")
+    nothing := none_of()
+    counted := unwrap_or(nothing, number)
+    named := unwrap_or(nothing, word)
+    found := unwrap_or(first_of(words), named)
+    if counted > 0 {
+        return found
+    }
+    word
+}

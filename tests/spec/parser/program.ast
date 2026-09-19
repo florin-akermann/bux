@@ -1,141 +1,141 @@
 import io 82..91
-type UserId 93..120
-  variant UserId 107..120
-    named-type Int64 114..119
-type Payment 122..229
-  variant Pending 143..150
-  variant Authorized 157..208
-    field authorization_id 178..202
-      named-type String 196..202
-  variant Failed 215..229
-    named-type String 222..228
-type User 231..278
-  field id 249..259
-    named-type UserId 253..259
-  field active 264..276
-    named-type Bool 272..276
-function describe 280..510
-  parameter payment 292..308
-    named-type Payment 301..308
+type UserId 93..118
+  variant UserId 107..118
+    named-type Int 114..117
+type Payment 120..227
+  variant Pending 141..148
+  variant Authorized 155..206
+    field authorization_id 176..200
+      named-type String 194..200
+  variant Failed 213..227
+    named-type String 220..226
+type User 229..276
+  field id 247..257
+    named-type UserId 251..257
+  field active 262..274
+    named-type Bool 270..274
+function describe 278..508
+  parameter payment 290..306
+    named-type Payment 299..306
   result
-    named-type String 313..319
-  block 320..510
-    match 326..508
-      name payment 332..339
-      arm 350..370
-        pattern Pending 350..357
-        string "Waiting" 361..370
-      arm 379..447
-        pattern-record Authorized 379..410
-          pattern-field authorization_id 392..408
-        binary Add 414..447
-          string "Authorized: " 414..428
-          name authorization_id 431..447
-      arm 456..502
-        pattern-tuple Failed 456..470
-          pattern reason 463..469
-        binary Add 474..502
-          binary Add 474..495
-            string "Failed: \"" 474..486
-            name reason 489..495
-          string "\"" 498..502
-function first_user 512..646
-  parameter users 526..543
-    named-type List 533..543
-      named-type User 538..542
+    named-type String 311..317
+  block 318..508
+    match 324..506
+      name payment 330..337
+      arm 348..368
+        pattern Pending 348..355
+        string "Waiting" 359..368
+      arm 377..445
+        pattern-record Authorized 377..408
+          pattern-field authorization_id 390..406
+        binary Add 412..445
+          string "Authorized: " 412..426
+          name authorization_id 429..445
+      arm 454..500
+        pattern-tuple Failed 454..468
+          pattern reason 461..467
+        binary Add 472..500
+          binary Add 472..493
+            string "Failed: \"" 472..484
+            name reason 487..493
+          string "\"" 496..500
+function first_user 510..644
+  parameter users 524..541
+    named-type List 531..541
+      named-type User 536..540
   result
-    named-type Result 548..568
-      named-type User 555..559
-      named-type String 561..567
-  block 569..646
-    for-in user 575..624
-      name users 587..592
-      block 593..624
-        return 603..618
-          call 610..618
-            name Ok 610..612
-            name user 613..617
-    call 629..644
-      name Err 629..632
-      string "no users" 633..643
-function count_active 648..1107
-  type-parameter T 664..665
-  parameter users 667..684
-    named-type List 674..684
-      named-type User 679..683
-  parameter limit 686..696
-    named-type Int 693..696
+    named-type Result 546..566
+      named-type User 553..557
+      named-type String 559..565
+  block 567..644
+    for-in user 573..622
+      name users 585..590
+      block 591..622
+        return 601..616
+          call 608..616
+            name Ok 608..610
+            name user 611..615
+    call 627..642
+      name Err 627..630
+      string "no users" 631..641
+function count_active 646..1105
+  type-parameter T 662..663
+  parameter users 665..682
+    named-type List 672..682
+      named-type User 677..681
+  parameter limit 684..694
+    named-type Int 691..694
   result
-    named-type Result 701..720
-      named-type Int 708..711
-      named-type String 713..719
-  block 721..1107
-    binding Mutable total 727..740
-      integer 0 739..740
-    for-in user 745..945
-      name users 757..762
-      block 763..945
-        if 773..879
-          branch 773..839
-            binary Or 776..806
-              unary Not 776..788
-                field active 777..788
-                  name user 777..781
-              binary GreaterOrEqual 792..806
-                name total 792..797
-                name limit 801..806
-            block 807..839
-              continue 821..829
+    named-type Result 699..718
+      named-type Int 706..709
+      named-type String 711..717
+  block 719..1105
+    binding Mutable total 725..738
+      integer 0 737..738
+    for-in user 743..943
+      name users 755..760
+      block 761..943
+        if 771..877
+          branch 771..837
+            binary Or 774..804
+              unary Not 774..786
+                field active 775..786
+                  name user 775..779
+              binary GreaterOrEqual 790..804
+                name total 790..795
+                name limit 799..804
+            block 805..837
+              continue 819..827
           else
-            block 845..879
-              assign Add 859..869
-                name total 859..864
-                integer 1 868..869
-        if 888..939
-          branch 888..939
-            binary NotEqual 891..909
-              binary Remainder 891..904
-                binary Multiply 891..900
-                  name total 891..896
-                  integer 2 899..900
-                integer 3 903..904
-              integer 1 908..909
-            block 910..939
-              break 924..929
-    binding Immutable first 950..977
-      try 959..977
-        call 959..976
-          name first_user 959..969
-          name users 970..975
-    if 982..1044
-      branch 982..1044
-        binary Equal 985..1007
-          field id 985..993
-            name first 985..990
-          call 997..1007
-            name UserId 997..1003
-            integer -7 1004..1006
-        block 1008..1044
-          return 1018..1038
-            call 1025..1038
-              name Err 1025..1028
-              string "bad id" 1029..1037
-    binding Immutable renamed 1049..1083
-      record first 1060..1083
-        field-value active 1068..1081
-          bool false 1076..1081
-    call 1088..1105
-      name Ok 1088..1090
-      binary Subtract 1091..1104
-        binary Divide 1091..1100
-          name total 1091..1096
-          integer 1 1099..1100
-        integer 0 1103..1104
-function forever 1109..1165
+            block 843..877
+              assign Add 857..867
+                name total 857..862
+                integer 1 866..867
+        if 886..937
+          branch 886..937
+            binary NotEqual 889..907
+              binary Remainder 889..902
+                binary Multiply 889..898
+                  name total 889..894
+                  integer 2 897..898
+                integer 3 901..902
+              integer 1 906..907
+            block 908..937
+              break 922..927
+    binding Immutable first 948..975
+      try 957..975
+        call 957..974
+          name first_user 957..967
+          name users 968..973
+    if 980..1042
+      branch 980..1042
+        binary Equal 983..1005
+          field id 983..991
+            name first 983..988
+          call 995..1005
+            name UserId 995..1001
+            integer -7 1002..1004
+        block 1006..1042
+          return 1016..1036
+            call 1023..1036
+              name Err 1023..1026
+              string "bad id" 1027..1035
+    binding Immutable renamed 1047..1081
+      record first 1058..1081
+        field-value active 1066..1079
+          bool false 1074..1079
+    call 1086..1103
+      name Ok 1086..1088
+      binary Subtract 1089..1102
+        binary Divide 1089..1098
+          name total 1089..1094
+          integer 1 1097..1098
+        integer 0 1101..1102
+function forever 1107..1163
   result
-    unit-type 1125..1127
-  block 1128..1165
-    for 1134..1163
-      block 1138..1163
-        return 1148..1157
-          unit 1155..1157
+    unit-type 1123..1125
+  block 1126..1163
+    for 1132..1161
+      block 1136..1161
+        return 1146..1155
+          unit 1153..1155

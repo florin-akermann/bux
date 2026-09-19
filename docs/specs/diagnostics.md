@@ -54,7 +54,7 @@ A span that ends on a later line carets the rest of its first line and says wher
 ## The codes
 
 A code is `L` and four digits, grouped by the phase that raises it.
-The grammar writes `L01xx` and canonical form writes `L02xx`.
+The grammar writes `L01xx`, canonical form `L02xx`, name resolution `L03xx`, and inference `L04xx`.
 
 Every number and every long form lives in `crates/diagnostics/src/code.rs`, which declares them
 together so that neither can be added without the other.
@@ -76,6 +76,21 @@ Canonical form raises this one, in `crates/format/src/lib.rs`:
 
 One code covers all three ways a file departs from canonical form, because they are one problem
 and `lumen fmt` is the one answer to it.
+
+Name resolution raises these, in `crates/resolver/src/error.rs`:
+
+- `L0300` — nothing in scope has this name.
+- `L0301` — a module declares the same name twice.
+- `L0302` — a declaration or a binding hides a name that is already in scope.
+
+Type inference raises these, in `crates/types/src/error.rs`:
+
+- `L0400` — a type met a type it does not match.
+- `L0401` — a call passes more or fewer arguments than the function takes.
+- `L0402` — a field is reached that the type reached through does not have.
+- `L0403` — a type would have to contain itself.
+- `L0404` — a record is built without one of the fields it declares.
+- `L0405` — a record is written with one of its fields given a value twice.
 
 ## `lumen explain`
 

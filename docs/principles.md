@@ -29,7 +29,7 @@ over:
 
 ```text
 String
-Int64
+Int
 Decimal
 ```
 

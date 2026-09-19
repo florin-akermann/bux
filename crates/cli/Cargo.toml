@@ -17,6 +17,7 @@ lumen-diagnostics = { path = "../diagnostics" }
 lumen-format = { path = "../format" }
 lumen-parser = { path = "../parser" }
 lumen-resolver = { path = "../resolver" }
+lumen-types = { path = "../types" }
 clap = { version = "4", features = ["derive"] } # approved: argument parsing, help and version rendering
 
 [lints]

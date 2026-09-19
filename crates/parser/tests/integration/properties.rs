@@ -30,7 +30,7 @@ fn an_error_span_is_non_empty_and_lies_within_the_source(tc: TestCase) {
 /// The item shapes a generated program is built from, each one line of source.
 const ITEMS: [&str; 8] = [
     "import io",
-    "type UserId = UserId(Int64)",
+    "type UserId = UserId(Int)",
     "type User = {\n    id: UserId\n}",
     "type Payment =\n    | Pending\n    | Failed(String)",
     "fn identity(x) {\n    x\n}",
