@@ -85,7 +85,7 @@ A public name is a word rather than an initial, and a `Bool` function reads as a
 [019][c] - The predicate-prefix rule, test-first, over functions whose return type is `Bool`.
 [019][d] - Executable examples under `tests/spec/format/`.
 
-## 🟡 Item 020: The two rules lowering already assumes
+## 🟢 Item 020: The two rules lowering already assumes
 **Depends on:** Item 007, Item 009 — lowering asserts both, and nothing refuses either today.
 Lowering assumes an assignment names a name, and that a function is reached only by calling it.
 Neither rule is written down and neither is refused, so a program can reach lowering and panic.
