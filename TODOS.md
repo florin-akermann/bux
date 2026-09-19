@@ -121,12 +121,13 @@ A test runs it with the suite, so the one program the README promises can never 
 Every type is equatable today, which is Java's object model arriving by the back door.
 `crates/types/src/infer.rs` accepts `==` between any two operands that share a type.
 `crates/ir/src/lower/classes.rs` gives every record and every variant a generated `equals`.
-Version 0.1 has no traits, so the narrow answer is to equate `Int`, `Bool`, and `String` alone.
-`==` on a record or an ADT is then an error naming `Eq`, which 0.2 lets a type derive.
+`==` is `Eq`, and no type is equatable without an instance; a built-in type is no exception.
+Version 0.1 has no `derive`, so the library ships the three instances: `Int`, `Bool`, `String`.
+`==` on a record is then an error naming `Eq`, which 0.2 lets any type derive the same way.
 Widening later costs nothing; withdrawing a universal `==` once programs rely on it costs plenty.
-[022][a] - `docs/design.md` section 8 states that `==` needs `Eq`, and names the 0.1 subset.
+[022][a] - `docs/design.md` section 8 states that `==` needs `Eq`, and lists the 0.1 instances.
 [022][b] - `docs/specs/codegen.md` loses the paragraph putting `equals` on every class.
-[022][c] - Inference refuses `==` outside the three equatable types, test-first, under its own code.
+[022][c] - Inference refuses `==` without an `Eq` instance, test-first, under its own code.
 [022][d] - Lowering stops generating `equals`; a literal pattern still compares the three types.
 [022][e] - Executable examples under `tests/spec/type_inference/`, including the compile-fail case.
 
@@ -143,11 +144,55 @@ Writing the rule down and guarding it stops a later phase reaching for an inheri
 
 ## 🔴 Item 024: The JVM is a target, not a model
 The JVM is where Lumen compiles first, and that is the whole of its authority over the language.
-Today the claim is one buried clause of the preamble and a question in `docs/principles.md`.
-Nothing states it where a reader meets the language, so each JVM habit gets argued from scratch.
+`AGENTS.md` and the README state it; `docs/design.md`, which they cite, has one buried clause.
+`docs/principles.md` asks it as a question, so each JVM habit still gets argued from scratch.
 The object model is the standing instance: identity, `equals`, `hashCode`, and a root class.
+The eight special primitives are the other: in Lumen no built-in type is special.
 Stated once as a rule, every later question about a JVM habit is settled by citing it.
 [024][a] - `docs/design.md` section 2 gains the rule as prose, not as one more item in a list.
-[024][b] - The rule names what Lumen declines: the object model, the class hierarchy, boxing.
-[024][c] - `docs/principles.md` question 6 points at the rule rather than restating it.
-[024][d] - README calls the JVM the first target, so `The JVM's runtime` is not read as adoption.
+[024][b] - The rule names what Lumen declines: the object model, boxing, and special primitives.
+[024][c] - The rule states the model adopted instead: value semantics, in Valhalla's shape.
+[024][d] - `docs/principles.md` question 6 points at the rule rather than restating it.
+
+## 🔴 Item 025: Generics are specialized, never erased
+`docs/specs/codegen.md` erases a type parameter to `java.lang.Object`, boxing an `Int` across it.
+That is the one place a program can tell `Int` from a declared type, and the one place it boxes.
+A generic function is instead lowered once per instantiation, with the descriptor its types give.
+An `Int` then crosses a generic as a `long`, and a record as itself, so no type is special.
+The cost is one method per instantiation and a generic body that must reach the module using it.
+[025][a] - `docs/design.md` section 7 states that a generic is specialized at each use.
+[025][b] - `docs/specs/codegen.md` replaces erasure and settles how a body reaches another module.
+[025][c] - Lowering writes one method per instantiation, test-first, named without collision.
+[025][d] - A test on the bytecode: an `Int` passed to a generic is carried as `long` throughout.
+[025][e] - Executable examples under `tests/spec/generics/`.
+
+## 🔴 Item 026: A record that never escapes is never allocated
+**Depends on:** Item 022, Item 023 — splitting a value into fields is legal only without identity.
+A record built and read within one function has no reason to reach the heap.
+Without identity, the compiler may keep such a value in locals, one per field, and never `new` it.
+HotSpot's escape analysis does this when it can; Lumen's lowering does it every time it applies.
+That is Valhalla's scalarization, available today, because the language meets its precondition.
+An optimization earns its place by measurement, so the item starts with a number.
+[026][a] - A measured baseline: a loop building a record per iteration, timed with the JDK.
+[026][b] - `docs/specs/codegen.md` states the guarantee and exactly when a value stays in locals.
+[026][c] - The lowering, test-first: such a record emits no `new`, asserted on the instructions.
+[026][d] - A property test: the scalarized program computes what the allocating one computes.
+
+## 🔴 Item 027: Every generated class keeps the shape of a value class
+**Depends on:** Item 022, Item 023 — a value class has no identity, which those two make true.
+Valhalla flattens a class that has no identity, no null, and equality by state.
+Lumen's types have all three by design, so readiness is a matter of never drifting from it.
+A value class is `final` with `final` fields, and declares nothing a value class may not.
+The writer marks class and fields so, and a test holds every generated class inside the shape.
+[027][a] - `docs/specs/codegen.md` states the shape every generated class keeps, and why.
+[027][b] - Every generated field is `final` and every concrete class is `final`, held by a test.
+[027][c] - A test that no generated method is `synchronized`, which a value class cannot lock on.
+
+## 🔴 Item 028: Every generated class is a value class
+**Depends on:** Item 027 — the flag is set only on a class already inside the shape.
+The JDK the project targets decides when this item can start, and nothing lands before it can.
+Once the target JDK accepts the class-file flag, the writer sets it on every generated class.
+A preview feature pins a class file to one JDK, which the single-JDK rule already accepts.
+[028][a] - `docs/implementation.md` names the JDK that ships the flag, and its preview standing.
+[028][b] - The writer sets the flag, test-first against the bytes the class-file spec names.
+[028][c] - A run-time example under the flag, skipped with a named reason when the JDK lacks it.

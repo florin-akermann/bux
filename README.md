@@ -5,14 +5,18 @@
 > The JVM's runtime.
 > A Rust compiler.
 
-Lumen is a small, statically typed language for practical software on the JVM.
+Lumen is a small, statically typed language for practical software; its first target is the JVM.
 Its compiler is written in Rust and emits JVM bytecode.
 
-Three things set the everyday code apart:
+Four things set the everyday code apart:
 
 - Source that is not in canonical form does not compile; `lumen fmt` produces that form.
 - There are no anonymous functions; every function has a name, and names are first-class values.
 - Control flow is Go's: `if`, `for`, `match`, `break`, `continue`, `return`.
+- Values, not objects: nothing has identity, and `Int` is no more special than a type you declare.
+
+The JVM is a target, not a model: none of its constraints is kept, its object model least of all.
+Every type is shaped as a Valhalla value class: identity-free, null-free, equal by its state.
 
 The language is specified in `docs/design.md`.
 The compiler and roadmap are in `docs/implementation.md`; the principles in `docs/principles.md`.

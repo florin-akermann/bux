@@ -19,8 +19,13 @@ This file is that anchor; consistency is the throughline, and the bar is Code He
 - Plain loops are the default idiom; higher-order functions are library, not a second paradigm.
 - **Non-goals** — never implement, suggest, or plan: ownership, borrowing, lifetimes, inheritance.
 - Likewise null, checked exceptions, macros, implicit runtime magic, or Java's type system.
-- **Concurrency is Go's**: spawn, channels, blocking calls. No async/await, no function colouring.
-- The JVM is the implementation target, not the semantic model; no JVM detail leaks into Lumen.
+- **Concurrency is Go's**: spawn, channels, blocking calls; no async/await, no function colouring.
+- **The JVM is the first target, not the model**; its constraints, the object model first, stay out.
+- **Values, not objects.** Nothing has identity: no reference equality, `hashCode`, or `toString`.
+- Equality is opt-in: `==` needs `Eq`, which a type derives, and compares what a value holds.
+- **No built-in type is special.** `Int`, `Bool`, and `String` are types like any declared one.
+- Boxing and the primitive/reference split live inside the compiler; no program can observe them.
+- **Every type is shaped as a Valhalla value class**: identity-free, null-free, equal by its state.
 - Version 0.1 is `docs/implementation.md` section 9; nothing from a later version lands earlier.
 - **Only the current JDK release is targeted.** No older class-file version, no compatibility matrix.
 
