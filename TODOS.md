@@ -144,7 +144,7 @@ An example gains a way to state the output it must produce, and the harness comp
 [031][c] - The harness compares the output, test-first; a mismatch names the file and both texts.
 [031][d] - `tests/spec/arithmetic/division.lm` writes its answers out and states them.
 
-## 🟡 Item 029: No exceptions and no `unwrap`; every operation is total
+## 🟢 Item 029: No exceptions and no `unwrap`; every operation is total
 **Depends on:** Item 007 — a total `/` needs the type of what it returns.
 The non-goals name only checked exceptions; nothing says a Lumen program never throws or catches.
 Today `/` and `%` lower to `LDIV` and `LREM`, so a zero divisor throws `ArithmeticException`.
