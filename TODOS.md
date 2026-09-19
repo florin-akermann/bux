@@ -6,7 +6,7 @@
 
 ## Open
 
-## 🔴 Item 003: Canonical formatting as a compile gate
+## 🟡 Item 003: Canonical formatting as a compile gate
 **Depends on:** Item 002 — the formatter is the AST pretty-printer.
 A `format` crate prints the one canonical form of an AST; `docs/design.md` section 13 is the rule.
 A source file compiles only if `format(parse(source)) == source`, byte for byte.
