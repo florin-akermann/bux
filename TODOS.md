@@ -15,16 +15,6 @@ The examples run with the test suite, so a signature never drifts from the evide
 [015][c] - `lumen test` runs them; a failing example names the function it documents.
 [015][d] - Executable examples: a public function without one fails to compile.
 
-## 🟢 Item 016: Named arguments where a signature repeats a type
-**Depends on:** Item 007 — the rule is checked once parameter types are known.
-A structural smell a type system can make unrepresentable belongs in the language, not in a linter.
-mycs reports a swappable pair of arguments after the fact; Lumen refuses the call instead.
-When two parameters share a type, the call site names its arguments: `rename(from: a, to: b)`.
-A swapped pair of same-typed arguments is then a compile error rather than a runtime surprise.
-[016][a] - `docs/principles.md` gains the question; `docs/design.md` section 11 gains the rule.
-[016][b] - Spec first in `docs/specs/arguments.md`: the named-argument form and the error text.
-[016][c] - The check after inference, test-first; positional calls stay legal when all types differ.
-[016][d] - Executable examples under `tests/spec/arguments/`.
 
 ## 🔴 Item 017: A parameter is never a bare `Bool`
 **Depends on:** Item 016 — the rule shares its spec and its error voice with named arguments.
