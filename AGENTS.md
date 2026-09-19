@@ -39,14 +39,17 @@ This file is that anchor; consistency is the throughline, and the bar is Code He
 - `docs/specs/` — behaviour specs written before a feature lands; updated in place, never forked.
 - A JDK is needed only to run compiled programs; every compiler phase is tested without one.
 
-## TDD Workflow
-- Red/green cycles; run `cargo nextest run` before every commit; spec, test-first, review, commit.
+## BDD Workflow
+- Behaviour first: a `docs/specs/` spec with Gherkin scenarios names what the change must do.
+- Tests come early and first: write them from the scenarios, then implement until they pass.
+- No red/green micro-cycle is required; a behaviour, its tests, and its code land together.
 - Every phase gets property-based tests (`hegeltest`) for its invariants; examples are not enough.
 - Round trips are the first properties: print-then-parse, format idempotence, spans covering input.
 - Each crate has one integration-test binary, `tests/integration/main.rs`, declaring `mod` per file.
 - Shared helpers go in `tests/integration/common.rs`, reached with `use crate::common;`.
 - **Tests must never run git commands** — even in temp dirs; subprocess git can corrupt repo state.
 - Tests never require a JDK; a run-time example is skipped with a named reason when none is present.
+- Run `cargo nextest run` before every commit.
 
 ## Review Gate
 - The built-in `/code-review` is required before commit (semantic gate); `/work` runs it at medium.
