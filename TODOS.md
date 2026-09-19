@@ -117,20 +117,6 @@ A test runs it with the suite, so the one program the README promises can never 
 [021][c] - An integration test runs it through the CLI, skipped with a named reason when no JDK.
 [021][d] - README names the one command that runs it; class files beside it are ignored by git.
 
-## 🟡 Item 022: `==` requires `Eq` rather than every type
-Every type is equatable today, which is Java's object model arriving by the back door.
-`crates/types/src/infer.rs` accepts `==` between any two operands that share a type.
-`crates/ir/src/lower/classes.rs` gives every record and every variant a generated `equals`.
-`==` is `Eq`, and no type is equatable without an instance; a built-in type is no exception.
-Version 0.1 has no `derive`, so the library ships the three instances: `Int`, `Bool`, `String`.
-`==` on a record is then an error naming `Eq`, which 0.2 lets any type derive the same way.
-Widening later costs nothing; withdrawing a universal `==` once programs rely on it costs plenty.
-[022][a] - `docs/design.md` section 8 states that `==` needs `Eq`, and lists the 0.1 instances.
-[022][b] - `docs/specs/codegen.md` loses the paragraph putting `equals` on every class.
-[022][c] - Inference refuses `==` without an `Eq` instance, test-first, under its own code.
-[022][d] - Lowering stops generating `equals`; a literal pattern still compares the three types.
-[022][e] - Executable examples under `tests/spec/type_inference/`, including the compile-fail case.
-
 ## 🔴 Item 023: Identity is never observable
 **Depends on:** Item 022, Item 024 — the rule lands in the section Item 024 writes.
 Nothing in Lumen asks whether two values are one object, and nothing ever should.
