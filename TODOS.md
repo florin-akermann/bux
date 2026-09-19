@@ -120,7 +120,7 @@ An optimization earns its place by measurement, so the item starts with a number
 [026][c] - The lowering, test-first: such a record emits no `new`, asserted on the instructions.
 [026][d] - A property test: the scalarized program computes what the allocating one computes.
 
-## 🔴 Item 029: No exceptions and no `unwrap`; every operation is total
+## 🟡 Item 029: No exceptions and no `unwrap`; every operation is total
 **Depends on:** Item 007 — a total `/` needs the type of what it returns.
 The non-goals name only checked exceptions; nothing says a Lumen program never throws or catches.
 Today `/` and `%` lower to `LDIV` and `LREM`, so a zero divisor throws `ArithmeticException`.
