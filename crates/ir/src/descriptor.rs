@@ -12,6 +12,8 @@ pub enum Descriptor {
     /// A small whole number, which nothing in Lumen is carried by; a variant's tag is one.
     Integer,
     Reference(ClassName),
+    /// An array of what it holds, which only the entry point of a program is written with.
+    Array(Box<Descriptor>),
 }
 
 impl Descriptor {
@@ -19,6 +21,12 @@ impl Descriptor {
     #[must_use]
     pub fn reference(class: &str) -> Self {
         Self::Reference(ClassName::new(class))
+    }
+
+    /// An array of `held`, which is one reference however wide what it holds is.
+    #[must_use]
+    pub fn array(held: Self) -> Self {
+        Self::Array(Box::new(held))
     }
 
     /// How many local slots and stack words this takes, which is two for a `long`.
@@ -42,6 +50,7 @@ impl fmt::Display for Descriptor {
             Self::Boolean => f.write_str("Z"),
             Self::Integer => f.write_str("I"),
             Self::Reference(class) => write!(f, "L{class};"),
+            Self::Array(held) => write!(f, "[{held}"),
         }
     }
 }

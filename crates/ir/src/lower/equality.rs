@@ -17,7 +17,7 @@ pub(crate) fn compared(held: Option<&Descriptor>, how: Comparison) -> Vec<Instru
         None => vec![Instruction::Boolean(how == Comparison::Equal)],
         Some(Descriptor::Long) => vec![Instruction::CompareLongs(how)],
         Some(Descriptor::Boolean | Descriptor::Integer) => vec![Instruction::CompareIntegers(how)],
-        Some(Descriptor::Reference(_)) => by_value(how),
+        Some(Descriptor::Reference(_) | Descriptor::Array(_)) => by_value(how),
     }
 }
 

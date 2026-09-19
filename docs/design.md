@@ -465,6 +465,22 @@ Nested named functions may be declared inside a function body when they are loca
 
 A name forces the author to say what the function is for, and gives the reader a word to search.
 
+### The entry point
+
+A program starts at `main`:
+
+```text
+fn main() -> () {
+    greet("world")
+}
+```
+
+`main` takes nothing and gives back nothing: a program is run for what it does.
+A module declaring it can be run; one that does not is a library, and running it is refused.
+
+A run is over when `main` is.
+There is no exit status to write, because a program has nothing to say yet about how it went.
+
 ---
 
 ## 12. Control flow

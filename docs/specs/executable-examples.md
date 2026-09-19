@@ -37,6 +37,16 @@ The header is the word `expect-error`, a colon, and one diagnostic code from
 It cites the code and never the message, so rewording a diagnostic does not touch an example.
 A code the compiler cannot raise fails the run, naming the file that wrote it.
 
+An example that is run says so on its first line instead:
+
+```text
+// expect-run
+```
+
+It must compile, declare `main`, and run to the end without failing.
+That is the whole expectation: version 0.1 gives a program no way to say anything else about how
+it went, so an example claims nothing an example could not check.
+
 An example may carry ordinary comments; only the first line is read as an expectation.
 
 ## Compiling an example
@@ -52,11 +62,13 @@ A refused example that parses is still in canonical form, so `L0200` is never wh
 
 ## Running an example
 
-An example is not run.
-Nothing can run a Lumen program yet, so an expectation about what a program prints has nowhere to
-be checked and no way to be written down honestly.
-The harness gains a run step when the toolchain gains one, and this spec gains the header that
-spells the expectation then.
+An example headed `// expect-run` is run with `lumen run`, and must end with status 0.
+`docs/specs/run.md` says what running amounts to and where the JDK comes from.
+
+Running needs a JDK, and the test suite does not.
+An example that is run is skipped when `JAVA_HOME` names none, and the skip says so by name, so a
+run that proves less says which examples it did not reach.
+Every other example is held to its expectation either way, because nothing else needs a JVM.
 
 ## The harness
 

@@ -3,7 +3,7 @@
 //! Each test works in a directory of its own under the system's temporary directory, so no two
 //! tests can see each other's files and nothing is written inside the repository.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 use std::sync::atomic::{AtomicUsize, Ordering};
 
@@ -47,11 +47,34 @@ static NEXT: AtomicUsize = AtomicUsize::new(0);
 
 /// Runs the binary with `arguments` and returns what it said and how it exited.
 pub fn lumen(arguments: &[&str]) -> Run {
-    let output = Command::new(env!("CARGO_BIN_EXE_lumen"))
-        .args(arguments)
-        .output()
-        .expect("the lumen binary runs");
-    Run::of(&output)
+    finished(running(arguments))
+}
+
+/// The same run, as if `JAVA_HOME` named `home`, or named nothing at all.
+pub fn lumen_finding(arguments: &[&str], home: Option<&Path>) -> Run {
+    let mut command = running(arguments);
+    match home {
+        Some(home) => command.env("JAVA_HOME", home),
+        None => command.env_remove("JAVA_HOME"),
+    };
+    finished(command)
+}
+
+/// The `java` of the JDK `JAVA_HOME` names, which a test needs to run anything it built.
+pub fn jdk() -> Option<PathBuf> {
+    let home = PathBuf::from(std::env::var_os("JAVA_HOME")?);
+    let java = home.join("bin").join("java");
+    java.is_file().then_some(java)
+}
+
+fn running(arguments: &[&str]) -> Command {
+    let mut command = Command::new(env!("CARGO_BIN_EXE_lumen"));
+    command.args(arguments);
+    command
+}
+
+fn finished(mut command: Command) -> Run {
+    Run::of(&command.output().expect("the lumen binary runs"))
 }
 
 /// What one run of the binary amounted to.

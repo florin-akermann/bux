@@ -13,7 +13,7 @@ mod lower;
 pub use crate::class::{Class, Extending, Field, Method, Reached};
 pub use crate::code::{Arithmetic, Body, Comparison, FieldRef, Instruction, Label, MethodRef};
 pub use crate::descriptor::{ClassName, Descriptor, MethodDescriptor};
-pub use crate::lower::lower;
+pub use crate::lower::{is_a_program, lower};
 
 /// Every class a module becomes, in the order they are written.
 #[derive(Clone, Debug, PartialEq, Eq)]

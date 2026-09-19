@@ -6,4 +6,5 @@ mod building;
 mod common;
 mod examples;
 mod formatting;
+mod running;
 mod version;

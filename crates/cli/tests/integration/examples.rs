@@ -9,10 +9,10 @@ use std::path::{Path, PathBuf};
 use lumen_diagnostics::Code;
 use lumen_format::format;
 
-use crate::common::lumen;
+use crate::common::{Example, jdk, lumen};
 
 #[test]
-fn every_example_is_accepted_or_refused_exactly_as_it_says() {
+fn every_example_is_accepted_refused_or_run_exactly_as_it_says() {
     let examples = examples();
     assert!(
         !examples.is_empty(),
@@ -82,7 +82,28 @@ fn hold_to_its_expectation(path: &Path) {
                 run.stderr
             );
         }
+        Expectation::Runs => started(&source, path),
     }
+}
+
+/// An example that is run is copied out of the tree first, so a run writes nothing into it.
+fn started(source: &str, path: &Path) {
+    if jdk().is_none() {
+        eprintln!(
+            "skipped: {}: JAVA_HOME names no JDK, and an example that is run needs one",
+            path.display()
+        );
+        return;
+    }
+    let copy = Example::new(source);
+    let run = lumen(&["run", copy.path.to_str().expect("a UTF-8 path")]);
+    assert_eq!(
+        run.code,
+        0,
+        "{} does not run to the end:\n{}",
+        path.display(),
+        run.stderr
+    );
 }
 
 /// What an example says about itself.
@@ -92,10 +113,16 @@ enum Expectation {
     Compiles,
     /// The file opens with `// expect-error:` and the code it must be refused with.
     Refused(Code),
+    /// The file opens with `// expect-run`, so it must compile and then run to the end.
+    Runs,
 }
 
 impl Expectation {
     fn of(source: &str, path: &Path) -> Self {
+        let first = source.lines().next().unwrap_or_default().trim_end();
+        if first == RUNS {
+            return Self::Runs;
+        }
         let Some(written) = source
             .lines()
             .next()
@@ -113,6 +140,9 @@ impl Expectation {
 
 /// What an example writes to name the diagnostic it is refused with.
 const HEADER: &str = "// expect-error:";
+
+/// What an example writes to say it is run, and must run to the end.
+const RUNS: &str = "// expect-run";
 
 #[test]
 fn an_example_with_no_header_compiles() {
@@ -138,4 +168,14 @@ fn an_example_that_is_refused_names_the_diagnostic_on_its_first_line() {
 #[should_panic(expected = "demo.lm: there is no diagnostic L9999")]
 fn an_example_may_not_name_a_diagnostic_the_compiler_cannot_raise() {
     let _ = Expectation::of("// expect-error: L9999\n", Path::new("demo.lm"));
+}
+
+#[test]
+fn an_example_that_is_run_says_so_on_its_first_line() {
+    let source = "// expect-run\nfn main() -> () {\n    ()\n}\n";
+
+    assert_eq!(
+        Expectation::of(source, Path::new("demo.lm")),
+        Expectation::Runs
+    );
 }

@@ -86,7 +86,7 @@ impl Assembling {
         let opcode = match of {
             Descriptor::Long => opcode::LLOAD,
             Descriptor::Boolean | Descriptor::Integer => opcode::ILOAD,
-            Descriptor::Reference(_) => opcode::ALOAD,
+            Descriptor::Reference(_) | Descriptor::Array(_) => opcode::ALOAD,
         };
         self.indexed(opcode, slot);
         self.push(Held::of(of));
@@ -96,7 +96,7 @@ impl Assembling {
         let opcode = match of {
             Descriptor::Long => opcode::LSTORE,
             Descriptor::Boolean | Descriptor::Integer => opcode::ISTORE,
-            Descriptor::Reference(_) => opcode::ASTORE,
+            Descriptor::Reference(_) | Descriptor::Array(_) => opcode::ASTORE,
         };
         self.indexed(opcode, slot);
         self.pop();
@@ -280,7 +280,7 @@ impl Assembling {
             None => opcode::RETURN,
             Some(Descriptor::Long) => opcode::LRETURN,
             Some(Descriptor::Boolean | Descriptor::Integer) => opcode::IRETURN,
-            Some(Descriptor::Reference(_)) => opcode::ARETURN,
+            Some(Descriptor::Reference(_) | Descriptor::Array(_)) => opcode::ARETURN,
         };
         self.byte(opcode);
         self.unreachable();

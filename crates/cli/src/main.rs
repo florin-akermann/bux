@@ -4,6 +4,7 @@
 //! lives in the per-phase crates under `crates/`, what canonical form is belongs to
 //! `lumen-format`, and how a refusal reads belongs to `lumen-diagnostics`.
 
+use std::ffi::OsStr;
 use std::fs::{create_dir_all, read_to_string, write};
 use std::path::{Path, PathBuf};
 use std::process::exit;
@@ -12,7 +13,7 @@ use clap::{Parser, Subcommand};
 use lumen_diagnostics::{Code, Diagnostic, render};
 use lumen_exhaustiveness::check as exhaustive;
 use lumen_format::format;
-use lumen_ir::lower;
+use lumen_ir::{is_a_program, lower};
 use lumen_jvm::ClassFile;
 use lumen_parser::parse;
 use lumen_resolver::resolve;
@@ -37,6 +38,9 @@ enum Command {
     /// Compile a source file to the class files a JVM loads
     #[command(long_about = include_str!("help/build.md"))]
     Build { file: PathBuf },
+    /// Compile a source file and run the program it holds
+    #[command(long_about = include_str!("help/run.md"))]
+    Run { file: PathBuf },
     /// Print the long form of one diagnostic code
     #[command(long_about = include_str!("help/explain.md"))]
     Explain { code: String },
@@ -52,6 +56,7 @@ fn run(command: &Command) -> Outcome {
         Command::Fmt { file } => fmt(file),
         Command::Check { file } => check(file),
         Command::Build { file } => build(file),
+        Command::Run { file } => started(file),
         Command::Explain { code } => explain(code),
     }
 }
@@ -81,22 +86,66 @@ fn check(path: &Path) -> Outcome {
 
 /// Writes the class files of `path` beside it, one per class the module becomes.
 fn build(path: &Path) -> Outcome {
-    let Some(source) = source_of(path) else {
+    built(path).map_or_else(|refusal| refusal, |_| Outcome::Done)
+}
+
+/// Builds `path` and runs the program it holds, which ends however that program ends.
+///
+/// The program is compiled before the JDK is looked for, so a program that does not compile is
+/// told so on a machine that could not have run it anyway.
+fn started(path: &Path) -> Outcome {
+    let built = match built(path) {
+        Ok(built) => built,
+        Err(refusal) => return refusal,
+    };
+    if !built.starts {
+        eprintln!(
+            "error: {}: a module is run through `fn main() -> ()`, which this one does not declare",
+            path.display()
+        );
         return Outcome::Unusable;
+    }
+    let Some(java) = java() else {
+        return Outcome::Unusable;
+    };
+    ran(&java, &built)
+}
+
+/// Compiles `path` and writes the class files beside it, saying what a JVM would start on.
+fn built(path: &Path) -> Result<Built, Outcome> {
+    let Some(source) = source_of(path) else {
+        return Err(Outcome::Unusable);
     };
     let typed = match accepted(&source) {
         Ok(typed) => typed,
-        Err(diagnostic) => return refuse(&diagnostic, &source, path),
+        Err(diagnostic) => return Err(refuse(&diagnostic, &source, path)),
     };
     let Some(module) = module_of(path) else {
         eprintln!(
             "error: {}: a module is named by its file, and a class name holds none of {UNUSABLE_IN_A_NAME:?}",
             path.display()
         );
-        return Outcome::Unusable;
+        return Err(Outcome::Unusable);
     };
     let lowered = lower(&typed, &module);
-    written(&lumen_jvm::write(&lowered), path)
+    match written(&lumen_jvm::write(&lowered), path) {
+        Outcome::Done => Ok(Built {
+            module,
+            beside: path.parent().unwrap_or(Path::new(".")).to_path_buf(),
+            starts: is_a_program(&lowered),
+        }),
+        refusal => Err(refusal),
+    }
+}
+
+/// A module written out, which is what running one starts from.
+struct Built {
+    /// The class a JVM is started on, which is the module itself.
+    module: String,
+    /// Where the class files were written, which is where the JVM looks for them.
+    beside: PathBuf,
+    /// Whether the module declares `main`, which is what makes it a program.
+    starts: bool,
 }
 
 /// Every phase the front end has, run in order, stopping at the first refusal.
@@ -120,6 +169,43 @@ fn module_of(path: &Path) -> Option<String> {
     let stem = path.file_stem()?.to_string_lossy().into_owned();
     let usable = !stem.is_empty() && !stem.contains(UNUSABLE_IN_A_NAME);
     usable.then_some(stem)
+}
+
+/// Runs the module class on `java`, ending however the program it starts ends.
+fn ran(java: &Path, built: &Built) -> Outcome {
+    let classpath = [OsStr::new("-cp"), built.beside.as_os_str()];
+    match std::process::Command::new(java)
+        .args(classpath)
+        .arg(&built.module)
+        .status()
+    {
+        Ok(status) => Outcome::Ended(status.code().unwrap_or(STOPPED)),
+        Err(error) => {
+            eprintln!("error: {}: {error}", java.display());
+            Outcome::Unusable
+        }
+    }
+}
+
+/// What a program stopped from outside is reported as, having ended with no status of its own.
+///
+/// It is neither of the statuses the compiler ends with, so a program the operating system
+/// killed is never read as a program the compiler refused.
+const STOPPED: i32 = 128;
+
+/// The `java` of the JDK `JAVA_HOME` names, which is the only JVM a run ever reaches for.
+fn java() -> Option<PathBuf> {
+    let named = std::env::var_os("JAVA_HOME").filter(|home| !home.is_empty());
+    let Some(home) = named else {
+        eprintln!("error: JAVA_HOME is not set, and running a program needs the JDK it names");
+        return None;
+    };
+    let java = Path::new(&home).join("bin").join("java");
+    if !java.is_file() {
+        eprintln!("error: {}: JAVA_HOME names no JDK", java.display());
+        return None;
+    }
+    Some(java)
 }
 
 /// Writes each class beside the source file, in the package its name gives it.
@@ -158,6 +244,8 @@ enum Outcome {
     Refused,
     /// The command could not do its job at all, which is not about any program.
     Unusable,
+    /// A program ran, and this is the status it ended with rather than the compiler's.
+    Ended(i32),
 }
 
 impl Outcome {
@@ -166,6 +254,7 @@ impl Outcome {
             Self::Done => 0,
             Self::Refused => 1,
             Self::Unusable => 2,
+            Self::Ended(status) => *status,
         }
     }
 }

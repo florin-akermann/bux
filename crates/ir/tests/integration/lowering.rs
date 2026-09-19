@@ -340,3 +340,59 @@ fn an_operand_whose_type_was_erased_is_read_back_before_the_operator_works_on_it
         "lcmp takes two whole numbers"
     );
 }
+
+/// A module that can be run, which is one declaring the `main` a program starts at.
+const PROGRAM: &str = "fn main() -> () {\n    ()\n}\n";
+
+#[test]
+fn a_module_declaring_main_is_written_with_the_entry_point_a_jvm_starts_at() {
+    let lowered = common::lowered(PROGRAM);
+
+    let module = common::class_of(&lowered, &ClassName::new("demo"));
+
+    let started = common::method_of(module, "main");
+    assert_eq!(
+        module
+            .methods
+            .iter()
+            .filter(|method| method.name == "main")
+            .count(),
+        2,
+        "the function the module declares, and the entry point that calls it"
+    );
+    assert_eq!(
+        started.descriptor.to_string(),
+        "()V",
+        "the one written first"
+    );
+    assert!(lumen_ir::is_a_program(&lowered));
+}
+
+#[test]
+fn a_module_declaring_no_main_is_written_without_an_entry_point() {
+    let lowered = common::lowered("fn answer() -> Int {\n    7\n}\n");
+
+    let module = common::class_of(&lowered, &ClassName::new("demo"));
+
+    assert_eq!(module.methods.len(), 1, "only the function it declares");
+    assert!(!lumen_ir::is_a_program(&lowered));
+}
+
+#[test]
+fn the_entry_point_takes_what_a_jvm_hands_a_program_and_calls_the_main_beside_it() {
+    let lowered = common::lowered(PROGRAM);
+
+    let module = common::class_of(&lowered, &ClassName::new("demo"));
+
+    let started = module
+        .methods
+        .iter()
+        .find(|method| method.descriptor.to_string() == "([Ljava/lang/String;)V")
+        .expect("the module is written with an entry point");
+    assert_eq!(started.name, "main");
+    assert!(common::calls(
+        &started.body,
+        &ClassName::new("demo"),
+        "main"
+    ));
+}

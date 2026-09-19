@@ -436,7 +436,7 @@ fn boxing(of: &Descriptor) -> Option<Boxing> {
         Descriptor::Long => ("java/lang/Long", "longValue"),
         Descriptor::Boolean => ("java/lang/Boolean", "booleanValue"),
         Descriptor::Integer => ("java/lang/Integer", "intValue"),
-        Descriptor::Reference(_) => return None,
+        Descriptor::Reference(_) | Descriptor::Array(_) => return None,
     };
     Some(Boxing {
         class: ClassName::new(class),
@@ -457,7 +457,7 @@ fn reaching(name: &str, parameters: Vec<Descriptor>, result: Descriptor) -> Meth
 /// What `+` does to two values, which joins two strings and adds two whole numbers.
 fn joined(of: &Descriptor) -> Instruction {
     match of {
-        Descriptor::Reference(_) => Instruction::Concat,
+        Descriptor::Reference(_) | Descriptor::Array(_) => Instruction::Concat,
         Descriptor::Long | Descriptor::Boolean | Descriptor::Integer => {
             Instruction::Arithmetic(Arithmetic::Add)
         }

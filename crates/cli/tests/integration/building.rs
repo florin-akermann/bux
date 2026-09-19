@@ -1,9 +1,9 @@
 //! `lumen build`: the class files a module becomes, as the command line writes them.
 
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process::Command;
 
-use crate::common::{Example, lumen};
+use crate::common::{Example, jdk, lumen};
 
 /// A module with a record, an algebraic data type, and a function over each.
 const MODULE: &str = "type User = {\n    id: Int\n}\n\ntype Payment =\n    | Pending\n    | Failed(String)\n\nfn told(payment: Payment) -> String {\n    match payment {\n        Pending => \"waiting\"\n        Failed(reason) => reason\n    }\n}\n";
@@ -82,7 +82,7 @@ const EVERYTHING: &str = "fn identity<T>(value: T) -> T {\n    value\n}\n\nfn pi
 
 #[test]
 fn every_class_build_writes_is_one_a_jvm_loads_and_verifies() {
-    let Some(java) = java() else {
+    let Some(java) = jdk() else {
         eprintln!("skipped: JAVA_HOME names no JDK, and only a JVM verifies a class file");
         return;
     };
@@ -103,13 +103,6 @@ fn every_class_build_writes_is_one_a_jvm_loads_and_verifies() {
             "{class} did not load: {said}"
         );
     }
-}
-
-/// The `java` of the JDK `JAVA_HOME` names, when it names one.
-fn java() -> Option<PathBuf> {
-    let home = PathBuf::from(std::env::var_os("JAVA_HOME")?);
-    let java = home.join("bin").join("java");
-    java.is_file().then_some(java)
 }
 
 /// Every class written under `directory`, named the way a JVM is asked for one.

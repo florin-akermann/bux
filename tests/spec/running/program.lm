@@ -1,0 +1,36 @@
+// expect-run
+type Payment =
+    | Pending
+    | Failed(String)
+
+type User = {
+    id: Int
+    active: Bool
+}
+
+fn identity<T>(value: T) -> T {
+    value
+}
+
+fn told(payment: Payment) -> String {
+    match payment {
+        Pending => "waiting"
+        Failed(reason) => reason
+    }
+}
+
+fn doubled(count: Int) -> Int {
+    identity(count) + count
+}
+
+fn later(user: User) -> User {
+    user { active: false }
+}
+
+fn main() -> () {
+    answer := doubled(21)
+    waiting := told(Pending)
+    declined := told(Failed("declined"))
+    idle := later(User { id: answer, active: true })
+    ()
+}

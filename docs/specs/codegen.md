@@ -70,10 +70,17 @@ Boxing is decided from the types inference gave the call, never from the shape o
 
 Each function of the module is a `public static` method of the module class, named as it is
 written, with the descriptor its signature gives.
-A module declares each name once, so no two methods share a name and nothing is overloaded.
+A module declares each name once, so no two functions share a method name.
 
 A function is reached by `invokestatic` on the module class.
 Version 0.1 has no function values, so nothing else calls one.
+
+A module that declares `main` is written with one method more: `main([Ljava/lang/String;)V`, the
+shape a JVM starts at, whose whole body is a call of the `main` the module declares.
+It is the one method of a module class no function wrote, and the one name a module class carries
+twice, which the JVM tells apart by descriptor.
+Writing the entry point with the module is what makes running the module class the same thing as
+running the program, so `lumen run` supplies nothing of its own; `docs/specs/run.md` says how.
 
 ## How a type is laid out
 
