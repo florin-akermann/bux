@@ -37,6 +37,9 @@ The punctuation, longest match first:
 `=`, `<`, `>`, `+`, `-`, `*`, `/`, `%`, `!`, `?`, `.`, `,`, `:`, `|`, `(`, `)`, `{`, `}`, `[`, `]`.
 `+=` is the one compound assignment `docs/design.md` shows; others arrive with a design change.
 
+A keyword and a punctuation each know the text that spells them, which is how a later phase
+names one in a message; lexing that text yields that token back.
+
 Spaces, tabs, and carriage returns separate tokens and are not tokens themselves.
 A carriage return also ends a line, so CRLF input never puts a `\r` inside a token.
 A newline is a token because the grammar is newline-sensitive, as Go's is.

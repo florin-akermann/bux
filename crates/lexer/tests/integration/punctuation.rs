@@ -81,3 +81,50 @@ fn adjacent_punctuation_that_forms_no_longer_token_stays_apart() {
         ]
     );
 }
+
+#[test]
+fn the_text_of_a_punctuation_lexes_back_to_it() {
+    for punct in ALL_PUNCTUATION {
+        assert_eq!(
+            kinds(punct.text()),
+            [TokenKind::Punct(punct)],
+            "{:?} spells {:?}",
+            punct,
+            punct.text()
+        );
+    }
+}
+
+/// Every punctuation of the version 0.1 surface, in the order `docs/specs/lexer.md` lists them.
+const ALL_PUNCTUATION: [Punct; 30] = [
+    Punct::Walrus,
+    Punct::EqEq,
+    Punct::BangEq,
+    Punct::LtEq,
+    Punct::GtEq,
+    Punct::PlusEq,
+    Punct::AndAnd,
+    Punct::OrOr,
+    Punct::Arrow,
+    Punct::FatArrow,
+    Punct::Eq,
+    Punct::Lt,
+    Punct::Gt,
+    Punct::Plus,
+    Punct::Minus,
+    Punct::Star,
+    Punct::Slash,
+    Punct::Percent,
+    Punct::Bang,
+    Punct::Question,
+    Punct::Dot,
+    Punct::Comma,
+    Punct::Colon,
+    Punct::Pipe,
+    Punct::LParen,
+    Punct::RParen,
+    Punct::LBrace,
+    Punct::RBrace,
+    Punct::LBracket,
+    Punct::RBracket,
+];

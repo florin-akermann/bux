@@ -1,0 +1,55 @@
+// The version 0.1 grammar in a program shape: items, types, matching, and loops.
+import io
+
+type UserId = UserId(Int64)
+
+type Payment =
+    | Pending
+    | Authorized {
+        authorization_id: String
+    }
+    | Failed(String)
+
+type User = {
+    id: UserId
+    active: Bool
+}
+
+fn describe(payment: Payment) -> String {
+    match payment {
+        Pending =>
+            "Waiting"
+
+        Authorized { authorization_id } =>
+            "Authorized: " + authorization_id
+
+        Failed(reason) =>
+            "Failed: \"" + reason + "\""
+    }
+}
+
+fn count_active<T>(users: List<User>, limit: Int) -> Result<Int, String> {
+    var total = 0
+    for user in users {
+        if !user.active || total >= limit {
+            continue
+        } else {
+            total += 1
+        }
+        if total * 2 % 3 != 1 {
+            break
+        }
+    }
+    first := head(users)?
+    if first.id == UserId(-7) {
+        return Err("bad id")
+    }
+    renamed := first { active: false }
+    Ok(total / 1 - 0)
+}
+
+fn forever() -> () {
+    for {
+        return ()
+    }
+}

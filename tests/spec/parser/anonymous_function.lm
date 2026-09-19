@@ -1,0 +1,4 @@
+// A function without a name is a parse error, not a value.
+fn (x) {
+    x
+}

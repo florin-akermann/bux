@@ -1,0 +1,22 @@
+// The control-flow surface: every `for` header, an `else if` chain, and every comparison.
+fn classify(total: Int, limit: Int) -> String {
+    if total < limit {
+        return "under"
+    } else if total <= limit && total >= limit {
+        return "exactly"
+    } else if total > limit || total != limit {
+        return "over"
+    }
+    var seen = 0
+    for seen < limit {
+        seen += 1
+    }
+    for {
+        break
+    }
+    ok := seen == limit
+    if ok {
+        return "done"
+    }
+    "unknown"
+}

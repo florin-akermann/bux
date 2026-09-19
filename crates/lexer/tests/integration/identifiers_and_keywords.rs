@@ -60,3 +60,34 @@ fn a_non_ascii_letter_is_an_unknown_token_covering_the_whole_character() {
     assert_eq!(tokens[0].kind, TokenKind::Unknown);
     assert_eq!(tokens[0].span, Span::new(0, 2));
 }
+
+#[test]
+fn the_word_of_a_keyword_lexes_back_to_it() {
+    for keyword in ALL_KEYWORDS {
+        assert_eq!(
+            kinds(keyword.text()),
+            [TokenKind::Keyword(keyword)],
+            "{:?} spells {:?}",
+            keyword,
+            keyword.text()
+        );
+    }
+}
+
+/// Every keyword of the version 0.1 surface, in the order `docs/specs/lexer.md` lists them.
+const ALL_KEYWORDS: [Keyword; 14] = [
+    Keyword::Fn,
+    Keyword::Type,
+    Keyword::Var,
+    Keyword::If,
+    Keyword::Else,
+    Keyword::For,
+    Keyword::In,
+    Keyword::Match,
+    Keyword::Break,
+    Keyword::Continue,
+    Keyword::Return,
+    Keyword::Import,
+    Keyword::True,
+    Keyword::False,
+];

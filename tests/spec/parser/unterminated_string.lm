@@ -1,0 +1,3 @@
+fn f() {
+    a := "no closing quote
+}

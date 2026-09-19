@@ -1,0 +1,62 @@
+function classify 91..508
+  parameter total 103..113
+    named-type Int 110..113
+  parameter limit 115..125
+    named-type Int 122..125
+  result
+    named-type String 130..136
+  block 137..508
+    if 143..334
+      branch 143..190
+        binary Less 146..159
+          name total 146..151
+          name limit 154..159
+        block 160..190
+          return 170..184
+            string "under" 177..184
+      branch 196..264
+        binary And 199..231
+          binary LessOrEqual 199..213
+            name total 199..204
+            name limit 208..213
+          binary GreaterOrEqual 217..231
+            name total 217..222
+            name limit 226..231
+        block 232..264
+          return 242..258
+            string "exactly" 249..258
+      branch 270..334
+        binary Or 273..304
+          binary Greater 273..286
+            name total 273..278
+            name limit 281..286
+          binary NotEqual 290..304
+            name total 290..295
+            name limit 299..304
+        block 305..334
+          return 315..328
+            string "over" 322..328
+    binding Mutable seen 339..351
+      integer 0 350..351
+    for-while 356..398
+      binary Less 360..372
+        name seen 360..364
+        name limit 367..372
+      block 373..398
+        assign Add 383..392
+          name seen 383..387
+          integer 1 391..392
+    for 403..428
+      block 407..428
+        break 417..422
+    binding Immutable ok 433..452
+      binary Equal 439..452
+        name seen 439..443
+        name limit 447..452
+    if 457..492
+      branch 457..492
+        name ok 460..462
+        block 463..492
+          return 473..486
+            string "done" 480..486
+    string "unknown" 497..506

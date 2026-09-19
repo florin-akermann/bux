@@ -1,0 +1,2 @@
+18..35 this string has no closing quote
+help: add a closing `"` before the end of the line

@@ -416,10 +416,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "lumen-ast"
+version = "0.1.0"
+dependencies = [
+ "lumen-lexer",
+]
+
+[[package]]
 name = "lumen-lexer"
 version = "0.1.0"
 dependencies = [
  "hegeltest",
+]
+
+[[package]]
+name = "lumen-parser"
+version = "0.1.0"
+dependencies = [
+ "hegeltest",
+ "lumen-ast",
+ "lumen-lexer",
 ]
 
 [[package]]

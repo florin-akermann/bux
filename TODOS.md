@@ -25,6 +25,7 @@ A source file compiles only if `format(parse(source)) == source`, byte for byte.
 [003][c] - Property tests: the printer is idempotent, and its output always parses.
 [003][d] - `lumen fmt <file>` rewrites in place; `lumen check <file>` reports the first deviation.
 [003][e] - Help topics for `fmt` and `check` in `crates/cli/src/help/`.
+[003][f] - Item 002's deferred property: a printed AST parses back to an equal AST.
 
 ## 🔴 Item 004: Diagnostics rendering
 **Depends on:** Item 002 — the first diagnostics are parse errors.

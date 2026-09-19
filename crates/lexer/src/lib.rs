@@ -52,9 +52,11 @@ fn scan_token(rest: &str) -> (TokenKind, usize) {
         scan_word(rest)
     } else if first == '"' {
         scan_string(rest)
-    } else if let Some((text, punct)) = PUNCTUATION.iter().find(|(text, _)| rest.starts_with(text))
+    } else if let Some(punct) = PUNCTUATION
+        .iter()
+        .find(|punct| rest.starts_with(punct.text()))
     {
-        (TokenKind::Punct(*punct), text.len())
+        (TokenKind::Punct(*punct), punct.text().len())
     } else {
         (TokenKind::Unknown, first.len_utf8())
     }
@@ -66,8 +68,8 @@ fn scan_word(rest: &str) -> (TokenKind, usize) {
     let word = &rest[..len];
     let kind = KEYWORDS
         .iter()
-        .find(|(text, _)| *text == word)
-        .map_or(TokenKind::Identifier, |(_, keyword)| {
+        .find(|keyword| keyword.text() == word)
+        .map_or(TokenKind::Identifier, |keyword| {
             TokenKind::Keyword(*keyword)
         });
     (kind, len)

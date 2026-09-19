@@ -44,6 +44,29 @@ pub enum Keyword {
     False,
 }
 
+impl Keyword {
+    /// The word that spells this keyword.
+    #[must_use]
+    pub const fn text(self) -> &'static str {
+        match self {
+            Self::Fn => "fn",
+            Self::Type => "type",
+            Self::Var => "var",
+            Self::If => "if",
+            Self::Else => "else",
+            Self::For => "for",
+            Self::In => "in",
+            Self::Match => "match",
+            Self::Break => "break",
+            Self::Continue => "continue",
+            Self::Return => "return",
+            Self::Import => "import",
+            Self::True => "true",
+            Self::False => "false",
+        }
+    }
+}
+
 /// Operators and punctuation.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Punct {
@@ -109,54 +132,93 @@ pub enum Punct {
     RBracket,
 }
 
-/// Each keyword beside the word that spells it.
-pub(crate) const KEYWORDS: [(&str, Keyword); 14] = [
-    ("fn", Keyword::Fn),
-    ("type", Keyword::Type),
-    ("var", Keyword::Var),
-    ("if", Keyword::If),
-    ("else", Keyword::Else),
-    ("for", Keyword::For),
-    ("in", Keyword::In),
-    ("match", Keyword::Match),
-    ("break", Keyword::Break),
-    ("continue", Keyword::Continue),
-    ("return", Keyword::Return),
-    ("import", Keyword::Import),
-    ("true", Keyword::True),
-    ("false", Keyword::False),
+impl Punct {
+    /// The characters that spell this punctuation.
+    #[must_use]
+    pub const fn text(self) -> &'static str {
+        match self {
+            Self::Walrus => ":=",
+            Self::EqEq => "==",
+            Self::BangEq => "!=",
+            Self::LtEq => "<=",
+            Self::GtEq => ">=",
+            Self::PlusEq => "+=",
+            Self::AndAnd => "&&",
+            Self::OrOr => "||",
+            Self::Arrow => "->",
+            Self::FatArrow => "=>",
+            Self::Eq => "=",
+            Self::Lt => "<",
+            Self::Gt => ">",
+            Self::Plus => "+",
+            Self::Minus => "-",
+            Self::Star => "*",
+            Self::Slash => "/",
+            Self::Percent => "%",
+            Self::Bang => "!",
+            Self::Question => "?",
+            Self::Dot => ".",
+            Self::Comma => ",",
+            Self::Colon => ":",
+            Self::Pipe => "|",
+            Self::LParen => "(",
+            Self::RParen => ")",
+            Self::LBrace => "{",
+            Self::RBrace => "}",
+            Self::LBracket => "[",
+            Self::RBracket => "]",
+        }
+    }
+}
+
+/// Every keyword, so that a word can be looked up among them.
+pub(crate) const KEYWORDS: [Keyword; 14] = [
+    Keyword::Fn,
+    Keyword::Type,
+    Keyword::Var,
+    Keyword::If,
+    Keyword::Else,
+    Keyword::For,
+    Keyword::In,
+    Keyword::Match,
+    Keyword::Break,
+    Keyword::Continue,
+    Keyword::Return,
+    Keyword::Import,
+    Keyword::True,
+    Keyword::False,
 ];
 
-/// Each punctuation beside its text, longest first so that `:=` wins over `:`.
-pub(crate) const PUNCTUATION: [(&str, Punct); 30] = [
-    (":=", Punct::Walrus),
-    ("==", Punct::EqEq),
-    ("!=", Punct::BangEq),
-    ("<=", Punct::LtEq),
-    (">=", Punct::GtEq),
-    ("+=", Punct::PlusEq),
-    ("&&", Punct::AndAnd),
-    ("||", Punct::OrOr),
-    ("->", Punct::Arrow),
-    ("=>", Punct::FatArrow),
-    ("=", Punct::Eq),
-    ("<", Punct::Lt),
-    (">", Punct::Gt),
-    ("+", Punct::Plus),
-    ("-", Punct::Minus),
-    ("*", Punct::Star),
-    ("/", Punct::Slash),
-    ("%", Punct::Percent),
-    ("!", Punct::Bang),
-    ("?", Punct::Question),
-    (".", Punct::Dot),
-    (",", Punct::Comma),
-    (":", Punct::Colon),
-    ("|", Punct::Pipe),
-    ("(", Punct::LParen),
-    (")", Punct::RParen),
-    ("{", Punct::LBrace),
-    ("}", Punct::RBrace),
-    ("[", Punct::LBracket),
-    ("]", Punct::RBracket),
+/// Every punctuation, longest first so that `:=` wins over `:` and `->` over `-`.
+pub(crate) const PUNCTUATION: [Punct; 30] = [
+    Punct::Walrus,
+    Punct::EqEq,
+    Punct::BangEq,
+    Punct::LtEq,
+    Punct::GtEq,
+    Punct::PlusEq,
+    Punct::AndAnd,
+    Punct::OrOr,
+    Punct::Arrow,
+    Punct::FatArrow,
+    Punct::Eq,
+    Punct::Lt,
+    Punct::Gt,
+    Punct::Plus,
+    Punct::Minus,
+    Punct::Star,
+    Punct::Slash,
+    Punct::Percent,
+    Punct::Bang,
+    Punct::Question,
+    Punct::Dot,
+    Punct::Comma,
+    Punct::Colon,
+    Punct::Pipe,
+    Punct::LParen,
+    Punct::RParen,
+    Punct::LBrace,
+    Punct::RBrace,
+    Punct::LBracket,
+    Punct::RBracket,
 ];
