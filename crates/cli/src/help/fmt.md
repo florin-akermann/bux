@@ -15,7 +15,7 @@ directly above it; a comment already alone on its line stays where it is.
 Formatting never changes what a program says: the tree parsed from the canonical text is the
 tree parsed from the original.
 
-A file that does not parse is reported as the parse error, and nothing is written.
+A file that does not parse is reported as a diagnostic, and nothing is written.
 
 Exit codes: 0 when the file is canonical or was made canonical, 1 when it does not parse, and
 2 when it cannot be read or written.

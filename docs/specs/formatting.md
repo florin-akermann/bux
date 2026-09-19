@@ -112,12 +112,12 @@ order, and no comment is ever dropped or duplicated.
 A file that does not parse is reported as the parse error, by both commands, and neither writes.
 Exit codes are `0` for a file in canonical form, `1` for one that is not, and `2` for one that
 cannot be read.
-Item 004 is where these reports gain their `error[L0142]:` rendering; here they are plain lines.
+A refusal is rendered as a diagnostic, which `docs/specs/diagnostics.md` lays out, under `L0200`.
 
-A deviation names the line number, what the line says, and what canonical form writes there.
-The line number is one-based, as an editor counts lines.
-A line canonical form does not write at all is named as such, and a file whose lines all match
-is reported for the way it ends, which is how a missing final newline reads.
+A deviation points at the line it is about, and its `help:` names the text canonical form writes
+there.
+A line canonical form does not write at all is named as such, and a file whose lines all match is
+reported for the way it ends, which is how a missing final newline reads.
 
 ## Executable examples
 

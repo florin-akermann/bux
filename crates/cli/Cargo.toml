@@ -13,6 +13,7 @@ name = "integration"
 path = "tests/integration/main.rs"
 
 [dependencies]
+lumen-diagnostics = { path = "../diagnostics" }
 lumen-format = { path = "../format" }
 clap = { version = "4", features = ["derive"] } # approved: argument parsing, help and version rendering
 

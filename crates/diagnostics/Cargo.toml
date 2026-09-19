@@ -1,6 +1,6 @@
 [package]
-name = "lumen-format"
-description = "Formatter: the one canonical form of a program, and the gate that requires it"
+name = "lumen-diagnostics"
+description = "Diagnostics: the codes the compiler refuses with, and how a refusal reads"
 version.workspace = true
 edition.workspace = true
 
@@ -12,10 +12,7 @@ name = "integration"
 path = "tests/integration/main.rs"
 
 [dependencies]
-lumen-ast = { path = "../ast" }
-lumen-diagnostics = { path = "../diagnostics" }
 lumen-lexer = { path = "../lexer" }
-lumen-parser = { path = "../parser" }
 
 [dev-dependencies]
 hegeltest = "0.23" # approved: property-based testing, required by AGENTS.md for every phase

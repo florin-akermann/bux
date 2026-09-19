@@ -282,6 +282,9 @@ over cryptic JVM-oriented errors.
 
 The user should never need to understand JVM bytecode to understand a compiler error.
 
+This section sets the voice.
+`docs/specs/diagnostics.md` fixes the exact layout, the codes, and the exit codes.
+
 ---
 
 ## 9. Initial language scope

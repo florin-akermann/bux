@@ -19,8 +19,9 @@ mod stmt;
 mod type_ref;
 
 use std::fmt;
-use std::num::NonZeroUsize;
 
+use lumen_diagnostics::{Code, Diagnostic};
+use lumen_lexer::Span;
 use lumen_parser::{ParseError, parse};
 
 use crate::printer::Printer;
@@ -60,6 +61,22 @@ pub enum CheckError {
     NotCanonical(Deviation),
 }
 
+impl CheckError {
+    /// This refusal as the diagnostic the reader is shown.
+    #[must_use]
+    pub fn diagnostic(&self) -> Diagnostic {
+        match self {
+            Self::Parse(error) => error.diagnostic(),
+            Self::NotCanonical(deviation) => Diagnostic::new(
+                Code::NotCanonical,
+                deviation.to_string(),
+                deviation.span(),
+                Some(deviation.help()),
+            ),
+        }
+    }
+}
+
 impl fmt::Display for CheckError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -71,94 +88,95 @@ impl fmt::Display for CheckError {
 
 /// Where a file first departs from canonical form.
 ///
-/// There is no fourth case: canonical form never ends with a line the source does not reach,
-/// because every line it writes is made of text the source already holds.
+/// There is no fourth case: the source can only run out of lines before canonical form does when
+/// it does not end the way canonical form ends it, because every line canonical form writes is
+/// made of text the source already holds.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Deviation {
     /// A line whose text is not what canonical form writes there.
-    Line {
-        number: LineNumber,
-        found: String,
-        canonical: String,
-    },
+    Line { span: Span, canonical: String },
     /// A line the source has and canonical form does not.
-    Extra { number: LineNumber, found: String },
+    Extra { span: Span },
     /// Every line matches, and only the way the file ends does not.
-    Ending,
+    Ending { span: Span },
+}
+
+impl Deviation {
+    /// The source the deviation points at, which is the line it is about.
+    #[must_use]
+    pub const fn span(&self) -> Span {
+        match self {
+            Self::Line { span, .. } | Self::Extra { span } | Self::Ending { span } => *span,
+        }
+    }
+
+    /// What to do about it, which for a line canonical form rewrites is the text it writes.
+    fn help(&self) -> String {
+        match self {
+            Self::Line { canonical, .. } => format!("canonical form writes `{canonical}`"),
+            Self::Extra { .. } => "run `lumen fmt` to take this line out".to_owned(),
+            Self::Ending { .. } => "end the file with a newline".to_owned(),
+        }
+    }
 }
 
 impl fmt::Display for Deviation {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Line {
-                number,
-                found,
-                canonical,
-            } => write!(
-                f,
-                "line {number} is not in canonical form\n  found:     {found}\n  canonical: {canonical}"
-            ),
-            Self::Extra { number, found } => {
-                write!(f, "line {number} is not part of canonical form: {found}")
+            Self::Line { .. } => write!(f, "this line is not in canonical form"),
+            Self::Extra { .. } => write!(f, "canonical form does not write this line"),
+            Self::Ending { .. } => {
+                write!(f, "this file does not end the way canonical form ends it")
             }
-            Self::Ending => write!(f, "the file does not end the way canonical form ends it"),
         }
     }
 }
 
 /// The first line the two texts disagree on, or the ending when every line agrees.
 fn first_deviation(source: &str, canonical: &str) -> Deviation {
-    let wanted: Vec<&str> = lines_of(canonical).collect();
-    for (index, found) in lines_of(source).enumerate() {
-        let number = LineNumber::of(index);
+    let wanted: Vec<&str> = lines_of(canonical).map(|line| line.text).collect();
+    let mut last = Line { at: 0, text: "" };
+    for (index, line) in lines_of(source).enumerate() {
+        last = line;
         match wanted.get(index) {
-            None => {
-                return Deviation::Extra {
-                    number,
-                    found: found.to_owned(),
-                };
-            }
-            Some(line) if *line == found => {}
-            Some(line) => {
+            None => return Deviation::Extra { span: line.span() },
+            Some(text) if *text == line.text => {}
+            Some(text) => {
                 return Deviation::Line {
-                    number,
-                    found: found.to_owned(),
-                    canonical: (*line).to_owned(),
+                    span: line.span(),
+                    canonical: (*text).to_owned(),
                 };
             }
         }
     }
-    Deviation::Ending
+    Deviation::Ending { span: last.span() }
 }
 
 /// The lines of a text, keeping a carriage return canonical form would not write.
 ///
 /// `str::lines` takes a `\r` off the end of a line, which would let a file written with Windows
 /// line endings match canonical form line for line and be reported for its ending instead.
-fn lines_of(text: &str) -> impl Iterator<Item = &str> {
-    text.split_inclusive('\n')
-        .map(|line| line.strip_suffix('\n').unwrap_or(line))
+fn lines_of(text: &str) -> impl Iterator<Item = Line<'_>> {
+    let mut at = 0;
+    text.split_inclusive('\n').map(move |line| {
+        let starts = at;
+        at += line.len();
+        Line {
+            at: starts,
+            text: line.strip_suffix('\n').unwrap_or(line),
+        }
+    })
 }
 
-/// A one-based line number, as an editor counts lines.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct LineNumber(NonZeroUsize);
-
-impl LineNumber {
-    /// The line an index into a list of lines names.
-    fn of(index: usize) -> Self {
-        Self(NonZeroUsize::new(index + 1).expect("one more than an index is never zero"))
-    }
-
-    /// The number, as it is written.
-    #[must_use]
-    pub const fn get(self) -> usize {
-        self.0.get()
-    }
+/// One line of a text, and the byte offset it begins at.
+#[derive(Clone, Copy)]
+struct Line<'a> {
+    at: usize,
+    text: &'a str,
 }
 
-impl fmt::Display for LineNumber {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.0)
+impl Line<'_> {
+    const fn span(self) -> Span {
+        Span::new(self.at, self.text.len())
     }
 }

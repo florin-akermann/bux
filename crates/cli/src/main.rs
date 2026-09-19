@@ -1,14 +1,15 @@
 //! The `lumen` command-line interface.
 //!
 //! This crate is CLI only: argument parsing, file access, and help rendering. Compiler logic
-//! lives in the per-phase crates under `crates/`, and what canonical form is belongs to
-//! `lumen-format` and to `docs/specs/formatting.md`.
+//! lives in the per-phase crates under `crates/`, what canonical form is belongs to
+//! `lumen-format`, and how a refusal reads belongs to `lumen-diagnostics`.
 
 use std::fs::{read_to_string, write};
 use std::path::{Path, PathBuf};
 use std::process::exit;
 
 use clap::{Parser, Subcommand};
+use lumen_diagnostics::{Code, Diagnostic, render};
 use lumen_format::format;
 
 /// The Lumen compiler.
@@ -27,6 +28,9 @@ enum Command {
     /// Report the first line of a source file that is not in canonical form
     #[command(long_about = include_str!("help/check.md"))]
     Check { file: PathBuf },
+    /// Print the long form of one diagnostic code
+    #[command(long_about = include_str!("help/explain.md"))]
+    Explain { code: String },
 }
 
 fn main() {
@@ -38,6 +42,7 @@ fn run(command: &Command) -> Outcome {
     match command {
         Command::Fmt { file } => fmt(file),
         Command::Check { file } => check(file),
+        Command::Explain { code } => explain(code),
     }
 }
 
@@ -47,7 +52,7 @@ fn fmt(path: &Path) -> Outcome {
         return Outcome::Unusable;
     };
     match format(&source) {
-        Err(error) => refuse(path, &error.message()),
+        Err(error) => refuse(&error.diagnostic(), &source, path),
         Ok(canonical) if canonical == source => Outcome::Done,
         Ok(canonical) => rewrite(path, &canonical),
     }
@@ -60,16 +65,26 @@ fn check(path: &Path) -> Outcome {
     };
     match lumen_format::check(&source) {
         Ok(()) => Outcome::Done,
-        Err(error) => refuse(path, &error.to_string()),
+        Err(error) => refuse(&error.diagnostic(), &source, path),
     }
+}
+
+/// Prints what one diagnostic code means, at more length than its `help:` line has room for.
+fn explain(written: &str) -> Outcome {
+    let Some(code) = Code::written_as(written) else {
+        eprintln!("error: there is no diagnostic {written}");
+        return Outcome::Unusable;
+    };
+    print!("{}", code.explanation());
+    Outcome::Done
 }
 
 /// What a run amounted to, which is what its exit code says.
 enum Outcome {
     Done,
-    /// The file is a file, and the compiler will not have it.
+    /// The compiler will not have what it was given.
     Refused,
-    /// The file could not be read or written, which is not about the program in it.
+    /// The command could not do its job at all, which is not about any program.
     Unusable,
 }
 
@@ -103,8 +118,11 @@ fn rewrite(path: &Path, canonical: &str) -> Outcome {
     }
 }
 
-/// Reports why a file will not do, in the voice of `docs/implementation.md` section 8.
-fn refuse(path: &Path, message: &str) -> Outcome {
-    eprintln!("error: {}: {message}", path.display());
+/// Reports why a file will not do, in the layout of `docs/specs/diagnostics.md`.
+fn refuse(diagnostic: &Diagnostic, source: &str, path: &Path) -> Outcome {
+    eprint!(
+        "{}",
+        render(diagnostic, source, &path.display().to_string())
+    );
     Outcome::Refused
 }

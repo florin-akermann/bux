@@ -155,17 +155,20 @@ The expectation names a thing the reader writes, never a parser state: `a name`,
 `an import, a type, or a function`, or the exact token, as in `` `)` ``.
 The found part names what is there the same way, or `the end of the file`.
 
+Every parse error carries a code, and `docs/specs/diagnostics.md` is the catalogue of them.
+An `expected <what>, found <what>` error is `L0100`, whatever it expected.
+
 Seven failures are not about which token was found, and have their own words:
 
-| Error                | Message                                        | Help                               |
-|----------------------|------------------------------------------------|------------------------------------|
-| `fn` without a name  | expected a function name, found `` `(` ``      | every function has a name          |
-| unterminated string  | this string has no closing quote               | add a closing `"`                  |
-| unknown character    | this character is not part of the language     | (none)                             |
-| unknown escape       | `` `\q` `` is not an escape                     | the escapes the language knows     |
-| number too large     | this number does not fit in a whole number     | the largest whole number           |
-| chained comparison   | comparisons do not chain                       | compare twice and join with `&&`   |
-| nesting too deep     | this nests too deeply to parse                 | how deep brackets may nest         |
+| Error               | Code    | Message                                    | Help                        |
+|---------------------|---------|--------------------------------------------|-----------------------------|
+| `fn` without a name | `L0100` | expected a function name, found `` `(` ``  | every function has a name   |
+| unterminated string | `L0101` | this string has no closing quote           | add a closing `"`           |
+| unknown character   | `L0102` | this character is not part of the language | (none)                      |
+| number too large    | `L0103` | this number does not fit in a whole number | the largest whole number    |
+| unknown escape      | `L0104` | `` `\q` `` is not an escape                | the escapes the language knows |
+| chained comparison  | `L0105` | comparisons do not chain                   | compare twice, join with `&&` |
+| nesting too deep    | `L0106` | this nests too deeply to parse             | how deep brackets may nest  |
 
 ## Executable examples
 

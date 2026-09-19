@@ -2,6 +2,7 @@
 
 use std::fmt;
 
+use lumen_diagnostics::{Code, Diagnostic};
 use lumen_lexer::{Keyword, Punct, Span, Token, TokenKind};
 
 /// Why a parse failed, and where.
@@ -23,6 +24,17 @@ impl ParseError {
     #[must_use]
     pub const fn span(&self) -> Span {
         self.span
+    }
+
+    /// This failure as the diagnostic the reader is shown.
+    #[must_use]
+    pub fn diagnostic(&self) -> Diagnostic {
+        Diagnostic::new(
+            self.kind.code(),
+            self.message(),
+            self.span,
+            self.help().map(str::to_owned),
+        )
     }
 
     /// The `error:` line, without its prefix.
@@ -51,6 +63,19 @@ pub(crate) enum ParseErrorKind {
 }
 
 impl ParseErrorKind {
+    /// The code this failure is refused with, which `docs/specs/diagnostics.md` lists.
+    const fn code(&self) -> Code {
+        match self {
+            Self::Expected { .. } => Code::UnexpectedToken,
+            Self::UnterminatedString => Code::UnterminatedString,
+            Self::UnknownCharacter => Code::UnknownCharacter,
+            Self::IntegerTooLarge => Code::IntegerTooLarge,
+            Self::UnknownEscape(_) => Code::UnknownEscape,
+            Self::ChainedComparison => Code::ChainedComparison,
+            Self::NestingTooDeep => Code::NestingTooDeep,
+        }
+    }
+
     const fn help(&self) -> Option<&'static str> {
         match self {
             Self::Expected {
