@@ -6,16 +6,6 @@
 
 ## Open
 
-## 🟢 Item 013: Machine-applicable diagnostics
-**Depends on:** Item 003, Item 004 — the first fixes are the formatter's own repairs.
-`lumen check --json` writes diagnostics as data: code, message, byte span, and a fix where known.
-A canonical-form deviation carries its replacement, so a tool applies the compiler's own edit.
-Nothing downstream reformats a file by hand to satisfy the gate.
-[013][a] - Spec first in `docs/specs/diagnostics.md`: the JSON shape and the edit representation.
-[013][b] - The serialiser, test-first against golden JSON; spans are byte offsets into the source.
-[013][c] - Formatting deviations emit the canonical replacement for their span.
-[013][d] - Help topic for `--json` in `crates/cli/src/help/`.
-
 ## 🔴 Item 015: An executable example per public function
 **Depends on:** Item 005, Item 010 — the harness runs the examples, and running them needs a JDK.
 A public function carries at least one executable example, or the module does not compile.
