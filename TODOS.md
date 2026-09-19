@@ -6,16 +6,6 @@
 
 ## Open
 
-## 🟢 Item 006: Name resolution and basic modules
-**Depends on:** Item 002 — resolution consumes the untyped AST.
-A `resolver` crate produces a `ResolvedAst` where every name points at its definition.
-One file is one module; `import` brings another module's public names into scope.
-One name has one definition: nothing is shadowed and nothing is overloaded, so search is sound.
-`docs/design.md` states that rule before the resolver enforces it.
-[006][a] - Spec first in `docs/specs/modules.md`: visibility, imports, the unresolved-name error.
-[006][b] - Scopes and definitions, test-first; shadowing and overloading are named errors.
-[006][c] - Executable examples under `tests/spec/name_resolution/`.
-
 ## 🔴 Item 007: Type inference
 **Depends on:** Item 006 — inference runs on the resolved AST.
 A `types` crate does Hindley-Milner inference with let-polymorphism over the version 0.1 types.
