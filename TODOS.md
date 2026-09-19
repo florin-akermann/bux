@@ -117,7 +117,7 @@ A test runs it with the suite, so the one program the README promises can never 
 [021][c] - An integration test runs it through the CLI, skipped with a named reason when no JDK.
 [021][d] - README names the one command that runs it; class files beside it are ignored by git.
 
-## 🔴 Item 022: `==` requires `Eq` rather than every type
+## 🟡 Item 022: `==` requires `Eq` rather than every type
 Every type is equatable today, which is Java's object model arriving by the back door.
 `crates/types/src/infer.rs` accepts `==` between any two operands that share a type.
 `crates/ir/src/lower/classes.rs` gives every record and every variant a generated `equals`.
