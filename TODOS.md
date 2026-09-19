@@ -6,17 +6,6 @@
 
 ## Open
 
-## 🟢 Item 003: Canonical formatting as a compile gate
-**Depends on:** Item 002 — the formatter is the AST pretty-printer.
-A `format` crate prints the one canonical form of an AST; `docs/design.md` section 13 is the rule.
-A source file compiles only if `format(parse(source)) == source`, byte for byte.
-[003][a] - Spec first in `docs/specs/formatting.md`: indentation, spacing, line breaks, comments.
-[003][b] - The printer, test-first per construct; comments survive the round trip.
-[003][c] - Property tests: the printer is idempotent, and its output always parses.
-[003][d] - `lumen fmt <file>` rewrites in place; `lumen check <file>` reports the first deviation.
-[003][e] - Help topics for `fmt` and `check` in `crates/cli/src/help/`.
-[003][f] - Item 002's deferred property: a printed AST parses back to an equal AST.
-
 ## 🔴 Item 004: Diagnostics rendering
 **Depends on:** Item 002 — the first diagnostics are parse errors.
 A `diagnostics` crate renders `error[L0142]:`, the source line, a caret span, and a `help:`.
