@@ -6,7 +6,7 @@
 
 ## Open
 
-## 🔴 Item 004: Diagnostics rendering
+## 🟡 Item 004: Diagnostics rendering
 **Depends on:** Item 002 — the first diagnostics are parse errors.
 A `diagnostics` crate renders `error[L0142]:`, the source line, a caret span, and a `help:`.
 The voice is `docs/implementation.md` section 8; no diagnostic ever mentions the JVM.
