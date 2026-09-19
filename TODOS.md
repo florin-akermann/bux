@@ -16,16 +16,6 @@ The examples run with the test suite, so a signature never drifts from the evide
 [015][d] - Executable examples: a public function without one fails to compile.
 
 
-## 🟢 Item 017: A parameter is never a bare `Bool`
-**Depends on:** Item 016 — the rule shares its spec and its error voice with named arguments.
-mycs lints `Flag Argument`; the language removes it by refusing a `Bool` parameter outright.
-A two-variant ADT takes its place, so `open(ReadOnly)` reads where `open(true)` did not.
-The project already prefers one sum type over a pair of flags; this makes it the only option.
-[017][a] - `docs/design.md` section 11 states the rule; `docs/specs/arguments.md` gives the error.
-[017][b] - The spec settles the one carve-out: a boolean operation over `Bool` is still writable.
-[017][c] - The check after inference, test-first; the `help:` names the two-variant ADT to write.
-[017][d] - Executable examples under `tests/spec/arguments/`, including the compile-fail case.
-
 ## 🔴 Item 019: Canonical naming as part of canonical form
 **Depends on:** Item 003, Item 007 — casing is a formatter rule; the predicate rule needs types.
 mycs reports `Cryptic Public Identifier`, `Acronym Casing`, and `Boolean Predicate Prefix`.
