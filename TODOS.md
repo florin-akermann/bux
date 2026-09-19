@@ -6,7 +6,7 @@
 
 ## Open
 
-## 🔴 Item 013: Machine-applicable diagnostics
+## 🟡 Item 013: Machine-applicable diagnostics
 **Depends on:** Item 003, Item 004 — the first fixes are the formatter's own repairs.
 `lumen check --json` writes diagnostics as data: code, message, byte span, and a fix where known.
 A canonical-form deviation carries its replacement, so a tool applies the compiler's own edit.
