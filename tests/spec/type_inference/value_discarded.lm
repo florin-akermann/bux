@@ -1,0 +1,10 @@
+// expect-error: L0408
+// `save` gives back a `Result`, and this line drops it where nothing can read it.
+fn main() -> () {
+    save(1)
+    ()
+}
+
+fn save(value: Int) -> Result<(), String> {
+    Ok(())
+}

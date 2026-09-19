@@ -74,7 +74,7 @@ fn from_statement<'a>(statement: &'a Statement, into: &mut Vec<&'a Expr>) {
             }
             from_block(&walked.body, into);
         }
-        StatementKind::Expr(expr) => from_expr(expr, into),
+        StatementKind::Discard(expr) | StatementKind::Expr(expr) => from_expr(expr, into),
     }
 }
 

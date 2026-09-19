@@ -76,6 +76,10 @@ fn statement(printer: &mut Printer, written: &Statement) {
         StatementKind::Break => printer.word("break"),
         StatementKind::Continue => printer.word("continue"),
         StatementKind::For(loop_) => for_loop(printer, loop_),
+        StatementKind::Discard(value) => {
+            printer.word("_ = ");
+            operand(printer, value, 0, Records::Allowed);
+        }
         StatementKind::Expr(value) => operand(printer, value, 0, Records::Allowed),
     }
 }

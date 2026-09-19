@@ -124,3 +124,70 @@ fn a_generic_function_is_general_enough_for_any_two_uses(tc: TestCase) {
         second_type
     );
 }
+
+/// The statements a generated body is built from, each with the type it leaves behind.
+///
+/// `docs/specs/discarding.md` is about what a statement leaves, so the generator varies exactly
+/// that: `()` from one, something worth reading from the next.
+const STATEMENTS: [(&str, &str); 4] = [
+    ("log(1)", "()"),
+    ("()", "()"),
+    ("save(1)", "Result<(), String>"),
+    ("1 == 2", "Bool"),
+];
+
+#[hegel::test]
+fn a_statement_that_leaves_a_value_is_refused_above_the_last_one(tc: TestCase) {
+    let (above, left) = tc.draw(gs::sampled_from(&STATEMENTS));
+
+    let refused = !accepts(&body("()", &format!("    {above}\n    ()")));
+
+    assert_eq!(refused, left != UNIT, "{above} above `()` leaves {left}");
+}
+
+#[hegel::test]
+fn the_last_statement_of_a_body_is_the_value_the_function_gives_back(tc: TestCase) {
+    let (last, left) = tc.draw(gs::sampled_from(&STATEMENTS));
+
+    assert!(
+        accepts(&body(left, &format!("    {last}"))),
+        "{last} leaves the {left} its function gives back"
+    );
+}
+
+#[hegel::test]
+fn an_underscore_and_an_equals_make_any_statement_compile(tc: TestCase) {
+    let (thrown, left) = tc.draw(gs::sampled_from(&STATEMENTS));
+
+    assert!(
+        accepts(&body(UNIT, &format!("    _ = {thrown}\n    ()"))),
+        "_ = {thrown} throws away {left}"
+    );
+}
+
+/// The type of a statement that leaves nothing behind, which is what a discarded one must be.
+const UNIT: &str = "()";
+
+/// A module whose `main` gives back `result` and holds `written`, over the functions it calls.
+fn body(result: &str, written: &str) -> String {
+    format!(
+        concat!(
+            "fn main() -> {result} {{\n{written}\n}}\n\n",
+            "fn save(value: Int) -> Result<(), String> {{\n    Ok(())\n}}\n\n",
+            "fn log(value: Int) -> () {{\n    ()\n}}\n"
+        ),
+        result = result,
+        written = written
+    )
+}
+
+/// Whether the whole front end has `source`, which is what `lumen check` answers.
+fn accepts(source: &str) -> bool {
+    let Ok(program) = parse(source) else {
+        return false;
+    };
+    let Ok(resolved) = resolve(program) else {
+        return false;
+    };
+    check(resolved).is_ok()
+}

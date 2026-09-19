@@ -72,6 +72,9 @@ names is the settled one.
 
 A block's type is the type of its last statement when that statement is an expression, and `()`
 otherwise.
+Every statement above the last one is written for its effect, so its type is `()` and anything
+else is `L0408`; `docs/specs/discarding.md` states which blocks give their last statement's value
+away and which discard that one too.
 A block whose last statement is `return`, `break`, or `continue` has whatever type is asked of it,
 because control has already left.
 
@@ -132,6 +135,7 @@ the value it was given.
 | field given twice | `L0405` | `User` is given `id` twice                       |
 | not equatable     | `L0406` | `User` has no `Eq`, so two of them cannot be compared |
 | zero divisor      | `L0407` | this divisor is zero, so there is no answer      |
+| value discarded   | `L0408` | `Result<(), Error>` is left here and nothing takes it |
 
 `L0400` also says `` `Bool` cannot be added `` when `+` is given something that is neither `Int`
 nor `String`.

@@ -241,6 +241,10 @@ fn statement_node(tree: &mut Tree, depth: usize, statement: &Statement) {
         StatementKind::Break => tree.node(depth, "break", span),
         StatementKind::Continue => tree.node(depth, "continue", span),
         StatementKind::For(loop_) => for_node(tree, depth, span, loop_),
+        StatementKind::Discard(expr) => {
+            tree.node(depth, "discard", span);
+            expr_node(tree, depth + 1, expr);
+        }
         StatementKind::Expr(expr) => expr_node(tree, depth, expr),
     }
 }

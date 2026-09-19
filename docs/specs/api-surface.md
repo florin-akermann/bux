@@ -79,6 +79,8 @@ same thing.
 Two `_` on one line are not necessarily the same type: the page states what the module states, and
 a module that states nothing there has nothing for the page to print.
 Writing the signature is what turns a `_` into a type, and it is the author's to write.
+`_` is reserved for the discard of `docs/specs/discarding.md` and is no type either, so the page
+is a thing to read rather than a signature to paste.
 
 ## Exit codes
 

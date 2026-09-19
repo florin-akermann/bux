@@ -132,7 +132,7 @@ fn a_function_name_is_refused_wherever_a_value_is_written() {
         "    return helper\n",
         "    helper + 1\n",
         "    take(helper)\n",
-        "    match helper {\n        _ => 1\n    }\n",
+        "    match helper {\n        anything => 1\n    }\n",
     ];
     for place in places {
         let source = format!(

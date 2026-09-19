@@ -25,6 +25,14 @@ fn var_binds_a_name_that_may_be_assigned_to() {
 }
 
 #[test]
+fn an_underscore_and_an_equals_throw_the_value_away_on_purpose() {
+    assert_eq!(
+        in_function("    _ = save(user)"),
+        ["discard", "  call", "    name save", "    name user"]
+    );
+}
+
+#[test]
 fn an_assignment_replaces_or_adds_to_what_a_name_holds() {
     assert_eq!(
         in_function("    total = 1"),

@@ -38,6 +38,11 @@ pub enum StatementKind {
     Break,
     Continue,
     For(Box<ForLoop>),
+    /// `_ = save(user)`, which works the value out and throws it away on purpose.
+    ///
+    /// `docs/specs/discarding.md` says why the language makes a reader write this rather than
+    /// letting a statement drop a value in silence.
+    Discard(Expr),
     /// An expression evaluated for its value or its effect, including `if` and `match`.
     Expr(Expr),
 }

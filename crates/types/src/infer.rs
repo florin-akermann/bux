@@ -37,6 +37,7 @@ pub(crate) fn infer(resolved: &ResolvedProgram) -> Result<HashMap<Span, Type>, T
         introduced: Vec::new(),
         additions: Vec::new(),
         equalities: Vec::new(),
+        discards: Vec::new(),
         lookups: Vec::new(),
     };
     inference.module()?;
@@ -57,6 +58,9 @@ struct Inference<'a> {
     additions: Vec<(Type, Span)>,
     /// The comparisons of the current function, each waiting to be of a type that has `Eq`.
     equalities: Vec<(Type, Span)>,
+    /// The statements of the current function that nothing takes the value of, each of which
+    /// must therefore have no value to take.
+    discards: Vec<(Type, Span)>,
     /// The fields of the current function, each waiting on the type it is reached through.
     lookups: Vec<Lookup>,
 }
@@ -88,11 +92,12 @@ impl Inference<'_> {
             self.introduce(&written.name, Scheme::monomorphic(declared.clone()));
         }
         self.result = (*result).clone();
-        let body = self.block(&function.body)?;
+        let body = self.block(&function.body, Gives::ItsValue)?;
         self.look_up_fields()?;
         self.expect(&(*result).clone(), &body, function.body.span)?;
         self.settle_additions()?;
         self.settle_equalities()?;
+        self.settle_discards()?;
         for gone in mem::take(&mut self.introduced) {
             self.environment.unbind(&gone);
         }
@@ -100,12 +105,32 @@ impl Inference<'_> {
         Ok(())
     }
 
-    fn block(&mut self, block: &Block) -> Result<Type, TypeError> {
+    /// What a block leaves behind, having refused every statement that leaves something unread.
+    ///
+    /// Every statement but the last is written for its effect, and the last one too when the
+    /// block gives its value to nothing; `docs/specs/discarding.md` states the rule.
+    fn block(&mut self, block: &Block, gives: Gives) -> Result<Type, TypeError> {
         let mut value = Type::Unit;
-        for statement in &block.statements {
+        let last = block.statements.len().saturating_sub(1);
+        for (at, statement) in block.statements.iter().enumerate() {
             value = self.statement(statement)?;
+            if at < last || gives == Gives::Nothing {
+                self.discarded(statement, &value);
+            }
         }
         Ok(value)
+    }
+
+    /// Records a statement whose value nothing takes, to be answered once the function is done.
+    ///
+    /// Only a bare expression is asked about. A binding, an assignment, and a `for` leave `()`,
+    /// and `_ =` says the value was thrown away on purpose; `return`, `break`, and `continue`
+    /// leave a fresh variable because control has already gone, and asking `()` of that would
+    /// settle a type the source never wrote.
+    fn discarded(&mut self, statement: &Statement, value: &Type) {
+        if let StatementKind::Expr(left) = &statement.kind {
+            self.discards.push((value.clone(), left.span));
+        }
     }
 
     /// What a statement leaves behind, which is the block's value when it is the last one.
@@ -125,6 +150,10 @@ impl Inference<'_> {
             StatementKind::Break | StatementKind::Continue => Ok(self.table.fresh()),
             StatementKind::For(walked) => {
                 self.for_loop(walked)?;
+                Ok(Type::Unit)
+            }
+            StatementKind::Discard(expr) => {
+                self.expr(expr)?;
                 Ok(Type::Unit)
             }
             StatementKind::Expr(expr) => self.expr(expr),
@@ -184,7 +213,7 @@ impl Inference<'_> {
                 self.introduce(binding, Scheme::monomorphic(item));
             }
         }
-        self.block(&walked.body)?;
+        self.block(&walked.body, Gives::Nothing)?;
         Ok(())
     }
 
@@ -344,10 +373,13 @@ impl Inference<'_> {
         let mut blocks = Vec::new();
         for branch in &chain.branches {
             self.condition(&branch.condition)?;
-            blocks.push((self.block(&branch.block)?, branch.block.span));
+            blocks.push((
+                self.block(&branch.block, Gives::ItsValue)?,
+                branch.block.span,
+            ));
         }
         let result = match &chain.otherwise {
-            Some(block) => self.block(block)?,
+            Some(block) => self.block(block, Gives::ItsValue)?,
             None => Type::Unit,
         };
         for (found, span) in blocks {
@@ -525,4 +557,14 @@ fn name_of(callee: &Expr) -> Option<&Name> {
         ExprKind::Name(name) | ExprKind::Field { name, .. } => Some(name),
         _ => None,
     }
+}
+
+/// What becomes of a block's value, which decides whether its last statement is discarded.
+///
+/// A function body gives its value to the result the function declares, and an `if` or a `match`
+/// gives its value to the expression it is written in. A `for` body gives its value to nothing.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Gives {
+    ItsValue,
+    Nothing,
 }

@@ -59,18 +59,35 @@ impl TypeError {
 /// What went wrong, in the words the reader sees.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) enum TypeErrorKind {
-    Mismatch { expected: Type, found: Type },
+    Mismatch {
+        expected: Type,
+        found: Type,
+    },
     NotAddable(Type),
     WrongArgumentCount(Count),
     WrongTypeArgumentCount(Count),
-    UnknownField { of: Type, field: String },
+    UnknownField {
+        of: Type,
+        field: String,
+    },
     UnknownReceiver(String),
-    InModule { module: String, name: String },
+    InModule {
+        module: String,
+        name: String,
+    },
     Infinite,
-    MissingField { of: String, field: String },
-    FieldWrittenTwice { of: String, field: String },
+    MissingField {
+        of: String,
+        field: String,
+    },
+    FieldWrittenTwice {
+        of: String,
+        field: String,
+    },
     NotEquatable(Type),
     DivisorIsZero,
+    /// A statement leaves a value behind and nothing takes it.
+    Discarded(Type),
 }
 
 impl TypeErrorKind {
@@ -89,6 +106,7 @@ impl TypeErrorKind {
             Self::FieldWrittenTwice { .. } => Code::FieldWrittenTwice,
             Self::NotEquatable(_) => Code::NotEquatable,
             Self::DivisorIsZero => Code::DivisorIsZero,
+            Self::Discarded(_) => Code::Discarded,
         }
     }
 
@@ -118,6 +136,7 @@ impl TypeErrorKind {
                 "`==` and `!=` need `Eq`, which version 0.1 gives to `Int`, `Bool`, and `String`"
             }
             Self::DivisorIsZero => "a zero written here is never anything else; drop the division",
+            Self::Discarded(_) => "write `_ = ` in front of it to throw the value away on purpose",
         }
     }
 }
@@ -158,6 +177,7 @@ impl fmt::Display for TypeErrorKind {
                 )
             }
             Self::DivisorIsZero => write!(f, "this divisor is zero, so there is no answer"),
+            Self::Discarded(left) => write!(f, "`{left}` is left here and nothing takes it"),
         }
     }
 }

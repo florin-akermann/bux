@@ -25,200 +25,93 @@ pub enum TokenKind {
     Unknown,
 }
 
-/// The words the version 0.1 grammar reserves.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Keyword {
-    Fn,
-    Type,
-    Var,
-    If,
-    Else,
-    For,
-    In,
-    Match,
-    Break,
-    Continue,
-    Return,
-    Import,
-    True,
-    False,
-}
-
-impl Keyword {
-    /// The word that spells this keyword.
-    #[must_use]
-    pub const fn text(self) -> &'static str {
-        match self {
-            Self::Fn => "fn",
-            Self::Type => "type",
-            Self::Var => "var",
-            Self::If => "if",
-            Self::Else => "else",
-            Self::For => "for",
-            Self::In => "in",
-            Self::Match => "match",
-            Self::Break => "break",
-            Self::Continue => "continue",
-            Self::Return => "return",
-            Self::Import => "import",
-            Self::True => "true",
-            Self::False => "false",
+/// Declares a fixed vocabulary: the kinds, the text that spells each, and the list of them all.
+///
+/// Writing those three out separately is what lets them drift, and the drift that matters is a
+/// spelling the lexer scans for but no kind names, or a kind nothing scans for. Here a kind
+/// cannot be declared without its text, nor without joining the list the scanner searches.
+macro_rules! vocabulary {
+    (
+        $(#[$about:meta])*
+        $name:ident, $every:ident, $order:literal:
+        $($(#[$each:meta])* $kind:ident => $text:literal,)+
+    ) => {
+        $(#[$about])*
+        #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+        pub enum $name {
+            $($(#[$each])* $kind,)+
         }
-    }
-}
 
-/// Operators and punctuation.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Punct {
-    /// `:=`
-    Walrus,
-    /// `==`
-    EqEq,
-    /// `!=`
-    BangEq,
-    /// `<=`
-    LtEq,
-    /// `>=`
-    GtEq,
-    /// `+=`
-    PlusEq,
-    /// `&&`
-    AndAnd,
-    /// `||`
-    OrOr,
-    /// `->`
-    Arrow,
-    /// `=>`
-    FatArrow,
-    /// `=`
-    Eq,
-    /// `<`
-    Lt,
-    /// `>`
-    Gt,
-    /// `+`
-    Plus,
-    /// `-`
-    Minus,
-    /// `*`
-    Star,
-    /// `/`
-    Slash,
-    /// `%`
-    Percent,
-    /// `!`
-    Bang,
-    /// `?`
-    Question,
-    /// `.`
-    Dot,
-    /// `,`
-    Comma,
-    /// `:`
-    Colon,
-    /// `|`
-    Pipe,
-    /// `(`
-    LParen,
-    /// `)`
-    RParen,
-    /// `{`
-    LBrace,
-    /// `}`
-    RBrace,
-    /// `[`
-    LBracket,
-    /// `]`
-    RBracket,
-}
-
-impl Punct {
-    /// The characters that spell this punctuation.
-    #[must_use]
-    pub const fn text(self) -> &'static str {
-        match self {
-            Self::Walrus => ":=",
-            Self::EqEq => "==",
-            Self::BangEq => "!=",
-            Self::LtEq => "<=",
-            Self::GtEq => ">=",
-            Self::PlusEq => "+=",
-            Self::AndAnd => "&&",
-            Self::OrOr => "||",
-            Self::Arrow => "->",
-            Self::FatArrow => "=>",
-            Self::Eq => "=",
-            Self::Lt => "<",
-            Self::Gt => ">",
-            Self::Plus => "+",
-            Self::Minus => "-",
-            Self::Star => "*",
-            Self::Slash => "/",
-            Self::Percent => "%",
-            Self::Bang => "!",
-            Self::Question => "?",
-            Self::Dot => ".",
-            Self::Comma => ",",
-            Self::Colon => ":",
-            Self::Pipe => "|",
-            Self::LParen => "(",
-            Self::RParen => ")",
-            Self::LBrace => "{",
-            Self::RBrace => "}",
-            Self::LBracket => "[",
-            Self::RBracket => "]",
+        impl $name {
+            /// The text that spells this one.
+            #[must_use]
+            pub const fn text(self) -> &'static str {
+                match self {
+                    $(Self::$kind => $text,)+
+                }
+            }
         }
-    }
+
+        #[doc = $order]
+        pub(crate) const $every: &[$name] = &[$($name::$kind,)+];
+    };
 }
 
-/// Every keyword, so that a word can be looked up among them.
-pub(crate) const KEYWORDS: [Keyword; 14] = [
-    Keyword::Fn,
-    Keyword::Type,
-    Keyword::Var,
-    Keyword::If,
-    Keyword::Else,
-    Keyword::For,
-    Keyword::In,
-    Keyword::Match,
-    Keyword::Break,
-    Keyword::Continue,
-    Keyword::Return,
-    Keyword::Import,
-    Keyword::True,
-    Keyword::False,
-];
+vocabulary! {
+    /// The words the version 0.1 grammar reserves.
+    ///
+    /// `_` is reserved among them although it is no word: it spells the discard of
+    /// `docs/specs/discarding.md` and is never an identifier, while `_x` is a name as ever.
+    Keyword, KEYWORDS, "Every keyword, so that a word can be looked up among them.":
+    Fn => "fn",
+    Type => "type",
+    Var => "var",
+    If => "if",
+    Else => "else",
+    For => "for",
+    In => "in",
+    Match => "match",
+    Break => "break",
+    Continue => "continue",
+    Return => "return",
+    Import => "import",
+    True => "true",
+    False => "false",
+    /// `_`, which is written on the left of `=` and nowhere else.
+    Underscore => "_",
+}
 
-/// Every punctuation, longest first so that `:=` wins over `:` and `->` over `-`.
-pub(crate) const PUNCTUATION: [Punct; 30] = [
-    Punct::Walrus,
-    Punct::EqEq,
-    Punct::BangEq,
-    Punct::LtEq,
-    Punct::GtEq,
-    Punct::PlusEq,
-    Punct::AndAnd,
-    Punct::OrOr,
-    Punct::Arrow,
-    Punct::FatArrow,
-    Punct::Eq,
-    Punct::Lt,
-    Punct::Gt,
-    Punct::Plus,
-    Punct::Minus,
-    Punct::Star,
-    Punct::Slash,
-    Punct::Percent,
-    Punct::Bang,
-    Punct::Question,
-    Punct::Dot,
-    Punct::Comma,
-    Punct::Colon,
-    Punct::Pipe,
-    Punct::LParen,
-    Punct::RParen,
-    Punct::LBrace,
-    Punct::RBrace,
-    Punct::LBracket,
-    Punct::RBracket,
-];
+vocabulary! {
+    /// Operators and punctuation.
+    Punct, PUNCTUATION, "Every punctuation, longest first so `:=` wins over `:` and `->` over `-`.":
+    Walrus => ":=",
+    EqEq => "==",
+    BangEq => "!=",
+    LtEq => "<=",
+    GtEq => ">=",
+    PlusEq => "+=",
+    AndAnd => "&&",
+    OrOr => "||",
+    Arrow => "->",
+    FatArrow => "=>",
+    Eq => "=",
+    Lt => "<",
+    Gt => ">",
+    Plus => "+",
+    Minus => "-",
+    Star => "*",
+    Slash => "/",
+    Percent => "%",
+    Bang => "!",
+    Question => "?",
+    Dot => ".",
+    Comma => ",",
+    Colon => ":",
+    Pipe => "|",
+    LParen => "(",
+    RParen => ")",
+    LBrace => "{",
+    RBrace => "}",
+    LBracket => "[",
+    RBracket => "]",
+}

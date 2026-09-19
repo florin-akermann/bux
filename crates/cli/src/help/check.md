@@ -17,7 +17,9 @@ reads top down, so the reader meets the intent before the detail.
 
 Type inference comes next. A type written where another is needed, a call with the wrong number
 of arguments, a field a record does not declare, and a record built without one of its fields are
-each refused. Inside a function the types are inferred, so a signature is written where it
+each refused. A statement that leaves a value behind and gives it to nothing is refused here as
+well, because a dropped `Result` is a swallowed failure; `_ = save(user)` throws a value away on
+purpose and says so. Inside a function the types are inferred, so a signature is written where it
 documents a boundary rather than on every line.
 
 Exhaustiveness comes last. A `match` that leaves a value of the type it matches unanswered is

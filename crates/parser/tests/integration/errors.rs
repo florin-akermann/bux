@@ -204,3 +204,25 @@ fn the_refused_assignment_points_at_what_was_written_on_the_left() {
         "the span covers the target, not the whole line"
     );
 }
+
+#[test]
+fn an_underscore_is_written_on_the_left_of_a_single_equals_and_nowhere_else() {
+    let refused = [
+        ("fn f() {\n    _ += 1\n}\n", "expected `=`, found `+=`"),
+        ("fn f() {\n    _ := 1\n}\n", "expected `=`, found `:=`"),
+        ("fn f() {\n    _\n}\n", "expected `=`, found `}`"),
+        ("fn f() {\n    var _ = 1\n}\n", "expected a name, found `_`"),
+        (
+            "fn f() {\n    go(_)\n}\n",
+            "expected an expression, found `_`",
+        ),
+        (
+            "fn f(users: List<Int>) {\n    for _ in users {\n        go()\n    }\n}\n",
+            "expected an expression, found `_`",
+        ),
+    ];
+
+    for (source, said) in refused {
+        assert_eq!(message(source), said, "{source:?}");
+    }
+}

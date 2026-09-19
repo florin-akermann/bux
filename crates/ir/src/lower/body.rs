@@ -130,8 +130,15 @@ impl<'a> Builder<'a> {
             StatementKind::Break => self.broken(),
             StatementKind::Continue => self.continued(),
             StatementKind::For(repeated) => self.for_loop(repeated),
+            StatementKind::Discard(value) => self.discarded(value),
             StatementKind::Expr(_) => {}
         }
+    }
+
+    /// `_ = save(user)`: the value is worked out for its effect and then dropped.
+    fn discarded(&mut self, value: &Expr) {
+        let left = self.expr(value);
+        self.adapt(left, None);
     }
 
     fn binding(&mut self, name: &Name, value: &Expr) {

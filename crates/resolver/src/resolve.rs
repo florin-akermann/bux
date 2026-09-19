@@ -217,7 +217,7 @@ impl Resolver {
             },
             StatementKind::Break | StatementKind::Continue => Ok(()),
             StatementKind::For(loop_) => self.for_loop(loop_),
-            StatementKind::Expr(expr) => self.expr(expr),
+            StatementKind::Discard(expr) | StatementKind::Expr(expr) => self.expr(expr),
         }
     }
 

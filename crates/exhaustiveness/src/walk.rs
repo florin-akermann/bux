@@ -42,6 +42,7 @@ impl Walk<'_> {
         match &statement.kind {
             StatementKind::Binding { value, .. }
             | StatementKind::Assign { value, .. }
+            | StatementKind::Discard(value)
             | StatementKind::Expr(value) => self.expr(value),
             StatementKind::Return(returned) => match returned {
                 Some(value) => self.expr(value),

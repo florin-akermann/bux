@@ -62,6 +62,18 @@ fn a_non_ascii_letter_is_an_unknown_token_covering_the_whole_character() {
 }
 
 #[test]
+fn a_bare_underscore_is_the_discard_and_never_an_identifier() {
+    assert_eq!(kinds("_"), [TokenKind::Keyword(Keyword::Underscore)]);
+}
+
+#[test]
+fn an_underscore_with_a_word_on_it_is_an_ordinary_identifier() {
+    assert_eq!(kinds("_x"), [TokenKind::Identifier]);
+    assert_eq!(kinds("__"), [TokenKind::Identifier]);
+    assert_eq!(kinds("total_paid"), [TokenKind::Identifier]);
+}
+
+#[test]
 fn the_word_of_a_keyword_lexes_back_to_it() {
     for keyword in ALL_KEYWORDS {
         assert_eq!(
@@ -75,7 +87,7 @@ fn the_word_of_a_keyword_lexes_back_to_it() {
 }
 
 /// Every keyword of the version 0.1 surface, in the order `docs/specs/lexer.md` lists them.
-const ALL_KEYWORDS: [Keyword; 14] = [
+const ALL_KEYWORDS: [Keyword; 15] = [
     Keyword::Fn,
     Keyword::Type,
     Keyword::Var,
@@ -90,4 +102,5 @@ const ALL_KEYWORDS: [Keyword; 14] = [
     Keyword::Import,
     Keyword::True,
     Keyword::False,
+    Keyword::Underscore,
 ];

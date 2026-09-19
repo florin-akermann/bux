@@ -1,0 +1,16 @@
+// Throwing a value away is written, so a reader greps `_ = ` for everything a function ignores.
+fn main(values: List<Int>) -> () {
+    _ = save(0)
+    for value in values {
+        _ = save(value)
+    }
+    log(1)
+}
+
+fn save(value: Int) -> Result<(), String> {
+    Ok(())
+}
+
+fn log(value: Int) -> () {
+    ()
+}

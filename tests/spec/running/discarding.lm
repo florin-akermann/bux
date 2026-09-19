@@ -1,0 +1,31 @@
+// expect-run
+// A discarded value is worked out and dropped, whatever width the JVM holds it in.
+fn main() -> () {
+    _ = plain(2)
+    _ = "thrown away"
+    _ = wrapped(3)
+    _ = reads(wrapped(4))
+    var count = 0
+    for count < 3 {
+        _ = plain(count)
+        _ = wrapped(count)
+        count += 1
+    }
+    ()
+}
+
+fn plain(value: Int) -> Int {
+    value + 1
+}
+
+fn wrapped(value: Int) -> UserId {
+    UserId(value)
+}
+
+fn reads(id: UserId) -> Bool {
+    match id {
+        UserId(raw) => raw > 0
+    }
+}
+
+type UserId = UserId(Int)

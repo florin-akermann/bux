@@ -47,6 +47,8 @@ A refusal names a value the match does not cover, written in the shape of an arm
 cover it.
 `_` stands there for any value, which an arm writes as a name of its own: version 0.1 has no
 pattern that matches without binding.
+`_` is reserved for the discard of `docs/specs/discarding.md` and is no pattern at all, so a
+witness is read and answered rather than pasted back into the file.
 
 ```text
 error[L0500]: this `match` does not cover `Failed(_)`

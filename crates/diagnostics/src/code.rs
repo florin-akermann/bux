@@ -92,6 +92,8 @@ catalogue! {
     NotEquatable => "L0406",
     /// A divisor is written as zero, which the compiler can see has no answer.
     DivisorIsZero => "L0407",
+    /// A statement leaves a value behind and nothing takes it.
+    Discarded => "L0408",
     /// A `match` leaves a value of the type it matches unanswered.
     NonExhaustiveMatch => "L0500",
     /// A `match` lists its arms in an order the type does not declare its variants in.

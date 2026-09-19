@@ -7,12 +7,13 @@ use lumen_format::{CheckError, check, format};
 use crate::common::tree;
 
 /// The item shapes a generated program is built from, each already in canonical form.
-const ITEMS: [&str; 6] = [
+const ITEMS: [&str; 7] = [
     "import io",
     "type UserId = UserId(Int)",
     "type User = {\n    id: UserId\n}",
     "type Payment =\n    | Pending\n    | Failed(String)",
     "fn f(a: Int) -> Int {\n    // why this is here\n    a + 1 * (2 - 3)\n}",
+    "fn dropped(a: Int) -> Int {\n    _ = f(a)\n    a\n}",
     "fn g(p: Payment) -> Int {\n    match p {\n        Pending => 1\n        Failed(reason) => 2\n    }\n}",
 ];
 

@@ -79,10 +79,11 @@ parameters     := parameter { "," parameter }
 parameter      := Name [ ":" type ]
 
 block          := "{" { statement } "}"
-statement      := binding | assignment | "return" [ expression ]
+statement      := binding | assignment | discard | "return" [ expression ]
                 | "break" | "continue" | for | expression
 binding        := Name ":=" expression | "var" Name "=" expression
 assignment     := Name ( "=" | "+=" ) expression
+discard        := "_" "=" expression
 for            := "for" [ Name "in" expression | expression ] block
 
 expression     := or

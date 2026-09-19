@@ -321,6 +321,11 @@ An error type there would carry nothing the caller is not already holding.
 There is no `unwrap` and no `expect`, in the prelude or anywhere else.
 `or(maybe, fallback)` is the total default, named for what it does rather than for what it is not.
 
+**A value nothing takes is a compile error**, because a dropped `Result` is a swallowed failure.
+A statement written for its effect has nothing to leave behind, so its type is `()`.
+Throwing a value away is written rather than implied: `_ = save(user)` says it and `_` is no name.
+`docs/specs/discarding.md` states which statements give their value away and which discard it.
+
 **An unfinished body says so in the language**, with `todo("a reason")` where a value belongs.
 A hole takes whatever type is expected of it, so the work around it is typed like finished work.
 `lumen check` accepts a hole and `lumen build` refuses every one it finds, naming each.

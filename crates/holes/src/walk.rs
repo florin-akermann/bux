@@ -37,6 +37,7 @@ impl Walk<'_> {
         match &statement.kind {
             StatementKind::Binding { value, .. }
             | StatementKind::Assign { value, .. }
+            | StatementKind::Discard(value)
             | StatementKind::Expr(value) => self.expr(value, found),
             StatementKind::Return(returned) => {
                 if let Some(value) = returned {

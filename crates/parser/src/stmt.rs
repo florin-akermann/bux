@@ -28,11 +28,27 @@ fn statement_kind(cursor: &mut Cursor) -> Result<StatementKind, ParseError> {
         Some(TokenKind::Keyword(Keyword::Continue)) => Ok(single(cursor, StatementKind::Continue)),
         Some(TokenKind::Keyword(Keyword::For)) => for_statement(cursor),
         Some(TokenKind::Identifier) if cursor.peek_kind(1) == Some(WALRUS) => binding(cursor),
+        Some(UNDERSCORE) => discard(cursor),
         _ => expression_statement(cursor),
     }
 }
 
 const WALRUS: TokenKind = TokenKind::Punct(Punct::Walrus);
+
+const UNDERSCORE: TokenKind = TokenKind::Keyword(Keyword::Underscore);
+
+/// `_ = save(user)`, which works the value out and throws it away on purpose.
+///
+/// `_` is no name, so `=` is all that may follow it: `_ += 1` and a bare `_` are refused here
+/// rather than carried on as something the later phases would have to refuse again.
+fn discard(cursor: &mut Cursor) -> Result<StatementKind, ParseError> {
+    cursor.expect_keyword(Keyword::Underscore)?;
+    cursor.expect_punct(Punct::Eq)?;
+    Ok(StatementKind::Discard(expression(
+        cursor,
+        RecordLiterals::Allowed,
+    )?))
+}
 
 /// A statement that is one keyword and nothing else.
 fn single(cursor: &mut Cursor, kind: StatementKind) -> StatementKind {

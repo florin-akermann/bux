@@ -226,7 +226,7 @@ fn a_match_written_in_a_loop_is_checked_too() {
     let source = concat!(
         "fn describe(flags: List<Bool>) -> Int {\n",
         "    for flag in flags {\n",
-        "        match flag {\n            true => 1\n        }\n",
+        "        _ = match flag {\n            true => 1\n        }\n",
         "    }\n    0\n}\n"
     );
 

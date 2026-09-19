@@ -15,6 +15,12 @@ fn an_assignment_is_spaced_around_its_operator() {
 }
 
 #[test]
+fn a_discard_is_one_underscore_one_equals_and_the_value_thrown_away() {
+    assert_eq!(in_function("_=save(user)"), ["_ = save(user)"]);
+    assert_eq!(in_function("_  =   save( user )"), ["_ = save(user)"]);
+}
+
+#[test]
 fn a_return_carries_a_value_or_nothing() {
     assert_eq!(in_function("return"), ["return"]);
     assert_eq!(in_function("return  total"), ["return total"]);
