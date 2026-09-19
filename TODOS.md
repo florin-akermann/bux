@@ -116,3 +116,38 @@ A test runs it with the suite, so the one program the README promises can never 
 [021][b] - `example/main.lm` itself, in canonical form and held by `lumen check` like any source.
 [021][c] - An integration test runs it through the CLI, skipped with a named reason when no JDK.
 [021][d] - README names the one command that runs it; class files beside it are ignored by git.
+
+## 🔴 Item 022: `==` requires `Eq` rather than every type
+Every type is equatable today, which is Java's object model arriving by the back door.
+`crates/types/src/infer.rs` accepts `==` between any two operands that share a type.
+`crates/ir/src/lower/classes.rs` gives every record and every variant a generated `equals`.
+Version 0.1 has no traits, so the narrow answer is to equate `Int`, `Bool`, and `String` alone.
+`==` on a record or an ADT is then an error naming `Eq`, which 0.2 lets a type derive.
+Widening later costs nothing; withdrawing a universal `==` once programs rely on it costs plenty.
+[022][a] - `docs/design.md` section 8 states that `==` needs `Eq`, and names the 0.1 subset.
+[022][b] - `docs/specs/codegen.md` loses the paragraph putting `equals` on every class.
+[022][c] - Inference refuses `==` outside the three equatable types, test-first, under its own code.
+[022][d] - Lowering stops generating `equals`; a literal pattern still compares the three types.
+[022][e] - Executable examples under `tests/spec/type_inference/`, including the compile-fail case.
+
+## 🔴 Item 023: Identity is never observable
+**Depends on:** Item 022, Item 024 — the rule lands in the section Item 024 writes.
+Nothing in Lumen asks whether two values are one object, and nothing ever should.
+The JVM gives every object a header, `hashCode`, `getClass`, and `toString`, which Lumen hides.
+A generated class still inherits `Object.equals`, so dropping the generated one leaves identity.
+Writing the rule down and guarding it stops a later phase reaching for an inherited method.
+[023][a] - `docs/design.md` section 2 lists identity among the non-goals, beside the object model.
+[023][b] - `docs/specs/codegen.md` states that no generated class declares an inherited method.
+[023][c] - A test over the lowered classes: none declares `hashCode`, `getClass`, or `toString`.
+[023][d] - A test that no lowering emits a reference comparison, so identity has no opcode either.
+
+## 🔴 Item 024: The JVM is a target, not a model
+The JVM is where Lumen compiles first, and that is the whole of its authority over the language.
+Today the claim is one buried clause of the preamble and a question in `docs/principles.md`.
+Nothing states it where a reader meets the language, so each JVM habit gets argued from scratch.
+The object model is the standing instance: identity, `equals`, `hashCode`, and a root class.
+Stated once as a rule, every later question about a JVM habit is settled by citing it.
+[024][a] - `docs/design.md` section 2 gains the rule as prose, not as one more item in a list.
+[024][b] - The rule names what Lumen declines: the object model, the class hierarchy, boxing.
+[024][c] - `docs/principles.md` question 6 points at the rule rather than restating it.
+[024][d] - README calls the JVM the first target, so `The JVM's runtime` is not read as adoption.
