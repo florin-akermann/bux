@@ -6,7 +6,7 @@
 
 ## Open
 
-## 🔴 Item 006: Name resolution and basic modules
+## 🟡 Item 006: Name resolution and basic modules
 **Depends on:** Item 002 — resolution consumes the untyped AST.
 A `resolver` crate produces a `ResolvedAst` where every name points at its definition.
 One file is one module; `import` brings another module's public names into scope.
