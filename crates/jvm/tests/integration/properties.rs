@@ -33,8 +33,8 @@ fn every_class_a_module_compiles_to_begins_with_the_magic_and_the_current_versio
     for file in common::compiled(source) {
         let written = read(&file.bytes);
         assert_eq!(written.magic, 0xCAFE_BABE, "{}", file.path);
-        assert_eq!(written.major, 71);
-        assert_eq!(written.minor, 0);
+        assert_eq!(written.major, 72);
+        assert_eq!(written.minor, 65535);
     }
 }
 
@@ -88,8 +88,8 @@ fn every_class_written_begins_with_the_magic_and_the_current_version(tc: TestCas
     for file in lumen_jvm::write(&lowered) {
         let read = read(&file.bytes);
         assert_eq!(read.magic, 0xCAFE_BABE);
-        assert_eq!(read.major, 71);
-        assert_eq!(read.minor, 0);
+        assert_eq!(read.major, 72);
+        assert_eq!(read.minor, 65535);
     }
 }
 

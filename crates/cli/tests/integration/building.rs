@@ -39,7 +39,7 @@ fn every_class_build_writes_begins_with_the_class_file_magic() {
         .beside("example.class")
         .expect("the module is written");
     assert_eq!(&bytes[..4], &[0xCA, 0xFE, 0xBA, 0xBE]);
-    assert_eq!(&bytes[4..8], &[0, 0, 0, 71], "the current JDK's version");
+    assert_eq!(&bytes[4..8], &[0xFF, 0xFF, 0, 72], "JDK 28's version, marked preview");
 }
 
 #[test]
@@ -94,7 +94,7 @@ fn every_class_build_writes_is_one_a_jvm_loads_and_verifies() {
     assert!(!written.is_empty(), "the build wrote something to load");
     for class in written {
         let output = Command::new(&java)
-            .args(["-cp", directory(&example), &class])
+            .args(["--enable-preview", "-cp", directory(&example), &class])
             .output()
             .expect("the JDK's java runs");
         let said = String::from_utf8_lossy(&output.stderr);

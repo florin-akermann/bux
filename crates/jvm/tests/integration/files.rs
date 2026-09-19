@@ -9,14 +9,26 @@ use crate::common::{body, module_with, taking, written};
 use crate::reader::TakeCode;
 
 #[test]
-fn a_class_file_begins_with_the_magic_and_the_current_class_file_version() {
+fn a_class_file_begins_with_the_magic_and_the_version_of_jdk_28_marked_preview() {
     let class = module_with("nothing", taking(Vec::new(), None), body(vec![]));
 
     let file = written(class);
 
     assert_eq!(file.magic, 0xCAFE_BABE);
-    assert_eq!(file.minor, 0);
-    assert_eq!(file.major, 71);
+    assert_eq!(file.major, 72, "JDK 28");
+    assert_eq!(file.minor, 65535, "preview, which value classes are there");
+}
+
+#[test]
+fn a_class_is_written_without_the_identity_bit_which_is_what_makes_it_a_value_class() {
+    let mut base = Class::new(ClassName::new("demo/Payment"));
+    base.extending = Extending::ByItsVariants;
+
+    let closed = written(Class::new(ClassName::new("demo/User")));
+    let open = written(base);
+
+    assert_eq!(closed.access & 0x0020, 0, "a record has no identity");
+    assert_eq!(open.access & 0x0020, 0, "nor has the base of a type");
 }
 
 #[test]
@@ -107,6 +119,11 @@ fn a_field_of_a_class_is_written_public_and_final() {
     assert_eq!(file.fields[0].name, "id");
     assert_eq!(file.fields[0].descriptor, "J");
     assert_eq!(file.fields[0].access & 0x0010, 0x0010, "final");
+    assert_eq!(
+        file.fields[0].access & 0x0800,
+        0x0800,
+        "strict: written before the constructor hands itself up"
+    );
 }
 
 #[test]

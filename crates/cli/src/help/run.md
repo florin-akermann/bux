@@ -14,7 +14,8 @@ fn main() -> () {
 
 A module that declares it is a program; one that does not is a library, and running it is refused
 rather than guessed at. The entry point a JVM starts at is written with the module, so running the
-module class with `java` directly does exactly what `lumen run` does.
+module class with `java --enable-preview` directly does exactly what `lumen run` does. The flag is
+there because every class Lumen writes is a value class, which JDK 28 holds in preview.
 
 A program is compiled before the JDK is looked for, so a program that does not compile is told so
 on a machine that could not have run it anyway.

@@ -66,21 +66,13 @@ fn variant_class(shape: &Shape, base: &ClassName) -> Class {
     class
 }
 
-/// The constructor of a class that holds values: it hands its tag up, then fills its fields.
+/// The constructor of a class that holds values: it fills its fields, then hands its tag up.
+///
+/// A value class writes its fields before its base is constructed, which is the order the JVM
+/// asks of a strict field, so the value is whole by the time anything above it runs.
 fn constructor(shape: &Shape, extends: &ClassName) -> Method {
     let this = Descriptor::Reference(shape.class.clone());
-    let mut instructions = vec![Instruction::Load {
-        slot: 0,
-        of: this.clone(),
-    }];
-    if let Some(tag) = shape.tag {
-        instructions.push(Instruction::Integer(tag));
-    }
-    instructions.push(Instruction::Construct(MethodRef {
-        class: extends.clone(),
-        name: CONSTRUCTOR.to_owned(),
-        descriptor: MethodDescriptor::new(tag_taken(shape), None),
-    }));
+    let mut instructions = Vec::new();
     let mut slot = 1;
     for field in held(shape) {
         instructions.push(Instruction::Load {
@@ -94,11 +86,20 @@ fn constructor(shape: &Shape, extends: &ClassName) -> Method {
         slot += field.of.width();
         instructions.push(Instruction::PutField(reached(shape, &field)));
     }
+    instructions.push(Instruction::Load { slot: 0, of: this });
+    if let Some(tag) = shape.tag {
+        instructions.push(Instruction::Integer(tag));
+    }
+    instructions.push(Instruction::Construct(MethodRef {
+        class: extends.clone(),
+        name: CONSTRUCTOR.to_owned(),
+        descriptor: MethodDescriptor::new(tag_taken(shape), None),
+    }));
     instructions.push(Instruction::Return(None));
     instance_method(CONSTRUCTOR, shape.constructor(), instructions, 0)
 }
 
-/// The base's own constructor, which takes the tag and is all a base does.
+/// The base's own constructor, which takes the tag, writes it, and is all a base does.
 fn base_constructor(base: &ClassName) -> Method {
     let this = Descriptor::Reference(base.clone());
     let instructions = vec![
@@ -106,12 +107,6 @@ fn base_constructor(base: &ClassName) -> Method {
             slot: 0,
             of: this.clone(),
         },
-        Instruction::Construct(MethodRef {
-            class: object_class(),
-            name: CONSTRUCTOR.to_owned(),
-            descriptor: MethodDescriptor::new(Vec::new(), None),
-        }),
-        Instruction::Load { slot: 0, of: this },
         Instruction::Load {
             slot: 1,
             of: Descriptor::Integer,
@@ -120,6 +115,12 @@ fn base_constructor(base: &ClassName) -> Method {
             class: base.clone(),
             name: TAG.to_owned(),
             of: Descriptor::Integer,
+        }),
+        Instruction::Load { slot: 0, of: this },
+        Instruction::Construct(MethodRef {
+            class: object_class(),
+            name: CONSTRUCTOR.to_owned(),
+            descriptor: MethodDescriptor::new(Vec::new(), None),
         }),
         Instruction::Return(None),
     ];

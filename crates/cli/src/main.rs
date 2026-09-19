@@ -172,10 +172,17 @@ fn module_of(path: &Path) -> Option<String> {
 }
 
 /// Runs the module class on `java`, ending however the program it starts ends.
+///
+/// Every class written is a value class, which JDK 28 holds in preview, so the JVM is told to
+/// load preview class files; `docs/implementation.md` section 1 says why.
 fn ran(java: &Path, built: &Built) -> Outcome {
-    let classpath = [OsStr::new("-cp"), built.beside.as_os_str()];
+    let arguments = [
+        OsStr::new("--enable-preview"),
+        OsStr::new("-cp"),
+        built.beside.as_os_str(),
+    ];
     match std::process::Command::new(java)
-        .args(classpath)
+        .args(arguments)
         .arg(&built.module)
         .status()
     {

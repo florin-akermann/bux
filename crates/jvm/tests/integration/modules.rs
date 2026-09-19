@@ -2,14 +2,16 @@
 
 use crate::common;
 
-/// `ACC_PUBLIC`, `ACC_FINAL`, and `ACC_SUPER`, which every class nothing extends has.
-const FINAL_CLASS: u16 = 0x0031;
+/// `ACC_PUBLIC` and `ACC_FINAL`, and no identity bit: a value class nothing extends.
+const FINAL_CLASS: u16 = 0x0011;
 
-/// `ACC_PUBLIC`, `ACC_SUPER`, and `ACC_ABSTRACT`, which the base of a type has.
-const BASE_CLASS: u16 = 0x0421;
+/// `ACC_PUBLIC` and `ACC_ABSTRACT`, and no identity bit: the value class a type's variants extend.
+const BASE_CLASS: u16 = 0x0401;
 
 const PUBLIC_STATIC: u16 = 0x0009;
-const PUBLIC_FINAL: u16 = 0x0011;
+
+/// `ACC_PUBLIC`, `ACC_FINAL`, and `ACC_STRICT_INIT`, which every field of a value class has.
+const PUBLIC_FINAL_STRICT: u16 = 0x0811;
 
 /// A module of one function over a record and one over an algebraic data type.
 const MODULE: &str = "fn counted(users: List<User>) -> Int {\n    var total = 0\n    for user in users {\n        total += 1\n    }\n    total\n}\n\nfn told(payment: Payment) -> String {\n    match payment {\n        Pending => \"waiting\"\n        Failed(reason) => reason\n    }\n}\n\ntype Payment =\n    | Pending\n    | Failed(String)\n\ntype User = {\n    id: Int\n    active: Bool\n}\n";
@@ -42,7 +44,7 @@ fn a_record_is_a_final_class_whose_fields_are_final() {
 
     assert_eq!(user.access, FINAL_CLASS);
     assert_eq!(user.class(user.extends), "java/lang/Object");
-    assert_eq!(user.field("id").access, PUBLIC_FINAL);
+    assert_eq!(user.field("id").access, PUBLIC_FINAL_STRICT);
     assert_eq!(user.field("id").descriptor, "J");
     assert_eq!(user.field("active").descriptor, "Z");
 }

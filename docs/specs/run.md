@@ -17,8 +17,10 @@ The class files are written beside the source, exactly as `lumen build` writes t
 leaves the same artefacts a build does and nothing more.
 
 The JVM is started on the module class, in the directory the classes were written to.
-Running the module class directly with `java` does the same thing, because the entry point is
-part of what is written and not something the runner supplies.
+Running the module class directly with `java --enable-preview` does the same thing, because the
+entry point is part of what is written and not something the runner supplies.
+The flag is the one thing the runner adds: every class written is a value class, which JDK 28
+holds in preview, and `docs/specs/codegen.md` says what that makes the bytes look like.
 
 The program's own output is the runner's output: what it writes, the runner passes through
 unchanged, and the status it ends with is the status `lumen run` ends with.

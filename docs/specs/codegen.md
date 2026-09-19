@@ -5,8 +5,8 @@
 A checked module becomes class files a JVM can load.
 The phase consumes the typed tree, lowers it to a JVM intermediate representation, and writes the
 class files that representation describes.
-`docs/implementation.md` section 1 sets the target: the class-file version is the current JDK's,
-and no older JVM is supported.
+`docs/implementation.md` section 1 sets the target: JDK 28 or later, and no older JVM.
+Every class written is a Valhalla value class, which is how a Lumen value stays a value on a JVM.
 
 Nothing in this spec is visible from Lumen.
 A reader of a Lumen program never needs it, and no diagnostic mentions a class, a descriptor, or a
@@ -84,14 +84,21 @@ running the program, so `lumen run` supplies nothing of its own; `docs/specs/run
 
 ## How a type is laid out
 
-A record type is a `final` class with one `final` field per field it declares, in the order it
+Every class written is a value class: its identity bit is clear, so the JVM may flatten a value
+of it and never asks which object it is.
+A Lumen value has no identity to begin with, which `docs/design.md` section 2 states, so nothing
+is lost and the JVM is free to lay the value out flat wherever it can.
+Every field of a value class is `final` and strict: the constructor writes each field before it
+hands itself up to its base, and the value is whole by the time anything above it runs.
+
+A record type is a `final` value class with one field per field it declares, in the order it
 declares them, and one constructor taking them in that order.
 `user.name` is a `getfield`, and `user { active: false }` is a new instance built from the fields
 of the old one.
 
-An algebraic data type is an `abstract` class carrying one `final int` field, `tag`.
-Each variant is a `final` class extending it, whose constructor passes the variant's position in
-the declaration as the tag, and which declares one `final` field per value the variant carries.
+An algebraic data type is an `abstract` value class carrying one `int` field, `tag`.
+Each variant is a `final` value class extending it, whose constructor writes what the variant
+carries and then passes the variant's position in the declaration up as the tag.
 A variant that carries values positionally names them `value0`, `value1`, and so on.
 
 `match` tries each arm in the order it is written.
@@ -108,7 +115,10 @@ class a module writes declares the `equals` that `==` and a literal pattern call
 
 ## What the bytes look like
 
-The class-file version is the current JDK's, and the minor version is 0.
+The class-file version is 72, which is JDK 28's, and the minor version is 65535.
+The minor marks a preview class file, which is what a class file holding a value class is on
+JDK 28, and a JVM loads one only when started with `--enable-preview`.
+`lumen run` passes that flag, so a program is run without its author knowing any of this.
 Every method carries a `Code` attribute, and every `Code` attribute that branches carries a
 `StackMapTable`, which the verifier requires.
 
@@ -129,7 +139,7 @@ These hold and are checked with property-based tests:
 
 1. Lowering and writing a checked module never panics and is deterministic.
 2. Compiling one source twice gives byte-identical class files.
-3. Every class written begins with the class-file magic and the current version.
+3. Every class written begins with the class-file magic and JDK 28's version, marked preview.
 4. Every method a module declares is written as a static method of the module class.
 5. Every constant pool entry a method refers to is within the pool.
 6. No two classes of one module share a name.

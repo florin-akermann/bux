@@ -7,14 +7,20 @@ use crate::code::{Assembled, Context, assemble};
 use crate::frame::Hierarchy;
 use crate::pool::Pool;
 
-/// The class-file version of the JDK this targets, which is the current one and no other.
-const VERSION: (u16, u16) = (0, 71);
+/// The minor and major class-file version: JDK 28, marked preview, which value classes are there.
+///
+/// A preview class file carries minor version 65535, and a JVM loads one only when started with
+/// `--enable-preview`, which `lumen run` passes; `docs/implementation.md` section 1 says why.
+const VERSION: (u16, u16) = (65535, 72);
 
-/// `ACC_PUBLIC` and `ACC_SUPER`, which every class a module writes has.
-const CLASS_ACCESS: u16 = 0x0001 | 0x0020;
+/// `ACC_PUBLIC` alone: the identity bit, `0x0020`, is left clear, which makes a value class.
+const CLASS_ACCESS: u16 = 0x0001;
 const FINAL: u16 = 0x0010;
 const ABSTRACT: u16 = 0x0400;
-const FIELD_ACCESS: u16 = 0x0001 | FINAL;
+/// `ACC_STRICT_INIT`: the field is written before the constructor hands itself up, which every
+/// field of a value class is.
+const STRICT_INIT: u16 = 0x0800;
+const FIELD_ACCESS: u16 = 0x0001 | FINAL | STRICT_INIT;
 const METHOD_ACCESS: u16 = 0x0001;
 const STATIC: u16 = 0x0008;
 

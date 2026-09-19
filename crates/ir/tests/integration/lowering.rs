@@ -84,6 +84,30 @@ fn a_record_is_built_by_a_constructor_taking_its_fields_in_order() {
     assert_eq!(built.descriptor.to_string(), "(JZ)V");
 }
 
+#[test]
+fn a_constructor_fills_its_fields_before_it_hands_itself_up_to_its_base() {
+    let lowered = common::lowered(RECORD);
+
+    let built = common::method_of(
+        common::class_of(&lowered, &ClassName::new("demo/User")),
+        "<init>",
+    );
+
+    let instructions = &built.body.instructions;
+    let last_field = instructions
+        .iter()
+        .rposition(|instruction| matches!(instruction, Instruction::PutField(_)))
+        .expect("the fields are written");
+    let handed_up = instructions
+        .iter()
+        .position(|instruction| matches!(instruction, Instruction::Construct(_)))
+        .expect("the base is constructed");
+    assert!(
+        last_field < handed_up,
+        "a value class is whole before its base runs: {instructions:?}"
+    );
+}
+
 /// An algebraic data type with one variant that carries nothing and one that carries a value.
 const PAYMENT: &str = "type Payment =\n    | Pending\n    | Failed(String)\n";
 
