@@ -6,7 +6,7 @@
 
 ## Open
 
-## 🔴 Item 012: `todo` as an explicit hole
+## 🟡 Item 012: `todo` as an explicit hole
 **Depends on:** Item 007, Item 009 — a hole needs a type, and `lumen build` is what refuses it.
 An unfinished body writes `todo("reason")`, which takes whatever type the context expects.
 `lumen check` accepts a hole; `lumen build` refuses one, naming every hole and its reason.
