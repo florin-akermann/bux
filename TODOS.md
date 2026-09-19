@@ -136,7 +136,7 @@ The one throw the compiler emits, after an exhaustive `match`, stays unreachable
 [029][d] - `docs/specs/modules.md` names `or` in the prelude; `Option` comes apart only by `match`.
 [029][e] - Executable examples under `tests/spec/arithmetic/`, including the zero-divisor case.
 
-## 🟡 Item 030: An assignment names a mutable binding
+## 🟢 Item 030: An assignment names a mutable binding
 **Depends on:** Item 020 — the target is a name now, and what that name may be is still open.
 `total := 0` binds a name never assigned to again, and `var total = 0` binds one that may be.
 Nothing enforces it: `total := 0` followed by `total = 2` compiles, so `:=` promises nothing.
