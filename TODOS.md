@@ -6,7 +6,7 @@
 
 ## Open
 
-## 🟡 Item 002: Parser and untyped AST
+## 🟢 Item 002: Parser and untyped AST
 **Depends on:** Item 001 — the parser consumes its tokens.
 `ast` and `parser` crates: functions, `:=` bindings, `var`, `if`, `for`, `match`, records, ADTs.
 The AST is untyped and immutable; every later phase produces a new representation.
