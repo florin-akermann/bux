@@ -1,0 +1,31 @@
+// What a module offers, which is what `lumen api` prints of it.
+// The page holds every name this file declares at the top level, with the type it has.
+// A body, a comment, and a name bound inside a function are none of them on it.
+// `docs/specs/api-surface.md` states what is public, in what order, and written how.
+fn fullest(baskets: List<Basket>) -> Int {
+    var most = 0
+    for basket in baskets {
+        held := picked(Placed(basket))
+        if held > most {
+            most = held
+        }
+    }
+    most
+}
+
+/// How much an order comes to, which is nothing at all when nothing was ordered.
+fn picked(order: Order) -> Int {
+    match order {
+        Unplaced => 0
+        Placed(basket) => basket.apples + basket.pears
+    }
+}
+
+type Order =
+    | Unplaced
+    | Placed(Basket)
+
+type Basket = {
+    apples: Int
+    pears: Int
+}

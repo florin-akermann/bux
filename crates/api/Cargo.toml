@@ -1,0 +1,25 @@
+[package]
+name = "lumen-api"
+description = "The public surface of a module, printed from the types it was given"
+version.workspace = true
+edition.workspace = true
+
+[lib]
+path = "src/lib.rs"
+
+[[test]]
+name = "integration"
+path = "tests/integration/main.rs"
+
+[dependencies]
+lumen-ast = { path = "../ast" }
+lumen-format = { path = "../format" }
+lumen-types = { path = "../types" }
+
+[dev-dependencies]
+hegeltest = "0.23" # approved: property-based testing, required by AGENTS.md for every phase
+lumen-parser = { path = "../parser" }
+lumen-resolver = { path = "../resolver" }
+
+[lints]
+workspace = true

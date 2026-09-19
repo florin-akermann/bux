@@ -42,6 +42,9 @@ enum Command {
     /// Compile a source file and run the program it holds
     #[command(long_about = include_str!("help/run.md"))]
     Run { file: PathBuf },
+    /// Print the public surface of a module
+    #[command(long_about = include_str!("help/api.md"))]
+    Api { file: PathBuf },
     /// Print the long form of one diagnostic code
     #[command(long_about = include_str!("help/explain.md"))]
     Explain { code: String },
@@ -58,6 +61,7 @@ fn run(command: &Command) -> Outcome {
         Command::Check { file } => check(file),
         Command::Build { file } => build(file),
         Command::Run { file } => started(file),
+        Command::Api { file } => api(file),
         Command::Explain { code } => explain(code),
     }
 }
@@ -81,6 +85,20 @@ fn check(path: &Path) -> Outcome {
     };
     match accepted(&source) {
         Ok(_) => Outcome::Done,
+        Err(diagnostic) => refuse(&diagnostic, &source, path),
+    }
+}
+
+/// Prints every name `path` declares at the top level, with the type it has.
+fn api(path: &Path) -> Outcome {
+    let Some(source) = source_of(path) else {
+        return Outcome::Unusable;
+    };
+    match accepted(&source) {
+        Ok(typed) => {
+            print!("{}", lumen_api::surface(&typed));
+            Outcome::Done
+        }
         Err(diagnostic) => refuse(&diagnostic, &source, path),
     }
 }

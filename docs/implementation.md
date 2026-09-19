@@ -150,6 +150,7 @@ lumen run
 lumen test
 lumen fmt
 lumen check
+lumen api
 lumen repl
 lumen add
 ```
@@ -187,6 +188,7 @@ crates/
     hir/
     ir/
     jvm/
+    api/
     diagnostics/
     cli/
 ```

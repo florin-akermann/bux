@@ -20,6 +20,11 @@ pub(crate) struct Printer<'a> {
 }
 
 impl<'a> Printer<'a> {
+    /// A printer for text that carries no comment, which is the only thing a source is read for.
+    pub(crate) fn without_comments() -> Self {
+        Self::new("")
+    }
+
     pub(crate) fn new(source: &'a str) -> Self {
         Self {
             source,
@@ -35,6 +40,9 @@ impl<'a> Printer<'a> {
     /// A comment written at the end of a line therefore moves to its own line above that line,
     /// and a comment already alone on its line stays where it is.
     pub(crate) fn comments_above(&mut self, span: Span) {
+        if !self.has_comments() {
+            return;
+        }
         let line_end = self.end_of_line(span.start());
         self.comments_before(line_end);
     }

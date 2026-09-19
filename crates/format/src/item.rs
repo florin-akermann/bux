@@ -45,7 +45,7 @@ fn import(printer: &mut Printer, written: &Import) {
     printer.end_line();
 }
 
-fn type_declaration(printer: &mut Printer, written: &TypeDeclaration) {
+pub(crate) fn type_declaration(printer: &mut Printer, written: &TypeDeclaration) {
     printer.comments_above(written.span);
     printer.open_line();
     printer.word("type ");

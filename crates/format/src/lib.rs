@@ -21,6 +21,7 @@ mod type_ref;
 
 use std::fmt;
 
+use lumen_ast::TypeDeclaration;
 use lumen_diagnostics::{Code, Diagnostic};
 use lumen_lexer::Span;
 use lumen_parser::{ParseError, parse};
@@ -57,6 +58,17 @@ pub fn format(source: &str) -> Result<String, ParseError> {
     let mut printer = Printer::new(source);
     item::program(&mut printer, &program, source.len());
     Ok(printer.finish())
+}
+
+/// The canonical text of `declared`, as a file holds it, and holding no comment.
+///
+/// A type declaration is all surface, so this is also how `lumen api` prints one: one printer
+/// writes both, and a page can therefore never drift from the form a file is held to.
+#[must_use]
+pub fn type_declaration(declared: &TypeDeclaration) -> String {
+    let mut printer = Printer::without_comments();
+    item::type_declaration(&mut printer, declared);
+    printer.finish()
 }
 
 /// Why `check` refused a file.

@@ -8,4 +8,5 @@ mod example_program;
 mod examples;
 mod formatting;
 mod running;
+mod surface;
 mod version;

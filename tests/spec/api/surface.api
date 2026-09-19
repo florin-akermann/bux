@@ -1,0 +1,12 @@
+fn fullest(baskets: List<Basket>) -> Int
+
+fn picked(order: Order) -> Int
+
+type Order =
+    | Unplaced
+    | Placed(Basket)
+
+type Basket = {
+    apples: Int
+    pears: Int
+}
