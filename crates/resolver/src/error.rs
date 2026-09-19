@@ -73,6 +73,8 @@ pub(crate) enum ResolveErrorKind {
     NotCalled(String),
     /// A module name written as a value rather than as what a name is reached through.
     NotReachedThrough(String),
+    /// An assignment naming something other than a `var` binding.
+    NotAVariable(String),
 }
 
 impl ResolveErrorKind {
@@ -108,6 +110,7 @@ impl ResolveErrorKind {
             Self::Shadowed(_) => Code::NameShadowed,
             Self::WrittenAbove { .. } => Code::DefinitionBeforeUse,
             Self::NotCalled(_) | Self::NotReachedThrough(_) => Code::NotAValue,
+            Self::NotAVariable(_) => Code::NotAVariable,
         }
     }
 
@@ -123,6 +126,7 @@ impl ResolveErrorKind {
             Self::NotReachedThrough(_) => {
                 "a module is what a name is reached through, as `io.println` is"
             }
+            Self::NotAVariable(_) => "mutation is explicit: bind it with `var`, or bind a new name",
         }
     }
 }
@@ -148,6 +152,9 @@ impl fmt::Display for ResolveErrorKind {
                     f,
                     "`{text}` is a module, so a name inside it is what is written"
                 )
+            }
+            Self::NotAVariable(text) => {
+                write!(f, "`{text}` is not a `var`, so it is never assigned to")
             }
         }
     }

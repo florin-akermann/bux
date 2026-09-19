@@ -196,3 +196,65 @@ fn a_function_called_by_its_name_is_resolved_rather_than_refused() {
 
     resolved(source);
 }
+
+#[test]
+fn an_immutable_binding_is_never_assigned_to() {
+    let source = "fn count() -> Int {\n    total := 0\n    total = 2\n    total\n}\n";
+    let error = refusal(source);
+
+    assert_eq!(
+        error.message(),
+        "`total` is not a `var`, so it is never assigned to"
+    );
+    assert_eq!(
+        error.help(),
+        "mutation is explicit: bind it with `var`, or bind a new name"
+    );
+}
+
+#[test]
+fn a_var_binding_is_what_an_assignment_names() {
+    let source = "fn count() -> Int {\n    var total = 0\n    total = 2\n    total\n}\n";
+
+    resolved(source);
+}
+
+#[test]
+fn a_parameter_is_a_binding_that_never_changes() {
+    let source = "fn count(total: Int) -> Int {\n    total = 2\n    total\n}\n";
+
+    assert_eq!(
+        refusal(source).message(),
+        "`total` is not a `var`, so it is never assigned to"
+    );
+}
+
+#[test]
+fn a_for_in_binding_is_a_binding_that_never_changes() {
+    let source = "fn go(items: List<Int>) -> Int {\n    for item in items {\n        item = 1\n    }\n    0\n}\n";
+
+    assert_eq!(
+        refusal(source).message(),
+        "`item` is not a `var`, so it is never assigned to"
+    );
+}
+
+#[test]
+fn a_constructor_is_refused_rather_than_compiled_into_a_store_with_nowhere_to_write() {
+    let source = "fn go() -> Int {\n    Marker = Marker\n    1\n}\n\ntype Marker = {\n}\n";
+
+    assert_eq!(
+        refusal(source).message(),
+        "`Marker` is not a `var`, so it is never assigned to"
+    );
+}
+
+#[test]
+fn a_plus_equals_names_a_var_the_same_way_an_equals_does() {
+    let source = "fn count() -> Int {\n    total := 0\n    total += 2\n    total\n}\n";
+
+    assert_eq!(
+        refusal(source).message(),
+        "`total` is not a `var`, so it is never assigned to"
+    );
+}

@@ -74,6 +74,8 @@ catalogue! {
     DefinitionBeforeUse => "L0303",
     /// A name that is not a value, such as a function or a module, is written as one.
     NotAValue => "L0304",
+    /// An assignment names something other than a `var` binding.
+    NotAVariable => "L0305",
     /// A type met a type it does not match.
     TypeMismatch => "L0400",
     /// A call passes more or fewer arguments than the function takes.

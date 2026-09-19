@@ -475,6 +475,11 @@ The distinction should be obvious in source code.
 A record is updated by building the value it becomes, which the paragraph above shows.
 There is then one way to change what a name holds, and none to reach inside a value.
 
+**The name an assignment names is a `var` binding**.
+`total := 0` promises the reader that `total` never changes, so `total = 2` below it is refused.
+A parameter, a `for … in` binding, and a name a pattern binds never change either.
+Mutation is explicit, which means it is visible at the binding rather than only at the change.
+
 ---
 
 ## 11. Functions

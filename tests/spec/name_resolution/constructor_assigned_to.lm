@@ -1,0 +1,9 @@
+// expect-error: L0305
+// A constructor names a way to build a value, so an assignment has nowhere to write.
+fn go() -> Int {
+    Marker = Marker
+    1
+}
+
+type Marker = {
+}

@@ -2,7 +2,9 @@
 
 use std::collections::HashMap;
 
-use lumen_ast::{Block, Expr, ExprKind, ForHeader, ForLoop, Function, IfExpr, Item, MatchExpr};
+use lumen_ast::{
+    Block, Expr, ExprKind, ForHeader, ForLoop, Function, IfExpr, Item, MatchExpr, Mutability,
+};
 use lumen_ast::{Name, Pattern, PatternKind, Program, RecordField, Span, Statement, StatementKind};
 use lumen_ast::{TypeDeclaration, TypeDefinition, TypeRef, TypeRefKind, Variant, VariantPayload};
 
@@ -195,12 +197,16 @@ impl Resolver {
 
     fn statement(&mut self, statement: &Statement) -> Resolved {
         match &statement.kind {
-            StatementKind::Binding { name, value, .. } => {
+            StatementKind::Binding {
+                mutability,
+                name,
+                value,
+            } => {
                 self.expr(value)?;
-                self.introduce_value(name, DefinitionKind::Local)
+                self.introduce_value(name, bound(*mutability))
             }
             StatementKind::Assign { target, value, .. } => {
-                self.named(target, Position::Value)?;
+                self.assigned_to(target)?;
                 self.expr(value)
             }
             StatementKind::Return(value) => match value {
@@ -254,6 +260,19 @@ impl Resolver {
             }
             ExprKind::If(chain) => self.if_expr(chain),
             ExprKind::Match(match_expr) => self.match_expr(match_expr),
+        }
+    }
+
+    /// The name an assignment changes, which is a `var` binding and nothing else.
+    ///
+    /// Mutation is explicit, so what a name holds changes only where `var` said it may. What
+    /// this adds beyond that is the name that binds nothing at all: a constructor names a way
+    /// to build a value, and lowering it would store into a slot that does not exist.
+    fn assigned_to(&mut self, name: &Name) -> Resolved {
+        self.named(name, Position::Value)?;
+        match self.values.look_up(&name.text) {
+            Some(found) if found.kind == DefinitionKind::Variable => Ok(()),
+            _ => Err(refused(name, ResolveErrorKind::NotAVariable)),
         }
     }
 
@@ -370,7 +389,14 @@ impl Resolver {
     }
 }
 
-/// What a name in `scope` means, recorded against the namespace and the place it is written.
+/// The kind of definition a binding makes, which is what decides whether it may change.
+const fn bound(mutability: Mutability) -> DefinitionKind {
+    match mutability {
+        Mutability::Immutable => DefinitionKind::Local,
+        Mutability::Mutable => DefinitionKind::Variable,
+    }
+}
+
 /// Where a name is written, which is what decides whether it must name a value.
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Position {
@@ -398,6 +424,7 @@ fn refused(name: &Name, worded: fn(String) -> ResolveErrorKind) -> ResolveError 
     ResolveError::at(name, worded(name.text.clone()))
 }
 
+/// What a name in `scope` means, recorded against the namespace and the place it is written.
 fn use_name(scope: &Scope, found: &mut Definitions, name: &Name) -> Resolved {
     let Some(definition) = scope.look_up(&name.text) else {
         let kind = ResolveErrorKind::missing(scope.namespace(), &name.text);

@@ -51,7 +51,9 @@ impl Builder<'_> {
     fn written(&mut self, name: &Name) -> Option<Descriptor> {
         match self.definition(name).kind {
             DefinitionKind::Constructor => Some(self.built(name, &[])),
-            DefinitionKind::Local | DefinitionKind::Parameter => self.loaded(name),
+            DefinitionKind::Local | DefinitionKind::Variable | DefinitionKind::Parameter => {
+                self.loaded(name)
+            }
             DefinitionKind::Function
             | DefinitionKind::Module
             | DefinitionKind::Type

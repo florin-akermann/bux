@@ -24,8 +24,10 @@ pub enum DefinitionKind {
     Function,
     /// A parameter of a function.
     Parameter,
-    /// A binding made inside a body, by `:=`, `var`, a `for … in`, or a pattern.
+    /// A binding made inside a body, by `:=`, a `for … in`, or a pattern, which never changes.
     Local,
+    /// A binding made by `var`, which is the one name an assignment names.
+    Variable,
 }
 
 /// Where a definition came from.

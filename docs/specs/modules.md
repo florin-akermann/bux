@@ -92,12 +92,15 @@ Canonical form puts every import first and sorted, which settles where it goes w
 | shadowed name     | `L0302` | `x` is already in scope here                    |
 | written above use | `L0303` | `x` is written above `y`, which uses it         |
 | name that is no value | `L0304` | `x` is a function, so it is written as a call |
+| assigned but no `var` | `L0305` | `x` is not a `var`, so it is never assigned to |
 
 `L0300` helps with `a name is declared in this file, imported, or supplied by the prelude`.
 `L0301` helps with `one name has one definition; rename one of the two`.
 `L0302` helps with `rename the inner one; Lumen never hides a name`.
 `L0303` helps with `a file reads top down: move it below what uses it`.
 `L0304` helps with `version 0.1 reaches a function by calling it; write the call`.
+`L0304` helps a module with ``a module is what a name is reached through, as `io.println` is``.
+`L0305` helps with ``mutation is explicit: bind it with `var`, or bind a new name``.
 
 A name written where a type belongs and found only in the value scope is still `L0300`, with a
 message saying there is no type of that name.
@@ -108,10 +111,16 @@ A declaration that hides a prelude name is shadowed, because the prelude is alre
 Version 0.1 reaches a function by calling it, which `docs/design.md` section 11 states.
 A function name is `L0304` wherever it is written but as the name of a call.
 `held := helper`, `helper = 1`, and `filter(users, is_active)` are each refused at the name.
-A module name is `L0304` wherever it is written but on the left of a `.`, with the message
-`x` is a module, so a name inside it is what is written.
-It helps with `a module is what a name is reached through, as `io.println` is`.
-Neither has a type or a shape in version 0.1, so nothing reaches code generation it cannot write.
+A module name is `L0304` wherever it is written but on the left of a `.`.
+Its message is `x` is a module, so a name inside it is what is written.
+Neither has a type or a shape in version 0.1, so code generation is never handed one.
+
+The name an assignment names is a `var` binding, which `docs/design.md` section 10 states.
+Anything else is `L0305`, pointing at the name on the left of the `=` or the `+=`.
+A `:=` binding, a parameter, and a `for … in` binding each never change.
+Neither does a name a pattern binds, which an arm's body has no statement position to assign in.
+A constructor never changes either: it names a way to build a value, not a place to put one.
+Without the refusal it lowers into a store with nowhere to write, and does nothing at all.
 
 Resolution stops at the first error, as parsing does.
 

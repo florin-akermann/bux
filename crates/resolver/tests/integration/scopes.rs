@@ -64,6 +64,16 @@ fn a_binding_is_in_scope_after_the_statement_that_makes_it() {
 }
 
 #[test]
+fn a_var_binds_a_name_that_may_be_assigned_to() {
+    let source = "fn f() -> Int {\n    var total = 1\n    total + 1\n}\n";
+
+    assert_eq!(
+        kind(source, Value, "total", 2),
+        Some(DefinitionKind::Variable)
+    );
+}
+
+#[test]
 fn a_type_parameter_is_in_scope_in_the_signature_that_declares_it() {
     let source = "fn identity<T>(value: T) -> T {\n    value\n}\n";
 

@@ -89,6 +89,7 @@ Name resolution raises these, in `crates/resolver/src/error.rs`:
 - `L0302` — a declaration or a binding hides a name that is already in scope.
 - `L0303` — a declaration is written above something that uses it.
 - `L0304` — a name that is not a value, such as a function or a module, is written as one.
+- `L0305` — an assignment names something other than a `var` binding.
 
 Type inference raises these, in `crates/types/src/error.rs`:
 
