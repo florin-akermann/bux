@@ -6,18 +6,6 @@
 
 ## Open
 
-## 🟢 Item 034: A literal takes the type its context expects
-**Depends on:** Item 033 — a literal is a trait method, and the operator traits land first.
-`1` is an `Int` today, at the one place inference types a literal, so `Int32` is written `Int32(1)`.
-`docs/design.md` section 8 gives a whole-number literal the type its context expects instead.
-That needs the type to have `IntegerLiteral`; a literal that nothing settles is still an `Int`.
-A literal that does not fit its type is a compile error where it is written, never a wrapped value.
-`let x: Int32 = 5_000_000_000` is refused; how an instance states what fits is the spec's question.
-[034][a] - Spec first in `docs/specs/literals.md`: the trait, its bounds, and the error text.
-[034][b] - Inference gives a literal a variable constrained by `IntegerLiteral`, defaulted to `Int`.
-[034][c] - The fit check at compile time, test-first; the `Int` instance accepts every literal.
-[034][d] - Executable examples under `tests/spec/literals/`: `Int32` as a literal, and a misfit.
-
 ## 🔴 Item 042: A record or a variant derives `Eq`
 **Depends on:** Item 041 — a derived instance is an instance.
 `docs/design.md` section 8 promises `derive Eq` for 0.2, and refuses `==` on a record until then.
