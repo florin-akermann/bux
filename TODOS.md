@@ -42,7 +42,7 @@ Whatever says it is a language change, so `docs/design.md` section 17 answers fi
 [053][c] - `Hash<String>` moves to `library/prelude.lm`, and nothing is supplied any more.
 [053][d] - `strings.length` and `list.index_of` land, which `docs/specs/library.md` is waiting on.
 
-## 🔴 Item 054: The specs still say the compiler supplies what the library writes
+## 🟡 Item 054: The specs still say the compiler supplies what the library writes
 `library/prelude.lm` writes every instance of `Eq`, `Ord`, `Hash`, `Show`, and the operators.
 `docs/specs/traits.md` still has a section called "What the compiler supplies" that lists them.
 `docs/specs/operators.md` and `docs/specs/literals.md` say the same of what they are about.
