@@ -51,6 +51,6 @@ Arithmetic that divides is then a `match` or an `or` per division, and stops rea
 `((total / count)? / 2)? + 2 * 5` is then the readable form, and each `?` marks a division.
 A `None` met where the function gives back a `Result` stays `L0400`, because it names no error.
 Nothing converts: `?` propagates each kind into a function that gives back the same kind.
-[040][a] - Inference takes `?` on an `Option` in an `Option` function, test-first; `Result` as before.
+[040][a] - Inference takes `?` on an `Option` in an `Option` function, test-first; `Result` as is.
 [040][b] - Lowering hands the held `None` back as the answer; a property covers the shape it emits.
 [040][c] - `tests/spec/arithmetic/division.lm` divides through `?`; a `Result` function is refused.
