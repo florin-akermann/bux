@@ -5,6 +5,7 @@
 //! the answers sit beside it. `docs/specs/types.md` is the specification, and `docs/design.md`
 //! sections 3, 6, and 7 are the rules it enforces.
 
+mod bounds;
 mod environment;
 mod error;
 mod holds;

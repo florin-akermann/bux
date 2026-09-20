@@ -167,9 +167,15 @@ the value it was given.
 | holds itself      | `L0415` | `Node` holds `Node`                              |
 | type kept to itself | `L0416` | `greeting.wrapped` names `Held`, which `greeting` keeps to itself |
 | generic through a module | `L0417` | `holding.held` is generic, so `holding` alone writes it |
+| literal misfit    | `L0420` | `5000000000` does not fit `Int32`, which holds `-2147483648` to `2147483647` |
+| bound is not a number | `L0421` | `lowest` of `Int32` is read rather than run, so it is one whole number |
 
 `L0406` covers every operator, because every operator is a trait method and a type is written
 with one exactly where it has that trait's instance, which `docs/specs/operators.md` states.
+`L0420` and `L0421` are what `docs/specs/literals.md` states: a whole number is held to the range
+the instance of the type it settled on states, and that instance states it as two whole numbers.
+A whole number written at a type that takes none is `L0400`, because a whole number nothing else
+settles is an `Int` and an `Int` is not that type.
 `L0402` also says the type reached through `.` is not known, when inference never settled it.
 A variant that carries its values in order has no field to write against, so that is `L0402` too.
 A name reached inside a module is never `L0402`: every module in scope is supplied or loaded, so

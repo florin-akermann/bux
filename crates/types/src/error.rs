@@ -79,6 +79,18 @@ pub(crate) enum TypeErrorKind {
         of: String,
         field: String,
     },
+    /// A whole number written at a type whose instance of `IntegerLiteral` does not hold it.
+    LiteralDoesNotFit {
+        value: i64,
+        at: Type,
+        lowest: i64,
+        highest: i64,
+    },
+    /// A bound of an `IntegerLiteral` instance written as something other than one whole number.
+    BoundIsNotAWholeNumber {
+        bound: String,
+        of: String,
+    },
     /// An operator written over a type that has no instance of the trait that operator is.
     NoOperator {
         written_as: &'static str,
@@ -149,6 +161,8 @@ impl TypeErrorKind {
             Self::MissingField { .. } => Code::MissingField,
             Self::FieldWrittenTwice { .. } => Code::FieldWrittenTwice,
             Self::NoOperator { .. } => Code::NoOperator,
+            Self::LiteralDoesNotFit { .. } => Code::LiteralDoesNotFit,
+            Self::BoundIsNotAWholeNumber { .. } => Code::BoundIsNotAWholeNumber,
             Self::NoInstance { .. } => Code::NoInstance,
             Self::SignatureWithoutType(_) => Code::SignatureWithoutType,
             Self::DivisorIsZero => Code::DivisorIsZero,
@@ -185,6 +199,12 @@ impl TypeErrorKind {
             Self::FieldWrittenTwice { .. } => "a record gives each of its fields one value",
             Self::NoOperator { .. } => {
                 "an operator is a trait method, so a type gets one by writing that trait's instance"
+            }
+            Self::LiteralDoesNotFit { .. } => {
+                "write a whole number the type holds, or widen what its instance says it holds"
+            }
+            Self::BoundIsNotAWholeNumber { .. } => {
+                "a bound is read rather than run, so write it as one whole number and nothing else"
             }
             Self::NoInstance { .. } => {
                 "write the instance, or constrain the type parameter the call is made at"
@@ -258,6 +278,9 @@ impl fmt::Display for TypeErrorKind {
             }
             Self::FieldWrittenTwice { of, field } => {
                 write!(f, "`{of}` is given `{field}` twice")
+            }
+            Self::LiteralDoesNotFit { .. } | Self::BoundIsNotAWholeNumber { .. } => {
+                f.write_str(&self.how_a_whole_number_is_held())
             }
             Self::NoOperator { written_as, of, at } => {
                 write!(
@@ -352,6 +375,22 @@ impl TypeErrorKind {
                 format!(
                     "`{function}` gives back a `Bool`, so its name asks the question it answers"
                 )
+            }
+            _ => unreachable!("a kind reaches here only from the arm of `Display` that names it"),
+        }
+    }
+
+    /// The two refusals about a whole number, which `docs/specs/literals.md` states.
+    fn how_a_whole_number_is_held(&self) -> String {
+        match self {
+            Self::LiteralDoesNotFit {
+                value,
+                at,
+                lowest,
+                highest,
+            } => format!("`{value}` does not fit `{at}`, which holds `{lowest}` to `{highest}`"),
+            Self::BoundIsNotAWholeNumber { bound, of } => {
+                format!("`{bound}` of `{of}` is read rather than run, so it is one whole number")
             }
             _ => unreachable!("a kind reaches here only from the arm of `Display` that names it"),
         }

@@ -132,3 +132,15 @@ The receiver counts as an unnamed argument, so a call that must name them keeps 
 [050][c] - The checker and lowering treat it as the plain call; a property: the two forms agree.
 [050][d] - The formatter keeps the form, and a round trip covers it.
 [050][e] - Executable examples under `tests/spec/calls/`; the `or` examples in `docs/specs` move.
+
+## 🔴 Item 051: A whole number matches a declared type
+**Depends on:** Item 034 — a literal is `IntegerLiteral`, and matching one needs `Eq` as well.
+`docs/specs/literals.md` states the limit: a whole number written as a pattern is an `Int`.
+`match count { 5 => … }` over an `Int32` is therefore `L0400`, though `count + 5` is accepted.
+A pattern asks whether two values are the same, which is `Eq` rather than `IntegerLiteral`.
+So a pattern needs both: the number becomes the type, and the type says what sameness is.
+Exhaustiveness is the second question: a range of whole numbers is never listed arm by arm.
+[051][a] - Spec first in `docs/specs/literals.md`: what a pattern asks, and what it still needs.
+[051][b] - The pattern takes the type it is matched against, test-first, and is held to its bounds.
+[051][c] - Lowering compares through the type's `Eq`, and exhaustiveness keeps its wildcard rule.
+[051][d] - Executable examples under `tests/spec/literals/`: a match that answers, and one refused.

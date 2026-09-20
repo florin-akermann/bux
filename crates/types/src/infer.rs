@@ -2,6 +2,7 @@
 
 mod arguments;
 mod flags;
+mod literal;
 mod operator;
 mod pattern;
 mod predicate;
@@ -49,6 +50,7 @@ pub(crate) fn infer(
 ) -> Result<Inferred, TypeError> {
     let mut table = Table::default();
     let environment = Environment::of(resolved, &mut table)?;
+    table.whole_numbers_are_written_at(environment.takes_a_whole_number());
     let mut inference = Inference {
         resolved,
         imported,
@@ -58,6 +60,7 @@ pub(crate) fn infer(
         result: Type::Unit,
         introduced: Vec::new(),
         operated: Vec::new(),
+        literals: Vec::new(),
         discards: Vec::new(),
         lookups: Vec::new(),
         propagations: Vec::new(),
@@ -89,6 +92,8 @@ struct Inference<'a> {
     introduced: Vec<Key>,
     /// The operators of the current function, each `Int` unless something says otherwise.
     operated: Vec<Operated>,
+    /// The whole numbers the current function writes, each waiting on the type around it.
+    literals: Vec<literal::Written>,
     /// The statements of the current function that nothing takes the value of, each of which
     /// must therefore have no value to take.
     discards: Vec<(Type, Span)>,
@@ -166,6 +171,7 @@ impl Inference<'_> {
         self.look_up_fields()?;
         self.expect(&(*result).clone(), &body, function.body.span)?;
         self.settle_propagations()?;
+        self.settle_literals()?;
         self.settle_operators()?;
         self.settle_requirements()?;
         self.settle_discards()?;
@@ -311,7 +317,7 @@ impl Inference<'_> {
     fn written(&mut self, expr: &Expr) -> Result<Type, TypeError> {
         match &expr.kind {
             ExprKind::Name(name) => Ok(self.value(name)),
-            ExprKind::Integer(_) => Ok(Type::int()),
+            ExprKind::Integer(value) => Ok(self.literal(*value, expr.span)),
             ExprKind::String(_) => Ok(Type::string()),
             ExprKind::Bool(_) => Ok(Type::boolean()),
             ExprKind::Unit => Ok(Type::Unit),
@@ -473,8 +479,8 @@ impl Inference<'_> {
             Err(Clash::Infinite) => Err(TypeError::at(at, TypeErrorKind::Infinite)),
             Err(Clash::Mismatch) => {
                 let kind = TypeErrorKind::Mismatch {
-                    expected: self.table.solved(expected),
-                    found: self.table.solved(found),
+                    expected: self.table.read(expected),
+                    found: self.table.read(found),
                 };
                 Err(TypeError::at(at, kind))
             }
@@ -584,6 +590,9 @@ impl Inference<'_> {
         }
         for requirement in &self.requirements {
             self.table.unsettled(&requirement.required.at, &mut held);
+        }
+        for literal in &self.literals {
+            self.table.unsettled(literal.at(), &mut held);
         }
         free.retain(|var| !held.contains(var));
         free

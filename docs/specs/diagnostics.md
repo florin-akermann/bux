@@ -132,6 +132,8 @@ Type inference raises these, in `crates/types/src/error.rs`:
 - `L0417` — a generic function is reached through a module, which writes it where it is declared.
 - `L0418` — a trait method is used at a type that has no instance of that trait.
 - `L0419` — a parameter of a method a trait declares states no type.
+- `L0420` — a whole number does not fit the type it is written at.
+- `L0421` — a bound of an `IntegerLiteral` instance is not one whole number.
 
 Exhaustiveness raises these, in `crates/exhaustiveness/src/error.rs`:
 

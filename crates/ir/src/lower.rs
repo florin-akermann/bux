@@ -11,6 +11,7 @@ mod equality;
 mod escape;
 mod expr;
 mod generic;
+mod literal;
 mod modules;
 mod operator;
 mod pattern;

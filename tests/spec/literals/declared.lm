@@ -1,0 +1,82 @@
+// expect-run
+// > a literal in a result is the type the result declares
+// > a literal in an argument is the type the parameter declares
+// > the lowest whole number the instance states fits
+// > a whole number nothing settles is still an Int
+// > a name bound to a whole number takes the type its use expects
+// > from_literal at Int is the whole number it is given
+// A whole number takes the type its context expects, which `docs/specs/literals.md` states.
+// `Int32` gets that the one way any type gets anything: by writing an instance of the trait.
+// Each line is written only where the answer is the one it claims, so a wrong answer writes
+// nothing and the harness says the header was not met.
+import io
+
+fn main() -> () {
+    if is_worth(counted(), 42) {
+        io.println("a literal in a result is the type the result declares")
+    }
+    if is_worth(passed(count: 42), 42) {
+        io.println("a literal in an argument is the type the parameter declares")
+    }
+    if is_worth(lowest_of(), -2147483648) {
+        io.println("the lowest whole number the instance states fits")
+    }
+    total := 20 + 22
+    if total == 42 {
+        io.println("a whole number nothing settles is still an Int")
+    }
+    if is_worth(bound(), 42) {
+        io.println("a name bound to a whole number takes the type its use expects")
+    }
+    if from_literal(42) == 42 {
+        io.println("from_literal at Int is the whole number it is given")
+    }
+}
+
+// example: is_worth(counted(), 42)
+fn is_worth(count: Int32, number: Int) -> Bool {
+    match count {
+        Int32(held) => held == number
+    }
+}
+
+// A literal is the declared result, so `42` here is an `Int32` and never an `Int`.
+// example: is_worth(counted(), 42)
+fn counted() -> Int32 {
+    42
+}
+
+// A literal is the declared parameter, so the call writes the number and nothing more.
+// example: is_worth(passed(count: 42), 42)
+fn passed(count: Int32) -> Int32 {
+    count
+}
+
+// The bound its own instance states is a number the type holds, which is the point of stating it.
+// example: is_worth(lowest_of(), -2147483648)
+fn lowest_of() -> Int32 {
+    -2147483648
+}
+
+// A binding says nothing about its type, so the use of it settles the whole number it holds.
+// example: is_worth(bound(), 42)
+fn bound() -> Int32 {
+    count := 42
+    count
+}
+
+instance IntegerLiteral<Int32> {
+    fn lowest() -> Int {
+        -2147483648
+    }
+
+    fn highest() -> Int {
+        2147483647
+    }
+
+    fn from_literal(literal: Int) -> Int32 {
+        Int32(literal)
+    }
+}
+
+type Int32 = Int32(Int)

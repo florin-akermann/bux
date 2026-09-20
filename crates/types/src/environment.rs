@@ -8,6 +8,7 @@ use lumen_ast::{Variant, VariantPayload};
 use lumen_resolver::prelude;
 use lumen_resolver::{Definition, DefinitionKind, Namespace, Origin, ResolvedProgram};
 
+use crate::bounds::{self, Bounds};
 use crate::error::{Count, TypeError, TypeErrorKind};
 use crate::scheme::{Quantified, Required, Scheme};
 use crate::table::Table;
@@ -28,6 +29,8 @@ pub(crate) struct Environment {
     methods: HashMap<Key, Quantified>,
     /// Every trait that has an instance for a type, by the two names that say so.
     instances: HashSet<(String, String)>,
+    /// What each type's instance of `IntegerLiteral` says it holds, by the name of that type.
+    holds: HashMap<String, Bounds>,
     /// What each instance's method must be, which is its trait's method at the instance's type.
     written_as: HashMap<Key, Type>,
     /// Where each method of each trait is declared, which is what an instance is read against.
@@ -83,6 +86,16 @@ impl Environment {
     /// Only a trait's method has one, so this is also what says a name is one of them.
     pub(crate) fn of_a_trait(&self, key: &Key) -> Option<&Quantified> {
         self.methods.get(key)
+    }
+
+    /// The whole numbers the type called `for_type` holds, when it takes a literal at all.
+    pub(crate) fn holds(&self, for_type: &str) -> Option<Bounds> {
+        self.holds.get(for_type).copied()
+    }
+
+    /// The types a whole number may be written at, which is every one with the instance.
+    pub(crate) fn takes_a_whole_number(&self) -> impl Iterator<Item = String> + '_ {
+        self.holds.keys().cloned()
     }
 
     /// Whether the trait called `of` has an instance for the type called `for_type`.
@@ -181,6 +194,7 @@ impl Environment {
         for (of, for_type) in prelude::instances() {
             self.instances.insert((of.to_owned(), for_type.to_owned()));
         }
+        self.holds.insert(Type::int().to_string(), Bounds::INT);
     }
 
     /// One method of one supplied trait, a name in scope with the type its trait gives it.
@@ -194,7 +208,7 @@ impl Environment {
             trait_name: of.to_owned(),
             at: at.clone(),
         }];
-        let signature = signature_of(of, &at);
+        let signature = signature_of(of, method, &at);
         self.bind(
             key.clone(),
             Scheme::over(vec![Quantified::Parameter(value.clone())], signature).requiring(asks),
@@ -287,6 +301,10 @@ impl Environment {
         self.takes_no_arguments(resolved, &declaration.for_type)?;
         let of = declaration.trait_name.text.clone();
         let for_type = declaration.for_type.text.clone();
+        if of == prelude::INTEGER_LITERAL {
+            self.holds
+                .insert(for_type.clone(), bounds::stated(declaration)?);
+        }
         self.instances.insert((of, for_type.clone()));
         let given = Type::Named {
             name: for_type,
@@ -551,19 +569,29 @@ impl Key {
     }
 }
 
-/// The type each prelude trait's one method has, written over the trait's own type parameter.
+/// The type one method of one prelude trait has, written over that trait's own type parameter.
 ///
 /// `docs/specs/operators.md` gives each operator's trait its signature: one gives back what it
-/// was given, one an `Option` of it, and one a `Bool` about it.
-fn signature_of(of: &str, at: &Type) -> Type {
+/// was given, one an `Option` of it, and one a `Bool` about it. `docs/specs/literals.md` gives
+/// `IntegerLiteral` its three, which are the only ones a prelude trait declares more than one of.
+fn signature_of(of: &str, method: &str, at: &Type) -> Type {
     let two = vec![at.clone(), at.clone()];
     match of {
         prelude::EQ | prelude::ORD => Type::function(two, Type::boolean()),
         prelude::DIV | prelude::REM => Type::function(two, Type::option(at.clone())),
         prelude::NEG => Type::function(vec![at.clone()], at.clone()),
         prelude::ADD | prelude::SUB | prelude::MUL => Type::function(two, at.clone()),
+        prelude::INTEGER_LITERAL => written_as_a_literal(method, at),
         _ => unreachable!("the prelude declares exactly the traits `prelude::TRAITS` lists"),
     }
+}
+
+/// The type one method of `IntegerLiteral` has: a bound gives an `Int`, and the third builds a `T`.
+fn written_as_a_literal(method: &str, at: &Type) -> Type {
+    if method == prelude::FROM_LITERAL {
+        return Type::function(vec![Type::int()], at.clone());
+    }
+    Type::function(Vec::new(), Type::int())
 }
 
 /// The types the prelude supplies, with how many arguments each one is written with.

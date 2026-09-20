@@ -19,22 +19,31 @@ pub const REM: &str = "Rem";
 pub const NEG: &str = "Neg";
 /// The trait `<`, `<=`, `>`, and `>=` are.
 pub const ORD: &str = "Ord";
+/// The trait a whole-number literal is, which `docs/specs/literals.md` writes out.
+pub const INTEGER_LITERAL: &str = "IntegerLiteral";
+/// The method of that trait a whole number is written as, which turns one into the type.
+pub const FROM_LITERAL: &str = "from_literal";
+/// The method of that trait giving the smallest whole number its type holds.
+pub const LOWEST: &str = "lowest";
+/// The method of that trait giving the largest whole number its type holds.
+pub const HIGHEST: &str = "highest";
 
 /// The types the prelude supplies.
 pub(crate) const TYPES: [&str; 6] = ["Bool", "Int", "List", "Option", "Result", "String"];
 
 /// A trait the prelude supplies: what it declares, and which types it already has instances for.
 ///
-/// `docs/specs/traits.md` writes `Eq` out and `docs/specs/operators.md` writes the other seven
-/// out, each with the instances the library will ship once the prelude is Lumen source.
+/// `docs/specs/traits.md` writes `Eq` out, `docs/specs/operators.md` the seven an operator is,
+/// and `docs/specs/literals.md` the one a literal is, each with the instances the library will
+/// ship once the prelude is Lumen source.
 pub struct Supplied {
     pub name: &'static str,
     pub methods: &'static [&'static str],
     pub instances: &'static [&'static str],
 }
 
-/// Every trait the prelude supplies, which is `Eq` and the trait each operator is.
-pub const TRAITS: [Supplied; 8] = [
+/// Every trait the prelude supplies: `Eq`, the trait each operator is, and the one a literal is.
+pub const TRAITS: [Supplied; 9] = [
     Supplied {
         name: EQ,
         methods: &["is_equal"],
@@ -73,6 +82,11 @@ pub const TRAITS: [Supplied; 8] = [
     Supplied {
         name: ORD,
         methods: &["is_less"],
+        instances: &["Int"],
+    },
+    Supplied {
+        name: INTEGER_LITERAL,
+        methods: &[LOWEST, HIGHEST, FROM_LITERAL],
         instances: &["Int"],
     },
 ];

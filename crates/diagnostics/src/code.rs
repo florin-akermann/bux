@@ -134,6 +134,10 @@ catalogue! {
     NoInstance => "L0418",
     /// A parameter of a trait's method states no type, which nothing is left to infer.
     SignatureWithoutType => "L0419",
+    /// A whole number does not fit the type it is written at, which its instance says it holds.
+    LiteralDoesNotFit => "L0420",
+    /// A bound of an `IntegerLiteral` instance is written as other than one whole number.
+    BoundIsNotAWholeNumber => "L0421",
     /// A `match` leaves a value of the type it matches unanswered.
     NonExhaustiveMatch => "L0500",
     /// A `match` lists its arms in an order the type does not declare its variants in.

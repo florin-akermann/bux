@@ -83,16 +83,18 @@ Every module has these names in scope without importing anything:
 
 ```text
 types:        Bool  Int  List  Option  Result  String
-traits:       Add  Div  Eq  Mul  Neg  Ord  Rem  Sub
+traits:       Add  Div  Eq  IntegerLiteral  Mul  Neg  Ord  Rem  Sub
 constructors: Err  None  Ok  Some
 functions:    or  todo
-methods:      add  divide  is_equal  is_less  multiply  negate  remainder  subtract
+methods:      add  divide  from_literal  highest  is_equal  is_less  lowest  multiply
+              negate  remainder  subtract
 ```
 
 `or(maybe, fallback)` is what an `Option` holds, or the fallback when it holds nothing, and
 `docs/specs/arithmetic.md` says why.
 `todo(reason)` is a hole, which `docs/specs/holes.md` states.
 `Eq` is the trait `==` is, with the instances `docs/specs/traits.md` names.
+`IntegerLiteral` is the trait a whole-number literal is, which `docs/specs/literals.md` states.
 The other seven traits are the ones the other operators are, which `docs/specs/operators.md`
 names along with the instances the compiler supplies for each.
 

@@ -7,6 +7,7 @@ mod descriptors;
 mod escaping;
 mod io;
 mod lists;
+mod literals;
 mod lowering;
 mod operators;
 mod properties;

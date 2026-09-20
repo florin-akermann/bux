@@ -18,9 +18,7 @@ impl Builder<'_> {
     pub(crate) fn expr(&mut self, expr: &Expr) -> Option<Descriptor> {
         match &expr.kind {
             ExprKind::Unit => None,
-            ExprKind::Integer(value) => {
-                Some(self.left(Instruction::Long(*value), Descriptor::Long))
-            }
+            ExprKind::Integer(value) => Some(self.whole_number(*value, expr.span)),
             ExprKind::Bool(value) => {
                 Some(self.left(Instruction::Boolean(*value), Descriptor::Boolean))
             }

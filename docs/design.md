@@ -506,7 +506,7 @@ A whole-number literal takes the type the context expects, provided that type ha
 A literal that does not fit its type is a compile error where it is written.
 It is never a wrapped value and never a runtime failure, because a literal is no exception.
 A literal whose type nothing settles is an `Int`, which is the one default the language keeps.
-The spec that lands the trait settles how an instance states what fits.
+`docs/specs/literals.md` settles how an instance states what fits: two bounds the compiler reads.
 
 Standard traits should include concepts such as:
 

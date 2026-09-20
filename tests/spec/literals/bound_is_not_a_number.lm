@@ -1,0 +1,21 @@
+// expect-error: L0421
+// A bound is read rather than run, so its body is one whole number and nothing else.
+fn counted() -> Int32 {
+    5
+}
+
+instance IntegerLiteral<Int32> {
+    fn lowest() -> Int {
+        0 - 2147483648
+    }
+
+    fn highest() -> Int {
+        2147483647
+    }
+
+    fn from_literal(literal: Int) -> Int32 {
+        Int32(literal)
+    }
+}
+
+type Int32 = Int32(Int)

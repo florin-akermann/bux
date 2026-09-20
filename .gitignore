@@ -20,3 +20,6 @@ __pycache__/
 # class files a `lumen build` writes beside a source file; the source is what the repo keeps
 tests/spec/**/*.class
 example/**/*.class
+
+# macOS folder metadata; nothing in this repo reads it
+.DS_Store

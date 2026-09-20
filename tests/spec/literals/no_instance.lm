@@ -1,0 +1,6 @@
+// expect-error: L0400
+// A whole number settles only on a type that takes one, so meeting a type that takes none is the
+// ordinary clash of two types, and is reported as the `Int` the number would have defaulted to.
+fn is_open() -> Bool {
+    1
+}

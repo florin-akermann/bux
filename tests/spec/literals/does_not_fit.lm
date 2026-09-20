@@ -1,0 +1,22 @@
+// expect-error: L0420
+// The range is what the instance claimed, not what the machine can hold, and a literal outside
+// it is refused where it is written rather than wrapped where it runs.
+fn counted() -> Int32 {
+    5000000000
+}
+
+instance IntegerLiteral<Int32> {
+    fn lowest() -> Int {
+        -2147483648
+    }
+
+    fn highest() -> Int {
+        2147483647
+    }
+
+    fn from_literal(literal: Int) -> Int32 {
+        Int32(literal)
+    }
+}
+
+type Int32 = Int32(Int)

@@ -148,8 +148,9 @@ instance Eq<String>
 of them is refused with `L0302`, exactly as one declaring its own `todo` is.
 A module writing `instance Eq<Int>` is refused with `L0308`, because there already is one.
 
-`Eq` is one of the eight traits the prelude declares; `docs/specs/operators.md` writes out the
-other seven, which are the traits the other operators are.
+`Eq` is one of the nine traits the prelude declares.
+`docs/specs/operators.md` writes out seven of the rest, which are the traits the other operators
+are, and `docs/specs/literals.md` writes out `IntegerLiteral`, which is the trait a literal is.
 
 A supplied instance has no body to call.
 `is_equal` at `Int`, at `Bool`, or at `String` is written out where it is called, as `or` is, and

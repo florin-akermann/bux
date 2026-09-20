@@ -34,9 +34,13 @@ impl Builder<'_> {
     /// instance for.
     ///
     /// `add(one, other)` is the call `one + other` already is, so the two are written the same.
+    /// `from_literal(5)` is the whole number `5` already is, which `lower/literal.rs` writes.
     pub(crate) fn supplied_instance(&mut self, name: &Name, arguments: &[&Expr]) -> Descriptor {
         let of = prelude::trait_of(&name.text)
             .expect("the prelude declares every method that reaches here");
+        if of == prelude::INTEGER_LITERAL {
+            return self.supplied_from_literal(arguments);
+        }
         if of == prelude::NEG {
             let [value] = arguments else {
                 unreachable!("inference gave `negate` the one argument it takes")
@@ -236,7 +240,7 @@ fn written_as(of: &str) -> BinaryOperator {
         prelude::MUL => BinaryOperator::Multiply,
         prelude::DIV => BinaryOperator::Divide,
         prelude::REM => BinaryOperator::Remainder,
-        _ => unreachable!("prefix `-` takes one value, and is written before this is reached"),
+        _ => unreachable!("prefix `-` and a literal are both written before this is reached"),
     }
 }
 

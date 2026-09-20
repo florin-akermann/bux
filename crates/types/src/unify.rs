@@ -54,14 +54,33 @@ pub(crate) enum Clash {
 }
 
 /// Settles `var` on `to`, unless `to` is a type that holds `var` and so cannot be finite.
+///
+/// A variable standing for a whole number settles on less than an ordinary one: only on a type a
+/// whole number may be written at. A clash here is therefore the ordinary clash of two types, and
+/// is reported as one, because such a variable reads as the `Int` it would have defaulted to.
 fn settle(table: &mut Table, var: TypeVar, to: &Type) -> Result<(), Clash> {
     let mut held = Vec::new();
     table.unsettled(to, &mut held);
     if held.contains(&var) {
         return Err(Clash::Infinite);
     }
+    if table.is_a_whole_number(var) && !stands_for_a_whole_number(table, to) {
+        return Err(Clash::Mismatch);
+    }
     table.settle(var, to.clone());
     Ok(())
+}
+
+/// Whether a whole number may be what `to` stands for, which settling one on it needs.
+///
+/// A variable may: two whole numbers meeting are one whole number, and whatever settles the one
+/// that is left settles both. Everything else is a type, and takes a whole number or does not.
+fn stands_for_a_whole_number(table: &mut Table, to: &Type) -> bool {
+    if let Type::Var(other) = to {
+        table.note_a_whole_number(*other);
+        return true;
+    }
+    table.takes_a_whole_number(to)
 }
 
 fn each(table: &mut Table, theirs: &[Type], ours: &[Type]) -> Result<(), Clash> {
