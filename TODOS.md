@@ -6,7 +6,7 @@
 
 ## Open
 
-## 🔴 Item 015: An executable example per public function
+## 🟡 Item 015: An executable example per public function
 **Depends on:** Item 005, Item 010 — the harness runs the examples, and running them needs a JDK.
 A public function carries at least one executable example, or the module does not compile.
 The examples run with the test suite, so a signature never drifts from the evidence for it.
