@@ -21,19 +21,6 @@ A Java object a Lumen program holds is a value it cannot compare, hash, or print
 [048][e] - Executable examples under `tests/spec/interop/`, skipped by name when there is no JDK.
 [048][f] - `Show<Bool|Int|String>` and `Hash<String>` move to `library/prelude.lm` over `extern`.
 
-## 🟢 Item 049: A package is a directory of modules with a name and a version
-**Depends on:** Item 044, Item 045 — a package offers types; the library is the first package.
-`docs/implementation.md` section 10 names package management; no document says what a package is.
-Version 0.1 finds a module beside the importing file and nowhere else.
-A package is a directory with a manifest naming it and its version, and its modules are its files.
-A dependency is a package in a named directory, and the manifest lists it; nothing is fetched.
-Fetching, a registry, and a lockfile wait for a concrete requirement, which offline-first defers.
-[049][a] - `docs/design.md` section 16 states what a package is and how an import reaches one.
-[049][b] - Spec first in `docs/specs/packages.md`: the manifest, the directory, and the errors.
-[049][c] - Loading reaches a dependency's module, test-first; a ring across packages is `L0307`.
-[049][d] - Help topic in `crates/cli/src/help/`; `lumen check` and `lumen build` take a package.
-[049][e] - Executable examples under `tests/spec/packages/`: two packages, one importing the other.
-
 ## 🔴 Item 051: Identity is quarantined, not abolished
 `docs/design.md` section 15 argues that no two spawned functions ever hold the same value.
 The section's own example refutes it: `events` is held by the parent and by the spawned `produce`.
