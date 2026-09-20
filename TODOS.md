@@ -49,14 +49,26 @@ C2 cannot be measured while a program has no observable result: the loop is dele
 its reads are loop-invariant and folded into one multiplication, so neither run says anything.
 
 ## 🔴 Item 031: An executable example asserts what a program writes out
-**Depends on:** Item 029 — no Lumen program can fail at runtime, so an exit status proves little.
+**Depends on:** Item 029, Item 035 — an exit status proves little, and writing out comes first.
 `// expect-run` judges an example by its exit status, which is `0` for every program that runs.
 Now that no operation throws, an example cannot show that a value is the one the spec claims.
 An example gains a way to state the output it must produce, and the harness compares it.
 `17 / 5` being `Some(3)` is then checked rather than asserted in prose.
 `io.println` is named in a help line and implemented nowhere, so writing out comes first.
-[031][a] - A program has a way to write a line out, which version 0.1 has nowhere yet.
+[031][a] - Item 035 gives a program a way to write a line out; nothing of it is done here.
 [031][b] - `docs/specs/executable-examples.md` states the header and what is compared.
 [031][c] - The harness compares the output, test-first; a mismatch names the file and both texts.
 [031][d] - `tests/spec/arithmetic/division.lm` writes its answers out and states them.
 
+## 🔴 Item 035: A program reaches the console and the file system
+A program can work nothing out that anyone can see: version 0.1 has no way to write a line.
+`docs/design.md` section 16 already writes `io.print`, and a help line already writes `io.println`,
+so the name is in two places and the implementation is in neither.
+Reading a file is the other half, and `docs/implementation.md` section 4 lists IO and Files apart.
+Reaching either needs a static field, which the lowering has no instruction for today.
+A read can fail, so it gives back a `Result`, which `docs/design.md` section 5 requires of it.
+[035][a] - Spec first in `docs/specs/io.md`: what each module declares, and what a failure gives.
+[035][b] - The lowering reads a static field, test-first, which is how `System.out` is reached.
+[035][c] - Writing a line out, test-first, under the one name the spec settles on.
+[035][d] - Reading a file whole, test-first, as a `Result` the caller must open.
+[035][e] - Executable examples under `tests/spec/io/`, skipped by name where no JDK is installed.
