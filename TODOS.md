@@ -6,7 +6,7 @@
 
 ## Open
 
-## 🔴 Item 034: A literal takes the type its context expects
+## 🟡 Item 034: A literal takes the type its context expects
 **Depends on:** Item 033 — a literal is a trait method, and the operator traits land first.
 `1` is an `Int` today, at the one place inference types a literal, so `Int32` is written `Int32(1)`.
 `docs/design.md` section 8 gives a whole-number literal the type its context expects instead.
