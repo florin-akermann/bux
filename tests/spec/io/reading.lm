@@ -1,5 +1,8 @@
 // expect-run
+// > the read failed and said why
 // Reading a file gives back a `Result`, so a file that is not there is a case, not a failure.
+// What the failure says of itself is the JDK's wording, so the program states its own instead.
+// It still reads what it was handed: a failure that said nothing writes the other line.
 import files
 
 import io
@@ -7,6 +10,14 @@ import io
 fn main() -> () {
     match files.read("no-such-file.txt") {
         Ok(text) => io.println(text)
-        Err(why) => io.println(why)
+        Err(why) => io.println(told(why: why))
+    }
+}
+
+fn told(why: String) -> String {
+    if why == "" {
+        "the read failed and said nothing"
+    } else {
+        "the read failed and said why"
     }
 }

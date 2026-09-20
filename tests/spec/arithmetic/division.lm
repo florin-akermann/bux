@@ -1,21 +1,47 @@
 // expect-run
+// > 17 / 5 is Some(3)
+// > 17 / 0 is None
+// > 17 % 5 is Some(2)
+// > 17 % 0 is None
 // `/` and `%` give an `Option<Int>`, so a zero divisor is answered rather than thrown.
-// Nothing here is asserted. `expect-run` judges an example by its exit status, and no Lumen
-// program can fail at runtime, so running every path a division has to the end is what this
-// shows. Item 031 is what will let it state the answers it works out.
+// A zero written as a divisor is refused where it is written, so each one arrives as a value.
+// Each line is written only where the answer is the one it claims, so the header above is
+// checked rather than asserted: a wrong answer writes a different line and the harness says so.
+import io
+
 fn main() -> () {
-    first := quotient(of: 17, by: 5) + quotient(of: 17, by: 0)
-    answers := first + leftover(of: 17, by: 5) + leftover(of: 17, by: 0)
-    ()
+    io.println(answered(claim: "17 / 5 is Some(3)", answer: divided(of: 17, by: 5), wanted: 3))
+    io.println(nothing(claim: "17 / 0 is None", answer: divided(of: 17, by: 0)))
+    io.println(answered(claim: "17 % 5 is Some(2)", answer: leftover(of: 17, by: 5), wanted: 2))
+    io.println(nothing(claim: "17 % 0 is None", answer: leftover(of: 17, by: 0)))
 }
 
-fn quotient(of: Int, by: Int) -> Int {
-    match of / by {
-        Some(answer) => answer
-        None => -1
+fn divided(of: Int, by: Int) -> Option<Int> {
+    of / by
+}
+
+fn leftover(of: Int, by: Int) -> Option<Int> {
+    of % by
+}
+
+fn answered(claim: String, answer: Option<Int>, wanted: Int) -> String {
+    match answer {
+        Some(held) => held_as(claim: claim, held: held, wanted: wanted)
+        None => "no answer where " + claim
     }
 }
 
-fn leftover(of: Int, by: Int) -> Int {
-    or(of % by, -1)
+fn held_as(claim: String, held: Int, wanted: Int) -> String {
+    if held == wanted {
+        claim
+    } else {
+        "another answer where " + claim
+    }
+}
+
+fn nothing(claim: String, answer: Option<Int>) -> String {
+    match answer {
+        Some(held) => "an answer where " + claim
+        None => claim
+    }
 }

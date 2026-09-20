@@ -47,7 +47,7 @@ cargo run --bin lumen -- run example/main.lm
 ```
 
 It ends normally and exits `0`, which is the whole of what it shows.
-Version 0.1 has no way to write a line out, so a run that reaches the end is the observation.
+The answer it works out is an `Int`, and version 0.1 has no way to write a number out.
 `docs/specs/example-program.md` says what the directory holds and why that is enough.
 
 Its public surface is one page, which is what a reader consults to learn a signature:

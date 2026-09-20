@@ -1,6 +1,6 @@
 // The first Lumen program, and the one the README points at.
 // It is everyday Lumen: a record, an algebraic data type, a `match`, and a `for` loop.
-// Unplaced is printed, because version 0.1 has no way to write a line out.
+// Nothing is written out, because version 0.1 has no way to write a number out.
 // Running to the end is what it shows, and `docs/specs/example-program.md` says why.
 // A file reads top down, so what a name is comes below the first line that uses it.
 fn main() -> () {

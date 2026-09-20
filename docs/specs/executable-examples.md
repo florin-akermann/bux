@@ -41,13 +41,27 @@ An example that is run says so on its first line instead:
 
 ```text
 // expect-run
+// > 17 / 5 is Some(3)
+// > 17 / 0 is None
 ```
 
 It must compile, declare `main`, and run to the end without failing.
-That is the whole expectation: version 0.1 gives a program no way to say anything else about how
-it went, so an example claims nothing an example could not check.
+It must also write exactly what the lines under the header say it writes.
+Each line is the word `>` after the comment marker, a space, and one line the program writes.
+They come directly under the header, in the order the program writes them.
+A line the program writes empty is stated with the marker and nothing after it.
+Canonical form keeps no space at the end of a line, which is why there is none to write.
 
-An example may carry ordinary comments; only the first line is read as an expectation.
+A line opening with the marker anywhere else fails the run, naming the file.
+Such a line is one an author meant to state and the harness would never have compared.
+Reading it as a program that wrote the wrong thing would send the reader to the wrong file.
+An example that is not run states no output at all, for the same reason.
+An example that states none of them writes nothing at all, which is as much a claim as any other.
+
+An example states what it works out rather than asserting it in prose.
+`17 / 5` being `Some(3)` is then something the harness checks, and something a reader can see.
+
+An example may carry ordinary comments below its expectation.
 
 ## Compiling an example
 
@@ -64,6 +78,14 @@ A refused example that parses is still in canonical form, so `L0200` is never wh
 
 An example headed `// expect-run` is run with `lumen run`, and must end with status 0.
 `docs/specs/run.md` says what running amounts to and where the JDK comes from.
+
+What the program writes to standard output is compared with what the header states.
+The stated lines are each followed by a line break, and the comparison is exact.
+An output ending without a line break cannot be stated yet; the example needing it adds a form.
+What the program writes to standard error is not compared, because nothing writes there yet.
+
+A mismatch names the example's path, what the header stated, and what the program wrote.
+Both are shown as the text they are, so a line break or a space that differs is visible.
 
 Running needs a JDK, and the test suite does not.
 An example that is run is skipped when `JAVA_HOME` names none, and the skip says so by name, so a

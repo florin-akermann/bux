@@ -45,10 +45,10 @@ lumen run example/main.lm
 The program ends normally and exits `0`.
 
 That is the whole of what it shows, and it is deliberate.
-Version 0.1 has no way to write a line out, and no Lumen program can fail at runtime, which
-`docs/specs/arithmetic.md` explains.
-So an observable answer is not available to this program yet, and a run that reaches the end is.
-Item 031 is what turns the answers it works out into something a test can read.
+No Lumen program can fail at runtime, which `docs/specs/arithmetic.md` explains.
+The answer this program works out is an `Int`, and version 0.1 has no way to write a number out.
+`io.println` writes a line, which `docs/specs/io.md` states, but there is no text to hand it.
+So a run that reaches the end is what this program shows, and the answer itself waits on that.
 
 ## What it cannot show yet
 

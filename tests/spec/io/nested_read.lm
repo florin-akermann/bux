@@ -1,4 +1,5 @@
 // expect-run
+// > the read failed and said why
 // A read is written wherever an expression is, with a larger one already part worked out.
 import files
 
@@ -18,6 +19,14 @@ fn wrapped() -> Option<Result<String, String>> {
 fn told(result: Result<String, String>) -> String {
     match result {
         Ok(text) => text
-        Err(why) => why
+        Err(why) => said(why: why)
+    }
+}
+
+fn said(why: String) -> String {
+    if why == "" {
+        "the read failed and said nothing"
+    } else {
+        "the read failed and said why"
     }
 }

@@ -1,4 +1,6 @@
 // expect-run
+// > one and two
+// > and three
 // A program reaches the console through `io`, which the compiler supplies.
 import io
 

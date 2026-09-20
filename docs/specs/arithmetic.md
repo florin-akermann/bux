@@ -120,6 +120,5 @@ These hold over any module that divides, and are checked with property-based tes
 
 `tests/spec/arithmetic/division.lm` runs the arithmetic this spec states on a JDK, and is
 skipped when none is present.
-It proves that nothing throws, which is all an example can prove while `lumen run` is judged by
-its exit status alone and no Lumen program can fail at runtime.
-The values themselves wait on an example that asserts what a program writes out.
+It writes out what each division worked out, and its header states the lines it must write.
+Each answer is checked rather than asserted, in the form `docs/specs/executable-examples.md` gives.
