@@ -22,7 +22,7 @@ use crate::infer::settle::Lookup;
 use crate::scheme::{Quantified, Scheme};
 use crate::surface::{Imported, Surface};
 use crate::table::Table;
-use crate::types::{Type, TypeVar};
+use crate::types::{OPTION, RESULT, Type, TypeVar};
 use crate::unify::{Clash, unify};
 
 /// The type of every expression of `resolved`, and what the module offers, or the first thing
@@ -49,6 +49,7 @@ pub(crate) fn infer(
         equalities: Vec::new(),
         discards: Vec::new(),
         lookups: Vec::new(),
+        propagations: Vec::new(),
     };
     inference.module()?;
     let offered = inference.offered();
@@ -76,6 +77,8 @@ struct Inference<'a> {
     discards: Vec<(Type, Span)>,
     /// The fields of the current function, each waiting on the type it is reached through.
     lookups: Vec<Lookup>,
+    /// The `?`s of the current function that nothing had yet said which kind they propagate.
+    propagations: Vec<Propagation>,
 }
 
 impl Inference<'_> {
@@ -130,6 +133,7 @@ impl Inference<'_> {
         let body = self.block(&function.body, Gives::ItsValue)?;
         self.look_up_fields()?;
         self.expect(&(*result).clone(), &body, function.body.span)?;
+        self.settle_propagations()?;
         self.settle_additions()?;
         self.settle_equalities()?;
         self.settle_discards()?;
@@ -413,14 +417,34 @@ impl Inference<'_> {
         Ok(found)
     }
 
+    /// `?` hands the case with nothing to go on back, and leaves what the other case carries.
+    ///
+    /// `docs/design.md` section 5 states the rule: each kind lands in a function that gives back
+    /// the same kind, so nothing is converted. A `?` that neither the function's result nor what
+    /// it is written on has settled yet waits for the body to say, as a field lookup does.
     fn propagated(&mut self, inner: &Expr, at: Span) -> Result<Type, TypeError> {
         let found = self.expr(inner)?;
-        let ok = self.table.fresh();
-        let error = self.table.fresh();
-        self.expect(&Type::result(ok.clone(), error.clone()), &found, inner.span)?;
-        let propagated = self.table.fresh();
-        self.expect(&self.result.clone(), &Type::result(propagated, error), at)?;
-        Ok(ok)
+        let waiting = Propagation {
+            found,
+            held: self.table.fresh(),
+            inner: inner.span,
+            at,
+        };
+        let held = waiting.held.clone();
+        match self.propagates(&waiting.found) {
+            Some(kind) => self.propagate(waiting, kind)?,
+            None => self.propagations.push(waiting),
+        }
+        Ok(held)
+    }
+
+    /// Which of the two kinds this `?` propagates, which is the one its function gives back.
+    ///
+    /// What the `?` is written on answers where the function has not, which is how a body with
+    /// no signature above it still divides through `?`.
+    fn propagates(&self, found: &Type) -> Option<Propagated> {
+        propagated(&self.table.solved(&self.result))
+            .or_else(|| propagated(&self.table.solved(found)))
     }
 
     fn if_expr(&mut self, chain: &IfExpr) -> Result<Type, TypeError> {
@@ -609,6 +633,39 @@ fn miscounted(name: &Name, takes: usize, given: usize) -> TypeError {
 fn name_of(callee: &Expr) -> Option<&Name> {
     match &callee.kind {
         ExprKind::Name(name) | ExprKind::Field { name, .. } => Some(name),
+        _ => None,
+    }
+}
+
+/// One `?`, and what it was written on, waiting on the kind its function gives back.
+pub(crate) struct Propagation {
+    /// The type of what the `?` is written on, which is one of the two kinds.
+    pub(crate) found: Type,
+    /// The type the `?` leaves behind, which is what that kind carries.
+    pub(crate) held: Type,
+    /// Where what the `?` is written on is written, which a mismatch there points at.
+    pub(crate) inner: Span,
+    /// Where the `?` is written, which a function of the wrong kind is reported at.
+    pub(crate) at: Span,
+}
+
+/// Which case a `?` hands back, neither of which ever becomes the other.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum Propagated {
+    /// An `Option`, whose `None` says there is nothing and has nothing more to say.
+    Absence,
+    /// A `Result`, whose `Err` says what the caller could not have worked out.
+    Failure,
+}
+
+/// Which kind `settled` is, when it is one of the two a `?` propagates.
+pub(crate) fn propagated(settled: &Type) -> Option<Propagated> {
+    let Type::Named { name, .. } = settled else {
+        return None;
+    };
+    match name.as_str() {
+        OPTION => Some(Propagated::Absence),
+        RESULT => Some(Propagated::Failure),
         _ => None,
     }
 }

@@ -12,5 +12,6 @@ mod holds;
 mod imports;
 mod inference;
 mod predicate;
+mod propagating;
 mod properties;
 mod supplied;

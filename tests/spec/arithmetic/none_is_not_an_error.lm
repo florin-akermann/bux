@@ -1,0 +1,6 @@
+// expect-error: L0400
+// `?` propagates each kind into a function that gives back the same kind, and converts nothing.
+// A `None` met where the function gives back a `Result` names no error, so it is refused.
+fn scaled(total: Int, count: Int) -> Result<Int, String> {
+    Ok((total / count)?)
+}

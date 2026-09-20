@@ -17,9 +17,15 @@ use crate::descriptor::{ClassName, Descriptor, MethodDescriptor};
 ///
 /// The order is the order a tag counts in, and it is the order exhaustiveness lists them in.
 const PRELUDE: [(&str, [(&str, usize); 2]); 2] = [
-    ("Option", [("Some", 1), ("None", 0)]),
-    ("Result", [("Ok", 1), ("Err", 1)]),
+    (OPTION, [(SOME, 1), (NONE, 0)]),
+    (RESULT, [(OK, 1), (ERR, 1)]),
 ];
+
+/// The type a value of, or nothing, is written as, which a `?` hands a `None` back from.
+pub(crate) const OPTION: &str = "Option";
+
+/// The type an attempt is written as, which a `?` hands an `Err` back from.
+pub(crate) const RESULT: &str = "Result";
 
 /// The package the prelude types are written in, which every module may reach.
 const PRELUDE_PACKAGE: &str = "lumen";

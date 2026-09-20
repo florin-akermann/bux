@@ -103,19 +103,6 @@ fn a_for_in_over_something_that_is_not_a_list_is_refused() {
 }
 
 #[test]
-fn a_question_mark_in_a_function_that_returns_no_result_is_refused() {
-    let source = concat!(
-        "fn go() -> Int {\n    name := find()?\n    1\n}\n\n",
-        "fn find() -> Result<String, Int> {\n    Ok(\"found\")\n}\n"
-    );
-
-    assert_eq!(
-        refusal(source).message(),
-        "expected `Int`, found `Result<_, Int>`"
-    );
-}
-
-#[test]
 fn every_refusal_carries_the_help_line_its_code_has() {
     let error = refusal("fn count() -> Int {\n    \"seven\"\n}\n");
 

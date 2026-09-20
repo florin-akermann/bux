@@ -43,6 +43,13 @@ well, because a dropped `Result` is a swallowed failure; `_ = save(user)` throws
 purpose and says so. Inside a function the types are inferred, so a signature is written where it
 documents a boundary rather than on every line.
 
+`?` is settled here too. It hands the `Err` of a `Result` or the `None` of an `Option` back, and
+lands in a function that gives back the same kind, so it never converts one into the other.
+A division propagated with `?` in a function that gives back a `Result` is refused for that
+reason: a `None` names no error, and a `match` there states which error a zero divisor is. What a
+function gives back is still written out, so a body that propagates with `?` ends in `Some(…)` or
+`Ok(…)` as any other body does.
+
 How a call passes its arguments is settled here too. A call names all of its arguments or none of
 them, written `rename(from: old, to: new)` as a record writes a field, and the names run in the
 order the declaration lists the parameters. Where the declaration gives two of its parameters one

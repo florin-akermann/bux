@@ -74,11 +74,13 @@ That keeps arithmetic readable, because `?` marks the one operation that can hav
 
 ```text
 fn scaled(total: Int, count: Int) -> Option<Int> {
-    ((total / count)? / 2)? + 2 * 5
+    Some(((total / count)? / 2)? + 2 * 5)
 }
 ```
 
 Each `/` gives an `Option<Int>` and carries its own `?`; `+` and `*` give an `Int` and carry none.
+The body says which answer it gives, as `Ok(user)` does in a function that gives back a `Result`:
+nothing is wrapped for the author, because `?` is the only thing here that is not written out.
 In a function that gives back a `Result`, `(a / b)?` is refused, because a `None` names no error.
 A `match` there states which error a zero divisor is, and there is no shorter way to say it.
 The prelude supplies `or` for the case where a fallback is what the author means:
@@ -106,6 +108,10 @@ Each lowers to a test of the divisor, which yields `None` when it is zero and th
 remainder wrapped in `Some` when it is not.
 `?` on an `Option` lowers as `?` on a `Result` does: a test of the tag, which gives the `None` it
 was handed back as the function's answer, and otherwise reads the value out of the `Some`.
+The `None` goes back exactly as it arrived, carrying nothing that would have to be built again.
+Which of the two a `?` is about is settled by the kind its function gives back.
+What the `?` is written on answers where no signature has, and a `?` neither of them settles waits
+for the body, which is the last thing that can say what a function gives back.
 
 No method a module writes can throw.
 The one `athrow` code generation emits sits after an exhaustive `match`, where every value of the
@@ -140,5 +146,6 @@ These hold over any module that divides, and are checked with property-based tes
 
 `tests/spec/arithmetic/division.lm` runs the arithmetic this spec states on a JDK, and is
 skipped when none is present.
+It divides through `?` as well as through `or` and `match`, so the propagation runs there too.
 It writes out what each division worked out, and its header states the lines it must write.
 Each answer is checked rather than asserted, in the form `docs/specs/executable-examples.md` gives.

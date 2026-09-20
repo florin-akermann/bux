@@ -9,7 +9,8 @@ use crate::descriptor::Descriptor;
 use crate::lower::body::{Builder, Held, LIST};
 use crate::lower::equality::compared;
 use crate::lower::modules::Through;
-use crate::lower::shape::{CONSTRUCTOR, Carried, ERR, NONE, OK, SOME, Shape, TAG};
+use crate::lower::shape::{CONSTRUCTOR, Carried, ERR, NONE, OK, OPTION, RESULT};
+use crate::lower::shape::{SOME, Shape, TAG};
 use crate::lower::shape::{object, object_class};
 
 impl Builder<'_> {
@@ -354,10 +355,16 @@ impl Builder<'_> {
         Some(slot.of)
     }
 
-    /// `f(x)?` gives back the error it was handed, and otherwise reads the value out of it.
+    /// `?` hands the case with nothing to go on back, and reads the value out of the other.
+    ///
+    /// The two kinds lower the same way: a test of the tag, the value handed back as the
+    /// function's answer where it is the case that propagates, and the value read out of it
+    /// where it is not. `docs/specs/arithmetic.md` states it for an `Option`, whose `None` goes
+    /// back exactly as it was handed over, carrying nothing to be built again.
     fn propagated(&mut self, inner: &Expr, at: Span) -> Option<Descriptor> {
-        let failed = self.lowering.shapes.built(ERR).clone();
-        let worked = self.lowering.shapes.built(OK).clone();
+        let (handed_back, carrying) = self.propagates(inner.span);
+        let failed = self.lowering.shapes.built(handed_back).clone();
+        let worked = self.lowering.shapes.built(carrying).clone();
         let of = Descriptor::Reference(failed.base.clone());
         let held = self.expr(inner);
         self.adapt(held, Some(of.clone()));
@@ -489,6 +496,18 @@ impl Builder<'_> {
             unreachable!("a record is updated through a binding, which is declared where it is")
         };
         self.record_of(at)
+    }
+
+    /// The variant a `?` at `written` hands back, and the one it reads its value out of.
+    fn propagates(&self, written: Span) -> (&'static str, &'static str) {
+        let Some(Type::Named { name, .. }) = self.lowering.typed.type_of(written) else {
+            unreachable!("inference gave every `?` a type to propagate")
+        };
+        match name.as_str() {
+            OPTION => (NONE, SOME),
+            RESULT => (ERR, OK),
+            other => unreachable!("`?` propagates an `Option` or a `Result`, never a `{other}`"),
+        }
     }
 
     /// The record the type of what is written at `written` is, which is what carries its fields.

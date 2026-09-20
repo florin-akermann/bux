@@ -74,16 +74,6 @@ fn a_record_update_has_the_type_it_already_had() {
 }
 
 #[test]
-fn a_question_mark_gives_the_ok_and_leaves_with_the_error() {
-    let source = concat!(
-        "fn load(id: Int) -> Result<String, Int> {\n    name := find(id)?\n    Ok(name)\n}\n\n",
-        "fn find(id: Int) -> Result<String, Int> {\n    Ok(\"found\")\n}\n"
-    );
-
-    assert_eq!(inferred_type(source, "find(id)?", 1), "String");
-}
-
-#[test]
 fn a_match_arm_binds_what_its_variant_carries() {
     let source = concat!(
         "fn describe(payment: Payment) -> String {\n    match payment {\n        Pending => \"waiting\"\n        Failed(reason) => reason\n    }\n}\n\n",

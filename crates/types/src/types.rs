@@ -25,6 +25,12 @@ pub enum Type {
     Unit,
 }
 
+/// The type a value of, or nothing, is written as, which a `?` hands a `None` back from.
+pub(crate) const OPTION: &str = "Option";
+
+/// The type an attempt is written as, which a `?` hands an `Err` back from.
+pub(crate) const RESULT: &str = "Result";
+
 impl Type {
     /// A whole number, 64 bits wide, and the only one the language has.
     #[must_use]
@@ -53,13 +59,13 @@ impl Type {
     /// A value of type `value`, or nothing.
     #[must_use]
     pub fn option(value: Self) -> Self {
-        Self::applied("Option", vec![value])
+        Self::applied(OPTION, vec![value])
     }
 
     /// A `value` when it worked and an `error` when it did not.
     #[must_use]
     pub fn result(value: Self, error: Self) -> Self {
-        Self::applied("Result", vec![value, error])
+        Self::applied(RESULT, vec![value, error])
     }
 
     /// A function from `parameters` to `result`.

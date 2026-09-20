@@ -9,7 +9,7 @@ use std::mem;
 use lumen_ast::{Name, Span};
 
 use crate::error::{TypeError, TypeErrorKind};
-use crate::infer::{Inference, labelled};
+use crate::infer::{Inference, Propagated, Propagation, labelled};
 use crate::supplied;
 use crate::surface::Offered;
 use crate::types::Type;
@@ -24,6 +24,48 @@ impl Inference<'_> {
             self.look_up(lookup)?;
         }
         Ok(())
+    }
+
+    /// The `?`s of one function that nothing had settled when they were walked past.
+    ///
+    /// They settle after the body has met the declared result, which is the last thing that can
+    /// say what a function with no signature gives back. A function that recurses through its
+    /// own `?` is the reason: nothing but its body ever says which kind it propagates. One that
+    /// still says nothing propagates a `Result`, which is the kind a `?` with no answer is
+    /// reported against.
+    pub(crate) fn settle_propagations(&mut self) -> Result<(), TypeError> {
+        for waiting in mem::take(&mut self.propagations) {
+            let kind = self
+                .propagates(&waiting.found)
+                .unwrap_or(Propagated::Failure);
+            self.propagate(waiting, kind)?;
+        }
+        Ok(())
+    }
+
+    /// One `?`, held to the kind it propagates on both sides: what it is given, and what it
+    /// leaves the function.
+    ///
+    /// The two sides of a `Result` share an error type, so a `?` never propagates into a
+    /// function that names another one. An `Option` carries nothing to share, so a `None` goes
+    /// into any function that gives one back.
+    pub(crate) fn propagate(
+        &mut self,
+        waiting: Propagation,
+        kind: Propagated,
+    ) -> Result<(), TypeError> {
+        let (written_on, given_back) = match kind {
+            Propagated::Absence => (Type::option(waiting.held), Type::option(self.table.fresh())),
+            Propagated::Failure => {
+                let error = self.table.fresh();
+                (
+                    Type::result(waiting.held, error.clone()),
+                    Type::result(self.table.fresh(), error),
+                )
+            }
+        };
+        self.expect(&written_on, &waiting.found, waiting.inner)?;
+        self.expect(&self.result.clone(), &given_back, waiting.at)
     }
 
     /// The additions of one function, each an addition of `Int`s unless something said otherwise.

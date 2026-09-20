@@ -268,6 +268,83 @@ fn or_works_out_its_fallback_before_it_asks_which_variant_it_was_handed(tc: Test
     );
 }
 
+/// The class an `Option` is held as, which is what a `?` on one hands back.
+const OPTION: &str = "lumen/Option";
+
+/// The tag a `None` carries, which is its position in the declaration of `Option`.
+const NONE: i32 = 1;
+
+/// The ways a `?` on an `Option` is written, each holding a division where `{}` is.
+const PROPAGATING: [&str; 5] = [
+    "fn go(a: Int, b: Int) -> Option<Int> {\n    Some(({})?)\n}\n",
+    "fn go(a: Int, b: Int) -> Option<Int> {\n    held := ({})?\n    Some(held)\n}\n",
+    "fn go(a: Int, b: Int) -> Option<Int> {\n    Some((({})? / 2)? + 2 * 5)\n}\n",
+    "fn is_same(a: Int, b: Int) -> Option<Bool> {\n    Some(({})? == a)\n}\n",
+    "fn go(a: Int, b: Int) -> Option<Int> {\n    if a == b {\n        return Some(({})?)\n    }\n    Some(0)\n}\n",
+];
+
+#[hegel::test]
+fn every_question_mark_on_an_option_gives_the_none_it_was_handed_back_unchanged(tc: TestCase) {
+    let dividend = tc.draw(gs::sampled_from(&OPERANDS));
+    let divisor = tc.draw(gs::sampled_from(&OPERANDS));
+    let context = tc.draw(gs::sampled_from(&PROPAGATING));
+    let source = context.replace("{}", &format!("{dividend} / {divisor}"));
+
+    let lowered = common::lowered(&source);
+
+    let mut propagated = 0;
+    for method in methods_of(&lowered) {
+        for at in asked_which_variant(method) {
+            propagated += 1;
+            assert_eq!(
+                &method[at..at + 2],
+                handed_back(held_in(method, at)),
+                "{source} builds a `None` rather than handing back the one it was given"
+            );
+        }
+    }
+    assert!(propagated > 0, "{source} writes a `?` on an `Option`");
+}
+
+/// Where each `?` on an `Option` jumps past the case it hands back, which is what follows.
+fn asked_which_variant(method: &[Instruction]) -> Vec<usize> {
+    method
+        .windows(4)
+        .enumerate()
+        .filter(|(_, window)| tests_the_none_tag(window))
+        .map(|(at, _)| at + 4)
+        .collect()
+}
+
+/// Whether these four instructions ask whether an `Option` is the `None` a `?` hands back.
+fn tests_the_none_tag(window: &[Instruction]) -> bool {
+    matches!(&window[0], Instruction::GetField(field)
+        if field.class == ClassName::new(OPTION) && field.name == "tag")
+        && window[1] == Instruction::Integer(NONE)
+        && window[2] == Instruction::CompareIntegers(Comparison::Equal)
+        && matches!(window[3], Instruction::JumpIfFalse(_))
+}
+
+/// The slot the `Option` a `?` at `at` was handed is set aside in, which the test read it from.
+fn held_in(method: &[Instruction], at: usize) -> u16 {
+    match &method[at - 5] {
+        Instruction::Load { slot, .. } => *slot,
+        other => panic!("a `?` reads the tag of what it loaded, not of {other:?}"),
+    }
+}
+
+/// Loading `slot` and giving it back, which is the whole of the case a `?` propagates.
+fn handed_back(slot: u16) -> [Instruction; 2] {
+    let of = Descriptor::reference(OPTION);
+    [
+        Instruction::Load {
+            slot,
+            of: of.clone(),
+        },
+        Instruction::Return(Some(of)),
+    ]
+}
+
 /// The instruction an operator written in a fallback lowers to.
 fn counted(operator: &str) -> Arithmetic {
     match operator {
