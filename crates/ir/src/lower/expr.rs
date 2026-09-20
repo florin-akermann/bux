@@ -55,8 +55,7 @@ impl Builder<'_> {
         for (at, element) in elements.iter().enumerate() {
             self.emit(Instruction::Copy);
             self.emit(Instruction::Integer(counting(at)));
-            let held = self.expr(element);
-            self.adapt(held, Some(object()));
+            self.handed(element, Some(object()));
             self.emit(Instruction::StoreInArray);
         }
         self.emit(Instruction::CollectList);
@@ -280,8 +279,7 @@ impl Builder<'_> {
         };
         let reached = self.reaching(at, name.span);
         for (argument, wanted) in arguments.iter().zip(&reached.signature.parameters) {
-            let held = self.expr(argument);
-            self.adapt(held, wanted.clone());
+            self.handed(argument, wanted.clone());
         }
         self.emit(Instruction::InvokeStatic(MethodRef {
             class: self.lowering.shapes.module().clone(),
@@ -297,8 +295,7 @@ impl Builder<'_> {
         self.emit(Instruction::New(shape.class.clone()));
         self.emit(Instruction::Copy);
         for (argument, carried) in arguments.iter().zip(&shape.carries) {
-            let held = self.expr(argument);
-            self.adapt(held, carried.of.clone());
+            self.handed(argument, carried.of.clone());
         }
         self.constructed(&shape)
     }
@@ -418,13 +415,7 @@ impl Builder<'_> {
         let Some(given) = written_for(fields, carried) else {
             unreachable!("inference gave every field of a record a value")
         };
-        self.holding(given, carried);
-    }
-
-    /// The value written for a field, left as the field holds it.
-    fn holding(&mut self, given: &FieldValue, carried: &Carried) {
-        let held = self.expr(&given.value);
-        self.adapt(held, carried.of.clone());
+        self.handed(&given.value, carried.of.clone());
     }
 
     /// `user { active: false }` builds another one, from the old fields where none is given.
@@ -434,7 +425,7 @@ impl Builder<'_> {
         self.emit(Instruction::Copy);
         for carried in &shape.carries {
             match written_for(fields, carried) {
-                Some(given) => self.holding(given, carried),
+                Some(given) => self.handed(&given.value, carried.of.clone()),
                 None => self.kept(base, &shape, carried),
             }
         }
@@ -442,9 +433,12 @@ impl Builder<'_> {
     }
 
     /// One field of the record being updated, read off the one the update was written against.
+    ///
+    /// A field carried by nothing is kept by doing nothing: a field typed `()` holds no value to
+    /// read, and the constructor the update calls does not take one for it either.
     fn kept(&mut self, base: &Name, shape: &Shape, carried: &Carried) {
         let Some(of) = carried.of.clone() else {
-            unreachable!("`Some` carries its value as a reference, whatever the value is")
+            return;
         };
         let held = self.loaded(base);
         self.adapt(held, Some(Descriptor::Reference(shape.class.clone())));

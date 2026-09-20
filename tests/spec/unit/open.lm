@@ -1,0 +1,38 @@
+// expect-run
+// > nothing, boxed
+// A `()` given to a declared type a type parameter left open, which holds a reference.
+import io
+
+fn main() -> () {
+    if is_boxed(Boxed { held: () }) && is_held(Held(())) {
+        io.println("nothing, boxed")
+    }
+    ()
+}
+
+/// Whether a record a type parameter left open at `()` is built and handed on.
+// example: is_boxed(Boxed { held: () })
+fn is_boxed(boxed: Boxed<()>) -> Bool {
+    _ = boxed
+    true
+}
+
+/// Whether the nothing a variant left open carries is read back out.
+// example: is_held(Held(()))
+fn is_held(box: Box<()>) -> Bool {
+    match box {
+        Held(inside) => is_given(inside)
+    }
+}
+
+/// Nothing is given, and there is nothing to say about it but that it arrived.
+// example: is_given(())
+fn is_given(given: ()) -> Bool {
+    true
+}
+
+type Boxed<T> = Boxed {
+    held: T
+}
+
+type Box<T> = Held(T)

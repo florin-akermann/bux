@@ -88,3 +88,20 @@ pub fn holds(class: &Class) -> Vec<&str> {
         .map(|field| field.name.as_str())
         .collect()
 }
+
+/// Each place a `()` is handed to something that holds a reference, and the function holding it.
+///
+/// `docs/specs/codegen.md` states that a `()` is carried by nothing, so each of these leaves
+/// nothing where a reference is wanted and something has to stand for it.
+pub const HOLDING_NOTHING: [(&str, &str); 4] = [
+    ("held", "fn held() -> Option<()> {\n    Some(())\n}\n"),
+    (
+        "saved",
+        "fn saved() -> Result<(), String> {\n    Ok(())\n}\n",
+    ),
+    ("written", "fn written() -> List<()> {\n    [()]\n}\n"),
+    (
+        "boxed",
+        "fn boxed() -> Box<()> {\n    Held(())\n}\n\ntype Box<T> = Held(T)\n",
+    ),
+];

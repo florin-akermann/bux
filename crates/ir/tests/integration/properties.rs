@@ -7,8 +7,9 @@ use lumen_ir::{Arithmetic, ClassName, Comparison, Descriptor, Instruction, Lower
 use crate::common;
 
 /// The modules a property is checked over, each written in one construct or another.
-const SOURCES: [&str; 9] = [
+const SOURCES: [&str; 10] = [
     "fn written() -> List<Int> {\n    [1, 2, 3]\n}\n",
+    "fn held() -> Option<()> {\n    Some(())\n}\n",
     "fn answer() -> Int {\n    7\n}\n",
     "fn held(user: User) -> Int {\n    user.id\n}\n\ntype User = {\n    id: Int\n    active: Bool\n}\n",
     "fn told(payment: Payment) -> String {\n    match payment {\n        Pending => \"waiting\"\n        Failed(reason) => reason\n    }\n}\n\ntype Payment =\n    | Pending\n    | Failed(String)\n",
@@ -446,4 +447,31 @@ fn a_written_list_gathers_as_many_elements_as_it_writes_and_builds_one_list(tc: 
 /// The length as the JVM counts it, which is what the array is made with.
 fn counting(many: usize) -> i32 {
     i32::try_from(many).expect("a generated list is short")
+}
+
+#[hegel::test]
+fn as_many_values_stand_for_nothing_as_there_are_units_reaching_a_reference(tc: TestCase) {
+    let many = tc.draw(gs::sampled_from(&LENGTHS));
+    let written: Vec<&str> = (0..many).map(|_| "()").collect();
+    let source = format!(
+        "fn written() -> List<()> {{\n    [{}]\n}}\n",
+        written.join(", ")
+    );
+
+    let lowered = common::lowered(&source);
+
+    let body = common::body_of(&lowered, "written");
+    assert_eq!(
+        standing_for_nothing(&body.instructions),
+        many,
+        "one value stands per `()` the list writes"
+    );
+}
+
+/// How many values the instructions build to stand for a `()`, which is a bare `java.lang.Object`.
+fn standing_for_nothing(instructions: &[Instruction]) -> usize {
+    instructions
+        .iter()
+        .filter(|step| **step == Instruction::New(ClassName::new("java/lang/Object")))
+        .count()
 }

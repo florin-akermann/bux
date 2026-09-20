@@ -69,7 +69,15 @@ not this one.
 
 `()` is carried by nothing at all.
 A function whose result is `()` returns `void`, and a binding of a unit value occupies no local.
-Version 0.1 can write `()` but can do nothing with one, so a representation would never be read.
+A `()` handed to something that holds a reference is the one place that leaves nothing where a
+word is wanted: a field, a variant's value, or a list element a type parameter left open holds a
+reference, and a `()` leaves none behind.
+There a fresh `java.lang.Object` is built and stands for it.
+What stands for `()` holds nothing, because `()` holds nothing, and every `()` is the same value:
+a Lumen value has no identity, and `()` has no `Eq`, so nothing tells two of them apart.
+Reading one back out reads a value carried by nothing, so what stood there is dropped unread.
+A field typed `()` is carried by nothing wherever it appears: building a record leaves none,
+and building one again from another neither reads that field nor hands it over.
 
 A whole number and a truth value are boxed where one is put in a field left open by a type
 parameter, and read back out where one is taken from such a field.
@@ -296,3 +304,4 @@ These hold and are checked with property-based tests:
 12. Such a program computes what the same program computes when the record is built.
 13. Every descriptor a class asks to load first names another class the same build writes.
 14. A written list of `n` elements gathers them into an array of `n` and builds one list.
+15. As many values stand for nothing as there are `()`s written where a reference is wanted.

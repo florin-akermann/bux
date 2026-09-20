@@ -5,11 +5,12 @@ use std::collections::{HashMap, HashSet};
 use lumen_ast::{AssignOperator, Block, Expr, ExprKind, ForHeader, ForLoop, Function, Name, Span};
 use lumen_ast::{Statement, StatementKind};
 use lumen_resolver::{Definition, Namespace, Origin};
+use lumen_types::Type;
 
 use crate::code::{Arithmetic, Body, Instruction, Label, MethodRef};
 use crate::descriptor::{ClassName, Descriptor, MethodDescriptor};
 use crate::lower::generic::Instantiation;
-use crate::lower::shape::object;
+use crate::lower::shape::{CONSTRUCTOR, object, object_class};
 use crate::lower::{Lowering, Reaching, Signature, escape};
 
 /// The list a `for … in` walks and a written list builds, which `docs/specs/codegen.md` names.
@@ -372,6 +373,46 @@ impl<'a> Builder<'a> {
         settled
     }
 
+    /// Lowers `expr` as the value something that holds it as `wanted` is handed.
+    ///
+    /// A `()` is carried by nothing at all, so an expression whose type is `()` leaves nothing
+    /// behind. Where the thing being handed it holds a reference, something has to stand there,
+    /// and this is the one place it is put there.
+    pub(crate) fn handed(&mut self, expr: &Expr, wanted: Option<Descriptor>) {
+        let held = self.expr(expr);
+        let stands_for_nothing =
+            held.is_none() && wanted.is_some() && self.holds_nothing(expr.span);
+        let left = if stands_for_nothing {
+            Some(self.nothing())
+        } else {
+            held
+        };
+        self.adapt(left, wanted);
+    }
+
+    /// The value a `()` stands as where a reference is wanted, which nothing reads back out.
+    ///
+    /// What stands for `()` holds nothing, because `()` holds nothing, and a Lumen value has no
+    /// identity for two of them to be told apart by. `docs/specs/codegen.md` states it.
+    fn nothing(&mut self) -> Descriptor {
+        self.emit(Instruction::New(object_class()));
+        self.emit(Instruction::Copy);
+        self.emit(Instruction::Construct(MethodRef {
+            class: object_class(),
+            name: CONSTRUCTOR.to_owned(),
+            descriptor: MethodDescriptor::new(Vec::new(), None),
+        }));
+        object()
+    }
+
+    /// Whether what is written at `written` has the type `()`, which nothing carries.
+    fn holds_nothing(&self, written: Span) -> bool {
+        self.lowering
+            .typed
+            .type_of(written)
+            .is_some_and(|of| matches!(self.at.substituted(of), Type::Unit))
+    }
+
     /// Makes what is on the stack into what is wanted there, which is nothing when they agree.
     pub(crate) fn adapt(&mut self, from: Option<Descriptor>, to: Option<Descriptor>) {
         match (from, to) {
@@ -379,6 +420,7 @@ impl<'a> Builder<'a> {
             (Some(held), None) => self.emit(Instruction::Drop(held)),
             // Nothing on the stack where something is wanted is code nothing reaches: a block
             // that left through a `return` leaves the stack to whatever comes after the jump.
+            // A `()` also leaves nothing, and `handed` stands a value there before it gets here.
             (None, _) => {}
         }
     }
@@ -530,8 +572,4 @@ fn joined(of: &Descriptor) -> Instruction {
             Instruction::Arithmetic(Arithmetic::Add)
         }
     }
-}
-
-fn object_class() -> ClassName {
-    ClassName::new("java/lang/Object")
 }

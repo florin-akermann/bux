@@ -1,0 +1,22 @@
+// expect-run
+// > renumbered
+// A record holding a field typed `()`, built again under another number.
+import io
+
+fn main() -> () {
+    if renumbered(Note { held: (), id: 1 }).id == 2 {
+        io.println("renumbered")
+    }
+    ()
+}
+
+/// The same note under another number, with the nothing it holds kept as it was.
+// example: renumbered(Note { held: (), id: 1 }).id == 2
+fn renumbered(note: Note) -> Note {
+    note { id: 2 }
+}
+
+type Note = {
+    held: ()
+    id: Int
+}

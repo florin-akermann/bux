@@ -1,0 +1,54 @@
+// expect-run
+// > carried and read back
+// A `()` an `Option` and a `Result` carry, which each holds as a reference.
+import io
+
+fn main() -> () {
+    if is_read(held()) && is_saved() {
+        io.println("carried and read back")
+    }
+    ()
+}
+
+/// Whether the nothing an `Option` carries is read back out.
+// example: is_read(Some(()))
+fn is_read(maybe: Option<()>) -> Bool {
+    match maybe {
+        Some(inside) => is_given(inside)
+        None => false
+    }
+}
+
+/// The `()` an `Option` carries.
+// example: is_read(held())
+fn held() -> Option<()> {
+    Some(())
+}
+
+/// Whether the `()` a `Result` carries survives a `?`.
+// example: is_saved()
+fn is_saved() -> Bool {
+    match saved() {
+        Ok(inside) => is_given(inside)
+        Err(why) => why == ""
+    }
+}
+
+/// A `()` carried through a `?` and put back in an `Ok`.
+// example: is_saved()
+fn saved() -> Result<(), String> {
+    inside := kept()?
+    Ok(inside)
+}
+
+/// A `()` in an `Ok`.
+// example: is_saved()
+fn kept() -> Result<(), String> {
+    Ok(())
+}
+
+/// Nothing is given, and there is nothing to say about it but that it arrived.
+// example: is_given(())
+fn is_given(given: ()) -> Bool {
+    true
+}

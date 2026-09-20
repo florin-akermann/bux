@@ -1,0 +1,22 @@
+// expect-run
+// > three nothings
+// A list of nothings, which holds each of them as a reference.
+import io
+
+fn main() -> () {
+    if counted([(), (), ()]) == 3 {
+        io.println("three nothings")
+    }
+    ()
+}
+
+/// How many nothings the list holds.
+// example: counted([()]) == 1
+fn counted(all: List<()>) -> Int {
+    var many = 0
+    for one in all {
+        _ = one
+        many += 1
+    }
+    many
+}

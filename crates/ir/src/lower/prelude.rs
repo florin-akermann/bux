@@ -70,8 +70,7 @@ impl Builder<'_> {
     /// later, and a program must not change its behaviour when it does. Nothing is left in a
     /// local when the fallback is carried by nothing, because there is nothing to leave.
     fn set_aside_as(&mut self, fallback: &Expr, wanted: Option<Descriptor>) -> Option<Slot> {
-        let left = self.expr(fallback);
-        self.adapt(left, wanted.clone());
+        self.handed(fallback, wanted.clone());
         let of = wanted?;
         let at = self.temporary(&of);
         self.emit(Instruction::Store {
