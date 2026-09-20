@@ -8,16 +8,18 @@ use lumen_ir::{
 use lumen_ir::{Label, Reached};
 
 use crate::common;
-use crate::reader::read;
+use crate::reader::{ClassFile, Constant, read};
 
 /// The modules the whole-compiler properties are checked over.
-const SOURCES: [&str; 6] = [
+const SOURCES: [&str; 8] = [
     "fn answer() -> Int {\n    7\n}\n",
     "fn held(user: User) -> Int {\n    user.id\n}\n\ntype User = {\n    id: Int\n}\n",
     "fn told(payment: Payment) -> String {\n    match payment {\n        Pending => \"waiting\"\n        Failed(reason) => reason\n    }\n}\n\ntype Payment =\n    | Pending\n    | Failed(String)\n",
     "fn walked(counts: List<Int>) -> Int {\n    var total = 0\n    for count in counts {\n        total += count\n    }\n    total\n}\n",
     "fn used() -> Result<Int, String> {\n    value := held()?\n    Ok(value + 1)\n}\n\nfn held() -> Result<Int, String> {\n    Ok(1)\n}\n",
     "fn number(user: User) -> Int {\n    user.home.number\n}\n\ntype User = {\n    id: Int\n    home: Address\n}\n\ntype Address = {\n    number: Int\n}\n",
+    "fn kept(count: Int) -> Int {\n    identity(count)\n}\n\nfn is_kept(flag: Bool) -> Bool {\n    identity(flag)\n}\n\nfn identity<T>(value: T) -> T {\n    value\n}\n",
+    "fn kept(count: Int) -> Int {\n    through(count)\n}\n\nfn through<T>(value: T) -> T {\n    identity(value)\n}\n\nfn identity<T>(value: T) -> T {\n    value\n}\n",
 ];
 
 #[hegel::test]
@@ -110,6 +112,59 @@ fn every_class_written_begins_with_the_magic_and_the_current_version(tc: TestCas
         assert_eq!(read.minor, 65535);
     }
 }
+
+#[hegel::test]
+fn no_method_written_for_a_function_a_module_declares_names_object(tc: TestCase) {
+    let source = tc.draw(gs::sampled_from(&SOURCES));
+
+    let module = read(&common::compiled(source)[0].bytes);
+
+    for method in &module.methods {
+        assert!(
+            !method.descriptor.contains("java/lang/Object"),
+            "{} is written {}",
+            method.name,
+            method.descriptor
+        );
+    }
+}
+
+#[hegel::test]
+fn a_generic_used_at_a_whole_number_is_written_taking_and_giving_back_a_long(tc: TestCase) {
+    let through = tc.draw(gs::sampled_from(&GENERICS));
+    let source =
+        format!("fn kept(count: Int) -> Int {{\n    {through}(count)\n}}\n{WRITTEN_OVER_ONE_TYPE}");
+
+    let module = read(&common::compiled(&source)[0].bytes);
+
+    let written = module
+        .methods
+        .iter()
+        .find(|method| method.name == format!("{through}$Int"))
+        .unwrap_or_else(|| panic!("{source} writes {through} at `Int`"));
+    assert_eq!(written.descriptor, "(J)J");
+    assert!(
+        !names(&module).any(|held| held == "java/lang/Long"),
+        "a whole number crossing a generic is a `long`, so nothing boxes it"
+    );
+}
+
+/// Every name the class holds in its pool, which is every class and member it can reach.
+fn names(module: &ClassFile) -> impl Iterator<Item = &str> {
+    module.pool.iter().filter_map(|constant| match constant {
+        Constant::Utf8(text) => Some(text.as_str()),
+        _ => None,
+    })
+}
+
+/// The generic functions the specialization property calls, each giving back what it was given.
+const GENERICS: [&str; 2] = ["identity", "through"];
+
+/// One generic that calls another, so a use of either settles both.
+const WRITTEN_OVER_ONE_TYPE: &str = concat!(
+    "\nfn through<T>(value: T) -> T {\n    identity(value)\n}\n\n",
+    "fn identity<T>(value: T) -> T {\n    value\n}\n"
+);
 
 #[hegel::test]
 fn every_method_a_module_declares_is_written_as_a_method_of_it(tc: TestCase) {

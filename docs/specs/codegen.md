@@ -52,8 +52,18 @@ a declared type the class written for it
 Option<T>       lumen.Option
 Result<T, E>    lumen.Result
 List<T>         java.util.List
-a type parameter java.lang.Object
 ```
+
+A type parameter written in a function signature is carried by nothing, because no method written
+has one: a generic function is written once per set of types it is used at, and each of those is
+carried by the type it settled on.
+"How a generic is written" below says how.
+
+A type parameter written in a type declaration is carried by `java.lang.Object`.
+A generic type is one class however it is used, which is what `Option`, `Result`, and `List`
+already are, so a field left open holds a reference and a whole number put in one is boxed.
+Making a class per use is the same change for types that this page makes for functions, and it is
+not this one.
 
 `Int` is `long` because `Int` is 64 bits wide, which `docs/design.md` section 3 states.
 
@@ -61,10 +71,14 @@ a type parameter java.lang.Object
 A function whose result is `()` returns `void`, and a binding of a unit value occupies no local.
 Version 0.1 can write `()` but can do nothing with one, so a representation would never be read.
 
-A type parameter erases to `java.lang.Object`, so a call that passes an `Int` or a `Bool` where a
-parameter is a type parameter boxes it, and one that reads such a result back at a settled type
-unboxes it.
-Boxing is decided from the types inference gave the call, never from the shape of the value.
+A whole number and a truth value are boxed where one is put in a field left open by a type
+parameter, and read back out where one is taken from such a field.
+`Option`, `Result`, `List`, and a generic type the module declares all hold their values that way.
+Boxing is decided from the types inference gave the expression, never from the shape of the value.
+
+Nothing else boxes.
+A call of a generic function reaches the method written for the types the call settled on, so an
+`Int` crossing one is a `long`, and `docs/design.md` section 3 keeps it a type like any other.
 
 ## How a function is called
 
@@ -81,6 +95,56 @@ It is the one method of a module class no function wrote, and the one name a mod
 twice, which the JVM tells apart by descriptor.
 Writing the entry point with the module is what makes running the module class the same thing as
 running the program, so `lumen run` supplies nothing of its own; `docs/specs/run.md` says how.
+
+## How a generic is written
+
+A function that declares no type parameter is written once, named as the source names it.
+
+A function that declares one is written once per set of types it is used at, and the one the
+source wrote is written not at all: it has no descriptor, because a type parameter is carried by
+nothing.
+A module that never uses a generic function writes no method for it, as it writes no method for
+a type parameter.
+
+Which types a use settles is read off the type inference gave that use, and the method it reaches
+is the one written for them.
+
+Two uses are the same use when they settled every type parameter on the same type, named without
+its arguments.
+`identity` at `Option<Int>` and `identity` at `Option<Bool>` both settled `T` on `Option`, so one
+method serves both; `identity` at `Int` and at `Bool` settled it on two types, so each has its own.
+
+Leaving a type's arguments out is what makes the set of methods finite.
+A type argument never reaches a descriptor, so nothing is lost by it, and a generic that calls
+itself at a type one deeper than the one it was written for asks for a method already written.
+
+A written method is named for the function and the types its parameters settled on, joined by
+`$`: `identity$Int`, `identity$Option`, `pair$Int$String`.
+A type is named by its own name, whatever it is written with, because a type argument never
+reaches a descriptor.
+`()` is written `$Unit` and a use that settles nothing is written `$Any`.
+`$` is legal in a JVM method name and Lumen has no operator for it, so a name written this way is
+one no source can collide with.
+
+Two methods may still be written under one name, because a declared type may be called `Unit` or
+`Any` and `()` is not that type.
+They are told apart by their descriptors, which is how a module class already carries `main`
+twice, and a call names the descriptor it reaches.
+A method is the one already written only when it is called the same and takes and gives back the
+same.
+
+A body is written with each type parameter standing for what the use settled it at, so a value of
+a type parameter is carried by whatever that type is carried by, and a call inside that body is a
+use of its own.
+A generic that a generic calls is therefore written for the types the outer one was written for.
+
+Nothing reaches a generic from outside the module that declares it, because nothing in the
+toolchain reads a second file: `docs/specs/modules.md` says a module imports only what the
+compiler supplies.
+Every use a generic has is therefore in the module that declares it, and every method it needs is
+written by the same build.
+What a use in another module would need is that module's build to have the declaring module's
+body, which is a question for the change that lets one file reach another and not for this page.
 
 ## How a type is laid out
 
@@ -204,12 +268,13 @@ These hold and are checked with property-based tests:
 1. Lowering and writing a checked module never panics and is deterministic.
 2. Compiling one source twice gives byte-identical class files.
 3. Every class written begins with the class-file magic and JDK 28's version, marked preview.
-4. Every method a module declares is written as a static method of the module class.
-5. Every constant pool entry a method refers to is within the pool.
-6. No two classes of one module share a name.
-7. Every method of every class ends by leaving it.
-8. No class a module writes declares a method a JVM class inherits.
-9. The one `equals` a module calls is the one `String` declares.
-10. A record bound with `:=` and mentioned only to read its fields is lowered without a `new`.
-11. Such a program computes what the same program computes when the record is built.
-12. Every descriptor a class asks to load first names another class the same build writes.
+4. Every function a module declares that is not generic is a static method of the module class.
+5. A generic function used at `Int` is written taking and giving back `long`, and boxes nothing.
+6. Every constant pool entry a method refers to is within the pool.
+7. No two classes of one module share a name.
+8. Every method of every class ends by leaving it.
+9. No class a module writes declares a method a JVM class inherits.
+10. The one `equals` a module calls is the one `String` declares.
+11. A record bound with `:=` and mentioned only to read its fields is lowered without a `new`.
+12. Such a program computes what the same program computes when the record is built.
+13. Every descriptor a class asks to load first names another class the same build writes.

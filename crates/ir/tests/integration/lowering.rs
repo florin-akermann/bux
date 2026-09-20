@@ -230,7 +230,7 @@ fn names_of(class: &lumen_ir::Class) -> Vec<&str> {
 }
 
 #[test]
-fn a_type_parameter_erases_to_object_so_a_call_boxes_the_number_it_passes() {
+fn a_field_a_type_parameter_leaves_open_is_object_so_a_number_put_in_one_is_boxed() {
     let lowered = common::lowered("fn held() -> Option<Int> {\n    Some(1)\n}\n");
 
     let held = common::body_of(&lowered, "held");
@@ -347,15 +347,15 @@ fn two_lowerings_of_one_source_are_the_same() {
     assert_eq!(common::lowered(source), common::lowered(source));
 }
 
-/// A function whose result is a type parameter, so every use of it leaves a reference behind.
+/// A function whose result is a type parameter, which every use of it settles for itself.
 ///
 /// It is written below the function that uses it, which is where a definition belongs.
-const ERASED: &str = "\nfn identity<T>(value: T) -> T {\n    value\n}\n";
+const GENERIC: &str = "\nfn identity<T>(value: T) -> T {\n    value\n}\n";
 
 #[test]
-fn a_condition_whose_type_was_erased_is_read_back_as_a_truth_value() {
+fn a_condition_that_came_through_a_generic_is_already_a_truth_value() {
     let source = format!(
-        "fn picked(count: Int) -> Int {{\n    if identity(count > 1) {{\n        1\n    }} else {{\n        2\n    }}\n}}\n{ERASED}"
+        "fn picked(count: Int) -> Int {{\n    if identity(count > 1) {{\n        1\n    }} else {{\n        2\n    }}\n}}\n{GENERIC}"
     );
 
     let lowered = common::lowered(&source);
@@ -363,35 +363,175 @@ fn a_condition_whose_type_was_erased_is_read_back_as_a_truth_value() {
     let picked = common::body_of(&lowered, "picked");
     let boolean = ClassName::new("java/lang/Boolean");
     assert!(
-        common::calls(picked, &boolean, "booleanValue"),
-        "a jump reads a word, not a reference"
+        !common::calls(picked, &boolean, "booleanValue"),
+        "the generic was written taking and giving back a word, so nothing is read back"
     );
 }
 
 #[test]
-fn the_operand_of_not_is_read_back_before_it_is_flipped() {
-    let source = format!("fn is_negated(flag: Bool) -> Bool {{\n    !identity(flag)\n}}\n{ERASED}");
+fn the_operand_of_not_came_back_from_the_generic_as_a_word() {
+    let source =
+        format!("fn is_negated(flag: Bool) -> Bool {{\n    !identity(flag)\n}}\n{GENERIC}");
 
     let lowered = common::lowered(&source);
 
     let negated = common::body_of(&lowered, "is_negated");
     let boolean = ClassName::new("java/lang/Boolean");
-    assert!(common::calls(negated, &boolean, "booleanValue"));
+    assert!(!common::calls(negated, &boolean, "booleanValue"));
 }
 
 #[test]
-fn an_operand_whose_type_was_erased_is_read_back_before_the_operator_works_on_it() {
+fn an_operand_that_came_through_a_generic_is_already_a_whole_number() {
     let source =
-        format!("fn is_compared(count: Int) -> Bool {{\n    identity(count) < 2\n}}\n{ERASED}");
+        format!("fn is_compared(count: Int) -> Bool {{\n    identity(count) < 2\n}}\n{GENERIC}");
 
     let lowered = common::lowered(&source);
 
     let compared = common::body_of(&lowered, "is_compared");
     let long = ClassName::new("java/lang/Long");
     assert!(
-        common::calls(compared, &long, "longValue"),
-        "lcmp takes two whole numbers"
+        !common::calls(compared, &long, "longValue"),
+        "lcmp takes what the generic gave back, which is already a whole number"
     );
+}
+
+#[test]
+fn a_generic_used_at_one_type_is_written_once_for_that_type() {
+    let source = format!("fn kept(count: Int) -> Int {{\n    identity(count)\n}}\n{GENERIC}");
+
+    let lowered = common::lowered(&source);
+
+    assert!(common::has_method(&lowered, "identity$Int"));
+    assert!(!common::has_method(&lowered, "identity"));
+}
+
+#[test]
+fn a_generic_used_at_two_types_is_written_once_for_each() {
+    let source = format!(
+        "fn kept(count: Int) -> Int {{\n    if identity(count > 0) {{\n        identity(count)\n    }} else {{\n        0\n    }}\n}}\n{GENERIC}"
+    );
+
+    let lowered = common::lowered(&source);
+
+    assert!(common::has_method(&lowered, "identity$Int"));
+    assert!(common::has_method(&lowered, "identity$Bool"));
+}
+
+#[test]
+fn a_generic_used_twice_at_one_type_is_written_once() {
+    let source = format!(
+        "fn kept(count: Int) -> Int {{\n    identity(count) + identity(count)\n}}\n{GENERIC}"
+    );
+
+    let lowered = common::lowered(&source);
+
+    assert_eq!(common::methods_named(&lowered, "identity$Int"), 1);
+}
+
+#[test]
+fn a_generic_nothing_uses_is_written_not_at_all() {
+    let source = format!("fn kept(count: Int) -> Int {{\n    count\n}}\n{GENERIC}");
+
+    let lowered = common::lowered(&source);
+
+    assert_eq!(common::methods_named(&lowered, "identity$Int"), 0);
+    assert!(!common::has_method(&lowered, "identity"));
+}
+
+#[test]
+fn a_generic_a_generic_calls_is_written_for_the_types_the_outer_one_was() {
+    let source = concat!(
+        "fn kept(count: Int) -> Int {\n    twice(count)\n}\n\n",
+        "fn twice<T>(value: T) -> T {\n    identity(identity(value))\n}\n\n",
+        "fn identity<T>(value: T) -> T {\n    value\n}\n"
+    );
+
+    let lowered = common::lowered(source);
+
+    assert!(common::has_method(&lowered, "twice$Int"));
+    assert!(common::has_method(&lowered, "identity$Int"));
+}
+
+#[test]
+fn a_generic_naming_two_type_parameters_is_named_for_both_in_the_order_declared() {
+    let source = concat!(
+        "fn kept(count: Int) -> Int {\n    paired(count, \"two\")\n}\n\n",
+        "fn paired<A, B>(first: A, second: B) -> A {\n    first\n}\n"
+    );
+
+    let lowered = common::lowered(source);
+
+    assert!(common::has_method(&lowered, "paired$Int$String"));
+}
+
+#[test]
+fn a_generic_used_at_nothing_interesting_takes_and_gives_back_nothing() {
+    let source = format!("fn kept() -> () {{\n    identity(())\n}}\n{GENERIC}");
+
+    let lowered = common::lowered(&source);
+
+    let written = common::method_of(
+        common::class_of(&lowered, &ClassName::new("demo")),
+        "identity$Unit",
+    );
+    assert_eq!(written.descriptor.to_string(), "()V");
+}
+
+#[test]
+fn a_generic_that_calls_itself_is_written_once_and_the_writing_ends() {
+    let source = concat!(
+        "fn kept(count: Int) -> Int {\n    counted(count, 2)\n}\n\n",
+        "fn counted<T>(value: T, at: Int) -> Int {\n    if at > 0 {\n        counted(value, at + -1) + 1\n    } else {\n        0\n    }\n}\n"
+    );
+
+    let lowered = common::lowered(source);
+
+    assert_eq!(common::methods_named(&lowered, "counted$Int"), 1);
+}
+
+#[test]
+fn a_declared_type_named_for_nothing_interesting_does_not_take_that_name_from_it() {
+    let source = concat!(
+        "fn kept(tag: Unit) -> Unit {\n    identity(tag)\n}\n\n",
+        "fn nothing() -> () {\n    identity(())\n}\n\n",
+        "fn identity<T>(value: T) -> T {\n    value\n}\n\n",
+        "type Unit = {\n    at: Int\n}\n"
+    );
+
+    let lowered = common::lowered(source);
+
+    let written: Vec<String> = common::class_of(&lowered, &ClassName::new("demo"))
+        .methods
+        .iter()
+        .filter(|method| method.name == "identity$Unit")
+        .map(|method| method.descriptor.to_string())
+        .collect();
+    assert_eq!(
+        written,
+        ["(Ldemo/Unit;)Ldemo/Unit;", "()V"],
+        "one name, two methods, told apart by what each takes"
+    );
+}
+
+#[test]
+fn a_main_that_declares_a_type_parameter_is_still_what_the_module_is_run_through() {
+    let lowered = common::lowered("fn main<T>() -> () {\n    ()\n}\n");
+
+    assert!(common::has_method(&lowered, "main"));
+    assert!(lumen_ir::is_a_program(&lowered));
+}
+
+#[test]
+fn a_generic_used_at_one_type_with_two_arguments_is_written_once_for_that_type() {
+    let source = concat!(
+        "fn kept(count: Int) -> Int {\n    or(identity(Some(count)), 0) + shown(identity(Some(count > 0)))\n}\n\n",
+        "fn shown(flag: Option<Bool>) -> Int {\n    if or(flag, false) {\n        1\n    } else {\n        0\n    }\n}\n\n",
+        "fn identity<T>(value: T) -> T {\n    value\n}\n"
+    );
+
+    let lowered = common::lowered(source);
+
+    assert_eq!(common::methods_named(&lowered, "identity$Option"), 1);
 }
 
 /// A module that can be run, which is one declaring the `main` a program starts at.

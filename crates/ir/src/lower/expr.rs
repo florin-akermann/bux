@@ -258,17 +258,17 @@ impl Builder<'_> {
         let Origin::Declared(at) = self.definition(name).origin else {
             return self.supplied(name, arguments, written);
         };
-        let signature = self.lowering.signature(at);
-        for (argument, wanted) in arguments.iter().zip(&signature.parameters) {
+        let reached = self.reaching(at, name.span);
+        for (argument, wanted) in arguments.iter().zip(&reached.signature.parameters) {
             let held = self.expr(argument);
             self.adapt(held, wanted.clone());
         }
         self.emit(Instruction::InvokeStatic(MethodRef {
             class: self.lowering.shapes.module().clone(),
-            name: name.text.clone(),
-            descriptor: signature.descriptor(),
+            name: reached.named,
+            descriptor: reached.signature.descriptor(),
         }));
-        signature.result
+        reached.signature.result
     }
 
     /// Builds what a constructor builds, out of the values it is given in order.

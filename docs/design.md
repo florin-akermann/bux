@@ -395,6 +395,25 @@ type Result<T, E> =
 
 The type system should support parametric polymorphism without requiring verbose annotations.
 
+### A generic is specialized at each use
+
+**A generic function is compiled once for each set of types it is used at**, and never once for
+all of them.
+
+`identity(1)` and `identity(word)` reach two different methods: one taking a whole number, one
+taking text.
+Neither boxes, neither casts, and an `Int` crossing a generic is the same 64 bits it is anywhere
+else.
+
+The alternative is erasure, which compiles one body over a type that every value fits, and pays
+for it by boxing every `Int` on the way in and casting it back on the way out.
+That would make `Int` the one type a program can tell from a declared one, and section 3 says
+there is no such type.
+
+A use that settles no type settles none for the machine either, and two uses that differ only in
+a type the machine cannot tell apart are one use.
+`docs/specs/codegen.md` states what is written and what it is named.
+
 ---
 
 ## 8. Typeclasses / traits

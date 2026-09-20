@@ -2,6 +2,7 @@
 
 use crate::common;
 use crate::reader;
+use crate::reader::ClassFile;
 
 /// `ACC_PUBLIC` and `ACC_FINAL`, and no identity bit: a value class nothing extends.
 const FINAL_CLASS: u16 = 0x0011;
@@ -112,4 +113,75 @@ fn no_method_a_module_writes_is_synchronized_because_a_value_cannot_be_locked_on
             );
         }
     }
+}
+
+/// A module using one generic at a whole number, a truth value, and a record it declares.
+const GENERIC: &str = "fn kept(count: Int) -> Int {\n    identity(count)\n}\n\nfn is_kept(flag: Bool) -> Bool {\n    identity(flag)\n}\n\nfn tagged(tag: Tag) -> Tag {\n    identity(tag)\n}\n\nfn identity<T>(value: T) -> T {\n    value\n}\n\ntype Tag = {\n    at: Int\n}\n";
+
+#[test]
+fn a_generic_is_written_once_per_set_of_types_it_is_used_at() {
+    let files = common::compiled(GENERIC);
+
+    let written = named(&common::one_of(&files, "demo.class"));
+
+    assert_eq!(
+        written,
+        [
+            "kept",
+            "is_kept",
+            "tagged",
+            "identity$Int",
+            "identity$Bool",
+            "identity$Tag"
+        ],
+        "one method per set of types used at, and none for the declaration itself"
+    );
+}
+
+#[test]
+fn an_int_passed_to_a_generic_is_carried_as_a_long_throughout() {
+    let files = common::compiled(GENERIC);
+    let module = common::one_of(&files, "demo.class");
+
+    let written: Vec<&str> = ["identity$Int", "identity$Bool", "identity$Tag"]
+        .iter()
+        .map(|name| descriptor_of(&module, name))
+        .collect();
+
+    assert_eq!(written, ["(J)J", "(Z)Z", "(Ldemo/Tag;)Ldemo/Tag;"]);
+}
+
+#[test]
+fn no_method_written_for_a_function_the_module_declares_names_object() {
+    let files = common::compiled(GENERIC);
+
+    let module = common::one_of(&files, "demo.class");
+
+    for method in &module.methods {
+        assert!(
+            !method.descriptor.contains("java/lang/Object"),
+            "{} is written {}",
+            method.name,
+            method.descriptor
+        );
+    }
+}
+
+/// The names of the methods the class declares, in the order it declares them.
+fn named(module: &ClassFile) -> Vec<String> {
+    module
+        .methods
+        .iter()
+        .map(|method| method.name.clone())
+        .collect()
+}
+
+/// How the class declares the method called `name`, which it declares exactly once.
+fn descriptor_of<'a>(module: &'a ClassFile, name: &str) -> &'a str {
+    let written = module
+        .methods
+        .iter()
+        .find(|method| method.name == name)
+        .unwrap_or_else(|| panic!("the module writes a method named {name}"));
+    written.descriptor.as_str()
 }

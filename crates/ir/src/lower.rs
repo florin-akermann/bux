@@ -10,10 +10,14 @@ mod classes;
 mod equality;
 mod escape;
 mod expr;
+mod generic;
 mod modules;
 mod pattern;
 mod prelude;
 mod shape;
+
+use std::cell::RefCell;
+use std::collections::{HashMap, HashSet};
 
 use lumen_ast::{Function, Item, Span};
 use lumen_holes::Whole;
@@ -24,6 +28,7 @@ use crate::class::{Class, Method, Reached};
 use crate::code::{Body, Instruction, MethodRef};
 use crate::descriptor::{Descriptor, MethodDescriptor};
 use crate::lower::body::Builder;
+use crate::lower::generic::Instantiation;
 use crate::lower::shape::Shapes;
 
 /// What Lumen calls the function a program starts at, and what a JVM calls the method it does.
@@ -39,6 +44,8 @@ pub fn lower(whole: &Whole<'_>, module: &str) -> Lowered {
     let lowering = Lowering {
         typed,
         shapes: Shapes::of(typed.resolved(), module),
+        declared: declarations_of(typed),
+        owed: RefCell::new(Vec::new()),
     };
     let module_class = lowering.module_class();
     let reads = modules::reads_a_file(&module_class);
@@ -54,53 +61,163 @@ pub fn lower(whole: &Whole<'_>, module: &str) -> Lowered {
 pub(crate) struct Lowering<'a> {
     pub(crate) typed: &'a TypedProgram,
     pub(crate) shapes: Shapes,
+    /// Every function the module declares, by the span of the name declaring it.
+    declared: HashMap<Span, &'a Function>,
+    /// The methods still owed, which lowering a body adds to as it meets a use of a generic.
+    owed: RefCell<Vec<Owed>>,
+}
+
+/// One method the module still owes: a function, and what one use of it settled its types at.
+struct Owed {
+    declared: Span,
+    at: Instantiation,
 }
 
 impl Lowering<'_> {
-    /// The class the module itself is: one static method per function, in the order written.
+    /// The class the module itself is: the functions it declares, as the methods they become.
+    ///
+    /// A function that declares no type parameter is one method, written whether anything calls
+    /// it or not. A generic is one method per set of types it is used at, so lowering a body is
+    /// what asks for the methods that body needs, and the asking goes on until nothing is owed.
     fn module_class(&self) -> Class {
         let mut class = Class::new(self.shapes.module().clone());
-        for item in &self.typed.resolved().program().items {
-            if let Item::Function(function) = item {
-                class.methods.push(self.method(function));
-            }
-        }
+        self.owe_every_plain_function();
+        class.methods = self.methods_owed();
         class.methods.extend(entry_point(&class));
         class
     }
 
-    fn method(&self, function: &Function) -> Method {
-        let signature = self.signature(function.name.span);
-        let mut builder = Builder::entering(self, function, &signature);
+    /// Asks for the method of every function a use of the module reaches on its own, in order.
+    ///
+    /// A function that declares no type parameter is written whether anything calls it or not,
+    /// because the module declares it and `docs/specs/modules.md` makes that public. `main` is
+    /// asked for however it is declared, because running the module is the use it has.
+    fn owe_every_plain_function(&self) {
+        let reached = self
+            .functions()
+            .filter(|function| function.type_parameters.is_empty() || function.name.text == START);
+        for function in reached {
+            self.owe(function.name.span, Instantiation::whole());
+        }
+    }
+
+    /// Every method the module owes, each written once, until nothing is owed any more.
+    ///
+    /// Writing one asks for the methods its body reaches, so the list grows as it is drained.
+    /// A method is the one already written when it is called the same and takes the same, which
+    /// is what a JVM tells apart and what a module class already carries `main` twice under.
+    fn methods_owed(&self) -> Vec<Method> {
+        let mut written = HashSet::new();
+        let mut methods = Vec::new();
+        while let Some(owed) = self.next_owed() {
+            let function = self.declared[&owed.declared];
+            let named = owed.at.names(&function.name.text);
+            let signature = self.signature(owed.declared, &owed.at);
+            if written.insert((named.clone(), signature.descriptor())) {
+                methods.push(self.method(function, named, &owed.at));
+            }
+        }
+        methods
+    }
+
+    /// Every function the module declares, in the order it writes them.
+    fn functions(&self) -> impl Iterator<Item = &Function> {
+        self.typed
+            .resolved()
+            .program()
+            .items
+            .iter()
+            .filter_map(|item| match item {
+                Item::Function(function) => Some(function),
+                Item::Import(_) | Item::Type(_) => None,
+            })
+    }
+
+    /// The method a use of `name` reaches: what it is called, and what it takes and gives back.
+    ///
+    /// Asking is what has the method written. A use inside a generic body is a use at the types
+    /// the body was written for, so what that body settled is applied before the use is read.
+    pub(crate) fn used(&self, declared: Span, at: Span, within: &Instantiation) -> Reaching {
+        let function = self.declared[&declared];
+        if function.type_parameters.is_empty() {
+            return Reaching {
+                named: function.name.text.clone(),
+                signature: self.signature(declared, &Instantiation::whole()),
+            };
+        }
+        let used = within.substituted(self.used_as(at));
+        let settled = Instantiation::of(function, self.used_as(declared), &used);
+        let named = settled.names(&function.name.text);
+        let signature = self.signature(declared, &settled);
+        self.owe(declared, settled);
+        Reaching { named, signature }
+    }
+
+    fn method(&self, function: &Function, named: String, at: &Instantiation) -> Method {
+        let signature = self.signature(function.name.span, at);
+        let mut builder = Builder::entering(self, function, &signature, at.clone());
         builder.body(&function.body);
         Method {
-            name: function.name.text.clone(),
+            name: named,
             descriptor: signature.descriptor(),
             reached: Reached::ThroughTheClass,
             body: builder.finish(),
         }
     }
 
-    /// What the function declared at `declared` takes and gives back.
-    pub(crate) fn signature(&self, declared: Span) -> Signature {
-        let Some(Type::Function { parameters, result }) = self.typed.type_of(declared) else {
+    fn owe(&self, declared: Span, at: Instantiation) {
+        self.owed.borrow_mut().push(Owed { declared, at });
+    }
+
+    /// The next method owed, taken in the order it was asked for so the class is written once.
+    ///
+    /// Lowering a body asks for the methods that body needs, so the list grows while it is
+    /// being drained, and the borrow is let go of before anything is lowered.
+    fn next_owed(&self) -> Option<Owed> {
+        let mut owed = self.owed.borrow_mut();
+        (!owed.is_empty()).then(|| owed.remove(0))
+    }
+
+    /// What the function declared at `declared` takes and gives back, at the types `at` settled.
+    fn signature(&self, declared: Span, at: &Instantiation) -> Signature {
+        let Type::Function { parameters, result } = self.used_as(declared) else {
             unreachable!("a function is declared with a function type")
         };
         Signature {
             parameters: parameters
                 .iter()
-                .map(|of| self.shapes.carried(of))
+                .map(|of| self.shapes.carried(&at.substituted(of)))
                 .collect(),
-            result: self.shapes.carried(result),
+            result: self.shapes.carried(&at.substituted(result)),
         }
     }
 
-    /// What the type of whatever is written at `written` is carried by.
-    pub(crate) fn carried(&self, written: Span) -> Option<Descriptor> {
+    /// The type of whatever is written at `written`, which every function and use has.
+    fn used_as(&self, written: Span) -> &Type {
         self.typed
             .type_of(written)
-            .and_then(|of| self.shapes.carried(of))
+            .expect("inference gave every function and every use of one a type")
     }
+}
+
+/// The method one use reaches, which is what a call is written with.
+pub(crate) struct Reaching {
+    pub(crate) named: String,
+    pub(crate) signature: Signature,
+}
+
+/// Every function the module declares, by the span of the name declaring it.
+fn declarations_of(typed: &TypedProgram) -> HashMap<Span, &Function> {
+    typed
+        .resolved()
+        .program()
+        .items
+        .iter()
+        .filter_map(|item| match item {
+            Item::Function(function) => Some((function.name.span, function)),
+            Item::Import(_) | Item::Type(_) => None,
+        })
+        .collect()
 }
 
 /// What a function takes and gives back, with a place for each parameter the source wrote.

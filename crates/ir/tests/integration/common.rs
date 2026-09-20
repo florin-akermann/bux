@@ -20,6 +20,20 @@ pub fn body_of<'a>(lowered: &'a Lowered, name: &str) -> &'a Body {
     &method_of(class_of(lowered, &ClassName::new("demo")), name).body
 }
 
+/// Whether the module class writes a method called `name`.
+pub fn has_method(lowered: &Lowered, name: &str) -> bool {
+    methods_named(lowered, name) > 0
+}
+
+/// How many methods the module class writes under `name`, which is one or none.
+pub fn methods_named(lowered: &Lowered, name: &str) -> usize {
+    class_of(lowered, &ClassName::new("demo"))
+        .methods
+        .iter()
+        .filter(|method| method.name == name)
+        .count()
+}
+
 /// The class written as `wanted`, which the example is about.
 pub fn class_of<'a>(lowered: &'a Lowered, wanted: &ClassName) -> &'a Class {
     lowered

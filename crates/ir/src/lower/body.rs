@@ -8,8 +8,9 @@ use lumen_resolver::{Definition, Namespace, Origin};
 
 use crate::code::{Arithmetic, Body, Instruction, Label, MethodRef};
 use crate::descriptor::{ClassName, Descriptor, MethodDescriptor};
+use crate::lower::generic::Instantiation;
 use crate::lower::shape::object;
-use crate::lower::{Lowering, Signature, escape};
+use crate::lower::{Lowering, Reaching, Signature, escape};
 
 /// The list a `for … in` walks, which is the one interface version 0.1 reaches.
 const LIST: &str = "java/util/List";
@@ -66,6 +67,8 @@ pub(crate) struct Builder<'a> {
     pub(crate) fields: HashMap<Held, Slot>,
     /// What the function gives back, which `return` and `?` both answer to.
     result: Option<Descriptor>,
+    /// What the use this body is being written for settled each of its type parameters at.
+    at: Instantiation,
 }
 
 impl<'a> Builder<'a> {
@@ -74,6 +77,7 @@ impl<'a> Builder<'a> {
         lowering: &'a Lowering<'a>,
         function: &Function,
         signature: &Signature,
+        at: Instantiation,
     ) -> Self {
         let mut builder = Self {
             lowering,
@@ -86,6 +90,7 @@ impl<'a> Builder<'a> {
             splitting: escape::split(lowering.typed.resolved(), &lowering.shapes, function),
             fields: HashMap::new(),
             result: signature.result.clone(),
+            at,
         };
         for parameter in &function.parameters {
             builder.declare(&parameter.name);
@@ -447,8 +452,17 @@ impl<'a> Builder<'a> {
     }
 
     /// The type of what is written at `written`, as the JVM carries it.
+    ///
+    /// Every type is asked for through here, so a body written for one use of a generic reads
+    /// each type parameter as the type that use settled it at.
     pub(crate) fn carried(&self, written: Span) -> Option<Descriptor> {
-        self.lowering.carried(written)
+        let of = self.lowering.typed.type_of(written)?;
+        self.lowering.shapes.carried(&self.at.substituted(of))
+    }
+
+    /// The method a use of the function declared at `declared` reaches from inside this body.
+    pub(crate) fn reaching(&self, declared: Span, at: Span) -> Reaching {
+        self.lowering.used(declared, at, &self.at)
     }
 
     pub(crate) fn definition(&self, name: &Name) -> Definition {

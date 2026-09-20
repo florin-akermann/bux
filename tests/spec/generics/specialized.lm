@@ -1,0 +1,46 @@
+// expect-run
+// A generic used at three types, each of which reaches a method written for that type alone.
+// `docs/specs/codegen.md` writes one method per set of types a use settles, and none for the
+// declaration itself, so an `Int` crossing a generic is the same 64 bits it is anywhere else.
+fn main() -> () {
+    counted := kept(7)
+    flagged := is_kept(true)
+    tagged := held(Tag { at: counted })
+    nested := twice(3)
+    ()
+}
+
+// example: kept(7) == 7
+fn kept(count: Int) -> Int {
+    identity(count)
+}
+
+// example: is_kept(true)
+fn is_kept(flag: Bool) -> Bool {
+    identity(flag)
+}
+
+// example: held(Tag { at: 4 }).at == 4
+fn held(tag: Tag) -> Tag {
+    identity(tag)
+}
+
+// example: twice(3) == 3
+fn twice(count: Int) -> Int {
+    through(count)
+}
+
+// A generic that calls a generic, which is written for the types the outer one was written for.
+// example: through(2) == 2
+fn through<T>(value: T) -> T {
+    identity(identity(value))
+}
+
+// example: identity(1) == 1
+fn identity<T>(value: T) -> T {
+    value
+}
+
+type Tag = {
+    at: Int
+}
