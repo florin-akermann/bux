@@ -111,7 +111,7 @@ impl Loader {
         Ok(())
     }
 
-    /// Reads what `import` names, unless the compiler supplies it or it has been read already.
+    /// Reads what `import` names, unless the library carries it or it has been read already.
     ///
     /// A module of the library is read out of the source the compiler carries rather than out of
     /// a file, which `docs/specs/library.md` states: the name is the library's, and a file of it

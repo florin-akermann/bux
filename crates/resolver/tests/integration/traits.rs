@@ -195,3 +195,80 @@ fn around_against(declared: &str) -> String {
         declared = declared
     )
 }
+
+/// Every instance the prelude has, as `docs/specs/traits.md`, `operators.md`, and `literals.md`
+/// each write theirs out.
+///
+/// This is read off those three specs rather than off `library/prelude.lm`, which is the whole
+/// point: an instance dropped from the library has to fail here rather than take the expectation
+/// with it.
+const HAS: [(&str, &str); 20] = [
+    ("Eq", "Bool"),
+    ("Eq", "Int"),
+    ("Eq", "String"),
+    ("Ord", "Bool"),
+    ("Ord", "Int"),
+    ("Ord", "String"),
+    ("Hash", "Bool"),
+    ("Hash", "Int"),
+    ("Hash", "String"),
+    ("Show", "Bool"),
+    ("Show", "Int"),
+    ("Show", "String"),
+    ("Add", "Int"),
+    ("Add", "String"),
+    ("Sub", "Int"),
+    ("Mul", "Int"),
+    ("Div", "Int"),
+    ("Rem", "Int"),
+    ("Neg", "Int"),
+    ("IntegerLiteral", "Int"),
+];
+
+/// The one of them the compiler still supplies, which `docs/specs/traits.md` names and says why.
+const STILL_SUPPLIED: (&str, &str) = ("Hash", "String");
+
+#[test]
+fn the_prelude_has_every_instance_the_specs_write_out_and_no_other() {
+    let mut has: Vec<(&str, &str)> = lumen_resolver::prelude::instances().collect();
+    let mut wanted = HAS.to_vec();
+
+    has.sort_unstable();
+    wanted.sort_unstable();
+    assert_eq!(has, wanted);
+}
+
+#[test]
+fn the_library_writes_every_one_of_them_but_the_one_still_supplied() {
+    let written = instances_written_in_the_library();
+
+    for (of, for_type) in HAS {
+        let is_written = written
+            .iter()
+            .any(|(wrote, wrote_for)| wrote == of && wrote_for == for_type);
+
+        assert_eq!(
+            is_written,
+            (of, for_type) != STILL_SUPPLIED,
+            "instance {of}<{for_type}> in library/prelude.lm"
+        );
+    }
+}
+
+/// The instances `library/prelude.lm` writes, read out of the source the compiler carries.
+fn instances_written_in_the_library() -> Vec<(String, String)> {
+    let source = lumen_resolver::library::source_of(lumen_resolver::library::PRELUDE)
+        .expect("the library carries the prelude");
+    let parsed = lumen_parser::parse(source).expect("the prelude the compiler carries parses");
+    parsed
+        .items
+        .iter()
+        .filter_map(|item| match item {
+            lumen_ast::Item::Instance(declaration) => Some((
+                declaration.trait_name.text.clone(),
+                declaration.for_type.text.clone(),
+            )),
+            _ => None,
+        })
+        .collect()
+}

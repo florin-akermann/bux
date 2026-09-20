@@ -5,7 +5,7 @@
 A trait names what a type can do, and an instance is one type doing it.
 
 `Eq` is the first: `==` compares two values only when their type has an instance of `Eq`, and a
-type the compiler supplies is no exception to that.
+type the JVM holds is no exception to that.
 `docs/design.md` section 8 states the design; this spec states what is written, what is refused,
 and what a constraint resolves to.
 
@@ -146,9 +146,9 @@ It is a function of what the value holds, so two equal values are shown alike.
 A `String` is shown as the characters it holds and nothing more: `shown("ada")` is `ada`, because
 `Show` is one rule for every type and a quote would be a rule for one of them.
 
-### What the compiler supplies
+### The instances the prelude has for them
 
-The prelude supplies all four for `Bool`, `Int`, and `String`:
+The prelude has all four for `Bool`, `Int`, and `String`:
 
 ```text
 instance Eq<Bool>       instance Eq<Int>       instance Eq<String>
@@ -157,7 +157,15 @@ instance Hash<Bool>     instance Hash<Int>     instance Hash<String>
 instance Show<Bool>     instance Show<Int>     instance Show<String>
 ```
 
-A supplied instance has no body to call: it is written out where it is called, as `or` is.
+Eleven of those twelve are Lumen source, a few lines each, and `library/prelude.lm` is where a
+reader goes to find what one of them says.
+`Hash<String>` is the twelfth, and the one the compiler still supplies: it reads a string by the
+characters it holds, and `String.hashCode` gives back a JVM `int`, which no Lumen type compiles to.
+
+None of the twelve has a body anything calls.
+What one amounts to is written out where it is called — the JVM instruction for it, or a call of
+the Java member behind it — which `docs/specs/library.md` states and `docs/specs/codegen.md`
+writes out.
 
 `false` comes before `true`, which is the order the two are written in and the order a JVM already
 puts them in.
@@ -209,27 +217,38 @@ A use of a trait method is resolved by the type its trait's parameter settled on
 A generic is compiled once per set of types, so the second case is a case only while type checking.
 The body written for `has_value` at `Point` has `T` standing for `Point`, and the `is_equal` it
 calls is the one `instance Eq<Point>` declares.
-The body written for `has_value` at `Int` calls the one the compiler supplies for `Int`.
+The instance `has_value` at `Int` resolves to is the one `library/prelude.lm` writes for `Int`,
+and what that instance amounts to is written out in place rather than called.
 
 `==` and `!=` are resolved the same way, against `Eq`.
 A comparison of two values of a type with no instance of `Eq` is refused as it was before traits,
 with `L0406`, and a comparison nothing settled is a comparison of `Int`s, which is the one default
 the language keeps.
 
-## What the compiler supplies
+## What the library writes and what the compiler supplies
 
-The prelude is not Lumen source yet, which `docs/specs/modules.md` states, so the compiler declares
-every trait the library will ship and every instance it will ship for `Bool`, `Int`, and `String`.
+`library/prelude.lm` is Lumen source the compiler carries, which `docs/specs/library.md` states,
+and it declares every trait and writes every instance of one for `Bool`, `Int`, and `String`.
 The four standard traits are written out above; `docs/specs/operators.md` writes out the six the
 arithmetic operators are, and `docs/specs/literals.md` writes out `IntegerLiteral`.
 
+`Hash<String>` is the one instance the compiler still supplies, because the member that would
+write it in Lumen gives back a JVM `int`.
+`todo` is the one function it supplies, because a hole has no body for the library to write.
+`Bool`, `Int`, `String`, and `List` stay the compiler's as well, because what they are made of is
+the JVM rather than a declaration, which `docs/specs/library.md` states.
+No instance, trait, or function of the prelude other than those two is the compiler's.
+
 A module writing `instance Eq<Int>` is refused with `L0308`, because there already is one, and a
 module declaring its own `Eq` is refused with `L0302`, exactly as one declaring its own `todo` is.
+Which of the two wrote the one already there makes no difference to either refusal.
 
-A supplied instance has no body to call.
+No instance over those three types has a body anything calls.
 `is_equal` at `Int`, at `Bool`, or at `String` is written out where it is called, as `or` is, and
 the comparison it writes is the one `==` already wrote: two whole numbers or two truth values as the
 JVM compares them, and two strings by the characters they hold.
+The body in `library/prelude.lm` is what says in Lumen what that instruction does, and reading it
+is what holds it to its type.
 Nothing asks whether two references are one object, which `docs/specs/codegen.md` requires.
 
 ## What is written
@@ -242,8 +261,8 @@ itself, joined by `$`: `Eq$Point$is_equal`.
 An instance's method is written whether anything calls it or not, as a function that declares no
 type parameter is, because it names no type parameter of its own.
 
-A call of a trait method is an `invokestatic` of the method the instance wrote, or the body the
-compiler supplies written out in place.
+A call of a trait method is an `invokestatic` of the method the instance wrote, or, over a type
+the JVM holds, the instruction that instance amounts to written out in place.
 `one == other` over a type with an instance is that same call, and `one != other` is that call
 with the answer flipped.
 
@@ -295,7 +314,7 @@ These hold and are checked with property-based tests:
 7. `is_less`, `hashed`, and `shown` are each accepted over exactly the types that have an
    instance of the trait declaring them, as `==` is.
 
-What each supplied instance then answers is a claim about a running program, so it is held to by
-`tests/spec/traits/supplied.lm` rather than by a property: that `is_less` is a total order over
-`Bool`, `Int`, and `String` and is transitive, that equal values hash alike, and that `shown`
-renders each of the three as this spec states.
+What each instance over those three types answers is a claim about a running program, so it is
+held to by `tests/spec/traits/supplied.lm` rather than by a property: that `is_less` is a total
+order over `Bool`, `Int`, and `String` and is transitive, that equal values hash alike, and that
+`shown` renders each of the three as this spec states.

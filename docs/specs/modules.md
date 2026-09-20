@@ -141,7 +141,7 @@ They are read out of `library/prelude.lm` rather than tabulated in the compiler,
 states.
 `IntegerLiteral` is the trait a whole-number literal is, which `docs/specs/literals.md` states.
 The other seven traits are the ones the other operators are, which `docs/specs/operators.md`
-names along with the instances the compiler supplies for each.
+names along with the instances the library writes for each.
 
 They are ordinary declarations of a module the compiler carries, not keywords.
 An import never reaches the prelude: a prelude name is written bare, and an import brings a module

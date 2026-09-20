@@ -54,10 +54,10 @@ A bound is what the author claims their type holds, not what the machine can hol
 `Int32` below carries an `Int`, as every declared type carries what it declares; the range is the
 domain its author means it to have, and the compiler holds every literal to it.
 
-## What the compiler supplies
+## What the library writes
 
-The prelude is not Lumen source yet, which `docs/specs/modules.md` states, so the compiler
-declares the trait and the one instance the library will ship:
+`library/prelude.lm` is Lumen source the compiler carries, which `docs/specs/library.md` states,
+and it declares the trait and writes the one instance:
 
 ```text
 instance IntegerLiteral<Int>
@@ -65,8 +65,9 @@ instance IntegerLiteral<Int>
 
 Its bounds are the whole numbers an `Int` holds, so every literal the lexer accepts fits `Int`.
 `docs/specs/lexer.md` refuses a number that does not, as `L0103`, before any of this is reached.
-That instance is supplied rather than written for a second reason: the lowest `Int` is one more
-than the largest number the lexer reads, so no Lumen source could write its `lowest`.
+Its `lowest` is written `-9223372036854775808`, which Lumen source can write because a `-` before
+a number is part of that number: `docs/specs/grammar.md` states the rule, and the smallest
+whole number is the reason for it.
 
 `IntegerLiteral` and its three methods are ordinary prelude names rather than keywords, so a
 module declaring one of them is refused with `L0302`.
@@ -157,8 +158,7 @@ range expects of the two.
 
 ## What is written
 
-A literal at a type the compiler supplies the instance for is the number itself, which is what a
-literal has always been.
+A literal at `Int` is the number itself, which is what a literal has always been.
 
 A literal at a type whose instance a module wrote is an `invokestatic` of that instance's
 `from_literal`, named as `docs/specs/traits.md` names an instance method:
@@ -177,7 +177,7 @@ A bound is read rather than run, and that is the whole of what a bound is for.
 | --- | --- |
 | `L0103` | A number does not fit in a whole number, which the lexer refuses first. |
 | `L0302` | A module declares `IntegerLiteral`, or one of its three methods. |
-| `L0308` | A module writes `instance IntegerLiteral<Int>`, which is already supplied. |
+| `L0308` | A module writes `instance IntegerLiteral<Int>`, which the prelude already has. |
 | `L0400` | A whole number is written at a type that takes none, including a type parameter. |
 | `L0420` | A whole number does not fit the type it is written at. |
 | `L0421` | A bound of an `IntegerLiteral` instance is not one whole number. |

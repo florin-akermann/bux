@@ -67,7 +67,8 @@ Every element is evaluated once, left to right, in the order it is written.
 Version 0.1 has no way to add to a list it has already built, so a list is written whole.
 
 Every operator is a trait method, which `docs/design.md` section 8 states.
-Version 0.1 has no typeclasses, so it wires each operator to the instances the library will ship:
+`library/prelude.lm` writes the instances of each over the types the JVM holds, which is what a
+program gets without writing one of its own:
 
 ```text
 +                        Int + Int, or String + String

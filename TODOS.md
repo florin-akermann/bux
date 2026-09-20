@@ -63,3 +63,15 @@ none of them, so the author is the one who can say which it is.
   that says reaching an interface waits.
 [055][c] - The lowering emits `InvokeInterface` on such a receiver, with the constant pool entry
   an interface method reference is, and `tests/spec/interop/` runs one on a JDK.
+
+## 🔴 Item 056: The IR's doc comments still say the compiler supplies an instance
+Item 054 took the wording out of the specs, and the lowering's own comments still carry it.
+`crates/ir/src/lower/operator.rs`, `literal.rs`, `expr.rs`, `derive.rs`, and `pattern.rs` each
+say "a type the compiler supplies the instance for" where they mean one the JVM holds.
+`crates/ir/src/lower/supplied.rs` opens by saying the prelude is not Lumen source yet, and it is.
+The behaviour they describe is right: a use over `Bool`, `Int`, or `String` is the instruction.
+What is wrong is where they send a reader looking for the body, which is `library/prelude.lm`.
+[056][a] - The five files in `crates/ir/src/lower/` say which types those are and who writes them.
+[056][b] - `crates/resolver/src/resolve/traits.rs` and `crates/ir/src/lower.rs` take that wording.
+[056][c] - So do the tests that assert about it: `crates/types/tests/integration/traits.rs`, and
+  `literals.rs`, `operators.rs`, and `traits.rs` under `crates/ir/tests/integration/`.

@@ -7,7 +7,7 @@ Every operator is a trait method, and `==` is only the first to be written that 
 `docs/design.md` section 8 names the traits: `+` is `Add`, `-` is `Sub`, `*` is `Mul`, `/` is
 `Div`, `%` is `Rem`, prefix `-` is `Neg`, and `<`, `<=`, `>`, and `>=` are `Ord`.
 `docs/specs/traits.md` states what a trait and an instance are; this spec states which trait each
-operator is, what the compiler supplies, and what a declared type writes to own one.
+operator is, what the library writes, and what a declared type writes to own one.
 
 Version 0.1 wired `Int` and `String` to the operators by name, so no declared type could have one.
 That wiring was the degenerate case of this design rather than a design of its own, and it goes:
@@ -70,10 +70,10 @@ instance can say that `a < b` and `b > a` disagree.
 `Ord` is one of the standard traits `docs/specs/traits.md` declares, and this spec gives the four
 comparisons the trait to resolve to; `docs/specs/derive.md` states what a type derives it as.
 
-## What the compiler supplies
+## What the library writes
 
-The prelude is not Lumen source yet, which `docs/specs/modules.md` states, so the compiler declares
-the seven traits and the instances the library will ship:
+`library/prelude.lm` is Lumen source the compiler carries, which `docs/specs/library.md` states,
+and it declares the seven traits and writes every one of these instances:
 
 ```text
 instance Add<Int>       instance Add<String>
@@ -87,16 +87,17 @@ instance Ord<Int>      instance Ord<String>      instance Ord<Bool>
 
 `Int` has every one of them, and `String` has `Add`, which joins two of them.
 `Ord` is the one that reaches past `Int`, because ordering is not arithmetic: `docs/specs/traits.md`
-states the order it supplies over `Bool` and over `String`.
+states the order the library writes over `Bool` and over `String`.
 Every other operator over a `String` or a `Bool` is `L0406` as it was.
 
 Each trait's name and each method's name is an ordinary prelude name rather than a keyword, so a
 module declaring `Add` or `add` is refused with `L0302`, exactly as one declaring `Eq` is.
 A module writing `instance Add<Int>` is refused with `L0308`, because there already is one.
 
-A supplied instance has no body to call.
-What it amounts to is written out where the operator is written, as `Eq`'s instances are: two whole
-numbers added as the JVM adds them, and two strings joined as `+` already joined them.
+None of these instances has a body anything calls.
+What one amounts to is written out where the operator is written, as `Eq`'s instances are: two
+whole numbers added as the JVM adds them, and two strings joined as `+` already joined them.
+The body in `library/prelude.lm` is what says in Lumen what that instruction does.
 
 ## A declared type owning an operator
 
@@ -131,7 +132,7 @@ The default is taken before the trait is asked, so what is asked for is `Add<Int
 An operator over a type whose instance a module wrote is an `invokestatic` of that instance's
 method, named as `docs/specs/traits.md` names one: `Add$Money$add`.
 
-An operator over a type the compiler supplies the instance for is the instruction it always was:
+An operator over one of the types the JVM holds is the instruction it always was:
 `ladd` for `Int`, a concatenation for `String`, and a compared pair of longs for `Ord<Int>`.
 `Ord<Bool>` and `Ord<String>` are likewise written out where they are written, as
 `docs/specs/traits.md` states what each one answers.
@@ -149,7 +150,7 @@ read once: it is loaded, and the two are the `add` arguments in the order the so
 | Code | Raised when |
 | --- | --- |
 | `L0302` | A module declares one of the seven traits, or one of their methods. |
-| `L0308` | A module writes an instance the compiler already supplies. |
+| `L0308` | A module writes an instance the prelude already has. |
 | `L0400` | The two sides of an operator are values of two different types. |
 | `L0406` | An operator, `+=` among them, is written over a type with no instance of its trait. |
 | `L0407` | A division is written with a `0` the compiler can already see. |

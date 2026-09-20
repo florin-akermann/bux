@@ -108,8 +108,8 @@ An instance's method is a method of the module class too, named for its trait, t
 for, and itself, joined by `$`: `Eq$Point$is_equal`.
 It is written whether anything calls it or not, as a function that declares no type parameter is,
 and a call of its trait's method at that type is an `invokestatic` of it.
-An instance the compiler supplies has no method, and what it amounts to is written out where the
-call stands; `docs/specs/traits.md` states both cases.
+An instance over a type the JVM holds has no method, and what it amounts to is written out where
+the call stands; `docs/specs/traits.md` states both cases.
 
 A function of a module the file imports is reached the same way, on that module's class.
 `greeting.hello("world")` is `invokestatic greeting.hello`, with the descriptor read off the type
