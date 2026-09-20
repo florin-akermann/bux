@@ -47,15 +47,3 @@ Reading `user.home.number` 200,000,000 times on JDK 28 EA b16 cost 1.37 s and no
 and 5.21 s with 167 young GCs flattened; under C1 alone, 0.13 s against 0.36 s.
 C2 cannot be measured while a program has no observable result: the loop is deleted outright, or
 its reads are loop-invariant and folded into one multiplication, so neither run says anything.
-
-## 🟢 Item 031: An executable example asserts what a program writes out
-**Depends on:** Item 029, Item 035 — an exit status proves little, and writing out comes first.
-`// expect-run` judges an example by its exit status, which is `0` for every program that runs.
-Now that no operation throws, an example cannot show that a value is the one the spec claims.
-An example gains a way to state the output it must produce, and the harness compares it.
-`17 / 5` being `Some(3)` is then checked rather than asserted in prose.
-`io.println` is named in a help line and implemented nowhere, so writing out comes first.
-[031][a] - Item 035 gives a program a way to write a line out; nothing of it is done here.
-[031][b] - `docs/specs/executable-examples.md` states the header and what is compared.
-[031][c] - The harness compares the output, test-first; a mismatch names the file and both texts.
-[031][d] - `tests/spec/arithmetic/division.lm` writes its answers out and states them.
