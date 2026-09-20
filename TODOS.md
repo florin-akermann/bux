@@ -71,7 +71,7 @@ Item 048 lands the declaration that makes such a reference writable, so this ite
 [052][b] - Section 15 cites the clause where it argues nothing is shared, so the two sections agree.
 [052][c] - Item 048's `docs/specs/interop.md` points at the clause rather than restating the rule.
 
-## 🔴 Item 053: A generic function is reachable through a module
+## 🟡 Item 053: A generic function is reachable through a module
 **Depends on:** Item 045 — the library is the first module whose functions a program cannot call.
 `docs/specs/codegen.md` writes a generic once per set of types a use settles it at.
 The module declaring it writes the sets its own body reaches, so an importer's set is never there.
