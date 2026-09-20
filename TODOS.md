@@ -6,7 +6,7 @@
 
 ## Open
 
-## 🟡 Item 042: A record or a variant derives `Eq`
+## 🟢 Item 042: A record or a variant derives `Eq`
 **Depends on:** Item 041 — a derived instance is an instance.
 `docs/design.md` section 8 promises `derive Eq` for 0.2, and refuses `==` on a record until then.
 Equality is by state, so the compiler can write the instance: field by field, variant by variant.
