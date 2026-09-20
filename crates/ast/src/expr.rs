@@ -1,6 +1,6 @@
 //! Expressions.
 
-use crate::{Block, Name, Pattern, Span};
+use crate::{Block, Name, Path, Pattern, Span};
 
 /// An expression, with the span of the source it was parsed from.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -85,7 +85,7 @@ pub enum ExprKind {
     ///
     /// Which of the two it is depends on what `base` names, so name resolution decides.
     Record {
-        base: Name,
+        base: Path,
         fields: Vec<FieldValue>,
     },
     If(Box<IfExpr>),

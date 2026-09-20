@@ -165,8 +165,8 @@ the value it was given.
 | flag parameter    | `L0412` | this parameter is a `Bool`, so a call of `open` passes `true` and says no more |
 | not a predicate   | `L0413` | `active` gives back a `Bool`, so its name asks the question it answers |
 | holds itself      | `L0415` | `Node` holds `Node`                              |
-| type kept to itself | `L0416` | `greeting.wrapped` names `Held`, which `greeting` keeps to itself |
 | generic through a module | `L0417` | `holding.held` is generic, so `holding` alone writes it |
+| name inside a module that is no value | `L0304` | `holding.held` is a function, so it is written as a call |
 | literal misfit    | `L0420` | `5000000000` does not fit `Int32`, which holds `-2147483648` to `2147483647` |
 | bound is not a number | `L0421` | `lowest` of `Int32` is read rather than run, so it is one whole number |
 
@@ -180,8 +180,15 @@ settles is an `Int` and an `Int` is not that type.
 A variant that carries its values in order has no field to write against, so that is `L0402` too.
 A name reached inside a module is never `L0402`: every module in scope is supplied or loaded, so
 what it declares is what answers, and a name it does not declare is `L0414`.
-`L0416` and `L0417` are what a module offers rather than what it declares, and
-`docs/specs/modules.md` states both.
+`L0417` is what a module offers rather than what it declares, which `docs/specs/modules.md`
+states: a generic function is written where it is declared, so it is reached nowhere else.
+A type that module declares is offered, and a signature naming one is reached like any other.
+`L0414` is also a type reached through a module that the module does not declare, because a type
+is a name reached inside a module as a function is.
+`L0304` is the resolver's code, raised here because only inference knows what a module offers:
+a name reached inside one is a function or a value, and version 0.1 holds no function.
+A variant that module declares which carries nothing is a value, so it is written as the name
+alone; every other name inside a module is written as the call `docs/specs/modules.md` states.
 `L0401` counts the arguments of a written type as well as those of a call.
 `L0407` is raised where a division is written with a `0` the compiler can already see.
 `L0409`, `L0410`, and `L0411` are about how a call passes its arguments, which

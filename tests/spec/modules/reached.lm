@@ -1,0 +1,30 @@
+// expect-run
+// > world
+// > sent by post
+// > pending
+// A type another module declares is reached through the import, as a function of it is.
+import holder
+
+import io
+
+fn main() -> () {
+    io.println(named(user: holder.User { id: 2, name: "world" }))
+    io.println(said(payment: holder.Sent("post")))
+    io.println(said(payment: holder.Pending))
+}
+
+// A record of another module is built by its name and read field by field.
+// example: named(user: holder.User { id: 2, name: "world" }) == "world"
+fn named(user: holder.User) -> String {
+    user.name
+}
+
+// A variant of another module is matched by its name, in the order that module declares them.
+// example: said(payment: holder.Pending) == "pending"
+// example: said(payment: holder.Sent("post")) == "sent by post"
+fn said(payment: holder.Payment) -> String {
+    match payment {
+        holder.Sent(how) => "sent by " + how
+        holder.Pending => "pending"
+    }
+}

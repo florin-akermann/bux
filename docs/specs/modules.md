@@ -49,12 +49,34 @@ A function is generic by the type inference settled on it, not by what it wrote:
 no type parameter and leaves its type free is generic in the same way.
 `docs/specs/types.md` states that as `L0417`.
 
-A type a module declares stays that module's own in version 0.1.
-A type is written as a bare name, and no name reaches into a module, so an importing module has no
-way to write one.
-A function whose signature names one is therefore refused where it is reached rather than where it
-is declared, which `docs/specs/types.md` states as `L0416`.
-A module builds what it likes and offers what the modules importing it can name.
+A module offers the types it declares as well as the functions.
+A type is reached through the module's name, as a function is: `demo.User` is the type the module
+`demo` declares as `User`.
+A variant of it is reached the same way, so a `match` over `demo.Payment` names `demo.Pending`.
+A type argument is written after the whole name, so `demo.Held<Int>` applies `Int` to `demo.Held`.
+
+A name reached through a module is never a name in scope, so `demo.User` and a `User` this module
+declares are two types and never a clash.
+Nothing is brought in by the import but the module's own name.
+
+The type is the one the declaring module declared and not a copy of it: a value built there is the
+same value here, and the fields it has and the variants it has are the ones it was declared with.
+A record of another module is built by its name, as one of this module is: `demo.User { id: 1 }`.
+
+A value reaches further than a name does.
+A function of an imported module gives back what its own module declared, and that may be a type of
+a module this one never imported: `relay.got()` gives back a `holder.User` where `relay` imports
+`holder` and this module imports only `relay`.
+Such a value is held and read as the type it was declared as, fields and variants and all.
+What it is never is written: writing `holder.User` needs `holder` in scope, which only an import
+puts it in, so a name this module cannot write stays a name it cannot write.
+
+A trait and its instances stay the declaring module's own, exactly as a generic function does.
+`demo.User` has no instance of `Eq` here however `demo` came by one, so `==` over two of them is
+refused as it is over any type with no instance.
+A trait is reached through no module either: `demo.Eq` is not written.
+Version 0.1 keeps both where they are declared, and `docs/specs/traits.md` states what an instance
+is; what a module offers is the names a reader can write, and an instance has no name to write.
 
 ## Scopes
 
@@ -64,6 +86,8 @@ A type scope is searched where a type is written, and a value scope everywhere e
 
 A module's type scope holds the prelude's types and traits, and every type and trait the file
 declares.
+A type reached through a module is in neither scope: the module is looked up in the value scope,
+and the name after the dot is looked up in what that module declares.
 A module's value scope holds the prelude's constructors, every variant the file declares, every
 function and trait method it declares, and every module it imports.
 An instance declares nothing in either: its methods answer for the name its trait declares, which
@@ -112,6 +136,9 @@ and it is the order `docs/specs/codegen.md` counts a tag in.
 A record field is looked up in the record's type, so `user.name` resolves `user` and leaves `name`.
 A field of a record literal names a field of the type being built, and is left the same way.
 A name written after `.` is never a name in scope, whether the receiver is a record or a module.
+What such a name means is inference's to say, because the module declaring it is what says so.
+A type and a pattern reached through a module are resolved the same way: the module is a name in
+scope and what follows the dot is not.
 
 A bare name in a pattern is a use when it names a variant in scope, and a binding otherwise.
 That choice is the resolver's, which is why the parser writes both as the same node.
@@ -145,6 +172,7 @@ Canonical form puts every import first and sorted, which settles where it goes w
 | assigned but no `var` | `L0305` | `x` is not a `var`, so it is never assigned to |
 | module with no file | `L0306` | there is no module named `demo`                   |
 | ring of imports   | `L0307` | `demo` imports `main`, which imports `demo`       |
+| reached through no module | `L0313` | `user` is a module in neither scope, and a type is reached through one |
 
 `L0300` helps with `a name is declared in this file, imported, or supplied by the prelude`.
 `L0301` helps with `one name has one definition; rename one of the two`.
@@ -155,6 +183,14 @@ Canonical form puts every import first and sorted, which settles where it goes w
 `L0305` helps with ``mutation is explicit: bind it with `var`, or bind a new name``.
 `L0306` helps with ``a module is a file beside this one: write `demo.lm```.
 `L0307` helps with `a module is compiled after what it imports, and a ring has no such order`.
+`L0313` helps with ``a type of another module is reached through the import: write `demo.User```.
+
+`L0313` is the name on the left of the dot of a type or of a pattern, which is a module or
+nothing at all.
+A module the file does not import is `L0300`, because the name is looked up in the value scope
+before it is asked to be a module.
+A name that module does not declare is `L0414`, which is raised where every other name reached
+inside a module is; `docs/specs/types.md` states it.
 
 `L0306` and `L0307` are raised while loading, before any module is resolved.
 Both point at the import that was being followed, in the file that wrote it.
@@ -171,6 +207,11 @@ A function name is `L0304` wherever it is written but as the name of a call.
 A module name is `L0304` wherever it is written but on the left of a `.`.
 Its message is `x` is a module, so a name inside it is what is written.
 Neither has a type or a shape in version 0.1, so code generation is never handed one.
+
+A name reached inside a module is `L0304` too, and inference is what raises it: only inference
+knows whether that module declares a function of that name or a variant carrying nothing.
+`demo.helper` outside a call is refused; `demo.Pending` is a value and is written as it stands.
+`docs/specs/types.md` states the code among the ones inference raises.
 
 The name an assignment names is a `var` binding, which `docs/design.md` section 10 states.
 Anything else is `L0305`, pointing at the name on the left of the `=` or the `+=`.

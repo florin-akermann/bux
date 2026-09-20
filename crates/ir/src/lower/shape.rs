@@ -9,7 +9,7 @@ use std::collections::HashMap;
 use lumen_ast::{Item, RecordField, TypeDeclaration, TypeDefinition, TypeRef, TypeRefKind};
 use lumen_ast::{Variant, VariantPayload};
 use lumen_resolver::{DefinitionKind, Namespace, ResolvedProgram};
-use lumen_types::Type;
+use lumen_types::{BuiltBy, OfferedConstructor, OfferedType, Type};
 
 use crate::descriptor::{ClassName, Descriptor, MethodDescriptor};
 
@@ -101,8 +101,8 @@ pub(crate) struct Shapes {
 }
 
 impl Shapes {
-    /// The shapes `resolved` declares, in a module of this name, with the prelude beside them.
-    pub(crate) fn of(resolved: &ResolvedProgram, module: &str) -> Self {
+    /// The shapes `resolved` declares and `reached` offers, with the prelude beside them.
+    pub(crate) fn of(resolved: &ResolvedProgram, module: &str, reached: &[OfferedType]) -> Self {
         let mut shapes = Self {
             module: ClassName::new(module),
             declarations: Vec::new(),
@@ -113,6 +113,9 @@ impl Shapes {
             if let Item::Type(declaration) = item {
                 shapes.declare(resolved, declaration);
             }
+        }
+        for offered in reached {
+            shapes.declare_reached(offered);
         }
         shapes.declare_prelude();
         shapes
@@ -197,6 +200,62 @@ impl Shapes {
             .push(Declared::Variants { base, constructors });
     }
 
+    /// A type of another module, whose classes that module writes and this one only reaches.
+    ///
+    /// Its shapes go nowhere near `declarations`: the module declaring it writes its classes,
+    /// and writing them again here would be two modules claiming one name.
+    fn declare_reached(&mut self, offered: &OfferedType) {
+        let base = self.declared(offered.name());
+        match offered.built_by() {
+            BuiltBy::Record(one) => {
+                self.records
+                    .insert(offered.name().to_owned(), one.name().to_owned());
+                let carries = self.offered_carries(one);
+                self.built_by.insert(
+                    one.name().to_owned(),
+                    Shape {
+                        class: base.clone(),
+                        base,
+                        tag: None,
+                        carries,
+                    },
+                );
+            }
+            BuiltBy::Variants(variants) => {
+                for (position, variant) in variants.iter().enumerate() {
+                    let carries = self.offered_carries(variant);
+                    let class = variant_class(&base, simple(variant.name()));
+                    self.built_by.insert(
+                        variant.name().to_owned(),
+                        Shape {
+                            class,
+                            base: base.clone(),
+                            tag: Some(i32::try_from(position).unwrap_or_default()),
+                            carries,
+                        },
+                    );
+                }
+            }
+        }
+    }
+
+    /// What one constructor of another module's type holds, named as that module named it.
+    fn offered_carries(&self, built: &OfferedConstructor) -> Vec<Carried> {
+        built
+            .carries()
+            .iter()
+            .enumerate()
+            .map(|(position, of)| Carried {
+                name: built
+                    .labels()
+                    .get(position)
+                    .cloned()
+                    .unwrap_or_else(|| positional(position)),
+                of: self.carried(of),
+            })
+            .collect()
+    }
+
     /// `Option` and `Result`, which are in scope in every module without being declared.
     fn declare_prelude(&mut self) {
         for (named, variants) in PRELUDE {
@@ -253,16 +312,17 @@ impl Shapes {
 
     /// What a type written in a declaration is carried by; a type parameter erases to `Object`.
     fn written(&self, resolved: &ResolvedProgram, type_ref: &TypeRef) -> Option<Descriptor> {
-        let TypeRefKind::Named { name, .. } = &type_ref.kind else {
+        let TypeRefKind::Named { path, .. } = &type_ref.kind else {
             return None;
         };
-        let parameter = resolved
-            .definition(Namespace::Type, name)
-            .is_some_and(|definition| definition.kind == DefinitionKind::TypeParameter);
+        let parameter = path.module.is_none()
+            && resolved
+                .definition(Namespace::Type, &path.name)
+                .is_some_and(|definition| definition.kind == DefinitionKind::TypeParameter);
         if parameter {
             return Some(object());
         }
-        Some(self.named(&name.text))
+        Some(self.named(&path.to_string()))
     }
 
     /// The class `constructor` builds, which name resolution has already proved is declared.
@@ -270,6 +330,11 @@ impl Shapes {
         self.built_by
             .get(constructor)
             .expect("name resolution gave every constructor a declaration")
+    }
+
+    /// The class `name` builds inside `module`, when that module offers a constructor of it.
+    pub(crate) fn offered(&self, module: &str, name: &str) -> Option<&Shape> {
+        self.built_by.get(&format!("{module}.{name}"))
     }
 
     /// What a value of the type called `named` is carried by.
@@ -284,10 +349,21 @@ impl Shapes {
         }
     }
 
-    /// The class written for the type called `declared`, which is of the module's package.
+    /// The class written for the type called `declared`, which is of its own module's package.
+    ///
+    /// A name holding a dot is a type of another module, written `demo.User` as
+    /// `docs/specs/modules.md` states, and the class it names is that module's own.
     fn declared(&self, declared: &str) -> ClassName {
-        ClassName::new(&format!("{}/{declared}", self.module))
+        let Some((module, named)) = declared.split_once('.') else {
+            return ClassName::new(&format!("{}/{declared}", self.module));
+        };
+        ClassName::new(&format!("{module}/{named}"))
     }
+}
+
+/// A name as the module declaring it wrote it, which is what is left of a dot where one is.
+fn simple(reached: &str) -> &str {
+    reached.split_once('.').map_or(reached, |(_, named)| named)
 }
 
 /// The class written for a variant, which is the type's class and the variant's name.

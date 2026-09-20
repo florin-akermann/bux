@@ -14,17 +14,17 @@ use std::mem;
 
 use lumen_ast::ForHeader;
 use lumen_ast::{Arguments, AssignOperator, BinaryOperator, Block, Expr, ExprKind};
-use lumen_ast::{ForLoop, Function, IfExpr, Item, MatchExpr, Mutability, Name};
-use lumen_ast::{Span, Statement, StatementKind};
+use lumen_ast::{ForLoop, Function, IfExpr, Item, MatchExpr, Mutability, Name, Path};
+use lumen_ast::{Span, Statement, StatementKind, TypeDeclaration, TypeDefinition};
 use lumen_resolver::{Definition, DefinitionKind, Namespace, ResolvedProgram};
 
 use crate::derive;
 use crate::environment::{Environment, Key};
 use crate::error::{Count, TypeError, TypeErrorKind};
 use crate::infer::operator::Operated;
-use crate::infer::settle::Lookup;
+use crate::infer::settle::{Lookup, Reached};
 use crate::scheme::{Quantified, Required, Scheme};
-use crate::surface::{Imported, Surface};
+use crate::surface::{BuiltBy, Imported, OfferedConstructor, OfferedType, Surface};
 use crate::table::Table;
 use crate::types::{OPTION, RESULT, Type, TypeVar};
 use crate::unify::{Clash, unify};
@@ -48,9 +48,10 @@ pub(crate) struct Inferred {
 pub(crate) fn infer(
     resolved: &ResolvedProgram,
     imported: &Imported,
+    reached: &[OfferedType],
 ) -> Result<Inferred, TypeError> {
     let mut table = Table::default();
-    let environment = Environment::of(resolved, &mut table)?;
+    let environment = Environment::of(resolved, reached, &mut table)?;
     table.whole_numbers_are_written_at(environment.takes_a_whole_number());
     let mut inference = Inference {
         resolved,
@@ -70,7 +71,7 @@ pub(crate) fn infer(
         methods_at: HashMap::new(),
     };
     inference.module()?;
-    let surface = Surface::of(resolved, inference.offered());
+    let surface = Surface::of(inference.offered(), inference.offered_types());
     let methods = inference.methods_at.clone();
     Ok(Inferred {
         types: inference.solved(),
@@ -135,6 +136,64 @@ impl Inference<'_> {
             self.function(function)?;
         }
         Ok(())
+    }
+
+    /// Every type the module declares, as a module importing it needs to write one.
+    ///
+    /// What builds it and what each of those carries is what the environment already worked
+    /// out, so the surface is read off that rather than off the declaration a second time.
+    fn offered_types(&self) -> Vec<OfferedType> {
+        self.resolved
+            .program()
+            .items
+            .iter()
+            .filter_map(|item| match item {
+                Item::Type(declaration) => Some(self.offered_type(declaration)),
+                _ => None,
+            })
+            .collect()
+    }
+
+    /// One declared type as a module importing this one reads it, with what builds it.
+    fn offered_type(&self, declaration: &TypeDeclaration) -> OfferedType {
+        let built_by = match &declaration.definition {
+            TypeDefinition::Record(_) => BuiltBy::Record(self.built_with(&declaration.name)),
+            TypeDefinition::Variants(variants) => BuiltBy::Variants(
+                variants
+                    .iter()
+                    .map(|variant| self.built_with(&variant.name))
+                    .collect(),
+            ),
+        };
+        let scheme = self
+            .environment
+            .declared_as(&declaration.name.text)
+            .expect("every type declaration is declared before any body is walked");
+        OfferedType::declared(
+            declaration.name.text.clone(),
+            scheme.quantified().to_vec(),
+            scheme.body().clone(),
+            built_by,
+        )
+    }
+
+    /// One constructor as a module importing this one reads it, which is what it carries.
+    fn built_with(&self, name: &Name) -> OfferedConstructor {
+        let key = Key::at(name);
+        let scheme = self
+            .environment
+            .scheme(&key)
+            .expect("a type declaration gives every constructor of it a type");
+        let carries = match scheme.body() {
+            Type::Function { parameters, .. } => parameters.clone(),
+            // One that carries nothing is the value it builds, so it takes no parameter at all.
+            _ => Vec::new(),
+        };
+        OfferedConstructor::declared(
+            name.text.clone(),
+            self.environment.labels(&key).to_vec(),
+            carries,
+        )
     }
 
     /// The type of every function this module declares, which is what it offers.
@@ -342,7 +401,7 @@ impl Inference<'_> {
                 at: expr.span,
             }),
             ExprKind::Call { callee, arguments } => self.call(callee, arguments, expr.span),
-            ExprKind::Field { receiver, name } => self.field(receiver, name),
+            ExprKind::Field { receiver, name } => self.field(receiver, name, Reached::AsAValue),
             ExprKind::Try(inner) => self.propagated(inner, expr.span),
             ExprKind::List(elements) => self.written_list(elements),
             ExprKind::Record { base, fields } => self.record(base, fields, expr.span),
@@ -366,7 +425,7 @@ impl Inference<'_> {
     }
 
     fn call(&mut self, callee: &Expr, arguments: &Arguments, at: Span) -> Result<Type, TypeError> {
-        let signature = self.expr(callee)?;
+        let signature = self.called(callee)?;
         let passed = arguments.values();
         let mut given = Vec::new();
         for argument in &passed {
@@ -388,6 +447,16 @@ impl Inference<'_> {
         Ok(*result)
     }
 
+    /// The type of what a call calls, which is the one place a function of a module is written.
+    fn called(&mut self, callee: &Expr) -> Result<Type, TypeError> {
+        let ExprKind::Field { receiver, name } = &callee.kind else {
+            return self.expr(callee);
+        };
+        let found = self.field(receiver, name, Reached::AsACall)?;
+        self.types.insert(callee.span, found.clone());
+        Ok(found)
+    }
+
     /// A call of something whose type is not yet a function, which unification has to settle.
     fn applied(&mut self, called: &Type, given: Vec<Type>, at: Span) -> Result<Type, TypeError> {
         let result = self.table.fresh();
@@ -401,13 +470,14 @@ impl Inference<'_> {
     /// Waiting costs the reader something: what the field turns out to be is then reported where
     /// the wait ended rather than where the field is written. So the wait is only for the types
     /// that something further on has still to settle.
-    fn field(&mut self, receiver: &Expr, name: &Name) -> Result<Type, TypeError> {
+    fn field(&mut self, receiver: &Expr, name: &Name, how: Reached) -> Result<Type, TypeError> {
         let through = self.expr(receiver)?;
         let found = self.table.fresh();
         let lookup = Lookup {
             through,
             field: name.clone(),
             found: found.clone(),
+            how,
         };
         if matches!(self.table.shallow(&lookup.through), Type::Var(_)) {
             self.lookups.push(lookup);
@@ -496,6 +566,38 @@ impl Inference<'_> {
         }
     }
 
+    /// Binds `name` to `scheme`, and records the type at the name, which is where it is declared.
+    fn introduce(&mut self, name: &Name, scheme: Scheme) {
+        self.types.insert(name.span, scheme.body().clone());
+        let key = Key::at(name);
+        self.environment.bind(key.clone(), scheme);
+        self.introduced.push(key);
+    }
+
+    /// The name a path names, as a key, and the type it has freshly at this use.
+    ///
+    /// A path reached through a module names what that module offers, which is bound under the
+    /// name this module writes it by; a bare one names what is in scope here.
+    ///
+    /// # Errors
+    ///
+    /// Returns the name where the module it is reached through declares nothing of it.
+    fn built_by(&mut self, path: &Path) -> Result<(Key, Type), TypeError> {
+        let Some(module) = &path.module else {
+            let key = self.key_of(&path.name);
+            return Ok((key, self.value(&path.name)));
+        };
+        let key = Key::reached(&path.to_string());
+        let Some(scheme) = self.environment.scheme(&key).cloned() else {
+            let kind = TypeErrorKind::NotInModule {
+                module: module.text.clone(),
+                name: path.name.text.clone(),
+            };
+            return Err(TypeError::at(path.name.span, kind));
+        };
+        Ok((key, scheme.instantiate(&mut self.table)))
+    }
+
     /// The type `name` has at this one use, fresh in whatever its definition is free over.
     ///
     /// A name written over a constrained type parameter asks its trait of whatever this use
@@ -516,14 +618,6 @@ impl Inference<'_> {
             });
         }
         found
-    }
-
-    /// Binds `name` to `scheme`, and records the type at the name, which is where it is declared.
-    fn introduce(&mut self, name: &Name, scheme: Scheme) {
-        self.types.insert(name.span, scheme.body().clone());
-        let key = Key::at(name);
-        self.environment.bind(key.clone(), scheme);
-        self.introduced.push(key);
     }
 
     /// The scheme the name defined at `key` was given, which every phase before this one assures.

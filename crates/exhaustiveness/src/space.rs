@@ -3,6 +3,7 @@
 use std::collections::HashMap;
 
 use lumen_ast::{Item, Program, TypeDeclaration, TypeDefinition, VariantPayload};
+use lumen_types::{BuiltBy, OfferedConstructor, OfferedType};
 
 /// One constructor, and how many values it carries.
 ///
@@ -25,8 +26,8 @@ pub(crate) struct Space {
 }
 
 impl Space {
-    /// The constructors of `program`, on top of the ones every module has.
-    pub(crate) fn of(program: &Program) -> Self {
+    /// The constructors of `program` and of the types it reaches, on top of every module's own.
+    pub(crate) fn of(program: &Program, reached: &[OfferedType]) -> Self {
         let mut space = Self::default();
         space.declare(vec![signature("false", 0), signature("true", 0)]);
         space.declare(vec![signature("Some", 1), signature("None", 0)]);
@@ -35,6 +36,9 @@ impl Space {
             if let Item::Type(declaration) = item {
                 space.declare(constructors(declaration));
             }
+        }
+        for offered in reached {
+            space.declare(offers(offered));
         }
         space
     }
@@ -68,6 +72,19 @@ impl Space {
         }
         self.declared.push(signatures);
     }
+}
+
+/// What a type of another module offers, which a `match` covers exactly as it covers its own.
+fn offers(offered: &OfferedType) -> Vec<Signature> {
+    match offered.built_by() {
+        BuiltBy::Record(one) => vec![offered_signature(one)],
+        BuiltBy::Variants(variants) => variants.iter().map(offered_signature).collect(),
+    }
+}
+
+/// One constructor of such a type, under the name a module importing it writes.
+fn offered_signature(built: &OfferedConstructor) -> Signature {
+    signature(built.name(), built.carries().len())
 }
 
 /// What a type declaration declares: one constructor for a record, and one for each variant.

@@ -273,8 +273,8 @@ fn record_fields(tree: &mut Tree, depth: usize, fields: &[RecordField]) {
 fn type_ref_node(tree: &mut Tree, depth: usize, type_ref: &TypeRef) {
     match &type_ref.kind {
         TypeRefKind::Unit => tree.node(depth, "unit-type", type_ref.span),
-        TypeRefKind::Named { name, arguments } => {
-            tree.node(depth, &format!("named-type {}", name.text), type_ref.span);
+        TypeRefKind::Named { path, arguments } => {
+            tree.node(depth, &format!("named-type {path}"), type_ref.span);
             for argument in arguments {
                 type_ref_node(tree, depth + 1, argument);
             }
@@ -386,7 +386,7 @@ fn expr_node(tree: &mut Tree, depth: usize, expr: &Expr) {
             }
         }
         ExprKind::Record { base, fields } => {
-            tree.node(depth, &format!("record {}", base.text), span);
+            tree.node(depth, &format!("record {base}"), span);
             for field in fields {
                 tree.node(
                     depth + 1,
@@ -445,18 +445,18 @@ fn match_node(tree: &mut Tree, depth: usize, span: Span, match_expr: &MatchExpr)
 fn pattern_node(tree: &mut Tree, depth: usize, pattern: &Pattern) {
     let span = pattern.span;
     match &pattern.kind {
-        PatternKind::Name(name) => tree.node(depth, &format!("pattern {}", name.text), span),
+        PatternKind::Name(path) => tree.node(depth, &format!("pattern {path}"), span),
         PatternKind::Integer(value) => tree.node(depth, &format!("pattern-integer {value}"), span),
         PatternKind::String(value) => tree.node(depth, &format!("pattern-string {value:?}"), span),
         PatternKind::Bool(value) => tree.node(depth, &format!("pattern-bool {value}"), span),
-        PatternKind::Tuple { name, elements } => {
-            tree.node(depth, &format!("pattern-tuple {}", name.text), span);
+        PatternKind::Tuple { path, elements } => {
+            tree.node(depth, &format!("pattern-tuple {path}"), span);
             for element in elements {
                 pattern_node(tree, depth + 1, element);
             }
         }
-        PatternKind::Record { name, fields } => {
-            tree.node(depth, &format!("pattern-record {}", name.text), span);
+        PatternKind::Record { path, fields } => {
+            tree.node(depth, &format!("pattern-record {path}"), span);
             for field in fields {
                 tree.node(
                     depth + 1,

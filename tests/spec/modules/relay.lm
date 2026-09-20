@@ -1,0 +1,7 @@
+import holder
+
+// A module gives back what it declares the type of, whoever is reading it.
+// example: got().name == "relayed"
+fn got() -> holder.User {
+    holder.User { id: 1, name: "relayed" }
+}

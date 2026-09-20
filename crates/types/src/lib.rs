@@ -25,7 +25,7 @@ use lumen_resolver::ResolvedProgram;
 
 pub use crate::error::TypeError;
 pub use crate::supplied::supplies;
-pub use crate::surface::{Imported, Surface};
+pub use crate::surface::{BuiltBy, Imported, OfferedConstructor, OfferedType, Surface};
 pub use crate::types::{Type, TypeParameter, TypeVar};
 
 /// Gives every expression of `resolved` the type it has, reaching `imported` through an import.
@@ -36,12 +36,14 @@ pub use crate::types::{Type, TypeParameter, TypeVar};
 /// expression whose type inference cannot give it.
 pub fn check(resolved: ResolvedProgram, imported: &Imported) -> Result<TypedProgram, TypeError> {
     holds::nothing_holds_itself(&resolved)?;
-    let inferred = infer::infer(&resolved, imported)?;
+    let reached = imported.every_type();
+    let inferred = infer::infer(&resolved, imported, &reached)?;
     Ok(TypedProgram {
         resolved,
         types: inferred.types,
         surface: inferred.surface,
         methods: inferred.methods,
+        reached,
     })
 }
 
@@ -52,6 +54,7 @@ pub struct TypedProgram {
     types: HashMap<Span, Type>,
     surface: Surface,
     methods: HashMap<Span, Type>,
+    reached: Vec<OfferedType>,
 }
 
 impl TypedProgram {
@@ -65,6 +68,15 @@ impl TypedProgram {
     #[must_use]
     pub const fn surface(&self) -> &Surface {
         &self.surface
+    }
+
+    /// Every type the modules this one imports offer, under the name this one writes it by.
+    ///
+    /// A type of another module is that module's own, so what it is built with and what each of
+    /// those carries is read from here rather than from anything this module declares.
+    #[must_use]
+    pub fn reached(&self) -> &[OfferedType] {
+        &self.reached
     }
 
     /// The type of what is written at `at`.

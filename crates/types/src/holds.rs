@@ -88,7 +88,9 @@ fn declared_at(declared: &[(&Name, &[RecordField])], named: &str) -> Span {
 /// runs through one holds nothing of itself and is finite.
 fn head_of(written: &TypeRef) -> Option<String> {
     match &written.kind {
-        TypeRefKind::Named { name, .. } => Some(name.text.clone()),
+        // A type of another module holds nothing of this one: a ring of imports is refused
+        // while loading, so no type it holds can reach back to a type declared here.
+        TypeRefKind::Named { path, .. } => path.module.is_none().then(|| path.name.text.clone()),
         TypeRefKind::Unit => None,
     }
 }

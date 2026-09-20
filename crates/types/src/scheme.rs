@@ -80,6 +80,25 @@ impl Scheme {
         replaced(&self.body, &HashMap::from([(one.clone(), given)]))
     }
 
+    /// The same scheme, with `rename` applied to every type it holds.
+    ///
+    /// A module offering its surface writes each of its own types as a name reached through it,
+    /// and a scheme is what a function offers, so this is how one crosses that boundary.
+    pub(crate) fn renamed(&self, rename: &impl Fn(&Type) -> Type) -> Self {
+        Self {
+            quantified: self.quantified.clone(),
+            body: rename(&self.body),
+            required: self
+                .required
+                .iter()
+                .map(|one| Required {
+                    trait_name: one.trait_name.clone(),
+                    at: rename(&one.at),
+                })
+                .collect(),
+        }
+    }
+
     /// The traits a use of this must answer for, still written over what this quantifies.
     pub(crate) fn required(&self) -> &[Required] {
         &self.required

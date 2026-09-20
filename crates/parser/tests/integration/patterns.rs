@@ -94,3 +94,36 @@ fn a_nested_pattern_matches_what_a_variant_carries() {
         ]
     );
 }
+
+#[test]
+fn a_variant_of_another_module_is_matched_through_the_name_it_is_reached_by() {
+    assert_eq!(
+        in_match("        demo.Pending => 1"),
+        [
+            "name payment",
+            "arm",
+            "  pattern demo.Pending",
+            "  integer 1"
+        ]
+    );
+    assert_eq!(
+        in_match("        demo.Failed(reason) => reason"),
+        [
+            "name payment",
+            "arm",
+            "  pattern-tuple demo.Failed",
+            "    pattern reason",
+            "  name reason",
+        ]
+    );
+    assert_eq!(
+        in_match("        demo.Authorized { id } => id"),
+        [
+            "name payment",
+            "arm",
+            "  pattern-record demo.Authorized",
+            "    pattern-field id",
+            "  name id",
+        ]
+    );
+}

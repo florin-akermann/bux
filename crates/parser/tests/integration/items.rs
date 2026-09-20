@@ -317,3 +317,28 @@ fn a_type_parameter_without_a_constraint_is_written_as_it_always_was() {
         ]
     );
 }
+
+#[test]
+fn a_type_of_another_module_is_written_through_the_name_it_is_reached_by() {
+    assert_eq!(
+        shape("type Holder = Holder(demo.User)"),
+        [
+            "type Holder",
+            "  variant Holder",
+            "    named-type demo.User"
+        ]
+    );
+}
+
+#[test]
+fn a_type_of_another_module_takes_its_arguments_after_the_whole_name() {
+    assert_eq!(
+        shape("type Holder = Holder(demo.Held<Int>)"),
+        [
+            "type Holder",
+            "  variant Holder",
+            "    named-type demo.Held",
+            "      named-type Int",
+        ]
+    );
+}

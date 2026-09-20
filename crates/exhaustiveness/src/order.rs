@@ -10,7 +10,7 @@
 //! two values of a `Bool` are each written where the author put them, and so is everything an
 //! arm writes after one of them.
 
-use lumen_ast::{MatchExpr, Name, Pattern, PatternKind, Span};
+use lumen_ast::{MatchExpr, Path, Pattern, PatternKind, Span};
 
 use crate::pattern::Reading;
 use crate::space::Space;
@@ -100,16 +100,14 @@ fn steps(pattern: &Pattern, reading: &Reading, space: &Space) -> Vec<Step> {
 
 /// Adds each constructor of `pattern` to `placed`, and says whether it placed all of them.
 fn walk(pattern: &Pattern, reading: &Reading, space: &Space, placed: &mut Vec<Step>) -> bool {
-    let Some(name) = constructor(pattern, reading) else {
+    let Some(path) = constructor(pattern, reading) else {
         return false;
     };
-    let Some(at) = space.declared_at(&name.text) else {
+    let name = path.to_string();
+    let Some(at) = space.declared_at(&name) else {
         return false;
     };
-    placed.push(Step {
-        at,
-        name: name.text.clone(),
-    });
+    placed.push(Step { at, name });
     let PatternKind::Tuple { elements, .. } = &pattern.kind else {
         return true;
     };
@@ -119,10 +117,10 @@ fn walk(pattern: &Pattern, reading: &Reading, space: &Space, placed: &mut Vec<St
 }
 
 /// The constructor a pattern names, which is nothing when it binds or writes a literal.
-fn constructor<'a>(pattern: &'a Pattern, reading: &Reading) -> Option<&'a Name> {
+fn constructor<'a>(pattern: &'a Pattern, reading: &Reading) -> Option<&'a Path> {
     match &pattern.kind {
-        PatternKind::Tuple { name, .. } | PatternKind::Record { name, .. } => Some(name),
-        PatternKind::Name(name) => (!reading.binds(name)).then_some(name),
+        PatternKind::Tuple { path, .. } | PatternKind::Record { path, .. } => Some(path),
+        PatternKind::Name(path) => (!reading.binds(path)).then_some(path),
         PatternKind::Integer(_) | PatternKind::String(_) | PatternKind::Bool(_) => None,
     }
 }

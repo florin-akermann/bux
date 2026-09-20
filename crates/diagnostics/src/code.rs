@@ -96,6 +96,8 @@ catalogue! {
     TraitAsType => "L0311",
     /// A derive names a trait no type derives, or a type this module does not declare.
     NotDerivable => "L0312",
+    /// A type or a pattern is reached through a name that is no module.
+    NotAModule => "L0313",
     /// A type met a type it does not match.
     TypeMismatch => "L0400",
     /// A call passes more or fewer arguments than the function takes.
@@ -128,8 +130,6 @@ catalogue! {
     NotInModule => "L0414",
     /// A declared type holds a value of itself, which no whole value could ever be.
     HoldsItself => "L0415",
-    /// A function reached through a module names a type that module declares.
-    TypeOfAnotherModule => "L0416",
     /// A generic function is reached through a module, which writes it where it is declared.
     GenericThroughModule => "L0417",
     /// A trait method is used at a type that has no instance of that trait.

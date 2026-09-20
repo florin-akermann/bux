@@ -153,6 +153,22 @@ fn a_record_literal_carries_its_fields_in_order() {
 }
 
 #[test]
+fn a_record_of_another_module_is_built_through_the_name_it_is_reached_by() {
+    assert_eq!(
+        in_function("demo.User { id: 1 }"),
+        ["record demo.User", "  field-value id", "    integer 1"]
+    );
+}
+
+#[test]
+fn a_name_reached_through_a_module_and_no_brace_is_a_field_rather_than_a_build() {
+    assert_eq!(
+        in_function("demo.Pending"),
+        ["field Pending", "  name demo"]
+    );
+}
+
+#[test]
 fn a_record_update_parses_as_the_same_node_as_a_record_literal() {
     assert_eq!(
         in_function(r#"user { name: "Bob" }"#),

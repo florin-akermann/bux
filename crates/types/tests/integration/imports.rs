@@ -1,8 +1,7 @@
 //! What a module reaches through an import, and what an imported module keeps to itself.
 //!
-//! `docs/specs/modules.md` states the rule: a loaded module offers every function it declares,
-//! and a type it declares stays its own, so a signature naming one is refused where it is
-//! reached.
+//! `docs/specs/modules.md` states the rule: a loaded module offers every function and every type
+//! it declares, each reached through the name the import brings into scope.
 
 use lumen_types::Imported;
 
@@ -11,6 +10,16 @@ use crate::common::{offering, refusal_reaching};
 
 /// A module declaring one function, which is what another module imports it for.
 const GREETING: &str = "fn hello(name: String) -> String {\n    \"hi \" + name\n}\n";
+
+/// A module declaring a type as well, which is what another module reaches through its name.
+const WRAPPING: &str = "fn wrapped(name: String) -> Greeting {\n    Greeting(name)\n}\n\ntype Greeting = Greeting(String)\n";
+
+/// A module declaring a record, which another module builds and reads the fields of.
+const USER: &str =
+    "fn named(user: User) -> String {\n    user.name\n}\n\ntype User = {\n    name: String\n}\n";
+
+/// A module declaring an algebraic data type, which another module matches values of.
+const PAYMENT: &str = "fn sent(how: String) -> Payment {\n    Sent(how)\n}\n\ntype Payment =\n    | Sent(String)\n    | Pending\n";
 
 /// What `source` puts out under the name `greeting`, which is the name each test imports.
 fn offered(source: &str) -> Imported {
@@ -64,30 +73,160 @@ fn a_name_an_imported_module_does_not_declare_is_refused_where_it_is_written() {
 }
 
 #[test]
-fn a_type_declared_by_the_imported_module_is_kept_to_itself() {
-    let greeting = "fn wrapped(name: String) -> Greeting {\n    Greeting(name)\n}\n\ntype Greeting = Greeting(String)\n";
+fn a_type_the_imported_module_declares_is_named_by_the_module_it_is_reached_through() {
     let source = reaching("_ = greeting.wrapped(\"world\")");
-    let error = refusal_reaching(&source, &offered(greeting));
 
     assert_eq!(
-        error.message(),
-        "`greeting.wrapped` names `Greeting`, which `greeting` keeps to itself"
-    );
-    assert_eq!(
-        error.help(),
-        "a signature written in types both modules have is what one module offers another"
+        inferred_type_reaching(&source, "greeting.wrapped", 1, &offered(WRAPPING)),
+        "(String) -> greeting.Greeting"
     );
 }
 
 #[test]
-fn a_type_kept_to_itself_is_found_however_deep_in_the_signature_it_is_written() {
+fn a_type_of_another_module_is_named_that_way_however_deep_in_the_signature_it_sits() {
     let greeting =
         "fn taken(held: List<Greeting>) -> Int {\n    1\n}\n\ntype Greeting = Greeting(String)\n";
     let source = reaching("_ = greeting.taken([])");
 
     assert_eq!(
+        inferred_type_reaching(&source, "greeting.taken", 1, &offered(greeting)),
+        "(List<greeting.Greeting>) -> Int"
+    );
+}
+
+#[test]
+fn a_constructor_of_another_module_builds_that_module_s_type() {
+    let source = reaching("_ = greeting.Greeting(\"world\")");
+
+    assert_eq!(
+        inferred_type_reaching(
+            &source,
+            "greeting.Greeting(\"world\")",
+            1,
+            &offered(WRAPPING)
+        ),
+        "greeting.Greeting"
+    );
+}
+
+#[test]
+fn a_type_of_another_module_is_written_where_a_signature_writes_a_type() {
+    let source = concat!(
+        "import greeting\n\n",
+        "fn held(value: greeting.Greeting) -> greeting.Greeting {\n    value\n}\n"
+    );
+
+    inferred_reaching(source, &offered(WRAPPING));
+}
+
+#[test]
+fn a_record_of_another_module_is_built_by_its_name_and_read_field_by_field() {
+    let source = concat!(
+        "import greeting\n\n",
+        "fn named() -> String {\n",
+        "    user := greeting.User { name: \"world\" }\n",
+        "    user.name\n",
+        "}\n"
+    );
+
+    inferred_reaching(source, &offered(USER));
+}
+
+#[test]
+fn a_variant_of_another_module_is_matched_by_the_name_it_is_reached_through() {
+    let source = concat!(
+        "import greeting\n\n",
+        "fn said(payment: greeting.Payment) -> String {\n",
+        "    match payment {\n",
+        "        greeting.Sent(how) => how\n",
+        "        greeting.Pending => \"pending\"\n",
+        "    }\n",
+        "}\n"
+    );
+
+    inferred_reaching(source, &offered(PAYMENT));
+}
+
+#[test]
+fn a_generic_type_of_another_module_takes_its_arguments_after_the_whole_name() {
+    let greeting =
+        "fn held<T>(value: T) -> Held<T> {\n    Held(value)\n}\n\ntype Held<T> = Held(T)\n";
+    let source = concat!(
+        "import greeting\n\n",
+        "fn taken(value: greeting.Held<Int>) -> greeting.Held<Int> {\n    value\n}\n"
+    );
+
+    inferred_reaching(source, &offered(greeting));
+}
+
+#[test]
+fn a_use_of_a_generic_type_of_another_module_is_named_as_written_when_it_counts_wrong() {
+    let greeting =
+        "fn held<T>(value: T) -> Held<T> {\n    Held(value)\n}\n\ntype Held<T> = Held(T)\n";
+    let source = concat!(
+        "import greeting\n\n",
+        "fn taken(value: greeting.Held<Int, Int>) -> Int {\n    1\n}\n"
+    );
+
+    assert_eq!(
+        refusal_reaching(source, &offered(greeting)).message(),
+        "`greeting.Held` takes 1 type argument but 2 were given"
+    );
+}
+
+#[test]
+fn a_type_of_a_module_this_one_does_not_import_is_read_as_the_type_it_was_declared_as() {
+    let source = "import relay\n\nfn named() -> String {\n    relay.got().name\n}\n";
+
+    assert_eq!(
+        inferred_type_reaching(source, "relay.got()", 1, &relayed()),
+        "greeting.User"
+    );
+    assert_eq!(
+        inferred_type_reaching(source, "relay.got().name", 1, &relayed()),
+        "String"
+    );
+}
+
+/// `relay` offers a function giving back a `greeting.User`, and `greeting` is not imported.
+///
+/// A module reaches what it imports and holds what those give it, so a value of `greeting.User`
+/// arrives here through `relay` however little this module has to do with `greeting`.
+fn relayed() -> Imported {
+    let relaying = concat!(
+        "import greeting\n\n",
+        "fn got() -> greeting.User {\n    greeting.User { name: \"world\" }\n}\n"
+    );
+    let imported = offered(USER);
+    let surface = inferred_reaching(relaying, &imported).surface().clone();
+    imported.offering("relay", surface)
+}
+
+#[test]
+fn a_type_the_imported_module_does_not_declare_is_refused_where_it_is_written() {
+    let source = concat!(
+        "import greeting\n\n",
+        "fn held(value: greeting.Farewell) -> Int {\n    1\n}\n"
+    );
+
+    assert_eq!(
+        refusal_reaching(source, &offered(WRAPPING)).message(),
+        "`greeting` declares no `Farewell`"
+    );
+}
+
+#[test]
+fn a_type_of_another_module_has_no_instance_here_however_that_module_came_by_one() {
+    let greeting = concat!(
+        "derive Eq for Greeting\n\n",
+        "fn wrapped(name: String) -> Greeting {\n    Greeting(name)\n}\n\n",
+        "type Greeting = Greeting(String)\n"
+    );
+    let source = reaching("_ = greeting.Greeting(\"a\") == greeting.Greeting(\"b\")");
+
+    assert_eq!(
         refusal_reaching(&source, &offered(greeting)).message(),
-        "`greeting.taken` names `Greeting`, which `greeting` keeps to itself"
+        "`greeting.Greeting` has no `Eq`, so `==` is not written over it"
     );
 }
 

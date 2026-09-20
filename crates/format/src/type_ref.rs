@@ -4,12 +4,12 @@ use lumen_ast::{TypeRef, TypeRefKind};
 
 use crate::printer::Printer;
 
-/// `Int`, `List<User>`, or `()`, always on one line.
+/// `Int`, `List<User>`, `demo.Held<Int>`, or `()`, always on one line.
 pub(crate) fn type_ref(printer: &mut Printer, written: &TypeRef) {
     match &written.kind {
         TypeRefKind::Unit => printer.word("()"),
-        TypeRefKind::Named { name, arguments } => {
-            printer.word(&name.text);
+        TypeRefKind::Named { path, arguments } => {
+            printer.path(path);
             type_arguments(printer, arguments);
         }
     }

@@ -9,7 +9,7 @@
 use std::collections::HashSet;
 
 use lumen_ast::{Block, Expr, ExprKind, ForHeader, ForLoop, Function, IfExpr, MatchExpr};
-use lumen_ast::{Mutability, Name, Span, Statement, StatementKind};
+use lumen_ast::{Mutability, Name, Path, Span, Statement, StatementKind};
 use lumen_resolver::{Definition, DefinitionKind, Namespace, Origin, ResolvedProgram};
 
 use crate::lower::shape::Shapes;
@@ -116,7 +116,9 @@ impl Walk<'_> {
                 }
             }
             ExprKind::Record { base, fields } => {
-                self.let_go_of(base);
+                if base.module.is_none() {
+                    self.let_go_of(&base.name);
+                }
                 for field in fields {
                     self.expr(&field.value);
                 }
@@ -167,10 +169,19 @@ impl Walk<'_> {
     ///
     /// A variant carries a tag its constructor writes, so splitting one would lose which variant
     /// the value is; only a record is nothing but the fields it declares.
-    fn builds_a_record(&self, base: &Name) -> bool {
-        self.definition(base)
-            .is_some_and(|definition| definition.kind == DefinitionKind::Constructor)
-            && self.shapes.builds_a_record(&base.text)
+    fn builds_a_record(&self, base: &Path) -> bool {
+        self.constructs(base) && self.shapes.builds_a_record(&base.to_string())
+    }
+
+    /// Whether `base` names a constructor rather than the binding an update is written against.
+    ///
+    /// One reached through a module always does: an update names a binding, and a binding is a
+    /// name of this module, which `docs/specs/modules.md` states a dotted name never is.
+    fn constructs(&self, base: &Path) -> bool {
+        base.module.is_some()
+            || self
+                .definition(&base.name)
+                .is_some_and(|definition| definition.kind == DefinitionKind::Constructor)
     }
 
     /// Where the binding `name` means was declared, when it means a binding at all.

@@ -1,6 +1,8 @@
 //! `docs/specs/arguments.md`: which calls name their arguments, and which names they write.
 
-use crate::common::{inferred, refusal};
+use lumen_types::Imported;
+
+use crate::common::{Offered, inferred, offering, refusal, refusal_reaching};
 
 /// A module whose `main` calls `rename` the way `call` writes it.
 ///
@@ -208,6 +210,40 @@ fn a_prelude_call_that_writes_names_is_refused_because_nothing_here_checks_them(
         error.help(),
         "only a call of a function this module declares names its arguments"
     );
+}
+
+#[test]
+fn a_call_of_a_function_of_another_module_names_no_argument_because_none_is_offered() {
+    let source =
+        "import greeting\n\nfn main() -> String {\n    greeting.hello(name: \"world\")\n}\n";
+    let error = refusal_reaching(source, &greeting());
+
+    assert_eq!(
+        error.message(),
+        "`greeting.hello` is reached through a module, so it carries its values in order and names none"
+    );
+    assert_eq!(
+        error.help(),
+        "only a call of a function this module declares names its arguments"
+    );
+}
+
+#[test]
+fn a_constructor_of_another_module_names_no_argument_either() {
+    let source = "import greeting\n\nfn main() -> greeting.Greeting {\n    greeting.Greeting(name: \"world\")\n}\n";
+
+    assert_eq!(
+        refusal_reaching(source, &greeting()).message(),
+        "`greeting.Greeting` is reached through a module, so it carries its values in order and names none"
+    );
+}
+
+/// A module declaring one function and one type, imported under the name `greeting`.
+fn greeting() -> Imported {
+    offering(&Offered {
+        module: "greeting",
+        source: "fn hello(name: String) -> Greeting {\n    Greeting(name)\n}\n\ntype Greeting = Greeting(String)\n",
+    })
 }
 
 #[test]

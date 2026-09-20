@@ -6,29 +6,78 @@
 use lumen_exhaustiveness::{MatchError, check};
 use lumen_parser::parse;
 use lumen_resolver::resolve;
-use lumen_types::TypedProgram;
+use lumen_types::{Imported, TypedProgram};
 
 /// The failure `source` is refused with.
 pub fn refusal(source: &str) -> MatchError {
-    check(&typed(source))
-        .err()
-        .unwrap_or_else(|| panic!("{source:?} is refused"))
+    reaching(source).refusal()
 }
 
 /// Asserts that every `match` of `source` covers the type it matches.
 pub fn covers_everything(source: &str) {
-    if let Err(error) = check(&typed(source)) {
-        panic!("{source:?} covers everything: {}", error.message());
+    reaching(source).covers_everything();
+}
+
+/// A module importing `demo` and matching one of its payments, with `arms` as the arms.
+///
+/// `demo` declares the payment type of `docs/design.md`, so every arm names a variant another
+/// module declares and the check reads them through what that module offers.
+pub fn demo_payments(arms: &str) -> Reaching {
+    let demo = concat!(
+        "fn pending() -> Payment {\n    Pending\n}\n\n",
+        "type Payment =\n    | Pending\n    | Authorized {\n        authorization_id: String\n    }\n    | Failed(String)\n"
+    );
+    Reaching {
+        source: format!(
+            "import demo\n\nfn describe(payment: demo.Payment) -> String {{\n    match payment {{\n{arms}    }}\n}}\n"
+        ),
+        imported: Imported::default().offering("demo", typed(demo).surface().clone()),
     }
 }
 
 /// The inferred program of `source`, which must get that far.
 pub fn typed(source: &str) -> TypedProgram {
-    let program = parse(source).unwrap_or_else(|error| panic!("{source:?} parses: {error:?}"));
-    let resolved =
-        resolve(program).unwrap_or_else(|error| panic!("{source:?} resolves: {error:?}"));
-    lumen_types::check(resolved, &lumen_types::Imported::default())
-        .unwrap_or_else(|error| panic!("{source:?} infers: {}", error.message()))
+    reaching(source).typed()
+}
+
+/// A module under test, with what the modules it imports offer it.
+pub struct Reaching {
+    source: String,
+    imported: Imported,
+}
+
+impl Reaching {
+    /// The failure the module is refused with.
+    pub fn refusal(&self) -> MatchError {
+        check(&self.typed())
+            .err()
+            .unwrap_or_else(|| panic!("{:?} is refused", self.source))
+    }
+
+    /// Asserts that every `match` of the module covers the type it matches.
+    pub fn covers_everything(&self) {
+        if let Err(error) = check(&self.typed()) {
+            panic!("{:?} covers everything: {}", self.source, error.message());
+        }
+    }
+
+    /// The inferred program of the module, which must get that far.
+    pub fn typed(&self) -> TypedProgram {
+        let source = &self.source;
+        let program = parse(source).unwrap_or_else(|error| panic!("{source:?} parses: {error:?}"));
+        let resolved =
+            resolve(program).unwrap_or_else(|error| panic!("{source:?} resolves: {error:?}"));
+        lumen_types::check(resolved, &self.imported)
+            .unwrap_or_else(|error| panic!("{source:?} infers: {}", error.message()))
+    }
+}
+
+/// `source` as a module under test that imports nothing.
+fn reaching(source: &str) -> Reaching {
+    Reaching {
+        source: source.to_owned(),
+        imported: Imported::default(),
+    }
 }
 
 /// A module matching on a nested value, with `arms` as the arms of the one `match`.

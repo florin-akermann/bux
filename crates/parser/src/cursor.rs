@@ -5,7 +5,7 @@
 //! arm. `docs/specs/grammar.md` states the rule; everything downstream then reads a token
 //! stream in which every remaining newline terminates something.
 
-use lumen_ast::{Name, Span};
+use lumen_ast::{Name, Path, Span};
 use lumen_lexer::{Keyword, Punct, Token, TokenKind, lex};
 
 use crate::error::{Expected, Found, ParseError, ParseErrorKind, token_error};
@@ -55,6 +55,22 @@ impl<'a> Cursor<'a> {
         let parsed = parse(self);
         self.depth -= 1;
         parsed
+    }
+
+    /// The identifier at the cursor, with the module it is reached through when a `.` follows.
+    ///
+    /// A type and a pattern each name one thing, so a dot there opens no field and no call:
+    /// `docs/specs/modules.md` makes it the module the name is reached inside of.
+    pub(crate) fn expect_path(&mut self, expected: Expected) -> Result<Path, ParseError> {
+        let name = self.expect_name(expected)?;
+        if self.eat_punct(Punct::Dot).is_none() {
+            return Ok(Path::bare(name));
+        }
+        let reached = self.expect_name(expected)?;
+        Ok(Path {
+            module: Some(name),
+            name: reached,
+        })
     }
 
     /// The identifier at the cursor, as a name.

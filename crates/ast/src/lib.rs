@@ -9,6 +9,7 @@
 mod expr;
 mod item;
 mod name;
+mod path;
 mod pattern;
 mod stmt;
 mod type_ref;
@@ -21,6 +22,7 @@ pub use item::{Parameter, Program};
 pub use item::{RecordField, Signature, TraitDeclaration, TypeDeclaration, TypeDefinition};
 pub use item::{TypeParameter, Variant, VariantPayload};
 pub use name::Name;
+pub use path::Path;
 pub use pattern::{Pattern, PatternKind};
 pub use stmt::{AssignOperator, Block, ForHeader, ForLoop, Mutability, Statement, StatementKind};
 pub use type_ref::{TypeRef, TypeRefKind};

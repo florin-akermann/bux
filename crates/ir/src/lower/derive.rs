@@ -116,11 +116,11 @@ impl<'a> Writing<'a> {
     /// A type whose instance a module wrote or derived is an `invokestatic` of that instance's
     /// method; a type the compiler supplies the instance for is what that instance always was.
     fn through(&mut self, of: &str, holds: &Holds<'_>) {
-        let TypeRefKind::Named { name, .. } = &holds.written.kind else {
+        let TypeRefKind::Named { path, .. } = &holds.written.kind else {
             unreachable!("`()` has no instance of anything, so nothing holding one derives")
         };
         let at = Type::Named {
-            name: name.text.clone(),
+            name: path.to_string(),
             arguments: Vec::new(),
         };
         let method = prelude::method_of(of).expect("a derivable trait declares one method");

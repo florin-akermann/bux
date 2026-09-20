@@ -5,15 +5,35 @@
 
 use lumen_holes::Whole;
 use lumen_ir::{Body, Class, ClassName, Instruction, Lowered, Method, MethodRef, lower};
+use lumen_types::Imported;
 
 /// The classes `source` becomes, as a module named `demo`.
 pub fn lowered(source: &str) -> Lowered {
+    lowered_reaching(source, &Imported::default())
+}
+
+/// The classes `source` becomes, as a module named `demo` reaching what `imported` offers.
+pub fn lowered_reaching(source: &str, imported: &Imported) -> Lowered {
     let program = lumen_parser::parse(source).expect("the example parses");
     let resolved = lumen_resolver::resolve(program).expect("every name of the example resolves");
-    let typed = lumen_types::check(resolved, &lumen_types::Imported::default())
-        .expect("every expression of the example has a type");
+    let typed =
+        lumen_types::check(resolved, imported).expect("every expression of the example has a type");
     let whole = Whole::of_module(&typed).expect("the example holds no hole");
     lower(&whole, "demo")
+}
+
+/// What the module `held` offers, which is a record and an algebraic data type.
+pub fn held() -> Imported {
+    let source = concat!(
+        "fn pending() -> Payment {\n    Pending\n}\n\n",
+        "type User = {\n    name: String\n}\n\n",
+        "type Payment =\n    | Sent(String)\n    | Pending\n"
+    );
+    let program = lumen_parser::parse(source).expect("the offered module parses");
+    let resolved = lumen_resolver::resolve(program).expect("the offered module resolves");
+    let typed = lumen_types::check(resolved, &Imported::default())
+        .expect("the offered module has a type for every expression");
+    Imported::default().offering("held", typed.surface().clone())
 }
 
 /// The body of the function `name` of the module.

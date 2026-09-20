@@ -1,6 +1,6 @@
 //! Types as they are written in source.
 
-use crate::{Name, Span};
+use crate::{Path, Span};
 
 /// A type written in source, such as `Int`, `List<User>`, or `()`.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -13,7 +13,10 @@ pub struct TypeRef {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum TypeRefKind {
     /// A name, with the type arguments applied to it; `Int` has none, `List<User>` has one.
-    Named { name: Name, arguments: Vec<TypeRef> },
+    ///
+    /// The name is reached through a module where one is written, so `demo.Held<Int>` applies
+    /// `Int` to the type `demo` declares as `Held`.
+    Named { path: Path, arguments: Vec<TypeRef> },
     /// `()`, the type of a function that returns nothing interesting.
     Unit,
 }

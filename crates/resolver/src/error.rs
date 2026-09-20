@@ -73,6 +73,8 @@ pub(crate) enum ResolveErrorKind {
     NotCalled(String),
     /// A module name written as a value rather than as what a name is reached through.
     NotReachedThrough(String),
+    /// A name that is no module written on the left of the dot of a type or of a pattern.
+    NotAModule(String),
     /// An assignment naming something other than a `var` binding.
     NotAVariable(String),
     /// A second instance of one trait for one type, named by both.
@@ -138,6 +140,7 @@ impl ResolveErrorKind {
             Self::Shadowed(_) => Code::NameShadowed,
             Self::WrittenAbove { .. } => Code::DefinitionBeforeUse,
             Self::NotCalled(_) | Self::NotReachedThrough(_) => Code::NotAValue,
+            Self::NotAModule(_) => Code::NotAModule,
             Self::NotAVariable(_) => Code::NotAVariable,
             Self::InstanceTwice { .. } => Code::InstanceDeclaredTwice,
             Self::MethodMissing { .. }
@@ -160,6 +163,9 @@ impl ResolveErrorKind {
             Self::NotCalled(_) => "version 0.1 reaches a function by calling it; write the call",
             Self::NotReachedThrough(_) => {
                 "a module is what a name is reached through, as `io.println` is"
+            }
+            Self::NotAModule(_) => {
+                "a type of another module is reached through the import: write `demo.User`"
             }
             Self::NotAVariable(_) => "mutation is explicit: bind it with `var`, or bind a new name",
             Self::InstanceTwice { .. } => "one trait and one type have one instance; join the two",
@@ -198,6 +204,12 @@ impl fmt::Display for ResolveErrorKind {
                 write!(
                     f,
                     "`{text}` is a module, so a name inside it is what is written"
+                )
+            }
+            Self::NotAModule(text) => {
+                write!(
+                    f,
+                    "`{text}` is a module in neither scope, and a type is reached through one"
                 )
             }
             Self::NotAVariable(text) => {

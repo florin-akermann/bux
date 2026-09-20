@@ -48,7 +48,7 @@ pub fn lower(whole: &Whole<'_>, module: &str) -> Lowered {
     let typed = whole.typed();
     let lowering = Lowering {
         typed,
-        shapes: Shapes::of(typed.resolved(), module),
+        shapes: Shapes::of(typed.resolved(), module, typed.reached()),
         declared: declarations_of(typed),
         answers: instances_of(typed),
         owed: RefCell::new(Vec::new()),

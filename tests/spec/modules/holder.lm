@@ -16,3 +16,12 @@ fn passed(value) {
 }
 
 type Held = Held(String)
+
+type User = {
+    id: Int
+    name: String
+}
+
+type Payment =
+    | Sent(String)
+    | Pending

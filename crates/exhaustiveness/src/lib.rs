@@ -24,7 +24,7 @@ pub use crate::error::MatchError;
 pub fn check(typed: &TypedProgram) -> Result<(), MatchError> {
     let resolved = typed.resolved();
     let program = resolved.program();
-    let space = space::Space::of(program);
+    let space = space::Space::of(program, typed.reached());
     let reading = pattern::Reading::new(resolved, &space);
     walk::module(program, &reading, &space)
 }

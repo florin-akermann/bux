@@ -85,3 +85,20 @@ fn a_written_list_keeps_a_record_literal_unparenthesised_in_a_for_header() {
         ["for u in [User { id: 1 }] {", "}"]
     );
 }
+
+#[test]
+fn a_name_reached_through_a_module_is_written_with_no_space_around_the_dot() {
+    assert_eq!(
+        in_function("demo . User {  id : 1 }"),
+        ["demo.User { id: 1 }"]
+    );
+    assert_eq!(
+        in_function("match p {\n  demo . Sent ( how ) => how\n  demo . Pending => \"\"\n}"),
+        [
+            "match p {",
+            "    demo.Sent(how) => how",
+            "    demo.Pending => \"\"",
+            "}",
+        ]
+    );
+}

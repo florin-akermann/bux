@@ -1,6 +1,6 @@
 //! Patterns: what a `match` arm asks of what it matches, and what it binds.
 
-use lumen_ast::{Name, Pattern, PatternKind};
+use lumen_ast::{Name, Path, Pattern, PatternKind};
 use lumen_resolver::DefinitionKind;
 
 use crate::error::TypeError;
@@ -14,29 +14,34 @@ impl Inference<'_> {
             PatternKind::Integer(_) => self.expect(expected, &Type::int(), pattern.span),
             PatternKind::String(_) => self.expect(expected, &Type::string(), pattern.span),
             PatternKind::Bool(_) => self.expect(expected, &Type::boolean(), pattern.span),
-            PatternKind::Name(name) => self.bare_pattern(name, expected),
-            PatternKind::Tuple { name, elements } => self.tuple_pattern(name, elements, expected),
-            PatternKind::Record { name, fields } => self.record_pattern(name, fields, expected),
+            PatternKind::Name(path) => self.bare_pattern(path, expected),
+            PatternKind::Tuple { path, elements } => self.tuple_pattern(path, elements, expected),
+            PatternKind::Record { path, fields } => self.record_pattern(path, fields, expected),
         }
     }
 
     /// A bare name matches a variant that carries nothing, or binds whatever is matched.
-    fn bare_pattern(&mut self, name: &Name, expected: &Type) -> Result<(), TypeError> {
-        if self.definition_kind(name) == DefinitionKind::Constructor {
-            let built = self.value(name);
-            return self.expect(expected, &built, name.span);
+    ///
+    /// One reached through a module always matches: nothing binds a name of another module.
+    fn bare_pattern(&mut self, path: &Path, expected: &Type) -> Result<(), TypeError> {
+        let name = &path.name;
+        if path.module.is_none() && self.definition_kind(name) != DefinitionKind::Constructor {
+            self.introduce(name, Scheme::monomorphic(expected.clone()));
+            return Ok(());
         }
-        self.introduce(name, Scheme::monomorphic(expected.clone()));
-        Ok(())
+        let (_, built) = self.built_by(path)?;
+        self.expect(expected, &built, name.span)
     }
 
     fn tuple_pattern(
         &mut self,
-        name: &Name,
+        path: &Path,
         elements: &[Pattern],
         expected: &Type,
     ) -> Result<(), TypeError> {
-        let Type::Function { parameters, result } = self.value(name) else {
+        let name = &path.name;
+        let (_, built) = self.built_by(path)?;
+        let Type::Function { parameters, result } = built else {
             return Err(miscounted(name, 0, elements.len()));
         };
         if parameters.len() != elements.len() {
@@ -51,13 +56,14 @@ impl Inference<'_> {
 
     fn record_pattern(
         &mut self,
-        name: &Name,
+        path: &Path,
         fields: &[Name],
         expected: &Type,
     ) -> Result<(), TypeError> {
-        let key = self.key_of(name);
+        let name = &path.name;
+        let (key, built) = self.built_by(path)?;
         let labels = self.environment.labels(&key).to_vec();
-        let Type::Function { parameters, result } = self.value(name) else {
+        let Type::Function { parameters, result } = built else {
             return Err(miscounted(name, 0, fields.len()));
         };
         self.expect(expected, &result, name.span)?;

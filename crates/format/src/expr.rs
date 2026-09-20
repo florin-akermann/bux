@@ -1,7 +1,7 @@
 //! Expressions as canonical form writes them, always on one line.
 
 use lumen_ast::{Arguments, BinaryOperator, Expr, ExprKind, FieldValue};
-use lumen_ast::{NamedArgument, UnaryOperator};
+use lumen_ast::{NamedArgument, Path, UnaryOperator};
 
 use crate::control::{if_expr, match_expr};
 use crate::literal::{integer, string};
@@ -88,7 +88,7 @@ pub(crate) fn expression(printer: &mut Printer, written: &Expr, records: Records
             printer.word("?");
         }
         ExprKind::List(elements) => written_list(printer, elements),
-        ExprKind::Record { base, fields } => record(printer, &base.text, fields),
+        ExprKind::Record { base, fields } => record(printer, base, fields),
         ExprKind::If(chain) => if_expr(printer, chain),
         ExprKind::Match(matched) => match_expr(printer, matched, written.span),
     }
@@ -201,8 +201,8 @@ fn named(printer: &mut Printer, written: &[NamedArgument]) {
 }
 
 /// `User { id: id }`, or `User {}` when it names no field.
-fn record(printer: &mut Printer, base: &str, fields: &[FieldValue]) {
-    printer.word(base);
+fn record(printer: &mut Printer, base: &Path, fields: &[FieldValue]) {
+    printer.path(base);
     if fields.is_empty() {
         printer.word(" {}");
         return;

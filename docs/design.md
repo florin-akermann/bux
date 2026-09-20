@@ -1001,6 +1001,20 @@ type UserId = UserId(Int)
 `UserId` names the type where a type is written and the constructor where a value is written.
 The compiler never has to guess which of the two was meant.
 
+A module offers the types it declares as well as the functions, and each is reached the same way:
+
+```text
+import greeting
+
+fn shout(said: greeting.Greeting) -> String {
+    greeting.spelled(said) + "!"
+}
+```
+
+`greeting.Greeting` is the type that module declares, written where a type is written.
+A variant of it is reached the same way, so a `match` over one names `greeting.Pending`.
+A type is a name like any other, and a module is what a name is reached through.
+
 A field of a record and a name of an imported module are each reached through something else.
 Neither is a name in scope.
 `user.name` is looked up in the record and `io.print` in the module, never in the file.

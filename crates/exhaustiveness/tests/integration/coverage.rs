@@ -4,7 +4,7 @@
 
 use lumen_diagnostics::render;
 
-use crate::common::{covers_everything, payments, refusal};
+use crate::common::{covers_everything, demo_payments, payments, refusal};
 
 #[test]
 fn a_match_on_every_variant_of_a_type_covers_it() {
@@ -308,5 +308,29 @@ fn a_constructor_carrying_more_than_one_value_names_a_stand_in_for_each() {
     assert_eq!(
         refusal(source).message(),
         "this `match` does not cover `Both(_, _)`"
+    );
+}
+
+#[test]
+fn a_match_over_a_type_of_another_module_covers_the_variants_that_module_declares() {
+    let module = demo_payments(concat!(
+        "        demo.Pending => \"pending\"\n",
+        "        demo.Authorized { authorization_id } => authorization_id\n",
+        "        demo.Failed(reason) => reason\n"
+    ));
+
+    module.covers_everything();
+}
+
+#[test]
+fn a_match_over_a_type_of_another_module_names_the_variant_it_leaves_out() {
+    let module = demo_payments(concat!(
+        "        demo.Pending => \"pending\"\n",
+        "        demo.Failed(reason) => reason\n"
+    ));
+
+    assert_eq!(
+        module.refusal().message(),
+        "this `match` does not cover `demo.Authorized(_)`"
     );
 }

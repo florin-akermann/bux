@@ -1,6 +1,7 @@
 //! What each expression leaves on the stack.
 
-use lumen_ast::{BinaryOperator, Expr, ExprKind, FieldValue, IfExpr, Name, Span, UnaryOperator};
+use lumen_ast::{BinaryOperator, Expr, ExprKind, FieldValue, IfExpr, Name, Path};
+use lumen_ast::{Span, UnaryOperator};
 use lumen_resolver::{DefinitionKind, Origin};
 use lumen_types::Type;
 
@@ -310,15 +311,13 @@ impl Builder<'_> {
     /// Builds what a constructor builds, out of the values it is given in order.
     fn built(&mut self, name: &Name, arguments: &[&Expr]) -> Descriptor {
         let shape = self.lowering.shapes.built(&name.text).clone();
-        self.emit(Instruction::New(shape.class.clone()));
-        self.emit(Instruction::Copy);
-        for (argument, carried) in arguments.iter().zip(&shape.carries) {
-            self.handed(argument, carried.of.clone());
-        }
-        self.constructed(&shape)
+        self.builds(&shape, arguments)
     }
 
     fn field(&mut self, receiver: &Expr, name: &Name) -> Option<Descriptor> {
+        if let Some(shape) = self.offered_variant(receiver, name) {
+            return Some(self.builds(&shape, &[]));
+        }
         if let ExprKind::Name(held) = &receiver.kind
             && let Some(binding) = self.split_binding(held)
         {
@@ -340,6 +339,24 @@ impl Builder<'_> {
             of: of.clone(),
         }));
         Some(of)
+    }
+
+    /// The variant another module offers as `name`, where that is what is reached rather than
+    /// a field of a record.
+    ///
+    /// One carrying nothing is written as the name alone, so it is reached here rather than as
+    /// the call `docs/specs/modules.md` writes a variant carrying something as.
+    fn offered_variant(&self, receiver: &Expr, name: &Name) -> Option<Shape> {
+        let ExprKind::Name(module) = &receiver.kind else {
+            return None;
+        };
+        if self.definition(module).kind != DefinitionKind::Module {
+            return None;
+        }
+        self.lowering
+            .shapes
+            .offered(&module.text, &name.text)
+            .cloned()
     }
 
     /// One field of a binding kept in locals, read from the local it lives in.
@@ -416,22 +433,33 @@ impl Builder<'_> {
         wanted
     }
 
-    fn record(&mut self, base: &Name, fields: &[FieldValue]) -> Descriptor {
-        if self.definition(base).kind == DefinitionKind::Constructor {
+    fn record(&mut self, base: &Path, fields: &[FieldValue]) -> Descriptor {
+        if base.module.is_some() || self.definition(&base.name).kind == DefinitionKind::Constructor
+        {
             return self.built_with(base, fields);
         }
-        self.updated(base, fields)
+        self.updated(&base.name, fields)
     }
 
     /// `User { id: id }` builds a record out of a value for each field it declares.
-    fn built_with(&mut self, base: &Name, fields: &[FieldValue]) -> Descriptor {
-        let shape = self.lowering.shapes.built(&base.text).clone();
+    fn built_with(&mut self, base: &Path, fields: &[FieldValue]) -> Descriptor {
+        let shape = self.lowering.shapes.built(&base.to_string()).clone();
         self.emit(Instruction::New(shape.class.clone()));
         self.emit(Instruction::Copy);
         for carried in &shape.carries {
             self.given(fields, carried);
         }
         self.constructed(&shape)
+    }
+
+    /// Builds one value of `shape`, out of the values the constructor is given in order.
+    pub(crate) fn builds(&mut self, shape: &Shape, arguments: &[&Expr]) -> Descriptor {
+        self.emit(Instruction::New(shape.class.clone()));
+        self.emit(Instruction::Copy);
+        for (argument, carried) in arguments.iter().zip(&shape.carries) {
+            self.handed(argument, carried.of.clone());
+        }
+        self.constructed(shape)
     }
 
     /// The value the literal gives the field `carried`, which inference proved it gives.

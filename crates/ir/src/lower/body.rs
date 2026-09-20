@@ -177,7 +177,13 @@ impl<'a> Builder<'a> {
         let ExprKind::Record { base, fields } = &value.kind else {
             unreachable!("a binding is split only where it holds a record literal")
         };
-        for carried in self.lowering.shapes.built(&base.text).clone().carries {
+        for carried in self
+            .lowering
+            .shapes
+            .built(&base.to_string())
+            .clone()
+            .carries
+        {
             self.given(fields, &carried);
             let Some(of) = carried.of else {
                 continue;

@@ -35,20 +35,20 @@ fn of_literal(literal: Literal) -> PatternKind {
     }
 }
 
-/// A bare name, or a variant matched on what it carries.
+/// A name, reached through a module or not, or a variant matched on what it carries.
 fn named(cursor: &mut Cursor) -> Result<PatternKind, ParseError> {
-    let name = cursor.expect_name(Expected::Pattern)?;
+    let path = cursor.expect_path(Expected::Pattern)?;
     if cursor.eat_punct(Punct::LParen).is_some() {
         let elements = cursor.nested(|cursor| {
             comma_separated(cursor, Punct::RParen, Emptiness::Forbidden, pattern)
         })?;
-        return Ok(PatternKind::Tuple { name, elements });
+        return Ok(PatternKind::Tuple { path, elements });
     }
     if cursor.eat_punct(Punct::LBrace).is_some() {
         let fields = comma_separated(cursor, Punct::RBrace, Emptiness::Forbidden, |cursor| {
             cursor.expect_name(Expected::Name)
         })?;
-        return Ok(PatternKind::Record { name, fields });
+        return Ok(PatternKind::Record { path, fields });
     }
-    Ok(PatternKind::Name(name))
+    Ok(PatternKind::Name(path))
 }

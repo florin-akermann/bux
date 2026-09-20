@@ -5,7 +5,7 @@
 
 use lumen_diagnostics::render;
 
-use crate::common::{covers_everything, outcomes, payments, refusal};
+use crate::common::{covers_everything, demo_payments, outcomes, payments, refusal};
 
 #[test]
 fn a_match_whose_arms_are_in_the_order_the_type_declares_them_passes() {
@@ -195,5 +195,19 @@ fn a_refusal_reads_as_the_diagnostic_it_is() {
             "\n",
             "help: arms come in the order the type declares its variants: `Some` before `None`\n",
         )
+    );
+}
+
+#[test]
+fn a_match_over_a_type_of_another_module_lists_its_arms_in_that_module_s_order() {
+    let module = demo_payments(concat!(
+        "        demo.Failed(reason) => reason\n",
+        "        demo.Pending => \"pending\"\n",
+        "        demo.Authorized { authorization_id } => authorization_id\n"
+    ));
+
+    assert_eq!(
+        module.refusal().message(),
+        "this `match` writes `demo.Pending` after `demo.Failed`"
     );
 }

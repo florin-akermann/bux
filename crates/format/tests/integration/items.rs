@@ -165,3 +165,11 @@ fn a_constrained_type_parameter_writes_its_trait_after_a_colon_and_a_space() {
         "fn has_value<T: Eq<T>>(value: T) -> Bool {\n    true\n}\n"
     );
 }
+
+#[test]
+fn a_type_reached_through_a_module_is_written_with_no_space_around_the_dot() {
+    assert_eq!(
+        formatted("fn held(value:demo . Held < Int >)->demo . User{\nvalue\n}\n"),
+        "fn held(value: demo.Held<Int>) -> demo.User {\n    value\n}\n"
+    );
+}

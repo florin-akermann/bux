@@ -8,6 +8,7 @@ use std::mem;
 
 use lumen_ast::Name;
 
+use crate::environment::Key;
 use crate::error::{TypeError, TypeErrorKind};
 use crate::infer::{Asked, Inference, Propagated, Propagation, Requirement, labelled};
 use crate::scheme::Required;
@@ -147,10 +148,10 @@ impl Inference<'_> {
 
     pub(crate) fn look_up(&mut self, lookup: Lookup) -> Result<(), TypeError> {
         let through = self.table.solved(&lookup.through);
-        let field = lookup.field;
         if let Type::Module(module) = &through {
-            return self.inside(module, &field, &lookup.found);
+            return self.inside(&module.clone(), &lookup);
         }
+        let field = lookup.field;
         let Type::Named { name, .. } = &through else {
             return Err(unreachable_field(&through, &field));
         };
@@ -168,7 +169,12 @@ impl Inference<'_> {
     }
 
     /// A name reached inside a module, which the compiler supplies or loading read from a file.
-    fn inside(&mut self, module: &str, field: &Name, found: &Type) -> Result<(), TypeError> {
+    ///
+    /// Version 0.1 has no function value, so a function of a module is written where a call
+    /// writes it and nowhere else; a variant it declares that carries nothing is a value and is
+    /// written as the name alone, which `docs/specs/modules.md` states.
+    fn inside(&mut self, module: &str, lookup: &Lookup) -> Result<(), TypeError> {
+        let field = &lookup.field;
         let declared = if supplied::supplies(module) {
             supplied::declared(module, &field.text)
         } else {
@@ -181,20 +187,27 @@ impl Inference<'_> {
             };
             return Err(TypeError::at(field.span, kind));
         };
-        self.expect(found, &declared, field.span)
+        if lookup.how == Reached::AsAValue && matches!(declared, Type::Function { .. }) {
+            let kind = TypeErrorKind::NotCalled {
+                module: module.to_owned(),
+                name: field.text.clone(),
+            };
+            return Err(TypeError::at(field.span, kind));
+        }
+        self.expect(&lookup.found, &declared, field.span)
     }
 
     /// The type a loaded module gives `field`, freshly at this use, when it offers one at all.
     ///
-    /// A signature naming a type that module declares offers nothing this one can write, which
-    /// `docs/specs/modules.md` states and refuses here rather than where it is declared.
+    /// A signature naming a type that module declares names it as this module writes it, which
+    /// `docs/specs/modules.md` states: the surface is offered under the name it is imported by.
     fn reached(&mut self, module: &str, field: &Name) -> Result<Option<Type>, TypeError> {
         let imported = self.imported;
         let Some(surface) = imported.surface(module) else {
             return Ok(None);
         };
         let scheme = match surface.function(&field.text) {
-            None => return Ok(None),
+            None => return Ok(self.built_inside(module, field)),
             Some(Offered::Generic) => {
                 let kind = TypeErrorKind::GenericThroughModule {
                     module: module.to_owned(),
@@ -204,15 +217,17 @@ impl Inference<'_> {
             }
             Some(Offered::Plain(scheme)) => scheme,
         };
-        if let Some(kept) = surface.kept_to_itself(scheme) {
-            let kind = TypeErrorKind::TypeOfAnotherModule {
-                module: module.to_owned(),
-                name: field.text.clone(),
-                declared: kept.to_owned(),
-            };
-            return Err(TypeError::at(field.span, kind));
-        }
         Ok(Some(scheme.clone().instantiate(&mut self.table)))
+    }
+
+    /// The constructor `module` offers as `field`, which builds a value of a type it declares.
+    ///
+    /// A variant carrying nothing is written as the name alone and one carrying something is
+    /// called, so both are reached here: a call reads the type of its callee off this too.
+    fn built_inside(&mut self, module: &str, field: &Name) -> Option<Type> {
+        let key = Key::reached(&format!("{module}.{}", field.text));
+        let scheme = self.environment.scheme(&key).cloned()?;
+        Some(scheme.instantiate(&mut self.table))
     }
 }
 
@@ -226,6 +241,16 @@ pub(crate) struct Lookup {
     pub(crate) through: Type,
     pub(crate) field: Name,
     pub(crate) found: Type,
+    pub(crate) how: Reached,
+}
+
+/// Where a name reached through a `.` is written, which says what may be found there.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum Reached {
+    /// The name of a call, which is the one place a function of a module is written.
+    AsACall,
+    /// Anywhere else, where a function is nothing this version can hold.
+    AsAValue,
 }
 
 /// A field reached through something that has no fields, or through a type nothing settled.

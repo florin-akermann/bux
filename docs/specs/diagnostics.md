@@ -62,6 +62,11 @@ Every number and every long form lives in `crates/diagnostics/src/code.rs`, whic
 together so that neither can be added without the other.
 The long form of a code is the file in `crates/diagnostics/src/explanations/` named after it.
 
+A code that stops being raised is taken out whole: the number, the long form, and the paragraph
+that stated it.
+The number is not given to anything else afterwards, so a gap in the run is a code that was
+retired and nothing more.
+
 The grammar raises these, in `crates/parser/src/error.rs`:
 
 - `L0100` — the grammar expected one thing and the source wrote another.
@@ -105,6 +110,7 @@ Name resolution raises these, in `crates/resolver/src/error.rs`:
 - `L0310` — something that is not a trait is written where a trait belongs.
 - `L0311` — a trait is written where a type belongs.
 - `L0312` — a derive names a trait no type derives, or a type this module does not declare.
+- `L0313` — a type or a pattern is reached through a name that is no module.
 
 Loading raises these, in `crates/modules/src/error.rs`, before any module is resolved:
 
@@ -129,7 +135,6 @@ Type inference raises these, in `crates/types/src/error.rs`:
 - `L0413` — a function whose result is `Bool` is named for a command rather than a question.
 - `L0414` — a module does not declare the name reached inside it.
 - `L0415` — a declared type holds a value of itself, around a ring that comes back to it.
-- `L0416` — a function reached through a module names a type that module declares.
 - `L0417` — a generic function is reached through a module, which writes it where it is declared.
 - `L0418` — a trait method is used at a type that has no instance of that trait.
 - `L0419` — a parameter of a method a trait declares states no type.

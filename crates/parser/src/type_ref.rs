@@ -7,7 +7,7 @@ use crate::cursor::Cursor;
 use crate::error::{Expected, ParseError};
 use crate::list::{Emptiness, comma_separated};
 
-/// `Int`, `List<User>`, or `()`.
+/// `Int`, `List<User>`, `demo.Held<Int>`, or `()`.
 pub(crate) fn type_ref(cursor: &mut Cursor) -> Result<TypeRef, ParseError> {
     let start = cursor.offset();
     if cursor.eat_punct(Punct::LParen).is_some() {
@@ -17,10 +17,10 @@ pub(crate) fn type_ref(cursor: &mut Cursor) -> Result<TypeRef, ParseError> {
             span: cursor.span_since(start),
         });
     }
-    let name = cursor.expect_name(Expected::Type)?;
+    let path = cursor.expect_path(Expected::Type)?;
     let arguments = type_arguments(cursor)?;
     Ok(TypeRef {
-        kind: TypeRefKind::Named { name, arguments },
+        kind: TypeRefKind::Named { path, arguments },
         span: cursor.span_since(start),
     })
 }

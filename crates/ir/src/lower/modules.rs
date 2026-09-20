@@ -71,6 +71,14 @@ impl Builder<'_> {
         reached: &Through<'_>,
         arguments: &[&Expr],
     ) -> Option<Descriptor> {
+        if let Some(shape) = self
+            .lowering
+            .shapes
+            .offered(&reached.module.text, &reached.name.text)
+            .cloned()
+        {
+            return Some(self.builds(&shape, arguments));
+        }
         match (reached.module.text.as_str(), reached.name.text.as_str()) {
             ("io", written @ ("print" | "println")) => self.written_out(written, arguments),
             ("files", "read") => Some(self.read_whole(arguments)),

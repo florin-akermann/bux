@@ -6,7 +6,7 @@
 //! has by the time anything calls it, and a signature the author left unwritten counts exactly as
 //! one they wrote out.
 
-use lumen_ast::{Arguments, Expr, Function, Name, NamedArgument, Span};
+use lumen_ast::{Arguments, Expr, ExprKind, Function, Name, NamedArgument, Span};
 use lumen_resolver::{DefinitionKind, Namespace, Origin};
 
 use crate::error::{TypeError, TypeErrorKind};
@@ -34,22 +34,41 @@ impl Inference<'_> {
             (Some(declared), Arguments::Positional(_)) => {
                 held_apart(&declared.name, &self.takes(declared), at)
             }
-            (None, Arguments::Named(_)) => Err(TypeError::at(at, self.unnameable(reached))),
+            (None, Arguments::Named(_)) => Err(TypeError::at(at, self.unnameable(callee, reached))),
             (None, Arguments::Positional(_)) => Ok(()),
         }
     }
 
-    /// Why what `called` names has no parameter names for a call to write.
-    fn unnameable(&self, called: &Name) -> TypeErrorKind {
+    /// Why what `written` names has no parameter names for a call to write.
+    ///
+    /// A name reached through a module is neither: what a module offers is the type of each of
+    /// its functions and of each of its constructors, and a type holds no parameter name.
+    fn unnameable(&self, callee: &Expr, written: &Name) -> TypeErrorKind {
+        if let Some(reached) = self.through_a_module(callee) {
+            return TypeErrorKind::NamedThroughModule(reached);
+        }
         let built = self
             .resolved
-            .definition(Namespace::Value, called)
+            .definition(Namespace::Value, written)
             .is_some_and(|definition| definition.kind == DefinitionKind::Constructor);
         if built {
-            TypeErrorKind::NamedConstructor(called.text.clone())
+            TypeErrorKind::NamedConstructor(written.text.clone())
         } else {
-            TypeErrorKind::NamedPrelude(called.text.clone())
+            TypeErrorKind::NamedPrelude(written.text.clone())
         }
+    }
+
+    /// The name a call writes where it reaches one through a module, which is `demo.helper`.
+    fn through_a_module(&self, callee: &Expr) -> Option<String> {
+        let ExprKind::Field { receiver, name } = &callee.kind else {
+            return None;
+        };
+        let ExprKind::Name(module) = &receiver.kind else {
+            return None;
+        };
+        let definition = self.resolved.definition(Namespace::Value, module)?;
+        (definition.kind == DefinitionKind::Module)
+            .then(|| format!("{}.{}", module.text, name.text))
     }
 
     /// The types the declaration gives its parameters, rather than the ones this call gave them.

@@ -115,6 +115,8 @@ pub(crate) enum TypeErrorKind {
     NamedConstructor(String),
     /// A call of a prelude function names its arguments, which this module cannot check.
     NamedPrelude(String),
+    /// A call of a name reached through a module names its arguments, which it has none of.
+    NamedThroughModule(String),
     /// A parameter is a bare `Bool`, so a call of it passes `true` and says no more.
     FlagParameter(String),
     NotAPredicate(String),
@@ -123,12 +125,10 @@ pub(crate) enum TypeErrorKind {
         module: String,
         name: String,
     },
-    /// A function reached through a module whose signature names a type that module declares.
-    TypeOfAnotherModule {
+    /// A function reached inside a module, written where a call does not write it.
+    NotCalled {
         module: String,
         name: String,
-        /// The type the module keeps to itself, which is the one this one cannot write.
-        declared: String,
     },
     /// A generic function reached through a module, which is written where it is declared.
     GenericThroughModule {
@@ -180,11 +180,13 @@ impl TypeErrorKind {
             Self::Discarded(_) => Code::Discarded,
             Self::Unnamed { .. } => Code::Unnamed,
             Self::Misnamed { .. } => Code::Misnamed,
-            Self::NamedConstructor(_) | Self::NamedPrelude(_) => Code::Unnameable,
+            Self::NamedConstructor(_) | Self::NamedPrelude(_) | Self::NamedThroughModule(_) => {
+                Code::Unnameable
+            }
             Self::FlagParameter(_) => Code::FlagParameter,
             Self::NotAPredicate(_) => Code::NotAPredicate,
             Self::NotInModule { .. } => Code::NotInModule,
-            Self::TypeOfAnotherModule { .. } => Code::TypeOfAnotherModule,
+            Self::NotCalled { .. } => Code::NotAValue,
             Self::GenericThroughModule { .. } => Code::GenericThroughModule,
             Self::HoldsItself { .. } => Code::HoldsItself,
         }
@@ -211,8 +213,8 @@ impl TypeErrorKind {
         let Type::Named { arguments, .. } = at else {
             return None;
         };
-        arguments
-            .is_empty()
+        // A derive names a type this module declares, so another module's is no answer here.
+        (arguments.is_empty() && !at.is_of_another_module())
             .then(|| format!("`{at}` gets one by deriving it: write `derive {of} for {at}`"))
     }
 
@@ -263,7 +265,7 @@ impl TypeErrorKind {
             Self::NamedConstructor(_) => {
                 "a variant whose values want names declares them as fields and is built as a record"
             }
-            Self::NamedPrelude(_) => {
+            Self::NamedPrelude(_) | Self::NamedThroughModule(_) => {
                 "only a call of a function this module declares names its arguments"
             }
             Self::FlagParameter(_) => {
@@ -271,10 +273,10 @@ impl TypeErrorKind {
             }
             Self::NotAPredicate(_) => "begin the name with `is_`, `has_`, `can_`, or `should_`",
             Self::NotInModule { .. } => {
-                "a module declares the functions it offers, and nothing else is a name it has"
+                "a module offers the functions and the types it declares, and nothing else"
             }
-            Self::TypeOfAnotherModule { .. } => {
-                "a signature written in types both modules have is what one module offers another"
+            Self::NotCalled { .. } => {
+                "version 0.1 reaches a function by calling it; write the call"
             }
             Self::GenericThroughModule { .. } => {
                 "write it in the module that reaches it, or give it a signature at one set of types"
@@ -302,7 +304,7 @@ impl fmt::Display for TypeErrorKind {
                 )
             }
             Self::NotInModule { .. }
-            | Self::TypeOfAnotherModule { .. }
+            | Self::NotCalled { .. }
             | Self::GenericThroughModule { .. } => f.write_str(&self.how_a_module_is_reached()),
             Self::HoldsItself { ring } => {
                 let (first, rest) = ring.split_first().expect("a ring runs through one type");
@@ -344,6 +346,7 @@ impl fmt::Display for TypeErrorKind {
             | Self::Misnamed { .. }
             | Self::NamedConstructor(_)
             | Self::NamedPrelude(_)
+            | Self::NamedThroughModule(_)
             | Self::FlagParameter(_)
             | Self::NotAPredicate(_) => f.write_str(&self.how_it_is_written()),
         }
@@ -370,12 +373,8 @@ impl TypeErrorKind {
     fn how_a_module_is_reached(&self) -> String {
         match self {
             Self::NotInModule { module, name } => format!("`{module}` declares no `{name}`"),
-            Self::TypeOfAnotherModule {
-                module,
-                name,
-                declared,
-            } => {
-                format!("`{module}.{name}` names `{declared}`, which `{module}` keeps to itself")
+            Self::NotCalled { module, name } => {
+                format!("`{module}.{name}` is a function, so it is written as a call")
             }
             Self::GenericThroughModule { module, name } => {
                 format!("`{module}.{name}` is generic, so `{module}` alone writes it")
@@ -405,6 +404,11 @@ impl TypeErrorKind {
             Self::NamedPrelude(called) => {
                 format!(
                     "`{called}` comes from the prelude, which declares no parameter names to write"
+                )
+            }
+            Self::NamedThroughModule(called) => {
+                format!(
+                    "`{called}` is reached through a module, so it carries its values in order and names none"
                 )
             }
             Self::FlagParameter(function) => {

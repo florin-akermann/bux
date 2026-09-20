@@ -68,6 +68,14 @@ impl Type {
         Self::applied(RESULT, vec![value, error])
     }
 
+    /// Whether this names a type another module declares, reached through that module's name.
+    ///
+    /// The name of one holds a dot, which no name a module declares ever does: a name is one
+    /// word, and `docs/specs/modules.md` reaches another module's type through the dot.
+    pub(crate) fn is_of_another_module(&self) -> bool {
+        matches!(self, Self::Named { name, .. } if name.contains('.'))
+    }
+
     /// A function from `parameters` to `result`.
     #[must_use]
     pub fn function(parameters: Vec<Self>, result: Self) -> Self {

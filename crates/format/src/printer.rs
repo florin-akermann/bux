@@ -3,7 +3,7 @@
 //! `docs/specs/formatting.md` states the layout; this type holds the two pieces of state that
 //! layout needs, the current indentation and the comments not yet written.
 
-use lumen_ast::Span;
+use lumen_ast::{Path, Span};
 use lumen_lexer::{TokenKind, lex};
 
 /// One level of indentation, as `docs/specs/formatting.md` fixes it.
@@ -70,6 +70,15 @@ impl<'a> Printer<'a> {
         for _ in 0..self.depth {
             self.text.push_str(INDENT);
         }
+    }
+
+    /// `User`, or `demo.User`: a name, written against the module it is reached through.
+    pub(crate) fn path(&mut self, written: &Path) {
+        if let Some(module) = &written.module {
+            self.word(&module.text);
+            self.word(".");
+        }
+        self.word(&written.name.text);
     }
 
     pub(crate) fn word(&mut self, text: &str) {

@@ -3,7 +3,7 @@
 //! An operator's operand lives here rather than in `expr`, so that the precedence chain reads
 //! top down in one file and the recursion back into an expression crosses a module boundary.
 
-use lumen_ast::{Arguments, Expr, ExprKind, NamedArgument};
+use lumen_ast::{Arguments, Expr, ExprKind, NamedArgument, Path};
 use lumen_lexer::{Keyword, Punct, TokenKind};
 
 use crate::control::{if_expression, match_expression};
@@ -163,11 +163,24 @@ fn written_list(cursor: &mut Cursor) -> Result<ExprKind, ParseError> {
     Ok(ExprKind::List(elements))
 }
 
-/// A name, or the record literal it heads.
+/// A name, or the record literal it heads, which is reached through a module or not.
 fn name_or_record(cursor: &mut Cursor, records: RecordLiterals) -> Result<ExprKind, ParseError> {
+    if records == RecordLiterals::Allowed && heads_a_record_of_a_module(cursor) {
+        let base = cursor.expect_path(Expected::Expression)?;
+        return record_literal(cursor, base);
+    }
     let base = cursor.expect_name(Expected::Expression)?;
     if records == RecordLiterals::Forbidden || !cursor.at_punct(Punct::LBrace) {
         return Ok(ExprKind::Name(base));
     }
-    record_literal(cursor, base)
+    record_literal(cursor, Path::bare(base))
+}
+
+/// `demo.User {`: a record of another module, which is the one dotted name a brace follows.
+///
+/// Every other dot opens a field or a call, which the postfix chain reads once the name is read.
+fn heads_a_record_of_a_module(cursor: &Cursor) -> bool {
+    cursor.peek_kind(1) == Some(TokenKind::Punct(Punct::Dot))
+        && cursor.peek_kind(2) == Some(TokenKind::Identifier)
+        && cursor.peek_kind(3) == Some(TokenKind::Punct(Punct::LBrace))
 }

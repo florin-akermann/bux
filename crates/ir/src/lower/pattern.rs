@@ -4,7 +4,7 @@
 //! already proved that some arm answers for every value, so falling past the last one is a thing
 //! that cannot happen, and the method says so by throwing rather than by carrying on.
 
-use lumen_ast::{MatchExpr, Name, Pattern, PatternKind, Span};
+use lumen_ast::{MatchExpr, Name, Path, Pattern, PatternKind, Span};
 use lumen_resolver::DefinitionKind;
 
 use crate::code::{Comparison, FieldRef, Instruction, Label, MethodRef};
@@ -75,9 +75,9 @@ impl Builder<'_> {
             next,
         };
         match &pattern.kind {
-            PatternKind::Name(name) => self.tried_name(name, &against),
-            PatternKind::Tuple { name, elements } => self.tried_tuple(name, elements, &against),
-            PatternKind::Record { name, fields } => self.tried_record(name, fields, &against),
+            PatternKind::Name(path) => self.tried_name(path, &against),
+            PatternKind::Tuple { path, elements } => self.tried_tuple(path, elements, &against),
+            PatternKind::Record { path, fields } => self.tried_record(path, fields, &against),
             PatternKind::Integer(value) => {
                 self.equal_to(Instruction::Long(*value), &Descriptor::Long, &against);
             }
@@ -93,11 +93,15 @@ impl Builder<'_> {
     }
 
     /// A bare name is a variant that carries nothing, or a binding that matches anything.
-    fn tried_name(&mut self, name: &Name, against: &Against) {
-        if self.definition(name).kind == DefinitionKind::Constructor {
-            self.tagged(name, against);
+    ///
+    /// One reached through a module is always the variant: nothing binds a name of another.
+    fn tried_name(&mut self, path: &Path, against: &Against) {
+        if path.module.is_some() || self.definition(&path.name).kind == DefinitionKind::Constructor
+        {
+            self.tagged(path, against);
             return;
         }
+        let name = &path.name;
         self.declare(name);
         self.emit(Instruction::Load {
             slot: against.slot.at,
@@ -107,8 +111,8 @@ impl Builder<'_> {
     }
 
     /// `Failed(reason)`: the value is a `Failed`, and what it carries matches in order.
-    fn tried_tuple(&mut self, name: &Name, elements: &[Pattern], against: &Against) {
-        let shape = self.tagged(name, against);
+    fn tried_tuple(&mut self, path: &Path, elements: &[Pattern], against: &Against) {
+        let shape = self.tagged(path, against);
         for (element, carried) in elements.iter().zip(&shape.carries) {
             let Some(of) = carried.of.clone() else {
                 continue;
@@ -124,8 +128,8 @@ impl Builder<'_> {
     }
 
     /// `Authorized { authorization_id }`: the value is an `Authorized`, and each field binds.
-    fn tried_record(&mut self, name: &Name, fields: &[Name], against: &Against) {
-        let shape = self.tagged(name, against);
+    fn tried_record(&mut self, path: &Path, fields: &[Name], against: &Against) {
+        let shape = self.tagged(path, against);
         for field in fields {
             let Some(carried) = shape
                 .carries
@@ -141,9 +145,9 @@ impl Builder<'_> {
         }
     }
 
-    /// The value is one `name` built, which its tag says; a type with one of them needs no test.
-    fn tagged(&mut self, name: &Name, against: &Against) -> Shape {
-        let shape = self.lowering.shapes.built(&name.text).clone();
+    /// The value is one `path` built, which its tag says; a type with one of them needs no test.
+    fn tagged(&mut self, path: &Path, against: &Against) -> Shape {
+        let shape = self.lowering.shapes.built(&path.to_string()).clone();
         let Some(tag) = shape.tag else {
             return shape;
         };

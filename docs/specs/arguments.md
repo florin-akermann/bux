@@ -74,6 +74,12 @@ call of either is ever asked to name one.
 Neither is declared here, so neither has parameter names to hold a call to, and naming the
 arguments of one is `L0411` as well.
 
+A name reached through a module is the third, and it is one for the same reason.
+What a module offers is the type of each function and of each constructor it declares.
+A type holds no parameter name, so `demo.hello(name: "world")` is `L0411`.
+A constructor of another module is no different, and `demo.Sent(how: "post")` is refused too.
+Each is written with its values in order.
+
 ## The errors
 
 `L0409` is a call that must name its arguments and does not:

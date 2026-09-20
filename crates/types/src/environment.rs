@@ -3,7 +3,7 @@
 use std::collections::{HashMap, HashSet};
 
 use lumen_ast::{DeriveDeclaration, Function, InstanceDeclaration, TraitDeclaration};
-use lumen_ast::{Item, Name, RecordField, Signature, Span, TypeDeclaration, TypeDefinition};
+use lumen_ast::{Item, Name, Path, RecordField, Signature, Span, TypeDeclaration, TypeDefinition};
 use lumen_ast::{TypeRef, TypeRefKind};
 use lumen_ast::{Variant, VariantPayload};
 use lumen_resolver::prelude;
@@ -13,6 +13,7 @@ use crate::bounds::{self, Bounds};
 use crate::derive;
 use crate::error::{Count, TypeError, TypeErrorKind};
 use crate::scheme::{Quantified, Required, Scheme};
+use crate::surface::{BuiltBy, OfferedType};
 use crate::table::Table;
 use crate::types::{Type, TypeParameter};
 
@@ -37,6 +38,8 @@ pub(crate) struct Environment {
     written_as: HashMap<Key, Type>,
     /// Where each method of each trait is declared, which is what an instance is read against.
     declares: HashMap<(String, String), Key>,
+    /// The type each declaration declares, over its own parameters, by the name it declares it.
+    declared: HashMap<String, Scheme>,
 }
 
 impl Environment {
@@ -45,8 +48,15 @@ impl Environment {
     /// # Errors
     ///
     /// Returns the first written type that names the wrong number of arguments.
-    pub(crate) fn of(resolved: &ResolvedProgram, table: &mut Table) -> Result<Self, TypeError> {
+    pub(crate) fn of(
+        resolved: &ResolvedProgram,
+        reached: &[OfferedType],
+        table: &mut Table,
+    ) -> Result<Self, TypeError> {
         let mut environment = Self::of_prelude();
+        for offered in reached {
+            environment.offered_by_another_module(offered);
+        }
         environment.note_arities(resolved);
         environment.declare_traits(resolved)?;
         for item in &resolved.program().items {
@@ -54,6 +64,23 @@ impl Environment {
         }
         derive::hold_what_they_need(&environment, resolved)?;
         Ok(environment)
+    }
+
+    /// One type another module offers, under the name a module importing it writes it by.
+    ///
+    /// It is declared exactly as a type of this module is: the same arity, the same constructors,
+    /// and the same labels, because it is that module's type and not a copy of it.
+    fn offered_by_another_module(&mut self, offered: &OfferedType) {
+        let named = offered.name().to_owned();
+        self.arities.insert(Key::reached(&named), offered.arity());
+        if let BuiltBy::Record(built) = offered.built_by() {
+            self.records.insert(named, Key::reached(built.name()));
+        }
+        for built in offered.constructors() {
+            let key = Key::reached(built.name());
+            self.labels.insert(key.clone(), built.labels().to_vec());
+            self.bind(key, offered.scheme_of(built));
+        }
     }
 
     /// How many arguments each declared type takes, which every written type is then held to.
@@ -125,6 +152,11 @@ impl Environment {
     /// The labels the constructor defined at `key` takes, in the order it takes them.
     pub(crate) fn labels(&self, key: &Key) -> &[String] {
         self.labels.get(key).map_or(&[], Vec::as_slice)
+    }
+
+    /// The type the declaration called `name` declares, written over its own parameters.
+    pub(crate) fn declared_as(&self, name: &str) -> Option<&Scheme> {
+        self.declared.get(name)
     }
 
     /// The constructor of the record type called `name`, when `name` is a record type.
@@ -387,6 +419,10 @@ impl Environment {
                 .map(|parameter| Type::Parameter(TypeParameter::written(parameter)))
                 .collect(),
         };
+        self.declared.insert(
+            declaration.name.text.clone(),
+            Scheme::over(over.clone(), declared.clone()),
+        );
         let TypeDefinition::Variants(variants) = &declaration.definition else {
             let TypeDefinition::Record(fields) = &declaration.definition else {
                 unreachable!("a type declaration is a record or variants")
@@ -518,9 +554,14 @@ impl Environment {
         resolved: &ResolvedProgram,
         written: &TypeRef,
     ) -> Result<Type, TypeError> {
-        let TypeRefKind::Named { name, arguments } = &written.kind else {
+        let TypeRefKind::Named { path, arguments } = &written.kind else {
             return Ok(Type::Unit);
         };
+        if let Some(module) = &path.module {
+            let reached = Reached { module, path };
+            return self.reached(&reached, self.each(resolved, arguments)?);
+        }
+        let name = &path.name;
         let definition = resolved
             .definition(Namespace::Type, name)
             .expect("name resolution gave every written type a definition");
@@ -533,6 +574,28 @@ impl Environment {
         Ok(Type::Named {
             name: name.text.clone(),
             arguments: self.each(resolved, arguments)?,
+        })
+    }
+
+    /// A type another module declares, reached through the name that module is imported by.
+    ///
+    /// # Errors
+    ///
+    /// Returns the name where that module declares no type of it, and the count where it does
+    /// and the use writes the wrong number of arguments.
+    fn reached(&self, reached: &Reached<'_>, arguments: Vec<Type>) -> Result<Type, TypeError> {
+        let written = reached.path.written();
+        let Some(takes) = self.arities.get(&Key::reached(&written.text)) else {
+            let kind = TypeErrorKind::NotInModule {
+                module: reached.module.text.clone(),
+                name: reached.path.name.text.clone(),
+            };
+            return Err(TypeError::at(written.span, kind));
+        };
+        Self::counted(&written, *takes, arguments.len())?;
+        Ok(Type::Named {
+            name: written.text,
+            arguments,
         })
     }
 
@@ -563,6 +626,12 @@ impl Environment {
     }
 }
 
+/// A written type reached through a module, which is the module written and the whole name.
+struct Reached<'w> {
+    module: &'w Name,
+    path: &'w Path,
+}
+
 /// Where a name was defined, which is what a type is filed under.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub(crate) enum Key {
@@ -570,6 +639,8 @@ pub(crate) enum Key {
     Declared(Span),
     /// A name the prelude supplies, known by the one spelling it has.
     Prelude(String),
+    /// A name another module declares, known by the name this module reaches it through.
+    Reached(String),
 }
 
 impl Key {
@@ -584,6 +655,11 @@ impl Key {
     /// The key of the declaration `name` is the name of.
     pub(crate) const fn at(name: &Name) -> Self {
         Self::Declared(name.span)
+    }
+
+    /// The key of a name another module declares, which is `demo.User` as this module writes it.
+    pub(crate) fn reached(name: &str) -> Self {
+        Self::Reached(name.to_owned())
     }
 
     fn prelude(name: &str) -> Self {

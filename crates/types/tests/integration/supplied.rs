@@ -56,7 +56,7 @@ fn a_name_a_supplied_module_does_not_declare_is_refused_where_it_is_written() {
     assert_eq!(error.message(), "`io` declares no `write`");
     assert_eq!(
         error.help(),
-        "a module declares the functions it offers, and nothing else is a name it has"
+        "a module offers the functions and the types it declares, and nothing else"
     );
 }
 

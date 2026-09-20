@@ -1,0 +1,10 @@
+// expect-run
+// > relayed
+// A value of a type this module does not import is held and read as what it was declared as.
+import io
+
+import relay
+
+fn main() -> () {
+    io.println(relay.got().name)
+}

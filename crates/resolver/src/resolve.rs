@@ -3,7 +3,7 @@
 use std::collections::{HashMap, HashSet};
 
 use lumen_ast::{Block, Expr, ExprKind, ForHeader, ForLoop, Function, IfExpr, Item};
-use lumen_ast::{MatchExpr, Mutability, Name, Pattern, PatternKind, Program, RecordField};
+use lumen_ast::{MatchExpr, Mutability, Name, Path, Pattern, PatternKind, Program, RecordField};
 use lumen_ast::{Span, Statement, StatementKind, TypeDeclaration, TypeDefinition, TypeRef};
 use lumen_ast::{TypeRefKind, Variant, VariantPayload};
 
@@ -273,7 +273,7 @@ impl Resolver {
                 self.written(callee, Position::Callee)?;
                 self.each(&arguments.values())
             }
-            ExprKind::Field { receiver, name } => self.reached(receiver, name),
+            ExprKind::Field { receiver, .. } => self.written(receiver, Position::Receiver),
             ExprKind::Try(inner) => self.expr(inner),
             ExprKind::List(elements) => {
                 for element in elements {
@@ -282,7 +282,7 @@ impl Resolver {
                 Ok(())
             }
             ExprKind::Record { base, fields } => {
-                self.use_value(base)?;
+                self.built_as(base)?;
                 for field in fields {
                     self.expr(&field.value)?;
                 }
@@ -316,23 +316,6 @@ impl Resolver {
                 self.written(receiver, Position::Receiver)
             }
             _ => self.expr(expr),
-        }
-    }
-
-    /// `user.name` reads a field, and `io.println` names a function of a module.
-    ///
-    /// Version 0.1 has no function value, so a name inside a module written outside a call leaves
-    /// lowering nothing to write, exactly as a function of the file does.
-    fn reached(&mut self, receiver: &Expr, name: &Name) -> Resolved {
-        self.written(receiver, Position::Receiver)?;
-        let ExprKind::Name(module) = &receiver.kind else {
-            return Ok(());
-        };
-        match self.values.look_up(&module.text) {
-            Some(found) if found.kind == DefinitionKind::Module => {
-                Err(refused(name, ResolveErrorKind::NotCalled))
-            }
-            _ => Ok(()),
         }
     }
 
@@ -388,16 +371,16 @@ impl Resolver {
 
     fn pattern(&mut self, pattern: &Pattern) -> Resolved {
         match &pattern.kind {
-            PatternKind::Name(name) => self.bare_pattern(name),
-            PatternKind::Tuple { name, elements } => {
-                self.use_value(name)?;
+            PatternKind::Name(path) => self.bare_pattern(path),
+            PatternKind::Tuple { path, elements } => {
+                self.built_as(path)?;
                 for element in elements {
                     self.pattern(element)?;
                 }
                 Ok(())
             }
-            PatternKind::Record { name, fields } => {
-                self.use_value(name)?;
+            PatternKind::Record { path, fields } => {
+                self.built_as(path)?;
                 for field in fields {
                     self.introduce_value(field, DefinitionKind::Local)?;
                 }
@@ -408,26 +391,60 @@ impl Resolver {
     }
 
     /// A bare name matches what a constructor of that name carries, and otherwise binds the value.
-    fn bare_pattern(&mut self, name: &Name) -> Resolved {
+    ///
+    /// One reached through a module matches and never binds: a binding is a name of this module,
+    /// and a dotted name is a name of another, which `docs/specs/modules.md` states.
+    fn bare_pattern(&mut self, path: &Path) -> Resolved {
+        if path.module.is_some() {
+            return self.reached_through(path);
+        }
+        let name = &path.name;
         if self.values.look_up(&name.text).is_some_and(is_constructor) {
             return self.use_value(name);
         }
         self.introduce_value(name, DefinitionKind::Local)
     }
 
-    fn use_value(&mut self, name: &Name) -> Resolved {
-        use_name(&self.values, &mut self.definitions, name)
+    /// The name a value is built with, which is this module's constructor or another module's.
+    fn built_as(&mut self, path: &Path) -> Resolved {
+        if path.module.is_some() {
+            return self.reached_through(path);
+        }
+        self.use_value(&path.name)
     }
 
     fn type_ref(&mut self, type_ref: &TypeRef) -> Resolved {
-        let TypeRefKind::Named { name, arguments } = &type_ref.kind else {
+        let TypeRefKind::Named { path, arguments } = &type_ref.kind else {
             return Ok(());
         };
-        self.named_type(name)?;
+        if path.module.is_some() {
+            self.reached_through(path)?;
+        } else {
+            self.named_type(&path.name)?;
+        }
         for argument in arguments {
             self.type_ref(argument)?;
         }
         Ok(())
+    }
+
+    /// The module a path is reached through, which is a name in scope and has to be a module.
+    ///
+    /// Nothing after the dot is resolved here: what that module declares is what answers it, and
+    /// `docs/specs/modules.md` leaves that to the phase that holds the other module's surface.
+    fn reached_through(&mut self, path: &Path) -> Resolved {
+        let Some(module) = &path.module else {
+            unreachable!("a path with no module is resolved as the name of this module it is")
+        };
+        self.use_value(module)?;
+        match self.values.look_up(&module.text) {
+            Some(found) if found.kind == DefinitionKind::Module => Ok(()),
+            _ => Err(refused(module, ResolveErrorKind::NotAModule)),
+        }
+    }
+
+    fn use_value(&mut self, name: &Name) -> Resolved {
+        use_name(&self.values, &mut self.definitions, name)
     }
 
     /// A type as a type is written, refusing a trait, which names what a type can do and is none.

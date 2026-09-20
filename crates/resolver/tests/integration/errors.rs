@@ -188,13 +188,10 @@ fn a_module_name_left_of_a_dot_is_resolved_rather_than_refused() {
 }
 
 #[test]
-fn a_name_inside_a_module_is_written_as_a_call_because_nothing_holds_a_function() {
+fn a_name_inside_a_module_is_left_to_inference_because_only_it_knows_what_is_there() {
     let source = "import io\n\nfn go() -> Int {\n    io.count\n}\n";
 
-    assert_eq!(
-        refusal(source).message(),
-        "`count` is a function, so it is written as a call"
-    );
+    resolved(source);
 }
 
 #[test]
@@ -266,5 +263,41 @@ fn a_plus_equals_names_a_var_the_same_way_an_equals_does() {
     assert_eq!(
         refusal(source).message(),
         "`total` is not a `var`, so it is never assigned to"
+    );
+}
+
+#[test]
+fn a_type_reached_through_a_name_that_is_no_module_is_refused() {
+    let source = "fn held(user: Int, value: user.Thing) -> Int {\n    1\n}\n";
+    let error = refusal(source);
+
+    assert_eq!(
+        error.message(),
+        "`user` is a module in neither scope, and a type is reached through one"
+    );
+    assert_eq!(
+        error.help(),
+        "a type of another module is reached through the import: write `demo.User`"
+    );
+    assert_eq!(error.span().text(source), "user");
+}
+
+#[test]
+fn a_type_reached_through_a_name_nothing_declares_is_refused_as_an_unresolved_name() {
+    let source = "fn held(value: nowhere.Thing) -> Int {\n    1\n}\n";
+
+    assert_eq!(
+        refusal(source).message(),
+        "there is nothing named `nowhere`"
+    );
+}
+
+#[test]
+fn a_pattern_reached_through_a_name_that_is_no_module_is_refused_the_same_way() {
+    let source = "fn held(payment: Int) -> Int {\n    match payment {\n        payment.Pending => 1\n    }\n}\n";
+
+    assert_eq!(
+        refusal(source).message(),
+        "`payment` is a module in neither scope, and a type is reached through one"
     );
 }

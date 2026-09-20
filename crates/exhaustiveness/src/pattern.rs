@@ -2,7 +2,7 @@
 
 use std::fmt;
 
-use lumen_ast::{Name, Pattern, PatternKind};
+use lumen_ast::{Path, Pattern, PatternKind};
 use lumen_resolver::{DefinitionKind, Namespace, ResolvedProgram};
 
 use crate::space::Space;
@@ -52,10 +52,10 @@ impl<'a> Reading<'a> {
         match &pattern.kind {
             PatternKind::Integer(_) | PatternKind::String(_) => Pat::Literal,
             PatternKind::Bool(held) => self.constructed(&bool_name(*held), &[]),
-            PatternKind::Name(name) if self.binds(name) => Pat::Wildcard,
-            PatternKind::Tuple { name, elements } => self.constructed(&name.text, elements),
-            PatternKind::Name(name) | PatternKind::Record { name, .. } => {
-                self.constructed(&name.text, &[])
+            PatternKind::Name(path) if self.binds(path) => Pat::Wildcard,
+            PatternKind::Tuple { path, elements } => self.constructed(&path.to_string(), elements),
+            PatternKind::Name(path) | PatternKind::Record { path, .. } => {
+                self.constructed(&path.to_string(), &[])
             }
         }
     }
@@ -75,10 +75,15 @@ impl<'a> Reading<'a> {
     }
 
     /// Whether the name binds rather than naming a constructor, which resolution has decided.
-    pub(crate) fn binds(&self, name: &Name) -> bool {
-        self.resolved
-            .definition(Namespace::Value, name)
-            .is_none_or(|definition| definition.kind != DefinitionKind::Constructor)
+    ///
+    /// One reached through a module never binds: a binding is a name of this module, and a name
+    /// after a dot is a name of another, which `docs/specs/modules.md` states.
+    pub(crate) fn binds(&self, path: &Path) -> bool {
+        path.module.is_none()
+            && self
+                .resolved
+                .definition(Namespace::Value, &path.name)
+                .is_none_or(|definition| definition.kind != DefinitionKind::Constructor)
     }
 }
 
