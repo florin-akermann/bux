@@ -28,7 +28,7 @@ The cost is one method per instantiation and a generic body that must reach the 
 [025][d] - A test on the bytecode: an `Int` passed to a generic is carried as `long` throughout.
 [025][e] - Executable examples under `tests/spec/generics/`.
 
-## 🟡 Item 036: A type that holds itself is refused
+## 🟢 Item 036: A type that holds itself is refused
 `type Node = { number: Int, next: Node }` compiles today, and nothing can ever build one.
 A value has no null and no identity, so that field would have to hold a whole `Node` of its own.
 The layout is infinite, and the only reason no program fails is that no program can write one.
