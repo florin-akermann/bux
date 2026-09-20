@@ -31,7 +31,7 @@ There is no literal for either yet; a map is built by `empty` and `insert`, and 
 [046][c] - Both types in Lumen, test-first; a property: `get` after `insert` gives what went in.
 [046][d] - Executable examples under `tests/spec/library/`, including a key without `Hash`.
 
-## 🔴 Item 047: Richer patterns: `_`, a literal, and an or-pattern
+## 🟡 Item 047: Richer patterns: `_`, a literal, and an or-pattern
 **Depends on:** Item 040 — version 0.1 closes before the first 0.2 item opens.
 **Depends on:** Item 034 — a literal pattern over a declared type needs the trait a literal is.
 A pattern today is a bare name or a constructor with patterns inside; nothing else is written.
