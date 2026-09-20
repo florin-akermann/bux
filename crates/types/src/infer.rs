@@ -10,6 +10,7 @@ mod record;
 mod settle;
 
 use std::collections::HashMap;
+use std::iter;
 use std::mem;
 
 use lumen_ast::ForHeader;
@@ -425,8 +426,9 @@ impl Inference<'_> {
     }
 
     fn call(&mut self, callee: &Expr, arguments: &Arguments, at: Span) -> Result<Type, TypeError> {
+        self.names_none_in_front(callee, arguments, at)?;
         let signature = self.called(callee)?;
-        let passed = arguments.values();
+        let passed = self.passed(callee, arguments);
         let mut given = Vec::new();
         for argument in &passed {
             given.push(self.expr(argument)?);
@@ -448,13 +450,42 @@ impl Inference<'_> {
     }
 
     /// The type of what a call calls, which is the one place a function of a module is written.
+    ///
+    /// A dot before the name reaches into a module or passes what is before it first, which
+    /// `docs/specs/calls.md` states. The second is a call of a name in scope, so its type is the
+    /// type of that name and the receiver is read where the arguments are.
     fn called(&mut self, callee: &Expr) -> Result<Type, TypeError> {
         let ExprKind::Field { receiver, name } = &callee.kind else {
             return self.expr(callee);
         };
-        let found = self.field(receiver, name, Reached::AsACall)?;
+        let found = if self.resolved.module_reached(receiver).is_some() {
+            self.field(receiver, name, Reached::AsACall)?
+        } else {
+            self.value(name)
+        };
         self.types.insert(callee.span, found.clone());
         Ok(found)
+    }
+
+    /// Every argument a call passes, which begins with the receiver where one is written in front.
+    fn passed<'w>(&self, callee: &'w Expr, arguments: &'w Arguments) -> Vec<&'w Expr> {
+        let written = arguments.values();
+        let Some(receiver) = self.in_front(callee) else {
+            return written;
+        };
+        iter::once(receiver).chain(written).collect()
+    }
+
+    /// What a call passes first, where it is written in front of the name rather than inside the
+    /// brackets.
+    pub(crate) fn in_front<'w>(&self, callee: &'w Expr) -> Option<&'w Expr> {
+        let ExprKind::Field { receiver, .. } = &callee.kind else {
+            return None;
+        };
+        self.resolved
+            .module_reached(receiver)
+            .is_none()
+            .then_some(receiver.as_ref())
     }
 
     /// A call of something whose type is not yet a function, which unification has to settle.

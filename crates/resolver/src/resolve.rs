@@ -50,6 +50,21 @@ impl ResolvedProgram {
         &self.program
     }
 
+    /// The module a `.` reaches inside, where the name written before the dot names one.
+    ///
+    /// The name before the dot says what the dot does, which `docs/specs/calls.md` states, and
+    /// every phase after this one has to read it the same way: a module is reached inside, and
+    /// anything else is passed in front of the name or read as a field. One answer here is what
+    /// keeps them agreeing, because two that drift call a different function and say nothing.
+    #[must_use]
+    pub fn module_reached<'w>(&self, receiver: &'w Expr) -> Option<&'w Name> {
+        let ExprKind::Name(module) = &receiver.kind else {
+            return None;
+        };
+        let definition = self.definition(Namespace::Value, module)?;
+        (definition.kind == DefinitionKind::Module).then_some(module)
+    }
+
     /// What `name` means where it is written, which is in one namespace or the other.
     ///
     /// A field label and a name reached through a `.` have none, because neither is a name in
@@ -310,13 +325,37 @@ impl Resolver {
     fn written(&mut self, expr: &Expr, position: Position) -> Resolved {
         match &expr.kind {
             ExprKind::Name(name) => self.named(name, position),
-            // `io.println(…)`: the name inside the module is what is called, so the module is
-            // reached through the way it should be and nothing here is held as a value.
-            ExprKind::Field { receiver, .. } if matches!(position, Position::Callee) => {
-                self.written(receiver, Position::Receiver)
+            ExprKind::Field { receiver, name } if matches!(position, Position::Callee) => {
+                self.calls(receiver, name)
             }
             _ => self.expr(expr),
         }
+    }
+
+    /// The name a call writes after a `.`, which the name before the dot says the meaning of.
+    ///
+    /// `io.println(…)` reaches a function of the module `io`, and only that module says what is
+    /// there. `maybe.or(0)` is the call `or(maybe, 0)`, which `docs/specs/calls.md` states, so
+    /// the name after the dot is a name of this module and is looked up here like any other.
+    fn calls(&mut self, receiver: &Expr, name: &Name) -> Resolved {
+        self.written(receiver, Position::Receiver)?;
+        if self.reaches_a_module(receiver) {
+            return Ok(());
+        }
+        self.named(name, Position::Callee)
+    }
+
+    /// Whether the name before the dot is a module, which is what a name is reached through.
+    ///
+    /// The scope is what says so here, because the resolution that would answer it is the one
+    /// being built; [`ResolvedProgram::module_reached`] is the same question asked afterwards.
+    fn reaches_a_module(&self, receiver: &Expr) -> bool {
+        let ExprKind::Name(module) = &receiver.kind else {
+            return false;
+        };
+        self.values
+            .look_up(&module.text)
+            .is_some_and(|found| found.kind == DefinitionKind::Module)
     }
 
     /// Resolves `name`, then refuses it when what it names is no value and the position wants one.

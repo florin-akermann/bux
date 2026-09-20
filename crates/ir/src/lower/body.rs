@@ -4,7 +4,7 @@ use std::collections::{HashMap, HashSet};
 
 use lumen_ast::{AssignOperator, Block, Expr, ExprKind, ForHeader, ForLoop, Function, Name, Span};
 use lumen_ast::{Statement, StatementKind};
-use lumen_resolver::{Definition, Namespace, Origin};
+use lumen_resolver::{Definition, Namespace, Origin, ResolvedProgram};
 use lumen_types::Type;
 
 use crate::code::{Body, Instruction, Label, MethodRef};
@@ -512,6 +512,11 @@ impl<'a> Builder<'a> {
             .resolved()
             .definition(Namespace::Value, name)
             .expect("name resolution gave every written value a definition")
+    }
+
+    /// The resolution every name of this body was written against.
+    pub(crate) fn resolved(&self) -> &ResolvedProgram {
+        self.lowering.typed.resolved()
     }
 
     /// A local of the method's own, which a construct keeps a value in while it works.

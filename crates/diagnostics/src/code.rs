@@ -142,6 +142,8 @@ catalogue! {
     BoundIsNotAWholeNumber => "L0421",
     /// A type derives `Eq` and holds a value of a type that has none.
     HeldTypeHasNoInstance => "L0422",
+    /// A call written with its first argument in front names its arguments.
+    NamedInFront => "L0423",
     /// A `match` leaves a value of the type it matches unanswered.
     NonExhaustiveMatch => "L0500",
     /// A `match` lists its arms in an order the type does not declare its variants in.

@@ -90,6 +90,8 @@ or(maybe: Option<T>, fallback: T) -> T
 ```
 
 `or(total / count, 0)` is the whole of the common case, and it is an ordinary call.
+`(total / count).or(0)` is the same call with its first argument in front, which
+`docs/specs/calls.md` states.
 Both of its arguments are worked out before either branch is taken, because that is what a call
 does, and what `or` does must not change when the prelude becomes Lumen source.
 

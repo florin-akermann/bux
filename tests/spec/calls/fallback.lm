@@ -1,0 +1,18 @@
+// expect-run
+// > 3
+// > 0
+// `or(maybe, fallback)` reads inside out, and `maybe.or(fallback)` reads in the order it happens.
+// The two are one call, so the prelude declares nothing to earn the second spelling.
+import io
+
+fn main() -> () {
+    io.println(shown(shared(total: 17, people: 5).or(0)))
+    io.println(shown(shared(total: 17, people: 0).or(0)))
+}
+
+/// What each of `people` gets of `total`, which is nothing at all when there is nobody.
+// example: shared(total: 17, people: 5) == Some(3)
+// example: shared(total: 17, people: 0) == None
+fn shared(total: Int, people: Int) -> Option<Int> {
+    total / people
+}

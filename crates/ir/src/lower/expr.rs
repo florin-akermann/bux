@@ -1,5 +1,7 @@
 //! What each expression leaves on the stack.
 
+use std::iter;
+
 use lumen_ast::{BinaryOperator, Expr, ExprKind, FieldValue, IfExpr, Name, Path};
 use lumen_ast::{Span, UnaryOperator};
 use lumen_resolver::{DefinitionKind, Origin};
@@ -233,12 +235,10 @@ impl Builder<'_> {
         if let Some(reached) = self.reached_inside(callee) {
             return self.inside_module(&reached, arguments);
         }
-        let ExprKind::Name(name) = &callee.kind else {
-            unreachable!("version 0.1 calls a name, which is a function or a constructor")
-        };
+        let (name, passed) = written_as(callee, arguments);
         match self.definition(name).kind {
-            DefinitionKind::Constructor => Some(self.built(name, arguments)),
-            _ => self.invoked(name, arguments, at),
+            DefinitionKind::Constructor => Some(self.built(name, &passed)),
+            _ => self.invoked(name, &passed, at),
         }
     }
 
@@ -247,11 +247,8 @@ impl Builder<'_> {
         let ExprKind::Field { receiver, name } = &callee.kind else {
             return None;
         };
-        let ExprKind::Name(module) = &receiver.kind else {
-            return None;
-        };
-        let inside = self.definition(module).kind == DefinitionKind::Module;
-        inside.then_some(Through {
+        let module = self.resolved().module_reached(receiver)?;
+        Some(Through {
             module,
             name,
             used: callee.span,
@@ -597,4 +594,22 @@ fn written_for<'a>(fields: &'a [FieldValue], carried: &Carried) -> Option<&'a Fi
 /// clamping it would write an array of the wrong length rather than say so.
 fn counting(many: usize) -> i32 {
     i32::try_from(many).expect("a written list is shorter than a file can hold")
+}
+
+/// The name a call calls, and the arguments it passes, which the receiver begins where one is
+/// written in front of the name.
+///
+/// `docs/specs/calls.md` makes `first.f(rest)` the call `f(first, rest)`, so what is lowered is
+/// that call: the same function, the same arguments, and the same order.
+fn written_as<'w>(callee: &'w Expr, arguments: &[&'w Expr]) -> (&'w Name, Vec<&'w Expr>) {
+    match &callee.kind {
+        ExprKind::Name(name) => (name, arguments.to_vec()),
+        ExprKind::Field { receiver, name } => (
+            name,
+            iter::once(receiver.as_ref())
+                .chain(arguments.iter().copied())
+                .collect(),
+        ),
+        _ => unreachable!("version 0.1 calls a name, which is a function or a constructor"),
+    }
 }

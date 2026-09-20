@@ -20,6 +20,9 @@ impl Inference<'_> {
     /// module, so neither has parameter names for a call to write or to be held to. A call of
     /// one passes its values in order, and one that names them is `L0411` rather than a call
     /// whose names read as a promise nothing here can keep.
+    ///
+    /// A call written with its first argument in front is held to the rule before it gets here,
+    /// by [`Self::names_none_in_front`].
     pub(crate) fn named_as_declared(
         &self,
         callee: &Expr,
@@ -37,6 +40,30 @@ impl Inference<'_> {
             (None, Arguments::Named(_)) => Err(TypeError::at(at, self.unnameable(callee, reached))),
             (None, Arguments::Positional(_)) => Ok(()),
         }
+    }
+
+    /// A call written with its first argument in front names none of its arguments.
+    ///
+    /// The receiver is an argument and a dot is no place to write a name, so naming the rest
+    /// would name some of the arguments and not others. `docs/specs/calls.md` states it as
+    /// `L0423`, and a call earns it ahead of the count: the receiver is one of the arguments
+    /// the count counts, so a call that names them reads as one argument too many otherwise.
+    pub(crate) fn names_none_in_front(
+        &self,
+        callee: &Expr,
+        arguments: &Arguments,
+        at: Span,
+    ) -> Result<(), TypeError> {
+        let Some(reached) = name_of(callee) else {
+            return Ok(());
+        };
+        if self.in_front(callee).is_none() || matches!(arguments, Arguments::Positional(_)) {
+            return Ok(());
+        }
+        Err(TypeError::at(
+            at,
+            TypeErrorKind::NamedInFront(reached.text.clone()),
+        ))
     }
 
     /// Why what `written` names has no parameter names for a call to write.
@@ -63,12 +90,8 @@ impl Inference<'_> {
         let ExprKind::Field { receiver, name } = &callee.kind else {
             return None;
         };
-        let ExprKind::Name(module) = &receiver.kind else {
-            return None;
-        };
-        let definition = self.resolved.definition(Namespace::Value, module)?;
-        (definition.kind == DefinitionKind::Module)
-            .then(|| format!("{}.{}", module.text, name.text))
+        let module = self.resolved.module_reached(receiver)?;
+        Some(format!("{}.{}", module.text, name.text))
     }
 
     /// The types the declaration gives its parameters, rather than the ones this call gave them.

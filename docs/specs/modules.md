@@ -135,10 +135,15 @@ and it is the order `docs/specs/codegen.md` counts a tag in.
 
 A record field is looked up in the record's type, so `user.name` resolves `user` and leaves `name`.
 A field of a record literal names a field of the type being built, and is left the same way.
-A name written after `.` is never a name in scope, whether the receiver is a record or a module.
+A name reached through a module is never a name in scope either.
 What such a name means is inference's to say, because the module declaring it is what says so.
 A type and a pattern reached through a module are resolved the same way: the module is a name in
 scope and what follows the dot is not.
+
+The name of a call is the exception, and only where a module is not what is before the dot.
+`maybe.or(0)` is the call `or(maybe, 0)`, which `docs/specs/calls.md` states, so `or` is a name of
+this module and is resolved here like any other.
+The name before the dot is what says which of the two a call is, and nothing else is.
 
 A bare name in a pattern is a use when it names a variant in scope, and a binding otherwise.
 That choice is the resolver's, which is why the parser writes both as the same node.

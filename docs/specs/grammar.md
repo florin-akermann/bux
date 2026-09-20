@@ -151,7 +151,7 @@ A `-` before a number is part of that number, so the smallest whole number can b
 before anything else is the prefix operator.
 Blanks make no difference: `- 5` and `-5` are the same number, which is what lets the formatter
 write the one canonical spelling of it without changing what the source says.
-A postfix operator applies to the literal, so `-5.abs()` reads the field of `-5`.
+A postfix operator applies to the literal, so `-5.abs()` calls `abs` with `-5` in front of it.
 A leading zero decodes fine and is not canonical form, so Item 003's gate is what rejects it.
 
 A string literal decodes its escapes: `\"`, `\\`, `\n`, `\t`, and `\r`.
@@ -172,7 +172,8 @@ A parse error reads `expected <what>, found <what was there>`, in the voice of
 `docs/implementation.md` section 8.
 The expectation names a thing the reader writes, never a parser state: `a name`, `a type`,
 `an expression`, `a pattern`, `a function name`, `a trait`, `the end of the line`,
-`an import, a type, a trait, an instance, a derive, or a function`, or the exact token, as in `` `)` ``.
+`an import, a type, a trait, an instance, a derive, or a function`, or the exact token,
+as in `` `)` ``.
 The found part names what is there the same way, or `the end of the file`.
 
 Every parse error carries a code, and `docs/specs/diagnostics.md` is the catalogue of them.

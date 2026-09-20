@@ -104,7 +104,7 @@ impl Walk<'_> {
                 self.expr(right);
             }
             ExprKind::Call { callee, arguments } => {
-                self.expr(callee);
+                self.called(callee);
                 for value in arguments.values() {
                     self.expr(value);
                 }
@@ -129,11 +129,24 @@ impl Walk<'_> {
         }
     }
 
+    /// What a call calls, which is where a name written before a dot is passed rather than read.
+    ///
+    /// `docs/specs/calls.md` makes `point.across_of()` the call `across_of(point)`, so the name
+    /// in front of it goes wherever an argument goes and the record it means is built. A name
+    /// reached through a module is nothing of this one, and reads nothing here.
+    fn called(&mut self, callee: &Expr) {
+        let ExprKind::Field { receiver, .. } = &callee.kind else {
+            self.expr(callee);
+            return;
+        };
+        if self.resolved.module_reached(receiver).is_some() {
+            return;
+        }
+        self.expr(receiver);
+    }
+
     /// The receiver of a field read is the one mention that does not let the value go: it is read
     /// where it stands, and a record kept in locals has that field in one of them.
-    ///
-    /// A receiver is read and never passed, because version 0.1 declares no method for a record to
-    /// be the receiver of: the lowering refuses any callee that is not a name outright.
     fn read(&mut self, receiver: &Expr) {
         if !matches!(receiver.kind, ExprKind::Name(_)) {
             self.expr(receiver);

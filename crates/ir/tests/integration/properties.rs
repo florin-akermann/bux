@@ -20,6 +20,36 @@ const SOURCES: [&str; 10] = [
     "fn is_same(word: String, count: Int) -> Bool {\n    word == \"one\" && count != 2\n}\n",
 ];
 
+/// The values a generated call passes first, each one a value of `Int`.
+const FIRST: [&str; 3] = ["count", "1", "twice(count)"];
+
+/// The values it passes after that, each one a value of `String`.
+const REST: [&str; 2] = ["said", "\"hi\""];
+
+/// A module calling `held` as `call` writes it, with what it calls declared below.
+fn calling(call: &str) -> String {
+    format!(
+        "fn go(count: Int, said: String) -> String {{\n    {call}\n}}\n\n\
+         fn held(count: Int, said: String) -> String {{\n    said\n}}\n\n\
+         fn twice(count: Int) -> Int {{\n    count + count\n}}\n"
+    )
+}
+
+/// `docs/specs/calls.md`: the two spellings of one call are one call, and lower as one.
+#[hegel::test]
+fn a_call_written_in_front_of_the_name_lowers_as_the_plain_call_does(tc: TestCase) {
+    let first = tc.draw(gs::sampled_from(&FIRST));
+    let rest = tc.draw(gs::sampled_from(&REST));
+
+    let in_front = common::lowered(&calling(&format!("{first}.held({rest})")));
+    let plainly = common::lowered(&calling(&format!("held({first}, {rest})")));
+
+    assert_eq!(
+        common::body_of(&in_front, "go").instructions,
+        common::body_of(&plainly, "go").instructions
+    );
+}
+
 #[hegel::test]
 fn lowering_one_module_twice_gives_the_same_classes(tc: TestCase) {
     let source = tc.draw(gs::sampled_from(&SOURCES));

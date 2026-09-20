@@ -7,7 +7,7 @@
 use crate::common::{formatted, tree};
 
 /// Expressions whose shape survives being written in canonical form.
-const EXPRESSIONS: [&str; 22] = [
+const EXPRESSIONS: [&str; 24] = [
     "(a + b) * c",
     "a + (b * c)",
     "a - (b - c)",
@@ -15,6 +15,8 @@ const EXPRESSIONS: [&str; 22] = [
     "!(a && b)",
     "(!a) && b",
     "(a + b).c",
+    "a.f(b)",
+    "(a + b).f(c)",
     "(-a).b",
     "-a.b",
     "-(a + b)",

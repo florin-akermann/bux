@@ -75,6 +75,18 @@ fn a_record_passed_to_a_call_is_built() {
 }
 
 #[test]
+fn a_record_passed_in_front_of_the_name_is_built_as_any_other_argument_is() {
+    let source = "fn held(count: Int) -> Int {\n    \
+                  point := Point { across: count, down: count }\n    point.across_of()\n}\n\n\
+                  fn across_of(point: Point) -> Int {\n    point.across\n}\n\n\
+                  type Point = {\n    across: Int\n    down: Int\n}\n";
+
+    let lowered = declaring(source);
+
+    assert!(builds(&lowered), "{:?}", lowered.instructions);
+}
+
+#[test]
 fn a_record_given_back_is_built() {
     let source = "fn held(count: Int) -> Point {\n    \
                   point := Point { across: count, down: count }\n    point\n}\n\n\

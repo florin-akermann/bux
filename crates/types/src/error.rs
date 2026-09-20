@@ -117,6 +117,9 @@ pub(crate) enum TypeErrorKind {
     NamedPrelude(String),
     /// A call of a name reached through a module names its arguments, which it has none of.
     NamedThroughModule(String),
+    /// A call written with its first argument in front names its arguments, which it names none
+    /// of.
+    NamedInFront(String),
     /// A parameter is a bare `Bool`, so a call of it passes `true` and says no more.
     FlagParameter(String),
     NotAPredicate(String),
@@ -183,6 +186,7 @@ impl TypeErrorKind {
             Self::NamedConstructor(_) | Self::NamedPrelude(_) | Self::NamedThroughModule(_) => {
                 Code::Unnameable
             }
+            Self::NamedInFront(_) => Code::NamedInFront,
             Self::FlagParameter(_) => Code::FlagParameter,
             Self::NotAPredicate(_) => Code::NotAPredicate,
             Self::NotInModule { .. } => Code::NotInModule,
@@ -256,18 +260,12 @@ impl TypeErrorKind {
             }
             Self::DivisorIsZero => "a zero written here is never anything else; drop the division",
             Self::Discarded(_) => "write `_ = ` in front of it to throw the value away on purpose",
-            Self::Unnamed { .. } => {
-                "a call names its arguments when the declaration gives two parameters one type"
-            }
-            Self::Misnamed { .. } => {
-                "arguments are named in the order the declaration lists its parameters"
-            }
-            Self::NamedConstructor(_) => {
-                "a variant whose values want names declares them as fields and is built as a record"
-            }
-            Self::NamedPrelude(_) | Self::NamedThroughModule(_) => {
-                "only a call of a function this module declares names its arguments"
-            }
+            Self::Unnamed { .. }
+            | Self::Misnamed { .. }
+            | Self::NamedConstructor(_)
+            | Self::NamedPrelude(_)
+            | Self::NamedThroughModule(_)
+            | Self::NamedInFront(_) => self.how_arguments_are_named(),
             Self::FlagParameter(_) => {
                 "declare a two-variant type and take that instead, so the call says which of the two"
             }
@@ -284,6 +282,35 @@ impl TypeErrorKind {
             Self::HoldsItself { .. } => {
                 "hold an `Option` of it, which is how a type holds another of its own kind"
             }
+        }
+    }
+
+    /// The rule for a refusal about how a call writes the names of what it passes.
+    ///
+    /// `docs/specs/arguments.md` states these, and they read as one group: each says where a name
+    /// goes rather than what the type of the value is.
+    ///
+    /// A kind reaches here only from the arm of [`Self::stated`] that names it, so a new one is
+    /// added to both or to neither: `stated` matches every variant, and leaving one out of that
+    /// match is a compile error rather than a rule nothing states.
+    const fn how_arguments_are_named(&self) -> &'static str {
+        match self {
+            Self::Unnamed { .. } => {
+                "a call names its arguments when the declaration gives two parameters one type"
+            }
+            Self::Misnamed { .. } => {
+                "arguments are named in the order the declaration lists its parameters"
+            }
+            Self::NamedConstructor(_) => {
+                "a variant whose values want names declares them as fields and is built as a record"
+            }
+            Self::NamedPrelude(_) | Self::NamedThroughModule(_) => {
+                "only a call of a function this module declares names its arguments"
+            }
+            Self::NamedInFront(_) => {
+                "a call that names its arguments is written plainly, with every argument inside the brackets"
+            }
+            _ => panic!("a kind reaches here only from the arm of `stated` that names it"),
         }
     }
 }
@@ -347,6 +374,7 @@ impl fmt::Display for TypeErrorKind {
             | Self::NamedConstructor(_)
             | Self::NamedPrelude(_)
             | Self::NamedThroughModule(_)
+            | Self::NamedInFront(_)
             | Self::FlagParameter(_)
             | Self::NotAPredicate(_) => f.write_str(&self.how_it_is_written()),
         }
@@ -354,15 +382,6 @@ impl fmt::Display for TypeErrorKind {
 }
 
 impl TypeErrorKind {
-    /// The message of a refusal about how a call or a declaration is written.
-    ///
-    /// `docs/specs/arguments.md` and `docs/specs/naming.md` state these, and they read as one
-    /// group: each says what the author wrote rather than what type met what. Every other kind is
-    /// about a type, and [`fmt::Display`] writes those itself.
-    ///
-    /// A kind reaches here only from the arm of [`fmt::Display`] that names it, so a new one is
-    /// added to both or to neither: `Display` matches every variant, and leaving one out of that
-    /// match is a compile error rather than a message nothing writes.
     /// The message of a refusal about a name reached through a module.
     ///
     /// `docs/specs/modules.md` states these, and they read as one group: each says what the
@@ -383,6 +402,15 @@ impl TypeErrorKind {
         }
     }
 
+    /// The message of a refusal about how a call or a declaration is written.
+    ///
+    /// `docs/specs/arguments.md` and `docs/specs/naming.md` state these, and they read as one
+    /// group: each says what the author wrote rather than what type met what. Every other kind is
+    /// about a type, and [`fmt::Display`] writes those itself.
+    ///
+    /// A kind reaches here only from the arm of [`fmt::Display`] that names it, so a new one is
+    /// added to both or to neither: `Display` matches every variant, and leaving one out of that
+    /// match is a compile error rather than a message nothing writes.
     fn how_it_is_written(&self) -> String {
         match self {
             Self::Unnamed { function, repeated } => {
@@ -404,6 +432,11 @@ impl TypeErrorKind {
             Self::NamedPrelude(called) => {
                 format!(
                     "`{called}` comes from the prelude, which declares no parameter names to write"
+                )
+            }
+            Self::NamedInFront(called) => {
+                format!(
+                    "`{called}` is written with its first argument in front, so this call names none of them"
                 )
             }
             Self::NamedThroughModule(called) => {

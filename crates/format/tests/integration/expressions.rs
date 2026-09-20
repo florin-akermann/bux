@@ -3,7 +3,7 @@
 use crate::common::in_function;
 
 /// A source expression beside the canonical text of the same expression.
-const SPACING: [(&str, &str); 15] = [
+const SPACING: [(&str, &str); 17] = [
     ("[ 1 , 2 ]", "[1, 2]"),
     ("[ ]", "[]"),
     ("[\n    1,\n    2\n]", "[1, 2]"),
@@ -16,6 +16,8 @@ const SPACING: [(&str, &str); 15] = [
     ("f()", "f()"),
     ("f ( a : b , c : d )", "f(a: b, c: d)"),
     ("f(a:b)", "f(a: b)"),
+    ("a . f ( b )", "a.f(b)"),
+    ("a.f()", "a.f()"),
     ("a ?", "a?"),
     ("User{id:id}", "User { id: id }"),
     ("User{}", "User {}"),

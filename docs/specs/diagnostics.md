@@ -141,6 +141,7 @@ Type inference raises these, in `crates/types/src/error.rs`:
 - `L0420` — a whole number does not fit the type it is written at.
 - `L0421` — a bound of an `IntegerLiteral` instance is not one whole number.
 - `L0422` — a type derives a trait and holds a value of a type that has no instance of it.
+- `L0423` — a call written with its first argument in front names its arguments.
 
 Exhaustiveness raises these, in `crates/exhaustiveness/src/error.rs`:
 

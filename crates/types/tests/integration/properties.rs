@@ -42,6 +42,34 @@ fn an_inference_never_panics_and_is_deterministic(tc: TestCase) {
     );
 }
 
+/// The values a generated call passes first, each one a value of `Int`.
+const FIRST: [&str; 3] = ["count", "1", "twice(count)"];
+
+/// The values it passes after that, each one a value of `String`.
+const REST: [&str; 2] = ["said", "\"hi\""];
+
+/// A module calling `held` as `call` writes it and binding what comes back, with what it calls
+/// declared below.
+fn calling(call: &str) -> String {
+    format!(
+        "fn go(count: Int, said: String) -> String {{\n    answer := {call}\n    answer\n}}\n\n\
+         fn held(count: Int, said: String) -> String {{\n    said\n}}\n\n\
+         fn twice(count: Int) -> Int {{\n    count + count\n}}\n"
+    )
+}
+
+/// `docs/specs/calls.md`: the two spellings of one call are one call, and infer as one.
+#[hegel::test]
+fn a_call_written_in_front_of_the_name_infers_what_the_plain_call_infers(tc: TestCase) {
+    let first = tc.draw(gs::sampled_from(&FIRST));
+    let rest = tc.draw(gs::sampled_from(&REST));
+
+    assert_eq!(
+        inferred_type(&calling(&format!("{first}.held({rest})")), "answer", 2),
+        inferred_type(&calling(&format!("held({first}, {rest})")), "answer", 2)
+    );
+}
+
 #[hegel::test]
 fn a_module_built_of_pieces_that_each_infer_infers(tc: TestCase) {
     let source = module(&tc);

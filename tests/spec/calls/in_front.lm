@@ -1,0 +1,27 @@
+// expect-run
+// > 3 apples
+// > 6 apples
+// > 12 apples
+// A call is written with its first argument in front, which `docs/specs/calls.md` states.
+// The name after the dot is the function in scope, and nothing is declared to earn the form.
+import io
+
+fn main() -> () {
+    count := 3
+    io.println(count.described("apples"))
+    io.println(twice(count).described("apples"))
+    io.println(count.twice().twice().described("apples"))
+}
+
+/// How many of something there are, as a line a reader reads.
+// example: described(count: 3, said: "apples") == "3 apples"
+// example: described(3, "apples") == "3 apples"
+fn described(count: Int, said: String) -> String {
+    shown(count) + " " + said
+}
+
+/// Twice what it is given, which is what a chain of these counts up.
+// example: twice(2) == 4
+fn twice(count: Int) -> Int {
+    count + count
+}
