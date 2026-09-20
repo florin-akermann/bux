@@ -6,7 +6,7 @@
 
 ## Open
 
-## 🔴 Item 038: A `()` given to something that holds a reference
+## 🟡 Item 038: A `()` given to something that holds a reference
 `Ok(())` is refused by the JVM verifier rather than by the compiler, and `Some(())` and `[()]` too.
 `docs/specs/types.md` writes `Result<(), Error>` itself, so this is a type the language expects.
 `docs/specs/codegen.md` says `()` is carried by nothing at all, and a field a type parameter left
