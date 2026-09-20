@@ -28,18 +28,6 @@ The cost is one method per instantiation and a generic body that must reach the 
 [025][d] - A test on the bytecode: an `Int` passed to a generic is carried as `long` throughout.
 [025][e] - Executable examples under `tests/spec/generics/`.
 
-## 🟢 Item 026: A record that never escapes is never allocated
-**Depends on:** Item 022, Item 023 — splitting a value into fields is legal only without identity.
-A record built and read within one function has no reason to reach the heap.
-Without identity, the compiler may keep such a value in locals, one per field, and never `new` it.
-HotSpot's escape analysis does this when it can; Lumen's lowering does it every time it applies.
-That is Valhalla's scalarization, available today, because the language meets its precondition.
-An optimization earns its place by measurement, so the item starts with a number.
-[026][a] - A measured baseline: a loop building a record per iteration, timed with the JDK.
-[026][b] - `docs/specs/codegen.md` states the guarantee and exactly when a value stays in locals.
-[026][c] - The lowering, test-first: such a record emits no `new`, asserted on the instructions.
-[026][d] - A property test: the scalarized program computes what the allocating one computes.
-
 ## 🔴 Item 032: A record field of record type is laid out flat
 **Depends on:** Item 026 — the same measurement, on a record that holds a record.
 `docs/design.md` section 1 promises a record laid out flat wherever the JVM can flatten one.
