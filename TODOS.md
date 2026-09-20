@@ -6,7 +6,7 @@
 
 ## Open
 
-## 🟡 Item 045: The prelude and the standard library are Lumen source
+## 🟢 Item 045: The prelude and the standard library are Lumen source
 **Depends on:** Item 033, Item 044 — the operator instances need a home; a library needs names.
 `crates/resolver/src/prelude.rs` says the prelude becomes Lumen source once a module can be loaded.
 A module loads since Item 039, so the prelude's types, constructors, and `or` move to `.lm`.
