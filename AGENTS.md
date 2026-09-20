@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Lumen is a small ML-inspired language with Go-like syntax and tooling, compiled to the JVM in Rust.
+Bux is a small ML-inspired language with Go-like syntax and tooling, compiled to the JVM in Rust.
 `docs/design.md` is the language specification; a language change is a change there first.
 `docs/implementation.md` says how the compiler is built and what ships when.
 `docs/principles.md` holds the questions every proposed feature must answer.
@@ -9,10 +9,10 @@ This file is that anchor; consistency is the throughline, and the bar is Code He
 
 ## Project Scope
 - **Goal**: Go's simplicity, Haskell's types, Valhalla's values, a Rust compiler.
-- Everyday Lumen code reads like Go: basically a bunch of `for` loops, plus ADTs and `match`.
-- **Dogfood as early and as much as possible.** Lumen replaces Rust wherever Lumen can express it.
-- The end state is self-hosting: the compiler and the whole toolchain are written in Lumen.
-- The Rust compiler is only the bootstrap; no Rust remains once Lumen can compile itself.
+- Everyday Bux code reads like Go: basically a bunch of `for` loops, plus ADTs and `match`.
+- **Dogfood as early and as much as possible.** Bux replaces Rust wherever Bux can express it.
+- The end state is self-hosting: the compiler and the whole toolchain are written in Bux.
+- The Rust compiler is only the bootstrap; no Rust remains once Bux can compile itself.
 - The self-hosted toolchain preferably ships as native binaries via GraalVM native-image.
 - **Formatting is a compile error.** Source that is not in canonical form does not compile.
 - **No anonymous functions.** Every function has a name; functions are first-class by name.
@@ -20,6 +20,8 @@ This file is that anchor; consistency is the throughline, and the bar is Code He
 - `++`, `--`, `-=`, `*=`, `/=`, `%=`, and a ternary `?:` are named non-goals, not open questions.
 - `+=` is the one shorthand there is, and it is the ceiling rather than the first of a set.
 - Plain loops are the default idiom; higher-order functions are library, not a second paradigm.
+- **The standard library is small, and the fewer methods a type has, the better.**
+- A method lands only where a `for` loop cannot write it; a map has no iterator.
 - **Non-goals** — never implement, suggest, or plan: ownership, borrowing, lifetimes, inheritance.
 - Likewise null, checked exceptions, macros, implicit runtime magic, or Java's type system.
 - **Concurrency is Go's**: spawn, channels, blocking calls; no async/await, no function colouring.
@@ -28,9 +30,22 @@ This file is that anchor; consistency is the throughline, and the bar is Code He
 - Equality is opt-in: `==` needs `Eq`, which a type derives, and compares what a value holds.
 - **No built-in type is special.** `Int`, `Bool`, and `String` are types like any declared one.
 - Boxing and the primitive/reference split live inside the compiler; no program can observe them.
+- **No special cases.** A rule holds for every type, function, and operator alike, or it is no rule.
+- A prelude type is one a library could have declared; what `Int` can do, a declared type can do.
+- An operator is a function with other syntax; `main` is a function whose return type is `()`.
+- **Nothing panics, ever.** No operation is partial: `17 / 0` is `None`, and there is no `unwrap`.
+- Rust panics on a zero divisor and calls that a design; Bux does not, and the type says so.
+- The compiler is held to the same: a program it cannot compile gets a diagnostic, never a crash.
 - **Every type is a Valhalla value class** from day one: identity-free, null-free, equal by state.
 - Version 0.1 is `docs/implementation.md` section 9; nothing from a later version lands earlier.
 - **JDK 28 or later is targeted**, early access until it ships; no older class-file version, ever.
+
+## Name
+- **The language is Bux.** Lumen is the old name, and it survives only where nothing has moved yet.
+- Every new name is the new one: a `bux` binary, `bux-*` crates, `.bx` sources, "Bux" in prose.
+- There is no big-bang rename; a task moves what it touches, Boy Scout style, and stops there.
+- A rename that spans the tree, such as a crate, the binary, or the extension, is its own item.
+- Such an item lives in `TODOS.md` like any other, and lands whole so the tooling never disagrees.
 
 ## Agent TL;DR
 - **Code Health is authoritative** — the single source of truth for maintainability.

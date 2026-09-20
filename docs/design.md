@@ -126,6 +126,8 @@ In particular, the language should initially avoid:
 * async/await, or any other function colouring
 * identity, or an equality every type has whether or not it asked for one
 * boxing a program can observe, or a built-in type that is special
+* a special case: a type, an operator, or a function the rules exempt
+* a panic, a trap, or any other operation without an answer for some of its input
 
 ### The JVM is a target, not a model
 
@@ -151,6 +153,23 @@ shape Lumen is built around, and section 8 makes it `Add` exactly as `+` is.
 It is the ceiling rather than the first of a set: a second shorthand lands only where it removes a
 class of mistake, never where it removes typing.
 `docs/principles.md` question 9 is what any proposal for one answers.
+
+### Nothing is a special case
+
+A rule of this document holds for every type, every function, and every operator, or it is no rule.
+A prelude type is a type a library could have declared, and `Int` has nothing a declared type lacks.
+An operator is a function with other syntax, and section 5 gives it no exemption from its type.
+`main` is a function like any other: it declares what it gives back, and section 11 makes that `()`.
+A feature that works only because one name is treated apart from the rest is reshaped or refused.
+`docs/principles.md` question 10 asks it of every proposal.
+
+### Nothing panics
+
+An operation with no answer for some of its input says so in its type, and never at runtime.
+Rust panics on `x / 0` and calls the panic a design; Lumen does not, because a crash is an untyped
+answer.
+There is no panic, no trap, no exception, and no `unwrap`: no runtime failure a program can reach.
+Section 5 states the rule, and `docs/principles.md` question 11 asks it of every proposal.
 
 The guiding principle is:
 
@@ -329,6 +348,8 @@ A `None` met where the function gives back a `Result` is refused, because it nam
 An operation without an answer for some of its input says so in its type rather than at runtime.
 That holds for an operator as much as for a function.
 An operator is a function with other syntax, and syntax buys no exemption from the type.
+There is no panic and no trap, so there is no runtime failure for a program to catch or to observe.
+Rust panics on `x / 0` and calls the panic a design; Lumen refuses the trade, and the type answers.
 
 A module the compiler supplies may sit on a JVM operation that throws, and gives back a `Result`.
 The throw is caught where the module is built, and never reaches the program.
@@ -781,6 +802,8 @@ fn main() -> () {
 ```
 
 `main` takes nothing and gives back nothing: a program is run for what it does.
+It is a function like any other, and `-> ()` is its return type written, not a form it is spared.
+The JVM starts at a `main(String[])` of its own; the compiler writes that, and no program sees it.
 A module declaring it can be run; one that does not is a library, and running it is refused.
 
 A run is over when `main` is.
@@ -969,7 +992,7 @@ It is a JVM interface, and the JVM is a target, not a model.
 
 ## 15. Concurrency
 
-Lumen adopts Go's concurrency model whole: spawned functions, channels, and blocking calls.
+Lumen adopts Go's spawned functions, channels, and blocking calls, and refuses Go's locks.
 There is no **`async`/`await`** and no function colouring.
 A function that blocks is an ordinary function, called like any other.
 There is one kind of function, and no caller ever has to ask which kind it holds.
@@ -997,11 +1020,45 @@ event := events.receive()
 
 `spawn` takes a named function call, never an anonymous block.
 
+**A channel is the only way two spawned functions communicate.**
+There is no mutex, no atomic, no condition variable, and nothing to build one from.
+This is not a rule the compiler polices but a consequence of the value model.
+A lock protects shared mutable state, and Lumen has nothing to share.
+A value has no identity, so two functions never hold the same one.
+A record is rebuilt rather than reached into, as section 10 says.
+A named function cannot capture a local, and `spawn` passes its arguments by value.
+The one mutable thing, a `var` binding, is therefore never visible from another spawned function.
+There is no mutable global state, which section 14 lists as an effect for the same reason.
+A sender never knows its receivers, and no value is ever shared between spawned functions.
+
+**A slow receiver makes the sender wait.**
+That is the whole of backpressure, and every channel gives the same answer.
+A shared counter, cache, or pool is a spawned function that owns the state and receives requests.
+That is slower than a lock on a hot path, and the trade is accepted.
+A lock-free structure is a JVM library reached through interop, never something Lumen writes.
+
+Channels alone are not enough; three things arrive with them, or programs reinvent locks badly.
+A `select` chooses over several channels; a timeout, a cancellation, and a fan-in are all `select`.
+A channel closes, and `for … in` over it ends when it does, so a producer can say it is finished.
+Cancellation is a channel that closes; the spec names the idiom rather than adding a primitive.
+These are 0.3 work, and each gets a spec under `docs/specs/` before it lands.
+
+**Fan-out is a library type, not a primitive.**
+A topic delivers every message to every subscriber.
+It is a spawned owner holding subscriber channels, written in Lumen when a program needs it.
+A topic chooses what a slow subscriber sees: the sender waits, or a bounded buffer drops the oldest.
+The dropping topic reports the loss as a typed result on receive, never silently.
+A latest-value cell is a third type, not a mode on the first; a policy knob is refused.
+A subscription is a scoped resource, released as section 14 releases a file, and yields a channel.
+Nothing has identity, so there is no other way to unsubscribe.
+The derivation runs one way: a worker pool takes each job exactly once, which fan-out cannot say.
+That is why the channel is underneath and the topic on top.
+
+Distributed messaging is a JVM library a program consumes, never part of the language or runtime.
+A transport that shares the channel's receive shape gets a library wrapper once a program needs one.
+
 The underlying implementation can use JVM threads and, where appropriate, virtual threads.
-
 The language should hide most JVM concurrency boilerplate.
-
-Eventually, channel types and concurrency primitives may gain additional static guarantees.
 
 
 ---

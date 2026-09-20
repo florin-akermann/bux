@@ -76,6 +76,31 @@ are all refused: each one writes what `a = a + 1` and an `if` already write plai
 Lumen is built around, and it is the ceiling rather than the first of a set.
 A new shorthand lands only where it removes a class of mistake, never where it only removes typing.
 
+### 10. Is anything exempt from it?
+
+A rule that holds for every type, function, and operator but one is a special case, and is refused.
+A prelude type is a type a library could have declared, and question 8 holds it to that.
+An operator is a function with other syntax, and `docs/design.md` section 5 gives it no exemption.
+`main` is a function like any other: it declares what it gives back, and that is `()`.
+A feature that needs one name, type, or operator treated apart from the rest is reshaped until it
+does not, or refused.
+
+### 11. Does it have an answer for every input?
+
+An operation with no answer for some of its input says so in its type, never at runtime.
+Rust panics on `x / 0` and calls the panic a design; Lumen does not, so `17 / 0` is `None`.
+There is no panic, no exception, no `unwrap`, and no runtime failure a program can reach.
+A feature that would crash on some input is refused until its type carries that case instead.
+`docs/design.md` section 5 states the rule, and `docs/specs/arithmetic.md` works it through.
+
+### 12. Could a `for` loop write it instead?
+
+The standard library is small, and the fewer methods a type has, the better.
+A method lands only where a plain loop over what the type already exposes cannot write it.
+A map has no iterator, and no type has a `for_each`: the `for` loop is what Lumen is built around.
+A method that only saves the reader a loop is refused, the same as sugar under question 9.
+`docs/implementation.md` section 4 states the library's scope.
+
 ---
 
 ## 2. The central trade-off

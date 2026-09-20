@@ -112,7 +112,11 @@ Java interop should be powerful but should not determine the design of the langu
 
 ## 4. Standard library
 
-The standard library should be relatively small and practical.
+The standard library is small, and its data structures are smaller still.
+The fewer methods a type has, the better; a method earns its place, and a `for` loop does the rest.
+A method lands only where a plain loop over what the type already exposes cannot write it.
+A map has no iterator, and the same holds for every convenience a loop already writes.
+`docs/principles.md` question 12 is what a proposed method answers.
 
 Initial areas:
 
@@ -361,8 +365,7 @@ Add:
 
 Add:
 
-* concurrency
-* channels
+* concurrency: `spawn`, channels, `select`, close, and the cancellation idiom
 * JVM virtual-thread integration
 * HTTP
 * JSON
