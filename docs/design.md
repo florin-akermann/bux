@@ -317,6 +317,8 @@ An operator with an answer for every input keeps its plain type, which is why `I
 Wrapping on overflow is a defined answer, and there is no whole number equal to `x / 0`.
 An operator is a trait method, and section 8 says so; the rule binds every instance alike.
 A type whose `/` has an answer for every divisor may give a plain result, and `Int`'s does not.
+Arithmetic over `Int` divides through `?`, one per division, and reads as arithmetic.
+`or` is for the author who means a fallback, and `match` for the zero divisor with something to say.
 
 Which of the two an operation reaches for is settled by what the failure has to say.
 `Option` is for the case that explains itself, where the absence is the whole story.
