@@ -6,19 +6,6 @@
 
 ## Open
 
-## 🟢 Item 045: The prelude and the standard library are Lumen source
-**Depends on:** Item 033, Item 044 — the operator instances need a home; a library needs names.
-`crates/resolver/src/prelude.rs` says the prelude becomes Lumen source once a module can be loaded.
-A module loads since Item 039, so the prelude's types, constructors, and `or` move to `.lm`.
-The `Int` and `String` instances of the operator traits, and of `Eq`, live in the same source.
-`List` gains its everyday functions in Lumen: `length`, `push`, `contains`, `map`, and `filter`.
-`String` gains `length`, `contains`, `split`, and `join`, written against what `+` already gives.
-The compiler finds the library beside itself, so no build and no test needs the network.
-[045][a] - Spec first in `docs/specs/library.md`: where the source is, how it is found, its parts.
-[045][b] - Loading treats the library as modules, test-first; the prelude is loaded unasked.
-[045][c] - `prelude.rs` and the checker's built-in instances are removed; every test still passes.
-[045][d] - `List` and `String` functions, each with an executable example in `tests/spec/library/`.
-
 ## 🔴 Item 046: `Map<K, V>` and `Set<T>` are library types
 **Depends on:** Item 043, Item 053 — a key needs `Eq` and `Hash`; a library type is generic.
 `docs/implementation.md` section 4 names collections; version 0.1 has only `List`.
