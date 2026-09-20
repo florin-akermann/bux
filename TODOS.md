@@ -6,18 +6,6 @@
 
 ## Open
 
-## 🟢 Item 033: Every operator is a trait method
-**Depends on:** Item 041 — an instance needs a trait to be an instance of.
-`docs/design.md` section 8 makes `+ - * / %`, prefix `-`, and the comparisons trait methods.
-The type checker wires them to `Int` and `String` by name today, so no declared type can own one.
-A declared `Int32` gets `a + b` by writing an `Add` instance, as `Int` gets it from the library.
-`==` already works this way, and the other operators follow it.
-`&&`, `||`, and `!` stay `Bool`'s alone, because they short-circuit and an instance cannot.
-[033][a] - Spec first in `docs/specs/operators.md`: each trait, its method, and the `Int` instances.
-[033][b] - The library ships the `Int` and `String` instances; the checker resolves through them.
-[033][c] - The hard-wired `Int` cases in inference are removed, test-first; `Int` tests still pass.
-[033][d] - Executable examples under `tests/spec/operators/`: a declared type owning `+`, `<`, `/`.
-
 ## 🔴 Item 034: A literal takes the type its context expects
 **Depends on:** Item 033 — a literal is a trait method, and the operator traits land first.
 `1` is an `Int` today, at the one place inference types a literal, so `Int32` is written `Int32(1)`.
