@@ -30,7 +30,7 @@ A literal that does not fit its type is a compile error where it is written, nev
 [034][c] - The fit check at compile time, test-first; the `Int` instance accepts every literal.
 [034][d] - Executable examples under `tests/spec/literals/`: `Int32` as a literal, and a misfit.
 
-## 🔴 Item 039: A module is loaded from a file
+## 🟡 Item 039: A module is loaded from a file
 **Depends on:** nothing; version 0.1 lists basic modules in `docs/implementation.md` section 9.
 Nothing in the toolchain reads a second file yet, which `docs/specs/modules.md` states.
 `io` and `files` are supplied by the compiler, and the prelude is a list in the resolver.
