@@ -28,7 +28,7 @@ The cost is one method per instantiation and a generic body that must reach the 
 [025][d] - A test on the bytecode: an `Int` passed to a generic is carried as `long` throughout.
 [025][e] - Executable examples under `tests/spec/generics/`.
 
-## 🔴 Item 026: A record that never escapes is never allocated
+## 🟡 Item 026: A record that never escapes is never allocated
 **Depends on:** Item 022, Item 023 — splitting a value into fields is legal only without identity.
 A record built and read within one function has no reason to reach the heap.
 Without identity, the compiler may keep such a value in locals, one per field, and never `new` it.
