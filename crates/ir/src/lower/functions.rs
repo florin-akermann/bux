@@ -1,9 +1,10 @@
 //! The prelude's own functions, written out where they are called.
 //!
-//! The prelude is not Lumen source yet, so there is no class to call one on. `or` is the one
-//! that lowers, and the two branches it amounts to are written here. `todo` is the other, and
-//! nothing lowers a hole: `docs/specs/holes.md` has `lumen build` refuse every one of them
-//! before a single class file is written.
+//! The prelude is Lumen source the compiler reads rather than a module it compiles, so there is
+//! no class to call one of its functions on. `or` is the one that lowers, and the two branches
+//! it amounts to are written here. `todo` is the other, and nothing lowers a hole:
+//! `docs/specs/holes.md` has `lumen build` refuse every one of them before a class file is
+//! written.
 
 use lumen_ast::{Expr, Name, Span};
 
@@ -19,7 +20,7 @@ impl Builder<'_> {
     /// A call of a function the prelude supplies, which version 0.1 writes out where it is used.
     ///
     /// `or` is the only one that is lowered. There is no class to call it on, because the
-    /// prelude is not yet Lumen source, so the two branches it amounts to are written here
+    /// prelude is read rather than compiled, so the two branches it amounts to are written here
     /// instead. `todo` is the other, and nothing lowers a hole: `docs/specs/holes.md` has
     /// `lumen build` refuse every one of them before a single class file is written.
     pub(crate) fn supplied(

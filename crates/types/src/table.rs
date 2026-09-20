@@ -137,6 +137,11 @@ impl Table {
         self.whole_numbers.contains(&var)
     }
 
+    /// How many variables have been made, which is none where every type was written out.
+    pub(crate) const fn made(&self) -> u32 {
+        self.made
+    }
+
     /// The next variable there is, which no other place in the program has.
     fn made_up(&mut self) -> TypeVar {
         let var = TypeVar(self.made);

@@ -15,6 +15,7 @@ path = "tests/integration/main.rs"
 lumen-ast = { path = "../ast" }
 lumen-diagnostics = { path = "../diagnostics" }
 lumen-parser = { path = "../parser" }
+lumen-resolver = { path = "../resolver" }
 lumen-types = { path = "../types" }
 
 [dev-dependencies]

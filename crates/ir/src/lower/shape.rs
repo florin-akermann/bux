@@ -8,18 +8,10 @@ use std::collections::HashMap;
 
 use lumen_ast::{Item, RecordField, TypeDeclaration, TypeDefinition, TypeRef, TypeRefKind};
 use lumen_ast::{Variant, VariantPayload};
-use lumen_resolver::{DefinitionKind, Namespace, ResolvedProgram};
+use lumen_resolver::{DefinitionKind, Namespace, ResolvedProgram, prelude};
 use lumen_types::{BuiltBy, OfferedConstructor, OfferedType, Type};
 
 use crate::descriptor::{ClassName, Descriptor, MethodDescriptor};
-
-/// The types the prelude supplies, each with its variants and what each variant carries.
-///
-/// The order is the order a tag counts in, and it is the order exhaustiveness lists them in.
-const PRELUDE: [(&str, [(&str, usize); 2]); 2] = [
-    (OPTION, [(SOME, 1), (NONE, 0)]),
-    (RESULT, [(OK, 1), (ERR, 1)]),
-];
 
 /// The type a value of, or nothing, is written as, which a `?` hands a `None` back from.
 pub(crate) const OPTION: &str = "Option";
@@ -160,44 +152,7 @@ impl Shapes {
 
     fn declare(&mut self, resolved: &ResolvedProgram, declaration: &TypeDeclaration) {
         let base = self.declared(&declaration.name.text);
-        let TypeDefinition::Variants(variants) = &declaration.definition else {
-            let TypeDefinition::Record(fields) = &declaration.definition else {
-                unreachable!("a type declaration is a record or variants")
-            };
-            let carries = self.fields(resolved, fields);
-            self.records
-                .insert(declaration.name.text.clone(), declaration.name.text.clone());
-            self.declarations
-                .push(Declared::Record(declaration.name.text.clone()));
-            self.built_by.insert(
-                declaration.name.text.clone(),
-                Shape {
-                    class: base.clone(),
-                    base,
-                    tag: None,
-                    carries,
-                },
-            );
-            return;
-        };
-        let mut constructors = Vec::new();
-        for (position, variant) in variants.iter().enumerate() {
-            let carries = self.payload(resolved, variant);
-            let class = variant_class(&base, &variant.name.text);
-            let tag = i32::try_from(position).unwrap_or_default();
-            constructors.push(variant.name.text.clone());
-            self.built_by.insert(
-                variant.name.text.clone(),
-                Shape {
-                    class,
-                    base: base.clone(),
-                    tag: Some(tag),
-                    carries,
-                },
-            );
-        }
-        self.declarations
-            .push(Declared::Variants { base, constructors });
+        self.declare_as(resolved, declaration, base);
     }
 
     /// A type of another module, whose classes that module writes and this one only reaches.
@@ -256,33 +211,67 @@ impl Shapes {
             .collect()
     }
 
-    /// `Option` and `Result`, which are in scope in every module without being declared.
+    /// The prelude's own types, which are in scope in every module without being declared.
+    ///
+    /// They are laid out exactly as a module's own types are, from the same declarations, and
+    /// differ only in the package they are written in: every module reaches them, so no one
+    /// module's package could hold them.
     fn declare_prelude(&mut self) {
-        for (named, variants) in PRELUDE {
-            let base = prelude_class(named);
-            let mut constructors = Vec::new();
-            for (position, (variant, carries)) in variants.iter().enumerate() {
-                let held = (0..*carries)
-                    .map(|position| Carried {
-                        name: positional(position),
-                        of: Some(object()),
-                    })
-                    .collect();
-                let tag = i32::try_from(position).unwrap_or_default();
-                constructors.push((*variant).to_owned());
-                self.built_by.insert(
-                    (*variant).to_owned(),
-                    Shape {
-                        class: variant_class(&base, variant),
-                        base: base.clone(),
-                        tag: Some(tag),
-                        carries: held,
-                    },
-                );
-            }
-            self.declarations
-                .push(Declared::Variants { base, constructors });
+        let resolved = lumen_resolver::prelude_resolved();
+        for item in &resolved.program().items {
+            let Item::Type(declaration) = item else {
+                continue;
+            };
+            let base = prelude_class(&declaration.name.text);
+            self.declare_as(resolved, declaration, base);
         }
+    }
+
+    /// One type declaration, laid out as the class `base` and one class for each variant.
+    fn declare_as(
+        &mut self,
+        resolved: &ResolvedProgram,
+        declaration: &TypeDeclaration,
+        base: ClassName,
+    ) {
+        let TypeDefinition::Variants(variants) = &declaration.definition else {
+            let TypeDefinition::Record(fields) = &declaration.definition else {
+                unreachable!("a type declaration is a record or variants")
+            };
+            let carries = self.fields(resolved, fields);
+            self.records
+                .insert(declaration.name.text.clone(), declaration.name.text.clone());
+            self.declarations
+                .push(Declared::Record(declaration.name.text.clone()));
+            self.built_by.insert(
+                declaration.name.text.clone(),
+                Shape {
+                    class: base.clone(),
+                    base,
+                    tag: None,
+                    carries,
+                },
+            );
+            return;
+        };
+        let mut constructors = Vec::new();
+        for (position, variant) in variants.iter().enumerate() {
+            let carries = self.payload(resolved, variant);
+            let class = variant_class(&base, &variant.name.text);
+            let tag = i32::try_from(position).unwrap_or_default();
+            constructors.push(variant.name.text.clone());
+            self.built_by.insert(
+                variant.name.text.clone(),
+                Shape {
+                    class,
+                    base: base.clone(),
+                    tag: Some(tag),
+                    carries,
+                },
+            );
+        }
+        self.declarations
+            .push(Declared::Variants { base, constructors });
     }
 
     fn payload(&self, resolved: &ResolvedProgram, variant: &Variant) -> Vec<Carried> {
@@ -344,7 +333,9 @@ impl Shapes {
             "Bool" => Descriptor::Boolean,
             "String" => Descriptor::reference("java/lang/String"),
             "List" => Descriptor::reference("java/util/List"),
-            "Option" | "Result" => Descriptor::Reference(prelude_class(named)),
+            declared if prelude::declares_type(declared) => {
+                Descriptor::Reference(prelude_class(declared))
+            }
             declared => Descriptor::Reference(self.declared(declared)),
         }
     }

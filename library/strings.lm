@@ -1,0 +1,21 @@
+// The readings of a `String` a `for` loop would otherwise write the same way twice.
+//
+// `docs/specs/library.md` states the test a function here is held to: it is written in Lumen over
+// what the language already gives, and it lands only where a reader would write the loop twice.
+/// The parts run together, with `between` written between each pair of them.
+// example: join(["a", "b"], "-") == "a-b"
+fn join(parts: List<String>, between: String) -> String {
+    var joined = ""
+    var first = true
+    for part in parts {
+        if first {
+            joined += part
+        }
+        if !first {
+            joined += between
+            joined += part
+        }
+        first = false
+    }
+    joined
+}

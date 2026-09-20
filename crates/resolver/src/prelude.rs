@@ -9,9 +9,6 @@ use std::sync::LazyLock;
 
 use lumen_ast::{Item, Program};
 
-/// The prelude as the compiler carries it, which `docs/specs/library.md` states.
-const SOURCE: &str = include_str!("../../../library/prelude.lm");
-
 /// The trait `==` is, which `docs/specs/traits.md` writes out.
 pub const EQ: &str = "Eq";
 /// The method of that trait, which is what `==` is written as.
@@ -121,6 +118,13 @@ pub(crate) fn types() -> Vec<&'static str> {
 /// against that scope: every name it writes would already be in it.
 pub(crate) fn held() -> Vec<&'static str> {
     HELD.iter().map(|(name, _)| *name).collect()
+}
+
+/// Whether the prelude declares a type of this name, which is what puts it in the prelude's own
+/// package rather than a module's.
+#[must_use]
+pub fn declares_type(name: &str) -> bool {
+    declared_types().any(|declaration| declaration.name.text == name)
 }
 
 /// The constructors in scope everywhere, which are the variants of the types the prelude declares.
@@ -268,7 +272,9 @@ fn variants_of(definition: &'static lumen_ast::TypeDefinition) -> Vec<&'static s
 /// `docs/specs/library.md` states; the compiler's own tests are where it is caught.
 fn carried() -> &'static Program {
     static PARSED: LazyLock<Program> = LazyLock::new(|| {
-        lumen_parser::parse(SOURCE).expect("the library the compiler carries parses")
+        let source = crate::library::source_of(crate::library::PRELUDE)
+            .expect("the library the compiler carries holds the prelude");
+        lumen_parser::parse(source).expect("the library the compiler carries parses")
     });
     &PARSED
 }

@@ -1,9 +1,9 @@
 //! The modules the compiler declares, which nothing loads from source yet.
 //!
-//! `docs/specs/io.md` states what each one holds. They are declared here for the same reason the
-//! prelude is declared in the resolver: a module cannot be loaded from a file yet, and a program
-//! that can show nobody what it worked out is not much of a program. They become ordinary Lumen
-//! source once a module can be loaded, and nothing a program writes changes when they do.
+//! `docs/specs/io.md` states what each one holds. The library is Lumen source already, which
+//! `docs/specs/library.md` states, and these two are not: each reaches a JVM method the language
+//! cannot yet name. They become library modules over the `extern` declaration that names one, and
+//! nothing a program writes changes when they do.
 
 use crate::types::Type;
 

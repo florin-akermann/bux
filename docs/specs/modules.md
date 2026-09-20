@@ -108,24 +108,30 @@ Every module has these names in scope without importing anything:
 
 ```text
 types:        Bool  Int  List  Option  Result  String
-traits:       Add  Div  Eq  IntegerLiteral  Mul  Neg  Ord  Rem  Sub
+traits:       Add  Div  Eq  Hash  IntegerLiteral  Mul  Neg  Ord  Rem  Show  Sub
 constructors: Err  None  Ok  Some
 functions:    or  todo
-methods:      add  divide  from_literal  highest  is_equal  is_less  lowest  multiply
-              negate  remainder  subtract
+methods:      add  divide  from_literal  hashed  highest  is_equal  is_less  lowest
+              multiply  negate  remainder  shown  subtract
 ```
+
+They are read out of `library/prelude.lm` rather than tabulated in the compiler, which
+`docs/specs/library.md` states.
 
 `or(maybe, fallback)` is what an `Option` holds, or the fallback when it holds nothing, and
 `docs/specs/arithmetic.md` says why.
 `todo(reason)` is a hole, which `docs/specs/holes.md` states.
 `Eq` is the trait `==` is, with the instances `docs/specs/traits.md` names.
+`Hash` and `Show` are what a value opts into a hash and into text with, which the same spec
+states.
 `IntegerLiteral` is the trait a whole-number literal is, which `docs/specs/literals.md` states.
 The other seven traits are the ones the other operators are, which `docs/specs/operators.md`
 names along with the instances the compiler supplies for each.
 
-They are ordinary declarations of a module the compiler supplies, not keywords.
-Loading does not reach the prelude: a prelude name is written bare, and an import brings a module
+They are ordinary declarations of a module the compiler carries, not keywords.
+An import never reaches the prelude: a prelude name is written bare, and an import brings a module
 into scope under its name rather than the names inside it.
+Another module of the library is imported as any module is, which `docs/specs/library.md` states.
 
 `Option` declares `Some` and then `None`, and `Result` declares `Ok` and then `Err`.
 That order is the one a `match` lists its arms in, which `docs/specs/exhaustiveness.md` requires,

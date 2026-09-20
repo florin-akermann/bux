@@ -9,6 +9,7 @@ mod example_program;
 mod examples;
 mod formatting;
 mod importing;
+mod library;
 mod running;
 mod surface;
 mod testing;

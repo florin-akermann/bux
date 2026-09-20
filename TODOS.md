@@ -20,7 +20,7 @@ The compiler finds the library beside itself, so no build and no test needs the 
 [045][d] - `List` and `String` functions, each with an executable example in `tests/spec/library/`.
 
 ## 🔴 Item 046: `Map<K, V>` and `Set<T>` are library types
-**Depends on:** Item 043, Item 045 — a key needs `Eq` and `Hash`; a library type needs a library.
+**Depends on:** Item 043, Item 053 — a key needs `Eq` and `Hash`; a library type is generic.
 `docs/implementation.md` section 4 names collections; version 0.1 has only `List`.
 `Map<K, V>` and `Set<T>` are declared in Lumen, and `K: Hash<K>` says what a key must be.
 Both are values: two maps holding the same entries are one value, and neither has identity.
@@ -44,6 +44,7 @@ A Java object a Lumen program holds is a value it cannot compare, hash, or print
 [048][c] - Lowering emits the call and the two mappings, test-first, asserted on the instructions.
 [048][d] - `io` and `files` in Lumen; `docs/specs/io.md` loses the "supplied module" paragraph.
 [048][e] - Executable examples under `tests/spec/interop/`, skipped by name when there is no JDK.
+[048][f] - `Show<Bool|Int|String>` and `Hash<String>` move to `library/prelude.lm` over `extern`.
 
 ## 🔴 Item 049: A package is a directory of modules with a name and a version
 **Depends on:** Item 044, Item 045 — a package offers types; the library is the first package.
@@ -82,3 +83,30 @@ Item 048 lands the declaration that makes such a reference writable, so this ite
 [052][a] - `docs/design.md` section 14 names a foreign reference among what the check refuses.
 [052][b] - Section 15 cites the clause where it argues nothing is shared, so the two sections agree.
 [052][c] - Item 048's `docs/specs/interop.md` points at the clause rather than restating the rule.
+
+## 🔴 Item 053: A generic function is reachable through a module
+**Depends on:** Item 045 — the library is the first module whose functions a program cannot call.
+`docs/specs/codegen.md` writes a generic once per set of types a use settles it at.
+The module declaring it writes the sets its own body reaches, so an importer's set is never there.
+`L0417` refuses the call rather than writing bytecode nothing would load, which is the right stop.
+It is also why `library/strings.lm` holds one function and `list` holds none: both are generic.
+The answer is to write the set the importing module settles, in the module that settles it.
+That is what a specialisation already is; what is missing is reaching another module's body.
+[053][a] - `docs/specs/codegen.md` states where a specialisation of another module's generic goes.
+[053][b] - Lowering writes it, test-first, asserted on the instructions and the class it lands in.
+[053][c] - `L0417` is retired, and `docs/specs/diagnostics.md` records the code as spent.
+[053][d] - `library/list.lm` gains `length` and `has_value`, with examples in `tests/spec/library/`.
+
+## 🔴 Item 054: The prelude's own bodies are read by the compiler
+**Depends on:** Item 045 — the prelude is Lumen source, and its bodies are the part nothing reads.
+`docs/specs/library.md` says version 0.1 reads an instance head and never the body below it.
+Every use of `Add<Int>` is the JVM instruction, so `fn add(one, other) { one - other }` is unseen.
+The library is what says in Lumen what an instruction does, and an unread claim drifts from it.
+Inference runs over the prelude as it stands and turns up one refusal, which is a rule to settle.
+`hashed(value: Bool) -> Int` is a `Bool` parameter in a signature that is not all `Bool`.
+An instance has no say in its own signature: the trait it answers for is what decides it.
+So the rule is about a signature an author designs, and an instance method is not one of those.
+[054][a] - `docs/design.md` says the `Bool`-parameter rule holds where an author chose the types.
+[054][b] - Inference exempts an instance method, test-first, with the trait's signature as proof.
+[054][c] - The prelude is inferred where it is read, and a refusal in it fails the compiler's tests.
+[054][d] - A property: every instance body the prelude writes has the type its trait gives it.

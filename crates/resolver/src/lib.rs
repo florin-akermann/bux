@@ -7,6 +7,7 @@
 
 mod definition;
 mod error;
+pub mod library;
 mod order;
 pub mod prelude;
 mod resolve;

@@ -3,7 +3,6 @@
 // `docs/specs/library.md` says where this file lives and why it is Lumen rather than a table.
 // The compiler carries it, compiles it before every other module, and puts what it declares in
 // scope unasked.
-
 // example: or(Some(1), 0) == 1
 fn or<T>(maybe: Option<T>, fallback: T) -> T {
     match maybe {
@@ -161,9 +160,7 @@ trait Neg<T> {
 
 trait IntegerLiteral<T> {
     fn lowest() -> Int
-
     fn highest() -> Int
-
     fn from_literal(literal: Int) -> T
 }
 

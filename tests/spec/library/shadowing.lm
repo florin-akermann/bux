@@ -1,0 +1,13 @@
+// expect-run
+// > a-b
+// `strings.lm` sits beside this file and declares a `join` of its own. The import reaches the
+// library's all the same, because `docs/specs/library.md` says the compiler holds that source
+// and looks beside no file for it.
+import io
+
+import strings
+
+fn main() -> () {
+    io.println(strings.join(["a", "b"], "-"))
+    ()
+}

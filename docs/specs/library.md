@@ -30,17 +30,17 @@ That is also what makes every build and every test work with no network and no f
 
 ## How it is found
 
-The prelude is compiled before the module a command names, and before every module that one
-reaches.
-Nothing imports it: its names are in scope in every module, which `docs/specs/modules.md` states.
+The prelude is read before the module a command names, and before every module that one reaches.
+Nothing imports it: its names are in scope in every module, which `docs/specs/modules.md` states,
+so an `import prelude` names no module and is refused like any other name nothing holds.
 
 Another library module is reached by importing it, exactly as `io` is.
-`import list` brings `list` into scope under its own name, and `list.length(items)` is a call of
-the function `length` that module declares.
+`import strings` brings `strings` into scope under its own name, and `strings.join(parts, "-")`
+is a call of the function `join` that module declares.
 An import of a library module looks beside no file: the compiler holds the source, so a file of
 that name beside the importing one is not consulted and does not shadow it.
 
-A module a program writes may not be called `prelude`, `list`, or `strings`.
+Naming a module of a program `prelude` or `strings` therefore buys nothing.
 The name is taken, as `io` and `files` are taken, and an import of one is the library's.
 
 ## What the compiler still holds
@@ -56,10 +56,13 @@ Everything else the prelude used to supply is library source:
 ```text
 types:        Option  Result
 constructors: Some  None  Ok  Err
-functions:    or  todo
+functions:    or
 traits:       Add  Div  Eq  Hash  IntegerLiteral  Mul  Neg  Ord  Rem  Show  Sub
 instances:    each of those traits for the types of it the library writes
 ```
+
+`todo` stays the compiler's, because a hole has no body for the library to write:
+`docs/specs/holes.md` has `lumen build` refuse every one of them before a class file is written.
 
 ## An operator over a type the compiler holds
 
@@ -75,43 +78,57 @@ instance Add<Int> {
 
 That body is not a call of itself.
 An operator over `Bool`, `Int`, or `String` is the JVM instruction for it wherever it is written,
-which is what `docs/specs/codegen.md` already says, and the library's instance is the one place
-that instruction is wrapped in a method.
-Generic code reaching `Add` through a constraint calls that method; everything else is the
-instruction, and no program can tell which it got.
+which is what `docs/specs/codegen.md` already says, and generic code reaching `Add` through a
+constraint is written once per type it is used at and gets the same instruction.
+No program can tell which it got, because there is only one thing to get.
 
 The same holds for `Eq`, `Ord`, `Hash`, and `Show` over those three types, and for
 `IntegerLiteral<Int>`, whose `from_literal` gives back the whole number it is handed.
+
+What the compiler reads of one of those instances is its head, which says the trait has an
+instance for the type.
+Version 0.1 does not read the body: nothing calls it, because every use is the instruction.
+The body is there because an instance writes one, and because the library is what says in Lumen
+what the instruction does.
 
 ## The library modules
 
 `prelude` is every name above, and nothing else.
 
-`list` and `strings` hold what a `for` loop cannot write.
+`strings` holds what a `for` loop writes the same way twice.
 
 ```text
-list:    length  contains
 strings: join
 ```
 
-`length` counts what a list holds, and `contains` asks whether it holds a value, which needs
-`Eq<T>` and says so.
-`join` runs the parts of a `List<String>` together.
+`join` runs the parts of a `List<String>` together, with a separator between each pair.
 
-Each of the three is written in Lumen, over what the language already gives: a `for` loop, `==`,
-and `+`.
+It is written in Lumen, over what the language already gives: a `for` loop, `+`, and `var`.
 That is the test a library function is held to.
 It lands in the library rather than in the compiler exactly when Lumen can write it, and it lands
 at all only when a reader would otherwise write the same loop twice.
 
-`list.length` and `strings.length` are two names in two modules, which is why neither is in the
-prelude: one name has one definition, and a prelude holding both would break that.
+Were `strings` to gain a `length`, `list` would have one too, and neither could be a prelude name:
+one name has one definition, and a prelude holding both would break that.
 
 ## What is not here yet
+
+A library function that is generic is written but unreachable, so version 0.1 ships none.
+`length` and `has_value` over a `List<T>` are the two that are wanted, and `L0417` refuses a call
+of either: a generic function is written once per set of types it is used at, and the module
+declaring it writes the sets its own body reaches rather than an importer's.
+They land with the item that makes a generic reachable through a module.
 
 `push`, `split`, and the length of a string each need a JVM method the language cannot yet name.
 `docs/implementation.md` section 10's `extern` declaration is what names one, and they land with
 it rather than as a compiler-supplied table in the meantime.
+
+The prelude's instance bodies are read by a person rather than by the compiler, so one could say
+something other than the instruction it stands for and nothing would notice.
+Reading them is a whole pass over the prelude, and it turns up a rule an instance method cannot
+keep: `hashed(value: Bool) -> Int` is a `Bool` parameter in a signature that is not all `Bool`,
+which `docs/specs/types.md` refuses, and an instance has no say in its own signature.
+The rule and the pass land together, and neither lands here.
 
 `map` and `filter` need a parameter whose type is a function, which the grammar of
 `docs/specs/grammar.md` does not write.
@@ -120,9 +137,10 @@ They also fail the test above twice over: a `for` loop writes each of them in on
 
 ## The errors
 
-| code    | what it refuses                                                     |
-| ------- | ------------------------------------------------------------------- |
+| code    | what it refuses                                                      |
+| ------- | -------------------------------------------------------------------- |
 | `L0306` | an import names a module neither the library nor a file beside holds |
+| `L0417` | a call of a library function that is generic, reached through its module |
 
 A refusal inside the library is the compiler's own failure and not the program's.
 The library is compiled with every check a program is compiled with, and a library that does not
@@ -132,6 +150,11 @@ compile fails the compiler's own tests before it reaches anyone.
 
 These hold and are checked with property-based tests:
 
-1. Every library module compiles, and is in canonical form.
+1. Every library module is in canonical form, and every one a program may import compiles.
 2. A program that writes no import sees every prelude name and no library module's name.
 3. The prelude's declarations are the same whichever module asks for them.
+
+The prelude is not among the modules of property 1 that compile on their own.
+Its own names are in scope in every module, so a compiler reading it as a module would refuse
+every declaration in it as a name already in scope.
+It is read against what the JVM holds and nothing else, which is the one scope it fits.

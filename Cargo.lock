@@ -539,6 +539,7 @@ dependencies = [
  "lumen-ast",
  "lumen-diagnostics",
  "lumen-parser",
+ "lumen-resolver",
  "lumen-types",
 ]
 

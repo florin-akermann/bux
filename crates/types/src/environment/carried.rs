@@ -65,25 +65,38 @@ impl Environment {
     /// The prelude's declarations a module reaches, which is every one it can write the name of.
     ///
     /// An instance's methods are not among them: a module reaches an instance by asking for the
-    /// trait at a type rather than by naming the body that answers, and the body is checked where
-    /// the prelude itself is compiled. Filing it here would file it under the trait method's own
-    /// name, which is the name it answers for.
+    /// trait at a type rather than by naming the body that answers, and filing one here would
+    /// file it under the trait method's own name, which is the name it answers for. What each of
+    /// those bodies amounts to is the JVM instruction for it, which `docs/specs/library.md`
+    /// states along with why version 0.1 does not read them.
     ///
     /// # Errors
     ///
     /// Returns the first declaration that does not hold together.
+    ///
+    /// # Panics
+    ///
+    /// Panics where the prelude leaves a type to be inferred. A module is inferred against a
+    /// table of its own, and a variable made here would be a variable that table hands out
+    /// again, so the prelude writes every type it declares rather than leaving one open.
     fn declare_reachable(&mut self, resolved: &ResolvedProgram) -> Result<(), TypeError> {
+        let mut table = Table::default();
         for item in &resolved.program().items {
             match item {
                 Item::Type(declaration) => self.declare_type(resolved, declaration)?,
                 Item::Function(function) => {
-                    self.declare_function(resolved, function, &mut Table::default())?;
+                    self.declare_function(resolved, function, &mut table)?;
                 }
                 Item::Instance(declaration) => self.note_instance(resolved, declaration)?,
                 Item::Derive(declaration) => self.declare_derive(resolved, declaration)?,
                 Item::Import(_) | Item::Trait(_) => {}
             }
         }
+        assert_eq!(
+            table.made(),
+            0,
+            "the prelude writes out the type of everything it declares"
+        );
         Ok(())
     }
 
@@ -109,6 +122,11 @@ impl Environment {
 /// The prelude writes every one of these signatures itself, so this reads the declaration rather
 /// than restating it: `docs/specs/traits.md` and `docs/specs/operators.md` are what they say, and
 /// `library/prelude.lm` is where they are written down.
+///
+/// It is asked only once the prelude has been read: a derive is what asks, and reading the prelude
+/// declares a derive without reading one. Asking while the prelude is still being read would ask
+/// for what is being worked out, which is why `declare_reachable` records a derive and checks
+/// none.
 ///
 /// # Panics
 ///
