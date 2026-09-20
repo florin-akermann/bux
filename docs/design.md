@@ -651,6 +651,31 @@ A module declaring it can be run; one that does not is a library, and running it
 A run is over when `main` is.
 There is no exit status to write, because a program has nothing to say yet about how it went.
 
+### Every function carries an example
+
+**A function a module declares at the top level states at least one example**, or it is not built.
+
+```text
+// Divides `total` among `people`, giving back nothing where there is nobody to divide among.
+//
+// example: or(shared(total: 17, people: 5), 0) == 3
+fn shared(total: Int, people: Int) -> Option<Int> {
+    total / people
+}
+```
+
+An example is a line of the comment above the function, and it is Lumen rather than prose.
+It is an expression of type `Bool`, and `lumen test` runs every one a module states.
+
+A signature says what a function takes and gives back, and says nothing about what it does.
+Prose says that and drifts, because nothing runs prose.
+An example says it so the compiler can hold the function to it, and a stale one is a failing test.
+
+`main` is exempt: it is reached by running the module, so running the module is its example.
+`lumen check` accepts a function that states none, because a function is written before the
+example over it can compile.
+`docs/specs/doc-examples.md` is the specification.
+
 ---
 
 ## 12. Control flow

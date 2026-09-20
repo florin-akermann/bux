@@ -10,10 +10,12 @@ fn main() -> () {
     ()
 }
 
+// example: rename(from: "old", to: "new") == "oldnew"
 fn rename(from: String, to: String) -> String {
     from + to
 }
 
+// example: repeat(word: "ha", times: 3) == "hahaha"
 fn repeat(word: String, times: Int) -> String {
     var said = ""
     var left = times
@@ -25,11 +27,13 @@ fn repeat(word: String, times: Int) -> String {
 }
 
 /// The parameter types differ, so this call is written either way and is written in order here.
+// example: label("done", 1) == "done"
 fn label(text: String, count: Int) -> String {
     text
 }
 
 /// A type parameter counts as a type, so `pair` repeats one and every call of it names them.
+// example: pair(first: 1, second: 2) == 1
 fn pair<T>(first: T, second: T) -> T {
     first
 }

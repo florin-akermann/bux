@@ -5,6 +5,7 @@ fn main() -> () {
     ()
 }
 
+// example: open("notes.txt", ReadOnly) == "notes.txt"
 fn open(path: String, mode: Mode) -> String {
     match mode {
         ReadOnly => path

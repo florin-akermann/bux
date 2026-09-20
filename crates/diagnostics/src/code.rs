@@ -120,6 +120,14 @@ catalogue! {
     ArmOutOfOrder => "L0501",
     /// A hole is still in the program, and a hole has nothing to compile.
     HoleBuilt => "L0600",
+    /// A function a module declares at the top level states no example.
+    NoExample => "L0601",
+    /// An example is written where nothing carries one.
+    ExampleDocumentsNothing => "L0602",
+    /// An example a module states did not hold when it was run.
+    ExampleDoesNotHold => "L0603",
+    /// A run of the examples reaches a module whose name the module under test declares.
+    ExampleRunReachesTheName => "L0604",
 }
 
 impl Code {

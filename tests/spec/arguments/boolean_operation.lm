@@ -8,11 +8,13 @@ fn main() -> () {
 }
 
 /// Every parameter and the result is `Bool`, so these are operands rather than choices.
+// example: is_implied(first: true, second: false) == false
 fn is_implied(first: Bool, second: Bool) -> Bool {
     !first || second
 }
 
 /// The carve-out is about the signature, so a repeated type still asks the call for names.
+// example: is_both(left: true, right: false) == false
 fn is_both(left: Bool, right: Bool) -> Bool {
     left && right
 }

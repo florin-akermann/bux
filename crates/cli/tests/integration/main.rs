@@ -10,4 +10,5 @@ mod examples;
 mod formatting;
 mod running;
 mod surface;
+mod testing;
 mod version;

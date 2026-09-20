@@ -16,14 +16,18 @@ fn main() -> () {
     io.println(nothing(claim: "17 % 0 is None", answer: leftover(of: 17, by: 0)))
 }
 
+// example: or(divided(of: 17, by: 5), 0) == 3
+// example: or(divided(of: 17, by: 0), 0) == 0
 fn divided(of: Int, by: Int) -> Option<Int> {
     of / by
 }
 
+// example: or(leftover(of: 17, by: 5), 0) == 2
 fn leftover(of: Int, by: Int) -> Option<Int> {
     of % by
 }
 
+// example: answered(claim: "17 / 5 is Some(3)", answer: Some(3), wanted: 3) == "17 / 5 is Some(3)"
 fn answered(claim: String, answer: Option<Int>, wanted: Int) -> String {
     match answer {
         Some(held) => held_as(claim: claim, held: held, wanted: wanted)
@@ -31,6 +35,7 @@ fn answered(claim: String, answer: Option<Int>, wanted: Int) -> String {
     }
 }
 
+// example: held_as(claim: "it holds", held: 3, wanted: 3) == "it holds"
 fn held_as(claim: String, held: Int, wanted: Int) -> String {
     if held == wanted {
         claim
@@ -39,6 +44,7 @@ fn held_as(claim: String, held: Int, wanted: Int) -> String {
     }
 }
 
+// example: nothing(claim: "17 / 0 is None", answer: None) == "17 / 0 is None"
 fn nothing(claim: String, answer: Option<Int>) -> String {
     match answer {
         Some(held) => "an answer where " + claim

@@ -44,6 +44,28 @@ impl Diagnostic {
         }
     }
 
+    /// Where this points, which is the source the message is about.
+    #[must_use]
+    pub const fn span(&self) -> Span {
+        self.span
+    }
+
+    /// The same diagnostic, said about `span` instead.
+    ///
+    /// A command that compiles source it wrote itself is refused about what it wrote, and this
+    /// is how such a refusal is put back where the author can read it.
+    ///
+    /// The edit is dropped, because an edit is a span of the source it was worked out against
+    /// and that is the source this is being moved away from.
+    #[must_use]
+    pub fn about(self, span: Span) -> Self {
+        Self {
+            span,
+            fix: None,
+            ..self
+        }
+    }
+
     /// The same diagnostic, carrying the edit that answers it.
     #[must_use]
     pub fn fixed_by(self, fix: Fix) -> Self {

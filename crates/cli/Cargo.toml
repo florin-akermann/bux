@@ -15,6 +15,7 @@ path = "tests/integration/main.rs"
 [dependencies]
 lumen-api = { path = "../api" }
 lumen-diagnostics = { path = "../diagnostics" }
+lumen-examples = { path = "../examples" }
 lumen-exhaustiveness = { path = "../exhaustiveness" }
 lumen-format = { path = "../format" }
 lumen-holes = { path = "../holes" }

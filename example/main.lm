@@ -6,30 +6,35 @@
 fn main() -> () {
     ordered := Placed(Basket { apples: 3, pears: 4 })
     each := shared(total: picked(ordered) + picked(Unplaced), people: 2)
+    most := fullest(many: each)
     ()
 }
 
 /// What each of `people` gets, which is nothing when there is nobody to give it to.
+// example: shared(total: 7, people: 2) == 3
+// example: shared(total: 7, people: 0) == 0
 fn shared(total: Int, people: Int) -> Int {
     or(total / people, 0)
 }
 
-/// The fullest of the baskets, which is how a `for` loop reads.
-///
-/// Unplaced calls this: version 0.1 has no syntax that builds a `List`, so `main` has none to
-/// hand it. It is compiled and held to canonical form like the rest of the file.
-fn fullest(baskets: List<Basket>) -> Int {
+/// The fullest of `many` baskets, each one fuller than the last, which is how a loop reads.
+// example: fullest(many: 3) == 6
+fn fullest(many: Int) -> Int {
     var most = 0
-    for basket in baskets {
-        held := picked(Placed(basket))
+    var left = many
+    for left > 0 {
+        held := picked(Placed(Basket { apples: left, pears: left }))
         if held > most {
             most = held
         }
+        left += -1
     }
     most
 }
 
 /// How much an order comes to, which is nothing at all when nothing was ordered.
+// example: picked(Placed(Basket { apples: 3, pears: 4 })) == 7
+// example: picked(Unplaced) == 0
 fn picked(order: Order) -> Int {
     match order {
         Unplaced => 0

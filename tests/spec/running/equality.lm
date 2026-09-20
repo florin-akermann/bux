@@ -8,14 +8,17 @@ fn main() -> () {
     ()
 }
 
+// example: is_same(left: 7, right: 7)
 fn is_same(left: Int, right: Int) -> Bool {
     left == right
 }
 
+// example: is_matching(left: "one", right: "one")
 fn is_matching(left: String, right: String) -> Bool {
     left == right
 }
 
+// example: is_agreeing(left: true, right: true)
 fn is_agreeing(left: Bool, right: Bool) -> Bool {
     left == right
 }

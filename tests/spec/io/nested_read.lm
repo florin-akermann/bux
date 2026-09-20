@@ -12,10 +12,12 @@ fn main() -> () {
     }
 }
 
+// example: told(result: or(wrapped(), Ok(""))) == "the read failed and said why"
 fn wrapped() -> Option<Result<String, String>> {
     Some(files.read("no-such-file.txt"))
 }
 
+// example: told(result: Ok("a line")) == "a line"
 fn told(result: Result<String, String>) -> String {
     match result {
         Ok(text) => text
@@ -23,6 +25,7 @@ fn told(result: Result<String, String>) -> String {
     }
 }
 
+// example: said(why: "") == "the read failed and said nothing"
 fn said(why: String) -> String {
     if why == "" {
         "the read failed and said nothing"

@@ -5,6 +5,7 @@ fn main() -> () {
     ()
 }
 
+// example: summed(times: 1) == 3
 fn summed(times: Int) -> Int {
     var total = 0
     var left = times

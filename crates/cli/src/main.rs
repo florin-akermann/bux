@@ -5,20 +5,22 @@
 //! `lumen-format`, and how a refusal reads belongs to `lumen-diagnostics`.
 
 use std::ffi::OsStr;
-use std::fs::{create_dir_all, read_to_string, write};
+use std::fs::{create_dir, create_dir_all, read_to_string, remove_dir_all, write};
 use std::path::{Path, PathBuf};
-use std::process::exit;
+use std::process::{self, exit};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use clap::{Parser, Subcommand};
 use lumen_diagnostics::{Code, Diagnostic, json, render};
+use lumen_examples::{Example, Refusal, Run, stated_by};
 use lumen_exhaustiveness::check as exhaustive;
 use lumen_format::format;
 use lumen_holes::{Hole, Whole};
-use lumen_ir::{is_a_program, lower};
+use lumen_ir::{Lowered, is_a_program, lower};
 use lumen_jvm::ClassFile;
 use lumen_parser::parse;
 use lumen_resolver::resolve;
-use lumen_types::{TypedProgram, check as inferred};
+use lumen_types::{TypedProgram, check as check_types};
 
 /// The Lumen compiler.
 #[derive(Parser)]
@@ -47,6 +49,9 @@ enum Command {
     /// Compile a source file and run the program it holds
     #[command(long_about = include_str!("help/run.md"))]
     Run { file: PathBuf },
+    /// Run the examples a module states about its functions
+    #[command(long_about = include_str!("help/test.md"))]
+    Test { file: PathBuf },
     /// Print the public surface of a module
     #[command(long_about = include_str!("help/api.md"))]
     Api { file: PathBuf },
@@ -66,6 +71,7 @@ fn run(command: &Command) -> Outcome {
         Command::Check { file, json } => check(file, *json),
         Command::Build { file } => build(file),
         Command::Run { file } => started(file),
+        Command::Test { file } => tested(file),
         Command::Api { file } => api(file),
         Command::Explain { code } => explain(code),
     }
@@ -118,6 +124,134 @@ fn api(path: &Path) -> Outcome {
     }
 }
 
+/// Runs every example the module in `path` states, reporting each that did not hold.
+///
+/// `docs/specs/doc-examples.md` says what an example is and what running one amounts to. A
+/// module that states none has nothing to run, which is a run that held.
+fn tested(path: &Path) -> Outcome {
+    let Some(source) = source_of(path) else {
+        return Outcome::Unusable;
+    };
+    match stated_in(&source) {
+        Err(refusals) => refuse_each(&refusals, &source, path),
+        Ok(None) => Outcome::Done,
+        Ok(Some(run)) => held(&run, &source, path),
+    }
+}
+
+/// The run that tries the examples `source` states, where it states any.
+fn stated_in(source: &str) -> Result<Option<Run>, Vec<Diagnostic>> {
+    let inferred = accepted(source).map_err(|diagnostic| vec![diagnostic])?;
+    let program = inferred.resolved().program();
+    let stated = stated_by(source, program)
+        .map_err(|refused| refused.iter().map(Refusal::diagnostic).collect::<Vec<_>>())?;
+    if stated.is_empty() {
+        return Ok(None);
+    }
+    let run =
+        Run::of_module(source, program, stated).map_err(|refused| vec![refused.diagnostic()])?;
+    Ok(Some(run))
+}
+
+/// Compiles the module `run` wrote, starts it, and reports every example that did not hold.
+///
+/// The class files go somewhere of the run's own, so nothing a build wrote is touched, and what
+/// is written there is taken away again whether the examples held or not.
+fn held(run: &Run, source: &str, path: &Path) -> Outcome {
+    let Some(module) = named_module(path) else {
+        return Outcome::Unusable;
+    };
+    let lowered = match typed(run.source())
+        .map_err(|diagnostic| vec![diagnostic])
+        .and_then(|inferred| compiled(&inferred, run.source(), &module))
+    {
+        Ok(lowered) => lowered,
+        Err(refusals) => return refuse_each(&put_back(run, refusals), source, path),
+    };
+    let Some(java) = java() else {
+        return Outcome::Unusable;
+    };
+    let Some(beside) = somewhere_of_its_own() else {
+        return Outcome::Unusable;
+    };
+    let outcome = match written(&lumen_jvm::write(&lowered), &beside) {
+        Outcome::Done => match wrote(&java, &module, &beside) {
+            Some(written) => did_not_hold(run, &written, source, path),
+            None => Outcome::Unusable,
+        },
+        refusal => refusal,
+    };
+    drop(remove_dir_all(&beside));
+    outcome
+}
+
+/// Reports every example the run wrote a line about, which is every one that did not hold.
+fn did_not_hold(run: &Run, written: &str, source: &str, path: &Path) -> Outcome {
+    let refusals: Vec<Diagnostic> = written
+        .lines()
+        .filter_map(|line| run.named(line))
+        .map(Example::did_not_hold)
+        .collect();
+    if refusals.is_empty() {
+        Outcome::Done
+    } else {
+        refuse_each(&refusals, source, path)
+    }
+}
+
+/// Every refusal of the module a run wrote, said about the line in the file it was written from.
+///
+/// The run compiles like any module, so it is refused like any module, and a reader is owed the
+/// line they wrote rather than the line the run wrote around it.
+fn put_back(run: &Run, refusals: Vec<Diagnostic>) -> Vec<Diagnostic> {
+    refusals
+        .into_iter()
+        .map(|diagnostic| {
+            let written = diagnostic.span();
+            diagnostic.about(run.in_original(written))
+        })
+        .collect()
+}
+
+/// What the module wrote to standard output, or nothing where it could not be run to the end.
+fn wrote(java: &Path, module: &str, beside: &Path) -> Option<String> {
+    match starting(java, module, beside).output() {
+        Ok(ended) if ended.status.success() => String::from_utf8(ended.stdout).ok(),
+        Ok(ended) => {
+            eprint!("{}", String::from_utf8_lossy(&ended.stderr));
+            None
+        }
+        Err(error) => {
+            eprintln!("error: {}: {error}", java.display());
+            None
+        }
+    }
+}
+
+/// Where a run writes the classes it is about to start, which is nowhere a build writes.
+///
+/// The directory is made here rather than found, and made so that a run never opens one that
+/// was already there: the temporary directory is shared, and what a run writes into it is put
+/// on a classpath and then deleted whole.
+fn somewhere_of_its_own() -> Option<PathBuf> {
+    let held = std::env::temp_dir();
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .ok()?
+        .as_nanos();
+    for attempt in 0..ATTEMPTS_AT_A_DIRECTORY {
+        let beside = held.join(format!("lumen-test-{}-{now:x}-{attempt}", process::id()));
+        if create_dir(&beside).is_ok() {
+            return Some(beside);
+        }
+    }
+    eprintln!(
+        "error: {}: nowhere to write the classes a run starts",
+        held.display()
+    );
+    None
+}
+
 /// Writes the class files of `path` beside it, one per class the module becomes.
 fn build(path: &Path) -> Outcome {
     built(path).map_or_else(|refusal| refusal, |_| Outcome::Done)
@@ -150,30 +284,42 @@ fn built(path: &Path) -> Result<Built, Outcome> {
     let Some(source) = source_of(path) else {
         return Err(Outcome::Unusable);
     };
-    let typed = match accepted(&source) {
-        Ok(typed) => typed,
-        Err(diagnostic) => return Err(refuse(&diagnostic, &source, path)),
-    };
-    let whole = match Whole::of_module(&typed) {
-        Ok(whole) => whole,
-        Err(holes) => return Err(refuse_each(&holes, &source, path)),
-    };
-    let Some(module) = module_of(path) else {
-        eprintln!(
-            "error: {}: a module is named by its file, and a class name holds none of {UNUSABLE_IN_A_NAME:?}",
-            path.display()
-        );
+    let Some(module) = named_module(path) else {
         return Err(Outcome::Unusable);
     };
-    let lowered = lower(&whole, &module);
-    match written(&lumen_jvm::write(&lowered), path) {
+    let lowered = match accepted(&source)
+        .map_err(|diagnostic| vec![diagnostic])
+        .and_then(|inferred| compiled(&inferred, &source, &module))
+    {
+        Ok(lowered) => lowered,
+        Err(refusals) => return Err(refuse_each(&refusals, &source, path)),
+    };
+    let beside = path.parent().unwrap_or(Path::new(".")).to_path_buf();
+    match written(&lumen_jvm::write(&lowered), &beside) {
         Outcome::Done => Ok(Built {
             module,
-            beside: path.parent().unwrap_or(Path::new(".")).to_path_buf(),
+            beside,
             starts: is_a_program(&lowered),
         }),
         refusal => Err(refusal),
     }
+}
+
+/// The module `inferred` becomes, or every refusal that stops it becoming one.
+///
+/// Two things a build asks of a module that a check does not are asked here: every body is
+/// written, which `docs/specs/holes.md` states, and every function says what it does, which
+/// `docs/specs/doc-examples.md` states.
+fn compiled(
+    inferred: &TypedProgram,
+    source: &str,
+    module: &str,
+) -> Result<Lowered, Vec<Diagnostic>> {
+    let whole = Whole::of_module(inferred)
+        .map_err(|holes| holes.iter().map(Hole::diagnostic).collect::<Vec<_>>())?;
+    stated_by(source, inferred.resolved().program())
+        .map_err(|refused| refused.iter().map(Refusal::diagnostic).collect::<Vec<_>>())?;
+    Ok(lower(&whole, module))
 }
 
 /// A module written out, which is what running one starts from.
@@ -189,24 +335,44 @@ struct Built {
 /// Every phase the front end has, run in order, stopping at the first refusal.
 fn accepted(source: &str) -> Result<TypedProgram, Diagnostic> {
     lumen_format::check(source).map_err(|error| error.diagnostic())?;
+    typed(source)
+}
+
+/// Every phase after canonical form, which is all of them a module the compiler wrote needs.
+///
+/// Canonical form is a rule about what an author writes, and `docs/specs/formatting.md` leaves
+/// the text of a comment alone. An example is a comment, so holding a module written around one
+/// to canonical form would hold the author to a form nothing spells out and `lumen fmt` cannot
+/// repair.
+fn typed(source: &str) -> Result<TypedProgram, Diagnostic> {
     let program = parse(source).map_err(|error| error.diagnostic())?;
     let resolved = resolve(program).map_err(|error| error.diagnostic())?;
-    let typed = inferred(resolved).map_err(|error| error.diagnostic())?;
-    exhaustive(&typed).map_err(|error| error.diagnostic())?;
-    Ok(typed)
+    let inferred = check_types(resolved).map_err(|error| error.diagnostic())?;
+    exhaustive(&inferred).map_err(|error| error.diagnostic())?;
+    Ok(inferred)
 }
+
+/// How many names a run tries before it gives up on finding one nothing holds.
+const ATTEMPTS_AT_A_DIRECTORY: u8 = 16;
 
 /// What a class name cannot hold, because the JVM's internal form gives each of them a meaning.
 const UNUSABLE_IN_A_NAME: [char; 4] = ['.', ';', '[', '/'];
 
-/// The name the module takes, which is the name of the file it is written in.
+/// The module `path` names, which is the name of the file it is written in.
 ///
 /// A module class is named after the file, so a file whose name is not one a class may have
 /// leaves nothing to write: a JVM would refuse to load what came out.
-fn module_of(path: &Path) -> Option<String> {
-    let stem = path.file_stem()?.to_string_lossy().into_owned();
-    let usable = !stem.is_empty() && !stem.contains(UNUSABLE_IN_A_NAME);
-    usable.then_some(stem)
+/// That is said here rather than returned, because there is nothing about the program to say.
+fn named_module(path: &Path) -> Option<String> {
+    let stem = path.file_stem().unwrap_or_default().to_string_lossy();
+    if stem.is_empty() || stem.contains(UNUSABLE_IN_A_NAME) {
+        eprintln!(
+            "error: {}: a module is named by its file, and a class name holds none of {UNUSABLE_IN_A_NAME:?}",
+            path.display()
+        );
+        return None;
+    }
+    Some(stem.into_owned())
 }
 
 /// Runs the module class on `java`, ending however the program it starts ends.
@@ -214,22 +380,25 @@ fn module_of(path: &Path) -> Option<String> {
 /// Every class written is a value class, which JDK 28 holds in preview, so the JVM is told to
 /// load preview class files; `docs/implementation.md` section 1 says why.
 fn ran(java: &Path, built: &Built) -> Outcome {
-    let arguments = [
-        OsStr::new("--enable-preview"),
-        OsStr::new("-cp"),
-        built.beside.as_os_str(),
-    ];
-    match std::process::Command::new(java)
-        .args(arguments)
-        .arg(&built.module)
-        .status()
-    {
+    match starting(java, &built.module, &built.beside).status() {
         Ok(status) => Outcome::Ended(status.code().unwrap_or(STOPPED)),
         Err(error) => {
             eprintln!("error: {}: {error}", java.display());
             Outcome::Unusable
         }
     }
+}
+
+/// A JVM told to start `module`, with the classes under `beside` and preview classes loadable.
+fn starting(java: &Path, module: &str, beside: &Path) -> std::process::Command {
+    let mut command = std::process::Command::new(java);
+    command.args([
+        OsStr::new("--enable-preview"),
+        OsStr::new("-cp"),
+        beside.as_os_str(),
+    ]);
+    command.arg(module);
+    command
 }
 
 /// What a program stopped from outside is reported as, having ended with no status of its own.
@@ -254,8 +423,7 @@ fn java() -> Option<PathBuf> {
 }
 
 /// Writes each class beside the source file, in the package its name gives it.
-fn written(classes: &[ClassFile], path: &Path) -> Outcome {
-    let beside = path.parent().unwrap_or(Path::new("."));
+fn written(classes: &[ClassFile], beside: &Path) -> Outcome {
     for class in classes {
         let written = beside.join(&class.path);
         if let Some(package) = written.parent()
@@ -324,16 +492,16 @@ fn rewrite(path: &Path, canonical: &str) -> Outcome {
     }
 }
 
-/// Refuses every hole rather than the first, because a build is how a reader learns what is left.
+/// Refuses every one rather than the first, because a build is how a reader learns what is left.
 ///
-/// `docs/specs/holes.md` says why this is the one refusal that does not stop at the first, and
-/// the blank line between two blocks is what keeps them two blocks.
-fn refuse_each(holes: &[Hole], source: &str, path: &Path) -> Outcome {
-    for (written, hole) in holes.iter().enumerate() {
+/// `docs/specs/holes.md` says why a hole is not stopped at the first of, and an example a module
+/// does not state is not either. The blank line between two blocks is what keeps them two blocks.
+fn refuse_each(refusals: &[Diagnostic], source: &str, path: &Path) -> Outcome {
+    for (written, diagnostic) in refusals.iter().enumerate() {
         if written > 0 {
             eprintln!();
         }
-        refuse(&hole.diagnostic(), source, path);
+        refuse(diagnostic, source, path);
     }
     Outcome::Refused
 }

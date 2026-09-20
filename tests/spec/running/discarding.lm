@@ -14,14 +14,17 @@ fn main() -> () {
     ()
 }
 
+// example: plain(2) == 3
 fn plain(value: Int) -> Int {
     value + 1
 }
 
+// example: is_read(wrapped(4))
 fn wrapped(value: Int) -> UserId {
     UserId(value)
 }
 
+// example: is_read(UserId(1))
 fn is_read(id: UserId) -> Bool {
     match id {
         UserId(raw) => raw > 0

@@ -8,6 +8,7 @@ Commands:
   check     Report the first thing about a source file the compiler will not have
   build     Compile a source file to the class files a JVM loads
   run       Compile a source file and run the program it holds
+  test      Run the examples a module states about its functions
   api       Print the public surface of a module
   explain   Print the long form of one diagnostic code
 

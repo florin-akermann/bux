@@ -55,7 +55,7 @@ A span that ends on a later line carets the rest of its first line and says wher
 
 A code is `L` and four digits, grouped by the phase that raises it.
 The grammar writes `L01xx`, canonical form `L02xx`, name resolution `L03xx`, and inference `L04xx`.
-Exhaustiveness writes `L05xx`.
+Exhaustiveness writes `L05xx`, and what a build asks of a module it compiles writes `L06xx`.
 
 Every number and every long form lives in `crates/diagnostics/src/code.rs`, which declares them
 together so that neither can be added without the other.
@@ -127,6 +127,20 @@ Exhaustiveness raises these, in `crates/exhaustiveness/src/error.rs`:
 `lumen build` raises this one, in `crates/holes/src/hole.rs`:
 
 - `L0600` — a hole is still in the program, and a hole has nothing to compile.
+
+`lumen build`, `lumen run`, and `lumen test` raise these, in `crates/examples/src/refusal.rs`:
+
+- `L0601` — a function a module declares at the top level states no example.
+- `L0602` — an example is written where nothing carries one.
+
+`lumen test` raises these alone, the first in `crates/examples/src/example.rs` and the second in
+`crates/examples/src/refusal.rs`:
+
+- `L0603` — an example a module states did not hold when it was run.
+- `L0604` — a module declares the name a run of its examples reaches for.
+
+All three are reported together rather than one at a time, unlike every code above them.
+A reader answering them is answering a list, and a list of one would not be that list.
 
 ## As data
 

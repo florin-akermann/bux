@@ -14,6 +14,7 @@ fn main() -> () {
     }
 }
 
+// example: told(why: "") == "the read failed and said nothing"
 fn told(why: String) -> String {
     if why == "" {
         "the read failed and said nothing"

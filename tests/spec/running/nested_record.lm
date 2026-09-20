@@ -10,6 +10,7 @@ fn main() -> () {
     io.println(told(user: user))
 }
 
+// example: told(user: User { id: 1, home: Address { number: 7, zone: 2 } }) == "the number it was built with is the number it holds"
 fn told(user: User) -> String {
     if user.home.number == 7 {
         "the number it was built with is the number it holds"

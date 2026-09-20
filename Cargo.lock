@@ -415,6 +415,7 @@ dependencies = [
  "clap",
  "lumen-api",
  "lumen-diagnostics",
+ "lumen-examples",
  "lumen-exhaustiveness",
  "lumen-format",
  "lumen-holes",
@@ -450,6 +451,17 @@ version = "0.1.0"
 dependencies = [
  "hegeltest",
  "lumen-lexer",
+]
+
+[[package]]
+name = "lumen-examples"
+version = "0.1.0"
+dependencies = [
+ "hegeltest",
+ "lumen-ast",
+ "lumen-diagnostics",
+ "lumen-lexer",
+ "lumen-parser",
 ]
 
 [[package]]

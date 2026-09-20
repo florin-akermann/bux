@@ -7,6 +7,7 @@ fn main() -> () {
     ()
 }
 
+// example: told(Pending) == "waiting"
 fn told(payment: Payment) -> String {
     match payment {
         Pending => "waiting"
@@ -18,14 +19,17 @@ type Payment =
     | Pending
     | Failed(String)
 
+// example: doubled(21) == 42
 fn doubled(count: Int) -> Int {
     identity(count) + count
 }
 
+// example: identity(7) == 7
 fn identity<T>(value: T) -> T {
     value
 }
 
+// example: later(User { id: 1, active: true }).active == false
 fn later(user: User) -> User {
     user { active: false }
 }
