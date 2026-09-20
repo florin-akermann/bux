@@ -28,7 +28,7 @@ The cost is one method per instantiation and a generic body that must reach the 
 [025][d] - A test on the bytecode: an `Int` passed to a generic is carried as `long` throughout.
 [025][e] - Executable examples under `tests/spec/generics/`.
 
-## 🔴 Item 032: A record field of record type is laid out flat
+## 🟡 Item 032: A record field of record type is laid out flat
 **Depends on:** Item 026 — the same measurement, on a record that holds a record.
 `docs/design.md` section 1 promises a record laid out flat wherever the JVM can flatten one.
 A JVM decides a field's layout when it loads the class, before the field's own class is loaded.
