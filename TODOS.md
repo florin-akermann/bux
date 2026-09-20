@@ -6,7 +6,7 @@
 
 ## Open
 
-## 🟡 Item 033: Every operator is a trait method
+## 🟢 Item 033: Every operator is a trait method
 **Depends on:** Item 041 — an instance needs a trait to be an instance of.
 `docs/design.md` section 8 makes `+ - * / %`, prefix `-`, and the comparisons trait methods.
 The type checker wires them to `Int` and `String` by name today, so no declared type can own one.
