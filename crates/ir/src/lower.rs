@@ -8,6 +8,7 @@
 mod body;
 mod classes;
 mod equality;
+mod escape;
 mod expr;
 mod pattern;
 mod prelude;

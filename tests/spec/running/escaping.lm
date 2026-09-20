@@ -1,0 +1,22 @@
+// expect-run
+// A record built and read inside one function is kept in locals, and computes what it always did.
+fn main() -> () {
+    _ = summed(times: 3)
+    ()
+}
+
+fn summed(times: Int) -> Int {
+    var total = 0
+    var left = times
+    for left > 0 {
+        point := Point { across: left, down: left + 1 }
+        total += point.across + point.down
+        left += -1
+    }
+    total
+}
+
+type Point = {
+    across: Int
+    down: Int
+}

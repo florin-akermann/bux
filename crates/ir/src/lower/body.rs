@@ -1,15 +1,15 @@
 //! One function body, as the instructions and locals a method runs.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
-use lumen_ast::{AssignOperator, Block, Expr, ForHeader, ForLoop, Function, Name, Span};
+use lumen_ast::{AssignOperator, Block, Expr, ExprKind, ForHeader, ForLoop, Function, Name, Span};
 use lumen_ast::{Statement, StatementKind};
 use lumen_resolver::{Definition, Namespace, Origin};
 
 use crate::code::{Arithmetic, Body, Instruction, Label, MethodRef};
 use crate::descriptor::{ClassName, Descriptor, MethodDescriptor};
 use crate::lower::shape::object;
-use crate::lower::{Lowering, Signature};
+use crate::lower::{Lowering, Signature, escape};
 
 /// The list a `for … in` walks, which is the one interface version 0.1 reaches.
 const LIST: &str = "java/util/List";
@@ -19,6 +19,13 @@ const LIST: &str = "java/util/List";
 pub(crate) struct Slot {
     pub(crate) at: u16,
     pub(crate) of: Descriptor,
+}
+
+/// One field of a binding kept in locals: the name that declares it, and the field's own name.
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub(crate) struct Held {
+    pub(crate) binding: Span,
+    pub(crate) field: String,
 }
 
 /// The two places a loop is left from, which is what `break` and `continue` jump to.
@@ -53,6 +60,10 @@ pub(crate) struct Builder<'a> {
     next_label: u32,
     /// The loops the instruction being lowered is inside, the innermost one last.
     loops: Vec<Repeat>,
+    /// The bindings kept in locals rather than built, by the span of the name declaring each.
+    splitting: HashSet<Span>,
+    /// Where each field of a split binding lives; a field carried by nothing lives nowhere.
+    pub(crate) fields: HashMap<Held, Slot>,
     /// What the function gives back, which `return` and `?` both answer to.
     result: Option<Descriptor>,
 }
@@ -72,6 +83,8 @@ impl<'a> Builder<'a> {
             first_local: 0,
             next_label: 0,
             loops: Vec::new(),
+            splitting: escape::split(lowering.typed.resolved(), &lowering.shapes, function),
+            fields: HashMap::new(),
             result: signature.result.clone(),
         };
         for parameter in &function.parameters {
@@ -142,9 +155,45 @@ impl<'a> Builder<'a> {
     }
 
     fn binding(&mut self, name: &Name, value: &Expr) {
+        if self.splitting.contains(&name.span) {
+            self.split(name, value);
+            return;
+        }
         let left = self.expr(value);
         self.declare(name);
         self.stored(name, left);
+    }
+
+    /// A record kept in locals: each field is worked out in the order the type declares them,
+    /// which is the order the constructor would have taken them in, and put in a local of its own.
+    fn split(&mut self, name: &Name, value: &Expr) {
+        let ExprKind::Record { base, fields } = &value.kind else {
+            unreachable!("a binding is split only where it holds a record literal")
+        };
+        for carried in self.lowering.shapes.built(&base.text).clone().carries {
+            self.given(fields, &carried);
+            let Some(of) = carried.of else {
+                continue;
+            };
+            let at = self.temporary(&of);
+            self.emit(Instruction::Store {
+                slot: at,
+                of: of.clone(),
+            });
+            let held = Held {
+                binding: name.span,
+                field: carried.name,
+            };
+            self.fields.insert(held, Slot { at, of });
+        }
+    }
+
+    /// Whether the binding `name` means is one kept in locals, and where it was declared.
+    pub(crate) fn split_binding(&self, name: &Name) -> Option<Span> {
+        let Origin::Declared(at) = self.definition(name).origin else {
+            return None;
+        };
+        self.splitting.contains(&at).then_some(at)
     }
 
     fn assign(&mut self, name: &Name, operator: AssignOperator, value: &Expr) {

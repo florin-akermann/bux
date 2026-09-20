@@ -102,6 +102,32 @@ declares them, and one constructor taking them in that order.
 `user.name` is a `getfield`, and `user { active: false }` is a new instance built from the fields
 of the old one.
 
+A record a function builds and never lets go of is not built at all.
+`point := Point { across: 1, down: 2 }` puts each field in a local of its own, and `point.across`
+reads that local: no `new` is emitted, no constructor is called, and no `getfield` is read.
+A Lumen value has no identity, which `docs/design.md` section 2 states, so a value split across
+locals is the same value as one laid out on the heap and nothing a program can ask tells them apart.
+This is what Valhalla calls scalarization, and the language meets its precondition today.
+
+A binding is split when every one of these holds:
+
+- it is written with `:=`, so what the name holds never changes;
+- its value is a record literal naming its type, rather than an update of another record;
+- every other mention of the name in the function reads one field of it.
+
+Anything else a mention does is the value escaping: passing the name to a call, giving it back,
+binding it to a second name, updating it with `point { active: false }`, or matching on it.
+One escaping mention is enough to build the record, because a value that leaves the function has to
+be a whole one by the time it does.
+The question is asked of the function's whole body rather than of a block of it, so a name read
+after the loop that built it escapes wherever it is read.
+
+The fields are worked out in the order the type declares them, which is the order the constructor
+would have taken them in.
+A field carried by nothing occupies no local, the way a binding of a unit value does.
+Splitting changes no result: the program computes what it computed, and only the instructions
+differ.
+
 An algebraic data type is an `abstract` value class carrying one `int` field, `tag`.
 Each variant is a `final` value class extending it, whose constructor writes what the variant
 carries and then passes the variant's position in the declaration up as the tag.
@@ -162,3 +188,5 @@ These hold and are checked with property-based tests:
 7. Every method of every class ends by leaving it.
 8. No class a module writes declares a method a JVM class inherits.
 9. The one `equals` a module calls is the one `String` declares.
+10. A record bound with `:=` and mentioned only to read its fields is lowered without a `new`.
+11. Such a program computes what the same program computes when the record is built.

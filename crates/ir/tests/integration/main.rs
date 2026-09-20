@@ -4,5 +4,6 @@
 
 mod common;
 mod descriptors;
+mod escaping;
 mod lowering;
 mod properties;

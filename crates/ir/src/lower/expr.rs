@@ -6,7 +6,7 @@ use lumen_types::Type;
 
 use crate::code::{Arithmetic, Comparison, FieldRef, Instruction, MethodRef};
 use crate::descriptor::Descriptor;
-use crate::lower::body::Builder;
+use crate::lower::body::{Builder, Held};
 use crate::lower::equality::compared;
 use crate::lower::shape::{CONSTRUCTOR, Carried, ERR, NONE, OK, SOME, Shape, TAG, object};
 
@@ -269,6 +269,11 @@ impl Builder<'_> {
     }
 
     fn field(&mut self, receiver: &Expr, name: &Name) -> Option<Descriptor> {
+        if let ExprKind::Name(held) = &receiver.kind
+            && let Some(binding) = self.split_binding(held)
+        {
+            return self.held_field(binding, receiver.span, name);
+        }
         let shape = self.record_of(receiver.span);
         let held = self.expr(receiver);
         self.adapt(held, Some(Descriptor::Reference(shape.base.clone())));
@@ -285,6 +290,31 @@ impl Builder<'_> {
             of: of.clone(),
         }));
         Some(of)
+    }
+
+    /// One field of a binding kept in locals, read from the local it lives in.
+    ///
+    /// A field carried by nothing lives nowhere and reads as nothing, the way a binding of a unit
+    /// value does, so there is no local to read and nothing is emitted. Every other field of the
+    /// record is in one, because the binding put it there when it was split.
+    fn held_field(&mut self, binding: Span, at: Span, name: &Name) -> Option<Descriptor> {
+        let shape = self.record_of(at);
+        let Some(carried) = shape.carries.iter().find(|held| held.name == name.text) else {
+            unreachable!("inference gave every field a record that declares it")
+        };
+        carried.of.as_ref()?;
+        let held = Held {
+            binding,
+            field: name.text.clone(),
+        };
+        let Some(slot) = self.fields.get(&held).cloned() else {
+            unreachable!("splitting a binding put every field it carries in a local")
+        };
+        self.emit(Instruction::Load {
+            slot: slot.at,
+            of: slot.of.clone(),
+        });
+        Some(slot.of)
     }
 
     /// `f(x)?` gives back the error it was handed, and otherwise reads the value out of it.
@@ -343,13 +373,23 @@ impl Builder<'_> {
         self.emit(Instruction::New(shape.class.clone()));
         self.emit(Instruction::Copy);
         for carried in &shape.carries {
-            let Some(given) = fields.iter().find(|field| field.name.text == carried.name) else {
-                unreachable!("inference gave every field of a record a value")
-            };
-            let held = self.expr(&given.value);
-            self.adapt(held, carried.of.clone());
+            self.given(fields, carried);
         }
         self.constructed(&shape)
+    }
+
+    /// The value the literal gives the field `carried`, which inference proved it gives.
+    pub(crate) fn given(&mut self, fields: &[FieldValue], carried: &Carried) {
+        let Some(given) = written_for(fields, carried) else {
+            unreachable!("inference gave every field of a record a value")
+        };
+        self.holding(given, carried);
+    }
+
+    /// The value written for a field, left as the field holds it.
+    fn holding(&mut self, given: &FieldValue, carried: &Carried) {
+        let held = self.expr(&given.value);
+        self.adapt(held, carried.of.clone());
     }
 
     /// `user { active: false }` builds another one, from the old fields where none is given.
@@ -358,11 +398,8 @@ impl Builder<'_> {
         self.emit(Instruction::New(shape.class.clone()));
         self.emit(Instruction::Copy);
         for carried in &shape.carries {
-            match fields.iter().find(|field| field.name.text == carried.name) {
-                Some(given) => {
-                    let held = self.expr(&given.value);
-                    self.adapt(held, carried.of.clone());
-                }
+            match written_for(fields, carried) {
+                Some(given) => self.holding(given, carried),
                 None => self.kept(base, &shape, carried),
             }
         }
@@ -488,4 +525,9 @@ fn worked_on(operator: UnaryOperator) -> (Descriptor, Instruction) {
             Instruction::Arithmetic(Arithmetic::Negate),
         ),
     }
+}
+
+/// The value a record literal writes for the field `carried`, where it writes one.
+fn written_for<'a>(fields: &'a [FieldValue], carried: &Carried) -> Option<&'a FieldValue> {
+    fields.iter().find(|field| field.name.text == carried.name)
 }

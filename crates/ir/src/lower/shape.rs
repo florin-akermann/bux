@@ -131,6 +131,13 @@ impl Shapes {
         self.built(constructor)
     }
 
+    /// Whether `named` is the constructor of a record type, rather than of a variant of one.
+    pub(crate) fn builds_a_record(&self, named: &str) -> bool {
+        self.records
+            .values()
+            .any(|constructor| constructor == named)
+    }
+
     /// What a value of `of` is carried by, which is nothing at all when it is `()`.
     pub(crate) fn carried(&self, of: &Type) -> Option<Descriptor> {
         match of {
