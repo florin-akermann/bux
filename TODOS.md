@@ -31,24 +31,6 @@ There is no literal for either yet; a map is built by `empty` and `insert`, and 
 [046][c] - Both types in Lumen, test-first; a property: `get` after `insert` gives what went in.
 [046][d] - Executable examples under `tests/spec/library/`, including a key without `Hash`.
 
-## 🟢 Item 047: Richer patterns: `_`, a literal, and an or-pattern
-**Depends on:** Item 040 — version 0.1 closes before the first 0.2 item opens.
-**Depends on:** Item 034 — a literal pattern over a declared type needs the trait a literal is.
-A pattern today is a bare name or a constructor with patterns inside; nothing else is written.
-`docs/implementation.md` section 10 promises richer pattern matching and does not say richer how.
-Three forms earn their keep in everyday code: `_`, a literal, and an or-pattern.
-`_` ignores a value, `0` or `"quit"` matches one, and `A | B` answers two variants in one arm.
-A guard is not among them: an `if` inside the arm reads the same and keeps exhaustiveness simple.
-Exhaustiveness extends to each form; a literal pattern needs a `_` or a binding arm after it.
-A whole number written as a pattern is an `Int` today, which `docs/specs/literals.md` states.
-So `match count { 5 => … }` over an `Int32` is `L0400`, though `count + 5` is accepted, and a
-pattern needs both traits: `IntegerLiteral` to become the type, and `Eq` to say what sameness is.
-[047][a] - `docs/design.md` section 4 states the three forms and refuses the guard, with the reason.
-[047][b] - Spec first in `docs/specs/patterns.md`: each form, its canonical spacing, its errors.
-[047][c] - Parsing and exhaustiveness, test-first; a property: the check agrees with enumeration.
-[047][d] - A whole-number pattern takes the type it is matched against and compares by its `Eq`.
-[047][e] - Executable examples under `tests/spec/patterns/`, including a literal match with a gap.
-
 ## 🔴 Item 048: A Java class is reached through an `extern` declaration
 **Depends on:** Item 044, Item 045 — a wrapper is a library module offering its own types.
 `docs/implementation.md` section 3 sketches `extern java class` and says nothing of the boundary.
