@@ -27,23 +27,3 @@ The cost is one method per instantiation and a generic body that must reach the 
 [025][c] - Lowering writes one method per instantiation, test-first, named without collision.
 [025][d] - A test on the bytecode: an `Int` passed to a generic is carried as `long` throughout.
 [025][e] - Executable examples under `tests/spec/generics/`.
-
-## 🟢 Item 032: A record field of record type is laid out flat
-**Depends on:** Item 031 — the measurement needs a program whose result a JIT cannot delete.
-`docs/design.md` section 1 promises a record laid out flat wherever the JVM can flatten one.
-A JVM decides a field's layout when it loads the class, before the field's own class is loaded.
-JEP 401's `LoadableDescriptors` attribute names the classes a class file wants loaded first.
-Without it a `User` holding an `Address` keeps a reference where the JVM would have flattened.
-An optimization earns its place by measurement, so the item starts with a number.
-[032][a] - A measured baseline: a loop reading a record held in a record, timed with the JDK.
-[032][b] - `docs/specs/codegen.md` states which descriptors the attribute names, and on which class.
-[032][c] - The writer emits the attribute, test-first; a test on the bytes asserts what it names.
-[032][d] - The measurement again, and the number beside the baseline in the item's commit.
-
-The attribute was written and measured once and the measurement refused it, so it waits for 031.
-`LoadableDescriptors` does flatten the field: `REGULAR 4/4 Lmodule/Address;` becomes `FLAT 9/8`.
-But `getfield` of a flat field buffers a fresh instance, which only C2 removes by scalarizing it.
-Reading `user.home.number` 200,000,000 times on JDK 28 EA b16 cost 1.37 s and no GC unflattened,
-and 5.21 s with 167 young GCs flattened; under C1 alone, 0.13 s against 0.36 s.
-C2 cannot be measured while a program has no observable result: the loop is deleted outright, or
-its reads are loop-invariant and folded into one multiplication, so neither run says anything.
