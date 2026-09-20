@@ -11,6 +11,7 @@ mod examples;
 mod formatting;
 mod importing;
 mod library;
+mod packages;
 mod running;
 mod surface;
 mod testing;

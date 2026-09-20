@@ -7,6 +7,8 @@
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
 
+use lumen_modules::MANIFEST;
+
 /// A directory of Lumen modules, which is what an import looks in.
 pub struct Beside {
     directory: PathBuf,
@@ -36,6 +38,36 @@ impl Beside {
     /// The directory itself, which is where a module that is not written would have been.
     pub fn directory(&self) -> &Path {
         &self.directory
+    }
+
+    /// The manifest of a package called `name` that depends on each of `depends`.
+    pub fn packaged(&self, name: &str, depends: &[&Self]) -> &Self {
+        let stated: Vec<String> = depends
+            .iter()
+            .map(|package| format!("depends ../{}\n", package.named()))
+            .collect();
+        self.stating(&format!(
+            "package {name}\nversion 0.2.0\n{}",
+            stated.concat()
+        ))
+    }
+
+    /// The manifest that makes this directory a package, written exactly as `manifest` states it.
+    pub fn stating(&self, manifest: &str) -> &Self {
+        std::fs::write(self.directory.join(MANIFEST), manifest).expect("a manifest is writable");
+        self
+    }
+
+    /// What this directory is called, which is what a manifest beside it writes to reach it.
+    ///
+    /// Every one of these sits directly under the system's temporary directory, so a sibling of
+    /// one is reached from it by name.
+    pub fn named(&self) -> String {
+        self.directory
+            .file_name()
+            .expect("a temporary directory has a name")
+            .to_string_lossy()
+            .into_owned()
     }
 }
 

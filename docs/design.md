@@ -1117,9 +1117,23 @@ Neither is a name in scope.
 Section 11 states that form.
 
 An import names the file the module is written in, beside the file that writes the import.
-`import greeting` therefore reads `greeting.lm` from the same directory, and nowhere else is
-looked in.
+`import greeting` therefore reads `greeting.lm` from the same directory, and nowhere else but
+a package this one depends on.
 A ring of imports is refused: a module is compiled after what it imports, and a ring has no such
 order.
 
 `docs/specs/modules.md` states the scopes, the prelude every module has, and the errors.
+
+A package is a directory of modules, named by a manifest written beside them.
+
+```text
+package shapes
+version 0.2.0
+depends ../geometry
+```
+
+An import that reaches nothing beside the file that wrote it reaches a module of a package this
+one depends on.
+Nothing is fetched: a dependency is a directory that is already there, and the manifest names it.
+Two dependencies holding a module of one name are refused, because one name has one definition.
+`docs/specs/packages.md` states the manifest, the order an import is answered in, and the errors.

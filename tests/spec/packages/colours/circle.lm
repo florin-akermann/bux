@@ -1,0 +1,6 @@
+// A second package may declare a module of the same name, which is no clash until one import
+// can reach both of them.
+// example: shade() == "red"
+fn shade() -> String {
+    "red"
+}

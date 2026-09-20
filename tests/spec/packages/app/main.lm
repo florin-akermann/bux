@@ -1,0 +1,6 @@
+// An import that names no module beside this file names one of a package the manifest depends on.
+import circle
+
+fn edge() -> Int {
+    circle.around(3)
+}

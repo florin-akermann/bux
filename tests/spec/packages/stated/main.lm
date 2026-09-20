@@ -1,0 +1,6 @@
+// expect-error: L0315
+// A manifest states `package`, then `version`, then a `depends` for each dependency, and the one
+// beside this file states something else.
+fn held() -> Int {
+    1
+}

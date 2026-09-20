@@ -26,11 +26,16 @@ the file.
 ## Loading
 
 `import demo` names the file `demo.lm`, beside the file that imports it.
-There is no search path: a module is the file of that name beside the importing one, or nothing.
 `io` and `files` are supplied by the compiler, so an import of either looks for no file at all.
+A file beside the importing one is where a module is looked for, and a package is the one other
+place: a manifest beside the importing file names the directories a dependency's modules sit in.
+`docs/specs/packages.md` states that manifest and the order an import is answered in, and two
+files claiming a module of one name are refused there as `L0317`.
 
 Every module a program reaches is loaded before any of them is resolved.
 A module is read once however many modules import it, and is the same module to each of them.
+That holds because which file a name means is settled before a module already read is looked for,
+so two files claiming one name are refused rather than one of them silently standing for both.
 Loading walks the imports out from the file the command names, and stops at the first refusal.
 
 A ring of imports is refused.
@@ -192,6 +197,7 @@ Canonical form puts every import first and sorted, which settles where it goes w
 | assigned but no `var` | `L0305` | `x` is not a `var`, so it is never assigned to |
 | module with no file | `L0306` | there is no module named `demo`                   |
 | ring of imports   | `L0307` | `demo` imports `main`, which imports `demo`       |
+| module is two files | `L0317` | `demo` is both `../shapes/demo.lm` and `demo.lm` |
 | reached through no module | `L0313` | `user` is a module in neither scope, and a type is reached through one |
 
 `L0300` helps with `a name is declared in this file, imported, or supplied by the prelude`.
@@ -201,8 +207,9 @@ Canonical form puts every import first and sorted, which settles where it goes w
 `L0304` helps with `version 0.1 reaches a function by calling it; write the call`.
 `L0304` helps a module with ``a module is what a name is reached through, as `io.println` is``.
 `L0305` helps with ``mutation is explicit: bind it with `var`, or bind a new name``.
-`L0306` helps with ``a module is a file beside this one: write `demo.lm```.
+`L0306` helps with ``a module is a file beside this one, or one of a package it depends on``.
 `L0307` helps with `a module is compiled after what it imports, and a ring has no such order`.
+`L0317` helps with `one name has one definition; rename one of the two modules`.
 `L0313` helps with ``a type of another module is reached through the import: write `demo.User```.
 
 `L0313` is the name on the left of the dot of a type or of a pattern, which is a module or
@@ -212,8 +219,10 @@ before it is asked to be a module.
 A name that module does not declare is `L0414`, which is raised where every other name reached
 inside a module is; `docs/specs/types.md` states it.
 
-`L0306` and `L0307` are raised while loading, before any module is resolved.
-Both point at the import that was being followed, in the file that wrote it.
+`L0306`, `L0307`, and `L0317` are raised while loading, before any module is resolved.
+Each points at the import that was being followed, in the file that wrote it.
+A manifest the loader could not read is refused there too, which `docs/specs/packages.md` states
+as `L0315` and `L0316`.
 
 A name written where a type belongs and found only in the value scope is still `L0300`, with a
 message saying there is no type of that name.

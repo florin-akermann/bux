@@ -100,6 +100,12 @@ catalogue! {
     NotAModule => "L0313",
     /// A name that binds is written inside an or-pattern, which binds nothing.
     BindsInsideOr => "L0314",
+    /// A manifest states something other than `package`, `version`, and a `depends` for each one.
+    NotAManifest => "L0315",
+    /// A directory named as a package holds no manifest, so there is no package there.
+    NoSuchPackage => "L0316",
+    /// Two packages a module can reach both hold a module of the name an import writes.
+    ModuleIsTwoFiles => "L0317",
     /// A type met a type it does not match.
     TypeMismatch => "L0400",
     /// A call passes more or fewer arguments than the function takes.

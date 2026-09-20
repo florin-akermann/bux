@@ -89,4 +89,4 @@ came with and not every refusal the file holds: a file whose imports are also ou
 about canonical form first, and checking the repaired file then reports that.
 
 Exit codes: 0 when the compiler has nothing to say, 1 when it refuses the program, and 2 when the
-file cannot be read.
+file cannot be read or the directory is no package it can list.

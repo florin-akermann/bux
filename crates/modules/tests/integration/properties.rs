@@ -1,4 +1,4 @@
-//! The invariants of `docs/specs/modules.md`, checked on generated sets of modules.
+//! The invariants of `docs/specs/modules.md` and `docs/specs/packages.md`, on generated sets.
 
 use std::collections::HashSet;
 
@@ -135,3 +135,74 @@ fn imported_by(source: &str) -> Vec<String> {
         .map(str::to_owned)
         .collect()
 }
+
+/// `docs/specs/packages.md` property 1: a package's modules load below what they import.
+#[hegel::test]
+fn a_set_of_modules_split_across_two_packages_loads_dependencies_first(tc: TestCase) {
+    let modules = layered(&tc);
+    let (first, rest) = modules
+        .split_first()
+        .expect("a layered set holds one module");
+    let held = written(rest);
+    held.packaged("held", &[]);
+    let app = written(std::slice::from_ref(first));
+    app.packaged("app", &[&held]);
+    let loaded = load(&app.file_of(&first.0)).expect("a layered set across packages loads");
+    let order = order_of(&loaded);
+    for module in loaded.modules() {
+        let at = position_of(&order, module.name());
+        for imported in imported_by(module.source()) {
+            assert!(
+                position_of(&order, &imported) < at,
+                "{imported} is loaded before {}",
+                module.name()
+            );
+        }
+    }
+}
+
+/// `docs/specs/packages.md` property 2: a module beside the file wins over every dependency's.
+#[hegel::test]
+fn a_module_beside_the_importing_file_is_reached_however_many_packages_hold_one(tc: TestCase) {
+    let reached = NAMES[0];
+    let holders: Vec<Beside> = (0..tc.draw(gs::integers::<usize>().min_value(1).max_value(3)))
+        .map(|at| {
+            let holding = Beside::holding(&[(reached, &source(&[]))]);
+            holding.packaged(&format!("holder{at}"), &[]);
+            holding
+        })
+        .collect();
+    let app = Beside::holding(&[("main", &source(&[reached])), (reached, &source(&[]))]);
+    app.packaged("app", &holders.iter().collect::<Vec<&Beside>>());
+    let loaded = load(&app.file_of("main")).expect("a module beside the file is reachable");
+    assert_eq!(loaded.modules()[0].path(), app.file_of(reached));
+}
+
+/// `docs/specs/packages.md` property 3: a manifest is read or refused, and never panicked over.
+#[hegel::test]
+fn a_manifest_is_read_or_refused_against_the_text_it_is_written_in(tc: TestCase) {
+    let lines = tc.draw(gs::vecs(gs::sampled_from(MANIFEST_LINES.to_vec())).max_size(5));
+    let written: Vec<String> = lines.iter().map(|line| format!("{line}\n")).collect();
+    let manifest = written.concat();
+    let app = Beside::holding(&[("main", &source(&[]))]);
+    app.stating(&manifest);
+    let Err(NotLoaded::Refused(refused)) = load(&app.file_of("main")) else {
+        return;
+    };
+    if refused.path() == app.directory().join(lumen_modules::MANIFEST) {
+        assert_eq!(refused.source(), manifest);
+        assert!(refused.diagnostic().span().end() <= manifest.len());
+    }
+}
+
+/// The lines a generated manifest is built out of, well formed and otherwise.
+const MANIFEST_LINES: [&str; 8] = [
+    "package app",
+    "version 0.2.0",
+    "depends ../nowhere",
+    "",
+    "author nobody",
+    "package",
+    "package a b",
+    "packageapp",
+];

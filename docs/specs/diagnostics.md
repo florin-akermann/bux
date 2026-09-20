@@ -115,8 +115,11 @@ Name resolution raises these, in `crates/resolver/src/error.rs`:
 
 Loading raises these, in `crates/modules/src/error.rs`, before any module is resolved:
 
-- `L0306` — an import names a module no file beside the importing one holds.
+- `L0306` — an import names a module neither a file beside it nor a package it reaches holds.
 - `L0307` — a ring of imports, which leaves the modules in it no order to be compiled in.
+- `L0315` — a manifest states something other than `package`, `version`, and a `depends` for each.
+- `L0316` — a directory named as a package holds no manifest, so there is no package there.
+- `L0317` — two files claim the module name an import writes, so one build would hold both.
 
 Type inference raises these, in `crates/types/src/error.rs`:
 

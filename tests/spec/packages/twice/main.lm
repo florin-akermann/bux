@@ -1,0 +1,8 @@
+// expect-error: L0317
+// Two packages this one depends on each hold a module called `circle`, and one name has one
+// definition.
+import circle
+
+fn edge() -> Int {
+    circle.around(3)
+}

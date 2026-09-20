@@ -5,6 +5,8 @@ use std::fmt;
 use lumen_ast::Span;
 use lumen_diagnostics::{Code, Diagnostic};
 
+use crate::package::Keyword;
+
 /// Why loading failed, and which import it was following when it did.
 ///
 /// Loading stops at the first refusal, so there is exactly one of these per failed run. The
@@ -53,10 +55,24 @@ impl LoadError {
 /// What went wrong, in the words the reader sees.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) enum LoadErrorKind {
-    /// An import names a module no file beside the importing one holds.
+    /// An import names a module neither a file beside it nor a package it reaches holds.
     NoSuchModule(String),
     /// A ring of imports, named in the order it runs, beginning and ending at the same module.
     Ring(Vec<String>),
+    /// A manifest line is not the line the keyword it carries says belongs there.
+    LineIsNot(Keyword),
+    /// A manifest line states its keyword and then something other than one word.
+    NotOneWord(Keyword),
+    /// A `depends` names a directory that holds no manifest, so there is no package there.
+    NoSuchPackage(String),
+    /// A manifest states two `depends` naming one and the same directory.
+    DependsTwice(String),
+    /// An import names a module that two files, reached along two routes, both claim.
+    InTwoFiles {
+        module: String,
+        first: String,
+        second: String,
+    },
 }
 
 impl LoadErrorKind {
@@ -65,15 +81,27 @@ impl LoadErrorKind {
         match self {
             Self::NoSuchModule(_) => Code::NoSuchModule,
             Self::Ring(_) => Code::RingOfImports,
+            Self::LineIsNot(_) | Self::NotOneWord(_) | Self::DependsTwice(_) => Code::NotAManifest,
+            Self::NoSuchPackage(_) => Code::NoSuchPackage,
+            Self::InTwoFiles { .. } => Code::ModuleIsTwoFiles,
         }
     }
 
     const fn help(&self) -> &'static str {
         match self {
-            Self::NoSuchModule(_) => "a module is a file beside this one: write `demo.lm`",
+            Self::NoSuchModule(_) => {
+                "a module is a file beside this one, or one of a package it depends on"
+            }
             Self::Ring(_) => {
                 "a module is compiled after what it imports, and a ring has no such order"
             }
+            Self::LineIsNot(_) => {
+                "a manifest is `package`, then `version`, then a `depends` for each dependency"
+            }
+            Self::NotOneWord(_) => "a manifest line is a keyword, one space, and one word",
+            Self::DependsTwice(_) => "a manifest states one `depends` for each package it reaches",
+            Self::NoSuchPackage(_) => "a package is a directory holding `bux.package`",
+            Self::InTwoFiles { .. } => "one name has one definition; rename one of the two modules",
         }
     }
 }
@@ -90,6 +118,17 @@ impl fmt::Display for LoadErrorKind {
                 }
                 write!(f, "`{first}`")
             }
+            Self::LineIsNot(keyword) => write!(f, "`{keyword}` is what a manifest states here"),
+            Self::NotOneWord(keyword) => {
+                write!(f, "`{keyword}` states one word, and this line does not")
+            }
+            Self::DependsTwice(named) => write!(f, "`{named}` is depended on twice"),
+            Self::NoSuchPackage(named) => write!(f, "there is no package in `{named}`"),
+            Self::InTwoFiles {
+                module,
+                first,
+                second,
+            } => write!(f, "`{module}` is both `{first}` and `{second}`"),
         }
     }
 }

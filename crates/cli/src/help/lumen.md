@@ -5,14 +5,18 @@ Source that is not in canonical form does not compile: run `lumen fmt` first.
 
 Commands:
   fmt       Rewrite a source file in canonical form
-  check     Report the first thing about a source file the compiler will not have
-  build     Compile a source file to the class files a JVM loads
+  check     Report the first thing about a source file or a package the compiler will not have
+  build     Compile a source file or a package to the class files a JVM loads
   run       Compile a source file and run the program it holds
   test      Run the examples a module states about its functions
   api       Print the public surface of a module
   explain   Print the long form of one diagnostic code
 
 Run `lumen help <command>` for the long form of any of them.
+
+A package is a directory of modules with a `bux.package` manifest beside them; `check` and
+`build` each take one. `lumen help check` says what the manifest states and where an import
+looks.
 
 Every error carries a code on its first line; `lumen explain <code>` says more about it.
 

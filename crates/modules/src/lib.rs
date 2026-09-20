@@ -4,10 +4,12 @@
 //! file, dependencies before dependents. Nothing is merged: each module keeps its own source and
 //! its own tree, and is compiled as the module it is. `docs/specs/modules.md` is the
 //! specification, and `docs/design.md` section 16 is the rule it enforces: one file is one
-//! module, named by its file.
+//! module, named by its file. `docs/specs/packages.md` states the one place other than beside
+//! the importing file that an import is answered from.
 
 mod error;
 mod load;
+mod package;
 
 use std::io;
 use std::path::{Path, PathBuf};
@@ -17,6 +19,7 @@ use lumen_diagnostics::Diagnostic;
 
 pub use crate::error::LoadError;
 pub use crate::load::load;
+pub use crate::package::{MANIFEST, SUFFIX};
 
 /// Every module a program reaches, in the order they are compiled.
 ///
@@ -87,7 +90,7 @@ pub enum NotLoaded {
 
 impl NotLoaded {
     /// `diagnostic`, carrying the file it points into so a reader is shown the right source.
-    fn refused(diagnostic: &Diagnostic, path: &Path, source: &str) -> Self {
+    pub(crate) fn refused(diagnostic: &Diagnostic, path: &Path, source: &str) -> Self {
         Self::Refused(Box::new(Refusal {
             path: path.to_path_buf(),
             source: source.to_owned(),

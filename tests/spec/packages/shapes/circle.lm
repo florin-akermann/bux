@@ -1,0 +1,5 @@
+// A module of a package is a file of its directory, named by its file as every module is.
+// example: around(radius: 2) == 12
+fn around(radius: Int) -> Int {
+    radius * 6
+}

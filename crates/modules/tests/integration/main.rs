@@ -5,5 +5,6 @@
 mod common;
 mod library;
 mod loading;
+mod packages;
 mod properties;
 mod refusals;

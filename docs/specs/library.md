@@ -164,7 +164,7 @@ A program that cannot be written without one is what lands it.
 
 | code    | what it refuses                                                      |
 | ------- | -------------------------------------------------------------------- |
-| `L0306` | an import names a module neither the library nor a file beside holds |
+| `L0306` | an import names a module neither the library, a file beside, nor a package holds |
 | `L0424` | a call of a constrained library generic, at a type the library reaches no instance of |
 
 A refusal inside the library is the compiler's own failure and not the program's.

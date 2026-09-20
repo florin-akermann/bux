@@ -5,7 +5,7 @@
 //! `lumen-format`, and how a refusal reads belongs to `lumen-diagnostics`.
 
 use std::ffi::OsStr;
-use std::fs::{create_dir, create_dir_all, read_to_string, remove_dir_all, write};
+use std::fs::{create_dir, create_dir_all, read_dir, read_to_string, remove_dir_all, write};
 use std::path::{Path, PathBuf};
 use std::process::{self, exit};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -17,6 +17,7 @@ use lumen_format::format;
 use lumen_holes::{Hole, Whole};
 use lumen_ir::{Asked, Lowered, is_a_program, lower};
 use lumen_jvm::ClassFile;
+use lumen_modules::{MANIFEST, SUFFIX};
 use lumen_types::TypedProgram;
 
 use crate::compiling::{Checked, Module, NotCompiled, Refusal, checked, typed};
@@ -36,17 +37,17 @@ enum Command {
     /// Rewrite a source file in canonical form
     #[command(long_about = include_str!("help/fmt.md"))]
     Fmt { file: PathBuf },
-    /// Report the first thing about a source file the compiler will not have
-    #[command(long_about = include_str!("help/check.md"))]
+    /// Report the first thing about a source file or a package the compiler will not have
+    #[command(long_about = concat!(include_str!("help/check.md"), include_str!("help/packages.md")))]
     Check {
-        file: PathBuf,
+        path: PathBuf,
         /// Write the refusal as one line of JSON on standard output, edit included
         #[arg(long)]
         json: bool,
     },
-    /// Compile a source file to the class files a JVM loads
-    #[command(long_about = include_str!("help/build.md"))]
-    Build { file: PathBuf },
+    /// Compile a source file or a package to the class files a JVM loads
+    #[command(long_about = concat!(include_str!("help/build.md"), include_str!("help/packages.md")))]
+    Build { path: PathBuf },
     /// Compile a source file and run the program it holds
     #[command(long_about = include_str!("help/run.md"))]
     Run { file: PathBuf },
@@ -69,8 +70,8 @@ fn main() {
 fn run(command: &Command) -> Outcome {
     match command {
         Command::Fmt { file } => fmt(file),
-        Command::Check { file, json } => check(file, *json),
-        Command::Build { file } => build(file),
+        Command::Check { path, json } => check(path, *json),
+        Command::Build { path } => build(path),
         Command::Run { file } => started(file),
         Command::Test { file } => tested(file),
         Command::Api { file } => api(file),
@@ -92,9 +93,13 @@ fn fmt(path: &Path) -> Outcome {
 
 /// Reports the first thing about `path` the compiler will not have.
 ///
-/// `as_data` asks for the refusal as JSON rather than as a page to read, which
-/// `docs/specs/diagnostics.md` states field for field.
+/// A directory is a package, so every module of it is checked rather than one file, which
+/// `docs/specs/packages.md` states. `as_data` asks for the refusal as JSON rather than as a page
+/// to read, which `docs/specs/diagnostics.md` states field for field.
 fn check(path: &Path, as_data: bool) -> Outcome {
+    if path.is_dir() {
+        return across(path, &|module| check(module, as_data));
+    }
     match checked(path) {
         Ok(_) => Outcome::Done,
         Err(NotCompiled::Unusable) => Outcome::Unusable,
@@ -283,8 +288,55 @@ fn somewhere_of_its_own() -> Option<PathBuf> {
 }
 
 /// Writes the class files of `path` beside it, one per class the module becomes.
+///
+/// A directory is a package, so every module of it is built rather than one file, which
+/// `docs/specs/packages.md` states.
 fn build(path: &Path) -> Outcome {
+    if path.is_dir() {
+        return across(path, &build);
+    }
     built(path).map_or_else(|refusal| refusal, |_| Outcome::Done)
+}
+
+/// Runs `over` on every module of the package in `directory`, stopping at the first refusal.
+fn across(directory: &Path, over: &dyn Fn(&Path) -> Outcome) -> Outcome {
+    let Some(modules) = modules_of(directory) else {
+        return Outcome::Unusable;
+    };
+    modules
+        .iter()
+        .map(|module| over(module))
+        .find(|outcome| !matches!(outcome, Outcome::Done))
+        .unwrap_or(Outcome::Done)
+}
+
+/// Every module of the package in `directory`, in the order their names sort.
+///
+/// A directory holding no manifest is no package, and a directory that cannot be listed holds
+/// nothing to compile. Each is said here rather than returned, because neither is about a
+/// program: there is no manifest for a refusal to point into and no source to point at.
+fn modules_of(directory: &Path) -> Option<Vec<PathBuf>> {
+    if !directory.join(MANIFEST).is_file() {
+        eprintln!(
+            "error: {}: there is no package here, which is a directory holding `{MANIFEST}`",
+            directory.display()
+        );
+        return None;
+    }
+    let listed = match read_dir(directory) {
+        Ok(listed) => listed,
+        Err(error) => {
+            eprintln!("error: {}: {error}", directory.display());
+            return None;
+        }
+    };
+    let mut modules: Vec<PathBuf> = listed
+        .filter_map(Result::ok)
+        .map(|entry| entry.path())
+        .filter(|path| path.extension().is_some_and(|written| written == SUFFIX))
+        .collect();
+    modules.sort();
+    Some(modules)
 }
 
 /// Builds `path` and runs the program it holds, which ends however that program ends.

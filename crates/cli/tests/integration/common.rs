@@ -13,6 +13,13 @@ pub struct Sibling<'w> {
     pub content: &'w str,
 }
 
+/// A file written under an example's directory, which is what a manifest and a package are.
+pub struct Within<'w> {
+    /// Where the file goes, read against the example's own directory.
+    pub at: &'w str,
+    pub content: &'w str,
+}
+
 /// A source file of `content`, in a directory no other test writes to.
 pub struct Example {
     pub directory: PathBuf,
@@ -36,6 +43,18 @@ impl Example {
     pub fn beside_it(&self, sibling: &Sibling<'_>) {
         let path = self.directory.join(sibling.named).with_extension("lm");
         std::fs::write(path, sibling.content).expect("a module beside an example is writable");
+    }
+
+    /// The same, with `file` written where it says under the example's directory.
+    ///
+    /// A package's manifest and a package it depends on are each written this way, because
+    /// neither is a module and a dependency is a directory of its own.
+    pub fn within_it(&self, file: &Within<'_>) {
+        let path = self.directory.join(file.at);
+        if let Some(holding) = path.parent() {
+            std::fs::create_dir_all(holding).expect("a directory under an example is creatable");
+        }
+        std::fs::write(path, file.content).expect("a file under an example is writable");
     }
 
     /// What the file holds now.
