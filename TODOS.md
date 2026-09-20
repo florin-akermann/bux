@@ -42,16 +42,6 @@ Whatever says it is a language change, so `docs/design.md` section 17 answers fi
 [053][c] - `Hash<String>` moves to `library/prelude.lm`, and nothing is supplied any more.
 [053][d] - `strings.length` and `list.index_of` land, which `docs/specs/library.md` is waiting on.
 
-## 🟢 Item 054: The specs still say the compiler supplies what the library writes
-`library/prelude.lm` writes every instance of `Eq`, `Ord`, `Hash`, `Show`, and the operators.
-`docs/specs/traits.md` still has a section called "What the compiler supplies" that lists them.
-`docs/specs/operators.md` and `docs/specs/literals.md` say the same of what they are about.
-Each was true before the prelude became Lumen source, and each is a claim no code holds up.
-A reader who believes them looks in the compiler for a body that is in `library/prelude.lm`.
-[054][a] - `docs/specs/traits.md` says which instances the library writes and which are supplied.
-[054][b] - `docs/specs/operators.md` and `docs/specs/literals.md` take that same wording.
-[054][c] - `crates/diagnostics/src/explanations/L0308.md` and `L0310.md` follow the specs.
-
 ## 🔴 Item 055: An `extern` reaches a member of a Java interface
 `extern method` is lowered to `invokevirtual`, which the JVM refuses to link on an interface.
 `extern type Path = "java.nio.file.Path"` with `extern method as_text(path: Path) -> String`
