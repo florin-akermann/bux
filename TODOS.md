@@ -69,16 +69,21 @@ There is no literal for either yet; a map is built by `empty` and `insert`, and 
 
 ## 🔴 Item 047: Richer patterns: `_`, a literal, and an or-pattern
 **Depends on:** Item 040 — version 0.1 closes before the first 0.2 item opens.
+**Depends on:** Item 034 — a literal pattern over a declared type needs the trait a literal is.
 A pattern today is a bare name or a constructor with patterns inside; nothing else is written.
 `docs/implementation.md` section 10 promises richer pattern matching and does not say richer how.
 Three forms earn their keep in everyday code: `_`, a literal, and an or-pattern.
 `_` ignores a value, `0` or `"quit"` matches one, and `A | B` answers two variants in one arm.
 A guard is not among them: an `if` inside the arm reads the same and keeps exhaustiveness simple.
 Exhaustiveness extends to each form; a literal pattern needs a `_` or a binding arm after it.
+A whole number written as a pattern is an `Int` today, which `docs/specs/literals.md` states.
+So `match count { 5 => … }` over an `Int32` is `L0400`, though `count + 5` is accepted, and a
+pattern needs both traits: `IntegerLiteral` to become the type, and `Eq` to say what sameness is.
 [047][a] - `docs/design.md` section 4 states the three forms and refuses the guard, with the reason.
 [047][b] - Spec first in `docs/specs/patterns.md`: each form, its canonical spacing, its errors.
 [047][c] - Parsing and exhaustiveness, test-first; a property: the check agrees with enumeration.
-[047][d] - Executable examples under `tests/spec/patterns/`, including a literal match with a gap.
+[047][d] - A whole-number pattern takes the type it is matched against and compares by its `Eq`.
+[047][e] - Executable examples under `tests/spec/patterns/`, including a literal match with a gap.
 
 ## 🔴 Item 048: A Java class is reached through an `extern` declaration
 **Depends on:** Item 044, Item 045 — a wrapper is a library module offering its own types.
@@ -121,14 +126,3 @@ The receiver counts as an unnamed argument, so a call that must name them keeps 
 [050][d] - The formatter keeps the form, and a round trip covers it.
 [050][e] - Executable examples under `tests/spec/calls/`; the `or` examples in `docs/specs` move.
 
-## 🔴 Item 051: A whole number matches a declared type
-**Depends on:** Item 034 — a literal is `IntegerLiteral`, and matching one needs `Eq` as well.
-`docs/specs/literals.md` states the limit: a whole number written as a pattern is an `Int`.
-`match count { 5 => … }` over an `Int32` is therefore `L0400`, though `count + 5` is accepted.
-A pattern asks whether two values are the same, which is `Eq` rather than `IntegerLiteral`.
-So a pattern needs both: the number becomes the type, and the type says what sameness is.
-Exhaustiveness is the second question: a range of whole numbers is never listed arm by arm.
-[051][a] - Spec first in `docs/specs/literals.md`: what a pattern asks, and what it still needs.
-[051][b] - The pattern takes the type it is matched against, test-first, and is held to its bounds.
-[051][c] - Lowering compares through the type's `Eq`, and exhaustiveness keeps its wildcard rule.
-[051][d] - Executable examples under `tests/spec/literals/`: a match that answers, and one refused.

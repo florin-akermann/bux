@@ -135,7 +135,8 @@ A whole number written as a pattern is an `Int`, as it was before this.
 `match count { 5 => … }` over an `Int32` is therefore refused with `L0400`.
 A pattern asks whether two values are the same, which is `Eq` rather than `IntegerLiteral`, and
 the trait a pattern needs is a separate question from the trait a literal is.
-Nothing here needs the two answered together, so this answers the one it is about.
+Nothing here needs the two answered together, so this answers the one it is about, and
+`TODOS.md` item 047 is where a whole-number pattern over a declared type lands.
 
 `from_literal` is an ordinary trait method, so a program may call it by name.
 `from_literal(5)` at `Int` is the whole number it is given, and at a type whose instance a module
