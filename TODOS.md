@@ -71,19 +71,6 @@ Item 048 lands the declaration that makes such a reference writable, so this ite
 [052][b] - Section 15 cites the clause where it argues nothing is shared, so the two sections agree.
 [052][c] - Item 048's `docs/specs/interop.md` points at the clause rather than restating the rule.
 
-## 🟢 Item 053: A generic function is reachable through a module
-**Depends on:** Item 045 — the library is the first module whose functions a program cannot call.
-`docs/specs/codegen.md` writes a generic once per set of types a use settles it at.
-The module declaring it writes the sets its own body reaches, so an importer's set is never there.
-`L0417` refuses the call rather than writing bytecode nothing would load, which is the right stop.
-It is also why `library/strings.lm` holds one function and `list` holds none: both are generic.
-The answer is to write the set the importing module settles, in the module that settles it.
-That is what a specialisation already is; what is missing is reaching another module's body.
-[053][a] - `docs/specs/codegen.md` states where a specialisation of another module's generic goes.
-[053][b] - Lowering writes it, test-first, asserted on the instructions and the class it lands in.
-[053][c] - `L0417` is retired, and `docs/specs/diagnostics.md` records the code as spent.
-[053][d] - `library/list.lm` gains `length` and `has_value`, with examples in `tests/spec/library/`.
-
 ## 🔴 Item 054: The prelude's own bodies are read by the compiler
 **Depends on:** Item 045 — the prelude is Lumen source, and its bodies are the part nothing reads.
 `docs/specs/library.md` says version 0.1 reads an instance head and never the body below it.
