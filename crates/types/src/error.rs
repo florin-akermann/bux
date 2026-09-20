@@ -104,6 +104,7 @@ pub(crate) enum TypeErrorKind {
     NamedPrelude(String),
     /// A parameter is a bare `Bool`, so a call of it passes `true` and says no more.
     FlagParameter(String),
+    NotAPredicate(String),
 }
 
 impl TypeErrorKind {
@@ -127,6 +128,7 @@ impl TypeErrorKind {
             Self::Misnamed { .. } => Code::Misnamed,
             Self::NamedConstructor(_) | Self::NamedPrelude(_) => Code::Unnameable,
             Self::FlagParameter(_) => Code::FlagParameter,
+            Self::NotAPredicate(_) => Code::NotAPredicate,
         }
     }
 
@@ -172,6 +174,7 @@ impl TypeErrorKind {
             Self::FlagParameter(_) => {
                 "declare a two-variant type and take that instead, so the call says which of the two"
             }
+            Self::NotAPredicate(_) => "begin the name with `is_`, `has_`, `can_`, or `should_`",
         }
     }
 }
@@ -213,37 +216,60 @@ impl fmt::Display for TypeErrorKind {
             }
             Self::DivisorIsZero => write!(f, "this divisor is zero, so there is no answer"),
             Self::Discarded(left) => write!(f, "`{left}` is left here and nothing takes it"),
+            Self::Unnamed { .. }
+            | Self::Misnamed { .. }
+            | Self::NamedConstructor(_)
+            | Self::NamedPrelude(_)
+            | Self::FlagParameter(_)
+            | Self::NotAPredicate(_) => f.write_str(&self.how_it_is_written()),
+        }
+    }
+}
+
+impl TypeErrorKind {
+    /// The message of a refusal about how a call or a declaration is written.
+    ///
+    /// `docs/specs/arguments.md` and `docs/specs/naming.md` state these, and they read as one
+    /// group: each says what the author wrote rather than what type met what. Every other kind is
+    /// about a type, and [`fmt::Display`] writes those itself.
+    ///
+    /// A kind reaches here only from the arm of [`fmt::Display`] that names it, so a new one is
+    /// added to both or to neither: `Display` matches every variant, and leaving one out of that
+    /// match is a compile error rather than a message nothing writes.
+    fn how_it_is_written(&self) -> String {
+        match self {
             Self::Unnamed { function, repeated } => {
-                write!(
-                    f,
+                format!(
                     "`{function}` gives two parameters the type `{repeated}`, \
                      so this call names its arguments"
                 )
             }
             Self::Misnamed { written, parameter } => {
-                write!(
-                    f,
+                format!(
                     "this argument is named `{written}`, and the parameter here is `{parameter}`"
                 )
             }
             Self::NamedConstructor(called) => {
-                write!(
-                    f,
+                format!(
                     "`{called}` is a constructor, so it carries its values in order and names none"
                 )
             }
             Self::NamedPrelude(called) => {
-                write!(
-                    f,
+                format!(
                     "`{called}` comes from the prelude, which declares no parameter names to write"
                 )
             }
             Self::FlagParameter(function) => {
-                write!(
-                    f,
+                format!(
                     "this parameter is a `Bool`, so a call of `{function}` passes `true` and says no more"
                 )
             }
+            Self::NotAPredicate(function) => {
+                format!(
+                    "`{function}` gives back a `Bool`, so its name asks the question it answers"
+                )
+            }
+            _ => unreachable!("a kind reaches here only from the arm of `Display` that names it"),
         }
     }
 }

@@ -1,21 +1,21 @@
 // expect-run
 // `Eq` is what `==` is, and version 0.1 ships it for `Int`, `Bool`, and `String`.
 fn main() -> () {
-    numbers := same(left: 7, right: 7)
-    if numbers && matching(left: "one", right: "one") && agreeing(left: true, right: true) {
+    numbers := is_same(left: 7, right: 7)
+    if numbers && is_matching(left: "one", right: "one") && is_agreeing(left: true, right: true) {
         return ()
     }
     ()
 }
 
-fn same(left: Int, right: Int) -> Bool {
+fn is_same(left: Int, right: Int) -> Bool {
     left == right
 }
 
-fn matching(left: String, right: String) -> Bool {
+fn is_matching(left: String, right: String) -> Bool {
     left == right
 }
 
-fn agreeing(left: Bool, right: Bool) -> Bool {
+fn is_agreeing(left: Bool, right: Bool) -> Bool {
     left == right
 }

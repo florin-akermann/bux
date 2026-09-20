@@ -698,6 +698,28 @@ The formatter has no options.
 `docs/specs/formatting.md` states the canonical form it writes, construct by construct.
 The snippets in this document illustrate the shape of each feature, not its canonical spelling.
 
+### Naming
+
+Canonical form covers how a name is spelled, not only where it is written.
+
+**A function, a parameter, a record field, and an imported module are `snake_case`**.
+**A type, a variant, and a type parameter are `PascalCase`**.
+An acronym is a word, so `UserId` is canonical and `UserID` does not compile.
+
+**A declared name is two characters or more**, because `f` names nothing a reader can look for.
+A type parameter is exempt: it names no domain concept, and `T` is how that is written.
+
+**A function whose result is `Bool` asks the question it answers**, beginning `is_`, `has_`,
+`can_`, or `should_`.
+`if is_active(user)` reads as a question where `active(user)` reads as a command.
+
+The rules are about declared names, which is every name another file can write.
+A local binding is private to the body it is written in, so none of them is about one.
+
+Naming is checked and never rewritten, for the same reason order is: what a thing is called is the
+author's decision, so the compiler says what canonical form spells it rather than spelling it.
+`docs/specs/naming.md` is the specification.
+
 ### Order
 
 Canonical form covers sequence, not only whitespace.

@@ -140,6 +140,7 @@ the value it was given.
 | misnamed argument | `L0410` | this argument is named `to`, and the parameter here is `from` |
 | no names to write | `L0411` | `Span` is a constructor, so it carries its values in order and names none |
 | flag parameter    | `L0412` | this parameter is a `Bool`, so a call of `open` passes `true` and says no more |
+| not a predicate   | `L0413` | `active` gives back a `Bool`, so its name asks the question it answers |
 
 `L0400` also says `` `Bool` cannot be added `` when `+` is given something that is neither `Int`
 nor `String`.
@@ -156,6 +157,9 @@ how many there are and what they are is each settled before which of them is whi
 `L0412` is a parameter that is a bare `Bool`, which `docs/specs/arguments.md` states as well.
 It is raised where the parameter is written, because the declaration is what changes.
 It is reached after the body, because the type it reads is the one inference settled.
+`L0413` is a function whose result is `Bool` and whose name asks nothing, which
+`docs/specs/naming.md` states.
+It reads the same result and is reached at the same point, after `L0412` and for the same reason.
 A function whose parameters and result are all `Bool` is about `Bool`, and is the one carve-out.
 
 `/` and `%` give back `Option<Int>` rather than `Int`, which `docs/specs/arithmetic.md` states.

@@ -9,4 +9,5 @@ mod errors;
 mod flags;
 mod generics;
 mod inference;
+mod predicate;
 mod properties;

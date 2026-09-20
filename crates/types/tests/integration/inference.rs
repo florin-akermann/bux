@@ -18,7 +18,7 @@ fn a_quoted_string_is_a_string() {
 
 #[test]
 fn a_comparison_is_a_bool_however_it_is_written() {
-    let source = "fn small(value: Int) -> Bool {\n    value < 10\n}\n";
+    let source = "fn is_small(value: Int) -> Bool {\n    value < 10\n}\n";
 
     assert_eq!(inferred_type(source, "value < 10", 1), "Bool");
 }
@@ -53,8 +53,7 @@ fn a_for_loop_binds_the_item_of_the_list_it_walks() {
 
 #[test]
 fn a_field_is_the_type_the_record_declares_it() {
-    let source =
-        "fn open(user: User) -> Bool {\n    user.active\n}\n\ntype User = {\n    active: Bool\n}\n";
+    let source = "fn is_open(user: User) -> Bool {\n    user.active\n}\n\ntype User = {\n    active: Bool\n}\n";
 
     assert_eq!(inferred_type(source, "user.active", 1), "Bool");
 }
@@ -139,7 +138,7 @@ fn a_field_reached_through_a_name_bound_to_a_field_is_found() {
 #[test]
 fn the_three_types_the_library_ships_an_eq_for_are_compared() {
     let source = concat!(
-        "fn same(left: String, right: String) -> Bool {\n",
+        "fn is_same(left: String, right: String) -> Bool {\n",
         "    1 == 2 && true == false && left == right\n",
         "}\n"
     );
@@ -149,7 +148,7 @@ fn the_three_types_the_library_ships_an_eq_for_are_compared() {
 
 #[test]
 fn a_comparison_of_two_numbers_nothing_else_pins_down_is_a_comparison_of_ints() {
-    let source = "fn same(left: Int) -> Bool {\n    left == 1\n}\n";
+    let source = "fn is_same(left: Int) -> Bool {\n    left == 1\n}\n";
 
     assert_eq!(inferred_type(source, "1", 1), "Int");
 }

@@ -1,6 +1,6 @@
 // expect-error: L0402
 // A field is looked up in the record its type declares, and nowhere else.
-fn go(user: User) -> Bool {
+fn is_present(user: User) -> Bool {
     user.busy
 }
 

@@ -15,7 +15,7 @@ const SOURCES: [&str; 8] = [
     "fn used() -> Result<Int, String> {\n    value := held()?\n    Ok(value + 1)\n}\n\nfn held() -> Result<Int, String> {\n    Ok(1)\n}\n",
     "fn wrapped() -> Option<Int> {\n    Some(identity(2))\n}\n\nfn identity<T>(value: T) -> T {\n    value\n}\n",
     "fn counted() -> Int {\n    2\n}\n\nfn main() -> () {\n    ()\n}\n",
-    "fn same(word: String, count: Int) -> Bool {\n    word == \"one\" && count != 2\n}\n",
+    "fn is_same(word: String, count: Int) -> Bool {\n    word == \"one\" && count != 2\n}\n",
 ];
 
 #[hegel::test]
@@ -140,7 +140,7 @@ const CONTEXTS: [&str; 4] = [
     "fn go(a: Int, b: Int) -> Option<Int> {\n    {}\n}\n",
     "fn go(a: Int, b: Int) -> Int {\n    or({}, 0)\n}\n",
     "fn go(a: Int, b: Int) -> Option<Int> {\n    held := {}\n    held\n}\n",
-    "fn go(a: Int, b: Int) -> Bool {\n    or({}, 0) == a\n}\n",
+    "fn is_same(a: Int, b: Int) -> Bool {\n    or({}, 0) == a\n}\n",
 ];
 
 /// One module dividing, drawn from the operators, the operands, and where it is written.

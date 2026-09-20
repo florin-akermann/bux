@@ -1,0 +1,5 @@
+// expect-error: L0203
+// A declared name is a word rather than an initial.
+fn f(count: Int) -> Int {
+    count
+}

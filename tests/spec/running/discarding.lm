@@ -4,7 +4,7 @@ fn main() -> () {
     _ = plain(2)
     _ = "thrown away"
     _ = wrapped(3)
-    _ = reads(wrapped(4))
+    _ = is_read(wrapped(4))
     var count = 0
     for count < 3 {
         _ = plain(count)
@@ -22,7 +22,7 @@ fn wrapped(value: Int) -> UserId {
     UserId(value)
 }
 
-fn reads(id: UserId) -> Bool {
+fn is_read(id: UserId) -> Bool {
     match id {
         UserId(raw) => raw > 0
     }

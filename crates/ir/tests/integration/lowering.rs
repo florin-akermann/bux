@@ -29,18 +29,18 @@ fn a_function_is_reached_through_the_module_class_and_never_an_instance() {
 
 #[test]
 fn a_signature_says_what_each_lumen_type_is_carried_by() {
-    let source = "fn held(count: Int, name: String) -> Bool {\n    count > 1\n}\n\n\
-                  fn negated(flag: Bool) -> Bool {\n    !flag\n}\n";
+    let source = "fn is_held(count: Int, name: String) -> Bool {\n    count > 1\n}\n\n\
+                  fn is_negated(flag: Bool) -> Bool {\n    !flag\n}\n";
 
     let lowered = common::lowered(source);
 
     let demo = common::class_of(&lowered, &ClassName::new("demo"));
     assert_eq!(
-        common::method_of(demo, "held").descriptor.to_string(),
+        common::method_of(demo, "is_held").descriptor.to_string(),
         "(JLjava/lang/String;)Z"
     );
     assert_eq!(
-        common::method_of(demo, "negated").descriptor.to_string(),
+        common::method_of(demo, "is_negated").descriptor.to_string(),
         "(Z)Z"
     );
 }
@@ -370,11 +370,11 @@ fn a_condition_whose_type_was_erased_is_read_back_as_a_truth_value() {
 
 #[test]
 fn the_operand_of_not_is_read_back_before_it_is_flipped() {
-    let source = format!("fn negated(flag: Bool) -> Bool {{\n    !identity(flag)\n}}\n{ERASED}");
+    let source = format!("fn is_negated(flag: Bool) -> Bool {{\n    !identity(flag)\n}}\n{ERASED}");
 
     let lowered = common::lowered(&source);
 
-    let negated = common::body_of(&lowered, "negated");
+    let negated = common::body_of(&lowered, "is_negated");
     let boolean = ClassName::new("java/lang/Boolean");
     assert!(common::calls(negated, &boolean, "booleanValue"));
 }
@@ -382,11 +382,11 @@ fn the_operand_of_not_is_read_back_before_it_is_flipped() {
 #[test]
 fn an_operand_whose_type_was_erased_is_read_back_before_the_operator_works_on_it() {
     let source =
-        format!("fn compared(count: Int) -> Bool {{\n    identity(count) < 2\n}}\n{ERASED}");
+        format!("fn is_compared(count: Int) -> Bool {{\n    identity(count) < 2\n}}\n{ERASED}");
 
     let lowered = common::lowered(&source);
 
-    let compared = common::body_of(&lowered, "compared");
+    let compared = common::body_of(&lowered, "is_compared");
     let long = ClassName::new("java/lang/Long");
     assert!(
         common::calls(compared, &long, "longValue"),

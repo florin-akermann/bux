@@ -16,6 +16,9 @@ about layout.
 Formatting preserves meaning: `parse(format(source))` equals `parse(source)`, always.
 The printer therefore never reorders, adds, or drops anything the parse tree holds.
 
+How a name is spelled is part of canonical form too, and `docs/specs/naming.md` states it: a
+function is `snake_case`, a type is `PascalCase`, and neither is rewritten.
+
 Sequence is part of canonical form, and the printer is not what enforces it.
 `docs/design.md` section 13 puts imports first and sorted, a declaration above what uses it, and a
 match arm in the order the type declares its variants.
@@ -141,6 +144,9 @@ The language's own examples are then the largest evidence that the printer is ri
 ## Where each order rule is checked
 
 A rule is checked by the phase that holds the information it needs, and no earlier.
+
+How a name is spelled is a rule of the same kind, and `docs/specs/naming.md` says where each of
+those is checked.
 
 Import order is syntax, so `lumen-format` checks it alongside canonical form and raises `L0201`.
 Whether a declaration is written above what uses it needs to know which name means which

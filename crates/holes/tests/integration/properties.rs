@@ -9,11 +9,14 @@ use crate::common::{holes, written};
 const RESULTS: [&str; 5] = ["Int", "String", "Bool", "Option<Int>", "List<Int>"];
 
 /// The places a hole is written, each holding it where `{}` is.
+///
+/// The function asks a question in its name because the generator varies its result type,
+/// and `docs/specs/naming.md` holds a function that gives back a `Bool` to a name that asks one.
 const PLACES: [&str; 4] = [
-    "fn go() -> {result} {\n    {}\n}\n",
-    "fn go() -> {result} {\n    held := {}\n    held\n}\n",
-    "fn go(count: Int) -> {result} {\n    if count > 1 {\n        return {}\n    }\n    {}\n}\n",
-    "fn go(count: Int) -> {result} {\n    match count > 1 {\n        true => {}\n        false => {}\n    }\n}\n",
+    "fn is_reached() -> {result} {\n    {}\n}\n",
+    "fn is_reached() -> {result} {\n    held := {}\n    held\n}\n",
+    "fn is_reached(count: Int) -> {result} {\n    if count > 1 {\n        return {}\n    }\n    {}\n}\n",
+    "fn is_reached(count: Int) -> {result} {\n    match count > 1 {\n        true => {}\n        false => {}\n    }\n}\n",
 ];
 
 /// The modules a property is checked over, none of which holds a hole.

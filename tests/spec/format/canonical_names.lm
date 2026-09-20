@@ -1,0 +1,33 @@
+// Every kind of declared name, each spelled the way canonical form spells it.
+import io
+
+fn count_active(users: List<User>) -> Int {
+    var total = 0
+    for user in users {
+        if is_active(user) {
+            total += 1
+        }
+    }
+    total
+}
+
+fn is_active(user: User) -> Bool {
+    user.active
+}
+
+fn identity<T>(value: T) -> T {
+    value
+}
+
+type User = {
+    user_id: UserId
+    active: Bool
+}
+
+type UserId = UserId(Int)
+
+type Payment =
+    | Pending
+    | Authorized {
+        authorization_id: String
+    }

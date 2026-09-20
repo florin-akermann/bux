@@ -5,8 +5,8 @@ fn go() -> Int {
     twice(3)
 }
 
-fn twice(n) {
-    n + n
+fn twice(count) {
+    count + count
 }
 
 fn kept(value) {

@@ -12,7 +12,7 @@ use crate::common::{expressions, inferred_type, refusal};
 /// names, so any set of them is a module that infers.
 const PIECES: [&str; 6] = [
     "type UserId = UserId(Int)",
-    "fn open(user: User) -> Bool {\n    user.active\n}\n\ntype User = {\n    id: Int\n    active: Bool\n}\n",
+    "fn is_open(user: User) -> Bool {\n    user.active\n}\n\ntype User = {\n    id: Int\n    active: Bool\n}\n",
     "fn identity<T>(value: T) -> T {\n    value\n}",
     "fn total(counts: List<Int>) -> Int {\n    var sum = 0\n    for count in counts {\n        sum += count\n    }\n    sum\n}",
     "fn shout(word: String) -> String {\n    word + \"!\"\n}",
@@ -23,7 +23,7 @@ const PIECES: [&str; 6] = [
 const REFUSALS: [&str; 4] = [
     "fn refused() -> Int {\n    \"seven\"\n}",
     "fn refused<T>(value: T) -> T {\n    1\n}",
-    "fn refused(flag: Bool) -> Bool {\n    flag + flag\n}",
+    "fn is_refused(flag: Bool) -> Bool {\n    flag + flag\n}",
     "fn refused(value: Int) -> Int {\n    value.missing\n}",
 ];
 
@@ -111,7 +111,7 @@ fn a_generic_function_is_general_enough_for_any_two_uses(tc: TestCase) {
     let (first, first_type) = tc.draw(gs::sampled_from(&VALUES));
     let (second, second_type) = tc.draw(gs::sampled_from(&VALUES));
     let source = format!(
-        "fn go() -> {second_type} {{\n    one := given({first})\n    two := given({second})\n    two\n}}\n\n\
+        "fn is_general() -> {second_type} {{\n    one := given({first})\n    two := given({second})\n    two\n}}\n\n\
          fn given<T>(value: T) -> T {{\n    value\n}}\n"
     );
 
@@ -168,11 +168,14 @@ fn an_underscore_and_an_equals_make_any_statement_compile(tc: TestCase) {
 /// The type of a statement that leaves nothing behind, which is what a discarded one must be.
 const UNIT: &str = "()";
 
-/// A module whose `main` gives back `result` and holds `written`, over the functions it calls.
+/// A module whose one function gives back `result` and holds `written`, over the ones it calls.
+///
+/// The function asks a question in its name because the generator varies its result type, and
+/// `docs/specs/naming.md` holds a function that gives back a `Bool` to a name that asks one.
 fn body(result: &str, written: &str) -> String {
     format!(
         concat!(
-            "fn main() -> {result} {{\n{written}\n}}\n\n",
+            "fn is_done() -> {result} {{\n{written}\n}}\n\n",
             "fn save(value: Int) -> Result<(), String> {{\n    Ok(())\n}}\n\n",
             "fn log(value: Int) -> () {{\n    ()\n}}\n"
         ),
@@ -276,7 +279,7 @@ impl Signature<'_> {
             .map(|(position, one)| format!("p{position}: {one}"))
             .collect();
         format!(
-            "fn open({}) -> {} {{\n    todo(\"the body is not the point\")\n}}\n",
+            "fn is_open({}) -> {} {{\n    todo(\"the body is not the point\")\n}}\n",
             written.join(", "),
             self.gives
         )
@@ -309,4 +312,32 @@ fn a_bool_parameter_compiles_only_where_the_whole_signature_is_bool(tc: TestCase
     } else {
         assert!(accepts(&source), "{source}");
     }
+}
+
+/// The openers a generated name is built with, four of which are the questions a name may ask.
+const OPENERS: [&str; 6] = ["is_", "has_", "can_", "should_", "was_", ""];
+
+/// The words a generated name is built from, none of them asking a question on its own.
+const WORDS: [&str; 3] = ["active", "paid", "island"];
+
+/// The results a generated function gives back, one of which holds it to a question.
+const GIVES: [&str; 2] = ["Bool", "Int"];
+
+#[hegel::test]
+fn a_bool_function_compiles_exactly_when_its_name_asks_a_question(tc: TestCase) {
+    let opener = tc.draw(gs::sampled_from(&OPENERS));
+    let word = tc.draw(gs::sampled_from(&WORDS));
+    let gives = tc.draw(gs::sampled_from(&GIVES));
+    let source = format!(
+        "fn {opener}{word}(count: Int) -> {gives} {{\n    {}\n}}\n",
+        if gives == "Bool" {
+            "count > 1"
+        } else {
+            "count"
+        }
+    );
+
+    let asks = ["is_", "has_", "can_", "should_"].contains(&opener);
+
+    assert_eq!(accepts(&source), asks || gives != "Bool", "{source}");
 }

@@ -1,6 +1,6 @@
 // expect-error: L0406
 // `==` is `Eq`, and version 0.1 gives no declared type an instance of it.
-fn same(left: User, right: User) -> Bool {
+fn is_same(left: User, right: User) -> Bool {
     left == right
 }
 

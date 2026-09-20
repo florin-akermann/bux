@@ -1,0 +1,3 @@
+// expect-error: L0202
+// An acronym is a word, so canonical form spells this type `UserId`.
+type UserID = UserID(Int)

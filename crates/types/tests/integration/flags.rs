@@ -40,8 +40,8 @@ fn a_two_variant_type_is_what_a_parameter_takes_instead() {
 
 #[test]
 fn a_boolean_operation_over_bool_keeps_its_parameters() {
-    inferred(&declaring("first: Bool, second: Bool", "Bool"));
-    inferred(&declaring("only: Bool", "Bool"));
+    inferred("fn is_implied(first: Bool, second: Bool) -> Bool {\n    !first || second\n}\n");
+    inferred("fn is_set(only: Bool) -> Bool {\n    only\n}\n");
 }
 
 #[test]
@@ -69,7 +69,7 @@ fn a_parameter_the_author_left_untyped_is_held_to_the_type_it_turned_out_to_have
 
 #[test]
 fn a_type_parameter_is_not_a_bool_however_a_call_instantiates_it() {
-    let generic = "fn main() -> Bool {\n    open(true)\n}\n\n\
+    let generic = "fn is_passed() -> Bool {\n    open(true)\n}\n\n\
                    fn open<T>(value: T) -> T {\n    value\n}\n";
 
     inferred(generic);
@@ -77,7 +77,7 @@ fn a_type_parameter_is_not_a_bool_however_a_call_instantiates_it() {
 
 #[test]
 fn a_result_a_field_and_a_binding_may_each_be_a_bool() {
-    let elsewhere = "fn open(user: User) -> Bool {\n    ready := user.active\n    ready\n}\n\n\
+    let elsewhere = "fn is_open(user: User) -> Bool {\n    ready := user.active\n    ready\n}\n\n\
                      type User = {\n    active: Bool\n}\n";
 
     inferred(elsewhere);

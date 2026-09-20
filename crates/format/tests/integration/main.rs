@@ -9,5 +9,6 @@ mod expressions;
 mod gate;
 mod items;
 mod meaning;
+mod naming;
 mod properties;
 mod statements;

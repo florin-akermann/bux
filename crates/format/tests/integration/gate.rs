@@ -145,7 +145,7 @@ fn two_imports_out_of_sort_name_the_one_that_belongs_first() {
 #[test]
 fn a_file_whose_imports_are_first_and_sorted_passes() {
     assert_eq!(
-        check("import files\n\nimport io\n\nfn f() -> Int {\n    1\n}\n"),
+        check("import files\n\nimport io\n\nfn go() -> Int {\n    1\n}\n"),
         Ok(())
     );
 }

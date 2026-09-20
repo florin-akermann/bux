@@ -2,6 +2,7 @@
 
 use hegel::TestCase;
 use hegel::generators as gs;
+use lumen_diagnostics::render;
 use lumen_format::{CheckError, check, format};
 
 use crate::common::tree;
@@ -12,10 +13,10 @@ const ITEMS: [&str; 8] = [
     "type UserId = UserId(Int)",
     "type User = {\n    id: UserId\n}",
     "type Payment =\n    | Pending\n    | Failed(String)",
-    "fn f(a: Int) -> Int {\n    // why this is here\n    a + 1 * (2 - 3)\n}",
-    "fn dropped(a: Int) -> Int {\n    _ = f(a)\n    a\n}",
-    "fn named(a: Int) -> Int {\n    joined(first: a, second: a)\n}",
-    "fn g(p: Payment) -> Int {\n    match p {\n        Pending => 1\n        Failed(reason) => 2\n    }\n}",
+    "fn added(count: Int) -> Int {\n    // why this is here\n    count + 1 * (2 - 3)\n}",
+    "fn dropped(count: Int) -> Int {\n    _ = added(count)\n    count\n}",
+    "fn named(count: Int) -> Int {\n    joined(first: count, second: count)\n}",
+    "fn matched(payment: Payment) -> Int {\n    match payment {\n        Pending => 1\n        Failed(reason) => 2\n    }\n}",
 ];
 
 /// The atoms a generated expression is built from, one of which is a bare number.
@@ -51,7 +52,7 @@ fn program(tc: &TestCase) -> String {
         .into_iter()
         .map(str::to_owned)
         .collect();
-    items.push(format!("fn h() {{\n    {}\n}}", expression(tc)));
+    items.push(format!("fn held() {{\n    {}\n}}", expression(tc)));
     items.join("\n\n") + "\n"
 }
 
@@ -125,4 +126,57 @@ fn comment_lines(text: &str) -> Vec<&str> {
         .map(str::trim)
         .filter(|line| line.starts_with("//"))
         .collect()
+}
+
+/// What a generated name opens with, including the underscore a person leads one with.
+///
+/// An underscore never stands alone, because `_` is a keyword rather than a name.
+const OPENERS: [&str; 6] = ["a", "A", "u", "U", "_a", "_U"];
+
+/// The characters the rest of a generated name is drawn from, which are every kind it may hold.
+const LETTERS: &str = "abUI_2";
+
+/// How long the rest of a generated name runs, past the opener that is always written.
+const LONGEST: usize = 5;
+
+/// A name a person might write, in any mixture of case, underscore, and digit.
+fn a_name(tc: &TestCase) -> String {
+    let opener = tc.draw(gs::sampled_from(&OPENERS));
+    let rest: String = tc.draw(gs::text().alphabet(LETTERS).max_size(LONGEST));
+    format!("{opener}{rest}")
+}
+
+/// A module declaring one function called `name`, which is the only thing about it that varies.
+fn declaring(name: &str) -> String {
+    format!("fn {name}(count: Int) -> Int {{\n    count\n}}\n")
+}
+
+/// The spelling canonical form advises for `name`, where it advises one.
+///
+/// A name already canonical is its own spelling. A name that is an initial has none, because the
+/// word it should have named is the author's to choose and no rewrite can guess it.
+fn spelling(name: &str) -> Option<String> {
+    let Err(error) = check(&declaring(name)) else {
+        return Some(name.to_owned());
+    };
+    render(&error.diagnostic(), &declaring(name), "demo.lm")
+        .lines()
+        .find_map(|line| line.strip_prefix("help: canonical form spells this name `"))
+        .and_then(|spelled| spelled.strip_suffix('`'))
+        .map(str::to_owned)
+}
+
+#[hegel::test]
+fn every_spelling_canonical_form_advises_is_one_it_accepts(tc: TestCase) {
+    let written = a_name(&tc);
+
+    let Some(spelled) = spelling(&written) else {
+        return;
+    };
+
+    assert_eq!(
+        check(&declaring(&spelled)),
+        Ok(()),
+        "{written} -> {spelled}"
+    );
 }

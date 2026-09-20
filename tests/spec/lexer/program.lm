@@ -44,7 +44,7 @@ fn first_user(users: List<User>) -> Result<User, String> {
     Err("no users")
 }
 
-fn active(user: User) -> Bool {
+fn is_active(user: User) -> Bool {
     if user.active {
         return true
     }

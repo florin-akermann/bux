@@ -1,0 +1,9 @@
+// expect-error: L0413
+// A function whose result is `Bool` asks the question it answers.
+fn active(user: User) -> Bool {
+    user.active
+}
+
+type User = {
+    active: Bool
+}

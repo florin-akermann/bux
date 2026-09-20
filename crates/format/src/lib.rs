@@ -12,6 +12,7 @@ mod control;
 mod expr;
 mod item;
 mod literal;
+mod naming;
 mod operand;
 mod order;
 mod pattern;
@@ -26,6 +27,7 @@ use lumen_diagnostics::{Code, Diagnostic, Fix};
 use lumen_lexer::Span;
 use lumen_parser::{ParseError, parse};
 
+pub use crate::naming::{Kind, Misspelling};
 pub use crate::order::OutOfOrder;
 use crate::printer::Printer;
 
@@ -46,7 +48,10 @@ pub fn check(source: &str) -> Result<(), CheckError> {
             fix: Fix::new(Span::new(0, source.len()), canonical),
         });
     }
-    order::out_of_order(&program).map_or(Ok(()), |out| Err(CheckError::OutOfOrder(out)))
+    if let Some(out) = order::out_of_order(&program) {
+        return Err(CheckError::OutOfOrder(out));
+    }
+    naming::misspelled(&program).map_or(Ok(()), |name| Err(CheckError::Misspelled(name)))
 }
 
 /// The canonical text of `source`.
@@ -84,6 +89,8 @@ pub enum CheckError {
     },
     /// An import is written somewhere canonical form does not put it.
     OutOfOrder(OutOfOrder),
+    /// A declared name is spelled some way other than the one canonical form spells it.
+    Misspelled(Misspelling),
 }
 
 impl CheckError {
@@ -105,6 +112,12 @@ impl CheckError {
                 out.span(),
                 Some(out.help()),
             ),
+            Self::Misspelled(name) => Diagnostic::new(
+                name.code(),
+                name.to_string(),
+                name.span(),
+                Some(name.help()),
+            ),
         }
     }
 }
@@ -115,6 +128,7 @@ impl fmt::Display for CheckError {
             Self::Parse(error) => write!(f, "{}", error.message()),
             Self::NotCanonical { deviation, .. } => write!(f, "{deviation}"),
             Self::OutOfOrder(out) => write!(f, "{out}"),
+            Self::Misspelled(name) => write!(f, "{name}"),
         }
     }
 }

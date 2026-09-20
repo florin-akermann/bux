@@ -66,6 +66,10 @@ catalogue! {
     NotCanonical => "L0200",
     /// An import is written after a declaration, or two imports are out of sort.
     ImportOutOfOrder => "L0201",
+    /// A declared name is spelled some way other than the one canonical form spells it.
+    NotCanonicalCase => "L0202",
+    /// A declared name is an initial rather than a word a reader can look for.
+    NameIsAnInitial => "L0203",
     /// Nothing in scope has this name.
     UnresolvedName => "L0300",
     /// A module declares the same name twice.
@@ -104,6 +108,8 @@ catalogue! {
     Unnameable => "L0411",
     /// A parameter is a bare `Bool`, so a call of it passes `true` and says no more.
     FlagParameter => "L0412",
+    /// A function whose result is `Bool` is named for a command rather than a question.
+    NotAPredicate => "L0413",
     /// A `match` leaves a value of the type it matches unanswered.
     NonExhaustiveMatch => "L0500",
     /// A `match` lists its arms in an order the type does not declare its variants in.

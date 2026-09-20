@@ -1,0 +1,9 @@
+// expect-error: L0202
+// A function is `snake_case`, and the help spells the name canonical form writes.
+fn countActive(users: List<Int>) -> Int {
+    var total = 0
+    for user in users {
+        total += user
+    }
+    total
+}

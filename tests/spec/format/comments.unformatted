@@ -1,6 +1,6 @@
 // What this file is for.
 import io
-fn f() {
+fn go() {
     total := 0 // start at nothing
     // around again
     for {

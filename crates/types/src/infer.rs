@@ -3,6 +3,7 @@
 mod arguments;
 mod flags;
 mod pattern;
+mod predicate;
 mod record;
 mod settle;
 
@@ -102,6 +103,7 @@ impl Inference<'_> {
         self.settle_equalities()?;
         self.settle_discards()?;
         self.settle_parameters(function)?;
+        self.settle_predicate(function)?;
         for gone in mem::take(&mut self.introduced) {
             self.environment.unbind(&gone);
         }

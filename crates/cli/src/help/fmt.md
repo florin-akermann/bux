@@ -19,6 +19,13 @@ below what uses it, and a `match` lists its arms in the order the type declares 
 but where a declaration belongs is the author's decision, so `lumen check` says where it goes
 rather than moving it there.
 
+How a name is spelled is fixed the same way and rewritten no more than order is. A function, a
+parameter, a record field, and an imported module are snake_case; a type, a variant, and a type
+parameter are PascalCase; an acronym is a word, so UserId compiles and UserID does not. A
+declared name is two characters or more, and a function whose result is Bool begins is_, has_,
+can_, or should_. What a thing is called is the author's decision, so `lumen check` says what
+canonical form spells it rather than spelling it.
+
 A file that does not parse is reported as a diagnostic, and nothing is written.
 
 Exit codes: 0 when the file is canonical or was made canonical, 1 when it does not parse, and

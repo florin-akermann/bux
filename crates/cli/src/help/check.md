@@ -10,6 +10,12 @@ there. `lumen fmt` is the command that fixes it. An import written after a decla
 imports out of sort, is reported here too, and `lumen fmt` does not fix that one: where an import
 belongs is said, never rewritten.
 
+How a name is spelled is part of canonical form too, and is reported here for the same reason: a
+name written in neither snake_case nor PascalCase, and a declared name of one character, are each
+refused with the spelling canonical form gives it or the word it wants. A function whose result
+is Bool is held to a name that asks the question it answers, which is reported with the types
+because the result read is the one inference settled.
+
 Name resolution comes next. A name with no definition, a module that declares one name twice, and
 a binding that hides a name already in scope are each refused, because in Lumen one name has one
 definition. A declaration written above something that uses it is refused here as well: a file

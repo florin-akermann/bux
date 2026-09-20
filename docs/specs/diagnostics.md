@@ -77,11 +77,19 @@ Canonical form raises these, in `crates/format/src/lib.rs`:
 
 - `L0200` — the file is not in canonical form.
 - `L0201` — an import is written after a declaration, or two imports are out of sort.
+- `L0202` — a declared name is spelled some way other than the one canonical form spells it.
+- `L0203` — a declared name is an initial rather than a word a reader can look for.
 
 One code covers all three ways a file departs from whitespace form, because they are one problem
 and `lumen fmt` is the one answer to it.
 Order is its own code because `lumen fmt` is not the answer to it: where a declaration belongs is
 the author's decision, so the compiler says where rather than moving it.
+
+Naming has two codes for the same reason, and one each because the two have different answers: a
+miscased name has the spelling canonical form gives it, and an initial has a word only the author
+knows.
+`L0413` is with inference rather than here because the result it reads is the one inference
+settled, which `docs/specs/naming.md` states.
 
 Name resolution raises these, in `crates/resolver/src/error.rs`:
 
@@ -107,6 +115,7 @@ Type inference raises these, in `crates/types/src/error.rs`:
 - `L0410` — an argument is named something other than the parameter it is passed for.
 - `L0411` — a call names the arguments of something that has no parameter names.
 - `L0412` — a parameter is a bare `Bool` outside a function that is about `Bool`.
+- `L0413` — a function whose result is `Bool` is named for a command rather than a question.
 
 Exhaustiveness raises these, in `crates/exhaustiveness/src/error.rs`:
 
