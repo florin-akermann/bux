@@ -6,21 +6,6 @@
 
 ## Open
 
-## 🟢 Item 048: A Java class is reached through an `extern` declaration
-**Depends on:** Item 044, Item 045 — a wrapper is a library module offering its own types.
-`docs/implementation.md` section 3 sketches `extern java class` and says nothing of the boundary.
-`docs/design.md` section 2 says what never crosses: identity, `null`, exceptions, the object model.
-An `extern` declaration names a static method or a constructor and gives it a Lumen signature.
-A `null` given back becomes `None`, a thrown exception becomes `Err`, and nothing else shows.
-A Java object a Lumen program holds is a value it cannot compare, hash, or print until a trait says.
-`io` and `files` become Lumen modules over `extern` declarations; the compiler stops supplying them.
-[048][a] - `docs/design.md` gains a section: what an `extern` reaches, and what never crosses.
-[048][b] - Spec first in `docs/specs/interop.md`: the declaration, the two mappings, and the errors.
-[048][c] - Lowering emits the call and the two mappings, test-first, asserted on the instructions.
-[048][d] - `io` and `files` in Lumen; `docs/specs/io.md` loses the "supplied module" paragraph.
-[048][e] - Executable examples under `tests/spec/interop/`, skipped by name when there is no JDK.
-[048][f] - `Show<Bool|Int|String>` and `Hash<String>` move to `library/prelude.lm` over `extern`.
-
 ## 🔴 Item 051: Identity is quarantined, not abolished
 `docs/design.md` section 15 argues that no two spawned functions ever hold the same value.
 The section's own example refutes it: `events` is held by the parent and by the spawned `produce`.
