@@ -76,7 +76,7 @@ Fetching, a registry, and a lockfile wait for a concrete requirement, which offl
 [049][d] - Help topic in `crates/cli/src/help/`; `lumen check` and `lumen build` take a package.
 [049][e] - Executable examples under `tests/spec/packages/`: two packages, one importing the other.
 
-## 🔴 Item 050: A call is written with its first argument in front
+## 🟡 Item 050: A call is written with its first argument in front
 **Depends on:** Item 041 — the resolver and the checker are mid-change until it lands.
 `docs/design.md` section 11 makes `maybe.or(fallback)` the call `or(maybe, fallback)`.
 The parser already reads `maybe.or(0)` as a call of the field `or`, and the checker refuses it.
