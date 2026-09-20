@@ -6,7 +6,7 @@
 
 ## Open
 
-## 🟡 Item 044: A type a module declares is reachable from the module that imports it
+## 🟢 Item 044: A type a module declares is reachable from the module that imports it
 **Depends on:** Item 040 — version 0.1 closes before the first 0.2 item opens.
 `docs/specs/modules.md` keeps a type its declaring module's own: `demo.User` cannot be written.
 A function whose signature names one is refused where it is reached, as `L0416`.
