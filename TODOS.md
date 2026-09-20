@@ -27,3 +27,15 @@ The cost is one method per instantiation and a generic body that must reach the 
 [025][c] - Lowering writes one method per instantiation, test-first, named without collision.
 [025][d] - A test on the bytecode: an `Int` passed to a generic is carried as `long` throughout.
 [025][e] - Executable examples under `tests/spec/generics/`.
+
+## 🔴 Item 036: A type that holds itself is refused
+`type Node = { number: Int, next: Node }` compiles today, and nothing can ever build one.
+A value has no null and no identity, so that field would have to hold a whole `Node` of its own.
+The layout is infinite, and the only reason no program fails is that no program can write one.
+A type that holds itself, directly or around a ring of types, is refused where it is declared.
+`Option<Node>` is how a type holds another of its own kind, and it stays accepted.
+Item 032 found this: the class asked a JVM to load itself before it laid itself out.
+[036][a] - A spec states the rule, what the error says, and the ring it names.
+[036][b] - A diagnostic of its own, with its explanation file, in the range its phase owns.
+[036][c] - The check, test-first: a direct ring, a ring through a second type, and an `Option`.
+[036][d] - An executable example that is refused with the new code.
