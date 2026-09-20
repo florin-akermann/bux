@@ -97,6 +97,11 @@ No constructor written branches, so no such frame is written.
 No method a module writes is `synchronized`, because locking is done on an object and a value
 has no identity to be locked on; a JVM refuses a `monitorenter` on a value outright.
 
+A record held in a record is laid out flat, which `docs/design.md` section 1 promises.
+Where the value sits is the JVM's decision, and the compiler's part is to say what it must know
+first, which the `LoadableDescriptors` attribute below does.
+That attribute earns its place by measurement, and the change that adds it records the numbers.
+
 A record type is a `final` value class with one field per field it declares, in the order it
 declares them, and one constructor taking them in that order.
 `user.name` is a `getfield`, and `user { active: false }` is a new instance built from the fields
@@ -166,6 +171,20 @@ Every method carries a `Code` attribute, and every `Code` attribute that branche
 A `Code` attribute carries an exception table, which is empty for every method but the one read
 `docs/specs/io.md` states, and the handler's frame says the throwable alone holds where it lands.
 
+A class carries a `LoadableDescriptors` attribute naming what its own fields hold.
+A JVM settles where each field of a class sits while it loads that class, and it can fold a value
+into the class holding it only where it already knows what that value holds.
+JEP 401 is how a class file asks for those classes to be loaded before that, and this is that ask.
+A class names the descriptor of each field whose type the same build writes, in the order the
+fields are declared, and names a type two fields share once.
+A field carried by a class the JVM ships, `java.lang.String` among them, is not named: it is no
+value class, so nothing of it could be folded into the class holding it.
+A class never names itself: the layout being settled is its own, and no value folds into itself.
+The base of a sum type is not named either: a field typed as one holds whichever variant it was
+handed, so it stays a reference however early the base is loaded.
+A class with no such field carries no attribute at all rather than an empty one.
+Nothing else is named: what a method takes and gives back waits for a measurement that asks for it.
+
 The output is byte-reproducible.
 Two compilations of one source produce identical files, so nothing in the writer depends on a
 timestamp, a build path, or the order a hash map iterates.
@@ -192,3 +211,4 @@ These hold and are checked with property-based tests:
 9. The one `equals` a module calls is the one `String` declares.
 10. A record bound with `:=` and mentioned only to read its fields is lowered without a `new`.
 11. Such a program computes what the same program computes when the record is built.
+12. Every descriptor a class asks to load first names another class the same build writes.

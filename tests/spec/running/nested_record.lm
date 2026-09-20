@@ -1,0 +1,29 @@
+// expect-run
+// > the number it was built with is the number it holds
+// A record held in a record is laid out flat wherever the JVM can do that, which the class file
+// asks for; `docs/specs/codegen.md` states the ask, and nothing a program writes can see it.
+// What a program can see is this: the value read back is the value that was put in.
+import io
+
+fn main() -> () {
+    user := User { id: 1, home: Address { number: 7, zone: 2 } }
+    io.println(told(user: user))
+}
+
+fn told(user: User) -> String {
+    if user.home.number == 7 {
+        "the number it was built with is the number it holds"
+    } else {
+        "the number it holds is another one"
+    }
+}
+
+type User = {
+    id: Int
+    home: Address
+}
+
+type Address = {
+    number: Int
+    zone: Int
+}

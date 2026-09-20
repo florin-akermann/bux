@@ -15,6 +15,8 @@ pub struct ClassFile {
     pub extends: u16,
     pub fields: Vec<Member>,
     pub methods: Vec<Member>,
+    /// The descriptors `LoadableDescriptors` names, empty where the class carries none.
+    pub loadable: Vec<String>,
 }
 
 /// One constant pool entry, as far as a test looks into it.
@@ -132,6 +134,7 @@ pub fn read(bytes: &[u8]) -> ClassFile {
     assert_eq!(interfaces, 0, "version 0.1 writes no interfaces");
     let fields = reading.members(&pool);
     let methods = reading.members(&pool);
+    let loadable = reading.loadable(&pool);
     ClassFile {
         magic,
         minor,
@@ -142,6 +145,7 @@ pub fn read(bytes: &[u8]) -> ClassFile {
         extends,
         fields,
         methods,
+        loadable,
     }
 }
 
@@ -223,6 +227,21 @@ impl Reading<'_> {
         }
     }
 
+    /// The descriptors the class asks a JVM to load before it decides its own layout.
+    fn loadable(&mut self, pool: &[Constant]) -> Vec<String> {
+        let attributes = self.u2();
+        let mut wanted = Vec::new();
+        for _ in 0..attributes {
+            let of = named(pool, self.u2());
+            let length = self.u4() as usize;
+            let held = self.bytes(length);
+            if of == "LoadableDescriptors" {
+                wanted = read_loadable(&held, pool);
+            }
+        }
+        wanted
+    }
+
     fn handlers(&mut self, pool: &[Constant]) -> Vec<Caught> {
         let count = self.u2();
         (0..count)
@@ -289,6 +308,12 @@ fn read_code(bytes: &[u8], pool: &[Constant]) -> Code {
         frames,
         handlers,
     }
+}
+
+fn read_loadable(bytes: &[u8], pool: &[Constant]) -> Vec<String> {
+    let mut reading = Reading { bytes, at: 0 };
+    let count = reading.u2();
+    (0..count).map(|_| named(pool, reading.u2())).collect()
 }
 
 /// The class the pool names at `held`, which is the text the entry there points at.

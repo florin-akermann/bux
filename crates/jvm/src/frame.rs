@@ -205,6 +205,19 @@ impl Hierarchy {
         }
     }
 
+    /// Whether a value of `of` is one a JVM may fold into the class holding it.
+    ///
+    /// Only a class this build writes is a value class to begin with, so a field carried by one
+    /// the JVM ships is never folded. Nor is the base of a sum type, which its own variants
+    /// extend: a field typed as one holds whichever variant it was given, so it stays a
+    /// reference however early the base is loaded, and asking for it early buys nothing.
+    pub(crate) fn is_foldable(&self, of: &Descriptor) -> bool {
+        let Descriptor::Reference(class) = of else {
+            return false;
+        };
+        self.extends.contains_key(class) && !self.extends.values().any(|base| base == class)
+    }
+
     /// The class both are, which is one of them, the one they extend, or `java.lang.Object`.
     fn shared_by(&self, mine: &Held, theirs: &Held) -> Held {
         let (Held::Object(mine), Held::Object(theirs)) = (mine, theirs) else {

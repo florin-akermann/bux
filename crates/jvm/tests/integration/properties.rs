@@ -11,12 +11,13 @@ use crate::common;
 use crate::reader::read;
 
 /// The modules the whole-compiler properties are checked over.
-const SOURCES: [&str; 5] = [
+const SOURCES: [&str; 6] = [
     "fn answer() -> Int {\n    7\n}\n",
     "fn held(user: User) -> Int {\n    user.id\n}\n\ntype User = {\n    id: Int\n}\n",
     "fn told(payment: Payment) -> String {\n    match payment {\n        Pending => \"waiting\"\n        Failed(reason) => reason\n    }\n}\n\ntype Payment =\n    | Pending\n    | Failed(String)\n",
     "fn walked(counts: List<Int>) -> Int {\n    var total = 0\n    for count in counts {\n        total += count\n    }\n    total\n}\n",
     "fn used() -> Result<Int, String> {\n    value := held()?\n    Ok(value + 1)\n}\n\nfn held() -> Result<Int, String> {\n    Ok(1)\n}\n",
+    "fn number(user: User) -> Int {\n    user.home.number\n}\n\ntype User = {\n    id: Int\n    home: Address\n}\n\ntype Address = {\n    number: Int\n}\n",
 ];
 
 #[hegel::test]
@@ -47,6 +48,23 @@ fn every_constant_a_compiled_class_names_is_one_its_own_pool_holds(tc: TestCase)
         let held = written.pool.len();
         assert!(written.this as usize <= held, "{}", file.path);
         assert!(written.extends as usize <= held);
+    }
+}
+
+#[hegel::test]
+fn every_descriptor_a_class_asks_to_load_first_names_another_class_the_build_writes(tc: TestCase) {
+    let source = tc.draw(gs::sampled_from(&SOURCES));
+
+    let files = common::compiled(source);
+    let written: Vec<String> = files
+        .iter()
+        .map(|file| format!("L{};", file.path.trim_end_matches(".class")))
+        .collect();
+    for (file, itself) in files.iter().zip(&written) {
+        for wanted in read(&file.bytes).loadable {
+            assert!(written.contains(&wanted), "{} asks for {wanted}", file.path);
+            assert_ne!(&wanted, itself, "{} asks for itself", file.path);
+        }
     }
 }
 

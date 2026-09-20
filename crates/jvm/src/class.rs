@@ -1,6 +1,6 @@
 //! One class, as the bytes a JVM loads.
 
-use lumen_ir::{Class, Extending, Method, Reached};
+use lumen_ir::{Class, Descriptor, Extending, Method, Reached};
 
 use crate::bytes::Bytes;
 use crate::code::{Assembled, Caught, Context, assemble};
@@ -35,6 +35,7 @@ pub(crate) fn write(class: &Class, hierarchy: &Hierarchy) -> Vec<u8> {
     let extends = context.pool.class(&class.extends);
     let fields = written_fields(class, &mut context);
     let methods = written_methods(class, &mut context);
+    let wanted = written_loadable(class, &mut context);
     let mut bytes = Bytes::default();
     bytes.u4(0xCAFE_BABE);
     bytes.u2(VERSION.0);
@@ -47,8 +48,44 @@ pub(crate) fn write(class: &Class, hierarchy: &Hierarchy) -> Vec<u8> {
     bytes.u2(0);
     bytes.all(&fields);
     bytes.all(&methods);
-    bytes.u2(0);
+    bytes.u2(u16::from(wanted.is_some()));
+    bytes.all(wanted.as_deref().unwrap_or_default());
     bytes.taken()
+}
+
+/// The `LoadableDescriptors` attribute, where this class waits on another to lay itself out.
+///
+/// A JVM decides where each field of a class sits while it loads that class, and it can fold a
+/// value into one only if it already knows what that value holds. JEP 401 lets a class file say
+/// which descriptors it wants loaded first, and `docs/specs/codegen.md` states which ones a class
+/// names. A class that waits on nothing carries no attribute rather than an empty one.
+fn written_loadable(class: &Class, context: &mut Context<'_>) -> Option<Vec<u8>> {
+    let itself = Descriptor::Reference(class.name.clone());
+    let mut wanted: Vec<u16> = Vec::new();
+    for field in &class.fields {
+        if field.of == itself || !context.hierarchy.is_foldable(&field.of) {
+            continue;
+        }
+        let descriptor = context.pool.utf8(&field.of.to_string());
+        if !wanted.contains(&descriptor) {
+            wanted.push(descriptor);
+        }
+    }
+    if wanted.is_empty() {
+        return None;
+    }
+    let named = context.pool.utf8("LoadableDescriptors");
+    let mut descriptors = Bytes::default();
+    descriptors.u2(u16::try_from(wanted.len()).unwrap_or_default());
+    for descriptor in wanted {
+        descriptors.u2(descriptor);
+    }
+    let written = descriptors.taken();
+    let mut bytes = Bytes::default();
+    bytes.u2(named);
+    bytes.u4(u32::try_from(written.len()).unwrap_or_default());
+    bytes.all(&written);
+    Some(bytes.taken())
 }
 
 const fn extending(extending: Extending) -> u16 {

@@ -4,6 +4,7 @@
 
 mod common;
 mod files;
+mod loading;
 mod modules;
 mod properties;
 mod reader;
