@@ -76,21 +76,6 @@ Fetching, a registry, and a lockfile wait for a concrete requirement, which offl
 [049][d] - Help topic in `crates/cli/src/help/`; `lumen check` and `lumen build` take a package.
 [049][e] - Executable examples under `tests/spec/packages/`: two packages, one importing the other.
 
-## 🟢 Item 050: A call is written with its first argument in front
-**Depends on:** Item 041 — the resolver and the checker are mid-change until it lands.
-`docs/design.md` section 11 makes `maybe.or(fallback)` the call `or(maybe, fallback)`.
-The parser already reads `maybe.or(0)` as a call of the field `or`, and the checker refuses it.
-`Option<Int>` has no field named `or`, so `L0402` is what the form gets today.
-The name before the dot decides: a module is reached into, and a binding is passed first.
-Which function is called is settled by the name alone, so no type is looked up to find it.
-The receiver counts as an unnamed argument, so a call that must name them keeps its plain form.
-[050][a] - Spec first in `docs/specs/calls.md`: the form, the three dots, naming, and the errors.
-[050][b] - The resolver looks the callee up in scope when the receiver is no module, test-first.
-[050][c] - The checker and lowering treat it as the plain call; a property: the two forms agree.
-[050][d] - The formatter keeps the form, and a round trip covers it.
-[050][e] - Executable examples under `tests/spec/calls/`; the `or` examples in `docs/specs` move.
-
-
 ## 🔴 Item 051: Identity is quarantined, not abolished
 `docs/design.md` section 15 argues that no two spawned functions ever hold the same value.
 The section's own example refutes it: `events` is held by the parent and by the spawned `produce`.
