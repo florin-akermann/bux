@@ -30,20 +30,6 @@ A literal that does not fit its type is a compile error where it is written, nev
 [034][c] - The fit check at compile time, test-first; the `Int` instance accepts every literal.
 [034][d] - Executable examples under `tests/spec/literals/`: `Int32` as a literal, and a misfit.
 
-## 🟢 Item 041: A trait is declared, and a type gives it an instance
-**Depends on:** Item 040 — version 0.1 closes before the first 0.2 item opens.
-`docs/design.md` section 8 shows `trait Eq<T>` and the constraint `T: Eq<T>`, but no instance form.
-Today `Eq` is a shape the checker knows, with three instances the checker holds by name.
-A trait becomes a declaration a module writes, and an instance one it writes for a trait and a type.
-A generic is compiled once per set of types, so a constraint resolves to one instance statically.
-No dictionary is passed and no method table exists: the specialized body calls the instance.
-Two instances of one trait for one type are refused, and so is a constraint no instance answers.
-[041][a] - `docs/design.md` section 8 settles the instance form and where one may be written.
-[041][b] - Spec first in `docs/specs/traits.md`: declaration, instance, constraint, resolution.
-[041][c] - Parsing, resolving, and typing of the three, test-first; a property covers resolution.
-[041][d] - `Eq` is a declared trait and `==` resolves through it; the checker's built-in shape goes.
-[041][e] - Executable examples under `tests/spec/traits/`, including both refusals.
-
 ## 🔴 Item 042: A record or a variant derives `Eq`
 **Depends on:** Item 041 — a derived instance is an instance.
 `docs/design.md` section 8 promises `derive Eq` for 0.2, and refuses `==` on a record until then.
