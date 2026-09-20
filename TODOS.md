@@ -6,7 +6,7 @@
 
 ## Open
 
-## 🔴 Item 043: `Ord`, `Hash`, and `Show` are standard traits, and derivable
+## 🟡 Item 043: `Ord`, `Hash`, and `Show` are standard traits, and derivable
 **Depends on:** Item 042 — the second derivable trait follows the first's path.
 `docs/design.md` section 8 names `Eq`, `Ord`, `Hash`, and `Show` as the standard traits.
 Each is a declared trait the library ships, with instances for `Int`, `Bool`, and `String`.
