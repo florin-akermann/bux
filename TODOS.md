@@ -48,7 +48,7 @@ and 5.21 s with 167 young GCs flattened; under C1 alone, 0.13 s against 0.36 s.
 C2 cannot be measured while a program has no observable result: the loop is deleted outright, or
 its reads are loop-invariant and folded into one multiplication, so neither run says anything.
 
-## 🔴 Item 031: An executable example asserts what a program writes out
+## 🟡 Item 031: An executable example asserts what a program writes out
 **Depends on:** Item 029, Item 035 — an exit status proves little, and writing out comes first.
 `// expect-run` judges an example by its exit status, which is `0` for every program that runs.
 Now that no operation throws, an example cannot show that a value is the one the spec claims.
