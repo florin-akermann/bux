@@ -584,6 +584,23 @@ result := map(users, contact)
 
 This should be considered only after the core type system is stable.
 
+A map and a set are values too, and both are library types rather than language ones.
+
+```text
+ages := map.insert(map.empty(), "ada", 36)
+found := map.get(ages, "ada")
+```
+
+`Map<K, V>` holds one value for each key it is given, and `Set<T>` holds a value once however
+often it is given.
+Neither has identity, as no record has: nothing can ask whether two of them are one object.
+A key is a type equality is written over, so `K` is constrained by `Eq<K>` and by nothing else.
+Hashing asks for a table to bucket into, which asks for an array the language cannot yet name,
+and a constraint no body reads is a promise a caller keeps for nothing.
+`get` gives an `Option<V>`, because a key the map has no entry for is a case the type has to say.
+There is no literal for either: a map is built by `empty` and `insert`, and read by `get`.
+`docs/specs/collections.md` states each function, its type, and what it costs.
+
 ---
 
 ## 10. Immutability

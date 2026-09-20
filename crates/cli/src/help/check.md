@@ -7,10 +7,13 @@ and checks that every `match` answers for every value it may meet. Nothing is wr
 Loading comes first. `import greeting` names `greeting.lm`, beside the file that writes it, and
 every module the file reaches is read before any of them is checked. There is no search path:
 a module is the file of that name beside the importing one, or nothing, and an import that names
-no such file is refused. `io` and `files` are supplied by the compiler, and `strings` is a module
-of the library the compiler carries, so an import of any of the three looks for no file at all and
-a file of that name beside the importing one does not shadow it. Two modules that import each
-other are refused as well, because each would have to be compiled first.
+no such file is refused. `io` and `files` are supplied by the compiler, and `list`, `strings`,
+`map`, and `set` are modules of the library the compiler carries, so an import of any of them
+looks for no file at all and a file of that name beside the importing one does not shadow it.
+`map` holds `Map<K, V>`, built by `map.empty` and `map.insert` and read by `map.get`; `set` holds
+`Set<T>`, built the same way and read by `set.has_value`. A key is a type the prelude has an `Eq`
+instance for, which `Bool`, `Int`, and `String` are. Two modules that import each other are
+refused as well, because each would have to be compiled first.
 
 Every module reached is then held to everything below, and a refusal names the file it is in
 rather than the file the command named. A module is checked after everything it imports, so a

@@ -27,5 +27,8 @@ lumen-resolver = { path = "../resolver" }
 lumen-types = { path = "../types" }
 clap = { version = "4", features = ["derive"] } # approved: argument parsing, help and version rendering
 
+[dev-dependencies]
+hegeltest = "0.23" # approved: property-based testing, required by AGENTS.md for every phase
+
 [lints]
 workspace = true

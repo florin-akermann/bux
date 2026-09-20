@@ -297,6 +297,11 @@ JDK 28, and a JVM loads one only when started with `--enable-preview`.
 `lumen run` passes that flag, so a program is run without its author knowing any of this.
 Every method carries a `Code` attribute, and every `Code` attribute that branches carries a
 `StackMapTable`, which the verifier requires.
+Where two branches meet, a frame names the class both values are: one of them where the other
+extends it, the class they both extend where neither does, and `java.lang.Object` where they
+share nothing.
+A `match` whose arms give back a variant and the base of that variant's own sum type therefore
+meets as the base, and a frame naming `java.lang.Object` there would write a method no JVM loads.
 A `Code` attribute carries an exception table, which is empty for every method but the one read
 `docs/specs/io.md` states, and the handler's frame says the throwable alone holds where it lands.
 

@@ -1,0 +1,24 @@
+// expect-run
+// > 36
+// > 0
+// > 41
+// > true
+// > false
+// `map` and `set` are modules of the library the compiler carries, and each function in them is
+// generic. A key is a type the prelude reaches an `Eq` instance for, which `Int` and `String`
+// are, and `docs/specs/collections.md` states what each of these functions costs.
+import io
+
+import map
+
+import set
+
+fn main() -> () {
+    ages := map.insert(map.insert(map.empty(), "ada", 36), "alan", 41)
+    io.println(shown(or(map.get(ages, "ada"), 0)))
+    io.println(shown(or(map.get(ages, "grace"), 0)))
+    io.println(shown(or(map.get(map.insert(ages, "ada", 41), "ada"), 0)))
+    seen := set.insert(set.insert(set.empty(), 2), 2)
+    io.println(shown(set.has_value(seen, 2)))
+    io.println(shown(set.has_value(seen, 3)))
+}

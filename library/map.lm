@@ -1,0 +1,88 @@
+// The `Map<K, V>` a program builds by `empty` and `insert`, and reads by `get`.
+//
+// `docs/specs/collections.md` states each function, its type, and what it costs. A map holds one
+// value for each key it was given, and a key is a type the prelude reaches an `Eq` instance for.
+// Every walk here is a `for` loop over a `var`, because a walk written as a function that calls
+// itself runs out of stack on a map a program can build; the steps of that walk are the
+// functions below, because a `match` arm is an expression and cannot assign.
+/// The map that holds nothing, which every map is built out of.
+// example: or(get(empty(), 1), "none") == "none"
+fn empty<K, V>() -> Map<K, V> {
+    Empty
+}
+
+/// The map this one becomes with `value` at `key`, in place of whatever was there.
+// example: or(get(insert(empty(), 1, "a"), 1), "none") == "a"
+fn insert<K: Eq<K>, V>(into: Map<K, V>, key: K, value: V) -> Map<K, V> {
+    var rest = into
+    var passed = Empty
+    for is_at_another_key(rest, key) {
+        passed = moved(from: rest, onto: passed)
+        rest = behind(rest)
+    }
+    var built = Entry(key, value, behind(rest))
+    for is_an_entry(passed) {
+        built = moved(from: passed, onto: built)
+        passed = behind(passed)
+    }
+    built
+}
+
+/// The value at `key`, and `None` where the map holds no entry for it.
+// example: or(get(insert(empty(), 1, "a"), 2), "none") == "none"
+fn get<K: Eq<K>, V>(within: Map<K, V>, key: K) -> Option<V> {
+    var rest = within
+    for is_at_another_key(rest, key) {
+        rest = behind(rest)
+    }
+    value_at(rest)
+}
+
+/// Whether there is an entry here, at a key other than the one being looked for.
+// example: is_at_another_key(insert(empty(), 1, "a"), 2)
+fn is_at_another_key<K: Eq<K>, V>(within: Map<K, V>, key: K) -> Bool {
+    match within {
+        Empty => false
+        Entry(held, _, _) => held != key
+    }
+}
+
+/// Whether there is an entry here at all.
+// example: !is_an_entry(empty())
+fn is_an_entry<K, V>(within: Map<K, V>) -> Bool {
+    match within {
+        Empty => false
+        Entry(_, _, _) => true
+    }
+}
+
+/// The value of the entry here, and `None` where there is no entry here.
+// example: or(value_at(insert(empty(), 1, "a")), "none") == "a"
+fn value_at<K, V>(within: Map<K, V>) -> Option<V> {
+    match within {
+        Empty => None
+        Entry(_, value, _) => Some(value)
+    }
+}
+
+/// What is behind the entry here, which is nothing where there is no entry here.
+// example: !is_an_entry(behind(insert(empty(), 1, "a")))
+fn behind<K, V>(within: Map<K, V>) -> Map<K, V> {
+    match within {
+        Empty => Empty
+        Entry(_, _, rest) => rest
+    }
+}
+
+/// `onto` with the entry at the front of `from` put in front of it.
+// example: or(get(moved(from: insert(empty(), 1, "a"), onto: empty()), 1), "none") == "a"
+fn moved<K, V>(from: Map<K, V>, onto: Map<K, V>) -> Map<K, V> {
+    match from {
+        Empty => onto
+        Entry(key, value, _) => Entry(key, value, onto)
+    }
+}
+
+type Map<K, V> =
+    | Empty
+    | Entry(K, V, Map<K, V>)

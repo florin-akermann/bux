@@ -232,7 +232,10 @@ impl Hierarchy {
         if above_mine == theirs {
             return Held::Object(theirs.clone());
         }
-        if above_theirs == mine || above_mine == above_theirs {
+        if above_theirs == mine {
+            return Held::Object(mine.clone());
+        }
+        if above_mine == above_theirs {
             return Held::Object(above_mine.clone());
         }
         Held::Object(object)

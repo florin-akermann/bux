@@ -1,0 +1,35 @@
+// expect-run
+// > 1
+// > 0
+// One arm of a `match` gives back the base of the sum type and another gives back a variant of
+// it, so the two meet where the arms join. `docs/specs/codegen.md` says the frame there names
+// the class both are, which is the base; naming `java.lang.Object` instead would write a method
+// the verifier refuses to load.
+import io
+
+fn main() -> () {
+    io.println(shown(size(picked(from: One(1), onto: Nothing))))
+    io.println(shown(size(picked(from: Nothing, onto: Nothing))))
+}
+
+/// How many values the pick holds.
+// example: size(Nothing) == 0
+fn size<T>(held: Held<T>) -> Int {
+    match held {
+        Nothing => 0
+        One(_) => 1
+    }
+}
+
+/// `onto` where `from` holds nothing, and what `from` holds otherwise.
+// example: size(picked(from: Nothing, onto: Nothing)) == 0
+fn picked<T>(from: Held<T>, onto: Held<T>) -> Held<T> {
+    match from {
+        Nothing => onto
+        One(value) => One(value)
+    }
+}
+
+type Held<T> =
+    | Nothing
+    | One(T)

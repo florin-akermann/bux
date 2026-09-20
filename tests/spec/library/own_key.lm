@@ -1,0 +1,13 @@
+// expect-error: L0424
+// A key is a type the library itself reaches an `Eq` instance for, and those are the prelude's.
+// `Kept` is not one of them however this module came by its own instance, because an instance
+// stays in the module that declares it, which `docs/specs/modules.md` states.
+import map
+
+fn main() -> () {
+    _ = map.insert(map.empty(), Kept("one"), 1)
+}
+
+derive Eq for Kept
+
+type Kept = Kept(String)

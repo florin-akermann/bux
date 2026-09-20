@@ -40,7 +40,7 @@ is a call of the function `join` that module declares.
 An import of a library module looks beside no file: the compiler holds the source, so a file of
 that name beside the importing one is not consulted and does not shadow it.
 
-Naming a module of a program `prelude` or `strings` therefore buys nothing.
+Naming a module of a program `prelude`, `list`, `strings`, `map`, or `set` therefore buys nothing.
 The name is taken, as `io` and `files` are taken, and an import of one is the library's.
 
 ## What the compiler still holds
@@ -109,15 +109,25 @@ Everything else a module's body is held to, an instance body is held to.
 
 `prelude` is every name above, and nothing else.
 
-`strings` holds what a `for` loop writes the same way twice.
+`list`, `strings`, `map`, and `set` each hold what a `for` loop writes the same way twice.
 
 ```text
+list:    length  has_value
 strings: join
+map:     empty  insert  get
+set:     empty  insert  has_value
 ```
+
+`map` and `set` declare the types they are about as well as the functions, and each declares the
+steps of its own walks beside them, which `docs/specs/collections.md` lists.
+One module holds one type, because `empty` has one definition and a module holding both maps and
+sets would need two.
 
 `join` runs the parts of a `List<String>` together, with a separator between each pair.
 
-It is written in Lumen, over what the language already gives: a `for` loop, `+`, and `var`.
+It is written in Bux, over what the language already gives: a `for` loop, `+`, and `var`.
+Every function of `map` and `set` is written over the same, with `match` and a declared type
+beside them, and no function in the library calls itself.
 That is the test a library function is held to.
 It lands in the library rather than in the compiler exactly when Lumen can write it, and it lands
 at all only when a reader would otherwise write the same loop twice.
@@ -125,11 +135,12 @@ at all only when a reader would otherwise write the same loop twice.
 Were `strings` to gain a `length`, `list` would have one too, and neither could be a prelude name:
 one name has one definition, and a prelude holding both would break that.
 
-A library function may be generic, and `list.length` and `list.has_value` are.
+A library function may be generic, and `list.length`, `list.has_value`, and every function of
+`map` and `set` are.
 A generic is written once per set of types it is used at, which `docs/specs/codegen.md` states,
 so the module declaring it writes the method and the module calling it writes the call.
-`has_value` constrains its type parameter by `Eq`, and the body asking for that instance is the
-library's, so the instance answering is one the library itself reaches.
+`list.has_value` constrains its type parameter by `Eq`, and the body asking for that instance is
+the library's, so the instance answering is one the library itself reaches.
 Those are the prelude's, which every module has alike, and `L0424` refuses a call that settles
 the parameter on anything else.
 
@@ -139,10 +150,15 @@ the parameter on anything else.
 `docs/implementation.md` section 10's `extern` declaration is what names one, and they land with
 it rather than as a compiler-supplied table in the meantime.
 
-`map` and `filter` need a parameter whose type is a function, which the grammar of
-`docs/specs/grammar.md` does not write.
+A mapping and a filtering over a list need a parameter whose type is a function, which the
+grammar of `docs/specs/grammar.md` does not write.
 They also fail the test above twice over: a `for` loop writes each of them in one line, and
 `docs/principles.md` question 12 asks what a method earns that a loop does not.
+The module called `map` is the one that holds `Map<K, V>`, and is neither of them.
+
+A map's size, a removal from one, and a literal for either type wait for the same test, which
+`docs/specs/collections.md` says of each of them.
+A program that cannot be written without one is what lands it.
 
 ## The errors
 
