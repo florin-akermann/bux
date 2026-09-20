@@ -36,6 +36,7 @@ pub use crate::types::{Type, TypeParameter, TypeVar};
 /// Returns the first declaration that holds a value of itself, or, where none does, the first
 /// expression whose type inference cannot give it.
 pub fn check(resolved: ResolvedProgram, imported: &Imported) -> Result<TypedProgram, TypeError> {
+    environment::prelude_checked();
     holds::nothing_holds_itself(&resolved)?;
     let reached = imported.every_type();
     let inferred = infer::infer(&resolved, imported, &reached)?;

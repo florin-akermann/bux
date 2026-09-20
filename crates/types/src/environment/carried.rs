@@ -12,6 +12,7 @@ use lumen_resolver::{Definition, ResolvedProgram, prelude};
 
 use super::{Environment, Key};
 use crate::error::TypeError;
+use crate::infer;
 use crate::scheme::{Quantified, Scheme};
 use crate::table::Table;
 use crate::types::{Type, TypeParameter};
@@ -117,6 +118,14 @@ impl Environment {
     }
 }
 
+/// Walks the prelude's own bodies, once however many modules a build checks.
+///
+/// It is done before the first module is, so a library that does not hold together is the
+/// compiler's own failure before it is anything else, which `docs/specs/library.md` states.
+pub(crate) fn prelude_checked() {
+    LazyLock::force(&CHECKED);
+}
+
 /// Whether the prelude itself has the instance of `of` for the type called `at`.
 ///
 /// A module's own instances are its own: `docs/specs/modules.md` keeps a trait and its instances
@@ -171,3 +180,19 @@ pub(super) enum Keyed {
 
 /// The prelude's own declarations, read out of the carried source the first time one is asked for.
 static DECLARED: LazyLock<Environment> = LazyLock::new(Environment::carried);
+
+/// The prelude's own bodies, walked once against what reading it declared.
+///
+/// `docs/specs/library.md` says the library is compiled with every check a program is compiled
+/// with, so what its source says an instruction does is held to the declarations above it rather
+/// than read by a person alone. It is walked where the prelude is read, which is the first time
+/// any module asks for it, and once for however many modules a build has.
+///
+/// # Panics
+///
+/// Panics where a body of the prelude does not have the type its declaration gives it. That is
+/// the compiler's own failure and no program's, which `docs/specs/library.md` states, and the
+/// compiler's own tests are where it is caught.
+static CHECKED: LazyLock<()> = LazyLock::new(|| {
+    infer::of_the_prelude().expect("the prelude the compiler carries is a module that compiles");
+});

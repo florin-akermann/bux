@@ -741,6 +741,18 @@ writable.
 A record field, a variant payload, a binding, and a result type may each be `Bool`.
 The rule is about what a call passes, which is the one place a bare `true` loses its meaning.
 
+The rule asks an author to have declared that two-variant type instead, so it holds where they
+chose the types and nowhere else.
+An instance method's signature is its trait's: `instance Hash<Bool>` writes `hashed(value: Bool)`
+because `trait Hash<T>` wrote `hashed(value: T)` and the instance settled `T` on `Bool`.
+There is no flag its author could have declined to write, and the two-variant type the rule asks
+for is one the trait would have had to take.
+
+So the rule reaches an instance method through its trait rather than at the instance.
+A trait writing `fn hashed(value: Bool) -> Int` is refused where it writes it, because that `Bool`
+is a flag every instance of the trait would then have to take.
+Nothing is given up: the one place such a parameter can be written is the one place it is read.
+
 ### The entry point
 
 A program starts at `main`:

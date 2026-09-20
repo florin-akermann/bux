@@ -197,11 +197,50 @@ A type parameter is not a `Bool`: `fn pick<T>(value: T)` is untouched however a 
 it, because the rule is about the signature.
 A parameter the body never constrains turned out to be a type parameter rather than a `Bool`,
 so a call of it passes `true` as freely as it passes anything else.
-That also settles what a generic declaration means once typeclasses land: an instance written
-out for `Bool` is a declaration like any other, and its parameters are held to this rule.
 
 A record field, a variant payload, a binding, and a result type may each be `Bool`.
 The rule is about what a call passes, which is the one place a bare `true` loses its meaning.
+
+### A signature an author did not choose
+
+The rule asks an author to have declared a two-variant type instead, so it reaches only the
+signatures they wrote.
+An instance method's is not one of them.
+
+```text
+trait Hash<T> {
+    fn hashed(value: T) -> Int
+}
+
+instance Hash<Bool> {
+    fn hashed(value: Bool) -> Int {
+```
+
+`Bool` is there because the trait wrote `T` and the instance settled it, and neither of those is a
+choice the method made.
+There is no flag its author could have declined to write, and the two-variant type the rule asks
+for is one the trait would have to have taken.
+
+So the rule reaches an instance method through its trait rather than at the instance, which
+`docs/design.md` section 11 states.
+A trait's own signature is held to it, at the parameter the trait wrote:
+
+```text
+trait Hash<T> {
+    fn hashed(value: Bool) -> Int
+}
+```
+
+That is `L0412` where the trait writes it, because every instance of the trait would have to take
+the flag and none of them could decline it.
+A trait method whose parameters and result are all `Bool` keeps them, exactly as a function does.
+
+Nothing is given up by reading the trait instead of the instance: a bare `Bool` in an instance
+method is one the trait wrote or one the instance settled a type parameter on, and the second is
+the type the instance is for rather than a parameter anything passes.
+Everything else a function's body is held to, an instance method's body is held to.
+`docs/specs/library.md` is where it comes up, because `instance Hash<Bool>` is one the prelude
+writes.
 
 `L0412` is the refusal:
 

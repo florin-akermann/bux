@@ -85,11 +85,25 @@ No program can tell which it got, because there is only one thing to get.
 The same holds for `Eq`, `Ord`, `Hash`, and `Show` over those three types, and for
 `IntegerLiteral<Int>`, whose `from_literal` gives back the whole number it is handed.
 
-What the compiler reads of one of those instances is its head, which says the trait has an
-instance for the type.
-Version 0.1 does not read the body: nothing calls it, because every use is the instruction.
-The body is there because an instance writes one, and because the library is what says in Lumen
-what the instruction does.
+Nothing calls one of those bodies, because every use is the instruction, and the compiler reads
+each of them all the same.
+The library is what says in Lumen what an instruction does, and a claim nothing reads drifts from
+what it claims about.
+So the prelude is inferred where it is read, which is before the first module of a build is, and
+every body in it is held to the type its declaration gives it.
+
+A refusal there is the compiler's own failure and no program's, so it fails the compiler's own
+tests rather than reaching anyone.
+The prelude is read once however many modules a build has, so a build pays for the walk once.
+
+That walk turns up one rule an instance method cannot keep, and the rule is what gives way.
+`hashed(value: Bool) -> Int` is a `Bool` parameter in a signature that is not all `Bool`, which
+`docs/specs/arguments.md` refuses as `L0412`.
+An instance has no say in its own signature: `trait Hash<T>` wrote it and `instance Hash<Bool>`
+settled `T`, so there is no flag the author could have declined to write.
+The rule is about the types an author chose, which `docs/design.md` states, so it reaches an
+instance method through its trait: `trait Hash<T>` is held to it and `instance Hash<Bool>` is not.
+Everything else a module's body is held to, an instance body is held to.
 
 ## The library modules
 
@@ -125,13 +139,6 @@ the parameter on anything else.
 `docs/implementation.md` section 10's `extern` declaration is what names one, and they land with
 it rather than as a compiler-supplied table in the meantime.
 
-The prelude's instance bodies are read by a person rather than by the compiler, so one could say
-something other than the instruction it stands for and nothing would notice.
-Reading them is a whole pass over the prelude, and it turns up a rule an instance method cannot
-keep: `hashed(value: Bool) -> Int` is a `Bool` parameter in a signature that is not all `Bool`,
-which `docs/specs/types.md` refuses, and an instance has no say in its own signature.
-The rule and the pass land together, and neither lands here.
-
 `map` and `filter` need a parameter whose type is a function, which the grammar of
 `docs/specs/grammar.md` does not write.
 They also fail the test above twice over: a `for` loop writes each of them in one line, and
@@ -155,6 +162,7 @@ These hold and are checked with property-based tests:
 1. Every library module is in canonical form, and every one a program may import compiles.
 2. A program that writes no import sees every prelude name and no library module's name.
 3. The prelude's declarations are the same whichever module asks for them.
+4. Every instance body the prelude writes has the type its trait gives it at the instance's type.
 
 The prelude is not among the modules of property 1 that compile on their own.
 Its own names are in scope in every module, so a compiler reading it as a module would refuse

@@ -55,25 +55,7 @@ pub(crate) fn infer(
 ) -> Result<Inferred, TypeError> {
     let mut table = Table::default();
     let environment = Environment::of(resolved, reached, &mut table)?;
-    table.whole_numbers_are_written_at(environment.takes_a_whole_number());
-    let mut inference = Inference {
-        resolved,
-        imported,
-        environment,
-        table,
-        types: HashMap::new(),
-        result: Type::Unit,
-        introduced: Vec::new(),
-        operated: Vec::new(),
-        literals: Vec::new(),
-        discards: Vec::new(),
-        lookups: Vec::new(),
-        propagations: Vec::new(),
-        requirements: Vec::new(),
-        promised: Vec::new(),
-        methods_at: HashMap::new(),
-        generics_reached: HashMap::new(),
-    };
+    let mut inference = Inference::over(resolved, imported, environment, table);
     inference.module()?;
     let surface = Surface::of(inference.offered(), inference.offered_types());
     let methods = inference.methods_at.clone();
@@ -84,6 +66,28 @@ pub(crate) fn infer(
         methods,
         generics_reached,
     })
+}
+
+/// The prelude's own bodies, walked with every check a module's bodies are walked with.
+///
+/// `docs/specs/library.md` says the library is compiled with every check a program is, so what
+/// its source says an instruction does is held to the types its own declarations give it. These
+/// are those checks, which is why this is what [`crate::check`] does and not a reading of its own:
+/// nothing holds itself, everything is declared, and every body is walked.
+///
+/// It imports nothing and is imported by nothing, which is the one scope it fits: its own names
+/// are in scope in every module, so a module reaching it is not reaching an import.
+///
+/// # Errors
+///
+/// Returns the first body of it that does not have the type its declaration gives it.
+pub(crate) fn of_the_prelude() -> Result<(), TypeError> {
+    let resolved = lumen_resolver::prelude_resolved();
+    crate::holds::nothing_holds_itself(resolved)?;
+    let imported = Imported::default();
+    let mut table = Table::default();
+    let environment = Environment::of(resolved, &[], &mut table)?;
+    Inference::over(resolved, &imported, environment, table).module()
 }
 
 /// Everything one run of inference is holding while it walks.
@@ -120,6 +124,36 @@ struct Inference<'a> {
     generics_reached: HashMap<Span, GenericUse>,
 }
 
+impl<'a> Inference<'a> {
+    /// One run of inference over `resolved`, holding nothing yet but what it is walked against.
+    fn over(
+        resolved: &'a ResolvedProgram,
+        imported: &'a Imported,
+        environment: Environment,
+        mut table: Table,
+    ) -> Self {
+        table.whole_numbers_are_written_at(environment.takes_a_whole_number());
+        Self {
+            resolved,
+            imported,
+            environment,
+            table,
+            types: HashMap::new(),
+            result: Type::Unit,
+            introduced: Vec::new(),
+            operated: Vec::new(),
+            literals: Vec::new(),
+            discards: Vec::new(),
+            lookups: Vec::new(),
+            propagations: Vec::new(),
+            requirements: Vec::new(),
+            promised: Vec::new(),
+            methods_at: HashMap::new(),
+            generics_reached: HashMap::new(),
+        }
+    }
+}
+
 impl Inference<'_> {
     /// Each function bottom up, so a call reads a signature already inferred.
     ///
@@ -137,6 +171,7 @@ impl Inference<'_> {
                 continue;
             };
             for method in &declaration.methods {
+                self.settle_method_parameters(method)?;
                 self.settle_method(method)?;
             }
         }
@@ -252,7 +287,7 @@ impl Inference<'_> {
         self.settle_operators()?;
         self.settle_requirements()?;
         self.settle_discards()?;
-        self.settle_parameters(function)?;
+        self.settle_parameters(function, &key)?;
         self.settle_predicate(function)?;
         for gone in mem::take(&mut self.introduced) {
             self.environment.unbind(&gone);

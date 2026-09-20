@@ -206,6 +206,9 @@ how many there are and what they are is each settled before which of them is whi
 `L0412` is a parameter that is a bare `Bool`, which `docs/specs/arguments.md` states as well.
 It is raised where the parameter is written, because the declaration is what changes.
 It is reached after the body, because the type it reads is the one inference settled.
+An instance method is reached through its trait rather than at the instance: the trait wrote the
+signature, so a trait's own method is held to the rule and an instance's is not, which
+`docs/specs/arguments.md` states.
 `L0413` is a function whose result is `Bool` and whose name asks nothing, which
 `docs/specs/naming.md` states.
 It reads the same result and is reached at the same point, after `L0412` and for the same reason.

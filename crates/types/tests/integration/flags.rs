@@ -115,3 +115,70 @@ fn a_body_that_does_not_typecheck_is_refused_before_the_parameter_is_read() {
 
     assert_eq!(error.message(), "expected `Int`, found `String`");
 }
+
+/// A module declaring a trait whose one method takes a `T`, and an instance of it for `Bool`.
+///
+/// The instance writes `Bool` because the trait wrote `T` and the instance is for `Bool`; the
+/// types are the trait's and not the author's, which is what the rule turns on.
+fn answering(method: &str) -> String {
+    format!(
+        "instance Asked<Bool> {{\n    {method}\n}}\n\n\
+         trait Asked<T> {{\n    fn answered(value: T) -> Int\n}}\n"
+    )
+}
+
+#[test]
+fn an_instance_method_keeps_a_bool_parameter_its_trait_gave_it() {
+    inferred(&answering(
+        "fn answered(value: Bool) -> Int {\n        1\n    }",
+    ));
+}
+
+#[test]
+fn a_bool_a_trait_wrote_outright_is_a_flag_where_the_trait_wrote_it() {
+    let source = concat!(
+        "instance Asked<Int> {\n    fn answered(value: Bool, at: Int) -> Int {\n        1\n    }\n}\n\n",
+        "trait Asked<T> {\n    fn answered(value: Bool, at: T) -> Int\n}\n"
+    );
+
+    let error = refusal(source);
+
+    assert_eq!(
+        error.message(),
+        "this parameter is a `Bool`, so a call of `answered` passes `true` and says no more"
+    );
+    assert_eq!(error.span().text(source), "value: Bool");
+}
+
+#[test]
+fn a_trait_method_that_is_all_bool_keeps_its_parameters_as_a_function_would() {
+    let source = concat!(
+        "instance Asked<Bool> {\n",
+        "    fn is_answered(value: Bool) -> Bool {\n        value\n    }\n}\n\n",
+        "trait Asked<T> {\n    fn is_answered(value: Bool) -> Bool\n}\n"
+    );
+
+    inferred(source);
+}
+
+#[test]
+fn the_same_signature_written_as_a_function_is_a_flag_all_the_same() {
+    let error = refusal("fn answered(value: Bool) -> Int {\n    1\n}\n");
+
+    assert_eq!(
+        error.message(),
+        "this parameter is a `Bool`, so a call of `answered` passes `true` and says no more"
+    );
+}
+
+#[test]
+fn an_instance_method_is_still_held_to_the_signature_its_trait_gave_it() {
+    let error = refusal(&answering(
+        "fn answered(value: Bool) -> String {\n        \"one\"\n    }",
+    ));
+
+    assert_eq!(
+        error.message(),
+        "expected `(Bool) -> Int`, found `(Bool) -> String`"
+    );
+}

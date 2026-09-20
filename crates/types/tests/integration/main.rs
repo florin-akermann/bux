@@ -13,6 +13,7 @@ mod generics;
 mod holds;
 mod imports;
 mod inference;
+mod library;
 mod literals;
 mod operators;
 mod patterns;
