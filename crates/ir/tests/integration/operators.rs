@@ -122,7 +122,7 @@ fn a_plus_equals_over_a_type_with_an_instance_of_add_calls_that_instance() {
     assert!(common::calls(worked_out, &demo(), "Add$Money$add"));
     assert!(
         !worked_out.instructions.contains(&Instruction::Concat),
-        "`+=` is the instance's `add`, not the join a supplied instance of `Add` writes"
+        "`+=` is the instance's `add`, not the join the prelude's `Add` for `String` writes"
     );
 }
 

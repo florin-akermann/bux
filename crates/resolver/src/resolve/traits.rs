@@ -161,8 +161,8 @@ fn derivable(named: &Name) -> Resolved {
     Err(ResolveError::at(named, kind))
 }
 
-/// The instances the compiler supplies, which a module writing one of them again is refused by.
-pub(super) fn supplied_instances() -> HashSet<(String, String)> {
+/// The instances the prelude has, which a module writing one of them again is refused by.
+pub(super) fn prelude_instances() -> HashSet<(String, String)> {
     prelude::instances()
         .map(|(of, for_type)| (of.to_owned(), for_type.to_owned()))
         .collect()

@@ -1,8 +1,8 @@
 //! What an operator is written as, which is a call of the method its trait declares.
 //!
 //! `docs/specs/operators.md` names the trait each operator is and states this: a type whose
-//! instance a module wrote gets an `invokestatic` of that instance's method, and a type the
-//! compiler supplies the instance for gets the instruction the operator always was.
+//! instance a module wrote gets an `invokestatic` of that instance's method, and one of the
+//! types the JVM holds gets the instruction the operator always was, written out in place.
 
 use lumen_ast::{BinaryOperator, Expr, Name, Span, UnaryOperator};
 use lumen_resolver::prelude;
@@ -10,7 +10,7 @@ use lumen_resolver::prelude;
 use crate::code::{Arithmetic, Comparison, Instruction, MethodRef};
 use crate::descriptor::Descriptor;
 use crate::lower::body::{Builder, Slot};
-use crate::lower::supplied::{compared, hashed_as, shown_as};
+use crate::lower::standard::{compared, hashed_as, shown_as};
 
 impl Builder<'_> {
     /// An operator, which is the call of the one method its trait declares.
@@ -25,7 +25,7 @@ impl Builder<'_> {
     ) -> Option<Descriptor> {
         let asked = asked_by(operator).expect("`&&` and `||` are written before this is reached");
         let Some(declared) = self.instance_written(method_of(asked.of), left.span) else {
-            return self.supplied_operator(operator, left, right);
+            return self.written_out_operator(operator, left, right);
         };
         Some(self.through_the_operator(&asked, declared, [left, right]))
     }
@@ -35,11 +35,11 @@ impl Builder<'_> {
     ///
     /// `add(one, other)` is the call `one + other` already is, so the two are written the same.
     /// `from_literal(5)` is the whole number `5` already is, which `lower/literal.rs` writes.
-    pub(crate) fn supplied_instance(&mut self, name: &Name, arguments: &[&Expr]) -> Descriptor {
+    pub(crate) fn written_out_instance(&mut self, name: &Name, arguments: &[&Expr]) -> Descriptor {
         let of = prelude::trait_of(&name.text)
             .expect("the prelude declares every method that reaches here");
         if of == prelude::INTEGER_LITERAL {
-            return self.supplied_from_literal(arguments);
+            return self.written_out_from_literal(arguments);
         }
         if let Some(reads) = reading_one(of) {
             let [value] = arguments else {
@@ -56,7 +56,7 @@ impl Builder<'_> {
         let [left, right] = arguments else {
             unreachable!("inference gave `{}` the two arguments it takes", name.text)
         };
-        self.supplied_operator(written_as(of), left, right)
+        self.written_out_operator(written_as(of), left, right)
             .expect("every supplied operator leaves a value")
     }
 
@@ -79,7 +79,7 @@ impl Builder<'_> {
     /// `total += value` is `Add`, so it asks the trait `total + value` asks.
     ///
     /// What the name holds is loaded first, because it is the first of the two the method takes,
-    /// and a type the compiler supplies the instance for adds as that operator always added.
+    /// and one of the types the JVM holds adds as that operator always added.
     pub(crate) fn added_to(&mut self, slot: &Slot, value: &Expr) -> Descriptor {
         self.emit(Instruction::Load {
             slot: slot.at,
@@ -88,7 +88,7 @@ impl Builder<'_> {
         let Some(declared) = self.instance_written(method_of(prelude::ADD), value.span) else {
             let left = self.expr(value);
             self.adapt(left, Some(slot.of.clone()));
-            self.emit(supplied_add(&slot.of));
+            self.emit(written_out_add(&slot.of));
             return slot.of.clone();
         };
         let reached = self.reaching(declared, declared);
@@ -160,11 +160,11 @@ impl Builder<'_> {
         reached.signature.result
     }
 
-    /// The body an instance the compiler supplies amounts to, written out where it is called.
+    /// What the prelude's instance amounts to, written out where the operator is called.
     ///
-    /// `Int` has every operator and `String` has `+`, which is the whole of it while the prelude
-    /// is not yet Lumen source, and what each writes is what that operator always wrote.
-    pub(crate) fn supplied_operator(
+    /// `Int` has every operator and `String` has `+`, which is the whole of what the prelude
+    /// writes an operator for, and what each writes is what that operator always wrote.
+    pub(crate) fn written_out_operator(
         &mut self,
         operator: BinaryOperator,
         left: &Expr,
@@ -197,8 +197,7 @@ impl Builder<'_> {
         }
     }
 
-    /// What the two values above it on the stack compare to, for a supplied instance of `Eq`
-    /// or of `Ord`.
+    /// What the two values above it on the stack compare to, for the prelude's `Eq` or `Ord`.
     fn same(&mut self, operator: BinaryOperator, held: Option<&Descriptor>) -> Descriptor {
         for instruction in compared(held, how(operator)) {
             self.emit(instruction);
@@ -265,7 +264,7 @@ fn method_of(of: &str) -> &'static str {
     prelude::method_of(of).expect("every operator's trait declares the one method it is")
 }
 
-/// The operator the trait `of` is, which is what its supplied instance writes out.
+/// The operator the trait `of` is, which is what the prelude's instance of it writes out.
 fn written_as(of: &str) -> BinaryOperator {
     match of {
         prelude::EQ => BinaryOperator::Equal,
@@ -279,7 +278,7 @@ fn written_as(of: &str) -> BinaryOperator {
     }
 }
 
-/// Which comparison a supplied instance of `Eq` or of `Ord` asks for.
+/// Which comparison the prelude's `Eq` or `Ord` asks for.
 const fn how(operator: BinaryOperator) -> Comparison {
     match operator {
         BinaryOperator::NotEqual => Comparison::NotEqual,
@@ -322,8 +321,8 @@ pub(crate) const fn is_negation(operator: UnaryOperator) -> bool {
     matches!(operator, UnaryOperator::Negate)
 }
 
-/// What a supplied instance of `Add` writes, which joins two strings and adds two whole numbers.
-fn supplied_add(of: &Descriptor) -> Instruction {
+/// What the prelude's `Add` writes, which joins two strings and adds two whole numbers.
+fn written_out_add(of: &Descriptor) -> Instruction {
     match of {
         Descriptor::Reference(_) | Descriptor::Array(_) => Instruction::Concat,
         Descriptor::Long | Descriptor::Boolean | Descriptor::Integer => {

@@ -1,11 +1,13 @@
 //! What the prelude's instances of the four standard traits amount to, written out where they
 //! are called.
 //!
-//! The prelude is not Lumen source yet, so there is no class to call one on:
-//! `docs/specs/traits.md` supplies `Eq`, `Ord`, `Hash`, and `Show` for `Bool`, `Int`, and
-//! `String`, and each is written here as the instructions it always was. Two whole numbers or
-//! two truth values stand in the order the JVM puts them, and two strings are read by the
-//! characters they hold rather than by being one object; identity is never what Lumen asks about.
+//! The prelude has `Eq`, `Ord`, `Hash`, and `Show` for `Bool`, `Int`, and `String`, which
+//! `docs/specs/traits.md` writes out, and `library/prelude.lm` writes all but `Hash<String>`.
+//! None of them is called: a use is what the instance amounts to, written out here as the
+//! instructions it always was, which is what `docs/specs/library.md` says the library is for.
+//! Two whole numbers or two truth values stand in the order the JVM puts them, and two strings
+//! are read by the characters they hold rather than by being one object; identity is never what
+//! Lumen asks about.
 
 use crate::code::{Comparison, Instruction, MethodRef};
 use crate::descriptor::{ClassName, Descriptor, MethodDescriptor};

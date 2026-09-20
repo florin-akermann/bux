@@ -1,6 +1,6 @@
 //! What a whole-number literal becomes, which `docs/specs/literals.md` states.
 //!
-//! A type the compiler supplies the instance for takes the number itself, which is what a literal
+//! `Int`, whose instance the prelude writes, takes the number itself, which is what a literal
 //! has always been. A type whose instance a module wrote takes it through that instance's
 //! `from_literal`, so the number is pushed and one call takes it.
 

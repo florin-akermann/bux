@@ -72,7 +72,7 @@ fn a_comparison_of_a_type_with_an_instance_of_eq_calls_that_instance() {
 }
 
 #[test]
-fn a_call_of_a_supplied_instance_is_written_out_where_it_stands() {
+fn a_call_of_an_instance_over_a_type_the_jvm_holds_is_written_out_where_it_stands() {
     let source = "fn is_same(left: Int, right: Int) -> Bool {\n    is_equal(left, right)\n}\n";
 
     let lowered = common::lowered(source);
@@ -83,7 +83,7 @@ fn a_call_of_a_supplied_instance_is_written_out_where_it_stands() {
             &ClassName::new("demo"),
             "Eq$Int$is_equal"
         ),
-        "a supplied instance has no method to call"
+        "an instance over a type the JVM holds has no method to call"
     );
     assert_eq!(common::methods_named(&lowered, "is_same"), 1);
 }

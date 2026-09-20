@@ -13,7 +13,7 @@ use crate::code::{Comparison, FieldRef, Instruction, Label, MethodRef};
 use crate::descriptor::{ClassName, Descriptor, MethodDescriptor};
 use crate::lower::body::{Builder, Slot};
 use crate::lower::shape::{CONSTRUCTOR, Carried, Shape, TAG};
-use crate::lower::supplied::compared;
+use crate::lower::standard::compared;
 
 /// What a pattern is matched against: the value, and where to go when it does not match.
 struct Against {
@@ -247,7 +247,7 @@ impl Builder<'_> {
     /// Whether the two values above it are the same, which is the `Eq` of the type they are.
     ///
     /// A pattern asks what `==` asks, so it reaches the instance `==` reaches: one a module
-    /// wrote is a call of its method, and one the compiler supplies is the instruction it is.
+    /// wrote is a call of its method, and one over a type the JVM holds is the instruction it is.
     fn same_as(&mut self, held: &Descriptor, written: Span, against: &Against) {
         match self.instance_written(prelude::IS_EQUAL, written) {
             None => {

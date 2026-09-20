@@ -18,7 +18,7 @@ mod operator;
 mod pattern;
 mod reaching;
 mod shape;
-mod supplied;
+mod standard;
 
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
@@ -213,7 +213,7 @@ impl Lowering<'_> {
 
     /// The method the instance for `at` writes for the trait method `method`, where there is one.
     ///
-    /// An instance the compiler supplies has none, which is what says a call of it is written
+    /// An instance over a type the JVM holds has none, which is what says a call of it is written
     /// out where it stands rather than made; `docs/specs/traits.md` states the two cases.
     pub(crate) fn answering(&self, method: &str, at: &lumen_types::Type) -> Option<Span> {
         let Type::Named { name, .. } = at else {

@@ -134,7 +134,7 @@ impl Resolver {
                 ],
             ),
             definitions: HashMap::new(),
-            instances: traits::supplied_instances(),
+            instances: traits::prelude_instances(),
             declared_traits: HashMap::new(),
         }
     }

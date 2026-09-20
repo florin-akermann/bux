@@ -172,8 +172,8 @@ fn a_parameter_of_a_method_a_trait_declares_states_its_type() {
     );
 }
 
-/// `Bool`, `Int`, and `String` have the instances the compiler supplies, and `Point` has the one
-/// the generated module writes; nothing else does, which is what the second property rests on.
+/// `Bool`, `Int`, and `String` have the instances the prelude has, and `Point` has the one the
+/// generated module writes; nothing else does, which is what the second property rests on.
 const COMPARED: [(&str, &str); 4] = [
     ("Bool", "true"),
     ("Int", "1"),

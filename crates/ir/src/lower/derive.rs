@@ -19,7 +19,7 @@ use crate::code::{Body, Comparison, FieldRef, Instruction, Label, MethodRef};
 use crate::descriptor::{ClassName, Descriptor};
 use crate::lower::Lowering;
 use crate::lower::shape::{Carried, Shape, TAG};
-use crate::lower::supplied::{compared, hashed_as, shown_as};
+use crate::lower::standard::{compared, hashed_as, shown_as};
 
 /// The local the first of the values a derived method takes arrives in.
 const ONE: u16 = 0;
@@ -114,7 +114,7 @@ impl<'a> Writing<'a> {
     /// Calls the instance of `of` at the type one value was written as, over what is on the stack.
     ///
     /// A type whose instance a module wrote or derived is an `invokestatic` of that instance's
-    /// method; a type the compiler supplies the instance for is what that instance always was.
+    /// method; one of the types the JVM holds is what that instance amounts to, written out.
     fn through(&mut self, of: &str, holds: &Holds<'_>) {
         let TypeRefKind::Named { path, .. } = &holds.written.kind else {
             unreachable!("`()` has no instance of anything, so nothing holding one derives")

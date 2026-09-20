@@ -215,8 +215,9 @@ impl Builder<'_> {
 
     /// Where the instance that answers `method` for whatever is written at `of` declares it.
     ///
-    /// A type the compiler supplies the instance for has no declaration to reach, and so has
-    /// nothing here; what its instance amounts to is written out where it is called.
+    /// One of the types the JVM holds has no declaration of its own to reach, even where
+    /// `library/prelude.lm` writes the instance: what that instance amounts to is written out
+    /// in place rather than called, so there is nothing here.
     pub(crate) fn instance_written(&self, method: &str, of: Span) -> Option<Span> {
         let at = self.lowering.typed.type_of(of)?;
         self.lowering.answering(method, &self.at().substituted(at))
@@ -282,7 +283,7 @@ impl Builder<'_> {
             .answering(&name.text, &self.at().substituted(at));
         match reached {
             Some(declared) => self.statically(declared, name.span, arguments),
-            None => Some(self.supplied_instance(name, arguments)),
+            None => Some(self.written_out_instance(name, arguments)),
         }
     }
 
