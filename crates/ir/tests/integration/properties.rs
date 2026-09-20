@@ -283,3 +283,128 @@ fn methods_of(lowered: &Lowered) -> impl Iterator<Item = &Vec<Instruction>> {
         .flat_map(|class| &class.methods)
         .map(|method| &method.body.instructions)
 }
+
+/// Every class a call of a supplied module's name may reach, which `docs/specs/io.md` names.
+const REACHED: [&str; 7] = [
+    "java/lang/System",
+    "java/io/PrintStream",
+    "java/io/File",
+    "java/nio/file/Files",
+    "java/lang/Throwable",
+    "lumen/Result",
+    "lumen/Files",
+];
+
+/// A call of each name the two supplied modules declare, with the path or text it is given.
+const CALLS: [&str; 3] = ["io.print(text)", "io.println(text)", "_ = files.read(text)"];
+
+/// The path a generated read is given, which changes nothing about how it is lowered.
+const PATHS: [&str; 3] = ["\"a.txt\"", "\"\"", "given + \".txt\""];
+
+#[hegel::test]
+fn a_call_of_a_supplied_name_reaches_only_what_the_spec_says_it_does(tc: TestCase) {
+    let call = tc.draw(gs::sampled_from(&CALLS));
+    let source =
+        format!("import files\n\nimport io\n\nfn go(text: String) -> () {{\n    {call}\n}}\n");
+
+    let lowered = common::lowered(&source);
+
+    for reached in reached_by(&lowered, "go")
+        .into_iter()
+        .chain(inside_the_reader(&lowered))
+    {
+        assert!(
+            REACHED.iter().any(|allowed| reached.starts_with(allowed)) || !reached.contains('/'),
+            "`{call}` reaches {reached}, which `docs/specs/io.md` does not name"
+        );
+    }
+}
+
+#[hegel::test]
+fn nothing_a_module_writes_guards_a_span_because_a_guard_is_a_method_of_its_own(tc: TestCase) {
+    let call = tc.draw(gs::sampled_from(&CALLS));
+    let source =
+        format!("import files\n\nimport io\n\nfn go(text: String) -> () {{\n    {call}\n}}\n");
+
+    let lowered = common::lowered(&source);
+
+    let reader = ClassName::new("lumen/Files");
+    for class in lowered.classes.iter().filter(|class| class.name != reader) {
+        for method in &class.methods {
+            assert!(
+                method.body.guards.is_empty(),
+                "{}.{} guards a span, and a guard begins with an empty stack",
+                class.name,
+                method.name
+            );
+        }
+    }
+}
+
+#[hegel::test]
+fn a_read_leaves_a_result_down_the_path_it_takes_and_down_the_one_it_is_thrown(tc: TestCase) {
+    let path = tc.draw(gs::sampled_from(&PATHS));
+    let source = format!(
+        "import files\n\nfn read(given: String) -> Result<String, String> {{\n    files.read({path})\n}}\n"
+    );
+
+    let lowered = common::lowered(&source);
+    let reader = common::class_of(&lowered, &ClassName::new("lumen/Files"));
+    let body = &common::method_of(reader, "read").body;
+
+    let [guard] = body.guards.as_slice() else {
+        panic!("a read guards one span")
+    };
+    let handler = written_at(body, guard.handler);
+    let (taken, thrown) = body.instructions.split_at(handler);
+    assert_eq!(built_by(taken), vec!["lumen/Result$Ok".to_owned()]);
+    assert_eq!(built_by(thrown), vec!["lumen/Result$Err".to_owned()]);
+}
+
+/// Every class the guarded read reaches, where the module is one that writes it.
+fn inside_the_reader(lowered: &Lowered) -> Vec<String> {
+    let named = ClassName::new("lumen/Files");
+    let Some(reader) = lowered.classes.iter().find(|class| class.name == named) else {
+        return Vec::new();
+    };
+    reached_in(&common::method_of(reader, "read").body)
+}
+
+/// Every class the method `name` of the module reaches, by a call or by a field.
+fn reached_by(lowered: &Lowered, name: &str) -> Vec<String> {
+    reached_in(common::body_of(lowered, name))
+}
+
+/// Every class `body` reaches, by a call or by a field.
+fn reached_in(body: &lumen_ir::Body) -> Vec<String> {
+    body.instructions
+        .iter()
+        .filter_map(|instruction| match instruction {
+            Instruction::New(class) | Instruction::Cast(class) => Some(class.written().to_owned()),
+            Instruction::GetStatic(field) => Some(field.class.written().to_owned()),
+            other => common::called(other).map(|called| called.class.written().to_owned()),
+        })
+        .collect()
+}
+
+/// Where `label` is written among `body`'s instructions.
+fn written_at(body: &lumen_ir::Body, label: lumen_ir::Label) -> usize {
+    body.instructions
+        .iter()
+        .position(|instruction| instruction == &Instruction::Label(label))
+        .unwrap_or_else(|| panic!("{label:?} is written in the body"))
+}
+
+/// The answers `instructions` builds, in the order they are built.
+///
+/// A read makes a `java.io.File` on the way, which is not an answer and is not one of these.
+fn built_by(instructions: &[Instruction]) -> Vec<String> {
+    instructions
+        .iter()
+        .filter_map(|instruction| match instruction {
+            Instruction::New(class) => Some(class.written().to_owned()),
+            _ => None,
+        })
+        .filter(|built| built.starts_with("lumen/Result$"))
+        .collect()
+}

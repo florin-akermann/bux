@@ -35,6 +35,7 @@ pub(crate) const IRETURN: u8 = 0xAC;
 pub(crate) const LRETURN: u8 = 0xAD;
 pub(crate) const ARETURN: u8 = 0xB0;
 pub(crate) const RETURN: u8 = 0xB1;
+pub(crate) const GETSTATIC: u8 = 0xB2;
 pub(crate) const GETFIELD: u8 = 0xB4;
 pub(crate) const PUTFIELD: u8 = 0xB5;
 pub(crate) const INVOKEVIRTUAL: u8 = 0xB6;

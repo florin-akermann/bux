@@ -229,6 +229,9 @@ impl Builder<'_> {
     }
 
     fn call(&mut self, callee: &Expr, arguments: &[&Expr], at: Span) -> Option<Descriptor> {
+        if let Some((module, reached)) = self.reached_inside(callee) {
+            return self.inside_module(module, reached, arguments);
+        }
         let ExprKind::Name(name) = &callee.kind else {
             unreachable!("version 0.1 calls a name, which is a function or a constructor")
         };
@@ -236,6 +239,18 @@ impl Builder<'_> {
             DefinitionKind::Constructor => Some(self.built(name, arguments)),
             _ => self.invoked(name, arguments, at),
         }
+    }
+
+    /// The module a callee reaches inside, and the name it reaches, where it reaches one.
+    fn reached_inside<'w>(&self, callee: &'w Expr) -> Option<(&'w Name, &'w Name)> {
+        let ExprKind::Field { receiver, name } = &callee.kind else {
+            return None;
+        };
+        let ExprKind::Name(module) = &receiver.kind else {
+            return None;
+        };
+        let reached = self.definition(module).kind == DefinitionKind::Module;
+        reached.then_some((module, name))
     }
 
     /// A call of a function of the module, which is a static method of the module class.

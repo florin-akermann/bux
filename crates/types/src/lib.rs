@@ -9,6 +9,7 @@ mod environment;
 mod error;
 mod infer;
 mod scheme;
+mod supplied;
 mod table;
 mod types;
 mod unify;

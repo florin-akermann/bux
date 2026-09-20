@@ -138,6 +138,7 @@ fn a_module(tc: &TestCase) -> Lowered {
             body: Body {
                 instructions: leaving(body(*which)),
                 locals: 0,
+                guards: Vec::new(),
             },
         });
     }

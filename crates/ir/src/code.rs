@@ -14,6 +14,21 @@ pub struct FieldRef {
     pub of: Descriptor,
 }
 
+/// A span of a body whose failure is caught, and where control lands when it is.
+///
+/// `docs/specs/io.md` states the one reason version 0.1 catches anything: a read of a file
+/// gives back a `Result`, and the handler is what turns a throwable into the `Err` of one.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Guard {
+    /// The first instruction the guard covers.
+    pub from: Label,
+    /// The instruction after the last one it covers.
+    pub to: Label,
+    /// Where control lands, with the throwable and nothing else on the stack.
+    pub handler: Label,
+    pub catching: ClassName,
+}
+
 /// One method of one class, which is what a call names.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct MethodRef {
@@ -92,6 +107,8 @@ pub enum Instruction {
     Construct(MethodRef),
     /// Reads a field of the instance on the stack.
     GetField(FieldRef),
+    /// Reads a field of a class, which stands on nothing: `java.lang.System.out` is one.
+    GetStatic(FieldRef),
     /// Writes the value on the stack into a field of the instance below it.
     PutField(FieldRef),
     InvokeStatic(MethodRef),
@@ -118,4 +135,6 @@ pub struct Body {
     pub instructions: Vec<Instruction>,
     /// The slots the body uses beyond the ones its parameters arrive in.
     pub locals: u16,
+    /// Each span of the body whose failure is caught, in the order the class file names them.
+    pub guards: Vec<Guard>,
 }

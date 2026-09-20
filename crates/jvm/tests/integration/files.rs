@@ -2,8 +2,9 @@
 //!
 //! `docs/specs/codegen.md` states each of these.
 
-use lumen_ir::{Class, ClassName, Comparison, Descriptor, Extending, Field, Instruction};
-use lumen_ir::{Label, Lowered, Method, Reached};
+use lumen_ir::Instruction;
+use lumen_ir::{Class, ClassName, Comparison, Descriptor, Extending, Field, FieldRef, Guard};
+use lumen_ir::{Label, Lowered, Method, MethodRef, Reached};
 
 use crate::common::{body, module_with, taking, written};
 use crate::reader::TakeCode;
@@ -255,4 +256,158 @@ fn a_small_whole_number_is_pushed_without_reaching_the_pool() {
     let code = file.method("tag").code.take_code();
 
     assert_eq!(code.instructions, [0x10, 3, 0xAC], "bipush 3, ireturn");
+}
+
+#[test]
+fn a_static_field_is_read_off_the_class_that_declares_it_and_nothing_below_it() {
+    let out = FieldRef {
+        class: ClassName::new("java/lang/System"),
+        name: "out".to_owned(),
+        of: Descriptor::reference("java/io/PrintStream"),
+    };
+    let class = module_with(
+        "standard_output",
+        taking(
+            Vec::new(),
+            Some(Descriptor::reference("java/io/PrintStream")),
+        ),
+        body(vec![
+            Instruction::GetStatic(out),
+            Instruction::Return(Some(Descriptor::reference("java/io/PrintStream"))),
+        ]),
+    );
+
+    let file = written(class);
+    let code = file.method("standard_output").code.take_code();
+
+    assert_eq!(code.instructions[0], 0xB2, "getstatic");
+    assert_eq!(code.instructions[3], 0xB0, "areturn");
+    assert_eq!(code.instructions.len(), 4);
+    assert_eq!(code.max_stack, 1, "it takes nothing off the stack");
+}
+
+#[test]
+fn a_body_that_catches_nothing_writes_an_exception_table_with_nothing_in_it() {
+    let class = module_with("nothing", taking(Vec::new(), None), body(vec![]));
+
+    let file = written(class);
+
+    assert!(file.method("nothing").code.take_code().handlers.is_empty());
+}
+
+#[test]
+fn a_guarded_span_is_written_as_the_offsets_it_covers_and_the_class_it_catches() {
+    let file = written(guarding());
+    let code = file.method("guarded").code.take_code();
+
+    let [row] = code.handlers.as_slice() else {
+        panic!("the method guards one span")
+    };
+    assert_eq!(row.catching, "java/lang/Throwable");
+    assert_eq!(row.from, 0, "the span begins where the body does");
+    assert!(
+        row.to > row.from,
+        "the span covers the instructions inside it"
+    );
+    assert_eq!(
+        code.instructions[row.handler as usize], 0x57,
+        "control lands on the `pop` that drops the throwable"
+    );
+}
+
+#[test]
+fn the_span_a_guard_covers_ends_before_the_branch_that_leaves_it() {
+    let file = written(guarding());
+    let code = file.method("guarded").code.take_code();
+    let [row] = code.handlers.as_slice() else {
+        panic!("the method guards one span")
+    };
+
+    assert_eq!(
+        code.instructions[row.to as usize], 0xA7,
+        "the `goto` past the handler is outside the span"
+    );
+}
+
+#[test]
+fn a_handler_is_told_that_the_throwable_is_what_holds_where_it_lands() {
+    let file = written(guarding());
+    let code = file.method("guarded").code.take_code();
+
+    assert!(
+        code.max_stack >= 1,
+        "the throwable the JVM hands over is on the stack"
+    );
+    assert!(
+        code.frames.is_some(),
+        "a handler is reached by a throw, so the frame there is written out"
+    );
+}
+
+/// A module whose one method guards a span, catching everything and dropping what it caught.
+fn guarding() -> Class {
+    let from = Label(0);
+    let to = Label(1);
+    let handler = Label(2);
+    let done = Label(3);
+    let throwable = Descriptor::reference("java/lang/Throwable");
+    let mut held = body(vec![
+        Instruction::Label(from),
+        Instruction::Text("a".to_owned()),
+        Instruction::Drop(Descriptor::reference("java/lang/String")),
+        Instruction::Label(to),
+        Instruction::Jump(done),
+        Instruction::Label(handler),
+        Instruction::Drop(throwable.clone()),
+        Instruction::Label(done),
+        Instruction::Return(None),
+    ]);
+    held.guards.push(Guard {
+        from,
+        to,
+        handler,
+        catching: ClassName::new("java/lang/Throwable"),
+    });
+    module_with("guarded", taking(Vec::new(), None), held)
+}
+
+#[test]
+fn the_throwable_a_handler_is_handed_is_counted_in_the_deepest_the_stack_goes() {
+    let file = written(peaking_at_the_handler());
+
+    let code = file.method("guarded").code.take_code();
+
+    assert_eq!(
+        code.max_stack, 1,
+        "nothing else pushes, so the throwable alone is the deepest the stack goes"
+    );
+}
+
+/// A module guarding a span that leaves nothing on the stack, so only its handler holds anything.
+fn peaking_at_the_handler() -> Class {
+    let from = Label(0);
+    let to = Label(1);
+    let handler = Label(2);
+    let done = Label(3);
+    let mut held = body(vec![
+        Instruction::Label(from),
+        Instruction::InvokeStatic(MethodRef {
+            class: ClassName::new("demo"),
+            name: "nothing".to_owned(),
+            descriptor: taking(Vec::new(), None),
+        }),
+        Instruction::Label(to),
+        Instruction::Jump(done),
+        Instruction::Label(handler),
+        Instruction::Drop(Descriptor::reference("java/lang/Throwable")),
+        Instruction::Label(done),
+        Instruction::Return(None),
+    ]);
+    held.guards.push(Guard {
+        from,
+        to,
+        handler,
+        catching: ClassName::new("java/lang/Throwable"),
+    });
+    module_with("guarded", taking(Vec::new(), None), held)
 }

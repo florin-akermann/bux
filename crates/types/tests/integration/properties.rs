@@ -341,3 +341,54 @@ fn a_bool_function_compiles_exactly_when_its_name_asks_a_question(tc: TestCase) 
 
     assert_eq!(accepts(&source), asks || gives != "Bool", "{source}");
 }
+
+/// Every name the two supplied modules declare, with the module each is reached through.
+const SUPPLIED: [(&str, &str, &str); 3] = [
+    ("io", "print", "()"),
+    ("io", "println", "()"),
+    ("files", "read", "Result<String, String>"),
+];
+
+/// The letters a generated name is drawn from, which are the ones a Lumen name may hold.
+const NAME_LETTERS: &str = "adenoprstuw";
+
+/// How long a generated name runs past the letter it opens with.
+const NAME_LONGEST: usize = 6;
+
+/// Where a call is written, which is every place an expression of its type may go.
+const PLACES: [&str; 3] = [
+    "    held := {call}\n    _ = held\n",
+    "    _ = {call}\n",
+    "    if true {\n        _ = {call}\n    }\n",
+];
+
+#[hegel::test]
+fn a_name_a_supplied_module_declares_has_one_type_wherever_it_is_written(tc: TestCase) {
+    let (module, name, result) = tc.draw(gs::sampled_from(&SUPPLIED));
+    let place = tc.draw(gs::sampled_from(&PLACES));
+    let call = format!("{module}.{name}(\"text\")");
+    let body = place.replace("{call}", &call);
+    let source = format!("import {module}\n\nfn go() -> () {{\n{body}}}\n");
+
+    crate::common::inferred(&source);
+    assert_eq!(
+        inferred_type(&source, &call, 1),
+        *result,
+        "{module}.{name} gives back what `docs/specs/io.md` says it does"
+    );
+}
+
+#[hegel::test]
+fn a_name_a_supplied_module_does_not_declare_is_refused_naming_the_module_and_it(tc: TestCase) {
+    let (module, _, _) = tc.draw(gs::sampled_from(&SUPPLIED));
+    let opener = tc.draw(gs::sampled_from(&["a", "w", "r"]));
+    let rest: String = tc.draw(gs::text().alphabet(NAME_LETTERS).max_size(NAME_LONGEST));
+    let name = format!("{opener}{rest}");
+    tc.assume(!SUPPLIED.iter().any(|(_, declared, _)| *declared == name));
+    let source = format!("import {module}\n\nfn go() -> () {{\n    _ = {module}.{name}()\n}}\n");
+
+    assert_eq!(
+        refusal(&source).message(),
+        format!("`{module}` declares no `{name}`")
+    );
+}

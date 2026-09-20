@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 
-use lumen_ir::{Body, ClassName, Descriptor, Instruction, Label, MethodDescriptor};
+use lumen_ir::{Body, ClassName, Descriptor, Guard, Instruction, Label, MethodDescriptor};
 
 use crate::bytes::Bytes;
 use crate::frame::{Frame, Held, Hierarchy};
@@ -16,6 +16,16 @@ pub(crate) struct Assembled {
     pub(crate) max_locals: u16,
     /// Each place a jump lands, with what holds there, in the order they are written.
     pub(crate) frames: Vec<(u16, Frame)>,
+    /// Each span whose failure is caught, as the offsets the exception table names.
+    pub(crate) handlers: Vec<Caught>,
+}
+
+/// One row of the exception table: the span covered, where it lands, and what it catches.
+pub(crate) struct Caught {
+    pub(crate) from: u16,
+    pub(crate) to: u16,
+    pub(crate) handler: u16,
+    pub(crate) catching: ClassName,
 }
 
 /// Assembles `body` into the bytes a method of `descriptor` runs.
@@ -35,6 +45,7 @@ pub(crate) fn assemble(
         pending: Vec::new(),
         deepest: 0,
         next: u32::MAX,
+        guards: body.guards.clone(),
     };
     for instruction in &body.instructions {
         assembling.one(instruction, context);
@@ -61,12 +72,15 @@ pub(crate) struct Assembling {
     deepest: usize,
     /// The number the next label the assembler makes for itself takes.
     next: u32,
+    /// Each span of the body whose failure is caught, which only a file read has.
+    guards: Vec<Guard>,
 }
 
 impl Assembling {
     fn one(&mut self, instruction: &Instruction, context: &mut Context<'_>) {
         if let Instruction::Label(label) = instruction {
             self.landing(*label, context);
+            self.guarding(*label, context);
             return;
         }
         if !self.reachable {
@@ -85,11 +99,54 @@ impl Assembling {
             self.bytes.patch_u2(patch.at, away.cast_unsigned());
         }
         let frames = self.written_frames();
+        let handlers = self.caught();
         Assembled {
             code: self.bytes.taken(),
             max_stack: u16::try_from(self.deepest).unwrap_or(u16::MAX),
             max_locals: slots,
             frames,
+            handlers,
+        }
+    }
+
+    /// Each guard as the offsets the exception table names, in the order they were stated.
+    fn caught(&self) -> Vec<Caught> {
+        self.guards
+            .iter()
+            .map(|guard| Caught {
+                from: self.landed(guard.from),
+                to: self.landed(guard.to),
+                handler: self.landed(guard.handler),
+                catching: guard.catching.clone(),
+            })
+            .collect()
+    }
+
+    fn landed(&self, label: Label) -> u16 {
+        self.landings.get(&label).copied().unwrap_or_default()
+    }
+
+    /// Says that control may reach the handler of each guard `label` opens or closes.
+    ///
+    /// A handler is reached by a throw rather than by a branch, so nothing else says what holds
+    /// there: the locals are the ones the guarded span runs with, and the stack is the throwable
+    /// alone, which is what the JVM leaves when it hands control over.
+    fn guarding(&mut self, label: Label, context: &mut Context<'_>) {
+        if !self.reachable {
+            return;
+        }
+        let opened: Vec<(Label, ClassName)> = self
+            .guards
+            .iter()
+            .filter(|guard| guard.from == label || guard.to == label)
+            .map(|guard| (guard.handler, guard.catching.clone()))
+            .collect();
+        for (handler, catching) in opened {
+            let caught = Frame {
+                locals: self.frame.locals.clone(),
+                stack: vec![Held::Object(catching)],
+            };
+            self.reaching(handler, &caught, context);
         }
     }
 
@@ -136,6 +193,9 @@ impl Assembling {
             return;
         };
         self.frame = frame.clone();
+        // A handler is reached with the throwable already on the stack, which nothing pushed, so
+        // the deepest the stack goes is read here as well as where a value is put on it.
+        self.deepest = self.deepest.max(self.frame.depth());
         self.reachable = true;
         let at = u16::try_from(self.bytes.len()).unwrap_or(u16::MAX);
         self.landings.insert(label, at);
@@ -208,9 +268,15 @@ impl Assembling {
 
     /// Says that control may reach `label` holding what it holds now.
     fn expect(&mut self, label: Label, context: &mut Context<'_>) {
+        let frame = self.frame.clone();
+        self.reaching(label, &frame, context);
+    }
+
+    /// Says that control may reach `label` holding what `frame` says it holds.
+    fn reaching(&mut self, label: Label, frame: &Frame, context: &mut Context<'_>) {
         let merged = match self.expected.get(&label) {
-            Some(known) => known.merged_with(&self.frame, context.hierarchy),
-            None => self.frame.clone(),
+            Some(known) => known.merged_with(frame, context.hierarchy),
+            None => frame.clone(),
         };
         self.expected.insert(label, merged);
     }

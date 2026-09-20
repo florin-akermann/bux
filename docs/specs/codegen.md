@@ -163,6 +163,8 @@ JDK 28, and a JVM loads one only when started with `--enable-preview`.
 `lumen run` passes that flag, so a program is run without its author knowing any of this.
 Every method carries a `Code` attribute, and every `Code` attribute that branches carries a
 `StackMapTable`, which the verifier requires.
+A `Code` attribute carries an exception table, which is empty for every method but the one read
+`docs/specs/io.md` states, and the handler's frame says the throwable alone holds where it lands.
 
 The output is byte-reproducible.
 Two compilations of one source produce identical files, so nothing in the writer depends on a

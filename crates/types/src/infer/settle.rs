@@ -10,6 +10,7 @@ use lumen_ast::{Name, Span};
 
 use crate::error::{TypeError, TypeErrorKind};
 use crate::infer::{Inference, labelled};
+use crate::supplied;
 use crate::types::Type;
 
 impl Inference<'_> {
@@ -78,6 +79,9 @@ impl Inference<'_> {
     pub(crate) fn look_up(&mut self, lookup: Lookup) -> Result<(), TypeError> {
         let through = self.table.solved(&lookup.through);
         let field = lookup.field;
+        if let Type::Module(module) = &through {
+            return self.inside(module, &field, &lookup.found);
+        }
         let Type::Named { name, .. } = &through else {
             return Err(unreachable_field(&through, &field));
         };
@@ -92,6 +96,21 @@ impl Inference<'_> {
         self.expect(&through, &result, field.span)?;
         let index = labelled(&labels, &field, &self.table.solved(&result))?;
         self.expect(&lookup.found, &parameters[index].clone(), field.span)
+    }
+
+    /// A name reached inside a module, which only a module the compiler supplies has any of.
+    fn inside(&mut self, module: &str, field: &Name, found: &Type) -> Result<(), TypeError> {
+        if !supplied::supplies(module) {
+            return Err(unreachable_field(&Type::Module(module.to_owned()), field));
+        }
+        let Some(declared) = supplied::declared(module, &field.text) else {
+            let kind = TypeErrorKind::NotInSuppliedModule {
+                module: module.to_owned(),
+                name: field.text.clone(),
+            };
+            return Err(TypeError::at(field.span, kind));
+        };
+        self.expect(found, &declared, field.span)
     }
 }
 

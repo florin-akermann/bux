@@ -11,7 +11,9 @@ mod descriptor;
 mod lower;
 
 pub use crate::class::{Class, Extending, Field, Method, Reached};
-pub use crate::code::{Arithmetic, Body, Comparison, FieldRef, Instruction, Label, MethodRef};
+pub use crate::code::{
+    Arithmetic, Body, Comparison, FieldRef, Guard, Instruction, Label, MethodRef,
+};
 pub use crate::descriptor::{ClassName, Descriptor, MethodDescriptor};
 pub use crate::lower::{is_a_program, lower};
 

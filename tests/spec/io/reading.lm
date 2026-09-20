@@ -1,0 +1,12 @@
+// expect-run
+// Reading a file gives back a `Result`, so a file that is not there is a case, not a failure.
+import files
+
+import io
+
+fn main() -> () {
+    match files.read("no-such-file.txt") {
+        Ok(text) => io.println(text)
+        Err(why) => io.println(why)
+    }
+}

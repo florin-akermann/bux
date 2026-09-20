@@ -11,3 +11,4 @@ mod generics;
 mod inference;
 mod predicate;
 mod properties;
+mod supplied;

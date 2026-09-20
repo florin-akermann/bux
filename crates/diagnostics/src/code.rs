@@ -110,6 +110,8 @@ catalogue! {
     FlagParameter => "L0412",
     /// A function whose result is `Bool` is named for a command rather than a question.
     NotAPredicate => "L0413",
+    /// A module the compiler supplies does not declare the name reached inside it.
+    NotInSuppliedModule => "L0414",
     /// A `match` leaves a value of the type it matches unanswered.
     NonExhaustiveMatch => "L0500",
     /// A `match` lists its arms in an order the type does not declare its variants in.

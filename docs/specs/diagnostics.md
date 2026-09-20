@@ -116,6 +116,7 @@ Type inference raises these, in `crates/types/src/error.rs`:
 - `L0411` — a call names the arguments of something that has no parameter names.
 - `L0412` — a parameter is a bare `Bool` outside a function that is about `Bool`.
 - `L0413` — a function whose result is `Bool` is named for a command rather than a question.
+- `L0414` — a module the compiler supplies does not declare the name reached inside it.
 
 Exhaustiveness raises these, in `crates/exhaustiveness/src/error.rs`:
 

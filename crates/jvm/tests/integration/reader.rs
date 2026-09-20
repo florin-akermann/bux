@@ -61,6 +61,16 @@ pub struct Code {
     pub max_locals: u16,
     pub instructions: Vec<u8>,
     pub frames: Option<Vec<u8>>,
+    pub handlers: Vec<Caught>,
+}
+
+/// One row of the exception table: the span covered, where it lands, and what it catches.
+#[derive(Debug, PartialEq, Eq)]
+pub struct Caught {
+    pub from: u16,
+    pub to: u16,
+    pub handler: u16,
+    pub catching: String,
 }
 
 /// Reading the `Code` of a method that must have one.
@@ -213,6 +223,18 @@ impl Reading<'_> {
         }
     }
 
+    fn handlers(&mut self, pool: &[Constant]) -> Vec<Caught> {
+        let count = self.u2();
+        (0..count)
+            .map(|_| Caught {
+                from: self.u2(),
+                to: self.u2(),
+                handler: self.u2(),
+                catching: class_named(pool, self.u2()),
+            })
+            .collect()
+    }
+
     fn u1(&mut self) -> u8 {
         self.at += 1;
         self.bytes[self.at - 1]
@@ -249,8 +271,7 @@ fn read_code(bytes: &[u8], pool: &[Constant]) -> Code {
     let max_locals = reading.u2();
     let length = reading.u4() as usize;
     let instructions = reading.bytes(length);
-    let handlers = reading.u2();
-    assert_eq!(handlers, 0, "version 0.1 catches nothing");
+    let handlers = reading.handlers(pool);
     let attributes = reading.u2();
     let mut frames = None;
     for _ in 0..attributes {
@@ -266,6 +287,15 @@ fn read_code(bytes: &[u8], pool: &[Constant]) -> Code {
         max_locals,
         instructions,
         frames,
+        handlers,
+    }
+}
+
+/// The class the pool names at `held`, which is the text the entry there points at.
+fn class_named(pool: &[Constant], held: u16) -> String {
+    match &pool[held as usize - 1] {
+        Constant::Class(written) => named(pool, *written),
+        other => panic!("{held} holds {other:?}, not a class"),
     }
 }
 

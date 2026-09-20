@@ -3,7 +3,7 @@
 use lumen_ir::{Class, Extending, Method, Reached};
 
 use crate::bytes::Bytes;
-use crate::code::{Assembled, Context, assemble};
+use crate::code::{Assembled, Caught, Context, assemble};
 use crate::frame::Hierarchy;
 use crate::pool::Pool;
 
@@ -106,6 +106,7 @@ fn written_code(method: &Method, class: &Class, context: &mut Context<'_>) -> Ve
         Reached::ThroughAnInstance => Some(class.name.clone()),
     };
     let assembled = assemble(&method.body, &method.descriptor, receiver.as_ref(), context);
+    let caught = written_handlers(&assembled.handlers, context.pool);
     let map = written_map(&assembled, context.pool);
     let named = context.pool.utf8("Code");
     let mut bytes = Bytes::default();
@@ -113,7 +114,7 @@ fn written_code(method: &Method, class: &Class, context: &mut Context<'_>) -> Ve
     bytes.u2(assembled.max_locals);
     bytes.u4(u32::try_from(assembled.code.len()).unwrap_or_default());
     bytes.all(&assembled.code);
-    bytes.u2(0);
+    bytes.all(&caught);
     bytes.u2(u16::from(!map.is_empty()));
     bytes.all(&map);
     let body = bytes.taken();
@@ -122,6 +123,20 @@ fn written_code(method: &Method, class: &Class, context: &mut Context<'_>) -> Ve
     attribute.u4(u32::try_from(body.len()).unwrap_or_default());
     attribute.all(&body);
     attribute.taken()
+}
+
+/// The exception table, which names every span whose failure is caught and where it lands.
+fn written_handlers(handlers: &[Caught], pool: &mut Pool) -> Vec<u8> {
+    let mut bytes = Bytes::default();
+    bytes.u2(u16::try_from(handlers.len()).unwrap_or_default());
+    for caught in handlers {
+        let catching = pool.class(&caught.catching);
+        bytes.u2(caught.from);
+        bytes.u2(caught.to);
+        bytes.u2(caught.handler);
+        bytes.u2(catching);
+    }
+    bytes.taken()
 }
 
 /// The `StackMapTable` attribute, which is left out when nothing branches.

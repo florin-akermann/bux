@@ -17,6 +17,26 @@ rather than guessed at. The entry point a JVM starts at is written with the modu
 module class with `java --enable-preview` directly does exactly what `lumen run` does. The flag is
 there because every class Lumen writes is a value class, which JDK 28 holds in preview.
 
+A program reaches the console with `io` and the file system with `files`, two modules the compiler
+supplies until a module can be loaded from source:
+
+```text
+import files
+
+import io
+
+fn main() -> () {
+    match files.read("notes.txt") {
+        Ok(text) => io.print(text)
+        Err(why) => io.println(why)
+    }
+}
+```
+
+`io.print` writes its text and nothing else, `io.println` writes it and then a line break, and
+`files.read` gives back the whole file as a `Result` the program must open, so a file that is not
+there is a case the program states rather than a failure that ends it.
+
 A program is compiled before the JDK is looked for, so a program that does not compile is told so
 on a machine that could not have run it anyway.
 

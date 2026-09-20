@@ -182,9 +182,19 @@ fn a_module_name_written_as_a_value_is_refused() {
 
 #[test]
 fn a_module_name_left_of_a_dot_is_resolved_rather_than_refused() {
-    let source = "import io\n\nfn go() -> Int {\n    io.count\n}\n";
+    let source = "import io\n\nfn go() -> Int {\n    io.count()\n}\n";
 
     resolved(source);
+}
+
+#[test]
+fn a_name_inside_a_module_is_written_as_a_call_because_nothing_holds_a_function() {
+    let source = "import io\n\nfn go() -> Int {\n    io.count\n}\n";
+
+    assert_eq!(
+        refusal(source).message(),
+        "`count` is a function, so it is written as a call"
+    );
 }
 
 #[test]

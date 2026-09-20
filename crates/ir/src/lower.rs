@@ -10,6 +10,7 @@ mod classes;
 mod equality;
 mod escape;
 mod expr;
+mod modules;
 mod pattern;
 mod prelude;
 mod shape;
@@ -39,8 +40,13 @@ pub fn lower(whole: &Whole<'_>, module: &str) -> Lowered {
         typed,
         shapes: Shapes::of(typed.resolved(), module),
     };
-    let mut classes = vec![lowering.module_class()];
+    let module_class = lowering.module_class();
+    let reads = modules::reads_a_file(&module_class);
+    let mut classes = vec![module_class];
     classes.extend(lowering.shapes.classes());
+    if reads {
+        classes.push(modules::files_class(&lowering.shapes));
+    }
     Lowered { classes }
 }
 
@@ -154,6 +160,7 @@ fn entry_point(class: &Class) -> Option<Method> {
                 Instruction::Return(None),
             ],
             locals: 0,
+            guards: Vec::new(),
         },
     })
 }

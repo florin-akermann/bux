@@ -303,6 +303,10 @@ An operation without an answer for some of its input says so in its type rather 
 That holds for an operator as much as for a function.
 An operator is a function with other syntax, and syntax buys no exemption from the type.
 
+A module the compiler supplies may sit on a JVM operation that throws, and gives back a `Result`.
+The throw is caught where the module is built, and never reaches the program.
+`docs/specs/io.md` states it for the one read version 0.1 has.
+
 So every operator that can fail gives back an `Option` or a `Result`, and never a bare answer.
 `/` and `%` are the ones version 0.1 has, and `17 / 0` is `None` rather than a crash.
 A divisor is never a hazard a reader has to spot.

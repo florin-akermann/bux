@@ -29,6 +29,7 @@ impl Assembling {
             Instruction::New(class) => self.new_instance(class, context),
             Instruction::Construct(method) => self.construct(method, context),
             Instruction::GetField(field) => self.get_field(field, context),
+            Instruction::GetStatic(field) => self.get_static(field, context),
             Instruction::PutField(field) => self.put_field(field, context),
             Instruction::InvokeStatic(method) => self.invoke_static(method, context),
             Instruction::InvokeVirtual(method) => self.invoke_virtual(method, context),
@@ -195,6 +196,14 @@ impl Assembling {
         self.byte(opcode::GETFIELD);
         self.short(named);
         self.pop();
+        self.push(Held::of(&field.of));
+    }
+
+    /// A field of a class, which stands on nothing, so nothing comes off the stack for it.
+    fn get_static(&mut self, field: &FieldRef, context: &mut Context<'_>) {
+        let named = context.pool.field(field);
+        self.byte(opcode::GETSTATIC);
+        self.short(named);
         self.push(Held::of(&field.of));
     }
 

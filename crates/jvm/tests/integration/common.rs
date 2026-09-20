@@ -56,6 +56,7 @@ pub fn body(instructions: Vec<Instruction>) -> Body {
     Body {
         instructions,
         locals: 0,
+        guards: Vec::new(),
     }
 }
 

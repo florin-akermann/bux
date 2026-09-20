@@ -135,6 +135,7 @@ fn instance_method(
         body: Body {
             instructions,
             locals,
+            guards: Vec::new(),
         },
     }
 }

@@ -1,0 +1,7 @@
+// expect-error: L0414
+// `io` is supplied by the compiler, and it declares no `write`.
+import io
+
+fn main() -> () {
+    io.write("one")
+}

@@ -1,0 +1,14 @@
+// expect-run
+// A program reaches the console through `io`, which the compiler supplies.
+import io
+
+fn main() -> () {
+    io.print("one")
+    io.print(" and ")
+    io.println("two")
+    io.println(joined(word: "three"))
+}
+
+fn joined(word: String) -> String {
+    "and " + word
+}

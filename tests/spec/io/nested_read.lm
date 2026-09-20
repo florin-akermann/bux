@@ -1,0 +1,23 @@
+// expect-run
+// A read is written wherever an expression is, with a larger one already part worked out.
+import files
+
+import io
+
+fn main() -> () {
+    match wrapped() {
+        Some(result) => io.println(told(result: result))
+        None => io.println("nothing")
+    }
+}
+
+fn wrapped() -> Option<Result<String, String>> {
+    Some(files.read("no-such-file.txt"))
+}
+
+fn told(result: Result<String, String>) -> String {
+    match result {
+        Ok(text) => text
+        Err(why) => why
+    }
+}

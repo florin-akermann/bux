@@ -105,6 +105,11 @@ pub(crate) enum TypeErrorKind {
     /// A parameter is a bare `Bool`, so a call of it passes `true` and says no more.
     FlagParameter(String),
     NotAPredicate(String),
+    /// A name reached inside a module the compiler supplies, which does not declare it.
+    NotInSuppliedModule {
+        module: String,
+        name: String,
+    },
 }
 
 impl TypeErrorKind {
@@ -129,6 +134,7 @@ impl TypeErrorKind {
             Self::NamedConstructor(_) | Self::NamedPrelude(_) => Code::Unnameable,
             Self::FlagParameter(_) => Code::FlagParameter,
             Self::NotAPredicate(_) => Code::NotAPredicate,
+            Self::NotInSuppliedModule { .. } => Code::NotInSuppliedModule,
         }
     }
 
@@ -175,6 +181,9 @@ impl TypeErrorKind {
                 "declare a two-variant type and take that instead, so the call says which of the two"
             }
             Self::NotAPredicate(_) => "begin the name with `is_`, `has_`, `can_`, or `should_`",
+            Self::NotInSuppliedModule { .. } => {
+                "`docs/specs/io.md` lists every name a supplied module declares"
+            }
         }
     }
 }
@@ -200,6 +209,9 @@ impl fmt::Display for TypeErrorKind {
                     f,
                     "`{module}` is a module, and `{name}` cannot be reached inside one yet"
                 )
+            }
+            Self::NotInSuppliedModule { module, name } => {
+                write!(f, "`{module}` declares no `{name}`")
             }
             Self::Infinite => f.write_str("this would have a type that contains itself"),
             Self::MissingField { of, field } => {

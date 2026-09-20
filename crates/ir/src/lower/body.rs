@@ -106,6 +106,7 @@ impl<'a> Builder<'a> {
         Body {
             instructions: self.instructions,
             locals: self.next_slot - self.first_local,
+            guards: Vec::new(),
         }
     }
 

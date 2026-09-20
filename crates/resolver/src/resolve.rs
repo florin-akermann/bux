@@ -251,7 +251,7 @@ impl Resolver {
                 self.written(callee, Position::Callee)?;
                 self.each(&arguments.values())
             }
-            ExprKind::Field { receiver, .. } => self.written(receiver, Position::Receiver),
+            ExprKind::Field { receiver, name } => self.reached(receiver, name),
             ExprKind::Try(inner) => self.expr(inner),
             ExprKind::Record { base, fields } => {
                 self.use_value(base)?;
@@ -282,7 +282,29 @@ impl Resolver {
     fn written(&mut self, expr: &Expr, position: Position) -> Resolved {
         match &expr.kind {
             ExprKind::Name(name) => self.named(name, position),
+            // `io.println(…)`: the name inside the module is what is called, so the module is
+            // reached through the way it should be and nothing here is held as a value.
+            ExprKind::Field { receiver, .. } if matches!(position, Position::Callee) => {
+                self.written(receiver, Position::Receiver)
+            }
             _ => self.expr(expr),
+        }
+    }
+
+    /// `user.name` reads a field, and `io.println` names a function of a module.
+    ///
+    /// Version 0.1 has no function value, so a name inside a module written outside a call leaves
+    /// lowering nothing to write, exactly as a function of the file does.
+    fn reached(&mut self, receiver: &Expr, name: &Name) -> Resolved {
+        self.written(receiver, Position::Receiver)?;
+        let ExprKind::Name(module) = &receiver.kind else {
+            return Ok(());
+        };
+        match self.values.look_up(&module.text) {
+            Some(found) if found.kind == DefinitionKind::Module => {
+                Err(refused(name, ResolveErrorKind::NotCalled))
+            }
+            _ => Ok(()),
         }
     }
 
