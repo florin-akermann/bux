@@ -2,13 +2,15 @@
 
 use std::collections::{HashMap, HashSet};
 
-use lumen_ast::{Function, InstanceDeclaration, TraitDeclaration, TypeRef, TypeRefKind};
+use lumen_ast::{DeriveDeclaration, Function, InstanceDeclaration, TraitDeclaration};
 use lumen_ast::{Item, Name, RecordField, Signature, Span, TypeDeclaration, TypeDefinition};
+use lumen_ast::{TypeRef, TypeRefKind};
 use lumen_ast::{Variant, VariantPayload};
 use lumen_resolver::prelude;
 use lumen_resolver::{Definition, DefinitionKind, Namespace, Origin, ResolvedProgram};
 
 use crate::bounds::{self, Bounds};
+use crate::derive;
 use crate::error::{Count, TypeError, TypeErrorKind};
 use crate::scheme::{Quantified, Required, Scheme};
 use crate::table::Table;
@@ -50,6 +52,7 @@ impl Environment {
         for item in &resolved.program().items {
             environment.declare(resolved, item, table)?;
         }
+        derive::compare_what_they_hold(&environment, resolved)?;
         Ok(environment)
     }
 
@@ -234,6 +237,7 @@ impl Environment {
             Item::Type(declaration) => self.declare_type(resolved, declaration),
             Item::Trait(_) => Ok(()),
             Item::Instance(declaration) => self.declare_instance(resolved, declaration, table),
+            Item::Derive(declaration) => self.declare_derive(resolved, declaration),
             Item::Function(function) => self.declare_function(resolved, function, table),
         }
     }
@@ -317,6 +321,24 @@ impl Environment {
                 continue;
             };
             self.written_as.insert(Key::at(&method.name), declared);
+        }
+        Ok(())
+    }
+
+    /// A derive: the instances it claims, each for the whole type it names.
+    ///
+    /// What each instance writes is settled by the declaration rather than by anything written
+    /// here, so a derive declares the instance and leaves the checking of it to the pass that
+    /// runs once every item has been declared.
+    fn declare_derive(
+        &mut self,
+        resolved: &ResolvedProgram,
+        declaration: &DeriveDeclaration,
+    ) -> Result<(), TypeError> {
+        self.takes_no_arguments(resolved, &declaration.for_type)?;
+        for named in &declaration.traits {
+            self.instances
+                .insert((named.text.clone(), declaration.for_type.text.clone()));
         }
         Ok(())
     }

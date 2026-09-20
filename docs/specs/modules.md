@@ -68,6 +68,7 @@ A module's value scope holds the prelude's constructors, every variant the file 
 function and trait method it declares, and every module it imports.
 An instance declares nothing in either: its methods answer for the name its trait declares, which
 `docs/specs/traits.md` states.
+A derive declares nothing either, for the same reason: what it writes is an instance.
 Both are collected before any body is walked, so a function may call one declared below it.
 
 A function adds its type parameters to the type scope, and its parameters to the value scope.

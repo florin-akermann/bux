@@ -94,6 +94,8 @@ catalogue! {
     NotATrait => "L0310",
     /// A trait is written where a type belongs.
     TraitAsType => "L0311",
+    /// A derive names a trait no type derives, or a type this module does not declare.
+    NotDerivable => "L0312",
     /// A type met a type it does not match.
     TypeMismatch => "L0400",
     /// A call passes more or fewer arguments than the function takes.
@@ -138,6 +140,8 @@ catalogue! {
     LiteralDoesNotFit => "L0420",
     /// A bound of an `IntegerLiteral` instance is written as other than one whole number.
     BoundIsNotAWholeNumber => "L0421",
+    /// A type derives `Eq` and holds a value of a type that has none.
+    HeldTypeHasNoInstance => "L0422",
     /// A `match` leaves a value of the type it matches unanswered.
     NonExhaustiveMatch => "L0500",
     /// A `match` lists its arms in an order the type does not declare its variants in.

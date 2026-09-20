@@ -252,6 +252,8 @@ fn declared(program: &Program) -> Vec<(&Name, Kind)> {
                     function(&mut names, method);
                 }
             }
+            // A derive declares no name: it names a trait and a type both declared elsewhere.
+            Item::Derive(_) => {}
             Item::Function(declared) => function(&mut names, declared),
         }
     }

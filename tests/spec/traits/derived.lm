@@ -1,0 +1,44 @@
+// expect-run
+// > two users of the same state are one value
+// > two users of different states are two values
+// > a pending payment equals a pending payment
+// > a failure equals a failure with the same reason
+// > a failure differs from one with another reason
+// A record and a variant each derive `Eq`, and `==` reaches what the derive wrote.
+import io
+
+fn main() -> () {
+    ada := User { id: 1, name: "ada" }
+    also_ada := User { id: 1, name: "ada" }
+    bo := User { id: 2, name: "ada" }
+    if ada == also_ada {
+        io.println("two users of the same state are one value")
+    }
+    if ada != bo {
+        io.println("two users of different states are two values")
+    }
+    late := Failed("late")
+    lost := Failed("lost")
+    if Pending == Pending {
+        io.println("a pending payment equals a pending payment")
+    }
+    if late == Failed("late") {
+        io.println("a failure equals a failure with the same reason")
+    }
+    if late != lost {
+        io.println("a failure differs from one with another reason")
+    }
+}
+
+derive Eq for User
+
+type User = {
+    id: Int
+    name: String
+}
+
+derive Eq for Payment
+
+type Payment =
+    | Pending
+    | Failed(String)

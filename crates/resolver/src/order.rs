@@ -10,7 +10,7 @@
 
 use std::collections::{BTreeSet, HashMap};
 
-use lumen_ast::{Item, Name, Program, Span};
+use lumen_ast::{DeriveDeclaration, Item, Name, Program, Span};
 
 use crate::definition::{Definition, Namespace, Origin};
 use crate::error::{ResolveError, ResolveErrorKind};
@@ -38,7 +38,8 @@ pub(crate) fn out_of_order(
 /// reaches in the source.
 struct Declared<'a> {
     name: &'a Name,
-    /// What a refusal calls this declaration, which is its name for all but an instance.
+    /// What a refusal calls this declaration: its name, or the whole line for an instance
+    /// and for a derive, neither of which declares one.
     written: String,
     extent: Span,
 }
@@ -65,9 +66,30 @@ fn declarations(program: &Program) -> Vec<Declared<'_>> {
                 ),
                 extent: declaration.span,
             }),
+            // A derive declares no name either, so it is spoken of as it is written: it names
+            // its traits and its type, and is written above both.
+            Item::Derive(declaration) => Some(Declared {
+                name: &declaration.for_type,
+                written: written_as(declaration),
+                extent: declaration.span,
+            }),
             Item::Function(function) => Some(named(&function.name, function.span)),
         })
         .collect()
+}
+
+/// What a refusal calls a derive, which is the derive as the module wrote it.
+fn written_as(declaration: &DeriveDeclaration) -> String {
+    let traits: Vec<&str> = declaration
+        .traits
+        .iter()
+        .map(|named| named.text.as_str())
+        .collect();
+    format!(
+        "derive {} for {}",
+        traits.join(", "),
+        declaration.for_type.text
+    )
 }
 
 /// Which declaration uses which, as `(meant, writes)` pairs: the declaration a name means, and

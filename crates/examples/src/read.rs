@@ -141,7 +141,11 @@ fn documented(program: &Program) -> impl Iterator<Item = &Function> {
         .iter()
         .filter_map(|item| match item {
             Item::Function(function) => Some(function),
-            Item::Import(_) | Item::Type(_) | Item::Trait(_) | Item::Instance(_) => None,
+            Item::Import(_)
+            | Item::Type(_)
+            | Item::Trait(_)
+            | Item::Instance(_)
+            | Item::Derive(_) => None,
         })
         .filter(|function| function.name.text != REACHED_BY_RUNNING)
 }

@@ -119,7 +119,7 @@ impl Resolver {
             Item::Import(import) => self.introduce_value(&import.module, DefinitionKind::Module),
             Item::Type(declaration) => self.declare_type(declaration),
             Item::Trait(declaration) => self.declare_trait(declaration),
-            Item::Instance(_) => Ok(()),
+            Item::Instance(_) | Item::Derive(_) => Ok(()),
             Item::Function(function) => {
                 self.introduce_value(&function.name, DefinitionKind::Function)
             }
@@ -144,6 +144,7 @@ impl Resolver {
             Item::Type(declaration) => self.type_declaration(declaration),
             Item::Trait(declaration) => self.trait_declaration(declaration),
             Item::Instance(declaration) => self.instance(declaration),
+            Item::Derive(declaration) => self.derive(declaration),
             Item::Function(function) => self.function(function),
         }
     }

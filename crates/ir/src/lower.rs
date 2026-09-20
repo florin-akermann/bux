@@ -7,6 +7,7 @@
 
 mod body;
 mod classes;
+mod derive;
 mod equality;
 mod escape;
 mod expr;
@@ -21,8 +22,9 @@ mod shape;
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 
-use lumen_ast::{Function, InstanceDeclaration, Item, Span};
+use lumen_ast::{DeriveDeclaration, Function, InstanceDeclaration, Item, Span, TypeDeclaration};
 use lumen_holes::Whole;
+use lumen_resolver::prelude as supplied;
 use lumen_types::{Type, TypedProgram};
 
 use crate::Lowered;
@@ -72,11 +74,20 @@ pub(crate) struct Lowering<'a> {
     owed: RefCell<Vec<Owed>>,
 }
 
-/// One function the module writes: the source of it, and what a JVM calls the method it becomes.
+/// One method the module writes: where its body comes from, and what a JVM calls it.
 struct Declared<'a> {
-    function: &'a Function,
     /// An instance's method is named for its trait and its type; every other is named as written.
     named: String,
+    body: Written<'a>,
+}
+
+/// Where the body of one method comes from.
+///
+/// A derive writes a method no source function stands behind, which `docs/specs/derive.md`
+/// states, and what it does follows from the declaration the derive names instead.
+enum Written<'a> {
+    Source(&'a Function),
+    Derived(&'a TypeDeclaration),
 }
 
 /// One method the module still owes: a function, and what one use of it settled its types at.
@@ -93,7 +104,7 @@ impl Lowering<'_> {
     /// what asks for the methods that body needs, and the asking goes on until nothing is owed.
     fn module_class(&self) -> Class {
         let mut class = Class::new(self.shapes.module().clone());
-        self.owe_every_plain_function();
+        self.owe_every_method_nothing_has_to_ask_for();
         class.methods = self.methods_owed();
         class.methods.extend(entry_point(&class));
         class
@@ -104,12 +115,15 @@ impl Lowering<'_> {
     /// A function that declares no type parameter is written whether anything calls it or not,
     /// because the module declares it and `docs/specs/modules.md` makes that public. `main` is
     /// asked for however it is declared, because running the module is the use it has.
-    fn owe_every_plain_function(&self) {
+    fn owe_every_method_nothing_has_to_ask_for(&self) {
         let reached = self
             .functions()
             .filter(|function| function.type_parameters.is_empty() || function.name.text == START);
         for function in reached {
             self.owe(function.name.span, Instantiation::whole());
+        }
+        for derived in derives_of(self.typed) {
+            self.owe(derived.for_type.span, Instantiation::whole());
         }
     }
 
@@ -126,7 +140,7 @@ impl Lowering<'_> {
             let named = owed.at.names(&declared.named);
             let signature = self.signature(owed.declared, &owed.at);
             if written.insert((named.clone(), signature.descriptor())) {
-                methods.push(self.method(declared.function, named, &owed.at));
+                methods.push(self.method(&owed, named, &signature));
             }
         }
         methods
@@ -155,12 +169,11 @@ impl Lowering<'_> {
     /// Asking is what has the method written. A use inside a generic body is a use at the types
     /// the body was written for, so what that body settled is applied before the use is read.
     pub(crate) fn used(&self, declared: Span, at: Span, within: &Instantiation) -> Reaching {
-        let function = self.declared[&declared].function;
+        let Written::Source(function) = self.declared[&declared].body else {
+            return self.plainly(declared);
+        };
         if function.type_parameters.is_empty() {
-            return Reaching {
-                named: self.declared[&declared].named.clone(),
-                signature: self.signature(declared, &Instantiation::whole()),
-            };
+            return self.plainly(declared);
         }
         let used = within.substituted(self.used_as(at));
         let settled = Instantiation::of(function, self.used_as(declared), &used);
@@ -170,15 +183,32 @@ impl Lowering<'_> {
         Reaching { named, signature }
     }
 
-    fn method(&self, function: &Function, named: String, at: &Instantiation) -> Method {
-        let signature = self.signature(function.name.span, at);
-        let mut builder = Builder::entering(self, function, &signature, at.clone());
-        builder.body(&function.body);
+    /// The method a use of a function that declares no type parameter reaches.
+    pub(crate) fn plainly(&self, declared: Span) -> Reaching {
+        Reaching {
+            named: self.declared[&declared].named.clone(),
+            signature: self.signature(declared, &Instantiation::whole()),
+        }
+    }
+
+    fn method(&self, owed: &Owed, named: String, signature: &Signature) -> Method {
         Method {
             name: named,
             descriptor: signature.descriptor(),
             reached: Reached::ThroughTheClass,
-            body: builder.finish(),
+            body: self.written_body(owed, signature),
+        }
+    }
+
+    /// What one method does: the body a function writes, or the one a derive follows from.
+    fn written_body(&self, owed: &Owed, signature: &Signature) -> Body {
+        match self.declared[&owed.declared].body {
+            Written::Source(function) => {
+                let mut builder = Builder::entering(self, function, signature, owed.at.clone());
+                builder.body(&function.body);
+                builder.finish()
+            }
+            Written::Derived(declaration) => derive::is_equal(self, declaration),
         }
     }
 
@@ -251,17 +281,51 @@ fn declarations_of(typed: &TypedProgram) -> HashMap<Span, Declared<'_>> {
                         .map(|method| (method.name.span, as_an_instance(instance, method))),
                 );
             }
+            Item::Derive(derive) => {
+                declared.insert(derive.for_type.span, as_derived(typed, derive));
+            }
             Item::Import(_) | Item::Type(_) | Item::Trait(_) => {}
         }
     }
     declared
 }
 
+/// The one method a derive writes, which a JVM reaches as it reaches a written instance's.
+///
+/// `docs/specs/derive.md` makes `Eq` the one trait a type derives, so a derive is one method and
+/// name resolution has already refused a derive of anything else.
+fn as_derived<'a>(typed: &'a TypedProgram, derive: &DeriveDeclaration) -> Declared<'a> {
+    let named = format!(
+        "{}${}${}",
+        supplied::EQ,
+        derive.for_type.text,
+        supplied::IS_EQUAL
+    );
+    Declared {
+        named,
+        body: Written::Derived(declared_as(typed, &derive.for_type.text)),
+    }
+}
+
+/// The declaration of the type called `named`, which is what a derive of it follows from.
+fn declared_as<'a>(typed: &'a TypedProgram, named: &str) -> &'a TypeDeclaration {
+    typed
+        .resolved()
+        .program()
+        .items
+        .iter()
+        .find_map(|item| match item {
+            Item::Type(declaration) if declaration.name.text == named => Some(declaration),
+            _ => None,
+        })
+        .expect("name resolution gave the derive's type a declaration in this module")
+}
+
 /// A function the module declares, which a JVM reaches by the name it is written with.
 fn as_written(function: &Function) -> Declared<'_> {
     Declared {
-        function,
         named: function.name.text.clone(),
+        body: Written::Source(function),
     }
 }
 
@@ -272,8 +336,8 @@ fn as_an_instance<'a>(instance: &InstanceDeclaration, method: &'a Function) -> D
         instance.trait_name.text, instance.for_type.text, method.name.text
     );
     Declared {
-        function: method,
         named,
+        body: Written::Source(method),
     }
 }
 
@@ -292,7 +356,24 @@ fn instances_of(typed: &TypedProgram) -> HashMap<(String, String), Span> {
             answers.insert(answering, method.name.span);
         }
     }
+    for derive in derives_of(typed) {
+        let answering = (supplied::IS_EQUAL.to_owned(), derive.for_type.text.clone());
+        answers.insert(answering, derive.for_type.span);
+    }
     answers
+}
+
+/// Every derive the module writes, in the order it writes them.
+fn derives_of(typed: &TypedProgram) -> impl Iterator<Item = &DeriveDeclaration> {
+    typed
+        .resolved()
+        .program()
+        .items
+        .iter()
+        .filter_map(|item| match item {
+            Item::Derive(derive) => Some(derive),
+            _ => None,
+        })
 }
 
 /// What a function takes and gives back, with a place for each parameter the source wrote.

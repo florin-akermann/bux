@@ -104,6 +104,7 @@ Name resolution raises these, in `crates/resolver/src/error.rs`:
 - `L0309` — an instance does not write exactly the methods its trait declares.
 - `L0310` — something that is not a trait is written where a trait belongs.
 - `L0311` — a trait is written where a type belongs.
+- `L0312` — a derive names a trait no type derives, or a type this module does not declare.
 
 Loading raises these, in `crates/modules/src/error.rs`, before any module is resolved:
 
@@ -134,6 +135,7 @@ Type inference raises these, in `crates/types/src/error.rs`:
 - `L0419` — a parameter of a method a trait declares states no type.
 - `L0420` — a whole number does not fit the type it is written at.
 - `L0421` — a bound of an `IntegerLiteral` instance is not one whole number.
+- `L0422` — a type derives `Eq` and holds a value of a type that has none.
 
 Exhaustiveness raises these, in `crates/exhaustiveness/src/error.rs`:
 

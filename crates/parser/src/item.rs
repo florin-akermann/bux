@@ -1,6 +1,7 @@
 //! The top-level declarations of a source file.
 
-use lumen_ast::{Function, Import, InstanceDeclaration, Item, Name, Parameter, Program};
+use lumen_ast::{DeriveDeclaration, Function, Import, InstanceDeclaration, Item, Name};
+use lumen_ast::{Parameter, Program};
 use lumen_ast::{RecordField, Signature, TraitDeclaration, TypeDeclaration, TypeDefinition};
 use lumen_ast::{Span, TypeRef, Variant, VariantPayload};
 use lumen_lexer::{Keyword, Punct, TokenKind};
@@ -27,6 +28,7 @@ fn item(cursor: &mut Cursor) -> Result<Item, ParseError> {
         Some(TokenKind::Keyword(Keyword::Type)) => type_declaration(cursor).map(Item::Type),
         Some(TokenKind::Keyword(Keyword::Trait)) => trait_declaration(cursor).map(Item::Trait),
         Some(TokenKind::Keyword(Keyword::Instance)) => instance(cursor).map(Item::Instance),
+        Some(TokenKind::Keyword(Keyword::Derive)) => derive(cursor).map(Item::Derive),
         Some(TokenKind::Keyword(Keyword::Fn)) => function(cursor).map(Item::Function),
         _ => Err(cursor.error(Expected::Item)),
     }
@@ -156,6 +158,23 @@ fn instance(cursor: &mut Cursor) -> Result<InstanceDeclaration, ParseError> {
         for_type: read.argument,
         methods: read.body,
         span: read.span,
+    })
+}
+
+/// `derive Eq, Ord for User`: the traits the compiler writes, and the type it writes them for.
+fn derive(cursor: &mut Cursor) -> Result<DeriveDeclaration, ParseError> {
+    let start = cursor.offset();
+    cursor.expect_keyword(Keyword::Derive)?;
+    let mut traits = vec![cursor.expect_name(Expected::Name)?];
+    while cursor.eat_punct(Punct::Comma).is_some() {
+        traits.push(cursor.expect_name(Expected::Name)?);
+    }
+    cursor.expect_keyword(Keyword::For)?;
+    let for_type = cursor.expect_name(Expected::Name)?;
+    Ok(DeriveDeclaration {
+        traits,
+        for_type,
+        span: cursor.span_since(start),
     })
 }
 

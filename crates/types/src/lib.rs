@@ -6,6 +6,7 @@
 //! sections 3, 6, and 7 are the rules it enforces.
 
 mod bounds;
+mod derive;
 mod environment;
 mod error;
 mod holds;

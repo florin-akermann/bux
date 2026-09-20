@@ -28,8 +28,8 @@ No token is decoded here: the value of an integer or string literal is the parse
 | `Unknown`            | one character the language has no use for                              |
 
 The keywords are the words the grammar reserves:
-`fn`, `type`, `trait`, `instance`, `var`, `if`, `else`, `for`, `in`, `match`, `break`,
-`continue`, `return`, `import`, `true`, `false`.
+`fn`, `type`, `trait`, `instance`, `derive`, `var`, `if`, `else`, `for`, `in`, `match`,
+`break`, `continue`, `return`, `import`, `true`, `false`.
 `_` is reserved alongside them: it is the discard, never an identifier, and `_x` is a name as ever.
 A later grammar item that reserves a word adds it here first.
 

@@ -4,6 +4,7 @@ use std::fmt;
 
 use lumen_ast::Span;
 use lumen_diagnostics::{Code, Diagnostic};
+use lumen_resolver::prelude;
 
 use crate::types::Type;
 
@@ -39,7 +40,7 @@ impl TypeError {
             self.kind.code(),
             self.message(),
             self.span,
-            Some(self.help().to_owned()),
+            Some(self.help()),
         )
     }
 
@@ -51,7 +52,7 @@ impl TypeError {
 
     /// The `help:` line, which every one of these has.
     #[must_use]
-    pub const fn help(&self) -> &'static str {
+    pub fn help(&self) -> String {
         self.kind.help()
     }
 }
@@ -139,6 +140,13 @@ pub(crate) enum TypeErrorKind {
         of: String,
         at: Type,
     },
+    /// A type deriving `Eq` that holds a value of a type that has none.
+    HeldTypeHasNoInstance {
+        deriving: String,
+        held: Type,
+        /// Where the value sits in the declaration: a field's name, or a variant's and its own.
+        held_as: String,
+    },
     /// A parameter of a trait's method that states no type.
     SignatureWithoutType(String),
     /// A declared type holds a value of itself, around a ring that comes back to it.
@@ -164,6 +172,7 @@ impl TypeErrorKind {
             Self::LiteralDoesNotFit { .. } => Code::LiteralDoesNotFit,
             Self::BoundIsNotAWholeNumber { .. } => Code::BoundIsNotAWholeNumber,
             Self::NoInstance { .. } => Code::NoInstance,
+            Self::HeldTypeHasNoInstance { .. } => Code::HeldTypeHasNoInstance,
             Self::SignatureWithoutType(_) => Code::SignatureWithoutType,
             Self::DivisorIsZero => Code::DivisorIsZero,
             Self::Discarded(_) => Code::Discarded,
@@ -179,7 +188,33 @@ impl TypeErrorKind {
         }
     }
 
-    const fn help(&self) -> &'static str {
+    /// The one line that says what to do about it, which every one of these has.
+    ///
+    /// A type with no `Eq` is the one whose answer names the source that gives it one, because
+    /// `docs/specs/derive.md` writes that instance for whoever asks and the reader may not know.
+    fn help(&self) -> String {
+        self.derived_instead()
+            .unwrap_or_else(|| self.stated().to_owned())
+    }
+
+    /// The derive that would give a type the `Eq` a comparison of it wanted, where that is what
+    /// went wrong and `docs/specs/derive.md` writes that instance for whoever asks.
+    fn derived_instead(&self) -> Option<String> {
+        let Self::NoOperator { of, at, .. } = self else {
+            return None;
+        };
+        if of != prelude::EQ {
+            return None;
+        }
+        let Type::Named { arguments, .. } = at else {
+            return None;
+        };
+        arguments
+            .is_empty()
+            .then(|| format!("`{at}` gets one by deriving it: write `derive Eq for {at}`"))
+    }
+
+    const fn stated(&self) -> &'static str {
         match self {
             Self::Mismatch { .. } => "one type is not another, however alike they are held",
             Self::WrongArgumentCount(_) => {
@@ -208,6 +243,9 @@ impl TypeErrorKind {
             }
             Self::NoInstance { .. } => {
                 "write the instance, or constrain the type parameter the call is made at"
+            }
+            Self::HeldTypeHasNoInstance { .. } => {
+                "a derived `Eq` compares by the `Eq` of what it holds; give the held type one"
             }
             Self::SignatureWithoutType(_) => {
                 "a signature has no body to read a type off, so it writes each one out"
@@ -291,6 +329,7 @@ impl fmt::Display for TypeErrorKind {
             Self::NoInstance { of, at } => {
                 write!(f, "`{at}` has no instance of `{of}`")
             }
+            Self::HeldTypeHasNoInstance { .. } => f.write_str(&self.what_it_holds()),
             Self::SignatureWithoutType(name) => {
                 write!(
                     f,
@@ -381,6 +420,19 @@ impl TypeErrorKind {
     }
 
     /// The two refusals about a whole number, which `docs/specs/literals.md` states.
+    /// What a type deriving `Eq` holds that has none, which is what the derive is refused for.
+    fn what_it_holds(&self) -> String {
+        let Self::HeldTypeHasNoInstance {
+            deriving,
+            held,
+            held_as,
+        } = self
+        else {
+            unreachable!("a kind reaches here only from the arm of `Display` that names it")
+        };
+        format!("`{deriving}` derives `Eq`, and the `{held}` it holds as `{held_as}` has none")
+    }
+
     fn how_a_whole_number_is_held(&self) -> String {
         match self {
             Self::LiteralDoesNotFit {

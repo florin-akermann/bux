@@ -141,7 +141,10 @@ impl fmt::Display for Expected {
             Self::Name => write!(f, "a name"),
             Self::FunctionName => write!(f, "a function name"),
             Self::Trait => write!(f, "a trait"),
-            Self::Item => write!(f, "an import, a type, a trait, an instance, or a function"),
+            Self::Item => write!(
+                f,
+                "an import, a type, a trait, an instance, a derive, or a function"
+            ),
             Self::Expression => write!(f, "an expression"),
             Self::Type => write!(f, "a type"),
             Self::Pattern => write!(f, "a pattern"),

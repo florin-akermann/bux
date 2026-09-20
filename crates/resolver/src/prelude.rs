@@ -5,6 +5,8 @@
 
 /// The trait `==` is, which `docs/specs/traits.md` writes out.
 pub const EQ: &str = "Eq";
+/// The method of that trait, which is what `==` is written as.
+pub const IS_EQUAL: &str = "is_equal";
 /// The trait `+` is.
 pub const ADD: &str = "Add";
 /// The trait binary `-` is.
@@ -46,7 +48,7 @@ pub struct Supplied {
 pub const TRAITS: [Supplied; 9] = [
     Supplied {
         name: EQ,
-        methods: &["is_equal"],
+        methods: &[IS_EQUAL],
         instances: &["Bool", "Int", "String"],
     },
     Supplied {

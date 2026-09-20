@@ -34,10 +34,20 @@ fn a_function_without_a_name_is_a_parse_error() {
 }
 
 #[test]
+fn a_derive_names_a_trait_before_for_and_a_type_after_it() {
+    assert_eq!(message("derive for User"), "expected a name, found `for`");
+    assert_eq!(message("derive Eq User"), "expected `for`, found `User`");
+    assert_eq!(
+        message("derive Eq, for User"),
+        "expected a name, found `for`"
+    );
+}
+
+#[test]
 fn a_file_may_only_hold_an_import_a_type_a_trait_an_instance_or_a_function() {
     assert_eq!(
         message("total := 1"),
-        "expected an import, a type, a trait, an instance, or a function, found `total`"
+        "expected an import, a type, a trait, an instance, a derive, or a function, found `total`"
     );
 }
 

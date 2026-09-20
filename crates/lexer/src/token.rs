@@ -67,6 +67,7 @@ vocabulary! {
     Type => "type",
     Trait => "trait",
     Instance => "instance",
+    Derive => "derive",
     Var => "var",
     If => "if",
     Else => "else",

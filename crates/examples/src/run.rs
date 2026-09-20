@@ -182,7 +182,7 @@ fn declaring(program: &Program, named: &str) -> Option<Span> {
         .items
         .iter()
         .filter_map(|item| match item {
-            Item::Import(_) | Item::Instance(_) => None,
+            Item::Import(_) | Item::Instance(_) | Item::Derive(_) => None,
             Item::Type(declaration) => Some(&declaration.name),
             Item::Trait(declaration) => Some(&declaration.name),
             Item::Function(function) => Some(&function.name),
@@ -198,7 +198,11 @@ fn imports_of(program: &Program) -> String {
         .iter()
         .filter_map(|item| match item {
             Item::Import(import) => Some(import.module.text.as_str()),
-            Item::Type(_) | Item::Trait(_) | Item::Instance(_) | Item::Function(_) => None,
+            Item::Type(_)
+            | Item::Trait(_)
+            | Item::Instance(_)
+            | Item::Derive(_)
+            | Item::Function(_) => None,
         })
         .collect();
     modules.push(WRITES_A_LINE);
@@ -224,6 +228,7 @@ fn declarations_of(source: &str, program: &Program) -> Vec<Span> {
             Item::Type(declaration) => Some(declaration.span),
             Item::Trait(declaration) => Some(declaration.span),
             Item::Instance(declaration) => Some(declaration.span),
+            Item::Derive(declaration) => Some(declaration.span),
             Item::Function(function) if function.name.text == read::REACHED_BY_RUNNING => None,
             Item::Function(function) => Some(function.span),
         })

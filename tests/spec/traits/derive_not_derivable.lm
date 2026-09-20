@@ -1,0 +1,11 @@
+// expect-error: L0312
+// `Ord` is not a trait a type derives, so the derive is refused naming it.
+fn main() -> () {
+    ()
+}
+
+derive Ord for User
+
+type User = {
+    id: Int
+}

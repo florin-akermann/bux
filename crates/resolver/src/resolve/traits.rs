@@ -6,7 +6,8 @@
 
 use std::collections::HashSet;
 
-use lumen_ast::{InstanceDeclaration, Name, Signature, TraitDeclaration, TypeParameter};
+use lumen_ast::{DeriveDeclaration, InstanceDeclaration, Name, Signature};
+use lumen_ast::{TraitDeclaration, TypeParameter};
 
 use crate::definition::{DefinitionKind, Origin};
 use crate::error::{ResolveError, ResolveErrorKind};
@@ -64,7 +65,7 @@ impl Resolver {
     pub(super) fn instance(&mut self, declaration: &InstanceDeclaration) -> Resolved {
         let declared = self.trait_named(&declaration.trait_name)?;
         self.named_type(&declaration.for_type)?;
-        self.claimed(declaration)?;
+        self.claimed(&declaration.trait_name, &declaration.for_type)?;
         writes_declared_names_once(declaration, &declared)?;
         writes_every_one(declaration, &declared)?;
         for method in &declaration.methods {
@@ -73,15 +74,45 @@ impl Resolver {
         Ok(())
     }
 
-    /// Records that this trait now has an instance for this type, refusing a second one.
-    fn claimed(&mut self, declaration: &InstanceDeclaration) -> Resolved {
-        let of = declaration.trait_name.text.clone();
-        let for_type = declaration.for_type.text.clone();
-        if self.instances.insert((of.clone(), for_type.clone())) {
+    /// A derive: each trait it names, and the type the compiler writes the instances for.
+    ///
+    /// A derive writes an instance, so it claims what an instance claims and is refused where an
+    /// instance would be. `docs/specs/derive.md` states which traits a type derives.
+    pub(super) fn derive(&mut self, declaration: &DeriveDeclaration) -> Resolved {
+        self.named_type(&declaration.for_type)?;
+        self.declared_here(&declaration.for_type)?;
+        for named in &declaration.traits {
+            self.trait_named(named)?;
+            derivable(named)?;
+            self.claimed(named, &declaration.for_type)?;
+        }
+        Ok(())
+    }
+
+    /// Refuses a derive for a type this module does not declare, which it writes nothing for.
+    ///
+    /// What a derive writes follows from the declaration it names, so the declaration has to be
+    /// here to be read. A prelude type has the instances the prelude ships and no others.
+    fn declared_here(&mut self, for_type: &Name) -> Resolved {
+        let origin = self.types.look_up(&for_type.text).map(|one| one.origin);
+        if matches!(origin, Some(Origin::Declared(_))) {
             return Ok(());
         }
-        let kind = ResolveErrorKind::InstanceTwice { of, for_type };
-        Err(ResolveError::at(&declaration.for_type, kind))
+        let kind = ResolveErrorKind::NotDeclaredHere(for_type.text.clone());
+        Err(ResolveError::at(for_type, kind))
+    }
+
+    /// Records that this trait now has an instance for this type, refusing a second one.
+    fn claimed(&mut self, of: &Name, for_type: &Name) -> Resolved {
+        let claim = (of.text.clone(), for_type.text.clone());
+        if self.instances.insert(claim) {
+            return Ok(());
+        }
+        let kind = ResolveErrorKind::InstanceTwice {
+            of: of.text.clone(),
+            for_type: for_type.text.clone(),
+        };
+        Err(ResolveError::at(for_type, kind))
     }
 
     /// The trait a type parameter is constrained by, when the author wrote one.
@@ -117,6 +148,21 @@ impl Resolver {
             .cloned()
             .unwrap_or_default()
     }
+}
+
+/// The traits a type derives, which `docs/specs/derive.md` states is `Eq` and nothing else yet.
+///
+/// `Ord`, `Hash`, and `Show` are named by `docs/design.md` section 8 and land with the traits
+/// themselves, so a derive of one is refused by name rather than written half.
+const DERIVABLE: [&str; 1] = [prelude::EQ];
+
+/// Refuses a trait that is not one a type derives, naming the trait the module wrote.
+fn derivable(named: &Name) -> Resolved {
+    if DERIVABLE.contains(&named.text.as_str()) {
+        return Ok(());
+    }
+    let kind = ResolveErrorKind::NotDerivable(named.text.clone());
+    Err(ResolveError::at(named, kind))
 }
 
 /// The instances the compiler supplies, which a module writing one of them again is refused by.

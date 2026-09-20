@@ -20,7 +20,7 @@ impl Program {
         self.items.iter().flat_map(|item| match item {
             Item::Function(function) => slice::from_ref(function),
             Item::Instance(instance) => instance.methods.as_slice(),
-            Item::Import(_) | Item::Type(_) | Item::Trait(_) => &[],
+            Item::Import(_) | Item::Type(_) | Item::Trait(_) | Item::Derive(_) => &[],
         })
     }
 }
@@ -32,7 +32,20 @@ pub enum Item {
     Type(TypeDeclaration),
     Trait(TraitDeclaration),
     Instance(InstanceDeclaration),
+    Derive(DeriveDeclaration),
     Function(Function),
+}
+
+/// `derive Eq for User`: the traits the compiler writes the instances of, and the type it writes
+/// them for.
+///
+/// `docs/specs/derive.md` states which traits a type derives and what each one writes.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct DeriveDeclaration {
+    /// Never empty: a derive naming no trait is a parse error.
+    pub traits: Vec<Name>,
+    pub for_type: Name,
+    pub span: Span,
 }
 
 /// `import io`: another module's public names are brought into scope.

@@ -87,6 +87,10 @@ and the rule is stated here for the change that makes the two differ.
 One trait and one type have one instance.
 A second instance of one trait for one type is refused where it is written.
 
+An instance is written by hand or by a derive, and the two are the same instance: what a derive
+writes is what an author would have, and a second one either way is the second instance refused.
+`docs/specs/derive.md` states which traits a type derives and what each derive writes.
+
 ## Constraining a generic
 
 ```text

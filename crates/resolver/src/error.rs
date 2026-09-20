@@ -97,6 +97,10 @@ pub(crate) enum ResolveErrorKind {
     },
     /// Something that is not a trait, written where a trait belongs.
     NotATrait(String),
+    /// A trait a derive names that is not one a type derives.
+    NotDerivable(String),
+    /// A type a derive names that this module does not declare.
+    NotDeclaredHere(String),
     /// A trait written where a type belongs.
     TraitAsType(String),
 }
@@ -140,6 +144,7 @@ impl ResolveErrorKind {
             | Self::MethodUndeclared { .. }
             | Self::MethodTwice { .. } => Code::InstanceMethods,
             Self::NotATrait(_) => Code::NotATrait,
+            Self::NotDerivable(_) | Self::NotDeclaredHere(_) => Code::NotDerivable,
             Self::TraitAsType(_) => Code::TraitAsType,
         }
     }
@@ -162,6 +167,10 @@ impl ResolveErrorKind {
             Self::MethodUndeclared { .. } => "an instance writes the trait's methods and no others",
             Self::MethodTwice { .. } => "one method of a trait gets one body from an instance",
             Self::NotATrait(_) => "a trait is declared with `trait`, and `Eq` is the one supplied",
+            Self::NotDerivable(_) => "`Eq` is the one trait a type derives; write the rest by hand",
+            Self::NotDeclaredHere(_) => {
+                "a derive reads the declaration it names, so it names one this module writes"
+            }
             Self::TraitAsType(_) => "name the type, and constrain it with `<T: Eq<T>>` where it is",
         }
     }
@@ -214,6 +223,12 @@ impl fmt::Display for ResolveErrorKind {
                 )
             }
             Self::NotATrait(text) => write!(f, "`{text}` is not a trait"),
+            Self::NotDerivable(text) => {
+                write!(f, "`{text}` is not a trait a type derives")
+            }
+            Self::NotDeclaredHere(text) => {
+                write!(f, "`{text}` is not a type this module declares")
+            }
             Self::TraitAsType(text) => write!(f, "`{text}` is a trait, not a type"),
         }
     }

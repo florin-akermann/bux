@@ -80,6 +80,7 @@ fn item_spans(program: &Program) -> Vec<Span> {
             Item::Type(declaration) => declaration.span,
             Item::Trait(declaration) => declaration.span,
             Item::Instance(declaration) => declaration.span,
+            Item::Derive(declaration) => declaration.span,
             Item::Function(function) => function.span,
         })
         .collect()

@@ -7,7 +7,8 @@
 use std::fmt::Write as _;
 
 use lumen_ast::{Arguments, Block, Expr, ExprKind, IfExpr, Item, MatchExpr, Pattern, PatternKind};
-use lumen_ast::{Function, Import, InstanceDeclaration, RecordField, Signature, TraitDeclaration};
+use lumen_ast::{DeriveDeclaration, Function, Import, InstanceDeclaration, RecordField};
+use lumen_ast::{Signature, TraitDeclaration};
 use lumen_ast::{Span, Statement, StatementKind, TypeDefinition, TypeRef, TypeRefKind};
 use lumen_ast::{TypeDeclaration, TypeParameter, Variant, VariantPayload};
 use lumen_parser::{ParseError, parse};
@@ -106,6 +107,7 @@ fn item_node(tree: &mut Tree, depth: usize, item: &Item) {
         Item::Type(declaration) => type_declaration_node(tree, depth, declaration),
         Item::Trait(declaration) => trait_node(tree, depth, declaration),
         Item::Instance(declaration) => instance_node(tree, depth, declaration),
+        Item::Derive(declaration) => derive_node(tree, depth, declaration),
         Item::Function(function) => function_node(tree, depth, function),
     }
 }
@@ -157,6 +159,20 @@ fn instance_node(tree: &mut Tree, depth: usize, declaration: &InstanceDeclaratio
     for method in &declaration.methods {
         function_node(tree, depth + 1, method);
     }
+}
+
+fn derive_node(tree: &mut Tree, depth: usize, declaration: &DeriveDeclaration) {
+    let named: Vec<&str> = declaration
+        .traits
+        .iter()
+        .map(|one| one.text.as_str())
+        .collect();
+    let label = format!(
+        "derive {} for {}",
+        named.join(", "),
+        declaration.for_type.text
+    );
+    tree.node(depth, &label, declaration.span);
 }
 
 fn import_node(tree: &mut Tree, depth: usize, import: &Import) {

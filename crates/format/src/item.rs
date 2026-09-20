@@ -1,6 +1,7 @@
 //! The top-level declarations of a source file.
 
-use lumen_ast::{Function, Import, InstanceDeclaration, Item, Name, Parameter, Program};
+use lumen_ast::{DeriveDeclaration, Function, Import, InstanceDeclaration, Item, Name};
+use lumen_ast::{Parameter, Program};
 use lumen_ast::{RecordField, Signature, Span, TraitDeclaration, TypeDeclaration};
 use lumen_ast::{TypeDefinition, TypeParameter, TypeRef, Variant, VariantPayload};
 
@@ -25,6 +26,7 @@ fn item(printer: &mut Printer, written: &Item) {
         Item::Type(declared) => type_declaration(printer, declared),
         Item::Trait(declared) => trait_declaration(printer, declared),
         Item::Instance(declared) => instance(printer, declared),
+        Item::Derive(declared) => derive(printer, declared),
         Item::Function(declared) => function(printer, declared),
     }
 }
@@ -160,6 +162,22 @@ fn instance(printer: &mut Printer, written: &InstanceDeclaration) {
         function(printer, declared);
     }
     close_block(printer, written.span.end());
+    printer.end_line();
+}
+
+/// `derive Eq, Ord for User`: one line, whatever it names, because nothing in it can be broken.
+fn derive(printer: &mut Printer, written: &DeriveDeclaration) {
+    printer.comments_above(written.span);
+    printer.open_line();
+    printer.word("derive ");
+    for (position, named) in written.traits.iter().enumerate() {
+        if position > 0 {
+            printer.word(", ");
+        }
+        printer.word(&named.text);
+    }
+    printer.word(" for ");
+    printer.word(&written.for_type.text);
     printer.end_line();
 }
 

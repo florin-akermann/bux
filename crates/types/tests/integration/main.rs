@@ -4,6 +4,7 @@
 
 mod arguments;
 mod common;
+mod derive;
 mod discarding;
 mod errors;
 mod flags;

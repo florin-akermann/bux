@@ -21,6 +21,9 @@ fn a_reserved_word_is_its_keyword() {
     let reserved = [
         ("fn", Keyword::Fn),
         ("type", Keyword::Type),
+        ("trait", Keyword::Trait),
+        ("instance", Keyword::Instance),
+        ("derive", Keyword::Derive),
         ("var", Keyword::Var),
         ("if", Keyword::If),
         ("else", Keyword::Else),
@@ -43,6 +46,7 @@ fn a_reserved_word_is_its_keyword() {
 fn a_word_that_merely_starts_with_a_keyword_is_an_identifier() {
     assert_eq!(kinds("fnord"), [TokenKind::Identifier]);
     assert_eq!(kinds("format"), [TokenKind::Identifier]);
+    assert_eq!(kinds("derived"), [TokenKind::Identifier]);
 }
 
 #[test]

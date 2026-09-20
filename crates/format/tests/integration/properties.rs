@@ -8,7 +8,7 @@ use lumen_format::{CheckError, check, format};
 use crate::common::tree;
 
 /// The item shapes a generated program is built from, each already in canonical form.
-const ITEMS: [&str; 10] = [
+const ITEMS: [&str; 12] = [
     "import io",
     "type UserId = UserId(Int)",
     "type User = {\n    id: UserId\n}",
@@ -19,6 +19,8 @@ const ITEMS: [&str; 10] = [
     "fn matched(payment: Payment) -> Int {\n    match payment {\n        Pending => 1\n        Failed(reason) => 2\n    }\n}",
     "trait Area<T> {\n    fn covered(shape: T) -> Int\n}",
     "instance Area<User> {\n    fn covered(shape: User) -> Int {\n        1\n    }\n}",
+    "derive Eq for User",
+    "derive Eq, Ord for Payment",
 ];
 
 /// The atoms a generated expression is built from, one of which is a bare number.

@@ -1,0 +1,15 @@
+// expect-error: L0422
+// A type derives `Eq` and holds a `List<Int>`, which has none, so the derive is refused.
+fn main() -> () {
+    basket := Basket { tags: [1] }
+    if basket == basket {
+        return ()
+    }
+    ()
+}
+
+derive Eq for Basket
+
+type Basket = {
+    tags: List<Int>
+}

@@ -270,6 +270,19 @@ fn an_instance_names_a_trait_and_the_type_it_is_for() {
 }
 
 #[test]
+fn a_derive_names_one_trait_and_the_type_the_compiler_writes_it_for() {
+    assert_eq!(shape("derive Eq for User"), ["derive Eq for User"]);
+}
+
+#[test]
+fn a_derive_names_every_trait_it_lists_in_the_order_it_lists_them() {
+    assert_eq!(
+        shape("derive Eq, Ord, Hash for Payment"),
+        ["derive Eq, Ord, Hash for Payment"]
+    );
+}
+
+#[test]
 fn a_type_parameter_is_written_with_the_trait_it_is_constrained_by() {
     assert_eq!(
         shape("fn has_value<T: Eq<T>>(value: T) -> Bool {\n    true\n}"),

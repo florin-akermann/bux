@@ -65,7 +65,7 @@ Uppercase and lowercase spellings are not distinguished; `Name` below is any ide
 ```text
 program        := { item }
 
-item           := import | type_declaration | trait | instance | function
+item           := import | type_declaration | trait | instance | derive | function
 
 import         := "import" Name
 
@@ -80,6 +80,7 @@ type           := Name [ "<" type { "," type } ">" ] | "(" ")"
 trait          := "trait" Name "<" Name ">" "{" signature { signature } "}"
 signature      := "fn" Name "(" [ parameters ] ")" [ "->" type ]
 instance       := "instance" Name "<" Name ">" "{" function { function } "}"
+derive         := "derive" Name { "," Name } "for" Name
 
 function       := "fn" Name [ constrained_parameters ] "(" [ parameters ] ")" [ "->" type ] block
 constrained_parameters := "<" constrained { "," constrained } ">"
@@ -171,7 +172,7 @@ A parse error reads `expected <what>, found <what was there>`, in the voice of
 `docs/implementation.md` section 8.
 The expectation names a thing the reader writes, never a parser state: `a name`, `a type`,
 `an expression`, `a pattern`, `a function name`, `a trait`, `the end of the line`,
-`an import, a type, a trait, an instance, or a function`, or the exact token, as in `` `)` ``.
+`an import, a type, a trait, an instance, a derive, or a function`, or the exact token, as in `` `)` ``.
 The found part names what is there the same way, or `the end of the file`.
 
 Every parse error carries a code, and `docs/specs/diagnostics.md` is the catalogue of them.

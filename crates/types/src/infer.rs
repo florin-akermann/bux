@@ -18,6 +18,7 @@ use lumen_ast::{ForLoop, Function, IfExpr, Item, MatchExpr, Mutability, Name};
 use lumen_ast::{Span, Statement, StatementKind};
 use lumen_resolver::{Definition, DefinitionKind, Namespace, ResolvedProgram};
 
+use crate::derive;
 use crate::environment::{Environment, Key};
 use crate::error::{Count, TypeError, TypeErrorKind};
 use crate::infer::operator::Operated;
@@ -117,6 +118,10 @@ impl Inference<'_> {
     /// that declares no signature has been given one by the time anything calls it.
     fn module(&mut self) -> Result<(), TypeError> {
         let resolved = self.resolved;
+        for (declaration, _) in derive::written_in(resolved) {
+            let at = &declaration.for_type;
+            self.types.insert(at.span, derive::is_equal_at(&at.text));
+        }
         for item in &resolved.program().items {
             let Item::Trait(declaration) = item else {
                 continue;
@@ -149,7 +154,11 @@ impl Inference<'_> {
                         .expect("every function a module declares is bound before its body");
                     Some((function.name.text.clone(), scheme.clone()))
                 }
-                Item::Import(_) | Item::Type(_) | Item::Trait(_) | Item::Instance(_) => None,
+                Item::Import(_)
+                | Item::Type(_)
+                | Item::Trait(_)
+                | Item::Instance(_)
+                | Item::Derive(_) => None,
             })
             .collect()
     }

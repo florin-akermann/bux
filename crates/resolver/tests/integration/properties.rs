@@ -93,8 +93,9 @@ fn declared_names(program: &Program) -> Vec<(Namespace, &Name)> {
                 let methods = declaration.methods.iter();
                 found.extend(methods.map(|method| (Namespace::Value, &method.name)));
             }
-            // An instance declares no name: the trait declares the one its methods answer for.
-            Item::Instance(_) => {}
+            // Neither an instance nor a derive declares a name: the trait declares the one
+            // its methods answer for.
+            Item::Instance(_) | Item::Derive(_) => {}
         }
     }
     found

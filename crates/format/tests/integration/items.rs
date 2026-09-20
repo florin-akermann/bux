@@ -121,6 +121,44 @@ fn an_instance_writes_one_blank_line_between_two_of_its_functions() {
 }
 
 #[test]
+fn a_derive_is_one_line_with_one_space_around_the_names_it_joins() {
+    assert_eq!(
+        formatted(
+            "derive   Eq    for    User
+"
+        ),
+        "derive Eq for User
+"
+    );
+}
+
+#[test]
+fn a_derive_of_several_traits_writes_a_comma_and_a_space_between_them() {
+    assert_eq!(
+        formatted(
+            "derive Eq ,Ord,   Hash for Payment
+"
+        ),
+        "derive Eq, Ord, Hash for Payment
+"
+    );
+}
+
+#[test]
+fn a_derive_keeps_the_comment_written_above_it() {
+    assert_eq!(
+        formatted(
+            "// compared by what it holds
+derive Eq for User
+"
+        ),
+        "// compared by what it holds
+derive Eq for User
+"
+    );
+}
+
+#[test]
 fn a_constrained_type_parameter_writes_its_trait_after_a_colon_and_a_space() {
     assert_eq!(
         formatted("fn has_value<T:Eq<T>>(value:T)->Bool{\ntrue\n}\n"),
