@@ -6,18 +6,6 @@
 
 ## Open
 
-## 🟢 Item 044: A type a module declares is reachable from the module that imports it
-**Depends on:** Item 040 — version 0.1 closes before the first 0.2 item opens.
-`docs/specs/modules.md` keeps a type its declaring module's own: `demo.User` cannot be written.
-A function whose signature names one is refused where it is reached, as `L0416`.
-A library written in Lumen is impossible until an importing module can name the types it offers.
-A type is reached the way a function is, through the module's name: `demo.User`, `demo.Payment`.
-Its variants are reached the same way, so a `match` over `demo.Payment` names `demo.Pending`.
-[044][a] - `docs/design.md` section 16 states the rule; `docs/specs/modules.md` states the scopes.
-[044][b] - Parsing a dotted type and a dotted pattern, test-first; canonical form settles spacing.
-[044][c] - Resolving and typing across the module boundary, test-first; `L0416` is retired.
-[044][d] - Executable examples under `tests/spec/modules/`: a record, an ADT, a `match` across.
-
 ## 🔴 Item 045: The prelude and the standard library are Lumen source
 **Depends on:** Item 033, Item 044 — the operator instances need a home; a library needs names.
 `crates/resolver/src/prelude.rs` says the prelude becomes Lumen source once a module can be loaded.
