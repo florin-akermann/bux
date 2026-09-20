@@ -30,19 +30,6 @@ A literal that does not fit its type is a compile error where it is written, nev
 [034][c] - The fit check at compile time, test-first; the `Int` instance accepts every literal.
 [034][d] - Executable examples under `tests/spec/literals/`: `Int32` as a literal, and a misfit.
 
-## 🟢 Item 039: A module is loaded from a file
-**Depends on:** nothing; version 0.1 lists basic modules in `docs/implementation.md` section 9.
-Nothing in the toolchain reads a second file yet, which `docs/specs/modules.md` states.
-`io` and `files` are supplied by the compiler, and the prelude is a list in the resolver.
-Both become Lumen source once a module can be loaded, and 0.1 is not done until it can.
-`docs/design.md` section 16 says one file is one module, named by its file.
-Where an import finds its file, and what a missing one says, is what the spec must answer.
-[039][a] - Spec first in `docs/specs/modules.md`: where an import finds its file, and the errors.
-[039][b] - The toolchain reads every file a program imports, test-first; a cycle is refused.
-[039][c] - A name reached through an import resolves and types against what that file declares.
-[039][d] - `lumen build` writes the class files of every module the program reaches.
-[039][e] - Executable examples under `tests/spec/modules/`: two files, and a missing import.
-
 ## 🔴 Item 040: `?` propagates an `Option`
 **Depends on:** nothing; `docs/design.md` section 5 and `docs/specs/arithmetic.md` state the rule.
 `/` and `%` give an `Option<Int>`, and today `?` is `Result`'s alone, so `(a / b)?` is refused.
