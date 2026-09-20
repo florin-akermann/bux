@@ -1,0 +1,176 @@
+// The names every module has in scope without importing anything.
+//
+// `docs/specs/library.md` says where this file lives and why it is Lumen rather than a table.
+// The compiler carries it, compiles it before every other module, and puts what it declares in
+// scope unasked.
+
+// example: or(Some(1), 0) == 1
+fn or<T>(maybe: Option<T>, fallback: T) -> T {
+    match maybe {
+        Some(value) => value
+        None => fallback
+    }
+}
+
+instance Eq<Bool> {
+    fn is_equal(one: Bool, other: Bool) -> Bool {
+        one == other
+    }
+}
+
+instance Eq<Int> {
+    fn is_equal(one: Int, other: Int) -> Bool {
+        one == other
+    }
+}
+
+instance Eq<String> {
+    fn is_equal(one: String, other: String) -> Bool {
+        one == other
+    }
+}
+
+instance Hash<Bool> {
+    fn hashed(value: Bool) -> Int {
+        match value {
+            true => 1
+            false => 0
+        }
+    }
+}
+
+instance Hash<Int> {
+    fn hashed(value: Int) -> Int {
+        value
+    }
+}
+
+instance Ord<Bool> {
+    fn is_less(one: Bool, other: Bool) -> Bool {
+        one < other
+    }
+}
+
+instance Ord<Int> {
+    fn is_less(one: Int, other: Int) -> Bool {
+        one < other
+    }
+}
+
+instance Ord<String> {
+    fn is_less(one: String, other: String) -> Bool {
+        one < other
+    }
+}
+
+instance Add<Int> {
+    fn add(one: Int, other: Int) -> Int {
+        one + other
+    }
+}
+
+instance Add<String> {
+    fn add(one: String, other: String) -> String {
+        one + other
+    }
+}
+
+instance Sub<Int> {
+    fn subtract(one: Int, other: Int) -> Int {
+        one - other
+    }
+}
+
+instance Mul<Int> {
+    fn multiply(one: Int, other: Int) -> Int {
+        one * other
+    }
+}
+
+instance Div<Int> {
+    fn divide(one: Int, other: Int) -> Option<Int> {
+        one / other
+    }
+}
+
+instance Rem<Int> {
+    fn remainder(one: Int, other: Int) -> Option<Int> {
+        one % other
+    }
+}
+
+instance Neg<Int> {
+    fn negate(value: Int) -> Int {
+        -value
+    }
+}
+
+instance IntegerLiteral<Int> {
+    fn lowest() -> Int {
+        -9223372036854775808
+    }
+
+    fn highest() -> Int {
+        9223372036854775807
+    }
+
+    fn from_literal(literal: Int) -> Int {
+        literal
+    }
+}
+
+trait Eq<T> {
+    fn is_equal(one: T, other: T) -> Bool
+}
+
+trait Ord<T> {
+    fn is_less(one: T, other: T) -> Bool
+}
+
+trait Hash<T> {
+    fn hashed(value: T) -> Int
+}
+
+trait Show<T> {
+    fn shown(value: T) -> String
+}
+
+trait Add<T> {
+    fn add(one: T, other: T) -> T
+}
+
+trait Sub<T> {
+    fn subtract(one: T, other: T) -> T
+}
+
+trait Mul<T> {
+    fn multiply(one: T, other: T) -> T
+}
+
+trait Div<T> {
+    fn divide(one: T, other: T) -> Option<T>
+}
+
+trait Rem<T> {
+    fn remainder(one: T, other: T) -> Option<T>
+}
+
+trait Neg<T> {
+    fn negate(value: T) -> T
+}
+
+trait IntegerLiteral<T> {
+    fn lowest() -> Int
+
+    fn highest() -> Int
+
+    fn from_literal(literal: Int) -> T
+}
+
+type Option<T> =
+    | Some(T)
+    | None
+
+type Result<T, E> =
+    | Ok(T)
+    | Err(E)

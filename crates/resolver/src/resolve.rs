@@ -1,6 +1,7 @@
 //! The walk: every name of a module, pointed at the definition it means.
 
 use std::collections::{HashMap, HashSet};
+use std::sync::LazyLock;
 
 use lumen_ast::{Block, Expr, ExprKind, ForHeader, ForLoop, Function, IfExpr, Item};
 use lumen_ast::{MatchExpr, Mutability, Name, Path, Program, RecordField};
@@ -35,6 +36,26 @@ pub fn resolve(program: Program) -> Result<ResolvedProgram, ResolveError> {
         program,
         definitions,
     })
+}
+
+/// The prelude, resolved, which every other module's scope is seeded from.
+///
+/// `docs/specs/library.md` says the compiler carries the source; this is that source with every
+/// name in it pointed at what it means, worked out once and the same for every module.
+#[must_use]
+pub fn prelude_resolved() -> &'static ResolvedProgram {
+    static RESOLVED: LazyLock<ResolvedProgram> = LazyLock::new(|| {
+        let program = prelude::program().clone();
+        let mut resolver = Resolver::of_the_library();
+        resolver
+            .module(&program)
+            .expect("every name of the library the compiler carries resolves");
+        ResolvedProgram {
+            program,
+            definitions: resolver.definitions,
+        }
+    });
+    &RESOLVED
 }
 
 /// A program whose every name points at the definition it means.
@@ -99,20 +120,34 @@ impl Resolver {
             types: Scope::of_prelude(
                 Namespace::Type,
                 &[
-                    (&prelude::TYPES, DefinitionKind::Type),
+                    (&prelude::types(), DefinitionKind::Type),
                     (&prelude::trait_names(), DefinitionKind::Trait),
                 ],
             ),
             values: Scope::of_prelude(
                 Namespace::Value,
                 &[
-                    (&prelude::CONSTRUCTORS, DefinitionKind::Constructor),
-                    (&prelude::FUNCTIONS, DefinitionKind::Function),
+                    (&prelude::constructors(), DefinitionKind::Constructor),
+                    (&prelude::functions(), DefinitionKind::Function),
                     (&prelude::method_names(), DefinitionKind::TraitMethod),
                 ],
             ),
             definitions: HashMap::new(),
             instances: traits::supplied_instances(),
+            declared_traits: HashMap::new(),
+        }
+    }
+
+    /// A resolver for the prelude itself, whose scope holds what the JVM holds and nothing else.
+    fn of_the_library() -> Self {
+        Self {
+            types: Scope::of_prelude(Namespace::Type, &[(&prelude::held(), DefinitionKind::Type)]),
+            values: Scope::of_prelude(
+                Namespace::Value,
+                &[(&prelude::supplied(), DefinitionKind::Function)],
+            ),
+            definitions: HashMap::new(),
+            instances: HashSet::new(),
             declared_traits: HashMap::new(),
         }
     }

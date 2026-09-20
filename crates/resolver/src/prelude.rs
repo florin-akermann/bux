@@ -1,7 +1,16 @@
 //! The names every module has in scope without importing anything.
 //!
-//! `docs/specs/modules.md` lists them. They become Lumen source once a module can be loaded;
-//! until then this is the prelude.
+//! `docs/specs/library.md` says where the source is and what is in it, and
+//! `docs/specs/modules.md` lists the names. The compiler carries `library/prelude.lm` and reads
+//! what it declares out of it, so `Option` and `Eq` are declared once rather than declared once
+//! and tabulated beside it.
+
+use std::sync::LazyLock;
+
+use lumen_ast::{Item, Program};
+
+/// The prelude as the compiler carries it, which `docs/specs/library.md` states.
+const SOURCE: &str = include_str!("../../../library/prelude.lm");
 
 /// The trait `==` is, which `docs/specs/traits.md` writes out.
 pub const EQ: &str = "Eq";
@@ -40,113 +49,142 @@ pub const LOWEST: &str = "lowest";
 /// The method of that trait giving the largest whole number its type holds.
 pub const HIGHEST: &str = "highest";
 
-/// The types the prelude supplies.
-pub(crate) const TYPES: [&str; 6] = ["Bool", "Int", "List", "Option", "Result", "String"];
-
-/// A trait the prelude supplies: what it declares, and which types it already has instances for.
-///
-/// `docs/specs/traits.md` writes `Eq` out, `docs/specs/operators.md` the seven an operator is,
-/// and `docs/specs/literals.md` the one a literal is, each with the instances the library will
-/// ship once the prelude is Lumen source.
-pub struct Supplied {
-    pub name: &'static str,
-    pub methods: &'static [&'static str],
-    pub instances: &'static [&'static str],
-}
-
-/// Every trait the prelude supplies: the four standard ones, the trait each operator is, and the
-/// one a literal is.
-pub const TRAITS: [Supplied; 11] = [
-    Supplied {
-        name: EQ,
-        methods: &[IS_EQUAL],
-        instances: &["Bool", "Int", "String"],
-    },
-    Supplied {
-        name: ADD,
-        methods: &["add"],
-        instances: &["Int", "String"],
-    },
-    Supplied {
-        name: SUB,
-        methods: &["subtract"],
-        instances: &["Int"],
-    },
-    Supplied {
-        name: MUL,
-        methods: &["multiply"],
-        instances: &["Int"],
-    },
-    Supplied {
-        name: DIV,
-        methods: &["divide"],
-        instances: &["Int"],
-    },
-    Supplied {
-        name: REM,
-        methods: &["remainder"],
-        instances: &["Int"],
-    },
-    Supplied {
-        name: NEG,
-        methods: &["negate"],
-        instances: &["Int"],
-    },
-    Supplied {
-        name: ORD,
-        methods: &[IS_LESS],
-        instances: &["Bool", "Int", "String"],
-    },
-    Supplied {
-        name: HASH,
-        methods: &[HASHED],
-        instances: &["Bool", "Int", "String"],
-    },
-    Supplied {
-        name: SHOW,
-        methods: &[SHOWN],
-        instances: &["Bool", "Int", "String"],
-    },
-    Supplied {
-        name: INTEGER_LITERAL,
-        methods: &[LOWEST, HIGHEST, FROM_LITERAL],
-        instances: &["Int"],
-    },
-];
-
 /// The traits a type derives, which `docs/specs/derive.md` states are the four standard ones.
 ///
 /// Each one is a reading of what a value holds, so each follows from the declaration and there is
 /// nothing for an author to decide; no other trait is derivable.
 pub const DERIVABLE: [&str; 4] = [EQ, ORD, HASH, SHOW];
 
-/// The constructors the prelude supplies.
-pub(crate) const CONSTRUCTORS: [&str; 4] = ["Err", "None", "Ok", "Some"];
-
-/// The functions the prelude supplies.
+/// The types the JVM holds directly, with how many arguments each is written with.
 ///
-/// `or` is the total way to get a value out of an `Option`, and `todo` is the hole
-/// `docs/specs/holes.md` states.
-pub(crate) const FUNCTIONS: [&str; 2] = ["or", "todo"];
+/// `docs/specs/library.md` draws the line here: what a type is made of is the JVM for these four
+/// and a declaration for every other, and a program cannot tell which it has. No Lumen
+/// declaration could write them, which is why they are the one part of the prelude left as a
+/// table rather than read out of `library/prelude.lm`.
+const HELD: [(&str, usize); 4] = [("Bool", 0), ("Int", 0), ("List", 1), ("String", 0)];
+
+/// The functions the compiler supplies, which is `todo` because a hole has no body to be written.
+const SUPPLIED: [&str; 1] = ["todo"];
+
+/// The instances the compiler still supplies, which are the ones Lumen cannot yet write.
+///
+/// `Show` renders a whole number or a truth value as text, and `Hash<String>` reads a string by
+/// the characters it holds. Each needs a JVM method the language cannot yet name, which
+/// `docs/specs/library.md` says `extern` is for.
+const STILL_SUPPLIED: [(&str, &str); 4] = [
+    (HASH, "String"),
+    (SHOW, "Bool"),
+    (SHOW, "Int"),
+    (SHOW, "String"),
+];
+
+/// A trait the prelude supplies: what it declares, and which types it already has instances for.
+pub struct Supplied {
+    pub name: &'static str,
+    pub methods: Vec<&'static str>,
+    pub instances: Vec<&'static str>,
+}
+
+/// The prelude as the compiler carries it, parsed.
+pub(crate) fn program() -> &'static Program {
+    carried()
+}
+
+/// Those same types, each with how many arguments it is written with.
+pub fn held_types() -> impl Iterator<Item = (&'static str, usize)> {
+    HELD.into_iter()
+}
+
+/// The instances the compiler still supplies, which are the ones Lumen cannot yet write.
+pub fn still_supplied() -> impl Iterator<Item = (&'static str, &'static str)> {
+    STILL_SUPPLIED.into_iter()
+}
+
+/// The functions in scope while the prelude itself is resolved, which is `todo` and nothing else.
+pub(crate) fn supplied() -> Vec<&'static str> {
+    SUPPLIED.to_vec()
+}
+
+/// The types in scope everywhere: the four the JVM holds, and the ones the prelude declares.
+pub(crate) fn types() -> Vec<&'static str> {
+    let mut found = held();
+    found.extend(carried().items.iter().filter_map(|item| match item {
+        Item::Type(declaration) => Some(declaration.name.text.as_str()),
+        _ => None,
+    }));
+    found
+}
+
+/// The names in scope while the prelude itself is resolved, which is what the JVM holds.
+///
+/// The prelude declares what every other module's scope is seeded with, so it cannot be resolved
+/// against that scope: every name it writes would already be in it.
+pub(crate) fn held() -> Vec<&'static str> {
+    HELD.iter().map(|(name, _)| *name).collect()
+}
+
+/// The constructors in scope everywhere, which are the variants of the types the prelude declares.
+pub(crate) fn constructors() -> Vec<&'static str> {
+    declared_types()
+        .flat_map(|declaration| variants_of(&declaration.definition))
+        .collect()
+}
+
+/// The functions in scope everywhere: the ones the prelude declares, and `todo`.
+pub(crate) fn functions() -> Vec<&'static str> {
+    let mut found: Vec<&'static str> = carried()
+        .items
+        .iter()
+        .filter_map(|item| match item {
+            Item::Function(function) => Some(function.name.text.as_str()),
+            _ => None,
+        })
+        .collect();
+    found.extend(SUPPLIED);
+    found
+}
 
 /// The trait names, which are names in the type scope beside the types.
 pub(crate) fn trait_names() -> Vec<&'static str> {
-    TRAITS.iter().map(|supplied| supplied.name).collect()
+    traits()
+        .map(|declaration| declaration.name.text.as_str())
+        .collect()
 }
 
 /// The names of every method they declare, which are names in the value scope beside the functions.
 pub(crate) fn method_names() -> Vec<&'static str> {
-    TRAITS
-        .iter()
-        .flat_map(|supplied| supplied.methods)
-        .copied()
+    traits()
+        .flat_map(|declaration| &declaration.methods)
+        .map(|signature| signature.name.text.as_str())
+        .collect()
+}
+
+/// Every trait the prelude declares, with its methods and the types it has an instance for.
+#[must_use]
+pub fn supplied_traits() -> Vec<Supplied> {
+    traits()
+        .map(|declaration| {
+            let name = declaration.name.text.as_str();
+            Supplied {
+                name,
+                methods: declaration
+                    .methods
+                    .iter()
+                    .map(|signature| signature.name.text.as_str())
+                    .collect(),
+                instances: instances()
+                    .filter(|(of, _)| *of == name)
+                    .map(|(_, for_type)| for_type)
+                    .collect(),
+            }
+        })
         .collect()
 }
 
 /// The one method the trait called `name` declares, where it declares exactly one.
 #[must_use]
 pub fn method_of(name: &str) -> Option<&'static str> {
-    match methods_of(name) {
+    match methods_of(name).as_deref() {
         Some([only]) => Some(only),
         _ => None,
     }
@@ -154,28 +192,83 @@ pub fn method_of(name: &str) -> Option<&'static str> {
 
 /// The methods the trait called `name` declares, when the prelude is the one that declares it.
 #[must_use]
-pub fn methods_of(name: &str) -> Option<&'static [&'static str]> {
-    TRAITS
-        .iter()
-        .find(|supplied| supplied.name == name)
-        .map(|supplied| supplied.methods)
+pub fn methods_of(name: &str) -> Option<Vec<&'static str>> {
+    traits()
+        .find(|declaration| declaration.name.text == name)
+        .map(|declaration| {
+            declaration
+                .methods
+                .iter()
+                .map(|signature| signature.name.text.as_str())
+                .collect()
+        })
 }
 
 /// The trait the prelude declares `method` in, when the prelude is the one that declares it.
 #[must_use]
 pub fn trait_of(method: &str) -> Option<&'static str> {
-    TRAITS
-        .iter()
-        .find(|supplied| supplied.methods.contains(&method))
-        .map(|supplied| supplied.name)
+    traits()
+        .find(|declaration| {
+            declaration
+                .methods
+                .iter()
+                .any(|signature| signature.name.text == method)
+        })
+        .map(|declaration| declaration.name.text.as_str())
 }
 
-/// Every instance the prelude supplies, as the two names that say which one it is.
+/// Every instance the prelude has, as the two names that say which one it is.
+///
+/// The ones the library writes come first, in the order it writes them, and the ones the compiler
+/// still supplies follow.
 pub fn instances() -> impl Iterator<Item = (&'static str, &'static str)> {
-    TRAITS.iter().flat_map(|supplied| {
-        supplied
-            .instances
-            .iter()
-            .map(|for_type| (supplied.name, *for_type))
+    carried()
+        .items
+        .iter()
+        .filter_map(|item| match item {
+            Item::Instance(declaration) => Some((
+                declaration.trait_name.text.as_str(),
+                declaration.for_type.text.as_str(),
+            )),
+            _ => None,
+        })
+        .chain(STILL_SUPPLIED)
+}
+
+/// Every trait the prelude declares, in the order it writes them.
+fn traits() -> impl Iterator<Item = &'static lumen_ast::TraitDeclaration> {
+    carried().items.iter().filter_map(|item| match item {
+        Item::Trait(declaration) => Some(declaration),
+        _ => None,
     })
+}
+
+/// Every type the prelude declares, in the order it writes them.
+fn declared_types() -> impl Iterator<Item = &'static lumen_ast::TypeDeclaration> {
+    carried().items.iter().filter_map(|item| match item {
+        Item::Type(declaration) => Some(declaration),
+        _ => None,
+    })
+}
+
+/// The names of the variants a type declaration writes, which a record declaration has none of.
+fn variants_of(definition: &'static lumen_ast::TypeDefinition) -> Vec<&'static str> {
+    match definition {
+        lumen_ast::TypeDefinition::Record(_) => Vec::new(),
+        lumen_ast::TypeDefinition::Variants(variants) => variants
+            .iter()
+            .map(|variant| variant.name.text.as_str())
+            .collect(),
+    }
+}
+
+/// The prelude, parsed once.
+///
+/// A library that does not parse is the compiler's own failure and not any program's, which
+/// `docs/specs/library.md` states; the compiler's own tests are where it is caught.
+fn carried() -> &'static Program {
+    static PARSED: LazyLock<Program> = LazyLock::new(|| {
+        lumen_parser::parse(SOURCE).expect("the library the compiler carries parses")
+    });
+    &PARSED
 }

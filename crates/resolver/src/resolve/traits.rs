@@ -136,7 +136,9 @@ impl Resolver {
             return Err(ResolveError::at(name, kind));
         }
         match found.map(|one| one.origin) {
-            Some(Origin::Prelude) => Ok(named(prelude::methods_of(&name.text).unwrap_or(&[]))),
+            Some(Origin::Prelude) => {
+                Ok(named(&prelude::methods_of(&name.text).unwrap_or_default()))
+            }
             _ => Ok(self.methods_declared_at(name)),
         }
     }

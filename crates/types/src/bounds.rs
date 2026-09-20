@@ -19,12 +19,6 @@ pub(crate) struct Bounds {
 }
 
 impl Bounds {
-    /// The whole numbers an `Int` holds, which is every one the lexer reads.
-    pub(crate) const INT: Self = Self {
-        lowest: i64::MIN,
-        highest: i64::MAX,
-    };
-
     /// Whether `value` is one of the whole numbers these bounds hold.
     pub(crate) const fn holds(self, value: i64) -> bool {
         self.lowest <= value && value <= self.highest

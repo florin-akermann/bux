@@ -14,10 +14,10 @@ path = "tests/integration/main.rs"
 [dependencies]
 lumen-ast = { path = "../ast" }
 lumen-diagnostics = { path = "../diagnostics" }
+lumen-parser = { path = "../parser" }
 
 [dev-dependencies]
 hegeltest = "0.23" # approved: property-based testing, required by AGENTS.md for every phase
-lumen-parser = { path = "../parser" }
 
 [lints]
 workspace = true

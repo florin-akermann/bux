@@ -123,7 +123,7 @@ fn a_module_may_not_declare_a_name_the_prelude_gives_a_trait() {
 
 #[test]
 fn the_prelude_gives_every_operator_its_trait_and_that_trait_its_method() {
-    for supplied in &lumen_resolver::prelude::TRAITS {
+    for supplied in &lumen_resolver::prelude::supplied_traits() {
         let declared = format!(
             "trait {}<T> {{\n    fn spelled(value: T) -> Int\n}}\n",
             supplied.name
@@ -133,7 +133,7 @@ fn the_prelude_gives_every_operator_its_trait_and_that_trait_its_method() {
             refusal(&declared).message(),
             format!("`{}` is already in scope here", supplied.name)
         );
-        for method in supplied.methods {
+        for method in &supplied.methods {
             let named = format!("fn {method}(value: Int) -> Int {{\n    value\n}}\n");
 
             assert_eq!(

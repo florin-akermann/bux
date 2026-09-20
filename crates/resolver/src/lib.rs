@@ -14,4 +14,4 @@ mod scope;
 
 pub use definition::{Definition, DefinitionKind, Namespace, Origin};
 pub use error::ResolveError;
-pub use resolve::{ResolvedProgram, resolve};
+pub use resolve::{ResolvedProgram, prelude_resolved, resolve};

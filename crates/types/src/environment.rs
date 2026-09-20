@@ -3,11 +3,11 @@
 use std::collections::{HashMap, HashSet};
 
 use lumen_ast::{DeriveDeclaration, Function, InstanceDeclaration, TraitDeclaration};
-use lumen_ast::{Item, Name, Path, RecordField, Signature, Span, TypeDeclaration, TypeDefinition};
+use lumen_ast::{Item, Name, Path, RecordField, Signature, TypeDeclaration, TypeDefinition};
 use lumen_ast::{TypeRef, TypeRefKind};
 use lumen_ast::{Variant, VariantPayload};
 use lumen_resolver::prelude;
-use lumen_resolver::{Definition, DefinitionKind, Namespace, Origin, ResolvedProgram};
+use lumen_resolver::{DefinitionKind, Namespace, ResolvedProgram};
 
 use crate::bounds::{self, Bounds};
 use crate::derive;
@@ -17,13 +17,23 @@ use crate::surface::{BuiltBy, OfferedType};
 use crate::table::Table;
 use crate::types::{Type, TypeParameter};
 
+mod carried;
+mod key;
+
+use carried::Keyed;
+pub(crate) use carried::signature_of;
+pub(crate) use key::Key;
+use key::{Built, parameter_of, quantified, written_over};
+
 /// Every name that has a type, and the shape of every type that has fields.
 ///
 /// A name is known by where it was defined rather than by how it is spelled, which is what lets
 /// one flat table hold the whole module: name resolution has already ruled out two definitions
 /// sharing a name and a binding hiding one.
-#[derive(Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub(crate) struct Environment {
+    /// How a declaration of the source being read is filed, which the prelude differs in.
+    keyed: Keyed,
     values: HashMap<Key, Scheme>,
     labels: HashMap<Key, Vec<String>>,
     records: HashMap<String, Key>,
@@ -59,9 +69,7 @@ impl Environment {
         }
         environment.note_arities(resolved);
         environment.declare_traits(resolved)?;
-        for item in &resolved.program().items {
-            environment.declare(resolved, item, table)?;
-        }
+        environment.declare_items(resolved, table)?;
         derive::hold_what_they_need(&environment, resolved)?;
         Ok(environment)
     }
@@ -91,8 +99,10 @@ impl Environment {
             let Item::Type(declaration) = item else {
                 continue;
             };
-            self.arities
-                .insert(Key::at(&declaration.name), declaration.parameters.len());
+            self.arities.insert(
+                self.declared_at(&declaration.name),
+                declaration.parameters.len(),
+            );
         }
     }
 
@@ -169,89 +179,20 @@ impl Environment {
         self.values.values()
     }
 
-    fn of_prelude() -> Self {
-        let mut environment = Self::default();
-        for (name, arity) in PRELUDE_TYPES {
-            environment.arities.insert(Key::prelude(name), arity);
-        }
-        let value = TypeParameter::prelude("T");
-        let error = TypeParameter::prelude("E");
-        let option = Type::option(Type::Parameter(value.clone()));
-        let result = Type::result(
-            Type::Parameter(value.clone()),
-            Type::Parameter(error.clone()),
-        );
-        let over_value = vec![Quantified::Parameter(value.clone())];
-        let over_both = vec![
-            Quantified::Parameter(value.clone()),
-            Quantified::Parameter(error.clone()),
-        ];
-        let carried = Type::Parameter(value.clone());
-        environment.bind(
-            Key::prelude("None"),
-            Scheme::over(over_value.clone(), option.clone()),
-        );
-        environment.bind(
-            Key::prelude("Some"),
-            Scheme::over(over_value, Type::function(vec![carried.clone()], option)),
-        );
-        environment.bind(
-            Key::prelude("Ok"),
-            Scheme::over(
-                over_both.clone(),
-                Type::function(vec![carried], result.clone()),
-            ),
-        );
-        environment.bind(
-            Key::prelude("Err"),
-            Scheme::over(
-                over_both,
-                Type::function(vec![Type::Parameter(error)], result),
-            ),
-        );
-        environment.bind(Key::prelude("or"), or(&value));
-        environment.bind(Key::prelude("todo"), todo(&value));
-        environment.supply_traits(&value);
-        environment
-    }
-
-    /// The traits the prelude supplies, and the instances the library will ship for each.
+    /// Every item of `resolved`, declared in the order it is written.
     ///
-    /// `docs/specs/traits.md` writes `Eq` out and `docs/specs/operators.md` writes the trait each
-    /// operator is. They are declared here for the reason the prelude's types are declared here:
-    /// a module cannot be loaded from a file yet.
-    fn supply_traits(&mut self, value: &TypeParameter) {
-        for supplied in &prelude::TRAITS {
-            for method in supplied.methods {
-                self.supply(value, supplied.name, method);
-            }
-        }
-        for (of, for_type) in prelude::instances() {
-            self.instances.insert((of.to_owned(), for_type.to_owned()));
-        }
-        self.holds.insert(Type::int().to_string(), Bounds::INT);
-    }
-
-    /// One method of one supplied trait, a name in scope with the type its trait gives it.
+    /// # Errors
     ///
-    /// The scheme is written over the trait's type parameter and asks that trait of it, so a use
-    /// of the method is answered by an instance exactly as a use of a declared one is.
-    fn supply(&mut self, value: &TypeParameter, of: &str, method: &str) {
-        let key = Key::prelude(method);
-        let at = Type::Parameter(value.clone());
-        let asks = vec![Required {
-            trait_name: of.to_owned(),
-            at: at.clone(),
-        }];
-        let signature = signature_of(of, method, &at);
-        self.bind(
-            key.clone(),
-            Scheme::over(vec![Quantified::Parameter(value.clone())], signature).requiring(asks),
-        );
-        self.methods
-            .insert(key.clone(), Quantified::Parameter(value.clone()));
-        self.declares
-            .insert((of.to_owned(), method.to_owned()), key);
+    /// Returns the first declaration that does not hold together.
+    fn declare_items(
+        &mut self,
+        resolved: &ResolvedProgram,
+        table: &mut Table,
+    ) -> Result<(), TypeError> {
+        for item in &resolved.program().items {
+            self.declare(resolved, item, table)?;
+        }
+        Ok(())
     }
 
     fn declare(
@@ -263,7 +204,10 @@ impl Environment {
         match item {
             Item::Import(import) => {
                 let module = Type::Module(import.module.text.clone());
-                self.bind(Key::at(&import.module), Scheme::monomorphic(module));
+                self.bind(
+                    self.declared_at(&import.module),
+                    Scheme::monomorphic(module),
+                );
                 Ok(())
             }
             Item::Type(declaration) => self.declare_type(resolved, declaration),
@@ -291,7 +235,7 @@ impl Environment {
         }];
         for method in &declaration.methods {
             let signature = self.signature(resolved, method)?;
-            let key = Key::at(&method.name);
+            let key = self.declared_at(&method.name);
             let scheme = Scheme::over(vec![parameter.clone()], signature).requiring(asks.clone());
             self.bind(key.clone(), scheme);
             self.methods.insert(key.clone(), parameter.clone());
@@ -334,16 +278,9 @@ impl Environment {
         declaration: &InstanceDeclaration,
         table: &mut Table,
     ) -> Result<(), TypeError> {
-        self.takes_no_arguments(resolved, &declaration.for_type)?;
-        let of = declaration.trait_name.text.clone();
-        let for_type = declaration.for_type.text.clone();
-        if of == prelude::INTEGER_LITERAL {
-            self.holds
-                .insert(for_type.clone(), bounds::stated(declaration)?);
-        }
-        self.instances.insert((of, for_type.clone()));
+        self.note_instance(resolved, declaration)?;
         let given = Type::Named {
-            name: for_type,
+            name: declaration.for_type.text.clone(),
             arguments: Vec::new(),
         };
         for method in &declaration.methods {
@@ -352,8 +289,33 @@ impl Environment {
             let Some(declared) = self.method_at(of, &method.name.text, &given) else {
                 continue;
             };
-            self.written_as.insert(Key::at(&method.name), declared);
+            self.written_as
+                .insert(self.declared_at(&method.name), declared);
         }
+        Ok(())
+    }
+
+    /// That an instance exists, and what it says its type holds when it is an `IntegerLiteral`.
+    ///
+    /// This is what a module reaching the instance asks for; what the instance writes to answer
+    /// with is declared beside it, where there is a body to declare.
+    ///
+    /// # Errors
+    ///
+    /// Returns the instance whose type takes arguments, or whose stated bounds are not numbers.
+    fn note_instance(
+        &mut self,
+        resolved: &ResolvedProgram,
+        declaration: &InstanceDeclaration,
+    ) -> Result<(), TypeError> {
+        self.takes_no_arguments(resolved, &declaration.for_type)?;
+        let of = declaration.trait_name.text.clone();
+        let for_type = declaration.for_type.text.clone();
+        if of == prelude::INTEGER_LITERAL {
+            self.holds
+                .insert(for_type.clone(), bounds::stated(declaration)?);
+        }
+        self.instances.insert((of, for_type));
         Ok(())
     }
 
@@ -392,7 +354,7 @@ impl Environment {
         let definition = resolved
             .definition(Namespace::Type, for_type)
             .expect("name resolution gave the instance's type a definition");
-        let key = Key::of(definition, for_type);
+        let key = self.key_of(definition, for_type);
         Self::counted(for_type, *self.arities.get(&key).unwrap_or(&0), 0)
     }
 
@@ -427,8 +389,10 @@ impl Environment {
             let TypeDefinition::Record(fields) = &declaration.definition else {
                 unreachable!("a type declaration is a record or variants")
             };
-            self.records
-                .insert(declaration.name.text.clone(), Key::at(&declaration.name));
+            self.records.insert(
+                declaration.name.text.clone(),
+                self.declared_at(&declaration.name),
+            );
             let built = self.built_from(resolved, &declaration.name, fields)?;
             self.build_with(built, &over, &declared);
             return Ok(());
@@ -462,7 +426,7 @@ impl Environment {
         let signature = Type::function(parameters, result);
         let required = self.constraints(resolved, function)?;
         let scheme = Scheme::over(over, signature).requiring(required);
-        self.bind(Key::at(&function.name), scheme);
+        self.bind(self.declared_at(&function.name), scheme);
         Ok(())
     }
 
@@ -492,12 +456,12 @@ impl Environment {
     ) -> Result<Built, TypeError> {
         match &variant.payload {
             VariantPayload::None => Ok(Built {
-                key: Key::at(&variant.name),
+                key: self.declared_at(&variant.name),
                 labels: Vec::new(),
                 carries: Vec::new(),
             }),
             VariantPayload::Tuple(written) => Ok(Built {
-                key: Key::at(&variant.name),
+                key: self.declared_at(&variant.name),
                 labels: Vec::new(),
                 carries: self.each(resolved, written)?,
             }),
@@ -518,7 +482,7 @@ impl Environment {
             carries.push(self.written(resolved, &field.type_ref)?);
         }
         Ok(Built {
-            key: Key::at(name),
+            key: self.declared_at(name),
             labels,
             carries,
         })
@@ -569,7 +533,7 @@ impl Environment {
             Self::counted(name, 0, arguments.len())?;
             return Ok(Type::Parameter(parameter_of(definition, name)));
         }
-        let key = Key::of(definition, name);
+        let key = self.key_of(definition, name);
         Self::counted(name, *self.arities.get(&key).unwrap_or(&0), arguments.len())?;
         Ok(Type::Named {
             name: name.text.clone(),
@@ -630,130 +594,4 @@ impl Environment {
 struct Reached<'w> {
     module: &'w Name,
     path: &'w Path,
-}
-
-/// Where a name was defined, which is what a type is filed under.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub(crate) enum Key {
-    /// A name this module declares, known by the place it is declared.
-    Declared(Span),
-    /// A name the prelude supplies, known by the one spelling it has.
-    Prelude(String),
-    /// A name another module declares, known by the name this module reaches it through.
-    Reached(String),
-}
-
-impl Key {
-    /// The key of a use of `name`, which `definition` says where to find.
-    pub(crate) fn of(definition: Definition, name: &Name) -> Self {
-        match definition.origin {
-            Origin::Declared(span) => Self::Declared(span),
-            Origin::Prelude => Self::Prelude(name.text.clone()),
-        }
-    }
-
-    /// The key of the declaration `name` is the name of.
-    pub(crate) const fn at(name: &Name) -> Self {
-        Self::Declared(name.span)
-    }
-
-    /// The key of a name another module declares, which is `demo.User` as this module writes it.
-    pub(crate) fn reached(name: &str) -> Self {
-        Self::Reached(name.to_owned())
-    }
-
-    fn prelude(name: &str) -> Self {
-        Self::Prelude(name.to_owned())
-    }
-}
-
-/// The type one method of one prelude trait has, written over that trait's own type parameter.
-///
-/// `docs/specs/operators.md` gives each operator's trait its signature: one gives back what it
-/// was given, one an `Option` of it, and one a `Bool` about it. `docs/specs/literals.md` gives
-/// `IntegerLiteral` its three, which are the only ones a prelude trait declares more than one of.
-/// `docs/specs/traits.md` gives `Hash` and `Show`, each of which reads one value.
-pub(crate) fn signature_of(of: &str, method: &str, at: &Type) -> Type {
-    let two = vec![at.clone(), at.clone()];
-    let one = vec![at.clone()];
-    match of {
-        prelude::EQ | prelude::ORD => Type::function(two, Type::boolean()),
-        prelude::HASH => Type::function(one, Type::int()),
-        prelude::SHOW => Type::function(one, Type::string()),
-        prelude::DIV | prelude::REM => Type::function(two, Type::option(at.clone())),
-        prelude::NEG => Type::function(one, at.clone()),
-        prelude::ADD | prelude::SUB | prelude::MUL => Type::function(two, at.clone()),
-        prelude::INTEGER_LITERAL => written_as_a_literal(method, at),
-        _ => unreachable!("the prelude declares exactly the traits `prelude::TRAITS` lists"),
-    }
-}
-
-/// The type one method of `IntegerLiteral` has: a bound gives an `Int`, and the third builds a `T`.
-fn written_as_a_literal(method: &str, at: &Type) -> Type {
-    if method == prelude::FROM_LITERAL {
-        return Type::function(vec![Type::int()], at.clone());
-    }
-    Type::function(Vec::new(), Type::int())
-}
-
-/// The types the prelude supplies, with how many arguments each one is written with.
-const PRELUDE_TYPES: [(&str, usize); 6] = [
-    ("Bool", 0),
-    ("Int", 0),
-    ("List", 1),
-    ("Option", 1),
-    ("Result", 2),
-    ("String", 0),
-];
-
-/// One constructor: where it is declared, what it labels, and what it carries.
-struct Built {
-    key: Key,
-    labels: Vec<String>,
-    carries: Vec<Type>,
-}
-
-fn quantified(parameters: &[Name]) -> Vec<Quantified> {
-    parameters
-        .iter()
-        .map(|parameter| Quantified::Parameter(TypeParameter::written(parameter)))
-        .collect()
-}
-
-/// The stand-ins a function is written over, which are its type parameters constrained or not.
-fn written_over(parameters: &[lumen_ast::TypeParameter]) -> Vec<Quantified> {
-    parameters
-        .iter()
-        .map(|parameter| Quantified::Parameter(TypeParameter::written(&parameter.name)))
-        .collect()
-}
-
-fn parameter_of(definition: Definition, name: &Name) -> TypeParameter {
-    TypeParameter {
-        name: name.text.clone(),
-        origin: definition.origin,
-    }
-}
-
-/// `or(maybe, fallback)`: what an `Option` holds, or the fallback when it holds nothing.
-///
-/// `Result` has no `or` yet, because two functions of one name wait on typeclasses, which
-/// `docs/implementation.md` section 9 leaves out of version 0.1.
-fn or(value: &TypeParameter) -> Scheme {
-    let held = Type::Parameter(value.clone());
-    Scheme::over(
-        vec![Quantified::Parameter(value.clone())],
-        Type::function(vec![Type::option(held.clone()), held.clone()], held),
-    )
-}
-
-/// `todo(reason)`: a hole, which is whatever type the place it is written in expects.
-///
-/// `docs/specs/holes.md` states what it is for. It gives back a type nothing constrains, so a
-/// hole unifies with whatever belongs where it is written.
-fn todo(value: &TypeParameter) -> Scheme {
-    Scheme::over(
-        vec![Quantified::Parameter(value.clone())],
-        Type::function(vec![Type::string()], Type::Parameter(value.clone())),
-    )
 }
