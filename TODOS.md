@@ -30,18 +30,6 @@ A literal that does not fit its type is a compile error where it is written, nev
 [034][c] - The fit check at compile time, test-first; the `Int` instance accepts every literal.
 [034][d] - Executable examples under `tests/spec/literals/`: `Int32` as a literal, and a misfit.
 
-## 🟢 Item 040: `?` propagates an `Option`
-**Depends on:** nothing; `docs/design.md` section 5 and `docs/specs/arithmetic.md` state the rule.
-`/` and `%` give an `Option<Int>`, and today `?` is `Result`'s alone, so `(a / b)?` is refused.
-Arithmetic that divides is then a `match` or an `or` per division, and stops reading as arithmetic.
-`?` on an `Option` in a function that gives back an `Option` gives the value, or the `None` back.
-`((total / count)? / 2)? + 2 * 5` is then the readable form, and each `?` marks a division.
-A `None` met where the function gives back a `Result` stays `L0400`, because it names no error.
-Nothing converts: `?` propagates each kind into a function that gives back the same kind.
-[040][a] - Inference takes `?` on an `Option` in an `Option` function, test-first; `Result` as is.
-[040][b] - Lowering hands the held `None` back as the answer; a property covers the shape it emits.
-[040][c] - `tests/spec/arithmetic/division.lm` divides through `?`; a `Result` function is refused.
-
 ## 🔴 Item 041: A trait is declared, and a type gives it an instance
 **Depends on:** Item 040 — version 0.1 closes before the first 0.2 item opens.
 `docs/design.md` section 8 shows `trait Eq<T>` and the constraint `T: Eq<T>`, but no instance form.
