@@ -59,16 +59,3 @@ An example gains a way to state the output it must produce, and the harness comp
 [031][b] - `docs/specs/executable-examples.md` states the header and what is compared.
 [031][c] - The harness compares the output, test-first; a mismatch names the file and both texts.
 [031][d] - `tests/spec/arithmetic/division.lm` writes its answers out and states them.
-
-## 🟢 Item 035: A program reaches the console and the file system
-A program can work nothing out that anyone can see: version 0.1 has no way to write a line.
-`docs/design.md` section 16 already writes `io.print`, and a help line already writes `io.println`,
-so the name is in two places and the implementation is in neither.
-Reading a file is the other half, and `docs/implementation.md` section 4 lists IO and Files apart.
-Reaching either needs a static field, which the lowering has no instruction for today.
-A read can fail, so it gives back a `Result`, which `docs/design.md` section 5 requires of it.
-[035][a] - Spec first in `docs/specs/io.md`: what each module declares, and what a failure gives.
-[035][b] - The lowering reads a static field, test-first, which is how `System.out` is reached.
-[035][c] - Writing a line out, test-first, under the one name the spec settles on.
-[035][d] - Reading a file whole, test-first, as a `Result` the caller must open.
-[035][e] - Executable examples under `tests/spec/io/`, skipped by name where no JDK is installed.
