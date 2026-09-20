@@ -16,17 +16,6 @@ The examples run with the test suite, so a signature never drifts from the evide
 [015][d] - Executable examples: a public function without one fails to compile.
 
 
-## 🟢 Item 019: Canonical naming as part of canonical form
-**Depends on:** Item 003, Item 007 — casing is a formatter rule; the predicate rule needs types.
-mycs reports `Cryptic Public Identifier`, `Acronym Casing`, and `Boolean Predicate Prefix`.
-Canonical form makes them errors: `snake_case` functions and `PascalCase` types.
-An acronym is a word, so `UserId` is canonical and `UserID` does not compile.
-A public name is a word rather than an initial, and a `Bool` function reads as a predicate.
-[019][a] - `docs/design.md` section 13 lists the naming rules alongside the formatting rules.
-[019][b] - Casing, acronym, and length rules, test-first; the `help:` prints the canonical spelling.
-[019][c] - The predicate-prefix rule, test-first, over functions whose return type is `Bool`.
-[019][d] - Executable examples under `tests/spec/format/`.
-
 ## 🔴 Item 025: Generics are specialized, never erased
 `docs/specs/codegen.md` erases a type parameter to `java.lang.Object`, boxing an `Int` across it.
 That is the one place a program can tell `Int` from a declared type, and the one place it boxes.
