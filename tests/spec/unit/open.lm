@@ -10,11 +10,10 @@ fn main() -> () {
     ()
 }
 
-/// Whether a record a type parameter left open at `()` is built and handed on.
+/// Whether the nothing a record field left open holds is read back out.
 // example: is_boxed(Boxed { held: () })
 fn is_boxed(boxed: Boxed<()>) -> Bool {
-    _ = boxed
-    true
+    is_given(boxed.held)
 }
 
 /// Whether the nothing a variant left open carries is read back out.
@@ -31,7 +30,7 @@ fn is_given(given: ()) -> Bool {
     true
 }
 
-type Boxed<T> = Boxed {
+type Boxed<T> = {
     held: T
 }
 
