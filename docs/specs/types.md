@@ -20,7 +20,7 @@ a declared record or ADT, with its type arguments
 a function, written (Int, String) -> Bool
 ```
 
-`Int` is a whole number, 64 bits wide, and it is the only one.
+`Int` is a whole number, 64 bits wide, and the only one the prelude supplies.
 `()` is the type of a function that returns nothing interesting.
 `List<T>` is written `[first, second]`, and `for` is what walks one.
 `Option` and `Result` are ordinary algebraic data types supplied by the prelude.
@@ -66,7 +66,8 @@ Writing a list builds one, and writing it inside a loop builds one each turn.
 Every element is evaluated once, left to right, in the order it is written.
 Version 0.1 has no way to add to a list it has already built, so a list is written whole.
 
-The operators are fixed:
+Every operator is a trait method, which `docs/design.md` section 8 states.
+Version 0.1 has no typeclasses, so it wires each operator to the instances the library will ship:
 
 ```text
 +                        Int + Int, or String + String
@@ -80,6 +81,7 @@ prefix -                 Int
 An addition whose type is still unknown when its function has been inferred is an addition of
 `Int`s.
 This is the one default in the language, and it is here because version 0.1 has no typeclasses.
+Once a literal takes the type its context expects, the same default settles a literal instead.
 A comparison whose type is still unknown at that point is a comparison of `Int`s for the same
 reason.
 

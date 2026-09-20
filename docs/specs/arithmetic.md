@@ -10,6 +10,10 @@ Division has no answer when the divisor is zero, so division says so in its type
 
 ## The operators
 
+Every operator is a trait method, and this spec states the instances the library ships for `Int`.
+`docs/design.md` section 8 names the traits; a declared type writes its own instances the same way.
+Version 0.1 wires `Int` and `String` to the operators directly, and behaves as the instances will.
+
 `+` joins two `Int`s or two `String`s, and gives back what it was given.
 `-` and `*` take two `Int`s and give an `Int`.
 
@@ -33,7 +37,7 @@ Nothing is checked at runtime that the type did not already say.
 
 ## Why only `/` and `%`
 
-`+`, `-`, and `*` are total, and they stay `Int`.
+`+`, `-`, and `*` are total, and their `Int` instances give an `Int`.
 Two whole numbers always have a sum, and when it does not fit, the answer wraps.
 Wrapping is a defined answer for every input, which is what makes the operation total.
 

@@ -57,6 +57,14 @@ A linter reports a swappable pair of arguments after the fact, and the call stil
 Where order alone holds two arguments apart, the call names them, and a swapped pair is refused.
 Elegance leaves the invalid case unwriteable; adequacy writes it and rejects it afterwards.
 
+### 8. Could a library declare it?
+
+A type the prelude supplies must be a type a library could have declared instead.
+A capability the language gives `Int` and withholds from a declared type is a leak of its own kind.
+A literal, an operator, and `Eq` are the three such capabilities, and each is a trait method.
+`docs/design.md` sections 3 and 8 state how they reach every type alike.
+A feature that gives a prelude type a fourth is refused until a declared type can have it too.
+
 ---
 
 ## 2. The central trade-off
