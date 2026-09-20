@@ -6,7 +6,7 @@
 
 ## Open
 
-## 🔴 Item 046: `Map<K, V>` and `Set<T>` are library types
+## 🟡 Item 046: `Map<K, V>` and `Set<T>` are library types
 **Depends on:** Item 043, Item 053 — a key needs `Eq` and `Hash`; a library type is generic.
 `docs/implementation.md` section 4 names collections; version 0.1 has only `List`.
 `Map<K, V>` and `Set<T>` are declared in Lumen, and `K: Hash<K>` says what a key must be.
