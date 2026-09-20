@@ -121,6 +121,7 @@ In particular, the language should initially avoid:
 * complicated metaprogramming
 * implicit runtime magic
 * excessive syntax
+* syntactic sugar: `++`, `--`, `-=`, `*=`, `/=`, `%=`, a ternary `?:`
 * anonymous functions
 * async/await, or any other function colouring
 * identity, or an equality every type has whether or not it asked for one
@@ -136,6 +137,20 @@ Not boxing, which a program never observes, and not erasure, which is why a gene
 What Lumen adopts instead is value semantics, in the shape Valhalla gives a value class.
 That shape is no identity, no null, and equality by state, and every Lumen type already has it.
 `docs/principles.md` asks of every feature whether the JVM leaks through it; this is the rule.
+
+### Sugar is a second spelling, and a second spelling is a cost
+
+A shorthand that writes what the language already writes buys nothing the type system can check.
+A reader learns both spellings, canonical form has to choose between them, and every later feature
+answers to two forms rather than one.
+So `++`, `--`, `-=`, `*=`, `/=`, `%=`, and a ternary `?:` are not deferred; they are refused.
+`a = a + 1` and an `if` say each of them, and say it in the one shape the rest of the language has.
+
+`+=` is the one shorthand the language keeps, because a `for` loop that totals is the everyday
+shape Lumen is built around, and section 8 makes it `Add` exactly as `+` is.
+It is the ceiling rather than the first of a set: a second shorthand lands only where it removes a
+class of mistake, never where it removes typing.
+`docs/principles.md` question 9 is what any proposal for one answers.
 
 The guiding principle is:
 

@@ -1,0 +1,9 @@
+// expect-error: L0100
+// `+=` is the one shorthand there is; `-=`, `*=`, `/=`, `%=`, `++`, and `--` are not written.
+// A second spelling of what `total = total - 1` already says buys nothing, so the grammar
+// has no rule for it and the parser reads an expression where the `=` stands.
+fn counted(start: Int) -> Int {
+    var total = start
+    total -= 1
+    total
+}

@@ -16,6 +16,9 @@ This file is that anchor; consistency is the throughline, and the bar is Code He
 - The self-hosted toolchain preferably ships as native binaries via GraalVM native-image.
 - **Formatting is a compile error.** Source that is not in canonical form does not compile.
 - **No anonymous functions.** Every function has a name; functions are first-class by name.
+- **No syntactic sugar.** A second way to write what the language already writes is refused.
+- `++`, `--`, `-=`, `*=`, `/=`, `%=`, and a ternary `?:` are named non-goals, not open questions.
+- `+=` is the one shorthand there is, and it is the ceiling rather than the first of a set.
 - Plain loops are the default idiom; higher-order functions are library, not a second paradigm.
 - **Non-goals** — never implement, suggest, or plan: ownership, borrowing, lifetimes, inheritance.
 - Likewise null, checked exceptions, macros, implicit runtime magic, or Java's type system.
@@ -96,6 +99,7 @@ This file is that anchor; consistency is the throughline, and the bar is Code He
 - **Build the smallest design that meets today's executable requirements**, never anticipated ones.
 - **No smartness by default** — no speculative extensibility, framework, or pluggable strategy.
 - Likewise no registry, plugin protocol, compatibility state, migration, retry, or extra config knob.
+- Sugar is the same debt in syntax: `docs/principles.md` question 9 is what a shorthand answers.
 - Add such machinery only when a concrete requirement or a failing example proves it needed.
 - A measured performance result, a security boundary, or an operational constraint proves it equally.
 - Every abstraction, type, state, config value, and branch must earn its keep.

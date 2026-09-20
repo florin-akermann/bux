@@ -195,6 +195,12 @@ An assignment names a name, which `docs/design.md` section 10 states.
 `user.name = "Bob"` and `first(users).id = 1` are `L0107`, pointing at what was written there.
 A value is changed by building the one it becomes rather than by reaching inside it.
 
+`=` and `+=` are the whole of the rule, and the grammar above is what makes that so.
+`++`, `--`, `-=`, `*=`, `/=`, and `%=` are not in it, so each is `L0100` where it is written:
+the grammar expected an expression and the source wrote an operator.
+`docs/design.md` section 2 says why they are refused rather than deferred, and
+`docs/principles.md` question 9 is what a proposal for one has to answer.
+
 ## Executable examples
 
 `tests/spec/parser/<name>.lm` files are parsed and compared with a sibling expectation file.

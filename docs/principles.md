@@ -65,6 +65,17 @@ A literal, an operator, and `Eq` are the three such capabilities, and each is a 
 `docs/design.md` sections 3 and 8 state how they reach every type alike.
 A feature that gives a prelude type a fourth is refused until a declared type can have it too.
 
+### 9. Is it a second way to write something the language already writes?
+
+Syntactic sugar is a second spelling, and a second spelling is a cost with no guarantee behind it.
+A reader learns both, a formatter chooses between them, and every later feature answers to two
+forms rather than one.
+`++`, `--`, `-=`, `*=`, `/=`, `%=`, a ternary `?:`, and a compound assignment of any other operator
+are all refused: each one writes what `a = a + 1` and an `if` already write plainly.
+`+=` is the one shorthand version 0.1 kept, because a `for` loop that totals is the everyday shape
+Lumen is built around, and it is the ceiling rather than the first of a set.
+A new shorthand lands only where it removes a class of mistake, never where it only removes typing.
+
 ---
 
 ## 2. The central trade-off
