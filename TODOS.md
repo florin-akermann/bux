@@ -6,7 +6,7 @@
 
 ## Open
 
-## 🔴 Item 048: A Java class is reached through an `extern` declaration
+## 🟡 Item 048: A Java class is reached through an `extern` declaration
 **Depends on:** Item 044, Item 045 — a wrapper is a library module offering its own types.
 `docs/implementation.md` section 3 sketches `extern java class` and says nothing of the boundary.
 `docs/design.md` section 2 says what never crosses: identity, `null`, exceptions, the object model.
