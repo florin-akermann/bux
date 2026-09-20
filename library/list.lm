@@ -1,0 +1,24 @@
+// The readings of a `List` a `for` loop would otherwise write the same way twice.
+//
+// `docs/specs/library.md` states the test a function here is held to: it is written in Lumen over
+// what the language already gives, and it lands only where a reader would write the loop twice.
+/// How many values the list holds.
+// example: length([1, 2, 3]) == 3
+fn length<T>(values: List<T>) -> Int {
+    var counted = 0
+    for value in values {
+        counted += 1
+    }
+    counted
+}
+
+/// Whether the list holds a value equal to this one.
+// example: has_value([1, 2], 2)
+fn has_value<T: Eq<T>>(values: List<T>, value: T) -> Bool {
+    for held in values {
+        if held == value {
+            return true
+        }
+    }
+    false
+}

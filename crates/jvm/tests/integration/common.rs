@@ -18,7 +18,11 @@ pub fn compiled(source: &str) -> Vec<Written> {
     let typed = lumen_types::check(resolved, &lumen_types::Imported::default())
         .expect("every expression of the example has a type");
     let whole = lumen_holes::Whole::of_module(&typed).expect("the module holds no hole");
-    lumen_jvm::write(&lumen_ir::lower(&whole, "demo"))
+    lumen_jvm::write(&lumen_ir::lower(
+        &whole,
+        "demo",
+        &lumen_ir::Asked::default(),
+    ))
 }
 
 /// The class written to `path`, read back.
@@ -33,6 +37,7 @@ pub fn one_of(files: &[Written], path: &str) -> ClassFile {
 /// The one class `classes` writes, read back.
 pub fn written(class: Class) -> ClassFile {
     let lowered = Lowered {
+        asks: lumen_ir::Asked::default(),
         classes: vec![class],
     };
     let files = lumen_jvm::write(&lowered);

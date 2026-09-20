@@ -15,5 +15,6 @@ mod lowering;
 mod operators;
 mod patterns;
 mod properties;
+mod specialised;
 mod traits;
 mod unit;

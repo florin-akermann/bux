@@ -145,6 +145,18 @@ impl TypeParameter {
             origin: Origin::Prelude,
         }
     }
+
+    /// A stand-in nothing names, which stands where a type is carried by what every value fits.
+    ///
+    /// A function whose type inference left free is generic without writing a type parameter,
+    /// and `docs/specs/codegen.md` erases such a stand-in rather than writing a method per type.
+    /// This is that stand-in, so the type a module reaching one writes is the type it reaches.
+    pub(crate) fn erased() -> Self {
+        Self {
+            name: "_".to_owned(),
+            origin: Origin::Prelude,
+        }
+    }
 }
 
 /// The types as a message lists them, separated by commas.

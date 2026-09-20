@@ -216,6 +216,7 @@ fn a_module(tc: &TestCase) -> Lowered {
         });
     }
     Lowered {
+        asks: lumen_ir::Asked::default(),
         classes: vec![class],
     }
 }

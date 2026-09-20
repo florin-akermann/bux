@@ -5,11 +5,13 @@
 //! `docs/specs/codegen.md` is the specification. Writing the bytes is `lumen-jvm`'s work; nothing
 //! here knows the layout of a class file.
 
+mod asked;
 mod class;
 mod code;
 mod descriptor;
 mod lower;
 
+pub use crate::asked::Asked;
 pub use crate::class::{Class, Extending, Field, Method, Reached};
 pub use crate::code::{
     Arithmetic, Body, Comparison, FieldRef, Guard, Instruction, Label, MethodRef,
@@ -21,4 +23,6 @@ pub use crate::lower::{is_a_program, lower};
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Lowered {
     pub classes: Vec<Class>,
+    /// What this module asked the modules it imports for, which their own builds write.
+    pub asks: Asked,
 }

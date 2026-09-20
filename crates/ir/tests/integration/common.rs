@@ -4,7 +4,7 @@
 //! one, because what the lowering says is only ever about a module the compiler has accepted.
 
 use lumen_holes::Whole;
-use lumen_ir::{Body, Class, ClassName, Instruction, Lowered, Method, MethodRef, lower};
+use lumen_ir::{Asked, Body, Class, ClassName, Instruction, Lowered, Method, MethodRef, lower};
 use lumen_types::Imported;
 
 /// The classes `source` becomes, as a module named `demo`.
@@ -14,12 +14,33 @@ pub fn lowered(source: &str) -> Lowered {
 
 /// The classes `source` becomes, as a module named `demo` reaching what `imported` offers.
 pub fn lowered_reaching(source: &str, imported: &Imported) -> Lowered {
-    let program = lumen_parser::parse(source).expect("the example parses");
+    lowered_as(&Written {
+        source,
+        named: "demo",
+        imported,
+        asked: &Asked::default(),
+    })
+}
+
+/// One module a behaviour is about, as the phases before lowering are given it.
+pub struct Written<'w> {
+    pub source: &'w str,
+    /// The name it is lowered under, which is the class its functions are methods of.
+    pub named: &'w str,
+    /// What the modules it imports offer it.
+    pub imported: &'w Imported,
+    /// What a module already lowered has asked of it, which is what a generic of it is asked for.
+    pub asked: &'w Asked,
+}
+
+/// The classes `written` becomes, under the name it says and knowing what it was asked for.
+pub fn lowered_as(written: &Written<'_>) -> Lowered {
+    let program = lumen_parser::parse(written.source).expect("the example parses");
     let resolved = lumen_resolver::resolve(program).expect("every name of the example resolves");
-    let typed =
-        lumen_types::check(resolved, imported).expect("every expression of the example has a type");
+    let typed = lumen_types::check(resolved, written.imported)
+        .expect("every expression of the example has a type");
     let whole = Whole::of_module(&typed).expect("the example holds no hole");
-    lower(&whole, "demo")
+    lower(&whole, written.named, written.asked)
 }
 
 /// What the module `held` offers, which is a record and an algebraic data type.
@@ -34,6 +55,25 @@ pub fn held() -> Imported {
     let typed = lumen_types::check(resolved, &Imported::default())
         .expect("the offered module has a type for every expression");
     Imported::default().offering("held", typed.surface().clone())
+}
+
+/// A module declaring generics, which is what another module reaches one of through an import.
+///
+/// `held` writes its type parameter out, `passed` writes none and lets inference find it, and
+/// `counted` writes one that reaches no further than the inside of a `List`.
+pub const HOLDER: &str = concat!(
+    "fn held<T>(value: T) -> T {\n    value\n}\n\n",
+    "fn passed(value) {\n    value\n}\n\n",
+    "fn counted<T>(values: List<T>) -> Int {\n    1\n}\n"
+);
+
+/// What [`HOLDER`] offers, under the name `holder`, which is the name a test imports it by.
+pub fn holder() -> Imported {
+    let program = lumen_parser::parse(HOLDER).expect("the offered module parses");
+    let resolved = lumen_resolver::resolve(program).expect("the offered module resolves");
+    let typed = lumen_types::check(resolved, &Imported::default())
+        .expect("the offered module has a type for every expression");
+    Imported::default().offering("holder", typed.surface().clone())
 }
 
 /// The body of the function `name` of the module.

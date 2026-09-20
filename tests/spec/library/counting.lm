@@ -1,0 +1,30 @@
+// expect-run
+// > 3
+// > 2
+// > 0
+// `list` is a module of the library the compiler carries, and its functions are generic.
+// A generic is written by the module that declares it, once per set of types a use settles it
+// at, so these three uses ask `list` for three methods and this module writes none of them.
+import io
+
+import list
+
+fn main() -> () {
+    io.println(shown(list.length([1, 2, 3])))
+    io.println(shown(list.length(["one", "two"])))
+    io.println(shown(length(kept())))
+}
+
+// A list of a type this module declares settles the type parameter on that type.
+// example: length(kept()) == 0
+fn length(values: List<Kept>) -> Int {
+    list.length(values)
+}
+
+/// No kept value at all, which is the empty list at a type this module declares.
+// example: list.length(kept()) == 0
+fn kept() -> List<Kept> {
+    []
+}
+
+type Kept = Kept(String)

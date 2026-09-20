@@ -502,6 +502,9 @@ impl<'a> Builder<'a> {
     }
 
     /// What the use this body is being written for settled each of its type parameters at.
+    ///
+    /// A call inside a generic is written once per set the generic itself was written for, so a
+    /// type parameter standing in the type of a call here stands for whatever that set gives it.
     pub(crate) const fn at(&self) -> &Instantiation {
         &self.at
     }

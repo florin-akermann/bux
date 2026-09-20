@@ -25,7 +25,8 @@ use lumen_resolver::ResolvedProgram;
 
 pub use crate::error::TypeError;
 pub use crate::supplied::supplies;
-pub use crate::surface::{BuiltBy, Imported, OfferedConstructor, OfferedType, Surface};
+pub use crate::surface::{BuiltBy, GenericUse, Imported, OfferedConstructor};
+pub use crate::surface::{OfferedType, Surface};
 pub use crate::types::{Type, TypeParameter, TypeVar};
 
 /// Gives every expression of `resolved` the type it has, reaching `imported` through an import.
@@ -43,6 +44,7 @@ pub fn check(resolved: ResolvedProgram, imported: &Imported) -> Result<TypedProg
         types: inferred.types,
         surface: inferred.surface,
         methods: inferred.methods,
+        generics_reached: inferred.generics_reached,
         reached,
     })
 }
@@ -54,6 +56,7 @@ pub struct TypedProgram {
     types: HashMap<Span, Type>,
     surface: Surface,
     methods: HashMap<Span, Type>,
+    generics_reached: HashMap<Span, GenericUse>,
     reached: Vec<OfferedType>,
 }
 
@@ -96,5 +99,15 @@ impl TypedProgram {
     #[must_use]
     pub fn instance_at(&self, written: Span) -> Option<&Type> {
         self.methods.get(&written)
+    }
+
+    /// What the use at `written` reaches, where what it reaches is another module's generic.
+    ///
+    /// Only a use reached through an import has one: `docs/specs/codegen.md` writes a generic
+    /// once per set of types it is used at, by the module that declares it, so this says which
+    /// set that module is asked for and what the method written for it takes and gives back.
+    #[must_use]
+    pub fn generic_reached(&self, written: Span) -> Option<&GenericUse> {
+        self.generics_reached.get(&written)
     }
 }

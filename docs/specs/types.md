@@ -165,10 +165,10 @@ the value it was given.
 | flag parameter    | `L0412` | this parameter is a `Bool`, so a call of `open` passes `true` and says no more |
 | not a predicate   | `L0413` | `active` gives back a `Bool`, so its name asks the question it answers |
 | holds itself      | `L0415` | `Node` holds `Node`                              |
-| generic through a module | `L0417` | `holding.held` is generic, so `holding` alone writes it |
 | name inside a module that is no value | `L0304` | `holding.held` is a function, so it is written as a call |
 | literal misfit    | `L0420` | `5000000000` does not fit `Int32`, which holds `-2147483648` to `2147483647` |
 | bound is not a number | `L0421` | `lowest` of `Int32` is read rather than run, so it is one whole number |
+| instance stays in its module | `L0424` | `list.has_value` is written in `list`, which has no `Eq` for `Kept` |
 
 `L0406` covers every operator, because every operator is a trait method and a type is written
 with one exactly where it has that trait's instance, which `docs/specs/operators.md` states.
@@ -180,8 +180,15 @@ settles is an `Int` and an `Int` is not that type.
 A variant that carries its values in order has no field to write against, so that is `L0402` too.
 A name reached inside a module is never `L0402`: every module in scope is supplied or loaded, so
 what it declares is what answers, and a name it does not declare is `L0414`.
-`L0417` is what a module offers rather than what it declares, which `docs/specs/modules.md`
-states: a generic function is written where it is declared, so it is reached nowhere else.
+A generic function a module declares is offered like every other, which `docs/specs/modules.md`
+states, so a call of one through an import is typed against the scheme that module wrote.
+`L0424` is the one thing such a call is held to beyond what a call of any other is: a constraint
+the declaration wrote over a type parameter is answered on behalf of a body that module writes,
+so the instance answering is one that module itself reaches.
+A trait and its instances stay where they are declared, which `docs/specs/modules.md` states, so
+those are the prelude's and no others: a use that settles such a parameter on a type of this
+module, or on a type parameter of its own, is refused rather than compiled.
+A generic whose type parameters carry no constraint is reached at any type at all.
 A type that module declares is offered, and a signature naming one is reached like any other.
 `L0414` is also a type reached through a module that the module does not declare, because a type
 is a name reached inside a module as a function is.

@@ -4,7 +4,7 @@
 //! carried by one descriptor. `docs/specs/codegen.md` states the layout; this is where a name
 //! written in Lumen becomes a name the JVM knows.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use lumen_ast::{Item, RecordField, TypeDeclaration, TypeDefinition, TypeRef, TypeRefKind};
 use lumen_ast::{Variant, VariantPayload};
@@ -90,6 +90,9 @@ pub(crate) struct Shapes {
     built_by: HashMap<String, Shape>,
     /// The constructor of each record type, which is what a field is reached through.
     records: HashMap<String, String>,
+    /// The types this module declares itself, which are the ones another module reaches by
+    /// writing this module's name in front.
+    own: HashSet<String>,
 }
 
 impl Shapes {
@@ -100,6 +103,7 @@ impl Shapes {
             declarations: Vec::new(),
             built_by: HashMap::new(),
             records: HashMap::new(),
+            own: HashSet::new(),
         };
         for item in &resolved.program().items {
             if let Item::Type(declaration) = item {
@@ -150,7 +154,41 @@ impl Shapes {
         }
     }
 
+    /// `of` written as the module `by` writes it, which is what asking `by` for a method needs.
+    ///
+    /// `docs/specs/codegen.md` states the two sides of it: a type `by` declares drops the module
+    /// name this one reaches it through, and a type this module declares gains this module's.
+    /// A type of the prelude, and a type of a third module, are written the same way in both.
+    pub(crate) fn as_written_by(&self, by: &str, of: &Type) -> Type {
+        let Type::Named { name, arguments } = of else {
+            return of.clone();
+        };
+        Type::Named {
+            name: self.written_by(by, name),
+            arguments: arguments
+                .iter()
+                .map(|argument| self.as_written_by(by, argument))
+                .collect(),
+        }
+    }
+
+    /// The name `by` writes the type this module writes as `named` by.
+    fn written_by(&self, by: &str, named: &str) -> String {
+        if let Some((module, own)) = named.split_once('.') {
+            return if module == by {
+                own.to_owned()
+            } else {
+                named.to_owned()
+            };
+        }
+        if self.own.contains(named) {
+            return format!("{}.{named}", self.module);
+        }
+        named.to_owned()
+    }
+
     fn declare(&mut self, resolved: &ResolvedProgram, declaration: &TypeDeclaration) {
+        self.own.insert(declaration.name.text.clone());
         let base = self.declared(&declaration.name.text);
         self.declare_as(resolved, declaration, base);
     }

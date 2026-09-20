@@ -136,13 +136,13 @@ Type inference raises these, in `crates/types/src/error.rs`:
 - `L0413` — a function whose result is `Bool` is named for a command rather than a question.
 - `L0414` — a module does not declare the name reached inside it.
 - `L0415` — a declared type holds a value of itself, around a ring that comes back to it.
-- `L0417` — a generic function is reached through a module, which writes it where it is declared.
 - `L0418` — a trait method is used at a type that has no instance of that trait.
 - `L0419` — a parameter of a method a trait declares states no type.
 - `L0420` — a whole number does not fit the type it is written at.
 - `L0421` — a bound of an `IntegerLiteral` instance is not one whole number.
 - `L0422` — a type derives a trait and holds a value of a type that has no instance of it.
 - `L0423` — a call written with its first argument in front names its arguments.
+- `L0424` — a generic of another module is used at a type whose instance stays in a module.
 
 Exhaustiveness raises these, in `crates/exhaustiveness/src/error.rs`:
 

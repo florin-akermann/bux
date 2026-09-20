@@ -9,7 +9,7 @@ use std::fmt::Write as _;
 
 use lumen_ast::Function;
 use lumen_resolver::Origin;
-use lumen_types::Type;
+use lumen_types::{Type, TypeParameter};
 
 /// What a type argument that settled nothing is called, which is what `Object` carries.
 const SETTLED_NOTHING: &str = "Any";
@@ -41,13 +41,37 @@ impl Instantiation {
     pub(crate) fn of(function: &Function, declared: &Type, used: &Type) -> Self {
         let mut found = HashMap::new();
         settle(declared, used, &mut found);
+        let at = |written: &lumen_ast::Name| {
+            let origin = Origin::Declared(written.span);
+            found.get(&origin).cloned()
+        };
+        Self::over(function, at)
+    }
+
+    /// A use that settled `settled`, in the order `function` declares its type parameters.
+    ///
+    /// This is the use another module asked for: it settled the set where it is written, and
+    /// `docs/specs/codegen.md` has the module declaring the function write the method for it.
+    pub(crate) fn asked_for(function: &Function, settled: &[Type]) -> Self {
+        let at = |written: &lumen_ast::Name| {
+            let position = function
+                .type_parameters
+                .iter()
+                .position(|declared| declared.name.span == written.span);
+            position.and_then(|position| settled.get(position).cloned())
+        };
+        Self::over(function, at)
+    }
+
+    /// One use of `function`, with `at` saying what each type parameter it declares settled on.
+    fn over(function: &Function, at: impl Fn(&lumen_ast::Name) -> Option<Type>) -> Self {
         let settled = function
             .type_parameters
             .iter()
             .map(|written| {
                 let origin = Origin::Declared(written.name.span);
-                let at = found.get(&origin).cloned();
-                (origin, at.unwrap_or_else(|| itself(&written.name)))
+                let settled = at(&written.name).unwrap_or_else(|| itself(&written.name));
+                (origin, settled)
             })
             .collect();
         Self { settled }
@@ -76,16 +100,9 @@ impl Instantiation {
     }
 
     /// What the method written for this use is called: the function, then each type it settled.
-    ///
-    /// `$` is legal in a method name and Lumen writes no operator with it, so a name reached
-    /// this way is one no source collides with.
     pub(crate) fn names(&self, function: &str) -> String {
-        self.settled
-            .iter()
-            .fold(function.to_owned(), |mut named, (_, at)| {
-                let _ = write!(named, "${}", head_of(at));
-                named
-            })
+        let at: Vec<Type> = self.settled.iter().map(|(_, at)| at.clone()).collect();
+        names(function, &at)
     }
 
     fn at(&self, parameter: Origin) -> Option<Type> {
@@ -137,21 +154,36 @@ fn settle(declared: &Type, used: &Type, into: &mut HashMap<Origin, Type>) {
     }
 }
 
+/// What the method written for a use that settled `at` is called.
+///
+/// The function's own name, then each type the use settled a type parameter on, joined by `$`.
+/// `$` is legal in a method name and Lumen writes no operator with it, so a name reached this way
+/// is one no source collides with. A module asking another for a method names it the same way,
+/// which is what has the two agree without either reading the other's tree.
+pub(crate) fn names(function: &str, at: &[Type]) -> String {
+    at.iter().fold(function.to_owned(), |mut named, at| {
+        let _ = write!(named, "${}", head_of(at));
+        named
+    })
+}
+
 /// The name a type gives the method written for a use that settled on it.
 ///
 /// A type argument never reaches a descriptor, so a type is named by its own name however it is
 /// written: `Option<Int>` and `Option<Bool>` are both `Option`, and both need the one method.
-fn head_of(at: &Type) -> &str {
+/// A type of another module is written `demo.User` and named `demo$User`, because a JVM method
+/// name holds no dot.
+fn head_of(at: &Type) -> String {
     match at {
-        Type::Named { name, .. } => name,
-        Type::Unit => NOTHING_AT_ALL,
+        Type::Named { name, .. } => name.replace('.', "$"),
+        Type::Unit => NOTHING_AT_ALL.to_owned(),
         Type::Var(_) | Type::Parameter(_) | Type::Function { .. } | Type::Module(_) => {
-            SETTLED_NOTHING
+            SETTLED_NOTHING.to_owned()
         }
     }
 }
 
 /// The type parameter `written` standing for itself, which is what an unsettled one does.
 fn itself(written: &lumen_ast::Name) -> Type {
-    Type::Parameter(lumen_types::TypeParameter::written(written))
+    Type::Parameter(TypeParameter::written(written))
 }

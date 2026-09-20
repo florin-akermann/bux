@@ -23,17 +23,17 @@ pub(crate) enum Offered {
     /// A function written once, whose type is fresh at each use.
     Plain(Scheme),
     /// A function written once per set of types it is used at, which `docs/specs/codegen.md`
-    /// states, so only the module declaring it knows which of them to write.
-    Generic,
+    /// states, so a use of one says which set it settled and the declaring module writes it.
+    Generic(Scheme),
 }
 
 impl Offered {
     fn reached_as(self, module: &str, own: &HashSet<String>) -> Self {
+        let renamed =
+            |scheme: Scheme| scheme.renamed(&|written| reached_through(written, module, own));
         match self {
-            Self::Generic => Self::Generic,
-            Self::Plain(scheme) => {
-                Self::Plain(scheme.renamed(&|written| reached_through(written, module, own)))
-            }
+            Self::Generic(scheme) => Self::Generic(renamed(scheme)),
+            Self::Plain(scheme) => Self::Plain(renamed(scheme)),
         }
     }
 
@@ -47,8 +47,53 @@ impl Offered {
         if scheme.quantified().is_empty() {
             Self::Plain(scheme)
         } else {
-            Self::Generic
+            Self::Generic(scheme)
         }
+    }
+}
+
+/// What one use of a generic another module declares reaches.
+///
+/// `docs/specs/codegen.md` writes a generic once per set of types it is used at, by the module
+/// that declares it, so a use of one through an import is a call of the method written for the
+/// set that use settled. These are the two things such a call needs: which set to ask for, and
+/// the type the method written for it has.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct GenericUse {
+    settled: Vec<Type>,
+    written_as: Type,
+}
+
+impl GenericUse {
+    pub(crate) const fn reaching(settled: Vec<Type>, written_as: Type) -> Self {
+        Self {
+            settled,
+            written_as,
+        }
+    }
+
+    /// The same, with `solve` applied to every type it holds.
+    pub(crate) fn solved(&self, solve: &impl Fn(&Type) -> Type) -> Self {
+        Self {
+            settled: self.settled.iter().map(solve).collect(),
+            written_as: solve(&self.written_as),
+        }
+    }
+
+    /// What the use settled each type parameter on, in the order the declaration writes them.
+    #[must_use]
+    pub fn settled(&self) -> &[Type] {
+        &self.settled
+    }
+
+    /// The type the method written for this use has, which is what a call of it is written with.
+    ///
+    /// It is not the type the use has: a stand-in inference made rather than the source wrote is
+    /// carried by what every value fits, so a use of one at an `Int` still reaches a method that
+    /// takes and gives back that.
+    #[must_use]
+    pub const fn written_as(&self) -> &Type {
+        &self.written_as
     }
 }
 

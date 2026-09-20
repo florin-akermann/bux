@@ -8,12 +8,12 @@ use std::mem;
 
 use lumen_ast::Name;
 
-use crate::environment::Key;
+use crate::environment::{self, Key};
 use crate::error::{TypeError, TypeErrorKind};
 use crate::infer::{Asked, Inference, Propagated, Propagation, Requirement, labelled};
 use crate::scheme::Required;
 use crate::supplied;
-use crate::surface::Offered;
+use crate::surface::{GenericUse, Offered};
 use crate::types::Type;
 
 impl Inference<'_> {
@@ -103,6 +103,9 @@ impl Inference<'_> {
         for requirement in mem::take(&mut self.requirements) {
             let at = self.table.solved(&requirement.required.at);
             let of = &requirement.required.trait_name;
+            if let Some(kind) = left_behind_by(&requirement.how, of, &at) {
+                return Err(TypeError::at(requirement.written, kind));
+            }
             if !self.answers(of, &at) {
                 return Err(unanswered(&requirement, at));
             }
@@ -178,7 +181,7 @@ impl Inference<'_> {
         let declared = if supplied::supplies(module) {
             supplied::declared(module, &field.text)
         } else {
-            self.reached(module, field)?
+            self.reached(module, field)
         };
         let Some(declared) = declared else {
             let kind = TypeErrorKind::NotInModule {
@@ -201,23 +204,31 @@ impl Inference<'_> {
     ///
     /// A signature naming a type that module declares names it as this module writes it, which
     /// `docs/specs/modules.md` states: the surface is offered under the name it is imported by.
-    fn reached(&mut self, module: &str, field: &Name) -> Result<Option<Type>, TypeError> {
+    ///
+    /// A generic is offered like any other, and what this use settled its written type parameters
+    /// on is noted: `docs/specs/codegen.md` writes one method per set, and the module declaring it
+    /// writes the set only once something says which one.
+    fn reached(&mut self, module: &str, field: &Name) -> Option<Type> {
         let imported = self.imported;
-        let Some(surface) = imported.surface(module) else {
-            return Ok(None);
+        let surface = imported.surface(module)?;
+        let Some(offered) = surface.function(&field.text) else {
+            return self.built_inside(module, field);
         };
-        let scheme = match surface.function(&field.text) {
-            None => return Ok(self.built_inside(module, field)),
-            Some(Offered::Generic) => {
-                let kind = TypeErrorKind::GenericThroughModule {
-                    module: module.to_owned(),
-                    name: field.text.clone(),
-                };
-                return Err(TypeError::at(field.span, kind));
-            }
-            Some(Offered::Plain(scheme)) => scheme,
-        };
-        Ok(Some(scheme.clone().instantiate(&mut self.table)))
+        let (Offered::Plain(scheme) | Offered::Generic(scheme)) = offered;
+        let use_of_it = scheme.clone().at_one_use(&mut self.table);
+        let how = how_it_is_asked(offered, module, field);
+        for required in use_of_it.required {
+            self.requirements.push(Requirement {
+                required,
+                written: field.span,
+                how: how.clone(),
+            });
+        }
+        if let Offered::Generic(_) = offered {
+            let reaching = GenericUse::reaching(use_of_it.settling, use_of_it.written_as);
+            self.generics_reached.insert(field.span, reaching);
+        }
+        Some(use_of_it.found)
     }
 
     /// The constructor `module` offers as `field`, which builds a value of a type it declares.
@@ -229,6 +240,45 @@ impl Inference<'_> {
         let scheme = self.environment.scheme(&key).cloned()?;
         Some(scheme.instantiate(&mut self.table))
     }
+}
+
+/// How the traits a use of `offered` must answer for came to be asked.
+///
+/// A generic is written by the module that declares it, which `docs/specs/codegen.md` states, so
+/// the body a constraint of one is asked on behalf of is that module's rather than this one's.
+fn how_it_is_asked(offered: &Offered, module: &str, field: &Name) -> Asked {
+    match offered {
+        Offered::Plain(_) => Asked::Constraint,
+        Offered::Generic(_) => Asked::OfAnotherModule {
+            module: module.to_owned(),
+            name: field.text.clone(),
+        },
+    }
+}
+
+/// What is wrong with asking another module's generic for an instance that does not reach it.
+///
+/// A trait and its instances stay where they are declared, which `docs/specs/modules.md` states,
+/// and a module offers neither, so the prelude's are the only instances this module can know
+/// another one has. A constraint on a generic that module writes is answered in its body, so a
+/// use settling that type parameter anywhere else asks for a body nothing could write.
+///
+/// It is refused before the instance is looked for at all: an instance this module reaches is no
+/// answer either, and saying to write one would be saying to write what would then be refused.
+fn left_behind_by(asked: &Asked, of: &str, at: &Type) -> Option<TypeErrorKind> {
+    let Asked::OfAnotherModule { module, name } = asked else {
+        return None;
+    };
+    let reached = match at {
+        Type::Named { name, .. } => environment::of_the_prelude(of, name),
+        _ => false,
+    };
+    (!reached).then(|| TypeErrorKind::InstanceStaysInItsModule {
+        module: module.clone(),
+        name: name.clone(),
+        of: of.to_owned(),
+        at: at.clone(),
+    })
 }
 
 /// What is wrong with leaving a `found` behind, which is that nothing is there to take it.
@@ -271,16 +321,12 @@ fn unreachable_field(through: &Type, field: &Name) -> TypeError {
 
 /// The refusal a trait nothing answers amounts to, worded by how it came to be asked.
 fn unanswered(requirement: &Requirement, at: Type) -> TypeError {
+    let of = requirement.required.trait_name.clone();
     let kind = match requirement.how {
-        Asked::Operator(written_as) => TypeErrorKind::NoOperator {
-            written_as,
-            of: requirement.required.trait_name.clone(),
-            at,
-        },
-        Asked::Method | Asked::Constraint => TypeErrorKind::NoInstance {
-            of: requirement.required.trait_name.clone(),
-            at,
-        },
+        Asked::Operator(written_as) => TypeErrorKind::NoOperator { written_as, of, at },
+        Asked::Method | Asked::Constraint | Asked::OfAnotherModule { .. } => {
+            TypeErrorKind::NoInstance { of, at }
+        }
     };
     TypeError::at(requirement.written, kind)
 }

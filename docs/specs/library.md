@@ -111,13 +111,15 @@ at all only when a reader would otherwise write the same loop twice.
 Were `strings` to gain a `length`, `list` would have one too, and neither could be a prelude name:
 one name has one definition, and a prelude holding both would break that.
 
-## What is not here yet
+A library function may be generic, and `list.length` and `list.has_value` are.
+A generic is written once per set of types it is used at, which `docs/specs/codegen.md` states,
+so the module declaring it writes the method and the module calling it writes the call.
+`has_value` constrains its type parameter by `Eq`, and the body asking for that instance is the
+library's, so the instance answering is one the library itself reaches.
+Those are the prelude's, which every module has alike, and `L0424` refuses a call that settles
+the parameter on anything else.
 
-A library function that is generic is written but unreachable, so version 0.1 ships none.
-`length` and `has_value` over a `List<T>` are the two that are wanted, and `L0417` refuses a call
-of either: a generic function is written once per set of types it is used at, and the module
-declaring it writes the sets its own body reaches rather than an importer's.
-They land with the item that makes a generic reachable through a module.
+## What is not here yet
 
 `push`, `split`, and the length of a string each need a JVM method the language cannot yet name.
 `docs/implementation.md` section 10's `extern` declaration is what names one, and they land with
@@ -140,7 +142,7 @@ They also fail the test above twice over: a `for` loop writes each of them in on
 | code    | what it refuses                                                      |
 | ------- | -------------------------------------------------------------------- |
 | `L0306` | an import names a module neither the library nor a file beside holds |
-| `L0417` | a call of a library function that is generic, reached through its module |
+| `L0424` | a call of a constrained library generic, at a type the library reaches no instance of |
 
 A refusal inside the library is the compiler's own failure and not the program's.
 The library is compiled with every check a program is compiled with, and a library that does not

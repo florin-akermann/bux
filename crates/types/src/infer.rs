@@ -25,7 +25,7 @@ use crate::error::{Count, TypeError, TypeErrorKind};
 use crate::infer::operator::Operated;
 use crate::infer::settle::{Lookup, Reached};
 use crate::scheme::{Quantified, Required, Scheme};
-use crate::surface::{BuiltBy, Imported, OfferedConstructor, OfferedType, Surface};
+use crate::surface::{BuiltBy, GenericUse, Imported, OfferedConstructor, OfferedType, Surface};
 use crate::table::Table;
 use crate::types::{OPTION, RESULT, Type, TypeVar};
 use crate::unify::{Clash, unify};
@@ -38,6 +38,8 @@ pub(crate) struct Inferred {
     pub(crate) surface: Surface,
     /// The type each use of a trait method reached its instance at, and nothing else has one.
     pub(crate) methods: HashMap<Span, Type>,
+    /// What each use of a generic another module declares reaches, by where the use is written.
+    pub(crate) generics_reached: HashMap<Span, GenericUse>,
 }
 
 /// The type of every expression of `resolved`, what the module offers, and the type each use of
@@ -70,14 +72,17 @@ pub(crate) fn infer(
         requirements: Vec::new(),
         promised: Vec::new(),
         methods_at: HashMap::new(),
+        generics_reached: HashMap::new(),
     };
     inference.module()?;
     let surface = Surface::of(inference.offered(), inference.offered_types());
     let methods = inference.methods_at.clone();
+    let generics_reached = inference.each_generic_reached();
     Ok(Inferred {
         types: inference.solved(),
         surface,
         methods,
+        generics_reached,
     })
 }
 
@@ -110,6 +115,9 @@ struct Inference<'a> {
     promised: Vec<Required>,
     /// The type each use of a trait method reached its instance at, by where the use is written.
     methods_at: HashMap<Span, Type>,
+    /// What each use of a generic another module declares reaches, by where the use is written,
+    /// still standing for whatever the rest of the module settles.
+    generics_reached: HashMap<Span, GenericUse>,
 }
 
 impl Inference<'_> {
@@ -636,19 +644,19 @@ impl Inference<'_> {
     fn value(&mut self, name: &Name) -> Type {
         let key = self.key_of(name);
         let scheme = self.scheme(&key);
-        let (found, asked) = scheme.at_one_use(&mut self.table);
+        let use_of_it = scheme.at_one_use(&mut self.table);
         let how = match self.environment.of_a_trait(&key) {
             Some(_) => Asked::Method,
             None => Asked::Constraint,
         };
-        for required in asked {
+        for required in use_of_it.required {
             self.requirements.push(Requirement {
                 required,
                 written: name.span,
-                how,
+                how: how.clone(),
             });
         }
-        found
+        use_of_it.found
     }
 
     /// The scheme the name defined at `key` was given, which every phase before this one assures.
@@ -739,6 +747,18 @@ impl Inference<'_> {
             .map(|(span, found)| (*span, self.table.solved(found)))
             .collect()
     }
+
+    /// What each use of another module's generic reaches, each followed to what it settled on.
+    ///
+    /// A use settles while the function around it is walked and the type it settled on may be
+    /// said anywhere in that function, so what a use reaches is read once the whole module has
+    /// been walked, as every other type it recorded is.
+    fn each_generic_reached(&self) -> HashMap<Span, GenericUse> {
+        self.generics_reached
+            .iter()
+            .map(|(span, reaching)| (*span, reaching.solved(&|at| self.table.solved(at))))
+            .collect()
+    }
 }
 
 /// A binary expression as inference reads it: the operator, its two operands, and its span.
@@ -803,7 +823,7 @@ pub(crate) struct Requirement {
 }
 
 /// How a trait came to be asked for, which is what an unanswered one is worded by.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) enum Asked {
     /// A call of one of the trait's methods, which reaches the instance for that type.
     Method,
@@ -811,6 +831,12 @@ pub(crate) enum Asked {
     Constraint,
     /// An operator, which is the method of the trait `docs/specs/operators.md` says it is.
     Operator(&'static str),
+    /// A use of a generic another module declares, whose type parameter that module constrained.
+    ///
+    /// The body asking is that module's, so the instance answering has to be one that module
+    /// reaches: `docs/specs/modules.md` keeps a trait and its instances where they are declared,
+    /// and the prelude's are the only ones both modules have.
+    OfAnotherModule { module: String, name: String },
 }
 
 /// Which case a `?` hands back, neither of which ever becomes the other.

@@ -3,7 +3,8 @@
 //! `docs/specs/modules.md` states the rule: a loaded module offers every function and every type
 //! it declares, each reached through the name the import brings into scope.
 
-use lumen_types::Imported;
+use lumen_ast::Span;
+use lumen_types::{GenericUse, Imported};
 
 use crate::common::{Offered, inferred_reaching, inferred_type_reaching};
 use crate::common::{offering, refusal_reaching};
@@ -239,31 +240,123 @@ fn a_module_may_declare_a_type_and_still_offer_what_is_written_without_it() {
 }
 
 #[test]
-fn a_generic_function_is_written_where_it_is_declared_and_not_reached_through_an_import() {
+fn a_generic_function_is_reached_through_an_import_at_the_types_the_use_settles() {
     let greeting = "fn held<T>(value: T) -> T {\n    value\n}\n";
     let source = reaching("_ = greeting.held(1)");
-    let error = refusal_reaching(&source, &offered(greeting));
 
     assert_eq!(
-        error.message(),
-        "`greeting.held` is generic, so `greeting` alone writes it"
-    );
-    assert_eq!(
-        error.help(),
-        "write it in the module that reaches it, or give it a signature at one set of types"
+        inferred_type_reaching(&source, "greeting.held", 1, &offered(greeting)),
+        "(Int) -> Int"
     );
 }
 
 #[test]
-fn a_function_whose_type_nothing_settled_is_generic_and_is_not_reached_through_an_import() {
+fn a_use_of_an_imported_generic_says_what_it_settled_each_type_parameter_on() {
+    let greeting = "fn held<T>(value: T) -> T {\n    value\n}\n";
+    let source = reaching("_ = greeting.held(1)");
+
+    assert_eq!(settled_by(&source, greeting), ["Int"]);
+}
+
+#[test]
+fn a_use_of_an_imported_generic_is_written_as_the_declaration_is_at_that_set() {
+    let greeting = "fn held<T>(value: T) -> T {\n    value\n}\n";
+    let source = reaching("_ = greeting.held(1)");
+
+    assert_eq!(written_as(&source, greeting), "(Int) -> Int");
+}
+
+#[test]
+fn a_function_whose_type_nothing_settled_is_generic_and_is_reached_all_the_same() {
     let greeting = "fn held(value) {\n    value\n}\n";
     let source = reaching("_ = greeting.held(1)");
-    let error = refusal_reaching(&source, &offered(greeting));
 
     assert_eq!(
-        error.message(),
-        "`greeting.held` is generic, so `greeting` alone writes it"
+        inferred_type_reaching(&source, "greeting.held", 1, &offered(greeting)),
+        "(Int) -> Int"
     );
+    assert_eq!(settled_by(&source, greeting), [] as [&str; 0]);
+}
+
+#[test]
+fn a_stand_in_inference_made_is_erased_rather_than_written_at_the_type_it_met() {
+    let greeting = "fn held(value) {\n    value\n}\n";
+    let source = reaching("_ = greeting.held(1)");
+
+    assert_eq!(written_as(&source, greeting), "(_) -> _");
+}
+
+/// A module whose generic writes a constraint, answered by an instance it declares itself.
+const SAME: &str = concat!(
+    "derive Eq for Greeting\n\n",
+    "fn is_same<T: Eq<T>>(one: T, other: T) -> Bool {\n    one == other\n}\n\n",
+    "fn wrapped(name: String) -> Greeting {\n    Greeting(name)\n}\n\n",
+    "type Greeting = Greeting(String)\n"
+);
+
+#[test]
+fn a_constraint_on_an_imported_generic_is_answered_by_the_prelude_s_instances() {
+    let source = reaching("_ = greeting.is_same(\"a\", \"b\")");
+
+    inferred_reaching(&source, &offered(SAME));
+}
+
+#[test]
+fn an_instance_the_module_declaring_the_generic_has_is_no_answer_for_a_use_here() {
+    let source = reaching("_ = greeting.is_same(greeting.wrapped(\"a\"), greeting.wrapped(\"b\"))");
+
+    assert_eq!(
+        refusal_reaching(&source, &offered(SAME)).message(),
+        concat!(
+            "`greeting.is_same` requires `Eq` of `greeting.Greeting`, ",
+            "and only the prelude's instances reach `greeting`"
+        )
+    );
+}
+
+#[test]
+fn an_instance_this_module_declares_is_no_answer_for_a_use_of_an_imported_generic() {
+    let source = concat!(
+        "import greeting\n\n",
+        "fn main() -> () {\n",
+        "    _ = greeting.is_same(Kept(\"a\"), Kept(\"b\"))\n",
+        "}\n\n",
+        "derive Eq for Kept\n\n",
+        "type Kept = Kept(String)\n"
+    );
+
+    assert_eq!(
+        refusal_reaching(source, &offered(SAME)).message(),
+        concat!(
+            "`greeting.is_same` requires `Eq` of `Kept`, ",
+            "and only the prelude's instances reach `greeting`"
+        )
+    );
+}
+
+/// What the one use of `greeting.held` in `source` settled each type parameter on.
+fn settled_by(source: &str, greeting: &str) -> Vec<String> {
+    reached_by(source, greeting)
+        .settled()
+        .iter()
+        .map(ToString::to_string)
+        .collect()
+}
+
+/// The type the method that one use of `greeting.held` reaches is written with.
+fn written_as(source: &str, greeting: &str) -> String {
+    reached_by(source, greeting).written_as().to_string()
+}
+
+/// What the one use of `greeting.held` in `source` reaches.
+fn reached_by(source: &str, greeting: &str) -> GenericUse {
+    let at = source
+        .find("held")
+        .expect("the source under test writes one use of `greeting.held`");
+    inferred_reaching(source, &offered(greeting))
+        .generic_reached(Span::new(at, "held".len()))
+        .expect("a use of a generic another module declares says what it reaches")
+        .clone()
 }
 
 #[test]

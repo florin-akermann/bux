@@ -1,7 +1,20 @@
-// expect-error: L0417
-// A generic is written once per set of types it is used at, where it is declared.
+// expect-run
+// > 1
+// > held
+// > kept
+// A generic another module declares is reached through the import, as any other function is.
+// It is written in the module that declares it, once per set of types a use settles it at, so
+// these four uses ask `holder` for four methods and `written` writes none of them.
 import holder
 
-fn taken() -> Int {
-    holder.held(1)
+import io
+
+fn main() -> () {
+    io.println(shown(holder.held(1)))
+    io.println(holder.held("held"))
+    match holder.held(Kept("kept")) {
+        Kept(inner) => io.println(inner)
+    }
 }
+
+type Kept = Kept(String)

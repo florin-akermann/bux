@@ -1,0 +1,21 @@
+// expect-run
+// > the list holds 2
+// > the list holds no 4
+// > the words hold one
+// A generic a constraint is written over is reached through an import like any other, and the
+// trait its type parameter promises is asked of whatever each use settles that parameter on.
+import io
+
+import list
+
+fn main() -> () {
+    if list.has_value([1, 2, 3], 2) {
+        io.println("the list holds 2")
+    }
+    if !list.has_value([1, 2, 3], 4) {
+        io.println("the list holds no 4")
+    }
+    if list.has_value(["one", "two"], "one") {
+        io.println("the words hold one")
+    }
+}

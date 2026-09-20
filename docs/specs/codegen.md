@@ -150,8 +150,8 @@ source wrote is written not at all: it has no descriptor, because a type paramet
 nothing.
 A module that never uses a generic function writes no method for it, as it writes no method for
 a type parameter.
-The module declaring one is therefore the only module that knows which of its methods exist,
-which is why a generic is not offered through an import.
+The module declaring one is therefore the only module that knows which of its methods exist, so
+a module that uses one has to say which set it settled.
 
 Which types a use settles is read off the type inference gave that use, and the method it reaches
 is the one written for them.
@@ -169,6 +169,8 @@ A written method is named for the function and the types its parameters settled 
 `$`: `identity$Int`, `identity$Option`, `pair$Int$String`.
 A type is named by its own name, whatever it is written with, because a type argument never
 reaches a descriptor.
+A type of another module is written `demo.User` and named `demo$User`, because a JVM method name
+holds no dot.
 `()` is written `$Unit` and a use that settles nothing is written `$Any`.
 `$` is legal in a JVM method name and Lumen has no operator for it, so a name written this way is
 one no source can collide with.
@@ -185,13 +187,26 @@ a type parameter is carried by whatever that type is carried by, and a call insi
 use of its own.
 A generic that a generic calls is therefore written for the types the outer one was written for.
 
-Nothing reaches a generic from outside the module that declares it, because nothing in the
-toolchain reads a second file: `docs/specs/modules.md` says a module imports only what the
-compiler supplies.
-Every use a generic has is therefore in the module that declares it, and every method it needs is
-written by the same build.
-What a use in another module would need is that module's build to have the declaring module's
-body, which is a question for the change that lets one file reach another and not for this page.
+A use of a generic another module declares is written by the module that declares it, in that
+module's own class, named for the set of types the use settled exactly as a use inside it would
+name the same set.
+The module writing the use writes no method of its own for it: it calls the other class, the way
+a call of a function that declares no type parameter already does.
+One set of types is therefore one method however many modules settle it there, which is what
+keeps a generic written once per set rather than once per set per module.
+
+Which sets a module is asked for is not read off its own body alone, so a build lowers each
+module after every module that imports it.
+Loading gives the order a module is checked in, which is dependencies first, and lowering runs
+that order backwards: by the time a module is lowered, everything that could ask of it has asked.
+
+A use settles its types in the module the use is written in, so the set it asks for is written in
+that module's names, and the ask carries them as the module being asked writes them.
+A type of the module being asked drops the module name it was reached through, and a type of the
+module asking gains its own, so `list.Held` asked of `list` is `Held` and `Foo` asked of `list`
+by `main` is `main.Foo`.
+A type of a third module, and a type of the prelude, are written the same way in both and cross
+unchanged.
 
 ## How a type is laid out
 

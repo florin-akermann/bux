@@ -54,17 +54,17 @@ impl Scheme {
 
     /// This scheme at one use: every stand-in replaced by a variable of its own.
     pub(crate) fn instantiate(&self, table: &mut Table) -> Type {
-        self.at_one_use(table).0
+        self.at_one_use(table).found
     }
 
-    /// This scheme at one use, and each trait that use must answer for, at the type it settled.
-    pub(crate) fn at_one_use(&self, table: &mut Table) -> (Type, Vec<Required>) {
+    /// This scheme at one use: the type it has there, what it asks for, and what it settled.
+    pub(crate) fn at_one_use(&self, table: &mut Table) -> AtOneUse {
         let given: HashMap<Quantified, Type> = self
             .quantified
             .iter()
             .map(|one| (one.clone(), table.fresh()))
             .collect();
-        let asked = self
+        let required = self
             .required
             .iter()
             .map(|one| Required {
@@ -72,7 +72,24 @@ impl Scheme {
                 at: replaced(&one.at, &given),
             })
             .collect();
-        (replaced(&self.body, &given), asked)
+        AtOneUse {
+            found: replaced(&self.body, &given),
+            required,
+            settling: self.written_stand_ins(&given),
+            written_as: replaced(&self.body, &erasing(&given)),
+        }
+    }
+
+    /// What this use gave each stand-in the declaration wrote, in the order it wrote them.
+    ///
+    /// A stand-in inference made is not among them: `docs/specs/codegen.md` writes a generic once
+    /// per set of types its written type parameters settled on, and names it after those alone.
+    fn written_stand_ins(&self, given: &HashMap<Quantified, Type>) -> Vec<Type> {
+        self.quantified
+            .iter()
+            .filter(|one| matches!(one, Quantified::Parameter(_)))
+            .filter_map(|one| given.get(one).cloned())
+            .collect()
     }
 
     /// This scheme with `one` of its stand-ins settled on `given`, which is what an instance is.
@@ -113,6 +130,33 @@ impl Scheme {
     pub(crate) fn quantified(&self) -> &[Quantified] {
         &self.quantified
     }
+}
+
+/// One use of a scheme: the type it has there, what it asks for, and what it settled.
+pub(crate) struct AtOneUse {
+    pub(crate) found: Type,
+    /// Each trait the use must answer for, at the type this use settled it at.
+    pub(crate) required: Vec<Required>,
+    /// What each stand-in the declaration wrote settled on, in the order it wrote them.
+    pub(crate) settling: Vec<Type>,
+    /// The type the method written for this use has, which is not the type the use has.
+    ///
+    /// `docs/specs/codegen.md` writes a generic at the types its written type parameters settled
+    /// on and at nothing else, so a stand-in inference made is carried by whatever every value
+    /// fits. A use of `fn passed(value) { value }` at an `Int` therefore reaches a method that
+    /// takes and gives back what a type parameter is carried by, not one that takes an `Int`.
+    pub(crate) written_as: Type,
+}
+
+/// `given`, with every stand-in inference made standing for the one type every value fits.
+fn erasing(given: &HashMap<Quantified, Type>) -> HashMap<Quantified, Type> {
+    given
+        .iter()
+        .map(|(one, at)| match one {
+            Quantified::Var(_) => (one.clone(), Type::Parameter(TypeParameter::erased())),
+            Quantified::Parameter(_) => (one.clone(), at.clone()),
+        })
+        .collect()
 }
 
 /// One stand-in a scheme is polymorphic over.

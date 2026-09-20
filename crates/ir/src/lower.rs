@@ -29,6 +29,7 @@ use lumen_resolver::prelude;
 use lumen_types::{Type, TypedProgram};
 
 use crate::Lowered;
+use crate::asked::{Asked, Specialisation};
 use crate::class::{Class, Method, Reached};
 use crate::code::{Body, Instruction, MethodRef};
 use crate::descriptor::{Descriptor, MethodDescriptor};
@@ -43,29 +44,40 @@ const START: &str = "main";
 ///
 /// A [`Whole`] is a module that holds no hole, which is the only kind there is anything to
 /// lower: `docs/specs/holes.md` states what a build does with the other kind.
+///
+/// `asked` is every method a module already lowered has asked of this one, which is how a
+/// generic reached through an import comes to be written: `docs/specs/codegen.md` has the module
+/// declaring it write the method, so a build lowers a module after everything that imports it.
 #[must_use]
-pub fn lower(whole: &Whole<'_>, module: &str) -> Lowered {
+pub fn lower(whole: &Whole<'_>, module: &str, asked: &Asked) -> Lowered {
     let typed = whole.typed();
     let lowering = Lowering {
         typed,
+        module: module.to_owned(),
         shapes: Shapes::of(typed.resolved(), module, typed.reached()),
         declared: declarations_of(typed),
         answers: instances_of(typed),
         owed: RefCell::new(Vec::new()),
+        asks: RefCell::new(Asked::default()),
     };
-    let module_class = lowering.module_class();
+    let module_class = lowering.module_class(asked);
     let reads = modules::reads_a_file(&module_class);
     let mut classes = vec![module_class];
     classes.extend(lowering.shapes.classes());
     if reads {
         classes.push(modules::files_class(&lowering.shapes));
     }
-    Lowered { classes }
+    Lowered {
+        classes,
+        asks: lowering.asks.into_inner(),
+    }
 }
 
 /// What lowering one module holds: the types it was given, and the classes it writes them as.
 pub(crate) struct Lowering<'a> {
     pub(crate) typed: &'a TypedProgram,
+    /// The name this module is reached by, which is what a type of its own is asked for under.
+    module: String,
     pub(crate) shapes: Shapes,
     /// Every function the module writes, by the span of the name declaring it.
     declared: HashMap<Span, Declared<'a>>,
@@ -73,6 +85,8 @@ pub(crate) struct Lowering<'a> {
     answers: HashMap<(String, String), Span>,
     /// The methods still owed, which lowering a body adds to as it meets a use of a generic.
     owed: RefCell<Vec<Owed>>,
+    /// The methods this module has asked other modules for, which their own builds write.
+    asks: RefCell<Asked>,
 }
 
 /// One method the module writes: where its body comes from, and what a JVM calls it.
@@ -107,9 +121,10 @@ impl Lowering<'_> {
     /// A function that declares no type parameter is one method, written whether anything calls
     /// it or not. A generic is one method per set of types it is used at, so lowering a body is
     /// what asks for the methods that body needs, and the asking goes on until nothing is owed.
-    fn module_class(&self) -> Class {
+    fn module_class(&self, asked: &Asked) -> Class {
         let mut class = Class::new(self.shapes.module().clone());
         self.owe_every_method_nothing_has_to_ask_for();
+        self.owe_every_method_another_module_asked_for(asked);
         class.methods = self.methods_owed();
         class.methods.extend(entry_point(&class));
         class
@@ -130,6 +145,44 @@ impl Lowering<'_> {
         for (named, _) in derived_in(self.typed) {
             self.owe(named.span, Instantiation::whole());
         }
+    }
+
+    /// Asks for the method of every set of types a use in another module settled one of these
+    /// generics at.
+    ///
+    /// A use settles its types where it is written and the method is written here, which
+    /// `docs/specs/codegen.md` states, so this is the only way such a method is asked for. A set
+    /// asked for a function this module does not declare is nothing: name resolution and
+    /// inference have both already held the asking module to what this one offers.
+    fn owe_every_method_another_module_asked_for(&self, asked: &Asked) {
+        for one in asked.of_module(&self.module) {
+            let Some(function) = self.declares(one.function()) else {
+                continue;
+            };
+            self.owe(
+                function.name.span,
+                Instantiation::asked_for(function, one.settled()),
+            );
+        }
+    }
+
+    /// The function this module declares as `named`, where it declares one.
+    fn declares(&self, named: &str) -> Option<&Function> {
+        self.functions()
+            .find(|function| function.name.text == named)
+    }
+
+    /// Asks `module` for the method of `function` at the types `settled`, and says what it is
+    /// called.
+    ///
+    /// The name is the one the other module's build writes the method under, arrived at from the
+    /// types alone, which is what has the two agree without either reading the other's tree.
+    pub(crate) fn asking(&self, module: &str, function: &str, settled: Vec<Type>) -> String {
+        let named = generic::names(function, &settled);
+        self.asks
+            .borrow_mut()
+            .note(Specialisation::of(module, function, settled));
+        named
     }
 
     /// Every method the module owes, each written once, until nothing is owed any more.
@@ -232,10 +285,27 @@ impl Lowering<'_> {
 
     /// What a function reached through another module takes and gives back, read off its use.
     ///
-    /// The module declaring it has written it once, under the name it is declared with, because
-    /// `docs/specs/modules.md` offers no generic through an import.
+    /// The module declaring it has written it once, under the name it is declared with, which is
+    /// every function of it that declares no type parameter and settles no type.
     pub(crate) fn reached_through(&self, used: Span) -> Signature {
         self.signature(used, &Instantiation::whole())
+    }
+
+    /// What a method written for one set of types takes and gives back, given the type it has.
+    ///
+    /// This is a generic of another module, whose method that module writes: the type is the one
+    /// the declaration has once that set is settled, rather than the one the use has.
+    pub(crate) fn written_as(&self, declared: &Type) -> Signature {
+        let Type::Function { parameters, result } = declared else {
+            unreachable!("a function is declared with a function type")
+        };
+        Signature {
+            parameters: parameters
+                .iter()
+                .map(|of| self.shapes.carried(of))
+                .collect(),
+            result: self.shapes.carried(result),
+        }
     }
 
     /// What the function declared at `declared` takes and gives back, at the types `at` settled.

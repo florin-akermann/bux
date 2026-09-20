@@ -133,13 +133,15 @@ pub(crate) enum TypeErrorKind {
         module: String,
         name: String,
     },
-    /// A generic function reached through a module, which is written where it is declared.
-    GenericThroughModule {
-        module: String,
-        name: String,
-    },
     /// A trait method, or a constrained generic, used at a type that has no instance.
     NoInstance {
+        of: String,
+        at: Type,
+    },
+    /// A generic another module declares, used at a type whose instance stays in this one.
+    InstanceStaysInItsModule {
+        module: String,
+        name: String,
         of: String,
         at: Type,
     },
@@ -177,6 +179,7 @@ impl TypeErrorKind {
             Self::LiteralDoesNotFit { .. } => Code::LiteralDoesNotFit,
             Self::BoundIsNotAWholeNumber { .. } => Code::BoundIsNotAWholeNumber,
             Self::NoInstance { .. } => Code::NoInstance,
+            Self::InstanceStaysInItsModule { .. } => Code::InstanceStaysInItsModule,
             Self::HeldTypeHasNoInstance { .. } => Code::HeldTypeHasNoInstance,
             Self::SignatureWithoutType(_) => Code::SignatureWithoutType,
             Self::DivisorIsZero => Code::DivisorIsZero,
@@ -191,7 +194,6 @@ impl TypeErrorKind {
             Self::NotAPredicate(_) => Code::NotAPredicate,
             Self::NotInModule { .. } => Code::NotInModule,
             Self::NotCalled { .. } => Code::NotAValue,
-            Self::GenericThroughModule { .. } => Code::GenericThroughModule,
             Self::HoldsItself { .. } => Code::HoldsItself,
         }
     }
@@ -252,6 +254,9 @@ impl TypeErrorKind {
             Self::NoInstance { .. } => {
                 "write the instance, or constrain the type parameter the call is made at"
             }
+            Self::InstanceStaysInItsModule { .. } => {
+                "call it at a type the prelude has an instance for, or write the loop here"
+            }
             Self::HeldTypeHasNoInstance { .. } => {
                 "a derived instance reads what it holds by that type's own; give the held one"
             }
@@ -275,9 +280,6 @@ impl TypeErrorKind {
             }
             Self::NotCalled { .. } => {
                 "version 0.1 reaches a function by calling it; write the call"
-            }
-            Self::GenericThroughModule { .. } => {
-                "write it in the module that reaches it, or give it a signature at one set of types"
             }
             Self::HoldsItself { .. } => {
                 "hold an `Option` of it, which is how a type holds another of its own kind"
@@ -332,7 +334,7 @@ impl fmt::Display for TypeErrorKind {
             }
             Self::NotInModule { .. }
             | Self::NotCalled { .. }
-            | Self::GenericThroughModule { .. } => f.write_str(&self.how_a_module_is_reached()),
+            | Self::InstanceStaysInItsModule { .. } => f.write_str(&self.how_a_module_is_reached()),
             Self::HoldsItself { ring } => {
                 let (first, rest) = ring.split_first().expect("a ring runs through one type");
                 write!(f, "`{first}` holds ")?;
@@ -395,9 +397,15 @@ impl TypeErrorKind {
             Self::NotCalled { module, name } => {
                 format!("`{module}.{name}` is a function, so it is written as a call")
             }
-            Self::GenericThroughModule { module, name } => {
-                format!("`{module}.{name}` is generic, so `{module}` alone writes it")
-            }
+            Self::InstanceStaysInItsModule {
+                module,
+                name,
+                of,
+                at,
+            } => format!(
+                "`{module}.{name}` requires `{of}` of `{at}`, \
+                 and only the prelude's instances reach `{module}`"
+            ),
             _ => unreachable!("a kind reaches here only from the arm of `Display` that names it"),
         }
     }

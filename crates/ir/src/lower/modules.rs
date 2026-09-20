@@ -11,6 +11,7 @@ use lumen_ast::{Expr, Name, Span};
 use crate::class::{Class, Method, Reached};
 use crate::code::{Body, FieldRef, Guard, Instruction, Label, MethodRef};
 use crate::descriptor::{ClassName, Descriptor, MethodDescriptor};
+use crate::lower::Signature;
 use crate::lower::body::Builder;
 use crate::lower::shape::{CONSTRUCTOR, ERR, OK, Shapes};
 
@@ -96,16 +97,46 @@ impl Builder<'_> {
         reached: &Through<'_>,
         arguments: &[&Expr],
     ) -> Option<Descriptor> {
-        let signature = self.lowering.reached_through(reached.used);
+        let (named, signature) = self.reaches(reached);
         for (argument, wanted) in arguments.iter().zip(&signature.parameters) {
             self.handed(argument, wanted.clone());
         }
         self.emit(Instruction::InvokeStatic(MethodRef {
             class: ClassName::new(&reached.module.text),
-            name: reached.name.text.clone(),
+            name: named,
             descriptor: signature.descriptor(),
         }));
         signature.result
+    }
+
+    /// The method this use reaches: what the other module calls it, and what it is written with.
+    ///
+    /// A function that declares no type parameter is written once, under its own name, and the
+    /// use carries the very signature the other module wrote it with. A generic is written once
+    /// per set of types it is used at, which `docs/specs/codegen.md` states, so a use of one
+    /// reaches a method named for the set this use settled and written with the type that set
+    /// gives the declaration, which is not the type the use has.
+    ///
+    /// A use inside a generic settles on that generic's own type parameters, and the body being
+    /// written is one set of those, so the set asked for is what this set gives them.
+    fn reaches(&mut self, reached: &Through<'_>) -> (String, Signature) {
+        let Some(generic) = self.lowering.typed.generic_reached(reached.name.span) else {
+            let signature = self.lowering.reached_through(reached.used);
+            return (reached.name.text.clone(), signature);
+        };
+        let module = &reached.module.text;
+        let asked_for = generic
+            .settled()
+            .iter()
+            .map(|at| {
+                self.lowering
+                    .shapes
+                    .as_written_by(module, &self.at().substituted(at))
+            })
+            .collect();
+        let named = self.lowering.asking(module, &reached.name.text, asked_for);
+        let written_as = self.at().substituted(generic.written_as());
+        (named, self.lowering.written_as(&written_as))
     }
 
     /// Writing to the standard output, which stands on a class rather than on an instance.

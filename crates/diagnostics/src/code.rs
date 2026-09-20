@@ -132,8 +132,6 @@ catalogue! {
     NotInModule => "L0414",
     /// A declared type holds a value of itself, which no whole value could ever be.
     HoldsItself => "L0415",
-    /// A generic function is reached through a module, which writes it where it is declared.
-    GenericThroughModule => "L0417",
     /// A trait method is used at a type that has no instance of that trait.
     NoInstance => "L0418",
     /// A parameter of a trait's method states no type, which nothing is left to infer.
@@ -146,6 +144,8 @@ catalogue! {
     HeldTypeHasNoInstance => "L0422",
     /// A call written with its first argument in front names its arguments.
     NamedInFront => "L0423",
+    /// A generic of another module is used at a type whose instance stays in a module.
+    InstanceStaysInItsModule => "L0424",
     /// A `match` leaves a value of the type it matches unanswered.
     NonExhaustiveMatch => "L0500",
     /// A `match` lists its arms in an order the type does not declare its variants in.

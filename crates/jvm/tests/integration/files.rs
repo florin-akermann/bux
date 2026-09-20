@@ -191,6 +191,7 @@ fn a_body_that_branches_carries_a_stack_map_with_one_entry_for_each_place_a_jump
 #[test]
 fn every_class_of_a_lowered_program_is_written_to_the_path_its_name_gives() {
     let lowered = Lowered {
+        asks: lumen_ir::Asked::default(),
         classes: vec![
             Class::new(ClassName::new("demo")),
             Class::new(ClassName::new("demo/User")),

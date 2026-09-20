@@ -15,10 +15,10 @@ other are refused as well, because each would have to be compiled first.
 Every module reached is then held to everything below, and a refusal names the file it is in
 rather than the file the command named. A module is checked after everything it imports, so a
 name reached through an import has the type the other module gave it. What a module offers is
-every function it declares; a type it declares stays its own, and a generic function is written
-where it is declared, so reaching either through an import is refused. A function is generic by
-the type inference settled on it, so one that writes no type parameter and settles none is
-generic too.
+every function it declares and every type it declares, each reached through the module's name. A
+generic function is offered like any other: it is written once per set of types it is used at, by
+the module that declares it, and a call through an import reaches the method written for the set
+that call settled.
 
 Canonical form is the first thing each module is held to: a file that differs is reported with
 the line and column it is about, that line under a row of carets, and a `help:` line naming the

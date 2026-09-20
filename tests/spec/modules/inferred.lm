@@ -1,7 +1,13 @@
-// expect-error: L0417
-// A function whose type nothing settled is generic, and is written where it is declared.
+// expect-run
+// > 2
+// > passed
+// A function whose type nothing settled is generic too, and is reached exactly as one that
+// writes its type parameters out is.
 import holder
 
-fn taken() -> Int {
-    holder.passed(1)
+import io
+
+fn main() -> () {
+    io.println(shown(holder.passed(2)))
+    io.println(holder.passed("passed"))
 }

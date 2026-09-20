@@ -42,12 +42,15 @@ way.
 What a loaded module offers is every function it declares, reached through the module's name.
 `demo.helper(2)` is that call, written exactly as `io.print("hi")` is written.
 
-A generic function stays that module's own too.
-It is written once per set of types it is used at, which `docs/specs/codegen.md` states, and the
-module declaring it writes only the sets its own body reaches.
+A generic function is offered like any other, and a use of one through an import is a call of the
+method the module declaring it writes for the set of types that use settled.
+It is written once per set of types it is used at, which `docs/specs/codegen.md` states, and that
+page says how a set settled in one module is asked of another.
 A function is generic by the type inference settled on it, not by what it wrote: one that writes
-no type parameter and leaves its type free is generic in the same way.
-`docs/specs/types.md` states that as `L0417`.
+no type parameter and leaves its type free is generic in the same way, and is reached the same way.
+A constraint such a function writes over one of its type parameters is answered by an instance the
+module declaring it reaches, because the body asking is that module's; those are the prelude's,
+which `docs/specs/types.md` states as `L0424`.
 
 A module offers the types it declares as well as the functions.
 A type is reached through the module's name, as a function is: `demo.User` is the type the module
@@ -77,6 +80,12 @@ refused as it is over any type with no instance.
 A trait is reached through no module either: `demo.Eq` is not written.
 Version 0.1 keeps both where they are declared, and `docs/specs/traits.md` states what an instance
 is; what a module offers is the names a reader can write, and an instance has no name to write.
+
+An instance either module declares therefore answers no constraint on an imported generic.
+The declaring module's is one this module cannot know it has, because neither offers the other its
+instances, and this module's is one that module could not reach.
+The prelude's are the only ones left, so a use settling such a type parameter anywhere else is
+refused as `L0424` rather than asking for a body the other module could not write.
 
 ## Scopes
 

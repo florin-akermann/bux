@@ -15,7 +15,7 @@ use lumen_diagnostics::{Code, Diagnostic, json, render};
 use lumen_examples::{Example, Refusal as ExampleRefusal, Run, stated_by};
 use lumen_format::format;
 use lumen_holes::{Hole, Whole};
-use lumen_ir::{Lowered, is_a_program, lower};
+use lumen_ir::{Asked, Lowered, is_a_program, lower};
 use lumen_jvm::ClassFile;
 use lumen_types::TypedProgram;
 
@@ -171,18 +171,18 @@ fn held(program: &Checked, run: &Run) -> Outcome {
     let Some(module) = named_module(root.path()) else {
         return Outcome::Unusable;
     };
-    let mut classes = match imported_classes(program) {
-        Ok(classes) => classes,
-        Err(refusal) => return refused_as(refusal),
-    };
     let lowered = match typed(run.source(), program.imported())
         .map_err(|diagnostic| vec![diagnostic])
-        .and_then(|inferred| compiled(&inferred, run.source(), &module))
+        .and_then(|inferred| compiled(&inferred, run.source(), &module, &Asked::default()))
     {
         Ok(lowered) => lowered,
         Err(refusals) => {
             return refuse_each(&put_back(run, refusals), root.source(), root.path());
         }
+    };
+    let mut classes = match imported_classes(program, &lowered.asks) {
+        Ok(classes) => classes,
+        Err(refusal) => return refused_as(refusal),
     };
     classes.extend(lumen_jvm::write(&lowered));
     let Some(java) = java() else {
@@ -203,20 +203,16 @@ fn held(program: &Checked, run: &Run) -> Outcome {
 }
 
 /// The class files of every module the one under test imports, which a run needs beside it.
-fn imported_classes(program: &Checked) -> Result<Vec<ClassFile>, NotCompiled> {
-    let mut classes = Vec::new();
-    for module in reached_by(program) {
-        classes.extend(lumen_jvm::write(&lowered_from(module)?));
-    }
-    Ok(classes)
-}
-
-/// Every module but the one the command named, which is the one written last.
-fn reached_by(program: &Checked) -> &[Module] {
-    program
+///
+/// `asked` is what the run itself asks of them, which is why the module under test is lowered
+/// first: an example reaches a generic of an imported module as any other body does.
+fn imported_classes(program: &Checked, asked: &Asked) -> Result<Vec<ClassFile>, NotCompiled> {
+    let imported = program
         .modules()
         .split_last()
-        .map_or(&[], |(_root, imported)| imported)
+        .map_or(&[][..], |(_root, rest)| rest);
+    let lowered = lowered_after_their_importers(imported, asked.clone())?;
+    Ok(lowered.iter().flat_map(lumen_jvm::write).collect())
 }
 
 /// Reports every example the run wrote a line about, which is every one that did not hold.
@@ -322,10 +318,8 @@ fn built(path: &Path) -> Result<Built, Outcome> {
     let Some(module) = named_module(program.root().path()) else {
         return Err(Outcome::Unusable);
     };
-    let mut lowered = Vec::new();
-    for one in program.modules() {
-        lowered.push(lowered_from(one).map_err(refused_as)?);
-    }
+    let lowered =
+        lowered_after_their_importers(program.modules(), Asked::default()).map_err(refused_as)?;
     let starts = lowered.last().is_some_and(is_a_program);
     let classes: Vec<ClassFile> = lowered.iter().flat_map(lumen_jvm::write).collect();
     let beside = path.parent().unwrap_or(Path::new(".")).to_path_buf();
@@ -339,9 +333,33 @@ fn built(path: &Path) -> Result<Built, Outcome> {
     }
 }
 
+/// Every module of `modules`, lowered, in the order their classes are written.
+///
+/// A generic is written by the module that declares it, at each set of types a use settled it
+/// at, which `docs/specs/codegen.md` states, and a use in one module asks the module it reaches
+/// into. So a module is lowered after everything that imports it: loading orders them
+/// dependencies first, and this runs that order backwards and turns the answer back around.
+///
+/// `asked` is what has been asked of them already, which is nothing for a build and what the
+/// module under test asks for a run of its examples.
+fn lowered_after_their_importers(
+    modules: &[Module],
+    asked: Asked,
+) -> Result<Vec<Lowered>, NotCompiled> {
+    let mut asked = asked;
+    let mut lowered = Vec::new();
+    for module in modules.iter().rev() {
+        let one = lowered_from(module, &asked)?;
+        asked = asked.and(&one.asks);
+        lowered.push(one);
+    }
+    lowered.reverse();
+    Ok(lowered)
+}
+
 /// The module `module` becomes, or every refusal that stops it becoming one.
-fn lowered_from(module: &Module) -> Result<Lowered, NotCompiled> {
-    compiled(module.typed(), module.source(), module.name())
+fn lowered_from(module: &Module, asked: &Asked) -> Result<Lowered, NotCompiled> {
+    compiled(module.typed(), module.source(), module.name(), asked)
         .map_err(|refusals| NotCompiled::refused(refusals, module.path(), module.source()))
 }
 
@@ -354,6 +372,7 @@ fn compiled(
     inferred: &TypedProgram,
     source: &str,
     module: &str,
+    asked: &Asked,
 ) -> Result<Lowered, Vec<Diagnostic>> {
     let whole = Whole::of_module(inferred)
         .map_err(|holes| holes.iter().map(Hole::diagnostic).collect::<Vec<_>>())?;
@@ -363,7 +382,7 @@ fn compiled(
             .map(ExampleRefusal::diagnostic)
             .collect::<Vec<_>>()
     })?;
-    Ok(lower(&whole, module))
+    Ok(lower(&whole, module, asked))
 }
 
 /// A module written out, which is what running one starts from.
