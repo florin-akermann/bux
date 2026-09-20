@@ -71,7 +71,7 @@ Item 048 lands the declaration that makes such a reference writable, so this ite
 [052][b] - Section 15 cites the clause where it argues nothing is shared, so the two sections agree.
 [052][c] - Item 048's `docs/specs/interop.md` points at the clause rather than restating the rule.
 
-## 🟡 Item 054: The prelude's own bodies are read by the compiler
+## 🟢 Item 054: The prelude's own bodies are read by the compiler
 **Depends on:** Item 045 — the prelude is Lumen source, and its bodies are the part nothing reads.
 `docs/specs/library.md` says version 0.1 reads an instance head and never the body below it.
 Every use of `Add<Int>` is the JVM instruction, so `fn add(one, other) { one - other }` is unseen.
