@@ -6,7 +6,7 @@
 
 ## Open
 
-## 🟡 Item 037: A list is written, not only walked
+## 🟢 Item 037: A list is written, not only walked
 **Depends on:** Item 025 — a list holds a type parameter, and a generic is specialized first.
 `docs/specs/types.md` gives `List<T>` a `for` that walks one and no syntax that builds one.
 So a function over a list is one nothing can call, and `for … in` is a loop no module can run.
