@@ -70,17 +70,3 @@ Item 048 lands the declaration that makes such a reference writable, so this ite
 [052][a] - `docs/design.md` section 14 names a foreign reference among what the check refuses.
 [052][b] - Section 15 cites the clause where it argues nothing is shared, so the two sections agree.
 [052][c] - Item 048's `docs/specs/interop.md` points at the clause rather than restating the rule.
-
-## 🟢 Item 054: The prelude's own bodies are read by the compiler
-**Depends on:** Item 045 — the prelude is Lumen source, and its bodies are the part nothing reads.
-`docs/specs/library.md` says version 0.1 reads an instance head and never the body below it.
-Every use of `Add<Int>` is the JVM instruction, so `fn add(one, other) { one - other }` is unseen.
-The library is what says in Lumen what an instruction does, and an unread claim drifts from it.
-Inference runs over the prelude as it stands and turns up one refusal, which is a rule to settle.
-`hashed(value: Bool) -> Int` is a `Bool` parameter in a signature that is not all `Bool`.
-An instance has no say in its own signature: the trait it answers for is what decides it.
-So the rule is about a signature an author designs, and an instance method is not one of those.
-[054][a] - `docs/design.md` says the `Bool`-parameter rule holds where an author chose the types.
-[054][b] - Inference exempts an instance method, test-first, with the trait's signature as proof.
-[054][c] - The prelude is inferred where it is read, and a refusal in it fails the compiler's tests.
-[054][d] - A property: every instance body the prelude writes has the type its trait gives it.
