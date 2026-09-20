@@ -5,6 +5,8 @@ Name resolution answers one question for every name in a file: which definition 
 errors.
 The phase consumes the untyped tree from the parser and produces a resolved program, where every
 name that has a definition points at it.
+Loading runs before it, and this spec states that too: which file an import names, and in which
+order the modules it reaches are compiled.
 
 ## Intent
 
@@ -20,8 +22,39 @@ Every name the file declares at the top level is public; there is no private dec
 `import io` brings the module `io` into scope under its own name.
 A name inside it is reached as `io.print`, which is a field access on the module and not a name in
 the file.
-Nothing in the toolchain reads a second file yet, so what a module holds is checked once one can be
-loaded.
+
+## Loading
+
+`import demo` names the file `demo.lm`, beside the file that imports it.
+There is no search path: a module is the file of that name beside the importing one, or nothing.
+`io` and `files` are supplied by the compiler, so an import of either looks for no file at all.
+
+Every module a program reaches is loaded before any of them is resolved.
+A module is read once however many modules import it, and is the same module to each of them.
+Loading walks the imports out from the file the command names, and stops at the first refusal.
+
+A ring of imports is refused.
+Two modules that import each other have no order to be typed in, because each needs the other
+first.
+That is unlike two declarations within one module, which are written either way and resolve either
+way.
+
+What a loaded module offers is every function it declares, reached through the module's name.
+`demo.helper(2)` is that call, written exactly as `io.print("hi")` is written.
+
+A generic function stays that module's own too.
+It is written once per set of types it is used at, which `docs/specs/codegen.md` states, and the
+module declaring it writes only the sets its own body reaches.
+A function is generic by the type inference settled on it, not by what it wrote: one that writes
+no type parameter and leaves its type free is generic in the same way.
+`docs/specs/types.md` states that as `L0417`.
+
+A type a module declares stays that module's own in version 0.1.
+A type is written as a bare name, and no name reaches into a module, so an importing module has no
+way to write one.
+A function whose signature names one is therefore refused where it is reached rather than where it
+is declared, which `docs/specs/types.md` states as `L0416`.
+A module builds what it likes and offers what the modules importing it can name.
 
 ## Scopes
 
@@ -56,7 +89,8 @@ functions:    or  todo
 `todo(reason)` is a hole, which `docs/specs/holes.md` states.
 
 They are ordinary declarations of a module the compiler supplies, not keywords.
-The prelude becomes Lumen source once a module can be loaded; until then this list is the prelude.
+Loading does not reach the prelude: a prelude name is written bare, and an import brings a module
+into scope under its name rather than the names inside it.
 
 `Option` declares `Some` and then `None`, and `Result` declares `Ok` and then `Err`.
 That order is the one a `match` lists its arms in, which `docs/specs/exhaustiveness.md` requires,
@@ -98,6 +132,8 @@ Canonical form puts every import first and sorted, which settles where it goes w
 | written above use | `L0303` | `x` is written above `y`, which uses it         |
 | name that is no value | `L0304` | `x` is a function, so it is written as a call |
 | assigned but no `var` | `L0305` | `x` is not a `var`, so it is never assigned to |
+| module with no file | `L0306` | there is no module named `demo`                   |
+| ring of imports   | `L0307` | `demo` imports `main`, which imports `demo`       |
 
 `L0300` helps with `a name is declared in this file, imported, or supplied by the prelude`.
 `L0301` helps with `one name has one definition; rename one of the two`.
@@ -106,6 +142,11 @@ Canonical form puts every import first and sorted, which settles where it goes w
 `L0304` helps with `version 0.1 reaches a function by calling it; write the call`.
 `L0304` helps a module with ``a module is what a name is reached through, as `io.println` is``.
 `L0305` helps with ``mutation is explicit: bind it with `var`, or bind a new name``.
+`L0306` helps with ``a module is a file beside this one: write `demo.lm```.
+`L0307` helps with `a module is compiled after what it imports, and a ring has no such order`.
+
+`L0306` and `L0307` are raised while loading, before any module is resolved.
+Both point at the import that was being followed, in the file that wrote it.
 
 A name written where a type belongs and found only in the value scope is still `L0300`, with a
 message saying there is no type of that name.

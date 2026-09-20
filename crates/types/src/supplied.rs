@@ -10,8 +10,12 @@ use crate::types::Type;
 /// The modules the compiler declares, rather than leaving them for module loading.
 const SUPPLIED: [&str; 2] = ["io", "files"];
 
-/// Whether the compiler supplies `module`, rather than leaving it for module loading.
-pub(crate) fn supplies(module: &str) -> bool {
+/// Whether the compiler supplies `module`, rather than leaving it for loading to find a file.
+///
+/// Loading asks this before it looks for a file, so an import of one of these names reaches the
+/// module declared here rather than a file that is not there.
+#[must_use]
+pub fn supplies(module: &str) -> bool {
     SUPPLIED.contains(&module)
 }
 

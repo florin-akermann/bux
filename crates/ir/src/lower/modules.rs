@@ -1,9 +1,12 @@
-//! What a call of a name inside a supplied module runs, which is a call of the JVM's own.
+//! What a call of a name inside a module runs, which is a static method of that module's class.
 //!
-//! `docs/specs/io.md` states what each name means; this is how each one is reached. Nothing here
-//! is visible from Lumen: a program writes `io.println` and never learns what carries it.
+//! A module loaded from a file is a class of its own, so a call reaching into one is the same
+//! call as any other, written against the other class. A module the compiler supplies has no
+//! class to reach, and is carried by a call of the JVM's own instead: `docs/specs/io.md` states
+//! what each of those names means. Nothing of either is visible from Lumen, and a program that
+//! writes `io.println` never learns what carries it.
 
-use lumen_ast::{Expr, Name};
+use lumen_ast::{Expr, Name, Span};
 
 use crate::class::{Class, Method, Reached};
 use crate::code::{Body, FieldRef, Guard, Instruction, Label, MethodRef};
@@ -52,21 +55,49 @@ const PATH_HELD: u16 = 0;
 /// The local the text of either answer is set aside in while the answer is built around it.
 const TEXT_HELD: u16 = 1;
 
+/// A name a call reaches through a module, and where the call writes it.
+///
+/// `used` is where the name is reached, which is what the types of the call are read off.
+pub(crate) struct Through<'w> {
+    pub(crate) module: &'w Name,
+    pub(crate) name: &'w Name,
+    pub(crate) used: Span,
+}
+
 impl Builder<'_> {
     /// A call of `module.name`, which inference has already settled the meaning of.
     pub(crate) fn inside_module(
         &mut self,
-        module: &Name,
-        name: &Name,
+        reached: &Through<'_>,
         arguments: &[&Expr],
     ) -> Option<Descriptor> {
-        match (module.text.as_str(), name.text.as_str()) {
+        match (reached.module.text.as_str(), reached.name.text.as_str()) {
             ("io", written @ ("print" | "println")) => self.written_out(written, arguments),
             ("files", "read") => Some(self.read_whole(arguments)),
-            (held, reached) => {
-                unreachable!("inference refused `{held}.{reached}` before it reached this")
-            }
+            _ => self.in_another_module(reached, arguments),
         }
+    }
+
+    /// A call of a function of a module loaded from a file, which is a static method of it.
+    ///
+    /// What it takes and gives back is read off the use rather than off the other module's
+    /// tree, which this module never holds. Inference has already met the two, so the use
+    /// carries the very signature the other module wrote the method with.
+    fn in_another_module(
+        &mut self,
+        reached: &Through<'_>,
+        arguments: &[&Expr],
+    ) -> Option<Descriptor> {
+        let signature = self.lowering.reached_through(reached.used);
+        for (argument, wanted) in arguments.iter().zip(&signature.parameters) {
+            self.handed(argument, wanted.clone());
+        }
+        self.emit(Instruction::InvokeStatic(MethodRef {
+            class: ClassName::new(&reached.module.text),
+            name: reached.name.text.clone(),
+            descriptor: signature.descriptor(),
+        }));
+        signature.result
     }
 
     /// Writing to the standard output, which stands on a class rather than on an instance.

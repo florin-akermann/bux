@@ -7,8 +7,9 @@ Version 0.1 has no way to write a line and none to read a file, and `io` and `fi
 `docs/design.md` section 16 states how a module is reached; this spec states what these two hold.
 
 They are supplied modules: the compiler declares them, the way it declares the prelude.
-It does so because nothing can load a module from source yet.
-They become ordinary Lumen source once one can be, and nothing a program writes changes then.
+It does so because what they hold is a call of the JVM's own, which no Lumen source states yet.
+Loading looks for no file for either, so a file of that name beside the importing one is never
+read; `docs/specs/modules.md` states that.
 
 ## What each module declares
 
@@ -31,7 +32,7 @@ The file is read as UTF-8, and a file that is not UTF-8 is an `Err` like any oth
 ## How each is reached
 
 A module is reached only through its own name, so a file writes `import io` before `io.println`.
-An import naming neither module is not refused; `docs/specs/modules.md` holds that until one loads.
+An import naming neither module names a file, which `docs/specs/modules.md` states.
 
 A supplied module holds exactly the names above.
 `io.write` is refused where it is written, because `io` is supplied and declares no `write`.
@@ -40,10 +41,10 @@ That is all these modules add; everything else about them is the ordinary rule f
 ## The errors
 
 ```text
-L0414  a supplied module does not declare the name reached inside it
+L0414  a module does not declare the name reached inside it
 ```
 
-`L0402` is unchanged, and still answers for a module the compiler does not supply.
+A module loaded from a file is held to the same rule, which `docs/specs/modules.md` states.
 
 ## What the bytes look like
 

@@ -30,7 +30,8 @@ writes one out of what it was given: the module's imports, a `main` that tries e
 turn, and every declaration the module makes other than its own `main`. That module is compiled
 and started the way any other is, its class files go into a directory made for that run alone so
 nothing `lumen build` wrote is touched, and a refusal of it is reported against the line in the
-original file.
+original file. Every module it imports is compiled into that directory too, so an example reaching
+a name through an import runs exactly as the module does.
 
 The run says which example did not hold by writing a line, and every line it writes opens with a
 mark of its own, so a line the program writes for itself is never read as a report. Writing a line

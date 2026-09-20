@@ -7,6 +7,12 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 use std::sync::atomic::{AtomicUsize, Ordering};
 
+/// A module written beside an example, which is what an import of that name finds.
+pub struct Sibling<'w> {
+    pub named: &'w str,
+    pub content: &'w str,
+}
+
 /// A source file of `content`, in a directory no other test writes to.
 pub struct Example {
     pub directory: PathBuf,
@@ -24,6 +30,12 @@ impl Example {
         let path = directory.join("example.lm");
         std::fs::write(&path, content).expect("an example is writable");
         Self { directory, path }
+    }
+
+    /// The same, with `sibling` written into the directory the example is in.
+    pub fn beside_it(&self, sibling: &Sibling<'_>) {
+        let path = self.directory.join(sibling.named).with_extension("lm");
+        std::fs::write(path, sibling.content).expect("a module beside an example is writable");
     }
 
     /// What the file holds now.

@@ -36,21 +36,25 @@ fn an_inference_never_panics_and_is_deterministic(tc: TestCase) {
     let Ok(resolved) = resolve(program) else {
         return;
     };
-    assert_eq!(check(resolved.clone()).is_ok(), check(resolved).is_ok());
+    assert_eq!(
+        check(resolved.clone(), &lumen_types::Imported::default()).is_ok(),
+        check(resolved, &lumen_types::Imported::default()).is_ok()
+    );
 }
 
 #[hegel::test]
 fn a_module_built_of_pieces_that_each_infer_infers(tc: TestCase) {
     let source = module(&tc);
     let resolved = resolved(&source);
-    check(resolved).unwrap_or_else(|error| panic!("{source:?} infers: {}", error.message()));
+    check(resolved, &lumen_types::Imported::default())
+        .unwrap_or_else(|error| panic!("{source:?} infers: {}", error.message()));
 }
 
 #[hegel::test]
 fn a_refusal_points_inside_the_source(tc: TestCase) {
     let refused = tc.draw(gs::sampled_from(&REFUSALS));
     let source = format!("{}\n\n{refused}\n", module(&tc));
-    let error = check(resolved(&source))
+    let error = check(resolved(&source), &lumen_types::Imported::default())
         .err()
         .unwrap_or_else(|| panic!("{source:?} is refused"));
     let span = error.span();
@@ -62,7 +66,8 @@ fn a_refusal_points_inside_the_source(tc: TestCase) {
 #[hegel::test]
 fn every_expression_of_an_inferred_program_has_a_type(tc: TestCase) {
     let source = module(&tc);
-    let typed = check(resolved(&source)).expect("a well-formed module infers");
+    let typed = check(resolved(&source), &lumen_types::Imported::default())
+        .expect("a well-formed module infers");
     for expr in expressions(typed.resolved().program()) {
         assert!(
             typed.type_of(expr.span).is_some(),
@@ -75,7 +80,8 @@ fn every_expression_of_an_inferred_program_has_a_type(tc: TestCase) {
 #[hegel::test]
 fn no_expression_of_an_inferred_module_is_left_unsettled(tc: TestCase) {
     let source = module(&tc);
-    let typed = check(resolved(&source)).expect("a well-formed module infers");
+    let typed = check(resolved(&source), &lumen_types::Imported::default())
+        .expect("a well-formed module infers");
     for expr in expressions(typed.resolved().program()) {
         let inferred = typed.type_of(expr.span).expect("an expression has a type");
         assert!(
@@ -192,7 +198,7 @@ fn accepts(source: &str) -> bool {
     let Ok(resolved) = resolve(program) else {
         return false;
     };
-    check(resolved).is_ok()
+    check(resolved, &lumen_types::Imported::default()).is_ok()
 }
 
 /// A value of each type a parameter may have, with the type it has.
@@ -435,5 +441,6 @@ fn a_chain_of_records_that_never_comes_back_round_is_accepted(tc: TestCase) {
 
     let source = along(many, "Int");
 
-    assert!(check(resolve(parse(&source).expect("it parses")).expect("it resolves")).is_ok());
+    let resolved = resolve(parse(&source).expect("it parses")).expect("it resolves");
+    assert!(check(resolved, &lumen_types::Imported::default()).is_ok());
 }

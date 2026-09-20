@@ -82,6 +82,10 @@ catalogue! {
     NotAValue => "L0304",
     /// An assignment names something other than a `var` binding.
     NotAVariable => "L0305",
+    /// An import names a module no file beside the importing one holds.
+    NoSuchModule => "L0306",
+    /// A ring of imports, which leaves the modules in it no order to be compiled in.
+    RingOfImports => "L0307",
     /// A type met a type it does not match.
     TypeMismatch => "L0400",
     /// A call passes more or fewer arguments than the function takes.
@@ -110,10 +114,14 @@ catalogue! {
     FlagParameter => "L0412",
     /// A function whose result is `Bool` is named for a command rather than a question.
     NotAPredicate => "L0413",
-    /// A module the compiler supplies does not declare the name reached inside it.
-    NotInSuppliedModule => "L0414",
+    /// A module does not declare the name reached inside it.
+    NotInModule => "L0414",
     /// A declared type holds a value of itself, which no whole value could ever be.
     HoldsItself => "L0415",
+    /// A function reached through a module names a type that module declares.
+    TypeOfAnotherModule => "L0416",
+    /// A generic function is reached through a module, which writes it where it is declared.
+    GenericThroughModule => "L0417",
     /// A `match` leaves a value of the type it matches unanswered.
     NonExhaustiveMatch => "L0500",
     /// A `match` lists its arms in an order the type does not declare its variants in.

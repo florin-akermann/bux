@@ -1,0 +1,10 @@
+// A module is one file, and what it offers is every function it declares.
+// example: greeting(name: "world") == "hello, world"
+fn greeting(name: String) -> String {
+    "hello, " + name
+}
+
+// example: doubled(count: 3) == 6
+fn doubled(count: Int) -> Int {
+    count + count
+}

@@ -40,6 +40,13 @@ They are `Option` with `Some` and `None`, and `Result` with `Ok` and `Err`.
 Writing them with the module keeps a build self-contained: there is no runtime jar to install and
 no version of one to agree with.
 
+A program of several modules is several such sets, one per module the file imports, written
+beside the same source file.
+Each module is its own class in its own package, so `greeting.lm` yields `greeting.class` and
+`greeting/…` whatever `demo.lm` yields.
+A module beside the file that nothing imports is not read and not written;
+`docs/specs/modules.md` states which modules a build reaches.
+
 ## What a value is
 
 A Lumen type is carried by a JVM type:
@@ -97,6 +104,12 @@ A module declares each name once, so no two functions share a method name.
 A function is reached by `invokestatic` on the module class.
 Version 0.1 has no function values, so nothing else calls one.
 
+A function of a module the file imports is reached the same way, on that module's class.
+`greeting.hello("world")` is `invokestatic greeting.hello`, with the descriptor read off the type
+inference gave the use.
+That is the very descriptor the other module wrote the method with, because a module offers only
+functions written once and in types both modules have; `docs/specs/modules.md` states both rules.
+
 A module that declares `main` is written with one method more: `main([Ljava/lang/String;)V`, the
 shape a JVM starts at, whose whole body is a call of the `main` the module declares.
 It is the one method of a module class no function wrote, and the one name a module class carries
@@ -130,6 +143,8 @@ source wrote is written not at all: it has no descriptor, because a type paramet
 nothing.
 A module that never uses a generic function writes no method for it, as it writes no method for
 a type parameter.
+The module declaring one is therefore the only module that knows which of its methods exist,
+which is why a generic is not offered through an import.
 
 Which types a use settles is read off the type inference gave that use, and the method it reaches
 is the one written for them.

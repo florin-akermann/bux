@@ -4,11 +4,26 @@ Report the first thing about a source file that the compiler will not have.
 holds it to canonical form, parses it, resolves every name in it, gives every expression a type,
 and checks that every `match` answers for every value it may meet. Nothing is written back.
 
-Canonical form comes first: a file that differs is reported with the line and column it is
-about, that line under a row of carets, and a `help:` line naming the text canonical form writes
-there. `lumen fmt` is the command that fixes it. An import written after a declaration, or two
-imports out of sort, is reported here too, and `lumen fmt` does not fix that one: where an import
-belongs is said, never rewritten.
+Loading comes first. `import greeting` names `greeting.lm`, beside the file that writes it, and
+every module the file reaches is read before any of them is checked. There is no search path:
+a module is the file of that name beside the importing one, or nothing, and an import that names
+no such file is refused. `io` and `files` are supplied by the compiler, so an import of either
+looks for no file at all. Two modules that import each other are refused as well, because each
+would have to be compiled first.
+
+Every module reached is then held to everything below, and a refusal names the file it is in
+rather than the file the command named. A module is checked after everything it imports, so a
+name reached through an import has the type the other module gave it. What a module offers is
+every function it declares; a type it declares stays its own, and a generic function is written
+where it is declared, so reaching either through an import is refused. A function is generic by
+the type inference settled on it, so one that writes no type parameter and settles none is
+generic too.
+
+Canonical form is the first thing each module is held to: a file that differs is reported with
+the line and column it is about, that line under a row of carets, and a `help:` line naming the
+text canonical form writes there. `lumen fmt` is the command that fixes it. An import written
+after a declaration, or two imports out of sort, is reported here too, and `lumen fmt` does not
+fix that one: where an import belongs is said, never rewritten.
 
 How a name is spelled is part of canonical form too, and is reported here for the same reason: a
 name written in neither snake_case nor PascalCase, and a declared name of one character, are each

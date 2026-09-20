@@ -11,6 +11,7 @@ mod holds;
 mod infer;
 mod scheme;
 mod supplied;
+mod surface;
 mod table;
 mod types;
 mod unify;
@@ -21,18 +22,24 @@ use lumen_ast::Span;
 use lumen_resolver::ResolvedProgram;
 
 pub use crate::error::TypeError;
+pub use crate::supplied::supplies;
+pub use crate::surface::{Imported, Surface};
 pub use crate::types::{Type, TypeParameter, TypeVar};
 
-/// Gives every expression of `resolved` the type it has.
+/// Gives every expression of `resolved` the type it has, reaching `imported` through an import.
 ///
 /// # Errors
 ///
 /// Returns the first declaration that holds a value of itself, or, where none does, the first
 /// expression whose type inference cannot give it.
-pub fn check(resolved: ResolvedProgram) -> Result<TypedProgram, TypeError> {
+pub fn check(resolved: ResolvedProgram, imported: &Imported) -> Result<TypedProgram, TypeError> {
     holds::nothing_holds_itself(&resolved)?;
-    let types = infer::infer(&resolved)?;
-    Ok(TypedProgram { resolved, types })
+    let (types, surface) = infer::infer(&resolved, imported)?;
+    Ok(TypedProgram {
+        resolved,
+        types,
+        surface,
+    })
 }
 
 /// A program whose every expression, and every name that declares one, has the type it has.
@@ -40,6 +47,7 @@ pub fn check(resolved: ResolvedProgram) -> Result<TypedProgram, TypeError> {
 pub struct TypedProgram {
     resolved: ResolvedProgram,
     types: HashMap<Span, Type>,
+    surface: Surface,
 }
 
 impl TypedProgram {
@@ -47,6 +55,12 @@ impl TypedProgram {
     #[must_use]
     pub const fn resolved(&self) -> &ResolvedProgram {
         &self.resolved
+    }
+
+    /// What this module offers the modules that import it.
+    #[must_use]
+    pub const fn surface(&self) -> &Surface {
+        &self.surface
     }
 
     /// The type of what is written at `at`.

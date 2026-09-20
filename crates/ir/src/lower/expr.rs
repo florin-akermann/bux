@@ -8,6 +8,7 @@ use crate::code::{Arithmetic, Comparison, FieldRef, Instruction, MethodRef};
 use crate::descriptor::Descriptor;
 use crate::lower::body::{Builder, Held, LIST};
 use crate::lower::equality::compared;
+use crate::lower::modules::Through;
 use crate::lower::shape::{CONSTRUCTOR, Carried, ERR, NONE, OK, SOME, Shape, TAG};
 use crate::lower::shape::{object, object_class};
 
@@ -248,8 +249,8 @@ impl Builder<'_> {
     }
 
     fn call(&mut self, callee: &Expr, arguments: &[&Expr], at: Span) -> Option<Descriptor> {
-        if let Some((module, reached)) = self.reached_inside(callee) {
-            return self.inside_module(module, reached, arguments);
+        if let Some(reached) = self.reached_inside(callee) {
+            return self.inside_module(&reached, arguments);
         }
         let ExprKind::Name(name) = &callee.kind else {
             unreachable!("version 0.1 calls a name, which is a function or a constructor")
@@ -261,15 +262,19 @@ impl Builder<'_> {
     }
 
     /// The module a callee reaches inside, and the name it reaches, where it reaches one.
-    fn reached_inside<'w>(&self, callee: &'w Expr) -> Option<(&'w Name, &'w Name)> {
+    fn reached_inside<'w>(&self, callee: &'w Expr) -> Option<Through<'w>> {
         let ExprKind::Field { receiver, name } = &callee.kind else {
             return None;
         };
         let ExprKind::Name(module) = &receiver.kind else {
             return None;
         };
-        let reached = self.definition(module).kind == DefinitionKind::Module;
-        reached.then_some((module, name))
+        let inside = self.definition(module).kind == DefinitionKind::Module;
+        inside.then_some(Through {
+            module,
+            name,
+            used: callee.span,
+        })
     }
 
     /// A call of a function of the module, which is a static method of the module class.

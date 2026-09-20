@@ -11,6 +11,7 @@ use lumen_ast::{Name, Span};
 use crate::error::{TypeError, TypeErrorKind};
 use crate::infer::{Inference, labelled};
 use crate::supplied;
+use crate::surface::Offered;
 use crate::types::Type;
 
 impl Inference<'_> {
@@ -98,19 +99,52 @@ impl Inference<'_> {
         self.expect(&lookup.found, &parameters[index].clone(), field.span)
     }
 
-    /// A name reached inside a module, which only a module the compiler supplies has any of.
+    /// A name reached inside a module, which the compiler supplies or loading read from a file.
     fn inside(&mut self, module: &str, field: &Name, found: &Type) -> Result<(), TypeError> {
-        if !supplied::supplies(module) {
-            return Err(unreachable_field(&Type::Module(module.to_owned()), field));
-        }
-        let Some(declared) = supplied::declared(module, &field.text) else {
-            let kind = TypeErrorKind::NotInSuppliedModule {
+        let declared = if supplied::supplies(module) {
+            supplied::declared(module, &field.text)
+        } else {
+            self.reached(module, field)?
+        };
+        let Some(declared) = declared else {
+            let kind = TypeErrorKind::NotInModule {
                 module: module.to_owned(),
                 name: field.text.clone(),
             };
             return Err(TypeError::at(field.span, kind));
         };
         self.expect(found, &declared, field.span)
+    }
+
+    /// The type a loaded module gives `field`, freshly at this use, when it offers one at all.
+    ///
+    /// A signature naming a type that module declares offers nothing this one can write, which
+    /// `docs/specs/modules.md` states and refuses here rather than where it is declared.
+    fn reached(&mut self, module: &str, field: &Name) -> Result<Option<Type>, TypeError> {
+        let imported = self.imported;
+        let Some(surface) = imported.surface(module) else {
+            return Ok(None);
+        };
+        let scheme = match surface.function(&field.text) {
+            None => return Ok(None),
+            Some(Offered::Generic) => {
+                let kind = TypeErrorKind::GenericThroughModule {
+                    module: module.to_owned(),
+                    name: field.text.clone(),
+                };
+                return Err(TypeError::at(field.span, kind));
+            }
+            Some(Offered::Plain(scheme)) => scheme,
+        };
+        if let Some(kept) = surface.kept_to_itself(scheme) {
+            let kind = TypeErrorKind::TypeOfAnotherModule {
+                module: module.to_owned(),
+                name: field.text.clone(),
+                declared: kept.to_owned(),
+            };
+            return Err(TypeError::at(field.span, kind));
+        }
+        Ok(Some(scheme.clone().instantiate(&mut self.table)))
     }
 }
 
@@ -141,13 +175,11 @@ pub(crate) struct Lookup {
 }
 
 /// A field reached through something that has no fields, or through a type nothing settled.
+///
+/// A module is never one of them: every module in scope is supplied or loaded, so a name
+/// reached inside one is answered by what it declares.
 fn unreachable_field(through: &Type, field: &Name) -> TypeError {
-    let kind = if let Type::Module(module) = through {
-        TypeErrorKind::InModule {
-            module: module.clone(),
-            name: field.text.clone(),
-        }
-    } else if matches!(through, Type::Var(_)) {
+    let kind = if matches!(through, Type::Var(_)) {
         TypeErrorKind::UnknownReceiver(field.text.clone())
     } else {
         TypeErrorKind::UnknownField {

@@ -8,6 +8,7 @@ mod common;
 mod example_program;
 mod examples;
 mod formatting;
+mod importing;
 mod running;
 mod surface;
 mod testing;

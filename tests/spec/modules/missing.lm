@@ -1,0 +1,7 @@
+// expect-error: L0306
+// An import names a file beside the one that writes it, and nothing else is looked in.
+import nowhere
+
+fn main() -> () {
+    nowhere.held()
+}

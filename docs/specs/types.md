@@ -165,12 +165,17 @@ the value it was given.
 | flag parameter    | `L0412` | this parameter is a `Bool`, so a call of `open` passes `true` and says no more |
 | not a predicate   | `L0413` | `active` gives back a `Bool`, so its name asks the question it answers |
 | holds itself      | `L0415` | `Node` holds `Node`                              |
+| type kept to itself | `L0416` | `greeting.wrapped` names `Held`, which `greeting` keeps to itself |
+| generic through a module | `L0417` | `holding.held` is generic, so `holding` alone writes it |
 
 `L0400` also says `` `Bool` cannot be added `` when `+` is given something that is neither `Int`
 nor `String`.
 `L0402` also says the type reached through `.` is not known, when inference never settled it.
-It also says that a module is what was reached through, because nothing may reach inside one yet.
 A variant that carries its values in order has no field to write against, so that is `L0402` too.
+A name reached inside a module is never `L0402`: every module in scope is supplied or loaded, so
+what it declares is what answers, and a name it does not declare is `L0414`.
+`L0416` and `L0417` are what a module offers rather than what it declares, and
+`docs/specs/modules.md` states both.
 `L0401` counts the arguments of a written type as well as those of a call.
 `L0407` is raised where a division is written with a `0` the compiler can already see.
 `L0409`, `L0410`, and `L0411` are about how a call passes its arguments, which

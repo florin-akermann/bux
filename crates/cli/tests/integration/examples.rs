@@ -9,7 +9,7 @@ use std::path::{Path, PathBuf};
 use lumen_diagnostics::Code;
 use lumen_format::format;
 
-use crate::common::{Example, jdk, lumen};
+use crate::common::{Example, Sibling, jdk, lumen};
 
 #[test]
 fn every_example_is_accepted_refused_or_run_exactly_as_it_says() {
@@ -100,6 +100,9 @@ fn hold_to_its_expectation(path: &Path) {
 }
 
 /// An example that is run is copied out of the tree first, so a run writes nothing into it.
+///
+/// Every module beside it is copied too, under its own name, because an import names the file
+/// beside the one that writes it and an example may be written across several.
 fn started(opened: &Opened, written: &str) {
     let shown = opened.path.display();
     if jdk().is_none() {
@@ -107,6 +110,12 @@ fn started(opened: &Opened, written: &str) {
         return;
     }
     let copy = Example::new(opened.source);
+    for (named, source) in beside(opened.path) {
+        copy.beside_it(&Sibling {
+            named: &named,
+            content: &source,
+        });
+    }
     let run = lumen(&["run", copy.path.to_str().expect("a UTF-8 path")]);
     assert_eq!(
         run.code, 0,
@@ -118,6 +127,29 @@ fn started(opened: &Opened, written: &str) {
         "{shown} writes {:?} where its header states {written:?}",
         run.stdout
     );
+}
+
+/// Every other module in the example's own directory, each under the name its file gives it.
+fn beside(path: &Path) -> Vec<(String, String)> {
+    let directory = path.parent().expect("an example sits in a directory");
+    let mut found = Vec::new();
+    for entry in std::fs::read_dir(directory).expect("an example's directory is readable") {
+        let beside = entry.expect("a directory entry is readable").path();
+        if beside == path || beside.extension().is_none_or(|kind| kind != "lm") {
+            continue;
+        }
+        let named = beside
+            .file_stem()
+            .expect("a module is named by its file")
+            .to_string_lossy()
+            .into_owned();
+        found.push((
+            named,
+            read_to_string(&beside).expect("a module is readable"),
+        ));
+    }
+    found.sort();
+    found
 }
 
 /// What an example says about itself.

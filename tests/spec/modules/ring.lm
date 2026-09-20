@@ -1,0 +1,7 @@
+// expect-error: L0307
+// Two modules that import each other have no order to be compiled in.
+import knot
+
+fn started() -> Int {
+    knot.held()
+}

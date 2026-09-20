@@ -19,7 +19,7 @@ pub enum Type {
         parameters: Vec<Type>,
         result: Box<Type>,
     },
-    /// An imported module, which version 0.1 has no way to reach a name inside.
+    /// An imported module, which a name is reached inside of rather than held as a value.
     Module(String),
     /// `()`, the type of a function that returns nothing interesting.
     Unit,

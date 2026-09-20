@@ -20,20 +20,26 @@ use crate::environment::{Environment, Key};
 use crate::error::{Count, TypeError, TypeErrorKind};
 use crate::infer::settle::Lookup;
 use crate::scheme::{Quantified, Scheme};
+use crate::surface::{Imported, Surface};
 use crate::table::Table;
 use crate::types::{Type, TypeVar};
 use crate::unify::{Clash, unify};
 
-/// The type of every expression of `resolved`, or the first thing that has no type.
+/// The type of every expression of `resolved`, and what the module offers, or the first thing
+/// that has no type.
 ///
 /// # Errors
 ///
 /// Returns the first expression whose type inference cannot give it.
-pub(crate) fn infer(resolved: &ResolvedProgram) -> Result<HashMap<Span, Type>, TypeError> {
+pub(crate) fn infer(
+    resolved: &ResolvedProgram,
+    imported: &Imported,
+) -> Result<(HashMap<Span, Type>, Surface), TypeError> {
     let mut table = Table::default();
     let environment = Environment::of(resolved, &mut table)?;
     let mut inference = Inference {
         resolved,
+        imported,
         environment,
         table,
         types: HashMap::new(),
@@ -45,12 +51,15 @@ pub(crate) fn infer(resolved: &ResolvedProgram) -> Result<HashMap<Span, Type>, T
         lookups: Vec::new(),
     };
     inference.module()?;
-    Ok(inference.solved())
+    let offered = inference.offered();
+    Ok((inference.solved(), Surface::of(resolved, offered)))
 }
 
 /// Everything one run of inference is holding while it walks.
 struct Inference<'a> {
     resolved: &'a ResolvedProgram,
+    /// What the modules this one imports offer it, which is how a name inside one has a type.
+    imported: &'a Imported,
     environment: Environment,
     table: Table,
     types: HashMap<Span, Type>,
@@ -83,6 +92,28 @@ impl Inference<'_> {
             }
         }
         Ok(())
+    }
+
+    /// The type of every function this module declares, which is what it offers.
+    ///
+    /// Inference walks bottom up and generalises each function as it leaves it, so by here
+    /// every one of them carries the type a module importing it would read.
+    fn offered(&self) -> HashMap<String, Scheme> {
+        self.resolved
+            .program()
+            .items
+            .iter()
+            .filter_map(|item| match item {
+                Item::Function(function) => {
+                    let scheme = self
+                        .environment
+                        .scheme(&Key::at(&function.name))
+                        .expect("every function a module declares is bound before its body");
+                    Some((function.name.text.clone(), scheme.clone()))
+                }
+                Item::Import(_) | Item::Type(_) => None,
+            })
+            .collect()
     }
 
     fn function(&mut self, function: &Function) -> Result<(), TypeError> {

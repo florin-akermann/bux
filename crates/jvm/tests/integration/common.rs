@@ -15,7 +15,8 @@ use crate::reader::{self, ClassFile};
 pub fn compiled(source: &str) -> Vec<Written> {
     let program = lumen_parser::parse(source).expect("the example parses");
     let resolved = lumen_resolver::resolve(program).expect("every name of the example resolves");
-    let typed = lumen_types::check(resolved).expect("every expression of the example has a type");
+    let typed = lumen_types::check(resolved, &lumen_types::Imported::default())
+        .expect("every expression of the example has a type");
     let whole = lumen_holes::Whole::of_module(&typed).expect("the module holds no hole");
     lumen_jvm::write(&lumen_ir::lower(&whole, "demo"))
 }

@@ -26,5 +26,6 @@ pub fn typed(source: &str) -> TypedProgram {
     let program = parse(source).unwrap_or_else(|error| panic!("{source:?} parses: {error:?}"));
     let resolved =
         resolve(program).unwrap_or_else(|error| panic!("{source:?} resolves: {error:?}"));
-    lumen_types::check(resolved).unwrap_or_else(|error| panic!("{source:?} is typed: {error:?}"))
+    lumen_types::check(resolved, &lumen_types::Imported::default())
+        .unwrap_or_else(|error| panic!("{source:?} is typed: {error:?}"))
 }

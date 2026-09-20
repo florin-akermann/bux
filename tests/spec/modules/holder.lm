@@ -1,0 +1,18 @@
+// A module builds what it likes, and offers what the modules importing it can name.
+// example: wrapped(name: "world") == Held("world")
+fn wrapped(name: String) -> Held {
+    Held(name)
+}
+
+// example: held(value: 1) == 1
+fn held<T>(value: T) -> T {
+    value
+}
+
+// A function nothing settled is generic too, however few angle brackets it writes.
+// example: passed(value: 1) == 1
+fn passed(value) {
+    value
+}
+
+type Held = Held(String)

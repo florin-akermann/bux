@@ -1,0 +1,7 @@
+// expect-error: L0417
+// A generic is written once per set of types it is used at, where it is declared.
+import holder
+
+fn taken() -> Int {
+    holder.held(1)
+}

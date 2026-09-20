@@ -54,7 +54,8 @@ A span that ends on a later line carets the rest of its first line and says wher
 ## The codes
 
 A code is `L` and four digits, grouped by the phase that raises it.
-The grammar writes `L01xx`, canonical form `L02xx`, name resolution `L03xx`, and inference `L04xx`.
+The grammar writes `L01xx`, canonical form `L02xx`, loading and name resolution `L03xx`, and
+inference `L04xx`.
 Exhaustiveness writes `L05xx`, and what a build asks of a module it compiles writes `L06xx`.
 
 Every number and every long form lives in `crates/diagnostics/src/code.rs`, which declares them
@@ -100,6 +101,11 @@ Name resolution raises these, in `crates/resolver/src/error.rs`:
 - `L0304` — a name that is not a value, such as a function or a module, is written as one.
 - `L0305` — an assignment names something other than a `var` binding.
 
+Loading raises these, in `crates/modules/src/error.rs`, before any module is resolved:
+
+- `L0306` — an import names a module no file beside the importing one holds.
+- `L0307` — a ring of imports, which leaves the modules in it no order to be compiled in.
+
 Type inference raises these, in `crates/types/src/error.rs`:
 
 - `L0400` — a type met a type it does not match.
@@ -116,8 +122,10 @@ Type inference raises these, in `crates/types/src/error.rs`:
 - `L0411` — a call names the arguments of something that has no parameter names.
 - `L0412` — a parameter is a bare `Bool` outside a function that is about `Bool`.
 - `L0413` — a function whose result is `Bool` is named for a command rather than a question.
-- `L0414` — a module the compiler supplies does not declare the name reached inside it.
+- `L0414` — a module does not declare the name reached inside it.
 - `L0415` — a declared type holds a value of itself, around a ring that comes back to it.
+- `L0416` — a function reached through a module names a type that module declares.
+- `L0417` — a generic function is reached through a module, which writes it where it is declared.
 
 Exhaustiveness raises these, in `crates/exhaustiveness/src/error.rs`:
 

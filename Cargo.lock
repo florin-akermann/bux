@@ -421,6 +421,7 @@ dependencies = [
  "lumen-holes",
  "lumen-ir",
  "lumen-jvm",
+ "lumen-modules",
  "lumen-parser",
  "lumen-resolver",
  "lumen-types",
@@ -528,6 +529,17 @@ name = "lumen-lexer"
 version = "0.1.0"
 dependencies = [
  "hegeltest",
+]
+
+[[package]]
+name = "lumen-modules"
+version = "0.1.0"
+dependencies = [
+ "hegeltest",
+ "lumen-ast",
+ "lumen-diagnostics",
+ "lumen-parser",
+ "lumen-types",
 ]
 
 [[package]]

@@ -13,6 +13,10 @@ brings a name in rather than putting one out. Neither is a comment, nor anything
 The page lists declarations in the order the file declares them. A file reads top down, and the
 page reads the same way, so a reader who knows the file knows where to look.
 
+The page is the named file's alone. A module the file imports is compiled, because the names
+reached through it have to have types, but nothing it declares is on the page: `lumen api` run
+against that module is what prints its surface.
+
 Every type printed is the type inference settled on, not the text the author wrote. `fn twice(n)`
 is printed `fn twice(n: Int) -> Int` when that is what it is, so a page says the same thing
 whether or not a signature was written. A type nothing in the module settled prints as `_`, which

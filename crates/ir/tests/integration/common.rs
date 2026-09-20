@@ -10,7 +10,8 @@ use lumen_ir::{Body, Class, ClassName, Instruction, Lowered, Method, MethodRef, 
 pub fn lowered(source: &str) -> Lowered {
     let program = lumen_parser::parse(source).expect("the example parses");
     let resolved = lumen_resolver::resolve(program).expect("every name of the example resolves");
-    let typed = lumen_types::check(resolved).expect("every expression of the example has a type");
+    let typed = lumen_types::check(resolved, &lumen_types::Imported::default())
+        .expect("every expression of the example has a type");
     let whole = Whole::of_module(&typed).expect("the example holds no hole");
     lower(&whole, "demo")
 }

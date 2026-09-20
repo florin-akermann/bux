@@ -9,6 +9,11 @@ method per function the module declares. Each type the module declares becomes a
 own in a package named after the module, so `type User` becomes `demo/User.class`. A variant of
 an algebraic data type becomes a class beside its type, named after both.
 
+A program of several modules is several classes. Every module the file imports is compiled and
+written too, so `import greeting` puts `greeting.class` beside `demo.class`, and a call of
+`greeting.hello` is a call of a static method of that class. A module beside the file that
+nothing imports is not read and not written.
+
 The types the prelude supplies are written on every build, in the package `lumen`. There is no
 runtime to install and no version of one to agree with: a build is self-contained.
 

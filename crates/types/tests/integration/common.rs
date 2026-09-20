@@ -7,31 +7,64 @@ use lumen_ast::{Block, Expr, ExprKind, ForHeader, IfExpr, Item, Program, Span};
 use lumen_ast::{Statement, StatementKind};
 use lumen_parser::parse;
 use lumen_resolver::{ResolvedProgram, resolve};
-use lumen_types::{TypeError, TypedProgram, check};
+use lumen_types::{Imported, TypeError, TypedProgram, check};
 
-/// The failure `source` is refused with.
+/// The failure `source` is refused with, importing nothing.
 pub fn refusal(source: &str) -> TypeError {
-    check(resolved(source))
+    refusal_reaching(source, &Imported::default())
+}
+
+/// The failure `source` is refused with, reaching what `imported` offers.
+pub fn refusal_reaching(source: &str, imported: &Imported) -> TypeError {
+    check(resolved(source), imported)
         .err()
         .unwrap_or_else(|| panic!("{source:?} is refused"))
 }
 
+/// A module the source under test imports, which inference reads the surface of.
+pub struct Offered<'w> {
+    pub module: &'w str,
+    pub source: &'w str,
+}
+
+/// What `offered` puts out, under the name the source under test imports it by.
+pub fn offering(offered: &Offered<'_>) -> Imported {
+    let surface = inferred(offered.source).surface().clone();
+    Imported::default().offering(offered.module, surface)
+}
+
 /// The type of the occurrence of `written` numbered `occurrence`, counting from one.
 pub fn inferred_type(source: &str, written: &str, occurrence: usize) -> String {
+    inferred_type_reaching(source, written, occurrence, &Imported::default())
+}
+
+/// The same, of a module reaching what `imported` offers.
+pub fn inferred_type_reaching(
+    source: &str,
+    written: &str,
+    occurrence: usize,
+    imported: &Imported,
+) -> String {
     let at = source
         .match_indices(written)
         .nth(occurrence - 1)
         .unwrap_or_else(|| panic!("{source:?} writes {written:?} {occurrence} times"))
         .0;
-    inferred(source)
+    inferred_reaching(source, imported)
         .type_of(Span::new(at, written.len()))
         .unwrap_or_else(|| panic!("{written:?} number {occurrence} is an expression"))
         .to_string()
 }
 
-/// The inferred program of `source`, which must infer.
+/// The inferred program of `source`, which must infer, importing nothing.
 pub fn inferred(source: &str) -> TypedProgram {
-    check(resolved(source)).unwrap_or_else(|error| panic!("{source:?} infers: {}", error.message()))
+    inferred_reaching(source, &Imported::default())
+}
+
+/// The inferred program of `source`, which must infer, reaching what `imported` offers.
+pub fn inferred_reaching(source: &str, imported: &Imported) -> TypedProgram {
+    check(resolved(source), imported)
+        .unwrap_or_else(|error| panic!("{source:?} infers: {}", error.message()))
 }
 
 /// Every expression `program` writes, each one exactly once.

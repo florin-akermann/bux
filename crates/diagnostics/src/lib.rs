@@ -44,6 +44,18 @@ impl Diagnostic {
         }
     }
 
+    /// Which kind of refusal this is, which is the stable handle a spec or a test cites.
+    #[must_use]
+    pub const fn code(&self) -> Code {
+        self.code
+    }
+
+    /// The `error:` line, without its prefix.
+    #[must_use]
+    pub fn message(&self) -> &str {
+        &self.message
+    }
+
     /// Where this points, which is the source the message is about.
     #[must_use]
     pub const fn span(&self) -> Span {

@@ -1,4 +1,7 @@
 //! The modules the compiler declares, as `docs/specs/io.md` states them.
+//!
+//! Inference is given the surface of every module loading read, and these are inferred with
+//! none, so the only modules reached here are the two the compiler supplies.
 
 use crate::common::{inferred, refusal};
 
@@ -53,7 +56,7 @@ fn a_name_a_supplied_module_does_not_declare_is_refused_where_it_is_written() {
     assert_eq!(error.message(), "`io` declares no `write`");
     assert_eq!(
         error.help(),
-        "`docs/specs/io.md` lists every name a supplied module declares"
+        "a module declares the functions it offers, and nothing else is a name it has"
     );
 }
 
@@ -70,9 +73,9 @@ fn a_supplied_module_declares_its_own_names_and_none_of_another_module_s() {
 }
 
 #[test]
-fn a_module_the_compiler_does_not_supply_still_waits_on_module_loading() {
+fn a_module_whose_surface_inference_was_not_given_declares_nothing() {
     assert_eq!(
         refusal(&calling("other", "other.write")).message(),
-        "`other` is a module, and `write` cannot be reached inside one yet"
+        "`other` declares no `write`"
     );
 }

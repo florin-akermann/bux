@@ -181,6 +181,7 @@ crates/
     parser/
     ast/
     format/
+    modules/
     resolver/
     types/
     exhaustiveness/

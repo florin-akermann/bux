@@ -1,0 +1,7 @@
+// expect-error: L0417
+// A function whose type nothing settled is generic, and is written where it is declared.
+import holder
+
+fn taken() -> Int {
+    holder.passed(1)
+}

@@ -1,0 +1,8 @@
+// expect-error: L0416
+// A type is written as a bare name, so a type another module declares cannot be named here.
+import holder
+
+fn taken() -> Int {
+    _ = holder.wrapped("world")
+    1
+}

@@ -11,7 +11,7 @@ use lumen_resolver::resolve;
 pub fn page(source: &str) -> String {
     let resolved =
         resolve(tree(source)).unwrap_or_else(|error| panic!("{source:?} resolves: {error:?}"));
-    let typed = lumen_types::check(resolved)
+    let typed = lumen_types::check(resolved, &lumen_types::Imported::default())
         .unwrap_or_else(|error| panic!("{source:?} is typed: {error:?}"));
     lumen_api::surface(&typed)
 }

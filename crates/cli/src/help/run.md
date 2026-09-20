@@ -2,7 +2,8 @@ Compile a source file and run the program it holds.
 
 `lumen run` does what `lumen build` does and then hands the result to a JVM. The class files are
 written beside the source exactly as a build writes them, so a run leaves the same files behind
-and nothing more.
+and nothing more. That includes the class of every module the program imports, because the
+program reaches them while it runs.
 
 A program starts at `main`, which takes nothing and gives back nothing:
 
@@ -18,7 +19,7 @@ module class with `java --enable-preview` directly does exactly what `lumen run`
 there because every class Lumen writes is a value class, which JDK 28 holds in preview.
 
 A program reaches the console with `io` and the file system with `files`, two modules the compiler
-supplies until a module can be loaded from source:
+supplies rather than reading from a file:
 
 ```text
 import files

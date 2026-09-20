@@ -24,7 +24,7 @@ fn checking_never_panics_and_is_deterministic(tc: TestCase) {
     let Ok(resolved) = resolve(program) else {
         return;
     };
-    let Ok(inferred) = lumen_types::check(resolved) else {
+    let Ok(inferred) = lumen_types::check(resolved, &lumen_types::Imported::default()) else {
         return;
     };
     assert_eq!(check(&inferred).is_ok(), check(&inferred).is_ok());

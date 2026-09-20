@@ -71,10 +71,6 @@ pub(crate) enum TypeErrorKind {
         field: String,
     },
     UnknownReceiver(String),
-    InModule {
-        module: String,
-        name: String,
-    },
     Infinite,
     MissingField {
         of: String,
@@ -105,8 +101,20 @@ pub(crate) enum TypeErrorKind {
     /// A parameter is a bare `Bool`, so a call of it passes `true` and says no more.
     FlagParameter(String),
     NotAPredicate(String),
-    /// A name reached inside a module the compiler supplies, which does not declare it.
-    NotInSuppliedModule {
+    /// A name reached inside a module, which the module does not declare.
+    NotInModule {
+        module: String,
+        name: String,
+    },
+    /// A function reached through a module whose signature names a type that module declares.
+    TypeOfAnotherModule {
+        module: String,
+        name: String,
+        /// The type the module keeps to itself, which is the one this one cannot write.
+        declared: String,
+    },
+    /// A generic function reached through a module, which is written where it is declared.
+    GenericThroughModule {
         module: String,
         name: String,
     },
@@ -125,9 +133,7 @@ impl TypeErrorKind {
             Self::WrongArgumentCount(_) | Self::WrongTypeArgumentCount(_) => {
                 Code::WrongArgumentCount
             }
-            Self::UnknownField { .. } | Self::UnknownReceiver(_) | Self::InModule { .. } => {
-                Code::UnknownField
-            }
+            Self::UnknownField { .. } | Self::UnknownReceiver(_) => Code::UnknownField,
             Self::Infinite => Code::InfiniteType,
             Self::MissingField { .. } => Code::MissingField,
             Self::FieldWrittenTwice { .. } => Code::FieldWrittenTwice,
@@ -139,7 +145,9 @@ impl TypeErrorKind {
             Self::NamedConstructor(_) | Self::NamedPrelude(_) => Code::Unnameable,
             Self::FlagParameter(_) => Code::FlagParameter,
             Self::NotAPredicate(_) => Code::NotAPredicate,
-            Self::NotInSuppliedModule { .. } => Code::NotInSuppliedModule,
+            Self::NotInModule { .. } => Code::NotInModule,
+            Self::TypeOfAnotherModule { .. } => Code::TypeOfAnotherModule,
+            Self::GenericThroughModule { .. } => Code::GenericThroughModule,
             Self::HoldsItself { .. } => Code::HoldsItself,
         }
     }
@@ -157,9 +165,6 @@ impl TypeErrorKind {
             Self::UnknownField { .. } => "a field is looked up in the record its type declares",
             Self::UnknownReceiver(_) => {
                 "declare the type of a parameter or a result so the field can be found"
-            }
-            Self::InModule { .. } => {
-                "a module's names arrive with module loading, which version 0.1 has not"
             }
             Self::Infinite => "one of these two is being used where the other was meant",
             Self::MissingField { .. } => {
@@ -187,8 +192,14 @@ impl TypeErrorKind {
                 "declare a two-variant type and take that instead, so the call says which of the two"
             }
             Self::NotAPredicate(_) => "begin the name with `is_`, `has_`, `can_`, or `should_`",
-            Self::NotInSuppliedModule { .. } => {
-                "`docs/specs/io.md` lists every name a supplied module declares"
+            Self::NotInModule { .. } => {
+                "a module declares the functions it offers, and nothing else is a name it has"
+            }
+            Self::TypeOfAnotherModule { .. } => {
+                "a signature written in types both modules have is what one module offers another"
+            }
+            Self::GenericThroughModule { .. } => {
+                "write it in the module that reaches it, or give it a signature at one set of types"
             }
             Self::HoldsItself { .. } => {
                 "hold an `Option` of it, which is how a type holds another of its own kind"
@@ -213,14 +224,24 @@ impl fmt::Display for TypeErrorKind {
                     "the type here is not known, so `{field}` cannot be found"
                 )
             }
-            Self::InModule { module, name } => {
+            Self::NotInModule { module, name } => {
+                write!(f, "`{module}` declares no `{name}`")
+            }
+            Self::TypeOfAnotherModule {
+                module,
+                name,
+                declared,
+            } => {
                 write!(
                     f,
-                    "`{module}` is a module, and `{name}` cannot be reached inside one yet"
+                    "`{module}.{name}` names `{declared}`, which `{module}` keeps to itself"
                 )
             }
-            Self::NotInSuppliedModule { module, name } => {
-                write!(f, "`{module}` declares no `{name}`")
+            Self::GenericThroughModule { module, name } => {
+                write!(
+                    f,
+                    "`{module}.{name}` is generic, so `{module}` alone writes it"
+                )
             }
             Self::HoldsItself { ring } => {
                 let (first, rest) = ring.split_first().expect("a ring runs through one type");

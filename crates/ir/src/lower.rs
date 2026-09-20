@@ -178,6 +178,14 @@ impl Lowering<'_> {
         (!owed.is_empty()).then(|| owed.remove(0))
     }
 
+    /// What a function reached through another module takes and gives back, read off its use.
+    ///
+    /// The module declaring it has written it once, under the name it is declared with, because
+    /// `docs/specs/modules.md` offers no generic through an import.
+    pub(crate) fn reached_through(&self, used: Span) -> Signature {
+        self.signature(used, &Instantiation::whole())
+    }
+
     /// What the function declared at `declared` takes and gives back, at the types `at` settled.
     fn signature(&self, declared: Span, at: &Instantiation) -> Signature {
         let Type::Function { parameters, result } = self.used_as(declared) else {

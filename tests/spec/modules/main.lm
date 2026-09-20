@@ -1,0 +1,25 @@
+// expect-run
+// > hello, world
+// > 6
+// A program reaches a module of its own the way it reaches one the compiler supplies.
+import greeting
+
+import io
+
+fn main() -> () {
+    io.println(greeting.greeting("world"))
+    io.println(counted())
+}
+
+// example: counted() == "6"
+fn counted() -> String {
+    said(greeting.doubled(3))
+}
+
+// example: said(total: 6) == "6"
+fn said(total: Int) -> String {
+    if total == 6 {
+        return "6"
+    }
+    "something else"
+}

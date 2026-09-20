@@ -1,0 +1,7 @@
+// expect-error: L0307
+// The other half of the ring, refused whichever of the two the command names.
+import ring
+
+fn held() -> Int {
+    ring.started()
+}

@@ -12,15 +12,16 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use clap::{Parser, Subcommand};
 use lumen_diagnostics::{Code, Diagnostic, json, render};
-use lumen_examples::{Example, Refusal, Run, stated_by};
-use lumen_exhaustiveness::check as exhaustive;
+use lumen_examples::{Example, Refusal as ExampleRefusal, Run, stated_by};
 use lumen_format::format;
 use lumen_holes::{Hole, Whole};
 use lumen_ir::{Lowered, is_a_program, lower};
 use lumen_jvm::ClassFile;
-use lumen_parser::parse;
-use lumen_resolver::resolve;
-use lumen_types::{TypedProgram, check as check_types};
+use lumen_types::TypedProgram;
+
+use crate::compiling::{Checked, Module, NotCompiled, Refusal, checked, typed};
+
+mod compiling;
 
 /// The Lumen compiler.
 #[derive(Parser)]
@@ -94,33 +95,34 @@ fn fmt(path: &Path) -> Outcome {
 /// `as_data` asks for the refusal as JSON rather than as a page to read, which
 /// `docs/specs/diagnostics.md` states field for field.
 fn check(path: &Path, as_data: bool) -> Outcome {
-    let Some(source) = source_of(path) else {
-        return Outcome::Unusable;
-    };
-    match accepted(&source) {
+    match checked(path) {
         Ok(_) => Outcome::Done,
-        Err(diagnostic) if as_data => written_as_data(&diagnostic, path),
-        Err(diagnostic) => refuse(&diagnostic, &source, path),
+        Err(NotCompiled::Unusable) => Outcome::Unusable,
+        Err(NotCompiled::Refused(refusal)) if as_data => written_as_data(&refusal),
+        Err(NotCompiled::Refused(refusal)) => shown(&refusal),
     }
 }
 
 /// Writes the refusal to standard output as data, because with `--json` that is what was asked for.
-fn written_as_data(diagnostic: &Diagnostic, path: &Path) -> Outcome {
-    print!("{}", json(diagnostic, &path.display().to_string()));
+///
+/// Checking stops at the first refusal, so there is the one to write.
+fn written_as_data(refusal: &Refusal) -> Outcome {
+    let first = refusal
+        .diagnostics()
+        .first()
+        .expect("a refusal refuses something");
+    print!("{}", json(first, &refusal.path().display().to_string()));
     Outcome::Refused
 }
 
 /// Prints every name `path` declares at the top level, with the type it has.
 fn api(path: &Path) -> Outcome {
-    let Some(source) = source_of(path) else {
-        return Outcome::Unusable;
-    };
-    match accepted(&source) {
-        Ok(typed) => {
-            print!("{}", lumen_api::surface(&typed));
+    match checked(path) {
+        Ok(program) => {
+            print!("{}", lumen_api::surface(program.root().typed()));
             Outcome::Done
         }
-        Err(diagnostic) => refuse(&diagnostic, &source, path),
+        Err(refusal) => refused_as(refusal),
     }
 }
 
@@ -129,22 +131,28 @@ fn api(path: &Path) -> Outcome {
 /// `docs/specs/doc-examples.md` says what an example is and what running one amounts to. A
 /// module that states none has nothing to run, which is a run that held.
 fn tested(path: &Path) -> Outcome {
-    let Some(source) = source_of(path) else {
-        return Outcome::Unusable;
+    let program = match checked(path) {
+        Ok(program) => program,
+        Err(refusal) => return refused_as(refusal),
     };
-    match stated_in(&source) {
-        Err(refusals) => refuse_each(&refusals, &source, path),
+    let root = program.root();
+    match stated_in(root) {
+        Err(refusals) => refuse_each(&refusals, root.source(), root.path()),
         Ok(None) => Outcome::Done,
-        Ok(Some(run)) => held(&run, &source, path),
+        Ok(Some(run)) => held(&program, &run),
     }
 }
 
-/// The run that tries the examples `source` states, where it states any.
-fn stated_in(source: &str) -> Result<Option<Run>, Vec<Diagnostic>> {
-    let inferred = accepted(source).map_err(|diagnostic| vec![diagnostic])?;
-    let program = inferred.resolved().program();
-    let stated = stated_by(source, program)
-        .map_err(|refused| refused.iter().map(Refusal::diagnostic).collect::<Vec<_>>())?;
+/// The run that tries the examples `root` states, where it states any.
+fn stated_in(root: &Module) -> Result<Option<Run>, Vec<Diagnostic>> {
+    let source = root.source();
+    let program = root.typed().resolved().program();
+    let stated = stated_by(source, program).map_err(|refused| {
+        refused
+            .iter()
+            .map(ExampleRefusal::diagnostic)
+            .collect::<Vec<_>>()
+    })?;
     if stated.is_empty() {
         return Ok(None);
     }
@@ -156,33 +164,59 @@ fn stated_in(source: &str) -> Result<Option<Run>, Vec<Diagnostic>> {
 /// Compiles the module `run` wrote, starts it, and reports every example that did not hold.
 ///
 /// The class files go somewhere of the run's own, so nothing a build wrote is touched, and what
-/// is written there is taken away again whether the examples held or not.
-fn held(run: &Run, source: &str, path: &Path) -> Outcome {
-    let Some(module) = named_module(path) else {
+/// is written there is taken away again whether the examples held or not. Every module the one
+/// under test imports is written there too, because the run reaches them as the module does.
+fn held(program: &Checked, run: &Run) -> Outcome {
+    let root = program.root();
+    let Some(module) = named_module(root.path()) else {
         return Outcome::Unusable;
     };
-    let lowered = match typed(run.source())
+    let mut classes = match imported_classes(program) {
+        Ok(classes) => classes,
+        Err(refusal) => return refused_as(refusal),
+    };
+    let lowered = match typed(run.source(), program.imported())
         .map_err(|diagnostic| vec![diagnostic])
         .and_then(|inferred| compiled(&inferred, run.source(), &module))
     {
         Ok(lowered) => lowered,
-        Err(refusals) => return refuse_each(&put_back(run, refusals), source, path),
+        Err(refusals) => {
+            return refuse_each(&put_back(run, refusals), root.source(), root.path());
+        }
     };
+    classes.extend(lumen_jvm::write(&lowered));
     let Some(java) = java() else {
         return Outcome::Unusable;
     };
     let Some(beside) = somewhere_of_its_own() else {
         return Outcome::Unusable;
     };
-    let outcome = match written(&lumen_jvm::write(&lowered), &beside) {
+    let outcome = match written(&classes, &beside) {
         Outcome::Done => match wrote(&java, &module, &beside) {
-            Some(written) => did_not_hold(run, &written, source, path),
+            Some(written) => did_not_hold(run, &written, root.source(), root.path()),
             None => Outcome::Unusable,
         },
         refusal => refusal,
     };
     drop(remove_dir_all(&beside));
     outcome
+}
+
+/// The class files of every module the one under test imports, which a run needs beside it.
+fn imported_classes(program: &Checked) -> Result<Vec<ClassFile>, NotCompiled> {
+    let mut classes = Vec::new();
+    for module in reached_by(program) {
+        classes.extend(lumen_jvm::write(&lowered_from(module)?));
+    }
+    Ok(classes)
+}
+
+/// Every module but the one the command named, which is the one written last.
+fn reached_by(program: &Checked) -> &[Module] {
+    program
+        .modules()
+        .split_last()
+        .map_or(&[], |(_root, imported)| imported)
 }
 
 /// Reports every example the run wrote a line about, which is every one that did not hold.
@@ -279,30 +313,36 @@ fn started(path: &Path) -> Outcome {
     ran(&java, &built)
 }
 
-/// Compiles `path` and writes the class files beside it, saying what a JVM would start on.
+/// Compiles `path` and every module it reaches, writing the class files of each beside it.
+///
+/// A module is a class of its own, so a program of several modules is several classes, and a
+/// JVM is started on the one the command named. `docs/specs/modules.md` states the order.
 fn built(path: &Path) -> Result<Built, Outcome> {
-    let Some(source) = source_of(path) else {
+    let program = checked(path).map_err(refused_as)?;
+    let Some(module) = named_module(program.root().path()) else {
         return Err(Outcome::Unusable);
     };
-    let Some(module) = named_module(path) else {
-        return Err(Outcome::Unusable);
-    };
-    let lowered = match accepted(&source)
-        .map_err(|diagnostic| vec![diagnostic])
-        .and_then(|inferred| compiled(&inferred, &source, &module))
-    {
-        Ok(lowered) => lowered,
-        Err(refusals) => return Err(refuse_each(&refusals, &source, path)),
-    };
+    let mut lowered = Vec::new();
+    for one in program.modules() {
+        lowered.push(lowered_from(one).map_err(refused_as)?);
+    }
+    let starts = lowered.last().is_some_and(is_a_program);
+    let classes: Vec<ClassFile> = lowered.iter().flat_map(lumen_jvm::write).collect();
     let beside = path.parent().unwrap_or(Path::new(".")).to_path_buf();
-    match written(&lumen_jvm::write(&lowered), &beside) {
+    match written(&classes, &beside) {
         Outcome::Done => Ok(Built {
             module,
             beside,
-            starts: is_a_program(&lowered),
+            starts,
         }),
         refusal => Err(refusal),
     }
+}
+
+/// The module `module` becomes, or every refusal that stops it becoming one.
+fn lowered_from(module: &Module) -> Result<Lowered, NotCompiled> {
+    compiled(module.typed(), module.source(), module.name())
+        .map_err(|refusals| NotCompiled::refused(refusals, module.path(), module.source()))
 }
 
 /// The module `inferred` becomes, or every refusal that stops it becoming one.
@@ -317,8 +357,12 @@ fn compiled(
 ) -> Result<Lowered, Vec<Diagnostic>> {
     let whole = Whole::of_module(inferred)
         .map_err(|holes| holes.iter().map(Hole::diagnostic).collect::<Vec<_>>())?;
-    stated_by(source, inferred.resolved().program())
-        .map_err(|refused| refused.iter().map(Refusal::diagnostic).collect::<Vec<_>>())?;
+    stated_by(source, inferred.resolved().program()).map_err(|refused| {
+        refused
+            .iter()
+            .map(ExampleRefusal::diagnostic)
+            .collect::<Vec<_>>()
+    })?;
     Ok(lower(&whole, module))
 }
 
@@ -330,26 +374,6 @@ struct Built {
     beside: PathBuf,
     /// Whether the module declares `main`, which is what makes it a program.
     starts: bool,
-}
-
-/// Every phase the front end has, run in order, stopping at the first refusal.
-fn accepted(source: &str) -> Result<TypedProgram, Diagnostic> {
-    lumen_format::check(source).map_err(|error| error.diagnostic())?;
-    typed(source)
-}
-
-/// Every phase after canonical form, which is all of them a module the compiler wrote needs.
-///
-/// Canonical form is a rule about what an author writes, and `docs/specs/formatting.md` leaves
-/// the text of a comment alone. An example is a comment, so holding a module written around one
-/// to canonical form would hold the author to a form nothing spells out and `lumen fmt` cannot
-/// repair.
-fn typed(source: &str) -> Result<TypedProgram, Diagnostic> {
-    let program = parse(source).map_err(|error| error.diagnostic())?;
-    let resolved = resolve(program).map_err(|error| error.diagnostic())?;
-    let inferred = check_types(resolved).map_err(|error| error.diagnostic())?;
-    exhaustive(&inferred).map_err(|error| error.diagnostic())?;
-    Ok(inferred)
 }
 
 /// How many names a run tries before it gives up on finding one nothing holds.
@@ -490,6 +514,19 @@ fn rewrite(path: &Path, canonical: &str) -> Outcome {
             Outcome::Unusable
         }
     }
+}
+
+/// What a refusal of a module amounts to, having shown the reader every part of it.
+fn refused_as(refusal: NotCompiled) -> Outcome {
+    match refusal {
+        NotCompiled::Unusable => Outcome::Unusable,
+        NotCompiled::Refused(refusal) => shown(&refusal),
+    }
+}
+
+/// Shows every refusal of one file, against the file it points into.
+fn shown(refusal: &Refusal) -> Outcome {
+    refuse_each(refusal.diagnostics(), refusal.source(), refusal.path())
 }
 
 /// Refuses every one rather than the first, because a build is how a reader learns what is left.

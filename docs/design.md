@@ -932,4 +932,10 @@ A field of a record and a name of an imported module are each reached through so
 Neither is a name in scope.
 `user.name` is looked up in the record and `io.print` in the module, never in the file.
 
+An import names the file the module is written in, beside the file that writes the import.
+`import greeting` therefore reads `greeting.lm` from the same directory, and nowhere else is
+looked in.
+A ring of imports is refused: a module is compiled after what it imports, and a ring has no such
+order.
+
 `docs/specs/modules.md` states the scopes, the prelude every module has, and the errors.
