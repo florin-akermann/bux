@@ -76,6 +76,6 @@ fn a_type_parameter_has_no_eq_because_nothing_says_the_type_it_stands_for_has_on
 
     assert_eq!(
         refusal(source).message(),
-        "`T` has no `Eq`, so two of them cannot be compared"
+        "`T` has no `Eq`, so `==` is not written over it"
     );
 }

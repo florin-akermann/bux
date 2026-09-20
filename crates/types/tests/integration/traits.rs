@@ -136,7 +136,7 @@ fn a_comparison_of_a_type_with_no_instance_of_eq_is_refused_as_it_always_was() {
 
     assert_eq!(
         error.message(),
-        "`Point` has no `Eq`, so two of them cannot be compared"
+        "`Point` has no `Eq`, so `==` is not written over it"
     );
 }
 

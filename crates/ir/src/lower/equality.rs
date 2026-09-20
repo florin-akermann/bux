@@ -1,16 +1,13 @@
 //! What makes two values the same value, which is one answer for `==` and for a literal pattern.
 //!
-//! `==` is `Eq`, and version 0.1 ships `Int`, `Bool`, and `String`, so this settles those three
-//! and nothing else. Two whole numbers or two truth values are the same when the JVM says they
-//! are, and two strings are the same when they hold the same characters rather than when they are
-//! one object; identity is never what Lumen asks about.
+//! `==` is `Eq` and `<` is `Ord`, and the prelude ships their instances for `Int`, `Bool`, and
+//! `String`, so this settles those and nothing else. Two whole numbers or two truth values stand
+//! in the order the JVM puts them, and two strings are the same when they hold the same
+//! characters rather than when they are one object; identity is never what Lumen asks about.
 
 use crate::code::{Comparison, Instruction, MethodRef};
 use crate::descriptor::{ClassName, Descriptor, MethodDescriptor};
 use crate::lower::shape::object;
-
-/// The one method `Eq` declares, which `==` is a call of and an instance writes a body for.
-pub(crate) const EQUALS: &str = "is_equal";
 
 /// What decides whether two values above it on the stack are the same, or are not.
 ///
@@ -38,14 +35,19 @@ fn string_class() -> ClassName {
 /// The call is on `String` itself and not on `Object`, so a reference of any other class reaching
 /// here writes a class file the verifier refuses. The identity `Object.equals` would answer with
 /// is then unreachable by construction rather than by the type checker alone.
+///
+/// `String` has `Eq` and no `Ord`, which `docs/specs/operators.md` states, so `==` and `!=` are
+/// the only two ways two strings are ever compared.
 fn by_value(how: Comparison) -> Vec<Instruction> {
     let mut instructions = vec![Instruction::InvokeVirtual(MethodRef {
         class: string_class(),
         name: "equals".to_owned(),
         descriptor: MethodDescriptor::new(vec![object()], Some(Descriptor::Boolean)),
     })];
-    if how != Comparison::Equal {
-        instructions.push(Instruction::Not);
+    match how {
+        Comparison::Equal => {}
+        Comparison::NotEqual => instructions.push(Instruction::Not),
+        ordered => unreachable!("`String` has no `Ord`, so nothing writes `{ordered:?}` over two"),
     }
     instructions
 }

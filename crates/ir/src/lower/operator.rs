@@ -1,0 +1,294 @@
+//! What an operator is written as, which is a call of the method its trait declares.
+//!
+//! `docs/specs/operators.md` names the trait each operator is and states this: a type whose
+//! instance a module wrote gets an `invokestatic` of that instance's method, and a type the
+//! compiler supplies the instance for gets the instruction the operator always was.
+
+use lumen_ast::{BinaryOperator, Expr, Name, Span, UnaryOperator};
+use lumen_resolver::prelude;
+
+use crate::code::{Arithmetic, Comparison, Instruction, MethodRef};
+use crate::descriptor::Descriptor;
+use crate::lower::body::{Builder, Slot};
+use crate::lower::equality::compared;
+
+impl Builder<'_> {
+    /// An operator, which is the call of the one method its trait declares.
+    ///
+    /// `&&` and `||` never reach here: each decides whether to run the other side, which no call
+    /// can, so `docs/specs/operators.md` keeps them `Bool`'s alone and the caller writes them.
+    pub(crate) fn operated(
+        &mut self,
+        operator: BinaryOperator,
+        left: &Expr,
+        right: &Expr,
+    ) -> Option<Descriptor> {
+        let asked = asked_by(operator).expect("`&&` and `||` are written before this is reached");
+        let Some(declared) = self.instance_written(method_of(asked.of), left.span) else {
+            return self.supplied_operator(operator, left, right);
+        };
+        Some(self.through_the_operator(&asked, declared, [left, right]))
+    }
+
+    /// A direct call of one of the prelude's trait methods, at a type the prelude has an
+    /// instance for.
+    ///
+    /// `add(one, other)` is the call `one + other` already is, so the two are written the same.
+    pub(crate) fn supplied_instance(&mut self, name: &Name, arguments: &[&Expr]) -> Descriptor {
+        let of = prelude::trait_of(&name.text)
+            .expect("the prelude declares every method that reaches here");
+        if of == prelude::NEG {
+            let [value] = arguments else {
+                unreachable!("inference gave `negate` the one argument it takes")
+            };
+            return self.negated(value);
+        }
+        let [left, right] = arguments else {
+            unreachable!("inference gave `{}` the two arguments it takes", name.text)
+        };
+        self.supplied_operator(written_as(of), left, right)
+            .expect("every supplied operator leaves a value")
+    }
+
+    /// `total += value` is `Add`, so it asks the trait `total + value` asks.
+    ///
+    /// What the name holds is loaded first, because it is the first of the two the method takes,
+    /// and a type the compiler supplies the instance for adds as that operator always added.
+    pub(crate) fn added_to(&mut self, slot: &Slot, value: &Expr) -> Descriptor {
+        self.emit(Instruction::Load {
+            slot: slot.at,
+            of: slot.of.clone(),
+        });
+        let Some(declared) = self.instance_written(method_of(prelude::ADD), value.span) else {
+            let left = self.expr(value);
+            self.adapt(left, Some(slot.of.clone()));
+            self.emit(supplied_add(&slot.of));
+            return slot.of.clone();
+        };
+        let reached = self.reaching(declared, declared);
+        self.handed(value, reached.signature.parameters[1].clone());
+        self.emit(Instruction::InvokeStatic(MethodRef {
+            class: self.lowering.shapes.module().clone(),
+            name: reached.named,
+            descriptor: reached.signature.descriptor(),
+        }));
+        reached
+            .signature
+            .result
+            .expect("`add` gives back the type it was given, which a local holds")
+    }
+
+    /// Prefix `-` is `Neg`, so a type whose instance a module wrote negates by that instance.
+    pub(crate) fn negated(&mut self, operand: &Expr) -> Descriptor {
+        let Some(declared) = self.instance_written(method_of(prelude::NEG), operand.span) else {
+            let held = self.expr(operand);
+            self.adapt(held, Some(Descriptor::Long));
+            self.emit(Instruction::Arithmetic(Arithmetic::Negate));
+            return Descriptor::Long;
+        };
+        self.statically(declared, operand.span, &[operand])
+            .expect("`negate` gives back the type it was given, which is carried by something")
+    }
+
+    /// An operator over a type whose instance a module wrote, which is a call of that method.
+    fn through_the_operator(
+        &mut self,
+        asked: &Asked,
+        declared: Span,
+        operands: [&Expr; 2],
+    ) -> Descriptor {
+        let given = if asked.reversed {
+            self.the_other_way_round(declared, operands)
+        } else {
+            self.statically(declared, declared, &operands)
+        };
+        if asked.flipped {
+            self.emit(Instruction::Not);
+        }
+        given.expect("every operator's method gives back a value")
+    }
+
+    /// `one > other` is `is_less(other, one)`, which `docs/specs/operators.md` states.
+    ///
+    /// Both sides are run in the order they are written and kept in locals, because a side may
+    /// be a call and the method takes the two the other way round.
+    fn the_other_way_round(&mut self, declared: Span, operands: [&Expr; 2]) -> Option<Descriptor> {
+        let reached = self.reaching(declared, declared);
+        let mut kept = Vec::new();
+        for (operand, wanted) in operands.iter().zip(&reached.signature.parameters) {
+            let Some(of) = wanted.clone() else {
+                self.value(operand);
+                continue;
+            };
+            kept.push((self.put_aside_as(operand, &of), of));
+        }
+        kept.reverse();
+        for (slot, of) in kept {
+            self.emit(Instruction::Load { slot, of });
+        }
+        self.emit(Instruction::InvokeStatic(MethodRef {
+            class: self.lowering.shapes.module().clone(),
+            name: reached.named,
+            descriptor: reached.signature.descriptor(),
+        }));
+        reached.signature.result
+    }
+
+    /// The body an instance the compiler supplies amounts to, written out where it is called.
+    ///
+    /// `Int` has every operator and `String` has `+`, which is the whole of it while the prelude
+    /// is not yet Lumen source, and what each writes is what that operator always wrote.
+    pub(crate) fn supplied_operator(
+        &mut self,
+        operator: BinaryOperator,
+        left: &Expr,
+        right: &Expr,
+    ) -> Option<Descriptor> {
+        if matches!(operator, BinaryOperator::Divide | BinaryOperator::Remainder) {
+            return Some(self.divided(counted(operator), left, right));
+        }
+        let held = self.value(left);
+        let other = self.value(right);
+        self.adapt(other, held.clone());
+        match operator {
+            BinaryOperator::Equal
+            | BinaryOperator::NotEqual
+            | BinaryOperator::Less
+            | BinaryOperator::LessOrEqual
+            | BinaryOperator::Greater
+            | BinaryOperator::GreaterOrEqual => Some(self.same(operator, held.as_ref())),
+            BinaryOperator::Add => self.added(held),
+            BinaryOperator::Subtract | BinaryOperator::Multiply => {
+                self.emit(Instruction::Arithmetic(counted(operator)));
+                Some(Descriptor::Long)
+            }
+            BinaryOperator::Or
+            | BinaryOperator::And
+            | BinaryOperator::Divide
+            | BinaryOperator::Remainder => {
+                unreachable!("`&&`, `||`, `/`, and `%` are each written before this is reached")
+            }
+        }
+    }
+
+    /// What the two values above it on the stack compare to, for a supplied instance of `Eq`
+    /// or of `Ord`.
+    fn same(&mut self, operator: BinaryOperator, held: Option<&Descriptor>) -> Descriptor {
+        for instruction in compared(held, how(operator)) {
+            self.emit(instruction);
+        }
+        Descriptor::Boolean
+    }
+}
+
+/// How an operator's call is read: the trait it is, and which way round its answer is.
+pub(crate) struct Asked {
+    /// The trait the operator is, which `docs/specs/operators.md` names.
+    of: &'static str,
+    /// Whether the method is given the right side first, which `>` and `<=` are.
+    reversed: bool,
+    /// Whether the answer is the other one, which `!=`, `<=`, and `>=` take.
+    flipped: bool,
+}
+
+/// The trait each operator is, and how it reads, or nothing where it is `Bool`'s alone.
+const fn asked_by(operator: BinaryOperator) -> Option<Asked> {
+    let asked = match operator {
+        BinaryOperator::Or | BinaryOperator::And => return None,
+        BinaryOperator::Equal => reading(prelude::EQ, false, false),
+        BinaryOperator::NotEqual => reading(prelude::EQ, false, true),
+        BinaryOperator::Less => reading(prelude::ORD, false, false),
+        BinaryOperator::Greater => reading(prelude::ORD, true, false),
+        BinaryOperator::LessOrEqual => reading(prelude::ORD, true, true),
+        BinaryOperator::GreaterOrEqual => reading(prelude::ORD, false, true),
+        BinaryOperator::Add => reading(prelude::ADD, false, false),
+        BinaryOperator::Subtract => reading(prelude::SUB, false, false),
+        BinaryOperator::Multiply => reading(prelude::MUL, false, false),
+        BinaryOperator::Divide => reading(prelude::DIV, false, false),
+        BinaryOperator::Remainder => reading(prelude::REM, false, false),
+    };
+    Some(asked)
+}
+
+const fn reading(of: &'static str, reversed: bool, flipped: bool) -> Asked {
+    Asked {
+        of,
+        reversed,
+        flipped,
+    }
+}
+
+/// The one method the trait `of` declares, which is the call an operator is.
+fn method_of(of: &str) -> &'static str {
+    prelude::methods_of(of)
+        .and_then(<[&str]>::first)
+        .copied()
+        .expect("every operator's trait is one the prelude declares")
+}
+
+/// The operator the trait `of` is, which is what its supplied instance writes out.
+fn written_as(of: &str) -> BinaryOperator {
+    match of {
+        prelude::EQ => BinaryOperator::Equal,
+        prelude::ORD => BinaryOperator::Less,
+        prelude::ADD => BinaryOperator::Add,
+        prelude::SUB => BinaryOperator::Subtract,
+        prelude::MUL => BinaryOperator::Multiply,
+        prelude::DIV => BinaryOperator::Divide,
+        prelude::REM => BinaryOperator::Remainder,
+        _ => unreachable!("prefix `-` takes one value, and is written before this is reached"),
+    }
+}
+
+/// Which comparison a supplied instance of `Eq` or of `Ord` asks for.
+const fn how(operator: BinaryOperator) -> Comparison {
+    match operator {
+        BinaryOperator::NotEqual => Comparison::NotEqual,
+        BinaryOperator::Less => Comparison::Less,
+        BinaryOperator::LessOrEqual => Comparison::LessOrEqual,
+        BinaryOperator::Greater => Comparison::Greater,
+        BinaryOperator::GreaterOrEqual => Comparison::GreaterOrEqual,
+        BinaryOperator::Equal
+        | BinaryOperator::Or
+        | BinaryOperator::And
+        | BinaryOperator::Add
+        | BinaryOperator::Subtract
+        | BinaryOperator::Multiply
+        | BinaryOperator::Divide
+        | BinaryOperator::Remainder => Comparison::Equal,
+    }
+}
+
+/// What an operator does to two whole numbers.
+const fn counted(operator: BinaryOperator) -> Arithmetic {
+    match operator {
+        BinaryOperator::Subtract => Arithmetic::Subtract,
+        BinaryOperator::Multiply => Arithmetic::Multiply,
+        BinaryOperator::Divide => Arithmetic::Divide,
+        BinaryOperator::Remainder => Arithmetic::Remainder,
+        BinaryOperator::Equal
+        | BinaryOperator::NotEqual
+        | BinaryOperator::Less
+        | BinaryOperator::LessOrEqual
+        | BinaryOperator::Greater
+        | BinaryOperator::GreaterOrEqual
+        | BinaryOperator::Or
+        | BinaryOperator::And
+        | BinaryOperator::Add => Arithmetic::Add,
+    }
+}
+
+/// `!` is `Bool`'s alone, which is why it is the one unary operator with no trait.
+pub(crate) const fn is_negation(operator: UnaryOperator) -> bool {
+    matches!(operator, UnaryOperator::Negate)
+}
+
+/// What a supplied instance of `Add` writes, which joins two strings and adds two whole numbers.
+fn supplied_add(of: &Descriptor) -> Instruction {
+    match of {
+        Descriptor::Reference(_) | Descriptor::Array(_) => Instruction::Concat,
+        Descriptor::Long | Descriptor::Boolean | Descriptor::Integer => {
+            Instruction::Arithmetic(Arithmetic::Add)
+        }
+    }
+}

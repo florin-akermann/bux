@@ -63,7 +63,6 @@ pub(crate) enum TypeErrorKind {
         expected: Type,
         found: Type,
     },
-    NotAddable(Type),
     WrongArgumentCount(Count),
     WrongTypeArgumentCount(Count),
     UnknownField {
@@ -80,7 +79,12 @@ pub(crate) enum TypeErrorKind {
         of: String,
         field: String,
     },
-    NotEquatable(Type),
+    /// An operator written over a type that has no instance of the trait that operator is.
+    NoOperator {
+        written_as: &'static str,
+        of: String,
+        at: Type,
+    },
     DivisorIsZero,
     /// A statement leaves a value behind and nothing takes it.
     Discarded(Type),
@@ -136,7 +140,7 @@ impl TypeErrorKind {
     /// The code this failure is refused with, which `docs/specs/types.md` lists.
     const fn code(&self) -> Code {
         match self {
-            Self::Mismatch { .. } | Self::NotAddable(_) => Code::TypeMismatch,
+            Self::Mismatch { .. } => Code::TypeMismatch,
             Self::WrongArgumentCount(_) | Self::WrongTypeArgumentCount(_) => {
                 Code::WrongArgumentCount
             }
@@ -144,7 +148,7 @@ impl TypeErrorKind {
             Self::Infinite => Code::InfiniteType,
             Self::MissingField { .. } => Code::MissingField,
             Self::FieldWrittenTwice { .. } => Code::FieldWrittenTwice,
-            Self::NotEquatable(_) => Code::NotEquatable,
+            Self::NoOperator { .. } => Code::NoOperator,
             Self::NoInstance { .. } => Code::NoInstance,
             Self::SignatureWithoutType(_) => Code::SignatureWithoutType,
             Self::DivisorIsZero => Code::DivisorIsZero,
@@ -164,7 +168,6 @@ impl TypeErrorKind {
     const fn help(&self) -> &'static str {
         match self {
             Self::Mismatch { .. } => "one type is not another, however alike they are held",
-            Self::NotAddable(_) => "`+` adds two `Int`s or joins two `String`s",
             Self::WrongArgumentCount(_) => {
                 "a call passes one argument for each the declaration lists"
             }
@@ -180,8 +183,8 @@ impl TypeErrorKind {
                 "building a record gives every field a value; update one to change only some"
             }
             Self::FieldWrittenTwice { .. } => "a record gives each of its fields one value",
-            Self::NotEquatable(_) => {
-                "`==` and `!=` need `Eq`; write an instance, or compare what the value holds"
+            Self::NoOperator { .. } => {
+                "an operator is a trait method, so a type gets one by writing that trait's instance"
             }
             Self::NoInstance { .. } => {
                 "write the instance, or constrain the type parameter the call is made at"
@@ -229,7 +232,6 @@ impl fmt::Display for TypeErrorKind {
             Self::Mismatch { expected, found } => {
                 write!(f, "expected `{expected}`, found `{found}`")
             }
-            Self::NotAddable(found) => write!(f, "`{found}` cannot be added"),
             Self::WrongArgumentCount(count) => count.fmt_with(f, "argument"),
             Self::WrongTypeArgumentCount(count) => count.fmt_with(f, "type argument"),
             Self::UnknownField { of, field } => write!(f, "`{of}` has no field named `{field}`"),
@@ -257,10 +259,10 @@ impl fmt::Display for TypeErrorKind {
             Self::FieldWrittenTwice { of, field } => {
                 write!(f, "`{of}` is given `{field}` twice")
             }
-            Self::NotEquatable(found) => {
+            Self::NoOperator { written_as, of, at } => {
                 write!(
                     f,
-                    "`{found}` has no `Eq`, so two of them cannot be compared"
+                    "`{at}` has no `{of}`, so `{written_as}` is not written over it"
                 )
             }
             Self::NoInstance { of, at } => {

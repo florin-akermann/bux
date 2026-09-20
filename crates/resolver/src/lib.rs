@@ -8,7 +8,7 @@
 mod definition;
 mod error;
 mod order;
-mod prelude;
+pub mod prelude;
 mod resolve;
 mod scope;
 

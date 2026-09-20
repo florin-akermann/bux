@@ -121,9 +121,8 @@ impl Resolver {
 
 /// The instances the compiler supplies, which a module writing one of them again is refused by.
 pub(super) fn supplied_instances() -> HashSet<(String, String)> {
-    prelude::EQUATABLE
-        .iter()
-        .map(|for_type| (prelude::EQ.to_owned(), (*for_type).to_owned()))
+    prelude::instances()
+        .map(|(of, for_type)| (of.to_owned(), for_type.to_owned()))
         .collect()
 }
 

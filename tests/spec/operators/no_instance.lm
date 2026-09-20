@@ -1,0 +1,10 @@
+// expect-error: L0406
+// Every operator is a trait method, so a type with no instance of that trait has no operator.
+// `Point` has no `Add`, so `+` is not written over it until it writes `instance Add<Point>`.
+fn joined(one: Point, other: Point) -> Point {
+    one + other
+}
+
+type Point = {
+    across: Int
+}

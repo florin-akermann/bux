@@ -25,9 +25,6 @@ pub enum Type {
     Unit,
 }
 
-/// The trait `==` is, which a comparison asks of the type it compares.
-pub(crate) const EQ: &str = "Eq";
-
 /// The type a value of, or nothing, is written as, which a `?` hands a `None` back from.
 pub(crate) const OPTION: &str = "Option";
 

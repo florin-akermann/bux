@@ -11,6 +11,7 @@ mod generics;
 mod holds;
 mod imports;
 mod inference;
+mod operators;
 mod predicate;
 mod propagating;
 mod properties;

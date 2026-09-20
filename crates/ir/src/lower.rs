@@ -12,6 +12,7 @@ mod escape;
 mod expr;
 mod generic;
 mod modules;
+mod operator;
 mod pattern;
 mod prelude;
 mod shape;

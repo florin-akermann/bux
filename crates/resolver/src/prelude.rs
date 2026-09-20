@@ -3,28 +3,79 @@
 //! `docs/specs/modules.md` lists them. They become Lumen source once a module can be loaded;
 //! until then this is the prelude.
 
+/// The trait `==` is, which `docs/specs/traits.md` writes out.
+pub const EQ: &str = "Eq";
+/// The trait `+` is.
+pub const ADD: &str = "Add";
+/// The trait binary `-` is.
+pub const SUB: &str = "Sub";
+/// The trait `*` is.
+pub const MUL: &str = "Mul";
+/// The trait `/` is.
+pub const DIV: &str = "Div";
+/// The trait `%` is.
+pub const REM: &str = "Rem";
+/// The trait prefix `-` is.
+pub const NEG: &str = "Neg";
+/// The trait `<`, `<=`, `>`, and `>=` are.
+pub const ORD: &str = "Ord";
+
 /// The types the prelude supplies.
 pub(crate) const TYPES: [&str; 6] = ["Bool", "Int", "List", "Option", "Result", "String"];
 
-/// The traits the prelude supplies, which `docs/specs/traits.md` lists.
-pub(crate) const TRAITS: [&str; 1] = [EQ];
-
-/// The methods those traits declare, each a name in scope beside the functions.
-pub(crate) const TRAIT_METHODS: [&str; 1] = [EQUALS];
-
-/// The trait `==` is, which the library will ship once the prelude is Lumen source.
-pub(crate) const EQ: &str = "Eq";
-
-/// The one method `Eq` declares.
-const EQUALS: &str = "is_equal";
-
-/// The types the prelude has instances of `Eq` for, which `docs/design.md` section 8 names.
-pub(crate) const EQUATABLE: [&str; 3] = ["Bool", "Int", "String"];
-
-/// The methods the trait called `name` declares, when the prelude is the one that declares it.
-pub(crate) fn methods_of(name: &str) -> Option<&'static [&'static str]> {
-    (name == EQ).then_some(&TRAIT_METHODS)
+/// A trait the prelude supplies: what it declares, and which types it already has instances for.
+///
+/// `docs/specs/traits.md` writes `Eq` out and `docs/specs/operators.md` writes the other seven
+/// out, each with the instances the library will ship once the prelude is Lumen source.
+pub struct Supplied {
+    pub name: &'static str,
+    pub methods: &'static [&'static str],
+    pub instances: &'static [&'static str],
 }
+
+/// Every trait the prelude supplies, which is `Eq` and the trait each operator is.
+pub const TRAITS: [Supplied; 8] = [
+    Supplied {
+        name: EQ,
+        methods: &["is_equal"],
+        instances: &["Bool", "Int", "String"],
+    },
+    Supplied {
+        name: ADD,
+        methods: &["add"],
+        instances: &["Int", "String"],
+    },
+    Supplied {
+        name: SUB,
+        methods: &["subtract"],
+        instances: &["Int"],
+    },
+    Supplied {
+        name: MUL,
+        methods: &["multiply"],
+        instances: &["Int"],
+    },
+    Supplied {
+        name: DIV,
+        methods: &["divide"],
+        instances: &["Int"],
+    },
+    Supplied {
+        name: REM,
+        methods: &["remainder"],
+        instances: &["Int"],
+    },
+    Supplied {
+        name: NEG,
+        methods: &["negate"],
+        instances: &["Int"],
+    },
+    Supplied {
+        name: ORD,
+        methods: &["is_less"],
+        instances: &["Int"],
+    },
+];
 
 /// The constructors the prelude supplies.
 pub(crate) const CONSTRUCTORS: [&str; 4] = ["Err", "None", "Ok", "Some"];
@@ -34,3 +85,45 @@ pub(crate) const CONSTRUCTORS: [&str; 4] = ["Err", "None", "Ok", "Some"];
 /// `or` is the total way to get a value out of an `Option`, and `todo` is the hole
 /// `docs/specs/holes.md` states.
 pub(crate) const FUNCTIONS: [&str; 2] = ["or", "todo"];
+
+/// The trait names, which are names in the type scope beside the types.
+pub(crate) fn trait_names() -> Vec<&'static str> {
+    TRAITS.iter().map(|supplied| supplied.name).collect()
+}
+
+/// The names of every method they declare, which are names in the value scope beside the functions.
+pub(crate) fn method_names() -> Vec<&'static str> {
+    TRAITS
+        .iter()
+        .flat_map(|supplied| supplied.methods)
+        .copied()
+        .collect()
+}
+
+/// The methods the trait called `name` declares, when the prelude is the one that declares it.
+#[must_use]
+pub fn methods_of(name: &str) -> Option<&'static [&'static str]> {
+    TRAITS
+        .iter()
+        .find(|supplied| supplied.name == name)
+        .map(|supplied| supplied.methods)
+}
+
+/// The trait the prelude declares `method` in, when the prelude is the one that declares it.
+#[must_use]
+pub fn trait_of(method: &str) -> Option<&'static str> {
+    TRAITS
+        .iter()
+        .find(|supplied| supplied.methods.contains(&method))
+        .map(|supplied| supplied.name)
+}
+
+/// Every instance the prelude supplies, as the two names that say which one it is.
+pub fn instances() -> impl Iterator<Item = (&'static str, &'static str)> {
+    TRAITS.iter().flat_map(|supplied| {
+        supplied
+            .instances
+            .iter()
+            .map(|for_type| (supplied.name, *for_type))
+    })
+}

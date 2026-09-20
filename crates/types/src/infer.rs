@@ -2,6 +2,7 @@
 
 mod arguments;
 mod flags;
+mod operator;
 mod pattern;
 mod predicate;
 mod record;
@@ -13,11 +14,12 @@ use std::mem;
 use lumen_ast::ForHeader;
 use lumen_ast::{Arguments, AssignOperator, BinaryOperator, Block, Expr, ExprKind};
 use lumen_ast::{ForLoop, Function, IfExpr, Item, MatchExpr, Mutability, Name};
-use lumen_ast::{Span, Statement, StatementKind, UnaryOperator};
+use lumen_ast::{Span, Statement, StatementKind};
 use lumen_resolver::{Definition, DefinitionKind, Namespace, ResolvedProgram};
 
 use crate::environment::{Environment, Key};
 use crate::error::{Count, TypeError, TypeErrorKind};
+use crate::infer::operator::Operated;
 use crate::infer::settle::Lookup;
 use crate::scheme::{Quantified, Required, Scheme};
 use crate::surface::{Imported, Surface};
@@ -55,8 +57,7 @@ pub(crate) fn infer(
         types: HashMap::new(),
         result: Type::Unit,
         introduced: Vec::new(),
-        additions: Vec::new(),
-        equalities: Vec::new(),
+        operated: Vec::new(),
         discards: Vec::new(),
         lookups: Vec::new(),
         propagations: Vec::new(),
@@ -86,10 +87,8 @@ struct Inference<'a> {
     result: Type,
     /// The names the current function bound, which go out of scope when it is done.
     introduced: Vec<Key>,
-    /// The additions of the current function, which are `Int` unless something says otherwise.
-    additions: Vec<(Type, Span)>,
-    /// The comparisons of the current function, each waiting to be of a type that has `Eq`.
-    equalities: Vec<(Type, Span)>,
+    /// The operators of the current function, each `Int` unless something says otherwise.
+    operated: Vec<Operated>,
     /// The statements of the current function that nothing takes the value of, each of which
     /// must therefore have no value to take.
     discards: Vec<(Type, Span)>,
@@ -167,8 +166,7 @@ impl Inference<'_> {
         self.look_up_fields()?;
         self.expect(&(*result).clone(), &body, function.body.span)?;
         self.settle_propagations()?;
-        self.settle_additions()?;
-        self.settle_equalities()?;
+        self.settle_operators()?;
         self.settle_requirements()?;
         self.settle_discards()?;
         self.settle_parameters(function)?;
@@ -272,7 +270,7 @@ impl Inference<'_> {
         let found = self.expr(value)?;
         self.expect(&assigned, &found, value.span)?;
         if operator == AssignOperator::Add {
-            self.additions.push((assigned, target.span));
+            self.adds_to(assigned, target.span);
         }
         Ok(Type::Unit)
     }
@@ -317,7 +315,7 @@ impl Inference<'_> {
             ExprKind::String(_) => Ok(Type::string()),
             ExprKind::Bool(_) => Ok(Type::boolean()),
             ExprKind::Unit => Ok(Type::Unit),
-            ExprKind::Unary { operator, operand } => self.unary(*operator, operand),
+            ExprKind::Unary { operator, operand } => self.unary(*operator, operand, expr.span),
             ExprKind::Binary {
                 operator,
                 left,
@@ -350,65 +348,6 @@ impl Inference<'_> {
             self.expect(&item, &found, element.span)?;
         }
         Ok(Type::list(item))
-    }
-
-    fn unary(&mut self, operator: UnaryOperator, operand: &Expr) -> Result<Type, TypeError> {
-        let wanted = match operator {
-            UnaryOperator::Not => Type::boolean(),
-            UnaryOperator::Negate => Type::int(),
-        };
-        let found = self.expr(operand)?;
-        self.expect(&wanted, &found, operand.span)?;
-        Ok(wanted)
-    }
-
-    fn binary(&mut self, written: &Binary<'_>) -> Result<Type, TypeError> {
-        let Binary {
-            operator,
-            left,
-            right,
-            at,
-        } = *written;
-        let found = self.expr(left)?;
-        let other = self.expr(right)?;
-        match operator {
-            BinaryOperator::Or | BinaryOperator::And => {
-                self.expect(&Type::boolean(), &found, left.span)?;
-                self.expect(&Type::boolean(), &other, right.span)?;
-                Ok(Type::boolean())
-            }
-            BinaryOperator::Equal | BinaryOperator::NotEqual => {
-                self.expect(&found, &other, right.span)?;
-                self.equalities.push((found, at));
-                Ok(Type::boolean())
-            }
-            BinaryOperator::Less
-            | BinaryOperator::LessOrEqual
-            | BinaryOperator::Greater
-            | BinaryOperator::GreaterOrEqual => {
-                self.expect(&Type::int(), &found, left.span)?;
-                self.expect(&Type::int(), &other, right.span)?;
-                Ok(Type::boolean())
-            }
-            BinaryOperator::Add => {
-                self.expect(&found, &other, right.span)?;
-                self.additions.push((found.clone(), left.span));
-                Ok(found)
-            }
-            BinaryOperator::Divide | BinaryOperator::Remainder => {
-                self.expect(&Type::int(), &found, left.span)?;
-                self.expect(&Type::int(), &other, right.span)?;
-                if right.kind == ExprKind::Integer(0) {
-                    return Err(TypeError::at(right.span, TypeErrorKind::DivisorIsZero));
-                }
-                Ok(Type::option(Type::int()))
-            }
-            _ => {
-                self.expect(&Type::int(), &found, left.span)?;
-                self.expect(&Type::int(), &other, right.span)?;
-                Ok(Type::int())
-            }
-        }
     }
 
     fn call(&mut self, callee: &Expr, arguments: &Arguments, at: Span) -> Result<Type, TypeError> {
@@ -640,11 +579,8 @@ impl Inference<'_> {
             self.table.unsettled(&lookup.through, &mut held);
             self.table.unsettled(&lookup.found, &mut held);
         }
-        for (added, _) in &self.additions {
-            self.table.unsettled(added, &mut held);
-        }
-        for (compared, _) in &self.equalities {
-            self.table.unsettled(compared, &mut held);
+        for operated in &self.operated {
+            self.table.unsettled(&operated.at, &mut held);
         }
         for requirement in &self.requirements {
             self.table.unsettled(&requirement.required.at, &mut held);
@@ -664,12 +600,12 @@ impl Inference<'_> {
 
 /// A binary expression as inference reads it: the operator, its two operands, and its span.
 #[derive(Clone, Copy)]
-struct Binary<'a> {
-    operator: BinaryOperator,
-    left: &'a Expr,
-    right: &'a Expr,
-    /// The whole expression, which is what a refused comparison points the reader at.
-    at: Span,
+pub(crate) struct Binary<'a> {
+    pub(crate) operator: BinaryOperator,
+    pub(crate) left: &'a Expr,
+    pub(crate) right: &'a Expr,
+    /// The whole expression, which is what a refused operator points the reader at.
+    pub(crate) at: Span,
 }
 
 /// The index `field` is at, or the report that nothing of that name is there.
@@ -730,8 +666,8 @@ pub(crate) enum Asked {
     Method,
     /// A use of something whose type parameter the declaration constrained by the trait.
     Constraint,
-    /// `==` or `!=`, which `docs/design.md` section 8 makes `Eq`'s and reports as its own.
-    Comparison,
+    /// An operator, which is the method of the trait `docs/specs/operators.md` says it is.
+    Operator(&'static str),
 }
 
 /// Which case a `?` hands back, neither of which ever becomes the other.

@@ -1,0 +1,149 @@
+// expect-run
+// > 3 cents and 7 cents is 10 cents
+// > 3 cents added to twice is 13 cents
+// > 7 cents less 3 cents is 4 cents
+// > 3 cents three times is 9 cents
+// > 7 cents shared by 2 cents is 3 cents
+// > 7 cents over 2 cents leaves 1 cent
+// > 3 cents owed is -3 cents
+// > 3 cents is less than 7 cents
+// > 7 cents is more than 3 cents
+// > 3 cents is at most 7 cents
+// > 7 cents is at least 3 cents
+// A declared type owns `+`, `-`, `*`, `/`, `%`, prefix `-`, and the four comparisons.
+// It owns each of them the one way any type does: by writing an instance of the trait it is.
+// Each line is written only where the answer is the one it claims, so a wrong answer writes
+// nothing and the harness says the header was not met.
+import io
+
+fn main() -> () {
+    one := Money { cents: 3 }
+    other := Money { cents: 7 }
+    if is_worth(one + other, 10) {
+        io.println("3 cents and 7 cents is 10 cents")
+    }
+    if is_worth(totalled(one: one, other: other), 13) {
+        io.println("3 cents added to twice is 13 cents")
+    }
+    if is_worth(other - one, 4) {
+        io.println("7 cents less 3 cents is 4 cents")
+    }
+    if is_worth(one * Money { cents: 3 }, 9) {
+        io.println("3 cents three times is 9 cents")
+    }
+    if is_maybe_worth(other / Money { cents: 2 }, 3) {
+        io.println("7 cents shared by 2 cents is 3 cents")
+    }
+    if is_maybe_worth(other % Money { cents: 2 }, 1) {
+        io.println("7 cents over 2 cents leaves 1 cent")
+    }
+    if is_worth(-one, -3) {
+        io.println("3 cents owed is -3 cents")
+    }
+    if is_less_than(one: one, other: other) {
+        io.println("3 cents is less than 7 cents")
+    }
+    if is_more_than(one: other, other: one) {
+        io.println("7 cents is more than 3 cents")
+    }
+    if is_at_most(one: one, other: other) {
+        io.println("3 cents is at most 7 cents")
+    }
+    if is_at_least(one: other, other: one) {
+        io.println("7 cents is at least 3 cents")
+    }
+}
+
+// `+=` is `Add` too, so it reaches the same instance `+` does.
+// example: totalled(one: Money { cents: 3 }, other: Money { cents: 7 }).cents == 13
+fn totalled(one: Money, other: Money) -> Money {
+    var total = one
+    total += other
+    total += Money { cents: 3 }
+    total
+}
+
+// The four spellings of `Ord` all answer through the one `is_less` the instance writes, so the
+// two examples of each say that no pair of them can disagree about one pair of values.
+// example: is_less_than(one: Money { cents: 3 }, other: Money { cents: 7 })
+// example: !is_less_than(one: Money { cents: 7 }, other: Money { cents: 3 })
+fn is_less_than(one: Money, other: Money) -> Bool {
+    one < other
+}
+
+// example: is_more_than(one: Money { cents: 7 }, other: Money { cents: 3 })
+// example: !is_more_than(one: Money { cents: 3 }, other: Money { cents: 7 })
+fn is_more_than(one: Money, other: Money) -> Bool {
+    one > other
+}
+
+// example: is_at_most(one: Money { cents: 3 }, other: Money { cents: 7 })
+// example: !is_at_most(one: Money { cents: 7 }, other: Money { cents: 3 })
+fn is_at_most(one: Money, other: Money) -> Bool {
+    one <= other
+}
+
+// example: is_at_least(one: Money { cents: 7 }, other: Money { cents: 3 })
+// example: !is_at_least(one: Money { cents: 3 }, other: Money { cents: 7 })
+fn is_at_least(one: Money, other: Money) -> Bool {
+    one >= other
+}
+
+// example: is_maybe_worth(Some(Money { cents: 3 }), 3)
+fn is_maybe_worth(money: Option<Money>, cents: Int) -> Bool {
+    match money {
+        Some(held) => is_worth(held, cents)
+        None => false
+    }
+}
+
+// example: is_worth(Money { cents: 3 }, 3)
+fn is_worth(money: Money, cents: Int) -> Bool {
+    money.cents == cents
+}
+
+instance Add<Money> {
+    fn add(one: Money, other: Money) -> Money {
+        Money { cents: one.cents + other.cents }
+    }
+}
+
+instance Sub<Money> {
+    fn subtract(one: Money, other: Money) -> Money {
+        Money { cents: one.cents - other.cents }
+    }
+}
+
+instance Mul<Money> {
+    fn multiply(one: Money, other: Money) -> Money {
+        Money { cents: one.cents * other.cents }
+    }
+}
+
+instance Div<Money> {
+    fn divide(one: Money, other: Money) -> Option<Money> {
+        Some(Money { cents: (one.cents / other.cents)? })
+    }
+}
+
+instance Rem<Money> {
+    fn remainder(one: Money, other: Money) -> Option<Money> {
+        Some(Money { cents: (one.cents % other.cents)? })
+    }
+}
+
+instance Neg<Money> {
+    fn negate(value: Money) -> Money {
+        Money { cents: -value.cents }
+    }
+}
+
+instance Ord<Money> {
+    fn is_less(one: Money, other: Money) -> Bool {
+        one.cents < other.cents
+    }
+}
+
+type Money = {
+    cents: Int
+}

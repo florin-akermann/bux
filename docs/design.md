@@ -483,8 +483,8 @@ Every operator is a trait method, and `==` is only the first to be written that 
 An operator's type is its instance's type: `Div<Int>` gives `Option<Int>`, `Add<Int>` an `Int`.
 The library ships the instances for `Int` and `String`; a declared type writes its own the same way.
 A type without an instance has no operator, so `a + b` over two `UserId`s is refused, as it is now.
-Version 0.1 wires `Int` and `String` to the operators directly, because it has no typeclasses.
-That wiring is the degenerate case of this design, not a design of its own, and 0.2 replaces it.
+The wiring version 0.1 shipped, which named `Int` and `String` where an instance now stands, was
+the degenerate case of this design rather than a design of its own, and it is gone.
 
 A literal is a trait method too, so a declared type can be written as plainly as `Int` can.
 A whole-number literal takes the type the context expects, provided that type has `IntegerLiteral`.

@@ -148,6 +148,9 @@ instance Eq<String>
 of them is refused with `L0302`, exactly as one declaring its own `todo` is.
 A module writing `instance Eq<Int>` is refused with `L0308`, because there already is one.
 
+`Eq` is one of the eight traits the prelude declares; `docs/specs/operators.md` writes out the
+other seven, which are the traits the other operators are.
+
 A supplied instance has no body to call.
 `is_equal` at `Int`, at `Bool`, or at `String` is written out where it is called, as `or` is, and
 the comparison it writes is the one `==` already wrote: two whole numbers or two truth values as the
@@ -194,7 +197,7 @@ A trait's name and the type an instance is for are written in `PascalCase`, and 
 | `L0311` | A trait is written where a type belongs. |
 | `L0400` | An instance's method has a signature the trait's method does not. |
 | `L0401` | An instance names a type that takes arguments, which an instance never names. |
-| `L0406` | `==` or `!=` is written between two values of a type with no instance of `Eq`. |
+| `L0406` | An operator is written over a type that has no instance of the trait it is. |
 | `L0418` | A trait method is used at a type with no instance of its trait. |
 | `L0419` | A parameter of a method a trait declares states no type. |
 

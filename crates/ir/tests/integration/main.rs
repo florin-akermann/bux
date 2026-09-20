@@ -8,6 +8,7 @@ mod escaping;
 mod io;
 mod lists;
 mod lowering;
+mod operators;
 mod properties;
 mod traits;
 mod unit;

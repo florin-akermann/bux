@@ -156,7 +156,7 @@ the value it was given.
 | infinite type     | `L0403` | this would have a type that contains itself      |
 | missing field     | `L0404` | `User` needs a field named `id`                  |
 | field given twice | `L0405` | `User` is given `id` twice                       |
-| not equatable     | `L0406` | `User` has no `Eq`, so two of them cannot be compared |
+| no operator       | `L0406` | `User` has no `Eq`, so `==` is not written over it |
 | zero divisor      | `L0407` | this divisor is zero, so there is no answer      |
 | value discarded   | `L0408` | `Result<(), Error>` is left here and nothing takes it |
 | unnamed arguments | `L0409` | `rename` gives two parameters the type `String`, so this call names its arguments |
@@ -168,8 +168,8 @@ the value it was given.
 | type kept to itself | `L0416` | `greeting.wrapped` names `Held`, which `greeting` keeps to itself |
 | generic through a module | `L0417` | `holding.held` is generic, so `holding` alone writes it |
 
-`L0400` also says `` `Bool` cannot be added `` when `+` is given something that is neither `Int`
-nor `String`.
+`L0406` covers every operator, because every operator is a trait method and a type is written
+with one exactly where it has that trait's instance, which `docs/specs/operators.md` states.
 `L0402` also says the type reached through `.` is not known, when inference never settled it.
 A variant that carries its values in order has no field to write against, so that is `L0402` too.
 A name reached inside a module is never `L0402`: every module in scope is supplied or loaded, so

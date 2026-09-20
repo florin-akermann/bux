@@ -122,6 +122,29 @@ fn a_module_may_not_declare_a_name_the_prelude_gives_a_trait() {
 }
 
 #[test]
+fn the_prelude_gives_every_operator_its_trait_and_that_trait_its_method() {
+    for supplied in &lumen_resolver::prelude::TRAITS {
+        let declared = format!(
+            "trait {}<T> {{\n    fn spelled(value: T) -> Int\n}}\n",
+            supplied.name
+        );
+
+        assert_eq!(
+            refusal(&declared).message(),
+            format!("`{}` is already in scope here", supplied.name)
+        );
+        for method in supplied.methods {
+            let named = format!("fn {method}(value: Int) -> Int {{\n    value\n}}\n");
+
+            assert_eq!(
+                refusal(&named).message(),
+                format!("`{method}` is already in scope here")
+            );
+        }
+    }
+}
+
+#[test]
 fn a_trait_method_is_a_name_that_is_called_and_never_read() {
     let error = refusal("fn read() -> Int {\n    is_equal\n}\n");
 

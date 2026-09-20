@@ -1,19 +1,19 @@
 //! What a function settles once its body has been walked.
 //!
-//! A field waits on the type it is reached through, and an addition and a comparison wait on
-//! the type of what they are given. Each of them is answered when the function they are
-//! written in has been inferred, so the report lands where the source wrote it.
+//! A field waits on the type it is reached through, and an operator waits on the type of what it
+//! is written over. Each of them is answered when the function they are written in has been
+//! inferred, so the report lands where the source wrote it.
 
 use std::mem;
 
-use lumen_ast::{Name, Span};
+use lumen_ast::Name;
 
 use crate::error::{TypeError, TypeErrorKind};
 use crate::infer::{Asked, Inference, Propagated, Propagation, Requirement, labelled};
 use crate::scheme::Required;
 use crate::supplied;
 use crate::surface::Offered;
-use crate::types::{EQ, Type};
+use crate::types::Type;
 
 impl Inference<'_> {
     /// The fields of one function, now that its body has said what they are reached through.
@@ -69,33 +69,25 @@ impl Inference<'_> {
         self.expect(&self.result.clone(), &given_back, waiting.at)
     }
 
-    /// The additions of one function, each an addition of `Int`s unless something said otherwise.
+    /// The operators of one function, each asking its trait of the type its operands settled on.
     ///
-    /// They settle last, after the declared result has had its say, because the result is often
-    /// the only thing that says an addition joins two `String`s.
-    pub(crate) fn settle_additions(&mut self) -> Result<(), TypeError> {
-        let waiting = mem::take(&mut self.additions);
-        self.settled(waiting, &Type::int(), not_addable)
-    }
-
-    /// The comparisons of one function, each between two values of a type that has `Eq`.
-    ///
-    /// `==` is `Eq`, which `docs/design.md` section 8 states, so a comparison asks the trait of
-    /// the type it compares exactly as a call of `equals` does. A comparison still untyped once
-    /// its function is inferred is a comparison of `Int`s, as an addition still untyped is an
-    /// addition of them, so the default is settled before the trait is asked.
-    pub(crate) fn settle_equalities(&mut self) -> Result<(), TypeError> {
-        for (found, at) in mem::take(&mut self.equalities) {
-            if matches!(self.table.shallow(&found), Type::Var(_)) {
-                self.expect(&Type::int(), &found, at)?;
+    /// Every operator is a trait method, which `docs/specs/operators.md` states, so an operator
+    /// asks its trait exactly as a call of one of that trait's methods does. They settle after
+    /// the declared result has had its say, because the result is often the only thing that says
+    /// a `+` joins two `String`s. An operator still untyped by then is over `Int`s, which is the
+    /// one default the language keeps, and the default is taken before the trait is asked.
+    pub(crate) fn settle_operators(&mut self) -> Result<(), TypeError> {
+        for operated in mem::take(&mut self.operated) {
+            if matches!(self.table.shallow(&operated.at), Type::Var(_)) {
+                self.expect(&Type::int(), &operated.at, operated.written)?;
             }
             self.requirements.push(Requirement {
                 required: Required {
-                    trait_name: EQ.to_owned(),
-                    at: found,
+                    trait_name: operated.of.to_owned(),
+                    at: operated.at,
                 },
-                written: at,
-                how: Asked::Comparison,
+                written: operated.written,
+                how: Asked::Operator(operated.written_as),
             });
         }
         Ok(())
@@ -138,30 +130,15 @@ impl Inference<'_> {
 
     /// The statements of one function that nothing takes the value of.
     ///
-    /// They settle after the comparisons, so a discarded `a == b` is named as the `Bool` it is
+    /// They settle after the operators, so a discarded `a == b` is named as the `Bool` it is
     /// rather than as a type nothing had settled yet. A statement inference never settled takes
-    /// `()`, as an unsettled addition takes `Int`, so `todo("not yet")` stands as a statement.
+    /// `()`, as an unsettled operator takes `Int`, so `todo("not yet")` stands as a statement.
     pub(crate) fn settle_discards(&mut self) -> Result<(), TypeError> {
-        let waiting = mem::take(&mut self.discards);
-        self.settled(waiting, &Type::Unit, not_discardable)
-    }
-
-    /// Each type that was waiting on the function it is written in, now that the function is done.
-    ///
-    /// A type nothing settled takes `default`, which is the one default the language has and the
-    /// reason `1 + 1` is an addition of `Int`s. A type that did settle is put to `refused`, which
-    /// says what is wrong with it or that nothing is.
-    fn settled(
-        &mut self,
-        waiting: Vec<(Type, Span)>,
-        default: &Type,
-        refused: fn(&Type) -> Option<TypeErrorKind>,
-    ) -> Result<(), TypeError> {
-        for (found, at) in waiting {
+        for (found, at) in mem::take(&mut self.discards) {
             let settled = self.table.shallow(&found);
             if matches!(settled, Type::Var(_)) {
-                self.expect(default, &found, at)?;
-            } else if let Some(kind) = refused(&self.table.solved(&settled)) {
+                self.expect(&Type::Unit, &found, at)?;
+            } else if let Some(kind) = not_discardable(&self.table.solved(&settled)) {
                 return Err(TypeError::at(at, kind));
             }
         }
@@ -239,12 +216,6 @@ impl Inference<'_> {
     }
 }
 
-/// What is wrong with adding two of `found`, which is that `+` joins `Int`s or `String`s.
-fn not_addable(found: &Type) -> Option<TypeErrorKind> {
-    let addable = *found == Type::int() || *found == Type::string();
-    (!addable).then(|| TypeErrorKind::NotAddable(found.clone()))
-}
-
 /// What is wrong with leaving a `found` behind, which is that nothing is there to take it.
 fn not_discardable(found: &Type) -> Option<TypeErrorKind> {
     (*found != Type::Unit).then(|| TypeErrorKind::Discarded(found.clone()))
@@ -276,7 +247,11 @@ fn unreachable_field(through: &Type, field: &Name) -> TypeError {
 /// The refusal a trait nothing answers amounts to, worded by how it came to be asked.
 fn unanswered(requirement: &Requirement, at: Type) -> TypeError {
     let kind = match requirement.how {
-        Asked::Comparison => TypeErrorKind::NotEquatable(at),
+        Asked::Operator(written_as) => TypeErrorKind::NoOperator {
+            written_as,
+            of: requirement.required.trait_name.clone(),
+            at,
+        },
         Asked::Method | Asked::Constraint => TypeErrorKind::NoInstance {
             of: requirement.required.trait_name.clone(),
             at,

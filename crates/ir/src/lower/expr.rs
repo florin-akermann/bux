@@ -7,8 +7,8 @@ use lumen_types::Type;
 use crate::code::{Arithmetic, Comparison, FieldRef, Instruction, MethodRef};
 use crate::descriptor::Descriptor;
 use crate::lower::body::{Builder, Held, LIST};
-use crate::lower::equality::{EQUALS, compared};
 use crate::lower::modules::Through;
+use crate::lower::operator::is_negation;
 use crate::lower::shape::{CONSTRUCTOR, Carried, ERR, NONE, OK, OPTION, RESULT};
 use crate::lower::shape::{SOME, Shape, TAG};
 use crate::lower::shape::{object, object_class};
@@ -91,13 +91,15 @@ impl Builder<'_> {
         }
     }
 
-    /// `!` and `-` each work on one settled type, whatever the operand was written as.
+    /// `!` is `Bool`'s alone, and prefix `-` is `Neg`, which a type gets by writing an instance.
     fn unary(&mut self, operator: UnaryOperator, operand: &Expr) -> Descriptor {
-        let (of, instruction) = worked_on(operator);
+        if is_negation(operator) {
+            return self.negated(operand);
+        }
         let held = self.expr(operand);
-        self.adapt(held, Some(of.clone()));
-        self.emit(instruction);
-        of
+        self.adapt(held, Some(Descriptor::Boolean));
+        self.emit(Instruction::Not);
+        Descriptor::Boolean
     }
 
     fn binary(
@@ -109,10 +111,7 @@ impl Builder<'_> {
         match operator {
             BinaryOperator::Or => Some(self.either(left, right)),
             BinaryOperator::And => Some(self.both(left, right)),
-            BinaryOperator::Divide | BinaryOperator::Remainder => {
-                Some(self.divided(counted(operator), left, right))
-            }
-            settled => self.applied(settled, left, right),
+            settled => self.operated(settled, left, right),
         }
     }
 
@@ -120,7 +119,7 @@ impl Builder<'_> {
     ///
     /// `ldiv` and `lrem` throw on a zero divisor and no method a module writes may throw, so the
     /// divisor is tested first and the answer is only ever worked out where there is one.
-    fn divided(&mut self, how: Arithmetic, left: &Expr, right: &Expr) -> Descriptor {
+    pub(crate) fn divided(&mut self, how: Arithmetic, left: &Expr, right: &Expr) -> Descriptor {
         let dividend = self.put_aside(left);
         let divisor = self.put_aside(right);
         self.emit(Instruction::Load {
@@ -141,13 +140,21 @@ impl Builder<'_> {
     }
 
     /// One operand of a division, put in a local so that the divisor can be tested on its own.
-    fn put_aside(&mut self, operand: &Expr) -> u16 {
+    pub(crate) fn put_aside(&mut self, operand: &Expr) -> u16 {
+        self.put_aside_as(operand, &Descriptor::Long)
+    }
+
+    /// Runs `operand` and keeps its value in a local of `of`, to be loaded again below.
+    ///
+    /// A side of an operator may be a call, so both sides are run in the order they are written
+    /// even where the method they are handed to takes them the other way round.
+    pub(crate) fn put_aside_as(&mut self, operand: &Expr, of: &Descriptor) -> u16 {
         let held = self.value(operand);
-        self.adapt(held, Some(Descriptor::Long));
-        let slot = self.temporary(&Descriptor::Long);
+        self.adapt(held, Some(of.clone()));
+        let slot = self.temporary(of);
         self.emit(Instruction::Store {
             slot,
-            of: Descriptor::Long,
+            of: of.clone(),
         });
         slot
     }
@@ -205,73 +212,17 @@ impl Builder<'_> {
         Descriptor::Boolean
     }
 
-    /// Both sides are run at the type they were inferred to have, and the operator decides.
-    fn applied(
-        &mut self,
-        operator: BinaryOperator,
-        left: &Expr,
-        right: &Expr,
-    ) -> Option<Descriptor> {
-        let held = self.value(left);
-        let other = self.value(right);
-        self.adapt(other, held.clone());
-        match operator {
-            BinaryOperator::Equal | BinaryOperator::NotEqual => {
-                Some(self.equal(operator, left.span, held.as_ref()))
-            }
-            BinaryOperator::Less
-            | BinaryOperator::LessOrEqual
-            | BinaryOperator::Greater
-            | BinaryOperator::GreaterOrEqual => {
-                self.emit(Instruction::CompareLongs(how(operator)));
-                Some(Descriptor::Boolean)
-            }
-            BinaryOperator::Add => self.added(held),
-            BinaryOperator::Or | BinaryOperator::And => held,
-            arithmetic => {
-                self.emit(Instruction::Arithmetic(counted(arithmetic)));
-                Some(Descriptor::Long)
-            }
-        }
-    }
-
-    /// `==` is `Eq`, so a type whose instance the module wrote is compared by that instance.
+    /// Where the instance that answers `method` for whatever is written at `of` declares it.
     ///
-    /// `docs/specs/traits.md` makes `one == other` the call of `is_equal` the instance answers
-    /// with, and `one != other` that call with the answer flipped. A type the compiler supplies
-    /// the instance for has no method to call, and what it amounts to is written out in place.
-    fn equal(
-        &mut self,
-        operator: BinaryOperator,
-        of: Span,
-        held: Option<&Descriptor>,
-    ) -> Descriptor {
-        let Some(reached) = self.instance_of(EQUALS, of) else {
-            return self.same(operator, held);
-        };
-        self.emit(Instruction::InvokeStatic(reached));
-        if operator == BinaryOperator::NotEqual {
-            self.emit(Instruction::Not);
-        }
-        Descriptor::Boolean
-    }
-
-    /// The method the instance for whatever is written at `of` gives `method`, where it has one.
-    fn instance_of(&self, method: &str, of: Span) -> Option<MethodRef> {
+    /// A type the compiler supplies the instance for has no declaration to reach, and so has
+    /// nothing here; what its instance amounts to is written out where it is called.
+    pub(crate) fn instance_written(&self, method: &str, of: Span) -> Option<Span> {
         let at = self.lowering.typed.type_of(of)?;
-        let declared = self
-            .lowering
-            .answering(method, &self.at().substituted(at))?;
-        let reached = self.reaching(declared, declared);
-        Some(MethodRef {
-            class: self.lowering.shapes.module().clone(),
-            name: reached.named,
-            descriptor: reached.signature.descriptor(),
-        })
+        self.lowering.answering(method, &self.at().substituted(at))
     }
 
     /// `+` joins two strings and adds two whole numbers, which is what their types say.
-    fn added(&mut self, held: Option<Descriptor>) -> Option<Descriptor> {
+    pub(crate) fn added(&mut self, held: Option<Descriptor>) -> Option<Descriptor> {
         match &held {
             Some(Descriptor::Reference(_)) => self.emit(Instruction::Concat),
             _ => self.emit(Instruction::Arithmetic(Arithmetic::Add)),
@@ -340,7 +291,12 @@ impl Builder<'_> {
     }
 
     /// A call of the method declared at `at`, which is a static method of the module class.
-    fn statically(&mut self, at: Span, used: Span, arguments: &[&Expr]) -> Option<Descriptor> {
+    pub(crate) fn statically(
+        &mut self,
+        at: Span,
+        used: Span,
+        arguments: &[&Expr],
+    ) -> Option<Descriptor> {
         let reached = self.reaching(at, used);
         for (argument, wanted) in arguments.iter().zip(&reached.signature.parameters) {
             self.handed(argument, wanted.clone());
@@ -351,32 +307,6 @@ impl Builder<'_> {
             descriptor: reached.signature.descriptor(),
         }));
         reached.signature.result
-    }
-
-    /// The body an instance the compiler supplies amounts to, written out where it is called.
-    ///
-    /// `Eq` at `Int`, at `Bool`, and at `String` is the whole of it while the prelude is not yet
-    /// Lumen source, and what it writes is what `==` already wrote: two whole numbers or two
-    /// truth values as the JVM compares them, and two strings by the characters they hold.
-    fn supplied_instance(&mut self, name: &Name, arguments: &[&Expr]) -> Descriptor {
-        assert!(
-            name.text == EQUALS,
-            "`equals` is the one supplied instance method; the prelude declares no other"
-        );
-        let [left, right] = arguments else {
-            unreachable!("inference gave `equals` the two arguments it takes")
-        };
-        let held = self.value(left);
-        let other = self.value(right);
-        self.adapt(other, held.clone());
-        self.same(BinaryOperator::Equal, held.as_ref())
-    }
-
-    fn same(&mut self, operator: BinaryOperator, held: Option<&Descriptor>) -> Descriptor {
-        for instruction in compared(held, how(operator)) {
-            self.emit(instruction);
-        }
-        Descriptor::Boolean
     }
 
     /// Builds what a constructor builds, out of the values it is given in order.
@@ -628,40 +558,6 @@ fn carried_name(carries: &[Carried]) -> String {
         .first()
         .map(|carried| carried.name.clone())
         .unwrap_or_default()
-}
-
-/// Which comparison an operator asks for.
-fn how(operator: BinaryOperator) -> Comparison {
-    match operator {
-        BinaryOperator::NotEqual => Comparison::NotEqual,
-        BinaryOperator::Less => Comparison::Less,
-        BinaryOperator::LessOrEqual => Comparison::LessOrEqual,
-        BinaryOperator::Greater => Comparison::Greater,
-        BinaryOperator::GreaterOrEqual => Comparison::GreaterOrEqual,
-        _ => Comparison::Equal,
-    }
-}
-
-/// What an operator does to two whole numbers.
-fn counted(operator: BinaryOperator) -> Arithmetic {
-    match operator {
-        BinaryOperator::Subtract => Arithmetic::Subtract,
-        BinaryOperator::Multiply => Arithmetic::Multiply,
-        BinaryOperator::Divide => Arithmetic::Divide,
-        BinaryOperator::Remainder => Arithmetic::Remainder,
-        _ => Arithmetic::Add,
-    }
-}
-
-/// What `!` and `-` each work on, and the instruction that does the work.
-fn worked_on(operator: UnaryOperator) -> (Descriptor, Instruction) {
-    match operator {
-        UnaryOperator::Not => (Descriptor::Boolean, Instruction::Not),
-        UnaryOperator::Negate => (
-            Descriptor::Long,
-            Instruction::Arithmetic(Arithmetic::Negate),
-        ),
-    }
 }
 
 /// The value a record literal writes for the field `carried`, where it writes one.

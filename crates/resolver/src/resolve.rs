@@ -84,7 +84,7 @@ impl Resolver {
                 Namespace::Type,
                 &[
                     (&prelude::TYPES, DefinitionKind::Type),
-                    (&prelude::TRAITS, DefinitionKind::Trait),
+                    (&prelude::trait_names(), DefinitionKind::Trait),
                 ],
             ),
             values: Scope::of_prelude(
@@ -92,7 +92,7 @@ impl Resolver {
                 &[
                     (&prelude::CONSTRUCTORS, DefinitionKind::Constructor),
                     (&prelude::FUNCTIONS, DefinitionKind::Function),
-                    (&prelude::TRAIT_METHODS, DefinitionKind::TraitMethod),
+                    (&prelude::method_names(), DefinitionKind::TraitMethod),
                 ],
             ),
             definitions: HashMap::new(),

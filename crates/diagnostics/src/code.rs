@@ -106,8 +106,8 @@ catalogue! {
     MissingField => "L0404",
     /// A record is written with one of its fields given a value twice.
     FieldWrittenTwice => "L0405",
-    /// `==` or `!=` is written between two values of a type that has no `Eq`.
-    NotEquatable => "L0406",
+    /// An operator is written over a type that has no instance of the trait that operator is.
+    NoOperator => "L0406",
     /// A divisor is written as zero, which the compiler can see has no answer.
     DivisorIsZero => "L0407",
     /// A statement leaves a value behind and nothing takes it.

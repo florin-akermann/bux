@@ -81,10 +81,13 @@ fn a_record_built_without_one_of_its_fields_is_refused() {
 }
 
 #[test]
-fn a_value_that_is_neither_an_int_nor_a_string_cannot_be_added() {
+fn a_type_with_no_instance_of_add_is_not_added() {
     let source = "fn go(flag: Bool) -> Bool {\n    flag + flag\n}\n";
 
-    assert_eq!(refusal(source).message(), "`Bool` cannot be added");
+    assert_eq!(
+        refusal(source).message(),
+        "`Bool` has no `Add`, so `+` is not written over it"
+    );
 }
 
 #[test]
@@ -184,7 +187,7 @@ fn a_record_has_no_eq_so_two_of_them_are_not_compared() {
 
     assert_eq!(
         refusal(source).message(),
-        "`User` has no `Eq`, so two of them cannot be compared"
+        "`User` has no `Eq`, so `==` is not written over it"
     );
 }
 
@@ -207,7 +210,7 @@ fn a_variant_has_no_eq_either() {
 
     assert_eq!(
         refusal(source).message(),
-        "`Payment` has no `Eq`, so two of them cannot be compared"
+        "`Payment` has no `Eq`, so `!=` is not written over it"
     );
 }
 
@@ -217,7 +220,7 @@ fn a_unit_has_no_eq_because_no_instance_ships_for_it() {
 
     assert_eq!(
         refusal(source).message(),
-        "`()` has no `Eq`, so two of them cannot be compared"
+        "`()` has no `Eq`, so `==` is not written over it"
     );
 }
 

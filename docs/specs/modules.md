@@ -83,16 +83,18 @@ Every module has these names in scope without importing anything:
 
 ```text
 types:        Bool  Int  List  Option  Result  String
-traits:       Eq
+traits:       Add  Div  Eq  Mul  Neg  Ord  Rem  Sub
 constructors: Err  None  Ok  Some
 functions:    or  todo
-methods:      is_equal
+methods:      add  divide  is_equal  is_less  multiply  negate  remainder  subtract
 ```
 
 `or(maybe, fallback)` is what an `Option` holds, or the fallback when it holds nothing, and
 `docs/specs/arithmetic.md` says why.
 `todo(reason)` is a hole, which `docs/specs/holes.md` states.
 `Eq` is the trait `==` is, with the instances `docs/specs/traits.md` names.
+The other seven traits are the ones the other operators are, which `docs/specs/operators.md`
+names along with the instances the compiler supplies for each.
 
 They are ordinary declarations of a module the compiler supplies, not keywords.
 Loading does not reach the prelude: a prelude name is written bare, and an import brings a module

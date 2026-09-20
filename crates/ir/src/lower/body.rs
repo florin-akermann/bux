@@ -7,7 +7,7 @@ use lumen_ast::{Statement, StatementKind};
 use lumen_resolver::{Definition, Namespace, Origin};
 use lumen_types::Type;
 
-use crate::code::{Arithmetic, Body, Instruction, Label, MethodRef};
+use crate::code::{Body, Instruction, Label, MethodRef};
 use crate::descriptor::{ClassName, Descriptor, MethodDescriptor};
 use crate::lower::generic::Instantiation;
 use crate::lower::shape::{CONSTRUCTOR, object, object_class};
@@ -209,18 +209,6 @@ impl<'a> Builder<'a> {
             (AssignOperator::Set | AssignOperator::Add, _) => self.expr(value),
         };
         self.stored(name, left);
-    }
-
-    /// `total += 1` reads what the name holds, adds to it, and puts it back.
-    fn added_to(&mut self, slot: &Slot, value: &Expr) -> Descriptor {
-        self.emit(Instruction::Load {
-            slot: slot.at,
-            of: slot.of.clone(),
-        });
-        let left = self.expr(value);
-        self.adapt(left, Some(slot.of.clone()));
-        self.emit(joined(&slot.of));
-        slot.of.clone()
     }
 
     fn returned(&mut self, value: Option<&Expr>) {
@@ -566,15 +554,5 @@ fn reaching(name: &str, parameters: Vec<Descriptor>, result: Descriptor) -> Meth
         class: ClassName::new(LIST),
         name: name.to_owned(),
         descriptor: MethodDescriptor::new(parameters, Some(result)),
-    }
-}
-
-/// What `+` does to two values, which joins two strings and adds two whole numbers.
-fn joined(of: &Descriptor) -> Instruction {
-    match of {
-        Descriptor::Reference(_) | Descriptor::Array(_) => Instruction::Concat,
-        Descriptor::Long | Descriptor::Boolean | Descriptor::Integer => {
-            Instruction::Arithmetic(Arithmetic::Add)
-        }
     }
 }

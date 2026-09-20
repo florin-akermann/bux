@@ -5,6 +5,7 @@ use std::collections::{HashMap, HashSet};
 use lumen_ast::{Function, InstanceDeclaration, TraitDeclaration, TypeRef, TypeRefKind};
 use lumen_ast::{Item, Name, RecordField, Signature, Span, TypeDeclaration, TypeDefinition};
 use lumen_ast::{Variant, VariantPayload};
+use lumen_resolver::prelude;
 use lumen_resolver::{Definition, DefinitionKind, Namespace, Origin, ResolvedProgram};
 
 use crate::error::{Count, TypeError, TypeErrorKind};
@@ -162,36 +163,46 @@ impl Environment {
         );
         environment.bind(Key::prelude("or"), or(&value));
         environment.bind(Key::prelude("todo"), todo(&value));
-        environment.supply_equality(&value);
+        environment.supply_traits(&value);
         environment
     }
 
-    /// `Eq`, and the instances of it the library will ship once the prelude is Lumen source.
+    /// The traits the prelude supplies, and the instances the library will ship for each.
     ///
-    /// `docs/specs/traits.md` writes the trait out. It is declared here for the reason the
-    /// prelude's types are declared here: a module cannot be loaded from a file yet.
-    fn supply_equality(&mut self, value: &TypeParameter) {
-        let compared = Type::Parameter(value.clone());
-        let key = Key::prelude(EQUALS);
+    /// `docs/specs/traits.md` writes `Eq` out and `docs/specs/operators.md` writes the trait each
+    /// operator is. They are declared here for the reason the prelude's types are declared here:
+    /// a module cannot be loaded from a file yet.
+    fn supply_traits(&mut self, value: &TypeParameter) {
+        for supplied in &prelude::TRAITS {
+            for method in supplied.methods {
+                self.supply(value, supplied.name, method);
+            }
+        }
+        for (of, for_type) in prelude::instances() {
+            self.instances.insert((of.to_owned(), for_type.to_owned()));
+        }
+    }
+
+    /// One method of one supplied trait, a name in scope with the type its trait gives it.
+    ///
+    /// The scheme is written over the trait's type parameter and asks that trait of it, so a use
+    /// of the method is answered by an instance exactly as a use of a declared one is.
+    fn supply(&mut self, value: &TypeParameter, of: &str, method: &str) {
+        let key = Key::prelude(method);
+        let at = Type::Parameter(value.clone());
         let asks = vec![Required {
-            trait_name: EQ.to_owned(),
-            at: compared.clone(),
+            trait_name: of.to_owned(),
+            at: at.clone(),
         }];
+        let signature = signature_of(of, &at);
         self.bind(
             key.clone(),
-            Scheme::over(
-                vec![Quantified::Parameter(value.clone())],
-                Type::function(vec![compared.clone(), compared], Type::boolean()),
-            )
-            .requiring(asks),
+            Scheme::over(vec![Quantified::Parameter(value.clone())], signature).requiring(asks),
         );
         self.methods
             .insert(key.clone(), Quantified::Parameter(value.clone()));
         self.declares
-            .insert((EQ.to_owned(), EQUALS.to_owned()), key);
-        for for_type in EQUATABLE {
-            self.instances.insert((EQ.to_owned(), for_type.to_owned()));
-        }
+            .insert((of.to_owned(), method.to_owned()), key);
     }
 
     fn declare(
@@ -540,14 +551,20 @@ impl Key {
     }
 }
 
-/// The trait `==` is, which `docs/design.md` section 8 makes the first operator written as one.
-const EQ: &str = "Eq";
-
-/// The one method `Eq` declares.
-const EQUALS: &str = "is_equal";
-
-/// The types the prelude has an instance of `Eq` for, which the library will ship.
-const EQUATABLE: [&str; 3] = ["Bool", "Int", "String"];
+/// The type each prelude trait's one method has, written over the trait's own type parameter.
+///
+/// `docs/specs/operators.md` gives each operator's trait its signature: one gives back what it
+/// was given, one an `Option` of it, and one a `Bool` about it.
+fn signature_of(of: &str, at: &Type) -> Type {
+    let two = vec![at.clone(), at.clone()];
+    match of {
+        prelude::EQ | prelude::ORD => Type::function(two, Type::boolean()),
+        prelude::DIV | prelude::REM => Type::function(two, Type::option(at.clone())),
+        prelude::NEG => Type::function(vec![at.clone()], at.clone()),
+        prelude::ADD | prelude::SUB | prelude::MUL => Type::function(two, at.clone()),
+        _ => unreachable!("the prelude declares exactly the traits `prelude::TRAITS` lists"),
+    }
+}
 
 /// The types the prelude supplies, with how many arguments each one is written with.
 const PRELUDE_TYPES: [(&str, usize); 6] = [
