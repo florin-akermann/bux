@@ -6,19 +6,6 @@
 
 ## Open
 
-## 🟢 Item 043: `Ord`, `Hash`, and `Show` are standard traits, and derivable
-**Depends on:** Item 042 — the second derivable trait follows the first's path.
-`docs/design.md` section 8 names `Eq`, `Ord`, `Hash`, and `Show` as the standard traits.
-Each is a declared trait the library ships, with instances for `Int`, `Bool`, and `String`.
-`Hash` is a trait a type opts into, not the JVM's `hashCode`; nothing has a hash it did not ask for.
-`Show` renders a value as text a reader can read; nothing has a `toString` it did not ask for.
-A record derives each field by field in declaration order; a variant by variant, then by payload.
-Item 033 makes `<` and its kin resolve through `Ord`; this item gives them the trait to resolve to.
-[043][a] - Spec first in `docs/specs/traits.md`: each trait's method, its laws, what derive writes.
-[043][b] - The three traits and the prelude's instances, test-first; properties cover each law.
-[043][c] - Derive for each, test-first; a property: derived `Ord` is total and agrees with `Eq`.
-[043][d] - Executable examples under `tests/spec/traits/`, one file per trait.
-
 ## 🔴 Item 044: A type a module declares is reachable from the module that imports it
 **Depends on:** Item 040 — version 0.1 closes before the first 0.2 item opens.
 `docs/specs/modules.md` keeps a type its declaring module's own: `demo.User` cannot be written.
