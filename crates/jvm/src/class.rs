@@ -1,6 +1,6 @@
 //! One class, as the bytes a JVM loads.
 
-use lumen_ir::{Class, Descriptor, Extending, Method, Reached};
+use lumen_ir::{Class, Extending, Method, Reached};
 
 use crate::bytes::Bytes;
 use crate::code::{Assembled, Caught, Context, assemble};
@@ -60,10 +60,9 @@ pub(crate) fn write(class: &Class, hierarchy: &Hierarchy) -> Vec<u8> {
 /// which descriptors it wants loaded first, and `docs/specs/codegen.md` states which ones a class
 /// names. A class that waits on nothing carries no attribute rather than an empty one.
 fn written_loadable(class: &Class, context: &mut Context<'_>) -> Option<Vec<u8>> {
-    let itself = Descriptor::Reference(class.name.clone());
     let mut wanted: Vec<u16> = Vec::new();
     for field in &class.fields {
-        if field.of == itself || !context.hierarchy.is_foldable(&field.of) {
+        if !context.hierarchy.is_foldable(&field.of) {
             continue;
         }
         let descriptor = context.pool.utf8(&field.of.to_string());

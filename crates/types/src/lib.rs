@@ -7,6 +7,7 @@
 
 mod environment;
 mod error;
+mod holds;
 mod infer;
 mod scheme;
 mod supplied;
@@ -26,8 +27,10 @@ pub use crate::types::{Type, TypeParameter, TypeVar};
 ///
 /// # Errors
 ///
-/// Returns the first expression whose type inference cannot give it.
+/// Returns the first declaration that holds a value of itself, or, where none does, the first
+/// expression whose type inference cannot give it.
 pub fn check(resolved: ResolvedProgram) -> Result<TypedProgram, TypeError> {
+    holds::nothing_holds_itself(&resolved)?;
     let types = infer::infer(&resolved)?;
     Ok(TypedProgram { resolved, types })
 }

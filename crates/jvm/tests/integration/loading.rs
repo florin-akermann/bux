@@ -158,28 +158,6 @@ fn the_module_class_asks_for_nothing_because_it_declares_no_field() {
 }
 
 #[test]
-fn a_record_holding_itself_does_not_ask_for_itself() {
-    let source = "fn number(node: Node) -> Int {
-    node.number
-}
-
-type Node = {
-    number: Int
-    next: Node
-}
-";
-
-    let files = common::compiled(source);
-
-    assert!(
-        common::one_of(&files, "demo/Node.class")
-            .loadable
-            .is_empty(),
-        "a class is the one being laid out, so nothing of it waits on it"
-    );
-}
-
-#[test]
 fn a_field_typed_as_the_base_of_a_sum_type_is_not_asked_for() {
     let source = "fn across(box: Box) -> Int {
     match box.held {

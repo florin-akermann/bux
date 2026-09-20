@@ -29,6 +29,17 @@ A type the author writes is the type they get.
 `fn wrap(raw: Int) -> UserId` is refused if its body returns an `Int`.
 A written type carries one argument for each its declaration lists, so `List<Int, Int>` is refused.
 
+A declared type does not hold a value of itself.
+`type Node = { number: Int, next: Node }` is refused where it is declared, because a value has no
+null: that field would hold a whole `Node`, whose own field would hold another, without end.
+A ring of declarations is refused the same way, so an `A` holding a `B` that holds an `A` is too.
+The refusal names the ring in the order it runs, and points at the declaration it came back to.
+`Option<Node>` is how a type holds another of its own kind, and it is accepted.
+
+Only a record's own fields are followed, because a record is what holds another by value.
+A field written as the base of an ADT holds whichever variant it was handed, which is a reference.
+A type written as an argument is not followed either, for the same reason: it is carried as one.
+
 An imported module is a type of its own that has nothing inside it.
 Version 0.1 brings a module into scope and has no way yet to reach a name in one.
 
@@ -141,6 +152,7 @@ the value it was given.
 | no names to write | `L0411` | `Span` is a constructor, so it carries its values in order and names none |
 | flag parameter    | `L0412` | this parameter is a `Bool`, so a call of `open` passes `true` and says no more |
 | not a predicate   | `L0413` | `active` gives back a `Bool`, so its name asks the question it answers |
+| holds itself      | `L0415` | `Node` holds `Node`                              |
 
 `L0400` also says `` `Bool` cannot be added `` when `+` is given something that is neither `Int`
 nor `String`.
@@ -177,3 +189,5 @@ These hold and are checked with property-based tests:
 4. Every expression of an inferred program has a type.
 5. No expression of a module whose signatures are written is left unsettled.
 6. A generic function is general enough for any two uses of it.
+7. A ring of declarations that hold one another by value is refused, naming the ring.
+8. A chain of declarations that never comes back round is accepted.

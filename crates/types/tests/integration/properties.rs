@@ -392,3 +392,48 @@ fn a_name_a_supplied_module_does_not_declare_is_refused_naming_the_module_and_it
         format!("`{module}` declares no `{name}`")
     );
 }
+
+/// The names a generated ring or chain of records is declared under, in the order it runs.
+const NAMED: [&str; 5] = ["Room", "Wing", "Floor", "Plan", "Site"];
+
+/// A module declaring `many` records, each holding the next, and the last holding `last`.
+fn along(many: usize, last: &str) -> String {
+    let declared = NAMED.iter().take(many).enumerate().map(|(at, named)| {
+        let held = if at + 1 == many { last } else { NAMED[at + 1] };
+        format!("\ntype {named} = {{\n    count: Int\n    next: {held}\n}}\n")
+    });
+    let reached = NAMED[0];
+    let opening = format!("fn counted(held: {reached}) -> Int {{\n    held.count\n}}\n");
+    declared.fold(opening, |mut source, written| {
+        source.push_str(&written);
+        source
+    })
+}
+
+#[hegel::test]
+fn a_ring_of_records_is_refused_however_long_the_ring_is(tc: TestCase) {
+    let many = tc.draw(gs::sampled_from(&[1, 2, 3, 4, 5]));
+
+    let message = refusal(&along(many, NAMED[0])).message();
+
+    let first = NAMED[0];
+    assert!(
+        message.starts_with(&format!("`{first}` holds ")),
+        "{message}"
+    );
+    assert!(message.ends_with(&format!("`{first}`")), "{message}");
+    assert_eq!(
+        message.matches(", which holds ").count(),
+        many - 1,
+        "a ring of {many} names every one of them: {message}"
+    );
+}
+
+#[hegel::test]
+fn a_chain_of_records_that_never_comes_back_round_is_accepted(tc: TestCase) {
+    let many = tc.draw(gs::sampled_from(&[1, 2, 3, 4, 5]));
+
+    let source = along(many, "Int");
+
+    assert!(check(resolve(parse(&source).expect("it parses")).expect("it resolves")).is_ok());
+}

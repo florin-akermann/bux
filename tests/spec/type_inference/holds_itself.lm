@@ -1,0 +1,12 @@
+// expect-error: L0415
+// A value has no null, so `next` would hold a whole `Node`, whose `next` would hold another.
+// There is no first one to build, so the declaration is refused rather than a program using it.
+// `Option<Node>` is how a type holds another of its own kind, and `None` is where it stops.
+fn counted(node: Node) -> Int {
+    node.count
+}
+
+type Node = {
+    count: Int
+    next: Node
+}

@@ -8,6 +8,7 @@ mod discarding;
 mod errors;
 mod flags;
 mod generics;
+mod holds;
 mod inference;
 mod predicate;
 mod properties;

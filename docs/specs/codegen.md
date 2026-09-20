@@ -179,7 +179,8 @@ A class names the descriptor of each field whose type the same build writes, in 
 fields are declared, and names a type two fields share once.
 A field carried by a class the JVM ships, `java.lang.String` among them, is not named: it is no
 value class, so nothing of it could be folded into the class holding it.
-A class never names itself: the layout being settled is its own, and no value folds into itself.
+No class names itself: a type that holds a value of itself is refused before this, which
+`docs/specs/types.md` states and the layout here is the reason for.
 The base of a sum type is not named either: a field typed as one holds whichever variant it was
 handed, so it stays a reference however early the base is loaded.
 A class with no such field carries no attribute at all rather than an empty one.

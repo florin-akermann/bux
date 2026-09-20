@@ -110,6 +110,11 @@ pub(crate) enum TypeErrorKind {
         module: String,
         name: String,
     },
+    /// A declared type holds a value of itself, around a ring that comes back to it.
+    HoldsItself {
+        /// The types the ring runs through, beginning and ending at the one refused.
+        ring: Vec<String>,
+    },
 }
 
 impl TypeErrorKind {
@@ -135,6 +140,7 @@ impl TypeErrorKind {
             Self::FlagParameter(_) => Code::FlagParameter,
             Self::NotAPredicate(_) => Code::NotAPredicate,
             Self::NotInSuppliedModule { .. } => Code::NotInSuppliedModule,
+            Self::HoldsItself { .. } => Code::HoldsItself,
         }
     }
 
@@ -184,6 +190,9 @@ impl TypeErrorKind {
             Self::NotInSuppliedModule { .. } => {
                 "`docs/specs/io.md` lists every name a supplied module declares"
             }
+            Self::HoldsItself { .. } => {
+                "hold an `Option` of it, which is how a type holds another of its own kind"
+            }
         }
     }
 }
@@ -212,6 +221,14 @@ impl fmt::Display for TypeErrorKind {
             }
             Self::NotInSuppliedModule { module, name } => {
                 write!(f, "`{module}` declares no `{name}`")
+            }
+            Self::HoldsItself { ring } => {
+                let (first, rest) = ring.split_first().expect("a ring runs through one type");
+                write!(f, "`{first}` holds ")?;
+                for held in rest {
+                    write!(f, "`{held}`, which holds ")?;
+                }
+                write!(f, "`{first}`")
             }
             Self::Infinite => f.write_str("this would have a type that contains itself"),
             Self::MissingField { of, field } => {
