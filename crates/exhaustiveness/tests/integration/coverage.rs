@@ -4,6 +4,8 @@
 
 use lumen_diagnostics::render;
 
+use lumen_exhaustiveness::MatchError;
+
 use crate::common::{covers_everything, demo_payments, payments, refusal};
 
 #[test]
@@ -28,10 +30,7 @@ fn a_match_missing_a_variant_names_the_one_it_leaves_uncovered() {
         "    }"
     ));
 
-    assert_eq!(
-        refusal(&source).message(),
-        "this `match` does not cover `Failed(_)`"
-    );
+    leaves_uncovered(&refusal(&source), "`Failed(_)`");
 }
 
 #[test]
@@ -42,10 +41,7 @@ fn a_match_missing_several_variants_names_them_in_the_order_they_are_declared() 
         "    }"
     ));
 
-    assert_eq!(
-        refusal(&source).message(),
-        "this `match` does not cover `Authorized(_)`, `Failed(_)`"
-    );
+    leaves_uncovered(&refusal(&source), "`Authorized(_)`, `Failed(_)`");
 }
 
 #[test]
@@ -96,10 +92,7 @@ fn a_match_on_a_bool_needs_both_of_its_values() {
         "    match count > 1 {\n        true => \"yes\"\n    }\n}\n"
     );
 
-    assert_eq!(
-        refusal(source).message(),
-        "this `match` does not cover `false`"
-    );
+    leaves_uncovered(&refusal(source), "`false`");
 }
 
 #[test]
@@ -119,7 +112,7 @@ fn a_number_has_more_values_than_a_match_can_write_down() {
         "    match count {\n        0 => \"none\"\n        1 => \"one\"\n    }\n}\n"
     );
 
-    assert_eq!(refusal(source).message(), "this `match` does not cover `_`");
+    leaves_uncovered(&refusal(source), "`_`");
 }
 
 #[test]
@@ -139,7 +132,7 @@ fn a_string_has_more_values_than_a_match_can_write_down() {
         "    match word {\n        \"yes\" => \"agreed\"\n    }\n}\n"
     );
 
-    assert_eq!(refusal(source).message(), "this `match` does not cover `_`");
+    leaves_uncovered(&refusal(source), "`_`");
 }
 
 #[test]
@@ -159,10 +152,7 @@ fn an_option_missing_one_of_its_variants_is_refused() {
         "    match value {\n        Some(inner) => inner\n    }\n}\n"
     );
 
-    assert_eq!(
-        refusal(source).message(),
-        "this `match` does not cover `None`"
-    );
+    leaves_uncovered(&refusal(source), "`None`");
 }
 
 #[test]
@@ -199,10 +189,7 @@ fn a_nested_value_left_uncovered_is_named_where_it_is_uncovered() {
         "    }\n}\n"
     );
 
-    assert_eq!(
-        refusal(source).message(),
-        "this `match` does not cover `Some(Err(_))`"
-    );
+    leaves_uncovered(&refusal(source), "`Some(Err(_))`");
 }
 
 #[test]
@@ -215,10 +202,7 @@ fn a_match_written_inside_another_match_is_checked_too() {
         "    }\n}\n"
     );
 
-    assert_eq!(
-        refusal(source).message(),
-        "this `match` does not cover `false`"
-    );
+    leaves_uncovered(&refusal(source), "`false`");
 }
 
 #[test]
@@ -230,10 +214,7 @@ fn a_match_written_in_a_loop_is_checked_too() {
         "    }\n    0\n}\n"
     );
 
-    assert_eq!(
-        refusal(source).message(),
-        "this `match` does not cover `false`"
-    );
+    leaves_uncovered(&refusal(source), "`false`");
 }
 
 #[test]
@@ -245,10 +226,7 @@ fn the_first_match_that_leaves_a_value_uncovered_is_the_one_reported() {
         "    earlier + later\n}\n"
     );
 
-    assert_eq!(
-        refusal(source).message(),
-        "this `match` does not cover `false`"
-    );
+    leaves_uncovered(&refusal(source), "`false`");
 }
 
 #[test]
@@ -279,10 +257,7 @@ fn a_value_left_uncovered_under_an_arm_is_named_alongside_the_variants_with_no_a
         "type Held =\n    | Wrapping(Option<Int>)\n    | Empty\n"
     );
 
-    assert_eq!(
-        refusal(source).message(),
-        "this `match` does not cover `Wrapping(None)`, `Empty`"
-    );
+    leaves_uncovered(&refusal(source), "`Wrapping(None)`, `Empty`");
 }
 
 #[test]
@@ -292,10 +267,7 @@ fn a_bool_left_uncovered_under_an_arm_is_named_where_it_is_uncovered() {
         "    match flag {\n        Some(true) => 1\n        None => 0\n    }\n}\n"
     );
 
-    assert_eq!(
-        refusal(source).message(),
-        "this `match` does not cover `Some(false)`"
-    );
+    leaves_uncovered(&refusal(source), "`Some(false)`");
 }
 
 #[test]
@@ -305,10 +277,7 @@ fn a_constructor_carrying_more_than_one_value_names_a_stand_in_for_each() {
         "type Pair =\n    | Both(Int, Int)\n    | Neither\n"
     );
 
-    assert_eq!(
-        refusal(source).message(),
-        "this `match` does not cover `Both(_, _)`"
-    );
+    leaves_uncovered(&refusal(source), "`Both(_, _)`");
 }
 
 #[test]
@@ -329,8 +298,81 @@ fn a_match_over_a_type_of_another_module_names_the_variant_it_leaves_out() {
         "        demo.Failed(reason) => reason\n"
     ));
 
+    leaves_uncovered(&module.refusal(), "`demo.Authorized(_)`");
+}
+
+#[test]
+fn an_underscore_covers_every_value_the_arms_above_it_left() {
+    let source = payments(concat!(
+        "    match payment {\n",
+        "        Pending => \"waiting\"\n",
+        "        _ => \"the rest\"\n",
+        "    }"
+    ));
+
+    covers_everything(&source);
+}
+
+#[test]
+fn an_or_pattern_covers_what_its_alternatives_cover_between_them() {
+    let source = payments(concat!(
+        "    match payment {\n",
+        "        Pending | Failed(_) => \"seen\"\n",
+        "        Authorized { authorization_id } => authorization_id\n",
+        "    }"
+    ));
+
+    covers_everything(&source);
+}
+
+#[test]
+fn an_or_pattern_covering_all_but_one_variant_names_the_one_it_leaves() {
+    let source = payments(concat!(
+        "    match payment {\n",
+        "        Pending | Failed(_) => \"seen\"\n",
+        "    }"
+    ));
+
+    leaves_uncovered(&refusal(&source), "`Authorized(_)`");
+}
+
+#[test]
+fn a_whole_number_pattern_leaves_every_other_number_uncovered() {
+    let source =
+        "fn counted(count: Int) -> String {\n    match count {\n        0 => \"none\"\n    }\n}\n";
+
+    leaves_uncovered(&refusal(source), "`_`");
+}
+
+#[test]
+fn a_whole_number_pattern_is_covered_by_an_underscore_after_it() {
+    let source = "fn counted(count: Int) -> String {\n    match count {\n        0 => \"none\"\n        _ => \"some\"\n    }\n}\n";
+
+    covers_everything(source);
+}
+
+#[test]
+fn an_or_pattern_of_numbers_still_leaves_the_rest_of_them_uncovered() {
+    let source = "fn counted(count: Int) -> String {\n    match count {\n        0 | 1 => \"few\"\n    }\n}\n";
+
+    leaves_uncovered(&refusal(source), "`_`");
+}
+
+#[test]
+fn an_alternative_inside_a_constructor_covers_only_what_it_names() {
+    let source = concat!(
+        "fn described(held: Option<Bool>) -> String {\n    match held {\n",
+        "        Some(true | false) => \"held\"\n",
+        "        None => \"nothing\"\n    }\n}\n"
+    );
+
+    covers_everything(source);
+}
+
+/// Asserts that `refused` names `uncovered` as what the `match` it refuses leaves unanswered.
+fn leaves_uncovered(refused: &MatchError, uncovered: &str) {
     assert_eq!(
-        module.refusal().message(),
-        "this `match` does not cover `demo.Authorized(_)`"
+        refused.message(),
+        format!("this `match` does not cover {uncovered}")
     );
 }

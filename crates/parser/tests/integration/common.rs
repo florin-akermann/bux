@@ -465,5 +465,12 @@ fn pattern_node(tree: &mut Tree, depth: usize, pattern: &Pattern) {
                 );
             }
         }
+        PatternKind::Wildcard => tree.node(depth, "pattern-wildcard", span),
+        PatternKind::Or(alternatives) => {
+            tree.node(depth, "pattern-or", span);
+            for alternative in alternatives {
+                pattern_node(tree, depth + 1, alternative);
+            }
+        }
     }
 }

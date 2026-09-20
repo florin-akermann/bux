@@ -14,6 +14,18 @@ pub(crate) fn pattern(printer: &mut Printer, written: &Pattern) {
         PatternKind::Bool(value) => printer.word(if *value { "true" } else { "false" }),
         PatternKind::Tuple { path, elements } => carried(printer, path, elements),
         PatternKind::Record { path, fields } => named_fields(printer, path, fields),
+        PatternKind::Wildcard => printer.word("_"),
+        PatternKind::Or(alternatives) => any_of(printer, alternatives),
+    }
+}
+
+/// `Pending | Running`, with one space on each side of every `|`.
+fn any_of(printer: &mut Printer, alternatives: &[Pattern]) {
+    for (position, alternative) in alternatives.iter().enumerate() {
+        if position > 0 {
+            printer.word(" | ");
+        }
+        pattern(printer, alternative);
     }
 }
 

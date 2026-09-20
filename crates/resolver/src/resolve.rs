@@ -3,7 +3,7 @@
 use std::collections::{HashMap, HashSet};
 
 use lumen_ast::{Block, Expr, ExprKind, ForHeader, ForLoop, Function, IfExpr, Item};
-use lumen_ast::{MatchExpr, Mutability, Name, Path, Pattern, PatternKind, Program, RecordField};
+use lumen_ast::{MatchExpr, Mutability, Name, Path, Program, RecordField};
 use lumen_ast::{Span, Statement, StatementKind, TypeDeclaration, TypeDefinition, TypeRef};
 use lumen_ast::{TypeRefKind, Variant, VariantPayload};
 
@@ -13,6 +13,7 @@ use crate::order;
 use crate::prelude;
 use crate::scope::Scope;
 
+mod pattern;
 mod traits;
 
 /// Resolves every name of `program`, or reports the first one that has no definition.
@@ -408,50 +409,6 @@ impl Resolver {
         Ok(())
     }
 
-    fn pattern(&mut self, pattern: &Pattern) -> Resolved {
-        match &pattern.kind {
-            PatternKind::Name(path) => self.bare_pattern(path),
-            PatternKind::Tuple { path, elements } => {
-                self.built_as(path)?;
-                for element in elements {
-                    self.pattern(element)?;
-                }
-                Ok(())
-            }
-            PatternKind::Record { path, fields } => {
-                self.built_as(path)?;
-                for field in fields {
-                    self.introduce_value(field, DefinitionKind::Local)?;
-                }
-                Ok(())
-            }
-            PatternKind::Integer(_) | PatternKind::String(_) | PatternKind::Bool(_) => Ok(()),
-        }
-    }
-
-    /// A bare name matches what a constructor of that name carries, and otherwise binds the value.
-    ///
-    /// One reached through a module matches and never binds: a binding is a name of this module,
-    /// and a dotted name is a name of another, which `docs/specs/modules.md` states.
-    fn bare_pattern(&mut self, path: &Path) -> Resolved {
-        if path.module.is_some() {
-            return self.reached_through(path);
-        }
-        let name = &path.name;
-        if self.values.look_up(&name.text).is_some_and(is_constructor) {
-            return self.use_value(name);
-        }
-        self.introduce_value(name, DefinitionKind::Local)
-    }
-
-    /// The name a value is built with, which is this module's constructor or another module's.
-    fn built_as(&mut self, path: &Path) -> Resolved {
-        if path.module.is_some() {
-            return self.reached_through(path);
-        }
-        self.use_value(&path.name)
-    }
-
     fn type_ref(&mut self, type_ref: &TypeRef) -> Resolved {
         let TypeRefKind::Named { path, arguments } = &type_ref.kind else {
             return Ok(());
@@ -573,8 +530,4 @@ fn introduce(
         },
     );
     Ok(())
-}
-
-fn is_constructor(definition: Definition) -> bool {
-    definition.kind == DefinitionKind::Constructor
 }

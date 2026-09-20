@@ -15,6 +15,9 @@ is a pattern of the scrutinee's type.
 ## What covers what
 
 A pattern that is a bare name binds, and binding covers every value of the type.
+`_` covers every value of the type as well, and binds nothing while it does.
+A literal covers the one value it names, and an or-pattern covers what its alternatives cover
+between them.
 Every other pattern names a constructor, and covers the values that constructor builds whose
 carried values its own patterns cover.
 
@@ -45,10 +48,8 @@ constructor builds.
 
 A refusal names a value the match does not cover, written in the shape of an arm that would
 cover it.
-`_` stands there for any value, which an arm writes as a name of its own: version 0.1 has no
-pattern that matches without binding.
-`_` is reserved for the discard of `docs/specs/discarding.md` and is no pattern at all, so a
-witness is read and answered rather than pasted back into the file.
+`_` stands there for any value, which is the pattern `docs/specs/patterns.md` writes for one.
+A witness is therefore written in the shape of the arm that answers it.
 
 ```text
 error[L0500]: this `match` does not cover `Failed(_)`
@@ -83,6 +84,11 @@ An arm is placed by the constructors it writes, read left to right and outermost
 Two arms that reach inside one variant therefore answer to that variant first and to what they
 reach for second: `Some(Ok(_))` is written above `Some(Err(_))`, and both above `None`.
 
+An arm of alternatives is placed by the first alternative it writes, so an arm answering for the
+first and the last of three variants is written above the arm answering for the middle one.
+The alternatives are held to the declared order among themselves, so `Running | Pending` is
+refused where the type declares `Pending` first.
+
 Placing stops at the first thing no declaration writes down.
 A name that binds, a number, and a string are each written where the author put them, and so is
 everything the arm writes after one of them.
@@ -109,3 +115,4 @@ These hold and are checked with property-based tests:
 4. A match with an arm that binds a name is accepted, whatever else it writes.
 5. A refusal points at a non-empty span that lies within the source.
 6. A match whose arms are rotated out of the declared order is refused.
+7. `A | B` in one arm covers exactly what `A` and `B` cover in two arms.

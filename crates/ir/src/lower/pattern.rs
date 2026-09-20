@@ -7,6 +7,8 @@
 use lumen_ast::{MatchExpr, Name, Path, Pattern, PatternKind, Span};
 use lumen_resolver::DefinitionKind;
 
+use lumen_resolver::prelude;
+
 use crate::code::{Comparison, FieldRef, Instruction, Label, MethodRef};
 use crate::descriptor::{ClassName, Descriptor, MethodDescriptor};
 use crate::lower::body::{Builder, Slot};
@@ -17,6 +19,12 @@ use crate::lower::supplied::compared;
 struct Against {
     slot: Slot,
     next: Label,
+}
+
+/// A literal a pattern writes: the instruction that pushes it, and the type that instruction is.
+struct Literal {
+    pushed: Instruction,
+    of: Descriptor,
 }
 
 impl Builder<'_> {
@@ -74,22 +82,63 @@ impl Builder<'_> {
             slot: slot.clone(),
             next,
         };
+        let written = pattern.span;
         match &pattern.kind {
             PatternKind::Name(path) => self.tried_name(path, &against),
             PatternKind::Tuple { path, elements } => self.tried_tuple(path, elements, &against),
             PatternKind::Record { path, fields } => self.tried_record(path, fields, &against),
-            PatternKind::Integer(value) => {
-                self.equal_to(Instruction::Long(*value), &Descriptor::Long, &against);
-            }
+            PatternKind::Or(alternatives) => self.tried_any_of(alternatives, &against),
+            PatternKind::Integer(value) => self.tried_number(*value, written, &against),
             PatternKind::Bool(value) => {
-                self.equal_to(Instruction::Boolean(*value), &Descriptor::Boolean, &against);
+                let written_as = Literal {
+                    pushed: Instruction::Boolean(*value),
+                    of: Descriptor::Boolean,
+                };
+                self.equal_to(written_as, written, &against);
             }
-            PatternKind::String(value) => self.equal_to(
-                Instruction::Text(value.clone()),
-                &Descriptor::reference("java/lang/String"),
-                &against,
-            ),
+            PatternKind::String(value) => {
+                let written_as = Literal {
+                    pushed: Instruction::Text(value.clone()),
+                    of: Descriptor::reference("java/lang/String"),
+                };
+                self.equal_to(written_as, written, &against);
+            }
+            PatternKind::Wildcard => {}
         }
+    }
+
+    /// `Pending | Running`: each alternative in turn, and the first that matches answers.
+    ///
+    /// No alternative binds, which `docs/specs/patterns.md` states, so the arm below reads the
+    /// same locals whichever one of them the value took.
+    fn tried_any_of(&mut self, alternatives: &[Pattern], against: &Against) {
+        let matched = self.label();
+        let Some((last, rest)) = alternatives.split_last() else {
+            return;
+        };
+        for alternative in rest {
+            let next = self.label();
+            self.tried(alternative, Some(&against.slot), next);
+            self.emit(Instruction::Jump(matched));
+            self.emit(Instruction::Label(next));
+        }
+        self.tried(last, Some(&against.slot), against.next);
+        self.emit(Instruction::Label(matched));
+    }
+
+    /// A whole number, which is the number at the type it is matched against.
+    ///
+    /// `docs/specs/patterns.md` holds it to `docs/specs/literals.md`, so a type whose instance a
+    /// module wrote takes the number through that instance's `from_literal` here too.
+    fn tried_number(&mut self, value: i64, written: Span, against: &Against) {
+        let of = self.carried(written);
+        self.emit(Instruction::Load {
+            slot: against.slot.at,
+            of: against.slot.of.clone(),
+        });
+        self.adapt(Some(against.slot.of.clone()), of);
+        let pushed = self.whole_number(value, written);
+        self.same_as(&pushed, written, against);
     }
 
     /// A bare name is a variant that carries nothing, or a binding that matches anything.
@@ -185,15 +234,35 @@ impl Builder<'_> {
     }
 
     /// The value is the literal the pattern writes, which is what `==` would have asked.
-    fn equal_to(&mut self, literal: Instruction, of: &Descriptor, against: &Against) {
+    fn equal_to(&mut self, literal: Literal, written: Span, against: &Against) {
         self.emit(Instruction::Load {
             slot: against.slot.at,
             of: against.slot.of.clone(),
         });
-        self.adapt(Some(against.slot.of.clone()), Some(of.clone()));
-        self.emit(literal);
-        for instruction in compared(Some(of), Comparison::Equal) {
-            self.emit(instruction);
+        self.adapt(Some(against.slot.of.clone()), Some(literal.of.clone()));
+        self.emit(literal.pushed);
+        self.same_as(&literal.of, written, against);
+    }
+
+    /// Whether the two values above it are the same, which is the `Eq` of the type they are.
+    ///
+    /// A pattern asks what `==` asks, so it reaches the instance `==` reaches: one a module
+    /// wrote is a call of its method, and one the compiler supplies is the instruction it is.
+    fn same_as(&mut self, held: &Descriptor, written: Span, against: &Against) {
+        match self.instance_written(prelude::IS_EQUAL, written) {
+            None => {
+                for instruction in compared(Some(held), Comparison::Equal) {
+                    self.emit(instruction);
+                }
+            }
+            Some(declared) => {
+                let reached = self.reaching(declared, written);
+                self.emit(Instruction::InvokeStatic(MethodRef {
+                    class: self.lowering.shapes.module().clone(),
+                    name: reached.named,
+                    descriptor: reached.signature.descriptor(),
+                }));
+            }
         }
         self.emit(Instruction::JumpIfFalse(against.next));
     }

@@ -1,0 +1,28 @@
+// expect-run
+// > in flight
+// > failed: no funds
+// > done
+// One arm answers for two variants, and the arm is placed by the first alternative it writes.
+import io
+
+fn main() -> () {
+    io.println(described(Running))
+    io.println(described(Failed("no funds")))
+    io.println(described(Done))
+    ()
+}
+
+// example: described(Pending) == "in flight"
+fn described(status: Status) -> String {
+    match status {
+        Pending | Running => "in flight"
+        Failed(reason) => "failed: " + reason
+        Done => "done"
+    }
+}
+
+type Status =
+    | Pending
+    | Running
+    | Failed(String)
+    | Done

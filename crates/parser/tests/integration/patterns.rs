@@ -127,3 +127,66 @@ fn a_variant_of_another_module_is_matched_through_the_name_it_is_reached_by() {
         ]
     );
 }
+
+#[test]
+fn an_underscore_is_a_pattern_of_its_own_and_binds_no_name() {
+    assert_eq!(
+        in_match("        _ => 1"),
+        ["name payment", "arm", "  pattern-wildcard", "  integer 1"]
+    );
+}
+
+#[test]
+fn alternatives_written_with_a_pipe_between_them_are_one_pattern() {
+    assert_eq!(
+        in_match("        Pending | Captured => 1"),
+        any_of(&["Pending", "Captured"])
+    );
+}
+
+#[test]
+fn three_alternatives_are_one_pattern_and_not_two_nested_ones() {
+    assert_eq!(
+        in_match("        Pending | Captured | Settled => 1"),
+        any_of(&["Pending", "Captured", "Settled"])
+    );
+}
+
+/// The nodes one arm becomes whose pattern writes `alternatives` with a `|` between them.
+fn any_of(alternatives: &[&str]) -> Vec<String> {
+    let mut nodes = vec![
+        "name payment".to_owned(),
+        "arm".to_owned(),
+        "  pattern-or".to_owned(),
+    ];
+    for name in alternatives {
+        nodes.push(format!("    pattern {name}"));
+    }
+    nodes.push("  integer 1".to_owned());
+    nodes
+}
+
+#[test]
+fn an_alternative_is_a_whole_pattern_so_one_is_written_inside_a_constructor() {
+    assert_eq!(
+        in_match("        Failed(0 | 1) => 1"),
+        [
+            "name payment",
+            "arm",
+            "  pattern-tuple Failed",
+            "    pattern-or",
+            "      pattern-integer 0",
+            "      pattern-integer 1",
+            "  integer 1",
+        ]
+    );
+}
+
+#[test]
+fn a_pipe_with_no_pattern_after_it_is_refused_where_the_pattern_belongs() {
+    let refused =
+        lumen_parser::parse("fn f() {\n    match payment {\n        Pending | => 1\n    }\n}\n")
+            .expect_err("a pattern is expected after the pipe");
+
+    assert_eq!(refused.message(), "expected a pattern, found `=>`");
+}

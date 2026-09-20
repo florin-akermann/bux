@@ -35,10 +35,11 @@ const EXPRESSIONS: [&str; 24] = [
 ];
 
 /// Statements whose shape survives it too, including the headers that forbid a record literal.
-const STATEMENTS: [&str; 5] = [
+const STATEMENTS: [&str; 6] = [
     "if (user { active: true }).active {\n    }",
     "for (user { active: true }).active {\n    }",
     "match (user { active: true }).active {\n        A => 1\n    }",
+    "match a {\n        0 | 1 => 1\n        _ => 2\n    }",
     "a = (b + c) * d",
     "return (a + b) * c",
 ];

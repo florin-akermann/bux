@@ -1,0 +1,13 @@
+// expect-error: L0501
+// An alternative is held to the order its type declares its variants in, as an arm is.
+fn described(status: Status) -> String {
+    match status {
+        Running | Pending => "in flight"
+        Failed(reason) => reason
+    }
+}
+
+type Status =
+    | Pending
+    | Running
+    | Failed(String)

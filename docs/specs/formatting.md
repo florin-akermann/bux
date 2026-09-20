@@ -86,6 +86,8 @@ follows, as `} else if other {`.
 
 A **`match`** writes `match scrutinee {`, then one `pattern => body` per line one level in, then
 `}`.
+A **pattern** is written as the author wrote it, and alternatives of an or-pattern are separated
+by one space, a `|`, and one space, with nothing bracketing them.
 
 A **`for`** writes `for {`, `for condition {`, or `for name in iterable {`.
 

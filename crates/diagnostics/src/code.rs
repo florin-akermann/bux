@@ -98,6 +98,8 @@ catalogue! {
     NotDerivable => "L0312",
     /// A type or a pattern is reached through a name that is no module.
     NotAModule => "L0313",
+    /// A name that binds is written inside an or-pattern, which binds nothing.
+    BindsInsideOr => "L0314",
     /// A type met a type it does not match.
     TypeMismatch => "L0400",
     /// A call passes more or fewer arguments than the function takes.

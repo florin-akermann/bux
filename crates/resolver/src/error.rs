@@ -105,6 +105,8 @@ pub(crate) enum ResolveErrorKind {
     NotDeclaredHere(String),
     /// A trait written where a type belongs.
     TraitAsType(String),
+    /// A name that binds, written inside an or-pattern.
+    BindsInsideOr(String),
 }
 
 impl ResolveErrorKind {
@@ -149,6 +151,7 @@ impl ResolveErrorKind {
             Self::NotATrait(_) => Code::NotATrait,
             Self::NotDerivable(_) | Self::NotDeclaredHere(_) => Code::NotDerivable,
             Self::TraitAsType(_) => Code::TraitAsType,
+            Self::BindsInsideOr(_) => Code::BindsInsideOr,
         }
     }
 
@@ -180,6 +183,7 @@ impl ResolveErrorKind {
                 "a derive reads the declaration it names, so it names one this module writes"
             }
             Self::TraitAsType(_) => "name the type, and constrain it with `<T: Eq<T>>` where it is",
+            Self::BindsInsideOr(_) => "write one arm for each alternative where one of them binds",
         }
     }
 }
@@ -244,6 +248,12 @@ impl fmt::Display for ResolveErrorKind {
                 write!(f, "`{text}` is not a type this module declares")
             }
             Self::TraitAsType(text) => write!(f, "`{text}` is a trait, not a type"),
+            Self::BindsInsideOr(text) => {
+                write!(
+                    f,
+                    "`{text}` binds inside an or-pattern, which binds nothing"
+                )
+            }
         }
     }
 }

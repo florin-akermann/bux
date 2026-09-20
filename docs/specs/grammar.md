@@ -117,8 +117,9 @@ if             := "if" expression block [ "else" ( block | if ) ]
 match          := "match" expression "{" { match_arm } "}"
 match_arm      := pattern "=>" expression
 
-pattern        := Name [ "(" pattern { "," pattern } ")" | "{" Name { "," Name } "}" ]
-                | Integer | String | "true" | "false"
+pattern        := alternative { "|" alternative }
+alternative    := Name [ "(" pattern { "," pattern } ")" | "{" Name { "," Name } "}" ]
+                | Integer | String | "true" | "false" | "_"
 ```
 
 A comparison does not chain: `a < b < c` is a parse error, as it is in Go.

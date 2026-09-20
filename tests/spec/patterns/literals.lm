@@ -1,0 +1,37 @@
+// expect-run
+// > none
+// > one
+// > some
+// > one inside
+// > another inside
+// A literal matches one value, and `_` covers the rest without binding a name to read.
+// A literal written inside what a variant carries is compared at the type that variant carries.
+import io
+
+fn main() -> () {
+    io.println(counted(0))
+    io.println(counted(1))
+    io.println(counted(7))
+    io.println(unwrapped(Box(1)))
+    io.println(unwrapped(Box(7)))
+    ()
+}
+
+// example: counted(0) == "none"
+fn counted(count: Int) -> String {
+    match count {
+        0 => "none"
+        1 => "one"
+        _ => "some"
+    }
+}
+
+// example: unwrapped(Box(1)) == "one inside"
+fn unwrapped(held: Box<Int>) -> String {
+    match held {
+        Box(1) => "one inside"
+        Box(_) => "another inside"
+    }
+}
+
+type Box<T> = Box(T)

@@ -9,7 +9,7 @@ pub struct Pattern {
     pub span: Span,
 }
 
-/// The pattern forms of version 0.1.
+/// The forms a pattern is written in, which `docs/specs/patterns.md` states.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum PatternKind {
     /// A name: it binds the value, or it names a variant that carries nothing.
@@ -30,4 +30,10 @@ pub enum PatternKind {
     Integer(i64),
     String(String),
     Bool(bool),
+    /// `_`: it matches every value and binds nothing, which is what a name cannot say.
+    Wildcard,
+    /// `Pending | Running`, which matches what any one of its alternatives matches.
+    ///
+    /// Every alternative binds nothing, so the arm reads the same whichever one answered.
+    Or(Vec<Pattern>),
 }

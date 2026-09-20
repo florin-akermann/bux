@@ -99,13 +99,13 @@ fn a_bound_names_no_instance_a_call_of_it_could_mean_so_a_call_is_refused() {
 }
 
 #[test]
-fn a_whole_number_written_as_a_pattern_is_an_int_rather_than_a_literal() {
+fn a_whole_number_written_as_a_pattern_takes_the_type_it_is_matched_against() {
     let source = format!(
         "fn counted(count: Int32) -> Int {{\n    match count {{\n        5 => 1\n    }}\n}}\n{INT32}"
     );
 
     let refused = refusal(&source);
-    assert_eq!(refused.message(), "expected `Int32`, found `Int`");
+    assert_eq!(refused.message(), "`Int32` has no instance of `Eq`");
     assert_eq!(refused.span().text(&source), "5");
 }
 

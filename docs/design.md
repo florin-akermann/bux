@@ -265,6 +265,15 @@ fn describe(payment: Payment) -> String {
 }
 ```
 
+A pattern is one of four things: a name that binds, `_`, a literal, or a constructor with
+patterns inside it.
+Alternatives are written in one arm as `Pending | Running`, which matches what either of them
+matches and binds nothing.
+
+A guard is refused.
+An `if` inside the arm says the same thing, and a guarded arm is an arm no exhaustiveness check
+can reason about.
+
 The compiler must verify that matches are exhaustive.
 
 Adding a variant must therefore make the compiler point at every affected match expression.

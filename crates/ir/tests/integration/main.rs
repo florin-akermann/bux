@@ -13,6 +13,7 @@ mod lists;
 mod literals;
 mod lowering;
 mod operators;
+mod patterns;
 mod properties;
 mod traits;
 mod unit;

@@ -5,6 +5,8 @@
 
 use lumen_diagnostics::render;
 
+use lumen_exhaustiveness::MatchError;
+
 use crate::common::{covers_everything, demo_payments, outcomes, payments, refusal};
 
 #[test]
@@ -30,10 +32,7 @@ fn an_arm_written_above_one_the_type_declares_above_it_is_refused() {
         "    }"
     ));
 
-    assert_eq!(
-        refusal(&source).message(),
-        "this `match` writes `Pending` after `Failed`"
-    );
+    writes_out_of_order(&refusal(&source), "`Pending` after `Failed`");
 }
 
 #[test]
@@ -92,10 +91,7 @@ fn an_option_is_written_the_way_the_prelude_declares_it() {
         "    match value {\n        None => fallback\n        Some(inner) => inner\n    }\n}\n"
     );
 
-    assert_eq!(
-        refusal(source).message(),
-        "this `match` writes `Some` after `None`"
-    );
+    writes_out_of_order(&refusal(source), "`Some` after `None`");
 }
 
 #[test]
@@ -117,10 +113,7 @@ fn two_arms_that_reach_inside_one_variant_out_of_order_are_refused() {
         "        None => \"nothing\"\n"
     ));
 
-    assert_eq!(
-        refusal(&source).message(),
-        "this `match` writes `Ok` after `Err`"
-    );
+    writes_out_of_order(&refusal(&source), "`Ok` after `Err`");
 }
 
 #[test]
@@ -146,10 +139,7 @@ fn the_variant_an_arm_answers_for_places_it_before_what_it_reaches_for_does() {
         "        Some(Err(problem)) => problem\n"
     ));
 
-    assert_eq!(
-        refusal(&source).message(),
-        "this `match` writes `Some` after `None`"
-    );
+    writes_out_of_order(&refusal(&source), "`Some` after `None`");
 }
 
 #[test]
@@ -206,8 +196,52 @@ fn a_match_over_a_type_of_another_module_lists_its_arms_in_that_module_s_order()
         "        demo.Authorized { authorization_id } => authorization_id\n"
     ));
 
-    assert_eq!(
-        module.refusal().message(),
-        "this `match` writes `demo.Pending` after `demo.Failed`"
+    writes_out_of_order(&module.refusal(), "`demo.Pending` after `demo.Failed`");
+}
+
+/// The refusal points at the alternative rather than the whole arm, which is what is out of place.
+#[test]
+fn an_alternative_written_above_one_the_type_declares_above_it_is_refused() {
+    let source = payments(concat!(
+        "    match payment {\n",
+        "        Failed(_) | Pending => \"seen\"\n",
+        "        Authorized { authorization_id } => authorization_id\n",
+        "    }"
+    ));
+
+    let refused = refusal(&source);
+
+    writes_out_of_order(&refused, "`Pending` after `Failed`");
+    let span = refused.span();
+    assert_eq!(&source[span.start()..span.end()], "Pending");
+}
+
+#[test]
+fn an_arm_is_placed_by_the_first_alternative_it_writes() {
+    let source = payments(concat!(
+        "    match payment {\n",
+        "        Pending | Failed(_) => \"seen\"\n",
+        "        Authorized { authorization_id } => authorization_id\n",
+        "    }"
+    ));
+
+    covers_everything(&source);
+}
+
+#[test]
+fn an_alternative_inside_a_constructor_is_held_to_the_order_as_well() {
+    let source = concat!(
+        "fn described(held: Option<Payment>) -> String {\n    match held {\n",
+        "        Some(Failed(_) | Pending) => \"seen\"\n",
+        "        Some(Authorized { authorization_id }) => authorization_id\n",
+        "        None => \"nothing\"\n    }\n}\n\n",
+        "type Payment =\n    | Pending\n    | Authorized {\n        authorization_id: String\n    }\n    | Failed(String)\n"
     );
+
+    writes_out_of_order(&refusal(source), "`Pending` after `Failed`");
+}
+
+/// Asserts that `refused` names the arm out of place and the one the type declares below it.
+fn writes_out_of_order(refused: &MatchError, written: &str) {
+    assert_eq!(refused.message(), format!("this `match` writes {written}"));
 }

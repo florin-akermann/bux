@@ -1,0 +1,13 @@
+// expect-error: L0314
+// An or-pattern binds nothing, so an alternative that binds is written as two arms instead.
+fn described(status: Status) -> String {
+    match status {
+        Failed(reason) | Cancelled(reason) => reason
+        _ => "in flight"
+    }
+}
+
+type Status =
+    | Pending
+    | Failed(String)
+    | Cancelled(String)

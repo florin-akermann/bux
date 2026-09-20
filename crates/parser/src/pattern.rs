@@ -1,14 +1,32 @@
 //! Patterns, as written in the arms of a `match`.
 
 use lumen_ast::{Pattern, PatternKind};
-use lumen_lexer::{Punct, TokenKind};
+use lumen_lexer::{Keyword, Punct, TokenKind};
 
 use crate::cursor::Cursor;
 use crate::error::{Expected, ParseError};
 use crate::list::{Emptiness, comma_separated};
 use crate::literal::{Literal, eat_literal};
 
+/// A pattern, which is one alternative or several written with a `|` between them.
 pub(crate) fn pattern(cursor: &mut Cursor) -> Result<Pattern, ParseError> {
+    let start = cursor.offset();
+    let first = alternative(cursor)?;
+    if !cursor.at_punct(Punct::Pipe) {
+        return Ok(first);
+    }
+    let mut alternatives = vec![first];
+    while cursor.eat_punct(Punct::Pipe).is_some() {
+        alternatives.push(alternative(cursor)?);
+    }
+    Ok(Pattern {
+        kind: PatternKind::Or(alternatives),
+        span: cursor.span_since(start),
+    })
+}
+
+/// One alternative, which is every form of pattern but the `|` that joins them.
+fn alternative(cursor: &mut Cursor) -> Result<Pattern, ParseError> {
     let start = cursor.offset();
     let kind = pattern_kind(cursor)?;
     Ok(Pattern {
@@ -18,6 +36,9 @@ pub(crate) fn pattern(cursor: &mut Cursor) -> Result<Pattern, ParseError> {
 }
 
 fn pattern_kind(cursor: &mut Cursor) -> Result<PatternKind, ParseError> {
+    if cursor.eat_keyword(Keyword::Underscore).is_some() {
+        return Ok(PatternKind::Wildcard);
+    }
     if let Some(literal) = eat_literal(cursor)? {
         return Ok(of_literal(literal));
     }

@@ -15,6 +15,7 @@ mod imports;
 mod inference;
 mod literals;
 mod operators;
+mod patterns;
 mod predicate;
 mod propagating;
 mod properties;

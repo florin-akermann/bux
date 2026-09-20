@@ -129,14 +129,13 @@ method and reads like every other constrained call.
 
 ## What is a literal, and what is not
 
-A whole number written as an expression is a literal, and that is the whole of the rule.
+A whole number is a literal wherever it is written, as an expression and as a pattern alike.
 
-A whole number written as a pattern is an `Int`, as it was before this.
-`match count { 5 => … }` over an `Int32` is therefore refused with `L0400`.
-A pattern asks whether two values are the same, which is `Eq` rather than `IntegerLiteral`, and
-the trait a pattern needs is a separate question from the trait a literal is.
-Nothing here needs the two answered together, so this answers the one it is about, and
-`TODOS.md` item 047 is where a whole-number pattern over a declared type lands.
+A whole number written as a pattern is a literal too, and takes the type it is matched against.
+`match count { 5 => … }` over an `Int32` asks `IntegerLiteral` for what `5` is at that type.
+A pattern then asks whether two values are the same, which is `Eq` rather than `IntegerLiteral`,
+so the type it is written over needs both and `docs/specs/patterns.md` states what it is refused
+with when it has one and not the other.
 
 `from_literal` is an ordinary trait method, so a program may call it by name.
 `from_literal(5)` at `Int` is the whole number it is given, and at a type whose instance a module

@@ -47,16 +47,25 @@ impl<'a> Reading<'a> {
         Self { resolved, space }
     }
 
-    /// What `pattern` matches.
-    pub(crate) fn of(&self, pattern: &Pattern) -> Pat {
+    /// Everything `pattern` matches, which an or-pattern matches more than one of.
+    ///
+    /// An alternative is a whole pattern and may be written inside a constructor, so what an arm
+    /// matches is every way of choosing one alternative at each place one is written.
+    /// `docs/specs/patterns.md` states that `A | B` in one arm covers what two arms cover.
+    pub(crate) fn every(&self, pattern: &Pattern) -> Vec<Pat> {
         match &pattern.kind {
-            PatternKind::Integer(_) | PatternKind::String(_) => Pat::Literal,
-            PatternKind::Bool(held) => self.constructed(&bool_name(*held), &[]),
-            PatternKind::Name(path) if self.binds(path) => Pat::Wildcard,
+            PatternKind::Integer(_) | PatternKind::String(_) => vec![Pat::Literal],
+            PatternKind::Bool(held) => bool_name(*held),
+            PatternKind::Wildcard => vec![Pat::Wildcard],
+            PatternKind::Name(path) if self.binds(path) => vec![Pat::Wildcard],
             PatternKind::Tuple { path, elements } => self.constructed(&path.to_string(), elements),
             PatternKind::Name(path) | PatternKind::Record { path, .. } => {
                 self.constructed(&path.to_string(), &[])
             }
+            PatternKind::Or(alternatives) => alternatives
+                .iter()
+                .flat_map(|alternative| self.every(alternative))
+                .collect(),
         }
     }
 
@@ -64,14 +73,26 @@ impl<'a> Reading<'a> {
     ///
     /// A record pattern names only the fields it binds, and each one binds, so the fields a
     /// declaration lists and the patterns written under it need not line up.
-    fn constructed(&self, name: &str, written: &[Pattern]) -> Pat {
-        let arguments = (0..self.space.carried_by(name))
-            .map(|carried| written.get(carried).map_or(Pat::Wildcard, |at| self.of(at)))
-            .collect();
-        Pat::Constructed {
-            name: name.to_owned(),
-            arguments,
+    fn constructed(&self, name: &str, written: &[Pattern]) -> Vec<Pat> {
+        let mut carried: Vec<Vec<Pat>> = vec![Vec::new()];
+        for position in 0..self.space.carried_by(name) {
+            let each = written
+                .get(position)
+                .map_or_else(|| vec![Pat::Wildcard], |at| self.every(at));
+            carried = each_followed_by(&carried, &each);
         }
+        carried
+            .into_iter()
+            .map(|arguments| Pat::Constructed {
+                name: name.to_owned(),
+                arguments,
+            })
+            .collect()
+    }
+
+    /// Where the module declares each constructor, which is what an arm is placed against.
+    pub(crate) const fn space(&self) -> &Space {
+        self.space
     }
 
     /// Whether the name binds rather than naming a constructor, which resolution has decided.
@@ -87,6 +108,23 @@ impl<'a> Reading<'a> {
     }
 }
 
-fn bool_name(held: bool) -> String {
-    if held { "true" } else { "false" }.to_owned()
+fn bool_name(held: bool) -> Vec<Pat> {
+    let name = if held { "true" } else { "false" };
+    vec![Pat::Constructed {
+        name: name.to_owned(),
+        arguments: Vec::new(),
+    }]
+}
+
+/// Every way of writing one of `so_far` and then one of `each`, which is what an alternative is.
+fn each_followed_by(so_far: &[Vec<Pat>], each: &[Pat]) -> Vec<Vec<Pat>> {
+    let mut grown = Vec::new();
+    for carried in so_far {
+        for one in each {
+            let mut row = carried.clone();
+            row.push(one.clone());
+            grown.push(row);
+        }
+    }
+    grown
 }

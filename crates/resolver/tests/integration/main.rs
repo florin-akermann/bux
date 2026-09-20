@@ -7,6 +7,7 @@ mod common;
 mod derive;
 mod errors;
 mod order;
+mod patterns;
 mod properties;
 mod scopes;
 mod traits;

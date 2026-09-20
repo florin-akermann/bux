@@ -1,0 +1,8 @@
+// expect-error: L0500
+// A literal names one value of a type that has more, so the arms never cover it on their own.
+fn counted(count: Int) -> String {
+    match count {
+        0 => "none"
+        1 => "one"
+    }
+}

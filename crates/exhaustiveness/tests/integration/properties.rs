@@ -15,6 +15,9 @@ const ARMS: [&str; 3] = [
     "        Failed(reason) => reason\n",
 ];
 
+/// A type whose variants each carry nothing, so any arm of it may be an alternative.
+const COLOURS: [&str; 3] = ["Red", "Green", "Blue"];
+
 #[hegel::test]
 fn checking_never_panics_and_is_deterministic(tc: TestCase) {
     let source = tc.draw(gs::text());
@@ -93,4 +96,28 @@ fn a_refusal_points_inside_the_source(tc: TestCase) {
 /// A `match` on the payment the enclosing function takes, written with `arms`.
 fn matching(arms: &[&str]) -> String {
     format!("    match payment {{\n{}    }}", arms.concat())
+}
+
+/// `A | B` in one arm covers exactly what `A` and `B` cover in two arms.
+#[hegel::test]
+fn one_arm_of_alternatives_covers_what_the_same_arms_cover_separately(tc: TestCase) {
+    let written = tc.draw(gs::sampled_from(&[1_usize, 2, 3]));
+    let named = &COLOURS[..written];
+    let apart = named
+        .iter()
+        .map(|name| format!("        {name} => \"seen\"\n"))
+        .collect::<Vec<String>>()
+        .concat();
+    let together = format!("        {} => \"seen\"\n", named.join(" | "));
+
+    assert_eq!(covers_every_colour(&apart), covers_every_colour(&together));
+}
+
+/// Whether a `match` on a colour whose arms are `arms` covers every colour there is.
+fn covers_every_colour(arms: &str) -> bool {
+    let source = format!(
+        "fn described(colour: Colour) -> String {{\n    match colour {{\n{arms}    }}\n}}\n\n\
+         type Colour =\n    | Red\n    | Green\n    | Blue\n"
+    );
+    check(&typed(&source)).is_ok()
 }

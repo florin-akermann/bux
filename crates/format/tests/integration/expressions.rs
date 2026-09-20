@@ -104,3 +104,19 @@ fn a_name_reached_through_a_module_is_written_with_no_space_around_the_dot() {
         ]
     );
 }
+
+#[test]
+fn an_underscore_and_an_or_pattern_are_written_as_canonical_form_writes_them() {
+    assert_eq!(
+        in_function("match p {\n  Pending|Running => 1\n  _ => 2\n}"),
+        ["match p {", "    Pending | Running => 1", "    _ => 2", "}",]
+    );
+}
+
+#[test]
+fn an_alternative_written_inside_a_constructor_keeps_its_spacing_too() {
+    assert_eq!(
+        in_function("match p {\n  Failed( 0|1 ) => 1\n  _ => 2\n}"),
+        ["match p {", "    Failed(0 | 1) => 1", "    _ => 2", "}"]
+    );
+}
