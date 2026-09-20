@@ -6,7 +6,7 @@
 
 ## Open
 
-## 🟡 Item 025: Generics are specialized, never erased
+## 🟢 Item 025: Generics are specialized, never erased
 `docs/specs/codegen.md` erases a type parameter to `java.lang.Object`, boxing an `Int` across it.
 That is the one place a program can tell `Int` from a declared type, and the one place it boxes.
 A generic function is instead lowered once per instantiation, with the descriptor its types give.
