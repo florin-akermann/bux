@@ -60,7 +60,7 @@ An example gains a way to state the output it must produce, and the harness comp
 [031][c] - The harness compares the output, test-first; a mismatch names the file and both texts.
 [031][d] - `tests/spec/arithmetic/division.lm` writes its answers out and states them.
 
-## 🟡 Item 035: A program reaches the console and the file system
+## 🟢 Item 035: A program reaches the console and the file system
 A program can work nothing out that anyone can see: version 0.1 has no way to write a line.
 `docs/design.md` section 16 already writes `io.print`, and a help line already writes `io.println`,
 so the name is in two places and the implementation is in neither.
