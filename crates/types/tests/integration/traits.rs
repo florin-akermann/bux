@@ -150,8 +150,6 @@ fn a_method_of_a_trait_that_gives_back_a_bool_asks_the_question_it_answers() {
     );
 }
 
-/// The types a trait can be given an instance for here, each with a value of it to compare.
-///
 #[test]
 fn an_instance_is_for_a_whole_type_and_never_for_one_that_takes_arguments() {
     let error = refusal(
@@ -166,7 +164,7 @@ fn an_instance_is_for_a_whole_type_and_never_for_one_that_takes_arguments() {
 
 #[test]
 fn a_parameter_of_a_method_a_trait_declares_states_its_type() {
-    let error = refusal("trait Shown<T> {\n    fn shown(one) -> Int\n}\n");
+    let error = refusal("trait Sized<T> {\n    fn measured(one) -> Int\n}\n");
 
     assert_eq!(
         error.message(),
@@ -219,4 +217,90 @@ fn a_type_with_no_instance_is_refused_wherever_the_trait_is_asked_of_it(tc: Test
     let error = refusal(&source);
 
     assert_eq!(error.message(), "`Circle` has no instance of `Eq`");
+}
+
+/// One standard trait, as the source that asks something of a value through it.
+#[derive(Clone, Copy, Debug)]
+struct Standard {
+    /// The trait's name, which a refusal names when a type has no instance of it.
+    of: &'static str,
+    method: &'static str,
+    /// Whether the method takes two values rather than one.
+    takes_two: bool,
+    gives: &'static str,
+}
+
+/// The four standard traits, which `docs/specs/traits.md` declares.
+const STANDARD: [Standard; 4] = [
+    asking("Eq", "is_equal", true, "Bool"),
+    asking("Ord", "is_less", true, "Bool"),
+    asking("Hash", "hashed", false, "Int"),
+    asking("Show", "shown", false, "String"),
+];
+
+const fn asking(
+    of: &'static str,
+    method: &'static str,
+    takes_two: bool,
+    gives: &'static str,
+) -> Standard {
+    Standard {
+        of,
+        method,
+        takes_two,
+        gives,
+    }
+}
+
+/// The types the prelude supplies all four standard instances for, with two values of each.
+const SUPPLIED: [(&str, &str, &str); 3] = [
+    ("Bool", "true", "false"),
+    ("Int", "1", "2"),
+    ("String", "\"one\"", "\"two\""),
+];
+
+/// A module whose one function asks `standard` of the given values, named as its answer asks.
+fn asking_of(standard: Standard, one: &str, other: &str) -> (String, String) {
+    let method = standard.method;
+    let written = if standard.takes_two {
+        format!("{method}({one}, {other})")
+    } else {
+        format!("{method}({one})")
+    };
+    let named = if standard.gives == "Bool" {
+        "is_read"
+    } else {
+        "read"
+    };
+    let gives = standard.gives;
+    let source = format!("fn {named}() -> {gives} {{\n    {written}\n}}\n");
+    (written, source)
+}
+
+/// Every standard trait's method is accepted over each of the three types the prelude supplies.
+#[hegel::test]
+fn each_standard_method_is_accepted_over_every_type_the_prelude_supplies(tc: TestCase) {
+    let standard = tc.draw(gs::sampled_from(&STANDARD));
+    let (at, one, other) = tc.draw(gs::sampled_from(&SUPPLIED));
+    let (written, source) = asking_of(standard, one, other);
+
+    let inferred = inferred_type(&source, &written, 1);
+
+    assert_eq!(inferred, standard.gives, "{} at {at}", standard.of);
+}
+
+/// A declared type without the instance is refused wherever a standard method is asked of it.
+#[hegel::test]
+fn each_standard_method_is_refused_over_a_type_with_no_instance_of_its_trait(tc: TestCase) {
+    let standard = tc.draw(gs::sampled_from(&STANDARD));
+    let circle = "Circle { radius: 1 }";
+    let (_, asked) = asking_of(standard, circle, circle);
+    let source = format!("{asked}\ntype Circle = {{\n    radius: Int\n}}\n");
+
+    let error = refusal(&source);
+
+    assert_eq!(
+        error.message(),
+        format!("`Circle` has no instance of `{}`", standard.of)
+    );
 }

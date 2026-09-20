@@ -1,0 +1,33 @@
+// expect-run
+// > two users of the same state hash alike
+// > two pending payments hash alike
+// > two failures with the same reason hash alike
+// A record and a variant each derive `Hash`, and equal values hash alike.
+import io
+
+fn main() -> () {
+    ada := User { id: 1, name: "ada" }
+    also_ada := User { id: 1, name: "ada" }
+    if hashed(ada) == hashed(also_ada) {
+        io.println("two users of the same state hash alike")
+    }
+    if hashed(Pending) == hashed(Pending) {
+        io.println("two pending payments hash alike")
+    }
+    if hashed(Failed("late")) == hashed(Failed("late")) {
+        io.println("two failures with the same reason hash alike")
+    }
+}
+
+derive Eq, Hash for User
+
+type User = {
+    id: Int
+    name: String
+}
+
+derive Eq, Hash for Payment
+
+type Payment =
+    | Pending
+    | Failed(String)

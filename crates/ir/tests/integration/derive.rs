@@ -4,7 +4,7 @@ use std::fmt::Write as _;
 
 use hegel::TestCase;
 use hegel::generators as gs;
-use lumen_ir::{Body, ClassName, Comparison, Instruction};
+use lumen_ir::{Body, ClassName, Comparison, Descriptor, Instruction};
 
 use crate::common;
 
@@ -99,19 +99,6 @@ fn a_derived_eq_reaches_a_held_type_s_own_instance_however_that_type_came_by_it(
 }
 
 #[test]
-fn a_derived_eq_of_variants_compares_the_tag_before_anything_a_variant_carries() {
-    let source = concat!(
-        "derive Eq for Payment\n\n",
-        "type Payment =\n    | Pending\n    | Failed(String)\n"
-    );
-
-    let body = fetched(source, "Eq$Payment$is_equal");
-
-    assert_eq!(fields_read(&body)[0..2], ["tag", "tag"]);
-    assert_eq!(fields_read(&body)[3..], ["value0", "value0"]);
-}
-
-#[test]
 fn a_variant_that_carries_nothing_is_answered_by_its_tag_alone() {
     let source = concat!(
         "derive Eq for Payment\n\n",
@@ -121,6 +108,141 @@ fn a_variant_that_carries_nothing_is_answered_by_its_tag_alone() {
     let body = fetched(source, "Eq$Payment$is_equal");
 
     assert_eq!(fields_read(&body), ["tag", "tag"]);
+}
+
+/// A module deriving all four standard traits for a record of two `Int` fields.
+const ALL_FOUR: &str = concat!(
+    "derive Eq, Ord, Hash, Show for Point\n\n",
+    "type Point = {\n    across: Int\n    up: Int\n}\n"
+);
+
+/// Each standard trait, with the method a derive of it writes.
+const STANDARD: [(&str, &str); 4] = [
+    ("Eq", "Eq$Point$is_equal"),
+    ("Ord", "Ord$Point$is_less"),
+    ("Hash", "Hash$Point$hashed"),
+    ("Show", "Show$Point$shown"),
+];
+
+#[test]
+fn a_derive_naming_four_traits_writes_the_method_of_each_one() {
+    let lowered = common::lowered(ALL_FOUR);
+
+    for (of, method) in STANDARD {
+        assert_eq!(common::methods_named(&lowered, method), 1, "{of}");
+    }
+}
+
+#[test]
+fn a_derived_ord_reads_each_field_of_both_values_both_ways_round_in_declaration_order() {
+    let body = fetched(ALL_FOUR, "Ord$Point$is_less");
+
+    assert_eq!(
+        fields_read(&body),
+        [
+            "across", "across", "across", "across", "up", "up", "up", "up"
+        ]
+    );
+    assert_eq!(answers(&body), [true, false]);
+}
+
+#[test]
+fn a_derived_hash_reads_each_field_once_in_declaration_order_and_gives_a_whole_number() {
+    let body = fetched(ALL_FOUR, "Hash$Point$hashed");
+
+    assert_eq!(fields_read(&body), ["across", "up"]);
+    assert_eq!(
+        body.instructions.last(),
+        Some(&Instruction::Return(Some(Descriptor::Long)))
+    );
+}
+
+/// What each derive of `Payment` reads, in order, where `Payment` is `Pending | Failed(String)`.
+///
+/// Every one of them reads the tag before what a variant carries, because which variant a value
+/// is decides both what the answer is and which block reads anything at all.
+const OVER_VARIANTS: [(&str, &[&str]); 4] = [
+    (
+        "Eq$Payment$is_equal",
+        &["tag", "tag", "tag", "value0", "value0"],
+    ),
+    (
+        "Ord$Payment$is_less",
+        &[
+            "tag", "tag", "tag", "tag", "tag", "value0", "value0", "value0", "value0",
+        ],
+    ),
+    ("Hash$Payment$hashed", &["tag", "tag", "value0"]),
+    ("Show$Payment$shown", &["tag", "value0"]),
+];
+
+#[test]
+fn a_derive_over_variants_reads_the_tag_before_anything_a_variant_carries() {
+    let source = concat!(
+        "derive Eq, Ord, Hash, Show for Payment\n\n",
+        "type Payment =\n    | Pending\n    | Failed(String)\n"
+    );
+
+    for (method, reads) in OVER_VARIANTS {
+        let body = fetched(source, method);
+
+        assert_eq!(fields_read(&body), reads, "{method}");
+    }
+}
+
+#[test]
+fn a_derived_show_writes_the_record_as_the_source_that_builds_it() {
+    let body = fetched(ALL_FOUR, "Show$Point$shown");
+
+    assert_eq!(texts(&body), ["Point {", " across: ", ", up: ", " }"]);
+}
+
+#[test]
+fn a_derived_show_writes_a_variant_by_its_own_name_and_whatever_it_carries() {
+    let source = concat!(
+        "derive Show for Payment\n\n",
+        "type Payment =\n    | Pending\n    | Failed(String)\n",
+        "    | Sent {\n        note: String\n    }\n"
+    );
+
+    let body = fetched(source, "Show$Payment$shown");
+
+    assert_eq!(
+        texts(&body),
+        ["Pending", "Failed(", ")", "Sent {", " note: ", " }"]
+    );
+}
+
+#[test]
+fn a_record_that_holds_nothing_is_shown_as_its_name_and_two_braces() {
+    let source = "derive Show for Empty\n\ntype Empty = {\n}\n";
+
+    let body = fetched(source, "Show$Empty$shown");
+
+    assert_eq!(texts(&body), ["Empty {", "}"]);
+}
+
+#[test]
+fn a_variant_declaring_braces_and_no_field_is_shown_with_those_braces() {
+    let source = concat!(
+        "derive Show for Payment\n\n",
+        "type Payment =\n    | Sent {\n    }\n    | Pending\n"
+    );
+
+    let body = fetched(source, "Show$Payment$shown");
+
+    assert_eq!(texts(&body), ["Sent {", "}", "Pending"]);
+}
+
+/// Every piece of text a body writes, in the order it writes them.
+fn texts(body: &Body) -> Vec<&str> {
+    body.instructions
+        .iter()
+        .filter_map(|instruction| match instruction {
+            Instruction::Text(written) => Some(written.as_str()),
+            _ => None,
+        })
+        .collect()
 }
 
 /// The names of the fields a body reads, in the order it reads them.
@@ -164,8 +286,13 @@ fn fetched(source: &str, named: &str) -> Body {
 /// The types a generated field is written at, each of which has `Eq` already.
 const FIELDS: [&str; 3] = ["Int", "Bool", "String"];
 
+/// Whichever trait is derived, a record of any shape reads every field in declaration order.
+///
+/// How many times each is read is the trait's own: `Eq` reads both values of it, `Ord` reads them
+/// both ways round, and `Hash` and `Show` read the one value they are handed.
 #[hegel::test]
-fn a_record_of_any_shape_derives_an_eq_that_reads_every_field_of_both_values(tc: TestCase) {
+fn a_record_of_any_shape_derives_a_body_that_reads_every_field_in_order(tc: TestCase) {
+    let (of, method) = tc.draw(gs::sampled_from(&STANDARD));
     let drawn: Vec<&str> = tc.draw(gs::vecs(gs::sampled_from(&FIELDS)).min_size(1));
     let lines = drawn
         .iter()
@@ -174,12 +301,22 @@ fn a_record_of_any_shape_derives_an_eq_that_reads_every_field_of_both_values(tc:
             let _ = writeln!(lines, "    value{position}: {at}");
             lines
         });
-    let source = format!("derive Eq for Held\n\ntype Held = {{\n{lines}}}\n");
+    let source = format!("derive {of} for Point\n\ntype Point = {{\n{lines}}}\n");
 
-    let body = fetched(&source, "Eq$Held$is_equal");
+    let body = fetched(&source, method);
 
+    let each = times_read(of);
     let wanted: Vec<String> = (0..drawn.len())
-        .flat_map(|position| [format!("value{position}"), format!("value{position}")])
+        .flat_map(|position| vec![format!("value{position}"); each])
         .collect();
     assert_eq!(fields_read(&body), wanted, "{source}");
+}
+
+/// How often a derive of `of` reads one field the type holds.
+fn times_read(of: &str) -> usize {
+    match of {
+        "Eq" => 2,
+        "Ord" => 4,
+        _ => 1,
+    }
 }

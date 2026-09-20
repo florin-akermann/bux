@@ -150,15 +150,9 @@ impl Resolver {
     }
 }
 
-/// The traits a type derives, which `docs/specs/derive.md` states is `Eq` and nothing else yet.
-///
-/// `Ord`, `Hash`, and `Show` are named by `docs/design.md` section 8 and land with the traits
-/// themselves, so a derive of one is refused by name rather than written half.
-const DERIVABLE: [&str; 1] = [prelude::EQ];
-
 /// Refuses a trait that is not one a type derives, naming the trait the module wrote.
 fn derivable(named: &Name) -> Resolved {
-    if DERIVABLE.contains(&named.text.as_str()) {
+    if prelude::DERIVABLE.contains(&named.text.as_str()) {
         return Ok(());
     }
     let kind = ResolveErrorKind::NotDerivable(named.text.clone());

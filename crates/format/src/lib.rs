@@ -21,6 +21,7 @@ mod stmt;
 mod type_ref;
 
 use std::fmt;
+use std::fmt::Write as _;
 
 use lumen_ast::TypeRef;
 use lumen_ast::{DeriveDeclaration, InstanceDeclaration, TraitDeclaration, TypeDeclaration};
@@ -101,16 +102,16 @@ pub fn instance_head(declared: &InstanceDeclaration) -> String {
     )
 }
 
-/// `instance Eq<User>`, which is what a derive puts on an API page.
+/// `instance Eq<User>`, one line per trait, which is what a derive puts on an API page.
 ///
 /// A derived instance is an instance, and `docs/specs/derive.md` leaves nothing able to tell the
-/// two apart, so the page states the trait the type has and not how it came by it.
+/// two apart, so the page states the traits the type has and not how it came by them.
 #[must_use]
 pub fn derived_head(declared: &DeriveDeclaration) -> String {
-    let [named] = declared.traits.as_slice() else {
-        unreachable!("`Eq` is the one trait a type derives, so a derive that resolved names one")
-    };
-    format!("instance {}<{}>\n", named.text, declared.for_type.text)
+    declared.traits.iter().fold(String::new(), |mut page, of| {
+        let _ = writeln!(page, "instance {}<{}>", of.text, declared.for_type.text);
+        page
+    })
 }
 
 /// The canonical text of a type as it is written, which a constraint on a page is stated with.

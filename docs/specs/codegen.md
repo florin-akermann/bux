@@ -262,8 +262,11 @@ No class a module writes, that one or the module class, declares a method a JVM 
 not `equals`, not `hashCode`, not `getClass`, not `toString`, and none of the rest of them.
 Declaring one would put the object model back inside a Lumen value, and `docs/design.md`
 section 2 declines the object model outright.
-`==` is `Eq`, which version 0.1 gives to `Int`, `Bool`, and `String` alone, so nothing asks a
-record or a variant whether it is the same as another one.
+`==` is `Eq`, and a record or a variant has one only where the module writes or derives it, which
+`docs/specs/traits.md` and `docs/specs/derive.md` state; the method that answers is a static
+method of the module class, reached by name.
+A value's hash and the text it is shown as are `Hash` and `Show`, which a type opts into the same
+way, so nothing has either without asking and neither is ever the JVM's own.
 A literal pattern tests a whole number, a truth value, or a string, and each of those is compared
 by what it holds rather than by being one object.
 

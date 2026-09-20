@@ -524,8 +524,8 @@ fn a_main_that_declares_a_type_parameter_is_still_what_the_module_is_run_through
 #[test]
 fn a_generic_used_at_one_type_with_two_arguments_is_written_once_for_that_type() {
     let source = concat!(
-        "fn kept(count: Int) -> Int {\n    or(identity(Some(count)), 0) + shown(identity(Some(count > 0)))\n}\n\n",
-        "fn shown(flag: Option<Bool>) -> Int {\n    if or(flag, false) {\n        1\n    } else {\n        0\n    }\n}\n\n",
+        "fn kept(count: Int) -> Int {\n    or(identity(Some(count)), 0) + flagged(identity(Some(count > 0)))\n}\n\n",
+        "fn flagged(flag: Option<Bool>) -> Int {\n    if or(flag, false) {\n        1\n    } else {\n        0\n    }\n}\n\n",
         "fn identity<T>(value: T) -> T {\n    value\n}\n"
     );
 

@@ -1,0 +1,84 @@
+// expect-run
+// > a user with a smaller id comes first
+// > the field a record declares first decides
+// > a variant the type declares first comes first
+// > two failures are ordered by what they carry
+// > exactly one of the three holds for every two payments
+// > the order of two payments is transitive
+// A record and a variant each derive `Ord`, and `<` reaches what the derive wrote.
+import io
+
+fn main() -> () {
+    ada := User { id: 1, name: "ada" }
+    bo := User { id: 2, name: "ada" }
+    zoe := User { id: 1, name: "zoe" }
+    if ada < bo {
+        io.println("a user with a smaller id comes first")
+    }
+    if ada < zoe && zoe < bo {
+        io.println("the field a record declares first decides")
+    }
+    if Pending < Failed("late") {
+        io.println("a variant the type declares first comes first")
+    }
+    if Failed("late") < Failed("lost") {
+        io.println("two failures are ordered by what they carry")
+    }
+    payments := [Pending, Failed("late"), Failed("lost")]
+    if is_a_total_order(payments) {
+        io.println("exactly one of the three holds for every two payments")
+    }
+    if is_transitive(payments) {
+        io.println("the order of two payments is transitive")
+    }
+}
+
+// example: is_a_total_order([Pending, Failed("late")])
+fn is_a_total_order(payments: List<Payment>) -> Bool {
+    for one in payments {
+        for other in payments {
+            if !is_exactly_one_way(one: one, other: other) {
+                return false
+            }
+        }
+    }
+    true
+}
+
+// example: is_exactly_one_way(one: Pending, other: Pending)
+fn is_exactly_one_way(one: Payment, other: Payment) -> Bool {
+    if one < other {
+        return !(other < one) && one != other
+    }
+    if other < one {
+        return one != other
+    }
+    one == other
+}
+
+// example: is_transitive([Pending, Failed("late")])
+fn is_transitive(payments: List<Payment>) -> Bool {
+    for first in payments {
+        for second in payments {
+            for third in payments {
+                if first < second && second < third && !(first < third) {
+                    return false
+                }
+            }
+        }
+    }
+    true
+}
+
+derive Eq, Ord for User
+
+type User = {
+    id: Int
+    name: String
+}
+
+derive Eq, Ord for Payment
+
+type Payment =
+    | Pending
+    | Failed(String)

@@ -8,23 +8,24 @@
 mod body;
 mod classes;
 mod derive;
-mod equality;
 mod escape;
 mod expr;
+mod functions;
 mod generic;
 mod literal;
 mod modules;
 mod operator;
 mod pattern;
-mod prelude;
 mod shape;
+mod supplied;
 
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 
-use lumen_ast::{DeriveDeclaration, Function, InstanceDeclaration, Item, Span, TypeDeclaration};
+use lumen_ast::{DeriveDeclaration, Function, InstanceDeclaration, Item, Name};
+use lumen_ast::{Span, TypeDeclaration};
 use lumen_holes::Whole;
-use lumen_resolver::prelude as supplied;
+use lumen_resolver::prelude;
 use lumen_types::{Type, TypedProgram};
 
 use crate::Lowered;
@@ -87,7 +88,11 @@ struct Declared<'a> {
 /// states, and what it does follows from the declaration the derive names instead.
 enum Written<'a> {
     Source(&'a Function),
-    Derived(&'a TypeDeclaration),
+    /// The trait the derive names, and the declaration the body follows from.
+    Derived {
+        of: String,
+        declaration: &'a TypeDeclaration,
+    },
 }
 
 /// One method the module still owes: a function, and what one use of it settled its types at.
@@ -122,8 +127,8 @@ impl Lowering<'_> {
         for function in reached {
             self.owe(function.name.span, Instantiation::whole());
         }
-        for derived in derives_of(self.typed) {
-            self.owe(derived.for_type.span, Instantiation::whole());
+        for (named, _) in derived_in(self.typed) {
+            self.owe(named.span, Instantiation::whole());
         }
     }
 
@@ -202,13 +207,13 @@ impl Lowering<'_> {
 
     /// What one method does: the body a function writes, or the one a derive follows from.
     fn written_body(&self, owed: &Owed, signature: &Signature) -> Body {
-        match self.declared[&owed.declared].body {
+        match &self.declared[&owed.declared].body {
             Written::Source(function) => {
                 let mut builder = Builder::entering(self, function, signature, owed.at.clone());
                 builder.body(&function.body);
                 builder.finish()
             }
-            Written::Derived(declaration) => derive::is_equal(self, declaration),
+            Written::Derived { of, declaration } => derive::body(self, of, declaration),
         }
     }
 
@@ -282,7 +287,9 @@ fn declarations_of(typed: &TypedProgram) -> HashMap<Span, Declared<'_>> {
                 );
             }
             Item::Derive(derive) => {
-                declared.insert(derive.for_type.span, as_derived(typed, derive));
+                for named in &derive.traits {
+                    declared.insert(named.span, as_derived(typed, derive, named));
+                }
             }
             Item::Import(_) | Item::Type(_) | Item::Trait(_) => {}
         }
@@ -290,20 +297,19 @@ fn declarations_of(typed: &TypedProgram) -> HashMap<Span, Declared<'_>> {
     declared
 }
 
-/// The one method a derive writes, which a JVM reaches as it reaches a written instance's.
+/// The one method a derive of one trait writes, which a JVM reaches as a written instance's.
 ///
-/// `docs/specs/derive.md` makes `Eq` the one trait a type derives, so a derive is one method and
-/// name resolution has already refused a derive of anything else.
-fn as_derived<'a>(typed: &'a TypedProgram, derive: &DeriveDeclaration) -> Declared<'a> {
-    let named = format!(
-        "{}${}${}",
-        supplied::EQ,
-        derive.for_type.text,
-        supplied::IS_EQUAL
-    );
+/// `docs/specs/derive.md` makes each of the four standard traits one method, so a derive naming
+/// two traits writes two methods and name resolution has already refused a derive of anything
+/// with more or fewer.
+fn as_derived<'a>(typed: &'a TypedProgram, derive: &DeriveDeclaration, of: &Name) -> Declared<'a> {
+    let method = prelude::method_of(&of.text).expect("a derivable trait declares one method");
     Declared {
-        named,
-        body: Written::Derived(declared_as(typed, &derive.for_type.text)),
+        named: format!("{}${}${method}", of.text, derive.for_type.text),
+        body: Written::Derived {
+            of: of.text.clone(),
+            declaration: declared_as(typed, &derive.for_type.text),
+        },
     }
 }
 
@@ -356,15 +362,16 @@ fn instances_of(typed: &TypedProgram) -> HashMap<(String, String), Span> {
             answers.insert(answering, method.name.span);
         }
     }
-    for derive in derives_of(typed) {
-        let answering = (supplied::IS_EQUAL.to_owned(), derive.for_type.text.clone());
-        answers.insert(answering, derive.for_type.span);
+    for (named, derive) in derived_in(typed) {
+        let method = prelude::method_of(&named.text).expect("a derivable trait declares one");
+        let answering = (method.to_owned(), derive.for_type.text.clone());
+        answers.insert(answering, named.span);
     }
     answers
 }
 
-/// Every derive the module writes, in the order it writes them.
-fn derives_of(typed: &TypedProgram) -> impl Iterator<Item = &DeriveDeclaration> {
+/// Every instance a derive writes, as the trait it names and the derive that names it.
+fn derived_in(typed: &TypedProgram) -> impl Iterator<Item = (&Name, &DeriveDeclaration)> {
     typed
         .resolved()
         .program()
@@ -374,6 +381,7 @@ fn derives_of(typed: &TypedProgram) -> impl Iterator<Item = &DeriveDeclaration> 
             Item::Derive(derive) => Some(derive),
             _ => None,
         })
+        .flat_map(|derive| derive.traits.iter().map(move |named| (named, derive)))
 }
 
 /// What a function takes and gives back, with a place for each parameter the source wrote.

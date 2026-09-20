@@ -10,29 +10,41 @@ fn module(derived: &str) -> String {
     format!("{derived}\n\n{USER}")
 }
 
+/// The four traits a type derives, which `docs/specs/derive.md` states are the standard ones.
+const DERIVABLE: [&str; 4] = ["Eq", "Ord", "Hash", "Show"];
+
 #[test]
-fn a_derive_of_eq_for_a_type_this_module_declares_resolves() {
-    let source = module("derive Eq for User");
+fn a_derive_of_each_standard_trait_for_a_type_this_module_declares_resolves() {
+    for of in DERIVABLE {
+        let source = module(&format!("derive {of} for User"));
+
+        assert_eq!(resolved(&source).program().items.len(), 2, "{of}");
+    }
+}
+
+#[test]
+fn a_derive_naming_every_standard_trait_at_once_resolves() {
+    let source = module(&format!("derive {} for User", DERIVABLE.join(", ")));
 
     assert_eq!(resolved(&source).program().items.len(), 2);
 }
 
 #[test]
 fn a_derive_of_a_trait_no_type_derives_is_refused_naming_that_trait() {
-    let error = refusal(&module("derive Ord for User"));
+    let error = refusal(&module("derive Add for User"));
 
-    assert_eq!(error.message(), "`Ord` is not a trait a type derives");
+    assert_eq!(error.message(), "`Add` is not a trait a type derives");
     assert_eq!(
         error.help(),
-        "`Eq` is the one trait a type derives; write the rest by hand"
+        "`Eq`, `Ord`, `Hash`, and `Show` are the traits a type derives; write others by hand"
     );
 }
 
 #[test]
 fn a_derive_names_the_first_trait_it_lists_that_no_type_derives() {
-    let error = refusal(&module("derive Eq, Ord for User"));
+    let error = refusal(&module("derive Eq, Add for User"));
 
-    assert_eq!(error.message(), "`Ord` is not a trait a type derives");
+    assert_eq!(error.message(), "`Add` is not a trait a type derives");
 }
 
 #[test]

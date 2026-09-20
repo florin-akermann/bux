@@ -21,6 +21,16 @@ pub const REM: &str = "Rem";
 pub const NEG: &str = "Neg";
 /// The trait `<`, `<=`, `>`, and `>=` are.
 pub const ORD: &str = "Ord";
+/// The method of that trait, which is what the four comparisons are written as.
+pub const IS_LESS: &str = "is_less";
+/// The trait a value opts into a hash with, rather than the `hashCode` a JVM object is born with.
+pub const HASH: &str = "Hash";
+/// The method of that trait, which gives a value the whole number that stands for what it holds.
+pub const HASHED: &str = "hashed";
+/// The trait a value opts into text with, rather than the `toString` a JVM object is born with.
+pub const SHOW: &str = "Show";
+/// The method of that trait, which renders a value as text a reader reads.
+pub const SHOWN: &str = "shown";
 /// The trait a whole-number literal is, which `docs/specs/literals.md` writes out.
 pub const INTEGER_LITERAL: &str = "IntegerLiteral";
 /// The method of that trait a whole number is written as, which turns one into the type.
@@ -44,8 +54,9 @@ pub struct Supplied {
     pub instances: &'static [&'static str],
 }
 
-/// Every trait the prelude supplies: `Eq`, the trait each operator is, and the one a literal is.
-pub const TRAITS: [Supplied; 9] = [
+/// Every trait the prelude supplies: the four standard ones, the trait each operator is, and the
+/// one a literal is.
+pub const TRAITS: [Supplied; 11] = [
     Supplied {
         name: EQ,
         methods: &[IS_EQUAL],
@@ -83,8 +94,18 @@ pub const TRAITS: [Supplied; 9] = [
     },
     Supplied {
         name: ORD,
-        methods: &["is_less"],
-        instances: &["Int"],
+        methods: &[IS_LESS],
+        instances: &["Bool", "Int", "String"],
+    },
+    Supplied {
+        name: HASH,
+        methods: &[HASHED],
+        instances: &["Bool", "Int", "String"],
+    },
+    Supplied {
+        name: SHOW,
+        methods: &[SHOWN],
+        instances: &["Bool", "Int", "String"],
     },
     Supplied {
         name: INTEGER_LITERAL,
@@ -92,6 +113,12 @@ pub const TRAITS: [Supplied; 9] = [
         instances: &["Int"],
     },
 ];
+
+/// The traits a type derives, which `docs/specs/derive.md` states are the four standard ones.
+///
+/// Each one is a reading of what a value holds, so each follows from the declaration and there is
+/// nothing for an author to decide; no other trait is derivable.
+pub const DERIVABLE: [&str; 4] = [EQ, ORD, HASH, SHOW];
 
 /// The constructors the prelude supplies.
 pub(crate) const CONSTRUCTORS: [&str; 4] = ["Err", "None", "Ok", "Some"];
@@ -114,6 +141,15 @@ pub(crate) fn method_names() -> Vec<&'static str> {
         .flat_map(|supplied| supplied.methods)
         .copied()
         .collect()
+}
+
+/// The one method the trait called `name` declares, where it declares exactly one.
+#[must_use]
+pub fn method_of(name: &str) -> Option<&'static str> {
+    match methods_of(name) {
+        Some([only]) => Some(only),
+        _ => None,
+    }
 }
 
 /// The methods the trait called `name` declares, when the prelude is the one that declares it.

@@ -52,7 +52,7 @@ impl Environment {
         for item in &resolved.program().items {
             environment.declare(resolved, item, table)?;
         }
-        derive::compare_what_they_hold(&environment, resolved)?;
+        derive::hold_what_they_need(&environment, resolved)?;
         Ok(environment)
     }
 
@@ -596,12 +596,16 @@ impl Key {
 /// `docs/specs/operators.md` gives each operator's trait its signature: one gives back what it
 /// was given, one an `Option` of it, and one a `Bool` about it. `docs/specs/literals.md` gives
 /// `IntegerLiteral` its three, which are the only ones a prelude trait declares more than one of.
-fn signature_of(of: &str, method: &str, at: &Type) -> Type {
+/// `docs/specs/traits.md` gives `Hash` and `Show`, each of which reads one value.
+pub(crate) fn signature_of(of: &str, method: &str, at: &Type) -> Type {
     let two = vec![at.clone(), at.clone()];
+    let one = vec![at.clone()];
     match of {
         prelude::EQ | prelude::ORD => Type::function(two, Type::boolean()),
+        prelude::HASH => Type::function(one, Type::int()),
+        prelude::SHOW => Type::function(one, Type::string()),
         prelude::DIV | prelude::REM => Type::function(two, Type::option(at.clone())),
-        prelude::NEG => Type::function(vec![at.clone()], at.clone()),
+        prelude::NEG => Type::function(one, at.clone()),
         prelude::ADD | prelude::SUB | prelude::MUL => Type::function(two, at.clone()),
         prelude::INTEGER_LITERAL => written_as_a_literal(method, at),
         _ => unreachable!("the prelude declares exactly the traits `prelude::TRAITS` lists"),

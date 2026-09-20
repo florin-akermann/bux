@@ -10,8 +10,8 @@ use lumen_resolver::DefinitionKind;
 use crate::code::{Comparison, FieldRef, Instruction, Label, MethodRef};
 use crate::descriptor::{ClassName, Descriptor, MethodDescriptor};
 use crate::lower::body::{Builder, Slot};
-use crate::lower::equality::compared;
 use crate::lower::shape::{CONSTRUCTOR, Carried, Shape, TAG};
+use crate::lower::supplied::compared;
 
 /// What a pattern is matched against: the value, and where to go when it does not match.
 struct Against {

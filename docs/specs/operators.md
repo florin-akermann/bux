@@ -67,8 +67,8 @@ An operator takes two values of one type and its trait's method says what it giv
 
 One method is what an instance writes, and the other three spellings follow from it, so no
 instance can say that `a < b` and `b > a` disagree.
-The trait `Ord` names here is the one Item 043 makes derivable; this spec gives the operators the
-trait to resolve to.
+`Ord` is one of the standard traits `docs/specs/traits.md` declares, and this spec gives the four
+comparisons the trait to resolve to; `docs/specs/derive.md` states what a type derives it as.
 
 ## What the compiler supplies
 
@@ -82,12 +82,13 @@ instance Mul<Int>
 instance Div<Int>
 instance Rem<Int>
 instance Neg<Int>
-instance Ord<Int>
+instance Ord<Int>      instance Ord<String>      instance Ord<Bool>
 ```
 
 `Int` has every one of them, and `String` has `Add`, which joins two of them.
-That is exactly what the operators accepted before they were traits, so no program changes meaning.
-`Ord<String>` waits for Item 043, which states what order two strings are in.
+`Ord` is the one that reaches past `Int`, because ordering is not arithmetic: `docs/specs/traits.md`
+states the order it supplies over `Bool` and over `String`.
+Every other operator over a `String` or a `Bool` is `L0406` as it was.
 
 Each trait's name and each method's name is an ordinary prelude name rather than a keyword, so a
 module declaring `Add` or `add` is refused with `L0302`, exactly as one declaring `Eq` is.
@@ -132,6 +133,8 @@ method, named as `docs/specs/traits.md` names one: `Add$Money$add`.
 
 An operator over a type the compiler supplies the instance for is the instruction it always was:
 `ladd` for `Int`, a concatenation for `String`, and a compared pair of longs for `Ord<Int>`.
+`Ord<Bool>` and `Ord<String>` are likewise written out where they are written, as
+`docs/specs/traits.md` states what each one answers.
 `/` and `%` keep the zero-divisor test `docs/specs/codegen.md` states, because `ldiv` throws and no
 method a module writes may throw.
 

@@ -91,6 +91,89 @@ An instance is written by hand or by a derive, and the two are the same instance
 writes is what an author would have, and a second one either way is the second instance refused.
 `docs/specs/derive.md` states which traits a type derives and what each derive writes.
 
+## The standard traits
+
+`docs/design.md` section 8 names four traits every language wants and every type may opt into:
+`Eq`, `Ord`, `Hash`, and `Show`.
+Each is a trait like any other, each declares one method, and no type has any of them until it
+writes the instance or derives it.
+
+```text
+trait Eq<T> {
+    fn is_equal(one: T, other: T) -> Bool
+}
+
+trait Ord<T> {
+    fn is_less(one: T, other: T) -> Bool
+}
+
+trait Hash<T> {
+    fn hashed(value: T) -> Int
+}
+
+trait Show<T> {
+    fn shown(value: T) -> String
+}
+```
+
+`Hash` is a trait a type opts into rather than the `hashCode` every JVM object is born with, and
+`Show` is one it opts into rather than `toString`.
+`docs/design.md` section 2 keeps a value free of both: a type that never asked has no hash to be
+put in a map by and no text to be printed as, and asking is writing the instance or the derive.
+
+### What each one promises
+
+`Eq` says when two values are one value, and it reads what they hold.
+Two values are equal when everything they hold is equal, and nothing asks whether two references
+are one object.
+
+`Ord` says which of two values comes first.
+`is_less` is the one method the four comparisons are written with, which
+`docs/specs/operators.md` states.
+The order is total: for any two values exactly one of `one < other`, `other < one`, and
+`one == other` holds, so `Ord` and `Eq` never disagree.
+It is also transitive: where `a < b` and `b < c`, `a < c`.
+The law is a law about a type that has both; a type may have `Ord` alone, and `docs/specs/derive.md`
+asks nothing of `Eq` when it writes one.
+
+`Hash` gives a value a whole number that stands for what it holds.
+Equal values hash alike, which is the whole of what a hash promises; two values that hash alike
+may still differ, and nothing reads a hash as an answer about equality.
+The law binds a type that has both, as `Ord`'s does.
+
+`Show` renders a value as text a reader reads.
+It is a function of what the value holds, so two equal values are shown alike.
+A `String` is shown as the characters it holds and nothing more: `shown("ada")` is `ada`, because
+`Show` is one rule for every type and a quote would be a rule for one of them.
+
+### What the compiler supplies
+
+The prelude supplies all four for `Bool`, `Int`, and `String`:
+
+```text
+instance Eq<Bool>       instance Eq<Int>       instance Eq<String>
+instance Ord<Bool>      instance Ord<Int>      instance Ord<String>
+instance Hash<Bool>     instance Hash<Int>     instance Hash<String>
+instance Show<Bool>     instance Show<Int>     instance Show<String>
+```
+
+A supplied instance has no body to call: it is written out where it is called, as `or` is.
+
+`false` comes before `true`, which is the order the two are written in and the order a JVM already
+puts them in.
+Two strings are ordered by their characters, one by one, and a string that begins another comes
+first: `"a" < "ab" < "b"`.
+
+`hashed` at `Int` is the whole number itself, at `Bool` is `0` for `false` and `1` for `true`, and
+at `String` is a number worked out from the characters it holds.
+Which number two unequal values work out to is not part of this spec, and nothing may be written
+that depends on it.
+`shown` at `Int` is the digits it is written with, at `Bool` is `true` or `false`, and at `String`
+is the string.
+
+`Eq`, `Ord`, `Hash`, and `Show`, and `is_equal`, `is_less`, `hashed`, and `shown`, are ordinary
+prelude names rather than keywords, so a module declaring one of them is refused with `L0302`.
+
 ## Constraining a generic
 
 ```text
@@ -136,25 +219,12 @@ the language keeps.
 ## What the compiler supplies
 
 The prelude is not Lumen source yet, which `docs/specs/modules.md` states, so the compiler declares
-`Eq` and the three instances the library will ship:
+every trait the library will ship and every instance it will ship for `Bool`, `Int`, and `String`.
+The four standard traits are written out above; `docs/specs/operators.md` writes out the six the
+arithmetic operators are, and `docs/specs/literals.md` writes out `IntegerLiteral`.
 
-```text
-trait Eq<T> {
-    fn is_equal(one: T, other: T) -> Bool
-}
-
-instance Eq<Int>
-instance Eq<Bool>
-instance Eq<String>
-```
-
-`Eq` and `is_equal` are ordinary prelude names rather than keywords, so a module declaring either
-of them is refused with `L0302`, exactly as one declaring its own `todo` is.
-A module writing `instance Eq<Int>` is refused with `L0308`, because there already is one.
-
-`Eq` is one of the nine traits the prelude declares.
-`docs/specs/operators.md` writes out seven of the rest, which are the traits the other operators
-are, and `docs/specs/literals.md` writes out `IntegerLiteral`, which is the trait a literal is.
+A module writing `instance Eq<Int>` is refused with `L0308`, because there already is one, and a
+module declaring its own `Eq` is refused with `L0302`, exactly as one declaring its own `todo` is.
 
 A supplied instance has no body to call.
 `is_equal` at `Int`, at `Bool`, or at `String` is written out where it is called, as `or` is, and
@@ -195,7 +265,7 @@ A trait's name and the type an instance is for are written in `PascalCase`, and 
 
 | Code | Raised when |
 | --- | --- |
-| `L0302` | A module declares `Eq` or `is_equal`, which the prelude already has in scope. |
+| `L0302` | A module declares a prelude trait or method, such as `Eq` or `is_equal`. |
 | `L0308` | A trait already has an instance for the type a second instance names. |
 | `L0309` | An instance leaves a method out, writes an undeclared one, or writes one twice. |
 | `L0310` | Something that is not a trait is written where a trait belongs. |
@@ -222,3 +292,10 @@ These hold and are checked with property-based tests:
    the instance of that type.
 5. A program with two instances of one trait for one type is refused, whatever order they are in.
 6. `==` is accepted over exactly the types that have an instance of `Eq`.
+7. `is_less`, `hashed`, and `shown` are each accepted over exactly the types that have an
+   instance of the trait declaring them, as `==` is.
+
+What each supplied instance then answers is a claim about a running program, so it is held to by
+`tests/spec/traits/supplied.lm` rather than by a property: that `is_less` is a total order over
+`Bool`, `Int`, and `String` and is transitive, that equal values hash alike, and that `shown`
+renders each of the three as this spec states.

@@ -167,7 +167,9 @@ impl ResolveErrorKind {
             Self::MethodUndeclared { .. } => "an instance writes the trait's methods and no others",
             Self::MethodTwice { .. } => "one method of a trait gets one body from an instance",
             Self::NotATrait(_) => "a trait is declared with `trait`, and `Eq` is the one supplied",
-            Self::NotDerivable(_) => "`Eq` is the one trait a type derives; write the rest by hand",
+            Self::NotDerivable(_) => {
+                "`Eq`, `Ord`, `Hash`, and `Show` are the traits a type derives; write others by hand"
+            }
             Self::NotDeclaredHere(_) => {
                 "a derive reads the declaration it names, so it names one this module writes"
             }

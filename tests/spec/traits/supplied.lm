@@ -1,0 +1,37 @@
+// expect-run
+// > false comes before true
+// > a string that begins another comes first
+// > two strings are ordered by their characters
+// > equal values hash alike, whatever type they are
+// > a whole number hashes to itself
+// > 42
+// > true
+// > ada
+// The prelude supplies `Eq`, `Ord`, `Hash`, and `Show` for `Bool`, `Int`, and `String`.
+import io
+
+fn main() -> () {
+    if false < true && !(true < false) {
+        io.println("false comes before true")
+    }
+    if "a" < "ab" && "ab" < "b" {
+        io.println("a string that begins another comes first")
+    }
+    if "one" < "two" && !("two" < "one") {
+        io.println("two strings are ordered by their characters")
+    }
+    if has_alike_hashes() {
+        io.println("equal values hash alike, whatever type they are")
+    }
+    if hashed(42) == 42 {
+        io.println("a whole number hashes to itself")
+    }
+    io.println(shown(42))
+    io.println(shown(true))
+    io.println(shown("ada"))
+}
+
+// example: has_alike_hashes()
+fn has_alike_hashes() -> Bool {
+    hashed(true) == hashed(true) && hashed("ada") == hashed("ada")
+}

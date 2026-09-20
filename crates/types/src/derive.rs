@@ -1,14 +1,14 @@
 //! What a derive writes, and what a type has to hold before it writes anything.
 //!
-//! `docs/specs/derive.md` states the rule this checks: a derived `Eq` compares field by field,
-//! by the `Eq` of each field's own type, so a field whose type has none leaves the derived
+//! `docs/specs/derive.md` states the rule this checks: a derived instance reads field by field,
+//! by the instance of each field's own type, so a field whose type has none leaves the derived
 //! instance nothing to call. Nothing here infers anything — it reads what a module declares.
 
-use lumen_ast::{DeriveDeclaration, Item, RecordField, TypeDeclaration, TypeDefinition};
+use lumen_ast::{Item, Name, RecordField, TypeDeclaration, TypeDefinition};
 use lumen_ast::{TypeRef, Variant, VariantPayload};
 use lumen_resolver::{ResolvedProgram, prelude};
 
-use crate::environment::Environment;
+use crate::environment::{Environment, signature_of};
 use crate::error::{TypeError, TypeErrorKind};
 use crate::types::Type;
 
@@ -19,35 +19,44 @@ struct Held<'a> {
     written: &'a TypeRef,
 }
 
-/// The type `Eq`'s method has at the type called `named`, which is what a derive writes.
-pub(crate) fn is_equal_at(named: &str) -> Type {
+/// One instance a derive writes: the trait it names, the type it is for, and that declaration.
+pub(crate) struct Writes<'a> {
+    pub(crate) of: &'a Name,
+    pub(crate) for_type: &'a Name,
+    declared: &'a TypeDeclaration,
+}
+
+/// The type the one method of `of` has at the type called `named`, which is what a derive writes.
+pub(crate) fn method_written(of: &str, named: &str) -> Type {
     let at = Type::Named {
         name: named.to_owned(),
         arguments: Vec::new(),
     };
-    Type::function(vec![at.clone(), at], Type::boolean())
+    let method = prelude::method_of(of).expect("a derivable trait declares one method");
+    signature_of(of, method, &at)
 }
 
-/// Refuses the first derive whose type holds a value of a type that has no `Eq`.
+/// Refuses the first derive whose type holds a value of a type that has no instance of the trait.
 ///
-/// This runs once every item has been declared, so a field whose type derives `Eq` further down
-/// the file counts as having one and two types that hold each other derive `Eq` together.
+/// This runs once every item has been declared, so a field whose type derives the trait further
+/// down the file counts as having it and two types that hold each other derive it together.
 ///
 /// # Errors
 ///
-/// Returns the first value a deriving type holds whose own type has no instance of `Eq`.
-pub(crate) fn compare_what_they_hold(
+/// Returns the first value a deriving type holds whose own type has no instance of that trait.
+pub(crate) fn hold_what_they_need(
     environment: &Environment,
     resolved: &ResolvedProgram,
 ) -> Result<(), TypeError> {
-    for (declaration, declared) in written_in(resolved) {
-        for held in holds(declared) {
+    for writes in written_in(resolved) {
+        for held in holds(writes.declared) {
             let of = environment.written(resolved, held.written)?;
-            if has_equality(environment, &of) {
+            if has_instance(environment, &writes.of.text, &of) {
                 continue;
             }
             let kind = TypeErrorKind::HeldTypeHasNoInstance {
-                deriving: declaration.for_type.text.clone(),
+                of: writes.of.text.clone(),
+                deriving: writes.for_type.text.clone(),
                 held: of,
                 held_as: held.held_as,
             };
@@ -57,10 +66,8 @@ pub(crate) fn compare_what_they_hold(
     Ok(())
 }
 
-/// Every derive a module writes, with the declaration of the type each one names.
-pub(crate) fn written_in(
-    resolved: &ResolvedProgram,
-) -> impl Iterator<Item = (&DeriveDeclaration, &TypeDeclaration)> {
+/// Every instance a module's derives write, with the declaration each one follows from.
+pub(crate) fn written_in(resolved: &ResolvedProgram) -> impl Iterator<Item = Writes<'_>> {
     resolved
         .program()
         .items
@@ -69,23 +76,25 @@ pub(crate) fn written_in(
             Item::Derive(declaration) => Some(declaration),
             _ => None,
         })
-        .map(|declaration| {
-            (
-                declaration,
-                declared_as(resolved, &declaration.for_type.text),
-            )
+        .flat_map(|declaration| {
+            let declared = declared_as(resolved, &declaration.for_type.text);
+            declaration.traits.iter().map(move |of| Writes {
+                of,
+                for_type: &declaration.for_type,
+                declared,
+            })
         })
 }
 
-/// Whether two values of `of` are ever compared, which is whether the type has an `Eq` to reach.
+/// Whether a value of `held` is ever handed to `of`, which is whether it has one to reach.
 ///
 /// `docs/specs/traits.md` gives an instance to a type written by name, so a type written with
 /// arguments has none however much its head does, and `()` has none at all.
-fn has_equality(environment: &Environment, of: &Type) -> bool {
-    let Type::Named { name, arguments } = of else {
+fn has_instance(environment: &Environment, of: &str, held: &Type) -> bool {
+    let Type::Named { name, arguments } = held else {
         return false;
     };
-    arguments.is_empty() && environment.has_instance(prelude::EQ, name)
+    arguments.is_empty() && environment.has_instance(of, name)
 }
 
 /// The declaration of the type called `named`, which is the one the derive above it names.
@@ -101,7 +110,7 @@ fn declared_as<'a>(resolved: &'a ResolvedProgram, named: &str) -> &'a TypeDeclar
         .expect("name resolution gave the derive's type a declaration in this module")
 }
 
-/// Every value a type holds, in the order a derived instance compares them.
+/// Every value a type holds, in the order a derived instance reads them.
 fn holds(declared: &TypeDeclaration) -> Vec<Held<'_>> {
     match &declared.definition {
         TypeDefinition::Record(fields) => fields.iter().map(field_of).collect(),
@@ -109,7 +118,7 @@ fn holds(declared: &TypeDeclaration) -> Vec<Held<'_>> {
     }
 }
 
-/// One field of a record, which a derived instance compares by its own type's `Eq`.
+/// One field of a record, which a derived instance reads by its own type's instance.
 fn field_of(field: &RecordField) -> Held<'_> {
     Held {
         held_as: field.name.text.clone(),

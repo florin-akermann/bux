@@ -135,7 +135,7 @@ Type inference raises these, in `crates/types/src/error.rs`:
 - `L0419` — a parameter of a method a trait declares states no type.
 - `L0420` — a whole number does not fit the type it is written at.
 - `L0421` — a bound of an `IntegerLiteral` instance is not one whole number.
-- `L0422` — a type derives `Eq` and holds a value of a type that has none.
+- `L0422` — a type derives a trait and holds a value of a type that has no instance of it.
 
 Exhaustiveness raises these, in `crates/exhaustiveness/src/error.rs`:
 

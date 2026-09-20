@@ -10,7 +10,7 @@ use lumen_resolver::prelude;
 use crate::code::{Arithmetic, Comparison, Instruction, MethodRef};
 use crate::descriptor::Descriptor;
 use crate::lower::body::{Builder, Slot};
-use crate::lower::equality::compared;
+use crate::lower::supplied::{compared, hashed_as, shown_as};
 
 impl Builder<'_> {
     /// An operator, which is the call of the one method its trait declares.
@@ -41,6 +41,12 @@ impl Builder<'_> {
         if of == prelude::INTEGER_LITERAL {
             return self.supplied_from_literal(arguments);
         }
+        if let Some(reads) = reading_one(of) {
+            let [value] = arguments else {
+                unreachable!("inference gave `{}` the one argument it takes", name.text)
+            };
+            return self.read_one(reads, value);
+        }
         if of == prelude::NEG {
             let [value] = arguments else {
                 unreachable!("inference gave `negate` the one argument it takes")
@@ -52,6 +58,22 @@ impl Builder<'_> {
         };
         self.supplied_operator(written_as(of), left, right)
             .expect("every supplied operator leaves a value")
+    }
+
+    /// `hashed(value)` and `shown(value)` at a type the prelude has an instance for, each of
+    /// which reads the one value it is handed.
+    fn read_one(&mut self, reads: ReadsOne, value: &Expr) -> Descriptor {
+        let held = self
+            .value(value)
+            .expect("a type with `Hash` or `Show` is carried by something");
+        let (written, gives) = match reads {
+            ReadsOne::Hashed => (hashed_as(&held), Descriptor::Long),
+            ReadsOne::Shown => (shown_as(&held), Descriptor::reference("java/lang/String")),
+        };
+        for instruction in written {
+            self.emit(instruction);
+        }
+        gives
     }
 
     /// `total += value` is `Add`, so it asks the trait `total + value` asks.
@@ -185,6 +207,22 @@ impl Builder<'_> {
     }
 }
 
+/// The one standard trait whose method reads one value rather than comparing two.
+#[derive(Clone, Copy)]
+enum ReadsOne {
+    Hashed,
+    Shown,
+}
+
+/// Which of the two `of` is, or nothing where its method takes two values.
+fn reading_one(of: &str) -> Option<ReadsOne> {
+    match of {
+        prelude::HASH => Some(ReadsOne::Hashed),
+        prelude::SHOW => Some(ReadsOne::Shown),
+        _ => None,
+    }
+}
+
 /// How an operator's call is read: the trait it is, and which way round its answer is.
 pub(crate) struct Asked {
     /// The trait the operator is, which `docs/specs/operators.md` names.
@@ -224,10 +262,7 @@ const fn reading(of: &'static str, reversed: bool, flipped: bool) -> Asked {
 
 /// The one method the trait `of` declares, which is the call an operator is.
 fn method_of(of: &str) -> &'static str {
-    prelude::methods_of(of)
-        .and_then(<[&str]>::first)
-        .copied()
-        .expect("every operator's trait is one the prelude declares")
+    prelude::method_of(of).expect("every operator's trait declares the one method it is")
 }
 
 /// The operator the trait `of` is, which is what its supplied instance writes out.

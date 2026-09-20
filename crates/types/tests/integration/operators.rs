@@ -100,12 +100,29 @@ fn a_string_has_add_so_two_of_them_are_joined_with_a_plus() {
 }
 
 #[test]
-fn a_string_has_no_ord_so_two_of_them_are_not_compared() {
-    let source = "fn is_first(one: String, other: String) -> Bool {\n    one < other\n}\n";
+fn the_prelude_orders_a_string_and_a_bool_as_it_orders_an_int() {
+    for held in ["String", "Bool"] {
+        let source =
+            format!("fn is_first(one: {held}, other: {held}) -> Bool {{\n    one < other\n}}\n");
+
+        assert_eq!(inferred_type(&source, "one < other", 1), "Bool", "{held}");
+    }
+}
+
+#[test]
+fn a_type_with_no_ord_is_not_compared_and_is_told_to_derive_one() {
+    let source = concat!(
+        "fn is_first(one: Money, other: Money) -> Bool {\n    one < other\n}\n\n",
+        "type Money = {\n    cents: Int\n}\n"
+    );
 
     assert_eq!(
         refusal(source).message(),
-        "`String` has no `Ord`, so `<` is not written over it"
+        "`Money` has no `Ord`, so `<` is not written over it"
+    );
+    assert_eq!(
+        refusal(source).help(),
+        "`Money` gets one by deriving it: write `derive Ord for Money`"
     );
 }
 

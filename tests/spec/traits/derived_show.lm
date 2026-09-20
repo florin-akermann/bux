@@ -1,0 +1,32 @@
+// expect-run
+// > User { id: 1, name: ada }
+// > Pending
+// > Failed(late)
+// > Sent { to: User { id: 1, name: ada }, note: hi }
+// A record and a variant each derive `Show`, and a value is shown as the source that builds it.
+import io
+
+fn main() -> () {
+    ada := User { id: 1, name: "ada" }
+    io.println(shown(ada))
+    io.println(shown(Pending))
+    io.println(shown(Failed("late")))
+    io.println(shown(Sent { to: ada, note: "hi" }))
+}
+
+derive Show for Payment
+
+type Payment =
+    | Pending
+    | Failed(String)
+    | Sent {
+        to: User
+        note: String
+    }
+
+derive Show for User
+
+type User = {
+    id: Int
+    name: String
+}

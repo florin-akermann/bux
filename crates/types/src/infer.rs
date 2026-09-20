@@ -118,9 +118,9 @@ impl Inference<'_> {
     /// that declares no signature has been given one by the time anything calls it.
     fn module(&mut self) -> Result<(), TypeError> {
         let resolved = self.resolved;
-        for (declaration, _) in derive::written_in(resolved) {
-            let at = &declaration.for_type;
-            self.types.insert(at.span, derive::is_equal_at(&at.text));
+        for writes in derive::written_in(resolved) {
+            let written = derive::method_written(&writes.of.text, &writes.for_type.text);
+            self.types.insert(writes.of.span, written);
         }
         for item in &resolved.program().items {
             let Item::Trait(declaration) = item else {

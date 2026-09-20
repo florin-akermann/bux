@@ -24,6 +24,7 @@ impl Assembling {
             Instruction::CompareLongs(how) => self.compare_longs(*how, context),
             Instruction::CompareIntegers(how) => self.compare_integers(*how, context),
             Instruction::Not => self.not(),
+            Instruction::Widen => self.widen(),
             Instruction::Jump(label) => self.jump(*label, context),
             Instruction::JumpIfFalse(label) => self.jump_if_false(*label, context),
             Instruction::New(class) => self.new_instance(class, context),
@@ -165,6 +166,13 @@ impl Assembling {
 
     fn compare_integers(&mut self, how: Comparison, context: &mut Context<'_>) {
         self.truth(opcode::IF_ICMPEQ + opcode::step(how), 2, context);
+    }
+
+    /// A small whole number becomes a whole number, which takes the one slot a long takes.
+    fn widen(&mut self) {
+        self.byte(opcode::I2L);
+        self.pop();
+        self.push(Held::Long);
     }
 
     fn not(&mut self) {

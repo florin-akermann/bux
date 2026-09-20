@@ -96,6 +96,8 @@ pub enum Instruction {
     CompareIntegers(Comparison),
     /// Turns a truth value into the other one.
     Not,
+    /// Turns the small whole number on the stack into a whole number.
+    Widen,
     /// Names a place a jump lands.
     Label(Label),
     Jump(Label),
