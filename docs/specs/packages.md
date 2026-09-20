@@ -64,10 +64,9 @@ not, and there is one way to write a manifest.
 
 `import demo` is answered by the first of these that holds `demo`:
 
-1. What the compiler supplies, which is `io` and `files`.
-2. What the library carries, which `docs/specs/library.md` lists.
-3. `demo.lm` beside the file that wrote the import.
-4. `demo.lm` in a package the manifest beside that file depends on.
+1. What the library carries, which `docs/specs/library.md` lists.
+2. `demo.lm` beside the file that wrote the import.
+3. `demo.lm` in a package the manifest beside that file depends on.
 
 Nothing else is looked in, and an import that reaches none of them is `L0306`.
 

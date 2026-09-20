@@ -26,7 +26,8 @@ the file.
 ## Loading
 
 `import demo` names the file `demo.lm`, beside the file that imports it.
-`io` and `files` are supplied by the compiler, so an import of either looks for no file at all.
+`io` and `files` are library modules, so an import of either reads the source the compiler
+carries and looks for no file at all.
 A file beside the importing one is where a module is looked for, and a package is the one other
 place: a manifest beside the importing file names the directories a dependency's modules sit in.
 `docs/specs/packages.md` states that manifest and the order an import is answered in, and two

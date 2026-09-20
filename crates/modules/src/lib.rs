@@ -18,7 +18,7 @@ use lumen_ast::Program;
 use lumen_diagnostics::Diagnostic;
 
 pub use crate::error::LoadError;
-pub use crate::load::load;
+pub use crate::load::{load, written};
 pub use crate::package::{MANIFEST, SUFFIX};
 
 /// Every module a program reaches, in the order they are compiled.

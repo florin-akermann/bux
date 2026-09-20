@@ -255,6 +255,15 @@ fn declared(program: &Program) -> Vec<(&Name, Kind)> {
             // A derive declares no name: it names a trait and a type both declared elsewhere.
             Item::Derive(_) => {}
             Item::Function(declared) => function(&mut names, declared),
+            Item::Extern(declared) => {
+                names.push((&declared.name, Kind::Function));
+                names.extend(
+                    declared
+                        .parameters
+                        .iter()
+                        .map(|one| (&one.name, Kind::Parameter)),
+                );
+            }
         }
     }
     names
@@ -291,6 +300,8 @@ fn signature<'a>(names: &mut Vec<(&'a Name, Kind)>, declared: &'a Signature) {
 /// The names a type definition declares below its own, which are its variants and their fields.
 fn definition<'a>(names: &mut Vec<(&'a Name, Kind)>, definition: &'a TypeDefinition) {
     match definition {
+        // A Java class declares nothing below its Lumen name; what it holds is the JVM's.
+        TypeDefinition::Foreign(_) => {}
         TypeDefinition::Record(fields) => fields_of(names, fields),
         TypeDefinition::Variants(variants) => {
             for variant in variants {

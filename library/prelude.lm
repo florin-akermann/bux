@@ -4,10 +4,21 @@
 // The compiler carries it, compiles it before every other module, and puts what it declares in
 // scope unasked.
 // example: or(Some(1), 0) == 1
+// example: or(None, 0) == 0
 fn or<T>(maybe: Option<T>, fallback: T) -> T {
     match maybe {
         Some(value) => value
         None => fallback
+    }
+}
+
+/// The value an answer holds, or `fallback` where it holds why it failed instead.
+// example: ok_or(Ok(1), 0) == 1
+// example: ok_or(Err("no"), 0) == 0
+fn ok_or<T, E>(answer: Result<T, E>, fallback: T) -> T {
+    match answer {
+        Ok(value) => value
+        Err(why) => fallback
     }
 }
 
@@ -40,6 +51,24 @@ instance Hash<Bool> {
 
 instance Hash<Int> {
     fn hashed(value: Int) -> Int {
+        value
+    }
+}
+
+instance Show<Bool> {
+    fn shown(value: Bool) -> String {
+        shown_truth(value)
+    }
+}
+
+instance Show<Int> {
+    fn shown(value: Int) -> String {
+        shown_number(value)
+    }
+}
+
+instance Show<String> {
+    fn shown(value: String) -> String {
         value
     }
 }
@@ -171,3 +200,9 @@ type Option<T> =
 type Result<T, E> =
     | Ok(T)
     | Err(E)
+
+/// `value` as the text a JVM writes a truth value as, which is `true` or `false`.
+extern static shown_truth(value: Bool) -> String = "java.lang.String.valueOf"
+
+/// `value` as the text a JVM writes a whole number as, which is its digits and a sign.
+extern static shown_number(value: Int) -> String = "java.lang.String.valueOf"

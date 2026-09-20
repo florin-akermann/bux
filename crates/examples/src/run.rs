@@ -186,6 +186,7 @@ fn declaring(program: &Program, named: &str) -> Option<Span> {
             Item::Type(declaration) => Some(&declaration.name),
             Item::Trait(declaration) => Some(&declaration.name),
             Item::Function(function) => Some(&function.name),
+            Item::Extern(declaration) => Some(&declaration.name),
         })
         .find(|declared| declared.text == named)
         .map(|declared| declared.span)
@@ -202,7 +203,8 @@ fn imports_of(program: &Program) -> String {
             | Item::Trait(_)
             | Item::Instance(_)
             | Item::Derive(_)
-            | Item::Function(_) => None,
+            | Item::Function(_)
+            | Item::Extern(_) => None,
         })
         .collect();
     modules.push(WRITES_A_LINE);
@@ -229,6 +231,7 @@ fn declarations_of(source: &str, program: &Program) -> Vec<Span> {
             Item::Trait(declaration) => Some(declaration.span),
             Item::Instance(declaration) => Some(declaration.span),
             Item::Derive(declaration) => Some(declaration.span),
+            Item::Extern(declaration) => Some(declaration.span),
             Item::Function(function) if function.name.text == read::REACHED_BY_RUNNING => None,
             Item::Function(function) => Some(function.span),
         })

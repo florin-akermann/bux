@@ -1,0 +1,8 @@
+// expect-error: L0428
+// An `extern method` reads the class it is called on off its first parameter.
+// An `Int` is a `long` and names no class, so there is nothing for the call to be written on.
+fn main() -> () {
+    _ = said(7)
+}
+
+extern method said(count: Int) -> String = "toString"

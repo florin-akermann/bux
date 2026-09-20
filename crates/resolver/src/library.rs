@@ -9,8 +9,10 @@
 ///
 /// The prelude comes first because every other module of it is read with the prelude's names
 /// already in scope, which is what `docs/specs/modules.md` says of every module.
-const CARRIED: [(&str, &str); 5] = [
+const CARRIED: [(&str, &str); 7] = [
     (PRELUDE, include_str!("../../../library/prelude.lm")),
+    ("io", include_str!("../../../library/io.lm")),
+    ("files", include_str!("../../../library/files.lm")),
     ("list", include_str!("../../../library/list.lm")),
     ("strings", include_str!("../../../library/strings.lm")),
     ("map", include_str!("../../../library/map.lm")),

@@ -63,17 +63,12 @@ const HELD: [(&str, usize); 4] = [("Bool", 0), ("Int", 0), ("List", 1), ("String
 /// The functions the compiler supplies, which is `todo` because a hole has no body to be written.
 const SUPPLIED: [&str; 1] = ["todo"];
 
-/// The instances the compiler still supplies, which are the ones Lumen cannot yet write.
+/// The instances the compiler still supplies, which is the one Lumen cannot yet write.
 ///
-/// `Show` renders a whole number or a truth value as text, and `Hash<String>` reads a string by
-/// the characters it holds. Each needs a JVM method the language cannot yet name, which
-/// `docs/specs/library.md` says `extern` is for.
-const STILL_SUPPLIED: [(&str, &str); 4] = [
-    (HASH, "String"),
-    (SHOW, "Bool"),
-    (SHOW, "Int"),
-    (SHOW, "String"),
-];
+/// `Hash<String>` reads a string by the characters it holds, and `String.hashCode` gives back a
+/// JVM `int`, which no Lumen type compiles to. `docs/specs/interop.md` states why that member is
+/// not reachable, so this one waits for a member that gives back a `long`.
+const STILL_SUPPLIED: [(&str, &str); 1] = [(HASH, "String")];
 
 /// A trait the prelude supplies: what it declares, and which types it already has instances for.
 pub struct Supplied {
@@ -258,7 +253,7 @@ fn declared_types() -> impl Iterator<Item = &'static lumen_ast::TypeDeclaration>
 /// The names of the variants a type declaration writes, which a record declaration has none of.
 fn variants_of(definition: &'static lumen_ast::TypeDefinition) -> Vec<&'static str> {
     match definition {
-        lumen_ast::TypeDefinition::Record(_) => Vec::new(),
+        lumen_ast::TypeDefinition::Foreign(_) | lumen_ast::TypeDefinition::Record(_) => Vec::new(),
         lumen_ast::TypeDefinition::Variants(variants) => variants
             .iter()
             .map(|variant| variant.name.text.as_str())

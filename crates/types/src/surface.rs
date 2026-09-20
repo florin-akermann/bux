@@ -113,6 +113,8 @@ pub enum BuiltBy {
     Record(OfferedConstructor),
     /// An algebraic data type, in the order it declares its variants.
     Variants(Vec<OfferedConstructor>),
+    /// A Java class, named as its `extern type` writes it, built by an `extern new` alone.
+    Foreign(String),
 }
 
 /// One constructor a type is built with, and what a value it builds carries.
@@ -163,6 +165,8 @@ impl OfferedType {
         match &self.built_by {
             BuiltBy::Record(one) => std::slice::from_ref(one),
             BuiltBy::Variants(variants) => variants,
+            // Nothing in Lumen builds a Java class; an `extern new` is what reaches one.
+            BuiltBy::Foreign(_) => &[],
         }
     }
 
@@ -273,6 +277,8 @@ impl BuiltBy {
     fn reached_as(self, module: &str, own: &HashSet<String>) -> Self {
         match self {
             Self::Record(one) => Self::Record(one.reached_as(module, own)),
+            // A Java class is named the same wherever it is reached from; it is the JVM's.
+            Self::Foreign(class) => Self::Foreign(class),
             Self::Variants(variants) => Self::Variants(
                 variants
                     .into_iter()

@@ -393,90 +393,141 @@ fn methods_of(lowered: &Lowered) -> impl Iterator<Item = &Vec<Instruction>> {
         .map(|method| &method.body.instructions)
 }
 
-/// Every class a call of a supplied module's name may reach, which `docs/specs/io.md` names.
-const REACHED: [&str; 7] = [
+/// Every JVM class the two library modules reach, which `docs/specs/io.md` names each of.
+///
+/// The last three are what the class file itself is made of rather than anything Lumen writes:
+/// every class a JVM holds is built on `java/lang/Object`, a guarded declaration asks whatever it
+/// caught what it says of itself, and the arm of a `match` nothing reaches says so rather than
+/// runs on, which `docs/specs/codegen.md` states.
+const REACHED: [&str; 9] = [
+    "java/lang/String",
     "java/lang/System",
     "java/io/PrintStream",
     "java/io/File",
+    "java/nio/file/Path",
     "java/nio/file/Files",
+    "java/lang/Object",
     "java/lang/Throwable",
-    "lumen/Result",
-    "lumen/Files",
+    "java/lang/AssertionError",
 ];
 
-/// A call of each name the two supplied modules declare, with the path or text it is given.
+/// The two library modules that reach outside a program, which is what `docs/specs/io.md` is about.
+const LIBRARY: [&str; 2] = ["io", "files"];
+
+/// A call of each name the two library modules declare, with the text it is given.
 const CALLS: [&str; 3] = ["io.print(text)", "io.println(text)", "_ = files.read(text)"];
 
-/// The path a generated read is given, which changes nothing about how it is lowered.
-const PATHS: [&str; 3] = ["\"a.txt\"", "\"\"", "given + \".txt\""];
+/// Every way an `extern` reaches a member, each written with the result left to be filled in.
+const REACHES: [(&str, &str); 4] = [
+    (
+        "extern field held() -> {result} = \"java.lang.System.out\"",
+        "PrintStream",
+    ),
+    (
+        "extern static worded(value: Int) -> {result} = \"java.lang.String.valueOf\"",
+        "String",
+    ),
+    (
+        "extern method trimmed(text: String) -> {result} = \"trim\"",
+        "String",
+    ),
+    ("extern new named(path: String) -> {result}", "File"),
+];
+
+/// Every way a declaration wraps what the member gives back, written around the type it wraps.
+const WRAPS: [&str; 3] = ["{held}", "Option<{held}>", "Result<{held}, String>"];
 
 #[hegel::test]
-fn a_call_of_a_supplied_name_reaches_only_what_the_spec_says_it_does(tc: TestCase) {
+fn a_call_into_a_library_module_reaches_that_module_s_class_and_nothing_else(tc: TestCase) {
     let call = tc.draw(gs::sampled_from(&CALLS));
     let source =
         format!("import files\n\nimport io\n\nfn go(text: String) -> () {{\n    {call}\n}}\n");
 
-    let lowered = common::lowered(&source);
+    let reaching = LIBRARY
+        .iter()
+        .fold(lumen_types::Imported::default(), |imported, module| {
+            imported.offering(module, common::library(module).offers())
+        });
+    let lowered = common::lowered_reaching(&source, &reaching);
 
-    for reached in reached_by(&lowered, "go")
-        .into_iter()
-        .chain(inside_the_reader(&lowered))
-    {
+    for reached in reached_by(&lowered, "go") {
         assert!(
-            REACHED.iter().any(|allowed| reached.starts_with(allowed)) || !reached.contains('/'),
-            "`{call}` reaches {reached}, which `docs/specs/io.md` does not name"
+            LIBRARY.contains(&reached.as_str()),
+            "`{call}` reaches {reached}, and a call into a module reaches that module"
         );
     }
 }
 
 #[hegel::test]
-fn nothing_a_module_writes_guards_a_span_because_a_guard_is_a_method_of_its_own(tc: TestCase) {
-    let call = tc.draw(gs::sampled_from(&CALLS));
-    let source =
-        format!("import files\n\nimport io\n\nfn go(text: String) -> () {{\n    {call}\n}}\n");
+fn every_class_a_library_module_reaches_is_one_the_spec_names(tc: TestCase) {
+    let module = tc.draw(gs::sampled_from(&LIBRARY));
 
-    let lowered = common::lowered(&source);
+    let lowered = common::library(module).lowered();
 
-    let reader = ClassName::new("lumen/Files");
-    for class in lowered.classes.iter().filter(|class| class.name != reader) {
+    for class in &lowered.classes {
         for method in &class.methods {
-            assert!(
-                method.body.guards.is_empty(),
-                "{}.{} guards a span, and a guard begins with an empty stack",
-                class.name,
-                method.name
-            );
+            for reached in reached_in(&method.body) {
+                assert!(
+                    REACHED.contains(&reached.as_str()) || !reached.starts_with("java/"),
+                    "{module}.{} reaches {reached}, which `docs/specs/io.md` does not name",
+                    method.name
+                );
+            }
         }
     }
 }
 
 #[hegel::test]
-fn a_read_leaves_a_result_down_the_path_it_takes_and_down_the_one_it_is_thrown(tc: TestCase) {
-    let path = tc.draw(gs::sampled_from(&PATHS));
-    let source = format!(
-        "import files\n\nfn read(given: String) -> Result<String, String> {{\n    files.read({path})\n}}\n"
+fn a_declaration_guards_a_span_exactly_where_it_gives_back_a_result(tc: TestCase) {
+    let (declared, held) = tc.draw(gs::sampled_from(&REACHES));
+    let wrap = tc.draw(gs::sampled_from(&WRAPS));
+    let result = wrap.replace("{held}", held);
+
+    let lowered = common::lowered(&declaring(declared, &result));
+
+    let body = common::body_of(&lowered, declared_name(declared));
+    let guards = usize::from(result.starts_with("Result<"));
+    assert_eq!(
+        body.guards.len(),
+        guards,
+        "`{result}` guards {guards} spans"
     );
+    for guard in &body.guards {
+        assert_eq!(guard.catching, ClassName::new("java/lang/Throwable"));
+    }
+}
 
-    let lowered = common::lowered(&source);
-    let reader = common::class_of(&lowered, &ClassName::new("lumen/Files"));
-    let body = &common::method_of(reader, "read").body;
+#[hegel::test]
+fn a_result_leaves_an_ok_down_the_path_taken_and_an_err_down_the_one_thrown(tc: TestCase) {
+    let (declared, held) = tc.draw(gs::sampled_from(&REACHES));
+    let result = format!("Result<{held}, String>");
 
+    let lowered = common::lowered(&declaring(declared, &result));
+
+    let body = common::body_of(&lowered, declared_name(declared));
     let [guard] = body.guards.as_slice() else {
-        panic!("a read guards one span")
+        panic!("a `Result` guards one span")
     };
-    let handler = written_at(body, guard.handler);
-    let (taken, thrown) = body.instructions.split_at(handler);
+    let (taken, thrown) = body.instructions.split_at(written_at(body, guard.handler));
     assert_eq!(built_by(taken), vec!["lumen/Result$Ok".to_owned()]);
     assert_eq!(built_by(thrown), vec!["lumen/Result$Err".to_owned()]);
 }
 
-/// Every class the guarded read reaches, where the module is one that writes it.
-fn inside_the_reader(lowered: &Lowered) -> Vec<String> {
-    let named = ClassName::new("lumen/Files");
-    let Some(reader) = lowered.classes.iter().find(|class| class.name == named) else {
-        return Vec::new();
-    };
-    reached_in(&common::method_of(reader, "read").body)
+/// A module holding `declared` with `result` filled in, over the types that declaration names.
+fn declaring(declared: &str, result: &str) -> String {
+    format!(
+        "{}\n\nextern type PrintStream = \"java.io.PrintStream\"\n\nextern type File = \"java.io.File\"\n",
+        declared.replace("{result}", result)
+    )
+}
+
+/// The name `declared` declares, which is the method the module writes it as.
+fn declared_name(declared: &str) -> &str {
+    declared
+        .split_whitespace()
+        .nth(2)
+        .and_then(|written| written.split('(').next())
+        .expect("a declaration writes its name after the way it reaches a member")
 }
 
 /// Every class the method `name` of the module reaches, by a call or by a field.
@@ -506,7 +557,8 @@ fn written_at(body: &lumen_ir::Body, label: lumen_ir::Label) -> usize {
 
 /// The answers `instructions` builds, in the order they are built.
 ///
-/// A read makes a `java.io.File` on the way, which is not an answer and is not one of these.
+/// A declaration may build the class it gives back on the way, which is not an answer and is not
+/// one of these.
 fn built_by(instructions: &[Instruction]) -> Vec<String> {
     instructions
         .iter()

@@ -45,3 +45,36 @@ Item 048 lands the declaration that makes such a reference writable, so this ite
 [052][a] - `docs/design.md` section 14 names a foreign reference among what the check refuses.
 [052][b] - Section 15 cites the clause where it argues nothing is shared, so the two sections agree.
 [052][c] - Item 048's `docs/specs/interop.md` points at the clause rather than restating the rule.
+
+## 🔴 Item 053: An `extern` reaches a member whose descriptor gives an `int`
+`docs/specs/interop.md` carries `Int` as a `long`, and a JVM `int` is a type no Lumen type is.
+`String.hashCode`, `String.length`, and `List.indexOf` each give one, so none of them is reachable.
+`Hash<String>` therefore stays the compiler's own, which Item 048 left as the one supplied instance.
+The compiler reads no class file, so it cannot learn a descriptor; the declaration has to say.
+Whatever says it is a language change, so `docs/design.md` section 17 answers first.
+[053][a] - `docs/design.md` section 17 says how a declaration names a member that gives an `int`.
+[053][b] - `docs/specs/interop.md` states the widening and what it refuses, spec before code.
+[053][c] - `Hash<String>` moves to `library/prelude.lm`, and nothing is supplied any more.
+[053][d] - `strings.length` and `list.index_of` land, which `docs/specs/library.md` is waiting on.
+
+## 🔴 Item 054: The specs still say the compiler supplies what the library writes
+`library/prelude.lm` writes every instance of `Eq`, `Ord`, `Hash`, `Show`, and the operators.
+`docs/specs/traits.md` still has a section called "What the compiler supplies" that lists them.
+`docs/specs/operators.md` and `docs/specs/literals.md` say the same of what they are about.
+Each was true before the prelude became Lumen source, and each is a claim no code holds up.
+A reader who believes them looks in the compiler for a body that is in `library/prelude.lm`.
+[054][a] - `docs/specs/traits.md` says which instances the library writes and which are supplied.
+[054][b] - `docs/specs/operators.md` and `docs/specs/literals.md` take that same wording.
+[054][c] - `crates/diagnostics/src/explanations/L0308.md` and `L0310.md` follow the specs.
+
+## 🔴 Item 055: An `extern` reaches a member of a Java interface
+`extern method` is lowered to `invokevirtual`, which the JVM refuses to link on an interface.
+`extern type Path = "java.nio.file.Path"` with `extern method as_text(path: Path) -> String`
+compiles, and running it is `java.lang.IncompatibleClassChangeError` with no diagnostic before it.
+Which of the two a Java name is is written in that name's own class file, and the compiler reads
+none of them, so the author is the one who can say which it is.
+[055][a] - `docs/design.md` section 17 says an `extern type` states that the class is an interface.
+[055][b] - `docs/specs/interop.md` and `docs/specs/grammar.md` take it, and drop the paragraph
+  that says reaching an interface waits.
+[055][c] - The lowering emits `InvokeInterface` on such a receiver, with the constant pool entry
+  an interface method reference is, and `tests/spec/interop/` runs one on a JDK.

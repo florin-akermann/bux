@@ -2,11 +2,14 @@
 
 use hegel::TestCase;
 use hegel::generators as gs;
+use lumen_diagnostics::Code;
 use lumen_parser::parse;
 use lumen_resolver::resolve;
 use lumen_types::check;
 
-use crate::common::{expressions, inferred_type, refusal};
+use crate::common::{
+    expressions, inferred_type, inferred_type_reaching, refusal, refusal_reaching,
+};
 
 /// The pieces a generated module is built from, each inferring on its own and declaring its own
 /// names, so any set of them is a module that infers.
@@ -376,8 +379,8 @@ fn a_bool_function_compiles_exactly_when_its_name_asks_a_question(tc: TestCase) 
     assert_eq!(accepts(&source), asks || gives != "Bool", "{source}");
 }
 
-/// Every name the two supplied modules declare, with the module each is reached through.
-const SUPPLIED: [(&str, &str, &str); 3] = [
+/// Every name the two library modules of `docs/specs/io.md` declare, and what each gives back.
+const REACHED: [(&str, &str, &str); 3] = [
     ("io", "print", "()"),
     ("io", "println", "()"),
     ("files", "read", "Result<String, String>"),
@@ -397,33 +400,72 @@ const PLACES: [&str; 3] = [
 ];
 
 #[hegel::test]
-fn a_name_a_supplied_module_declares_has_one_type_wherever_it_is_written(tc: TestCase) {
-    let (module, name, result) = tc.draw(gs::sampled_from(&SUPPLIED));
+fn a_name_a_library_module_declares_has_one_type_wherever_it_is_written(tc: TestCase) {
+    let (module, name, result) = tc.draw(gs::sampled_from(&REACHED));
     let place = tc.draw(gs::sampled_from(&PLACES));
     let call = format!("{module}.{name}(\"text\")");
     let body = place.replace("{call}", &call);
     let source = format!("import {module}\n\nfn go() -> () {{\n{body}}}\n");
 
-    crate::common::inferred(&source);
+    let library = crate::common::reaching_the_library();
+
+    crate::common::inferred_reaching(&source, &library);
     assert_eq!(
-        inferred_type(&source, &call, 1),
+        inferred_type_reaching(&source, &call, 1, &library),
         *result,
         "{module}.{name} gives back what `docs/specs/io.md` says it does"
     );
 }
 
 #[hegel::test]
-fn a_name_a_supplied_module_does_not_declare_is_refused_naming_the_module_and_it(tc: TestCase) {
-    let (module, _, _) = tc.draw(gs::sampled_from(&SUPPLIED));
+fn a_name_a_library_module_does_not_declare_is_refused_naming_the_module_and_it(tc: TestCase) {
+    let (module, _, _) = tc.draw(gs::sampled_from(&REACHED));
     let opener = tc.draw(gs::sampled_from(&["a", "w", "r"]));
     let rest: String = tc.draw(gs::text().alphabet(NAME_LETTERS).max_size(NAME_LONGEST));
     let name = format!("{opener}{rest}");
-    tc.assume(!SUPPLIED.iter().any(|(_, declared, _)| *declared == name));
+    tc.assume(!REACHED.iter().any(|(_, declared, _)| *declared == name));
     let source = format!("import {module}\n\nfn go() -> () {{\n    _ = {module}.{name}()\n}}\n");
 
     assert_eq!(
-        refusal(&source).message(),
+        refusal_reaching(&source, &crate::common::reaching_the_library()).message(),
         format!("`{module}` declares no `{name}`")
+    );
+}
+
+/// Every type that does not cross the boundary, which `docs/specs/interop.md` names each of.
+const CROSSES_NOT: [&str; 4] = ["List<String>", "User", "Paid", "Option<Int>"];
+
+/// Every place a signature writes a type, `{written}` standing for the one it writes there.
+const POSITIONS: [&str; 4] = [
+    "static held(one: {written}) -> String = \"java.lang.String.valueOf\"",
+    "static held(one: String, two: {written}) -> String = \"java.lang.String.valueOf\"",
+    "static held(one: String) -> {written} = \"java.lang.String.valueOf\"",
+    "method held(file: File, one: {written}) -> String = \"toString\"",
+];
+
+#[hegel::test]
+fn a_type_that_does_not_cross_is_refused_whichever_position_it_is_in(tc: TestCase) {
+    let written = tc.draw(gs::sampled_from(&CROSSES_NOT));
+    let position = tc.draw(gs::sampled_from(&POSITIONS));
+    let declared = position.replace("{written}", written);
+    let source = format!(
+        "extern {declared}\n\nextern type File = \"java.io.File\"\n\ntype User = {{\n    paid: Paid\n}}\n\ntype Paid = Paid(Int)\n"
+    );
+
+    let error = refusal(&source);
+
+    assert_eq!(
+        error.diagnostic().code(),
+        Code::DoesNotCross,
+        "{}",
+        error.message()
+    );
+    assert!(
+        error
+            .message()
+            .starts_with(&format!("`{written}` is no type")),
+        "{}",
+        error.message()
     );
 }
 

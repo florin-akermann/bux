@@ -1,7 +1,7 @@
 // expect-run
 // > hello, world
 // > 6
-// A program reaches a module of its own the way it reaches one the compiler supplies.
+// A program reaches a module of its own the way it reaches one the library carries.
 import greeting
 
 import io

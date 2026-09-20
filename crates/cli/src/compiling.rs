@@ -8,21 +8,18 @@ use std::path::{Path, PathBuf};
 
 use lumen_diagnostics::Diagnostic;
 use lumen_exhaustiveness::check as exhaustive;
+use lumen_modules::written as loaded_as_written;
 use lumen_modules::{NotLoaded, load};
 use lumen_types::{Imported, TypedProgram, check as check_types};
 
 /// Every module a program reaches, checked, dependencies before dependents.
+#[derive(Default)]
 pub(crate) struct Checked {
     modules: Vec<Module>,
     imported: Imported,
 }
 
 impl Checked {
-    /// What every module loaded offers, which is what typing one more of them reads.
-    pub(crate) const fn imported(&self) -> &Imported {
-        &self.imported
-    }
-
     /// Every module, in the order they are compiled, ending with the one the command named.
     pub(crate) fn modules(&self) -> &[Module] {
         &self.modules
@@ -33,6 +30,24 @@ impl Checked {
         self.modules
             .last()
             .expect("loading reads the file it is given")
+    }
+
+    /// Checks each of `loaded` in turn, each against the surfaces of the ones before it.
+    fn accept_each(&mut self, loaded: Vec<lumen_modules::Module>) -> Result<(), NotCompiled> {
+        for loaded in loaded {
+            let typed = accepted(loaded.source(), &self.imported).map_err(|diagnostic| {
+                NotCompiled::refused(vec![diagnostic], loaded.path(), loaded.source())
+            })?;
+            self.offer(loaded, typed);
+        }
+        Ok(())
+    }
+
+    /// Puts one checked module below the next, with what it offers among the surfaces.
+    fn offer(&mut self, loaded: lumen_modules::Module, typed: TypedProgram) {
+        let offered = std::mem::take(&mut self.imported);
+        self.imported = offered.offering(loaded.name(), typed.surface().clone());
+        self.modules.push(Module { loaded, typed });
     }
 }
 
@@ -67,23 +82,28 @@ impl Module {
 /// Checks the module at `path` and every module it reaches, each after what it imports.
 pub(crate) fn checked(path: &Path) -> Result<Checked, NotCompiled> {
     let loaded = load(path).map_err(NotCompiled::of)?;
-    let mut imported = Imported::default();
-    let mut modules = Vec::new();
-    for loaded in loaded.into_modules() {
-        let typed = match accepted(loaded.source(), &imported) {
-            Ok(typed) => typed,
-            Err(diagnostic) => {
-                return Err(NotCompiled::refused(
-                    vec![diagnostic],
-                    loaded.path(),
-                    loaded.source(),
-                ));
-            }
-        };
-        imported = imported.offering(loaded.name(), typed.surface().clone());
-        modules.push(Module { loaded, typed });
-    }
-    Ok(Checked { modules, imported })
+    let mut checked = Checked::default();
+    checked.accept_each(loaded.into_modules())?;
+    Ok(checked)
+}
+
+/// Checks the module `written` is, standing where the file at `path` stands, and its imports.
+///
+/// The imports are files an author wrote, so each is held to canonical form as any module is.
+/// This one is the compiler's own, and `typed` states why it is held to everything but that.
+pub(crate) fn written(written: &str, path: &Path) -> Result<Checked, NotCompiled> {
+    let mut loaded = loaded_as_written(written, path)
+        .map_err(NotCompiled::of)?
+        .into_modules();
+    let root = loaded
+        .pop()
+        .expect("loading ends with the module it was given");
+    let mut checked = Checked::default();
+    checked.accept_each(loaded)?;
+    let typed = typed(root.source(), &checked.imported)
+        .map_err(|diagnostic| NotCompiled::refused(vec![diagnostic], root.path(), root.source()))?;
+    checked.offer(root, typed);
+    Ok(checked)
 }
 
 /// Every phase the front end has, run in order over one module, stopping at the first refusal.

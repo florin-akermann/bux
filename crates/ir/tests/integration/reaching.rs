@@ -1,0 +1,381 @@
+//! What an `extern` declaration becomes, which `docs/specs/interop.md` states.
+//!
+//! Each one is a static method of the module that declares it, holding the member it names and
+//! the mapping the declaration asks for. `docs/specs/io.md` states what `io` and `files` reach
+//! through theirs, and the last of these hold the two library modules to it.
+
+use lumen_ir::{Asked, Body, ClassName, Descriptor, FieldRef, Guard, Instruction, Label};
+use lumen_ir::{Lowered, MethodDescriptor, MethodRef};
+use lumen_types::Imported;
+
+use crate::common::{LibraryModule, Written, body_of, called, class_of, library};
+use crate::common::{lowered_as, method_of};
+
+/// A module declaring the two ways of writing a line out, over the types those name.
+const WRITING: &str = concat!(
+    "fn printed(text: String) -> () {\n    put(out(), text)\n}\n\n",
+    "extern method put(stream: PrintStream, text: String) -> () = \"print\"\n\n",
+    "extern field out() -> PrintStream = \"java.lang.System.out\"\n\n",
+    "extern type PrintStream = \"java.io.PrintStream\"\n",
+);
+
+/// A module declaring a constructor and the static member that takes what it builds.
+const BUILDING: &str = concat!(
+    "extern static read_whole(path: Path) -> String = \"java.nio.file.Files.readString\"\n\n",
+    "extern new named(path: String) -> File\n\n",
+    "extern type File = \"java.io.File\"\n\n",
+    "extern type Path = \"java.nio.file.Path\"\n",
+);
+
+/// A module whose one declaration gives back a `Result`, which is the guarded shape.
+const GUARDED: &str = concat!(
+    "extern method as_a_path(file: File) -> Result<Path, String> = \"toPath\"\n\n",
+    "extern type File = \"java.io.File\"\n\n",
+    "extern type Path = \"java.nio.file.Path\"\n",
+);
+
+/// A module whose one declaration gives back an `Option`, which is the null-reading shape.
+const OPTIONAL: &str = concat!(
+    "extern method as_a_path(file: File) -> Option<Path> = \"toPath\"\n\n",
+    "extern type File = \"java.io.File\"\n\n",
+    "extern type Path = \"java.nio.file.Path\"\n",
+);
+
+#[test]
+fn a_field_is_read_off_the_class_it_names_and_handed_straight_back() {
+    let stream = Descriptor::reference("java/io/PrintStream");
+
+    assert_eq!(
+        body_of(&lowered(WRITING), "out").instructions,
+        vec![
+            Instruction::Label(Label(0)),
+            Instruction::GetStatic(FieldRef {
+                class: ClassName::new("java/lang/System"),
+                name: "out".to_owned(),
+                of: stream.clone(),
+            }),
+            Instruction::Label(Label(1)),
+            Instruction::Return(Some(stream)),
+        ]
+    );
+}
+
+#[test]
+fn a_method_loads_the_receiver_it_is_given_and_calls_the_member_on_it() {
+    let stream = Descriptor::reference("java/io/PrintStream");
+    let text = Descriptor::reference("java/lang/String");
+
+    assert_eq!(
+        body_of(&lowered(WRITING), "put").instructions,
+        vec![
+            Instruction::Label(Label(0)),
+            Instruction::Load {
+                slot: 0,
+                of: stream,
+            },
+            Instruction::Load {
+                slot: 1,
+                of: text.clone(),
+            },
+            Instruction::InvokeVirtual(MethodRef {
+                class: ClassName::new("java/io/PrintStream"),
+                name: "print".to_owned(),
+                descriptor: MethodDescriptor::new(vec![text], None),
+            }),
+            Instruction::Label(Label(1)),
+            Instruction::Return(None),
+        ]
+    );
+}
+
+#[test]
+fn a_constructor_builds_the_class_the_declaration_gives_back_and_hands_it_on() {
+    let file = ClassName::new("java/io/File");
+
+    assert_eq!(
+        body_of(&lowered(BUILDING), "named").instructions,
+        vec![
+            Instruction::Label(Label(0)),
+            Instruction::New(file.clone()),
+            Instruction::Copy,
+            Instruction::Load {
+                slot: 0,
+                of: Descriptor::reference("java/lang/String"),
+            },
+            Instruction::Construct(MethodRef {
+                class: file.clone(),
+                name: "<init>".to_owned(),
+                descriptor: MethodDescriptor::new(
+                    vec![Descriptor::reference("java/lang/String")],
+                    None,
+                ),
+            }),
+            Instruction::Label(Label(1)),
+            Instruction::Return(Some(Descriptor::Reference(file))),
+        ]
+    );
+}
+
+#[test]
+fn a_static_member_is_called_with_what_the_declaration_takes_and_nothing_else() {
+    let calls: Vec<String> = reached_by(body_of(&lowered(BUILDING), "read_whole"));
+
+    assert_eq!(calls, vec!["java/nio/file/Files.readString".to_owned()]);
+}
+
+#[test]
+fn a_declaration_that_gives_nothing_back_leaves_nothing_on_the_stack_to_drop() {
+    let dropped = body_of(&lowered(WRITING), "put")
+        .instructions
+        .iter()
+        .filter(|instruction| matches!(instruction, Instruction::Drop(_)))
+        .count();
+
+    assert_eq!(dropped, 0);
+}
+
+#[test]
+fn a_result_guards_the_member_and_catches_everything_a_jvm_can_throw() {
+    let written = lowered(GUARDED);
+    let body = body_of(&written, "as_a_path");
+
+    assert_eq!(
+        guarded(body).catching,
+        ClassName::new("java/lang/Throwable")
+    );
+}
+
+#[test]
+fn only_the_member_is_guarded_because_the_mapping_around_it_throws_nothing() {
+    let written = lowered(GUARDED);
+    let body = body_of(&written, "as_a_path");
+    let guard = guarded(body);
+    let inside = &body.instructions[at(body, guard.from)..at(body, guard.to)];
+
+    assert_eq!(
+        reached_in(inside),
+        vec!["java/io/File.toPath".to_owned()],
+        "a guard covers the member the declaration names and nothing more"
+    );
+}
+
+#[test]
+fn the_handler_asks_the_throwable_what_it_says_of_itself_and_nothing_else_about_it() {
+    let written = lowered(GUARDED);
+    let body = body_of(&written, "as_a_path");
+    let caught = &body.instructions[at(body, guarded(body).handler)..];
+
+    let asked: Vec<&str> = caught
+        .iter()
+        .filter_map(called)
+        .filter(|call| call.class == ClassName::new("java/lang/Throwable"))
+        .map(|call| call.name.as_str())
+        .collect();
+    assert_eq!(asked, vec!["toString"]);
+}
+
+#[test]
+fn both_answers_a_guarded_declaration_can_have_are_built_and_both_are_a_result() {
+    let written = lowered(GUARDED);
+    let body = body_of(&written, "as_a_path");
+    let (taken, thrown) = body.instructions.split_at(at(body, guarded(body).handler));
+
+    assert_eq!(built_in(taken), vec!["lumen/Result$Ok".to_owned()]);
+    assert_eq!(built_in(thrown), vec!["lumen/Result$Err".to_owned()]);
+}
+
+#[test]
+fn an_option_reads_what_came_back_for_null_and_builds_one_variant_down_each_path() {
+    let written = lowered(OPTIONAL);
+    let body = body_of(&written, "as_a_path");
+
+    assert!(
+        body.instructions
+            .iter()
+            .any(|instruction| matches!(instruction, Instruction::JumpIfNull(_))),
+        "an `Option` is read off whether the member gave back null"
+    );
+    assert_eq!(
+        built_in(&body.instructions),
+        vec![
+            "lumen/Option$Some".to_owned(),
+            "lumen/Option$None".to_owned()
+        ]
+    );
+    assert!(body.guards.is_empty(), "an `Option` catches nothing");
+}
+
+#[test]
+fn a_declaration_that_wraps_nothing_gives_back_what_the_member_gave_and_guards_none() {
+    let written = lowered(BUILDING);
+    let body = body_of(&written, "read_whole");
+
+    assert!(body.guards.is_empty());
+    assert_eq!(built_in(&body.instructions), Vec::<String>::new());
+}
+
+#[test]
+fn every_extern_is_a_method_of_the_module_that_declares_it_and_of_no_class_of_its_own() {
+    let written = lowered(WRITING);
+
+    for named in ["printed", "put", "out"] {
+        method_of(class_of(&written, &ClassName::new("demo")), named);
+    }
+    let own: Vec<&str> = crate::common::written(&written)
+        .into_iter()
+        .filter(|class| !class.starts_with("lumen/"))
+        .collect();
+    assert_eq!(own, vec!["demo"], "a declaration is a method, not a class");
+}
+
+#[test]
+fn a_guard_is_an_extern_s_own_so_nothing_a_module_writes_around_one_guards_a_span() {
+    let nesting = concat!(
+        "fn held(file: File) -> Option<Result<Path, String>> {\n    Some(as_a_path(file))\n}\n\n",
+        "extern method as_a_path(file: File) -> Result<Path, String> = \"toPath\"\n\n",
+        "extern type File = \"java.io.File\"\n\n",
+        "extern type Path = \"java.nio.file.Path\"\n",
+    );
+    let written = lowered(nesting);
+
+    assert!(body_of(&written, "held").guards.is_empty());
+    assert_eq!(body_of(&written, "as_a_path").guards.len(), 1);
+}
+
+#[test]
+fn a_call_into_a_library_module_is_a_static_call_of_that_module_s_class() {
+    let source = "import io\n\nfn go(text: String) -> () {\n    io.println(text)\n}\n";
+    let written = lowered_as(&Written {
+        source,
+        named: "demo",
+        imported: &library("io").offered(),
+        asked: &Asked::default(),
+    });
+
+    assert_eq!(
+        reached_by(body_of(&written, "go")),
+        vec!["io.println".to_owned()]
+    );
+}
+
+#[test]
+fn writing_a_line_out_reaches_the_stream_through_the_class_that_holds_it() {
+    let written = library("io").lowered();
+    let stream = ClassName::new("java/io/PrintStream");
+
+    assert!(
+        body_of_module(&written, library("io"), "out")
+            .instructions
+            .iter()
+            .any(|instruction| matches!(
+                instruction,
+                Instruction::GetStatic(field) if field.class == ClassName::new("java/lang/System")
+            ))
+    );
+    for named in ["put", "put_line"] {
+        let body = body_of_module(&written, library("io"), named);
+        assert!(
+            body.instructions
+                .iter()
+                .filter_map(called)
+                .any(|call| call.class == stream),
+            "io.{named} writes on the stream it is given"
+        );
+    }
+}
+
+#[test]
+fn the_path_is_asked_of_a_file_before_the_file_is_read_whole() {
+    let written = library("files").lowered();
+
+    let reached: Vec<String> = ["named", "as_a_path", "read_whole"]
+        .into_iter()
+        .flat_map(|named| reached_by(body_of_module(&written, library("files"), named)))
+        .filter(|call| call.starts_with("java/io/") || call.starts_with("java/nio/"))
+        .collect();
+    assert_eq!(
+        reached,
+        vec![
+            "java/io/File.<init>".to_owned(),
+            "java/io/File.toPath".to_owned(),
+            "java/nio/file/Files.readString".to_owned(),
+        ]
+    );
+}
+
+#[test]
+fn the_only_method_of_a_library_module_that_guards_a_span_gives_back_a_result() {
+    assert!(guarding("io").is_empty(), "nothing `io` reaches throws");
+    assert_eq!(
+        guarding("files"),
+        ["read_whole", "as_a_path"],
+        "the two declarations `files` writes with a `Result` are the two guarded spans"
+    );
+}
+
+/// Every method of the library module `named` that guards a span, in the order it writes them.
+fn guarding(named: &'static str) -> Vec<String> {
+    let written = library(named).lowered();
+    class_of(&written, &library(named).class())
+        .methods
+        .iter()
+        .filter(|method| !method.body.guards.is_empty())
+        .map(|method| method.name.clone())
+        .collect()
+}
+
+/// The classes `source` becomes as a module named `demo`, reaching nothing it does not declare.
+fn lowered(source: &str) -> Lowered {
+    lowered_as(&Written {
+        source,
+        named: "demo",
+        imported: &Imported::default(),
+        asked: &Asked::default(),
+    })
+}
+
+/// The body of the method `name` of the class `module` is.
+fn body_of_module<'a>(lowered: &'a Lowered, module: LibraryModule, name: &str) -> &'a Body {
+    &method_of(class_of(lowered, &module.class()), name).body
+}
+
+/// The one span of `body` whose failure is caught.
+fn guarded(body: &Body) -> Guard {
+    let [one] = body.guards.as_slice() else {
+        panic!("a guarded declaration guards one span")
+    };
+    one.clone()
+}
+
+/// Where `label` is written in `body`, counted in instructions.
+fn at(body: &Body, label: Label) -> usize {
+    body.instructions
+        .iter()
+        .position(|instruction| instruction == &Instruction::Label(label))
+        .unwrap_or_else(|| panic!("{label:?} is written in the body"))
+}
+
+/// Every method `body` calls, each written as the class and the name it reaches.
+fn reached_by(body: &Body) -> Vec<String> {
+    reached_in(&body.instructions)
+}
+
+/// Every method `instructions` call, each written as the class and the name it reaches.
+fn reached_in(instructions: &[Instruction]) -> Vec<String> {
+    instructions
+        .iter()
+        .filter_map(called)
+        .map(|call| format!("{}.{}", call.class, call.name))
+        .collect()
+}
+
+/// Every class `instructions` build, in the order they are built.
+fn built_in(instructions: &[Instruction]) -> Vec<String> {
+    instructions
+        .iter()
+        .filter_map(|instruction| match instruction {
+            Instruction::New(class) => Some(class.written().to_owned()),
+            _ => None,
+        })
+        .collect()
+}

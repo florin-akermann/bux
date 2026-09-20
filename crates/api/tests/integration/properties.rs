@@ -82,6 +82,7 @@ fn declarations(source: &str) -> Vec<String> {
             // name of its own.
             Item::Import(_) | Item::Instance(_) | Item::Derive(_) => {}
             Item::Function(function) => declared.push(function.name.text.clone()),
+            Item::Extern(declaration) => declared.push(declaration.name.text.clone()),
             Item::Type(declaration) => {
                 declared.push(declaration.name.text.clone());
                 declared.extend(variants(&declaration.definition));

@@ -40,8 +40,8 @@ is a call of the function `join` that module declares.
 An import of a library module looks beside no file: the compiler holds the source, so a file of
 that name beside the importing one is not consulted and does not shadow it.
 
-Naming a module of a program `prelude`, `list`, `strings`, `map`, or `set` therefore buys nothing.
-The name is taken, as `io` and `files` are taken, and an import of one is the library's.
+Naming a module of a program after a library module therefore buys nothing: the name is taken,
+and an import of it is the library's.
 
 ## What the compiler still holds
 
@@ -56,7 +56,7 @@ Everything else the prelude used to supply is library source:
 ```text
 types:        Option  Result
 constructors: Some  None  Ok  Err
-functions:    or
+functions:    or  ok_or
 traits:       Add  Div  Eq  Hash  IntegerLiteral  Mul  Neg  Ord  Rem  Show  Sub
 instances:    each of those traits for the types of it the library writes
 ```
@@ -109,14 +109,22 @@ Everything else a module's body is held to, an instance body is held to.
 
 `prelude` is every name above, and nothing else.
 
-`list`, `strings`, `map`, and `set` each hold what a `for` loop writes the same way twice.
+`list`, `strings`, `map`, and `set` each hold what a `for` loop writes the same way twice, and
+`io` and `files` hold what no `for` loop writes at all.
 
 ```text
 list:    length  has_value
 strings: join
 map:     empty  insert  get
 set:     empty  insert  has_value
+io:      print  println
+files:   read
 ```
+
+`io` and `files` are written over `extern` declarations, which `docs/specs/interop.md` states and
+`docs/specs/io.md` says what each of the two reaches. Each declares those declarations beside its
+functions, and every top-level name is public, so both surfaces are wider than the three names
+above; `docs/specs/io.md` names the rest.
 
 `map` and `set` declare the types they are about as well as the functions, and each declares the
 steps of its own walks beside them, which `docs/specs/collections.md` lists.
@@ -146,9 +154,9 @@ the parameter on anything else.
 
 ## What is not here yet
 
-`push`, `split`, and the length of a string each need a JVM method the language cannot yet name.
-`docs/implementation.md` section 10's `extern` declaration is what names one, and they land with
-it rather than as a compiler-supplied table in the meantime.
+`push`, `split`, and the length of a string each need a JVM method whose descriptor gives back an
+`int`, which is a type no Lumen type compiles to and so a type no `extern` declaration can name.
+`docs/specs/interop.md` states that, and they land with whatever names such a member.
 
 A mapping and a filtering over a list need a parameter whose type is a function, which the
 grammar of `docs/specs/grammar.md` does not write.

@@ -12,7 +12,6 @@ use crate::environment::{self, Key};
 use crate::error::{TypeError, TypeErrorKind};
 use crate::infer::{Asked, Inference, Propagated, Propagation, Requirement, labelled};
 use crate::scheme::Required;
-use crate::supplied;
 use crate::surface::{GenericUse, Offered};
 use crate::types::Type;
 
@@ -171,19 +170,14 @@ impl Inference<'_> {
         self.expect(&lookup.found, &parameters[index].clone(), field.span)
     }
 
-    /// A name reached inside a module, which the compiler supplies or loading read from a file.
+    /// A name reached inside a module loading read from a file.
     ///
     /// Version 0.1 has no function value, so a function of a module is written where a call
     /// writes it and nowhere else; a variant it declares that carries nothing is a value and is
     /// written as the name alone, which `docs/specs/modules.md` states.
     fn inside(&mut self, module: &str, lookup: &Lookup) -> Result<(), TypeError> {
         let field = &lookup.field;
-        let declared = if supplied::supplies(module) {
-            supplied::declared(module, &field.text)
-        } else {
-            self.reached(module, field)
-        };
-        let Some(declared) = declared else {
+        let Some(declared) = self.reached(module, field) else {
             let kind = TypeErrorKind::NotInModule {
                 module: module.to_owned(),
                 name: field.text.clone(),
@@ -305,8 +299,8 @@ pub(crate) enum Reached {
 
 /// A field reached through something that has no fields, or through a type nothing settled.
 ///
-/// A module is never one of them: every module in scope is supplied or loaded, so a name
-/// reached inside one is answered by what it declares.
+/// A module is never one of them: every module in scope was loaded, so a name reached inside
+/// one is answered by what it declares.
 fn unreachable_field(through: &Type, field: &Name) -> TypeError {
     let kind = if matches!(through, Type::Var(_)) {
         TypeErrorKind::UnknownReceiver(field.text.clone())

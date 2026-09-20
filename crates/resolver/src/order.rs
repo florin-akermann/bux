@@ -55,6 +55,7 @@ fn declarations(program: &Program) -> Vec<Declared<'_>> {
         .filter_map(|item| match item {
             Item::Import(_) => None,
             Item::Type(declaration) => Some(named(&declaration.name, declaration.span)),
+            Item::Extern(declaration) => Some(named(&declaration.name, declaration.span)),
             Item::Trait(declaration) => Some(named(&declaration.name, declaration.span)),
             // An instance declares no name, so it is spoken of by the trait and the type it
             // names: it is written below that trait, and below whatever its bodies reach.

@@ -43,6 +43,19 @@ fn a_library_module_is_handed_over_below_the_module_that_imports_it() {
 }
 
 #[test]
+fn every_library_module_a_file_imports_is_handed_over_below_it() {
+    let beside = Beside::holding(&[(
+        "main",
+        "import files\n\nimport io\n\nfn main() -> () {\n}\n",
+    )]);
+    let loaded = load(&beside.file_of("main")).expect("a library module needs no file");
+
+    assert_eq!(order_of(&loaded), ["files", "io", "main"]);
+    assert_eq!(source_of(&loaded, "io"), library::source_of("io"));
+    assert_eq!(source_of(&loaded, "files"), library::source_of("files"));
+}
+
+#[test]
 fn the_prelude_is_not_a_name_an_import_reaches() {
     let beside = Beside::holding(&[("main", IMPORTING_THE_PRELUDE)]);
     let refused = load(&beside.file_of("main")).expect_err("the prelude is imported by nothing");

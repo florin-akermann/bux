@@ -6,7 +6,7 @@
 use lumen_ast::{Block, Expr, ExprKind, ForHeader, IfExpr, Program, Span};
 use lumen_ast::{Statement, StatementKind};
 use lumen_parser::parse;
-use lumen_resolver::{ResolvedProgram, resolve};
+use lumen_resolver::{ResolvedProgram, library, resolve};
 use lumen_types::{Imported, TypeError, TypedProgram, check};
 
 /// The failure `source` is refused with, importing nothing.
@@ -32,6 +32,22 @@ pub fn offering(offered: &Offered<'_>) -> Imported {
     let surface = inferred(offered.source).surface().clone();
     Imported::default().offering(offered.module, surface)
 }
+
+/// What `io` and `files` put out, which is what a module importing either of them reaches.
+///
+/// They are library modules like `list` and `strings`, read out of the source the compiler
+/// carries, so inference is given their surfaces exactly as it is given a loaded module's.
+pub fn reaching_the_library() -> Imported {
+    LIBRARY
+        .iter()
+        .fold(Imported::default(), |imported, module| {
+            let source = library::source_of(module).expect("the library carries the module");
+            imported.offering(module, inferred(source).surface().clone())
+        })
+}
+
+/// The library modules these tests reach, which are the two `docs/specs/io.md` states.
+const LIBRARY: [&str; 2] = ["io", "files"];
 
 /// The type of the occurrence of `written` numbered `occurrence`, counting from one.
 pub fn inferred_type(source: &str, written: &str, occurrence: usize) -> String {

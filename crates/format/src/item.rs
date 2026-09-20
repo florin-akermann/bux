@@ -1,10 +1,12 @@
 //! The top-level declarations of a source file.
 
-use lumen_ast::{DeriveDeclaration, Function, Import, InstanceDeclaration, Item, Name};
+use lumen_ast::{DeriveDeclaration, ExternDeclaration, Function, Import, InstanceDeclaration};
+use lumen_ast::{Item, Name};
 use lumen_ast::{Parameter, Program};
 use lumen_ast::{RecordField, Signature, Span, TraitDeclaration, TypeDeclaration};
 use lumen_ast::{TypeDefinition, TypeParameter, TypeRef, Variant, VariantPayload};
 
+use crate::literal::string;
 use crate::printer::Printer;
 use crate::stmt::{block, close_block, open_block};
 use crate::type_ref::type_ref;
@@ -28,7 +30,29 @@ fn item(printer: &mut Printer, written: &Item) {
         Item::Instance(declared) => instance(printer, declared),
         Item::Derive(declared) => derive(printer, declared),
         Item::Function(declared) => function(printer, declared),
+        Item::Extern(declared) => declared_extern(printer, declared),
     }
+}
+
+/// `extern static read(path: Path) -> String = "java.nio.file.Files.readString"`, on one line.
+///
+/// There is no body to open a block with, and the result is always written, so every one of
+/// these is the one line `docs/specs/interop.md` writes it as.
+pub(crate) fn declared_extern(printer: &mut Printer, written: &ExternDeclaration) {
+    printer.comments_above(written.span);
+    printer.open_line();
+    printer.word("extern ");
+    printer.word(written.reaches.written());
+    printer.word(" ");
+    printer.word(&written.name.text);
+    parameters(printer, &written.parameters);
+    printer.word(" -> ");
+    type_ref(printer, &written.result);
+    if let Some(named) = written.reaches.named() {
+        printer.word(" = ");
+        printer.word(&string(&named.text));
+    }
+    printer.end_line();
 }
 
 /// A comment after the last item, at the left margin and below one blank line.
@@ -53,17 +77,32 @@ fn import(printer: &mut Printer, written: &Import) {
 pub(crate) fn type_declaration(printer: &mut Printer, written: &TypeDeclaration) {
     printer.comments_above(written.span);
     printer.open_line();
+    match &written.definition {
+        TypeDefinition::Foreign(class) => {
+            printer.word("extern type ");
+            printer.word(&written.name.text);
+            printer.word(" = ");
+            printer.word(&string(&class.text));
+            printer.end_line();
+        }
+        TypeDefinition::Record(fields) => {
+            opened(printer, written);
+            record_body(printer, fields, written.span);
+            printer.end_line();
+        }
+        TypeDefinition::Variants(variants) => {
+            opened(printer, written);
+            variants_of(printer, variants, written.span);
+        }
+    }
+}
+
+/// `type User<T> =`, which every type a declaration writes the body of opens with.
+fn opened(printer: &mut Printer, written: &TypeDeclaration) {
     printer.word("type ");
     printer.word(&written.name.text);
     type_parameters(printer, &written.parameters);
     printer.word(" =");
-    match &written.definition {
-        TypeDefinition::Record(fields) => {
-            record_body(printer, fields, written.span);
-            printer.end_line();
-        }
-        TypeDefinition::Variants(variants) => variants_of(printer, variants, written.span),
-    }
 }
 
 /// One variant on the `type` line, or two or more with a `|` each, one per line.

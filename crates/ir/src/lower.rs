@@ -16,13 +16,15 @@ mod literal;
 mod modules;
 mod operator;
 mod pattern;
+mod reaching;
 mod shape;
 mod supplied;
 
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 
-use lumen_ast::{DeriveDeclaration, Function, InstanceDeclaration, Item, Name};
+use lumen_ast::{DeriveDeclaration, ExternDeclaration, Function, InstanceDeclaration};
+use lumen_ast::{Item, Name};
 use lumen_ast::{Span, TypeDeclaration};
 use lumen_holes::Whole;
 use lumen_resolver::prelude;
@@ -60,13 +62,8 @@ pub fn lower(whole: &Whole<'_>, module: &str, asked: &Asked) -> Lowered {
         owed: RefCell::new(Vec::new()),
         asks: RefCell::new(Asked::default()),
     };
-    let module_class = lowering.module_class(asked);
-    let reads = modules::reads_a_file(&module_class);
-    let mut classes = vec![module_class];
+    let mut classes = vec![lowering.module_class(asked)];
     classes.extend(lowering.shapes.classes());
-    if reads {
-        classes.push(modules::files_class(&lowering.shapes));
-    }
     Lowered {
         classes,
         asks: lowering.asks.into_inner(),
@@ -102,6 +99,8 @@ struct Declared<'a> {
 /// states, and what it does follows from the declaration the derive names instead.
 enum Written<'a> {
     Source(&'a Function),
+    /// The Java member an `extern` names, which `docs/specs/interop.md` states the body of.
+    Reaching(&'a ExternDeclaration),
     /// The trait the derive names, and the declaration the body follows from.
     Derived {
         of: String,
@@ -144,6 +143,9 @@ impl Lowering<'_> {
         }
         for (named, _) in derived_in(self.typed) {
             self.owe(named.span, Instantiation::whole());
+        }
+        for declaration in self.typed.resolved().program().externs() {
+            self.owe(declaration.name.span, Instantiation::whole());
         }
     }
 
@@ -267,6 +269,7 @@ impl Lowering<'_> {
                 builder.finish()
             }
             Written::Derived { of, declaration } => derive::body(self, of, declaration),
+            Written::Reaching(declaration) => reaching::body(self, declaration, signature),
         }
     }
 
@@ -361,6 +364,9 @@ fn declarations_of(typed: &TypedProgram) -> HashMap<Span, Declared<'_>> {
                     declared.insert(named.span, as_derived(typed, derive, named));
                 }
             }
+            Item::Extern(declaration) => {
+                declared.insert(declaration.name.span, as_reaching(declaration));
+            }
             Item::Import(_) | Item::Type(_) | Item::Trait(_) => {}
         }
     }
@@ -395,6 +401,14 @@ fn declared_as<'a>(typed: &'a TypedProgram, named: &str) -> &'a TypeDeclaration 
             _ => None,
         })
         .expect("name resolution gave the derive's type a declaration in this module")
+}
+
+/// The one method an `extern` writes, which a JVM reaches as it reaches any other function's.
+fn as_reaching(declaration: &ExternDeclaration) -> Declared<'_> {
+    Declared {
+        named: declaration.name.text.clone(),
+        body: Written::Reaching(declaration),
+    }
 }
 
 /// A function the module declares, which a JVM reaches by the name it is written with.

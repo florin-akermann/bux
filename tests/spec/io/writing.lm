@@ -1,7 +1,7 @@
 // expect-run
 // > one and two
 // > and three
-// A program reaches the console through `io`, which the compiler supplies.
+// A program reaches the console through `io`, which is a module of the library.
 import io
 
 fn main() -> () {

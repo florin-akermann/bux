@@ -68,16 +68,6 @@ fn a_module_two_modules_import_is_read_once() {
 }
 
 #[test]
-fn a_module_the_compiler_supplies_is_reached_without_looking_for_a_file() {
-    let beside = Beside::holding(&[(
-        "main",
-        "import files\n\nimport io\n\nfn main() -> () {\n}\n",
-    )]);
-    let loaded = load(&beside.file_of("main")).expect("a supplied module needs no file");
-    assert_eq!(order_of(&loaded), ["main"]);
-}
-
-#[test]
 fn the_module_the_command_named_is_the_one_handed_over_last() {
     let beside = Beside::holding(&[
         (

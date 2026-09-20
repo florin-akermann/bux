@@ -435,14 +435,7 @@ impl<'a> Builder<'a> {
 
     /// A whole number or a truth value held as a reference, which a type parameter wants.
     fn boxed(&mut self, held: &Boxing) {
-        self.emit(Instruction::InvokeStatic(MethodRef {
-            class: held.class.clone(),
-            name: "valueOf".to_owned(),
-            descriptor: MethodDescriptor::new(
-                vec![held.of.clone()],
-                Some(Descriptor::Reference(held.class.clone())),
-            ),
-        }));
+        self.emit(holding(held));
     }
 
     /// A reference read back as the whole number or truth value inference says it is.
@@ -546,6 +539,23 @@ struct Boxing {
     of: Descriptor,
     /// The method that reads the value back out.
     read: &'static str,
+}
+
+/// What holds `of` as a reference, and nothing where a reference is what it is already.
+pub(crate) fn as_a_reference(of: &Descriptor) -> Option<Instruction> {
+    Some(holding(&boxing(of)?))
+}
+
+/// The call that holds a whole number or a truth value as the reference standing for it.
+fn holding(held: &Boxing) -> Instruction {
+    Instruction::InvokeStatic(MethodRef {
+        class: held.class.clone(),
+        name: "valueOf".to_owned(),
+        descriptor: MethodDescriptor::new(
+            vec![held.of.clone()],
+            Some(Descriptor::Reference(held.class.clone())),
+        ),
+    })
 }
 
 fn boxing(of: &Descriptor) -> Option<Boxing> {

@@ -152,6 +152,14 @@ catalogue! {
     NamedInFront => "L0423",
     /// A generic of another module is used at a type whose instance stays in a module.
     InstanceStaysInItsModule => "L0424",
+    /// An `extern` signature names a type no Java member takes or gives back.
+    DoesNotCross => "L0425",
+    /// An `extern` states something that is no Java name.
+    NotAJavaName => "L0426",
+    /// A derive names a type an `extern type` declares, whose contents are the JVM's.
+    DerivesAForeignType => "L0427",
+    /// An `extern method` or an `extern new` reaches a class, and its signature names none.
+    ReachesNoClass => "L0428",
     /// A `match` leaves a value of the type it matches unanswered.
     NonExhaustiveMatch => "L0500",
     /// A `match` lists its arms in an order the type does not declare its variants in.

@@ -28,6 +28,29 @@ pub fn load(path: &Path) -> Result<Loaded, NotLoaded> {
     })
 }
 
+/// Every module `written` reaches, as though it were the file at `path`.
+///
+/// `lumen test` writes a module out of the module under test, which `docs/specs/doc-examples.md`
+/// states, and that module imports what the one under test imports and `io` besides. It stands
+/// where that file stands, so its imports are answered exactly where the file's are. Nothing is
+/// read from `path`: it is where the imports are looked for, and what a refusal about it names.
+///
+/// # Errors
+///
+/// The same as [`load`], for the modules this one imports.
+pub fn written(written: &str, path: &Path) -> Result<Loaded, NotLoaded> {
+    let mut loader = Loader::default();
+    let depends = package::reachable_from(directory_of(path))?;
+    let whence = Whence {
+        at: Route::to(path.to_path_buf()),
+        depends,
+    };
+    loader.walk(&named(path), written.to_owned(), &whence)?;
+    Ok(Loaded {
+        modules: loader.modules,
+    })
+}
+
 /// The module a file declares, which is the name of the file it is written in.
 fn named(path: &Path) -> String {
     path.file_stem()
@@ -103,9 +126,6 @@ impl Loader {
     /// between, whichever of them was read first.
     fn follow(&mut self, import: &Import, whence: &Whence, source: &str) -> Result<(), NotLoaded> {
         let name = import.module.text.as_str();
-        if lumen_types::supplies(name) {
-            return Ok(());
-        }
         if library::source_of(name).is_some() {
             return self.library(import, whence, source);
         }
@@ -226,6 +246,7 @@ fn imports(program: &Program) -> impl Iterator<Item = &Import> {
         | Item::Trait(_)
         | Item::Instance(_)
         | Item::Derive(_)
+        | Item::Extern(_)
         | Item::Function(_) => None,
     })
 }

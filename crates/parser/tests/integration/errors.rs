@@ -44,10 +44,11 @@ fn a_derive_names_a_trait_before_for_and_a_type_after_it() {
 }
 
 #[test]
-fn a_file_may_only_hold_an_import_a_type_a_trait_an_instance_or_a_function() {
+fn a_file_may_only_hold_an_import_a_type_a_trait_an_instance_a_function_or_an_extern() {
     assert_eq!(
         message("total := 1"),
-        "expected an import, a type, a trait, an instance, a derive, or a function, found `total`"
+        "expected an import, a type, a trait, an instance, a derive, a function, or an extern, \
+         found `total`"
     );
 }
 
@@ -287,5 +288,21 @@ fn a_signature_of_a_trait_writes_no_body() {
     assert_eq!(
         message("trait Eq<T> {\n    fn is_equal(one: T, other: T) -> Bool {\n    }\n}"),
         "expected `fn`, found `{`"
+    );
+}
+
+#[test]
+fn a_field_written_with_a_parameter_is_a_parse_error_because_a_field_is_read() {
+    assert_eq!(
+        message("extern field out(count: Int) -> String = \"java.io.File.separator\"\n"),
+        "expected `)`, found `count`"
+    );
+}
+
+#[test]
+fn a_method_written_with_no_parameter_at_all_has_no_receiver_to_be_called_on() {
+    assert_eq!(
+        message("extern method worded() -> String = \"toString\"\n"),
+        "expected a name, found `)`"
     );
 }

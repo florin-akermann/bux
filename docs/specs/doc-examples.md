@@ -57,13 +57,20 @@ file's header is never read as documentation.
 
 ## Which functions carry one
 
-Every function a module declares at the top level carries at least one example, except `main`.
+Every function a module declares at the top level carries at least one example, except `main` and
+one whose signature gives nothing back.
 `docs/specs/api-surface.md` states that every such name is public, so every one of them is a name
 another module will reach for.
 
 `main` is exempt because it is reached by running the module rather than by calling it.
-It takes nothing and gives nothing back, so there is no expression over it to state.
 Running the module is the example of `main`.
+
+A function written `-> ()` is exempt because an example is an expression that is true, and no
+expression over a call giving nothing back is one.
+`io.println` is such a function: what it does is write a line, and there is nothing to say about
+the value it gives back, because it gives none.
+A function whose result is left to inference is not exempt, because the signature is what a
+reader of the declaration has, and it did not say.
 
 ## What refuses, and when
 

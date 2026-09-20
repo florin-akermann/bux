@@ -34,7 +34,14 @@ never writes, and `type Ids = List<Int>` is therefore a parse error.
 A trait declares signatures and an instance writes bodies for them, which `docs/specs/traits.md`
 states; a trait is written over one type parameter and an instance is for a type written by name.
 
-Nothing from a later version is parsed: no `derive`, `extern`, `spawn`, or effect arrow.
+An `extern` declaration names one member of one Java class and writes no body, which
+`docs/specs/interop.md` states; `field`, `static`, `method`, and `new` are read only after
+`extern`, and each is an ordinary identifier anywhere else.
+A `method` declares at least one parameter, because its receiver is the first of them, and a
+`field` declares none; both are the shape above rather than a refusal.
+Every one of them writes its result, because there is no body for inference to read one off.
+
+Nothing from a later version is parsed: no `spawn` and no effect arrow.
 The lexer reserves no word for them, so each reads as an ordinary identifier and fails in place.
 
 ## Newlines
@@ -66,6 +73,7 @@ Uppercase and lowercase spellings are not distinguished; `Name` below is any ide
 program        := { item }
 
 item           := import | type_declaration | trait | instance | derive | function
+                | extern_type | extern
 
 import         := "import" Name
 
@@ -81,6 +89,13 @@ trait          := "trait" Name "<" Name ">" "{" signature { signature } "}"
 signature      := "fn" Name "(" [ parameters ] ")" [ "->" type ]
 instance       := "instance" Name "<" Name ">" "{" function { function } "}"
 derive         := "derive" Name { "," Name } "for" Name
+
+extern_type    := "extern" "type" Name "=" String
+extern         := "extern" ( extern_field | extern_static | extern_method | extern_new )
+extern_field   := "field" Name "(" ")" "->" type "=" String
+extern_static  := "static" Name "(" [ parameters ] ")" "->" type "=" String
+extern_method  := "method" Name "(" parameters ")" "->" type "=" String
+extern_new     := "new" Name "(" [ parameters ] ")" "->" type
 
 function       := "fn" Name [ constrained_parameters ] "(" [ parameters ] ")" [ "->" type ] block
 constrained_parameters := "<" constrained { "," constrained } ">"

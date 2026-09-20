@@ -1,0 +1,27 @@
+// Reading a file whole, which is the one thing version 0.1 does with a file system.
+//
+// `docs/specs/io.md` states what the read gives back. It is written over `extern` declarations,
+// which `docs/specs/interop.md` states, and each of the two steps that can throw gives a `Result`.
+/// The whole file at `path` as text, or what went wrong reading it.
+// example: ok_or(read(""), "nothing there") == "nothing there"
+fn read(path: String) -> Result<String, String> {
+    match as_a_path(named(path)) {
+        Ok(found) => read_whole(found)
+        Err(why) => Err(why)
+    }
+}
+
+/// The whole file at `path`, read as UTF-8.
+extern static read_whole(path: Path) -> Result<String, String> = "java.nio.file.Files.readString"
+
+/// The path `file` names, which is how a file is reached to be read.
+extern method as_a_path(file: File) -> Result<Path, String> = "toPath"
+
+/// The file the text `path` names.
+extern new named(path: String) -> File
+
+/// A file the file system holds, named rather than opened.
+extern type File = "java.io.File"
+
+/// Where a file the file system holds is, which is what a read takes.
+extern type Path = "java.nio.file.Path"

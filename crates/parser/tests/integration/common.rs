@@ -6,8 +6,9 @@
 
 use std::fmt::Write as _;
 
+use lumen_ast::InstanceDeclaration;
 use lumen_ast::{Arguments, Block, Expr, ExprKind, IfExpr, Item, MatchExpr, Pattern, PatternKind};
-use lumen_ast::{DeriveDeclaration, Function, Import, InstanceDeclaration, RecordField};
+use lumen_ast::{DeriveDeclaration, ExternDeclaration, Function, Import, RecordField};
 use lumen_ast::{Signature, TraitDeclaration};
 use lumen_ast::{Span, Statement, StatementKind, TypeDefinition, TypeRef, TypeRefKind};
 use lumen_ast::{TypeDeclaration, TypeParameter, Variant, VariantPayload};
@@ -109,7 +110,32 @@ fn item_node(tree: &mut Tree, depth: usize, item: &Item) {
         Item::Instance(declaration) => instance_node(tree, depth, declaration),
         Item::Derive(declaration) => derive_node(tree, depth, declaration),
         Item::Function(function) => function_node(tree, depth, function),
+        Item::Extern(declaration) => extern_node(tree, depth, declaration),
     }
+}
+
+fn extern_node(tree: &mut Tree, depth: usize, declaration: &ExternDeclaration) {
+    let reaches = declaration.reaches.written();
+    tree.node(
+        depth,
+        &format!("extern {reaches} {}", declaration.name.text),
+        declaration.span,
+    );
+    if let Some(named) = declaration.reaches.named() {
+        tree.node(depth + 1, &format!("java {}", named.text), named.span);
+    }
+    for parameter in &declaration.parameters {
+        tree.node(
+            depth + 1,
+            &format!("parameter {}", parameter.name.text),
+            parameter.span,
+        );
+        if let Some(type_ref) = &parameter.type_ref {
+            type_ref_node(tree, depth + 2, type_ref);
+        }
+    }
+    tree.group(depth + 1, "result");
+    type_ref_node(tree, depth + 2, &declaration.result);
 }
 
 fn trait_node(tree: &mut Tree, depth: usize, declaration: &TraitDeclaration) {
@@ -199,6 +225,9 @@ fn type_declaration_node(tree: &mut Tree, depth: usize, declaration: &TypeDeclar
             for variant in variants {
                 variant_node(tree, depth + 1, variant);
             }
+        }
+        TypeDefinition::Foreign(class) => {
+            tree.node(depth + 1, &format!("java {}", class.text), class.span);
         }
     }
 }

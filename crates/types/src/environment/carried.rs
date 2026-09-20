@@ -55,7 +55,7 @@ impl Environment {
                 .instances
                 .insert((of.to_owned(), for_type.to_owned()));
         }
-        environment.note_arities(resolved);
+        environment.note_types(resolved);
         environment
             .declare_traits(resolved)
             .and_then(|()| environment.declare_reachable(resolved))
@@ -90,6 +90,7 @@ impl Environment {
                 }
                 Item::Instance(declaration) => self.note_instance(resolved, declaration)?,
                 Item::Derive(declaration) => self.declare_derive(resolved, declaration)?,
+                Item::Extern(declaration) => self.declare_extern(resolved, declaration)?,
                 Item::Import(_) | Item::Trait(_) => {}
             }
         }

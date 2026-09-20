@@ -2,7 +2,7 @@
 
 use std::slice;
 
-use crate::{Block, Name, Span, TypeRef};
+use crate::{Block, JavaName, Name, Span, TypeRef};
 
 /// One source file: the items it declares, in source order.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -20,7 +20,27 @@ impl Program {
         self.items.iter().flat_map(|item| match item {
             Item::Function(function) => slice::from_ref(function),
             Item::Instance(instance) => instance.methods.as_slice(),
-            Item::Import(_) | Item::Type(_) | Item::Trait(_) | Item::Derive(_) => &[],
+            Item::Import(_)
+            | Item::Type(_)
+            | Item::Trait(_)
+            | Item::Derive(_)
+            | Item::Extern(_) => &[],
+        })
+    }
+
+    /// Every extern the file declares, in the order it writes them.
+    ///
+    /// An extern is a function with no body: nothing walks it, and everything that asks what the
+    /// module offers, or what a name is bound to, reads it exactly as it reads a function.
+    pub fn externs(&self) -> impl Iterator<Item = &ExternDeclaration> {
+        self.items.iter().filter_map(|item| match item {
+            Item::Extern(declaration) => Some(declaration),
+            Item::Import(_)
+            | Item::Type(_)
+            | Item::Trait(_)
+            | Item::Instance(_)
+            | Item::Derive(_)
+            | Item::Function(_) => None,
         })
     }
 }
@@ -34,6 +54,63 @@ pub enum Item {
     Instance(InstanceDeclaration),
     Derive(DeriveDeclaration),
     Function(Function),
+    Extern(ExternDeclaration),
+}
+
+/// `extern static read_string(path: Path) -> String = "java.nio.file.Files.readString"`.
+///
+/// One member of one Java class, under the Lumen name and signature this declaration gives it.
+/// `docs/specs/interop.md` states what each kind reaches and what crosses the boundary. There is
+/// no body: what the member does is the member's, and the declaration only says how to reach it.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ExternDeclaration {
+    pub name: Name,
+    pub reaches: Reaches,
+    /// Empty for a `field`, and never empty for a `method`, whose receiver is the first of them.
+    pub parameters: Vec<Parameter>,
+    /// Always written: there is no body for inference to read a result off instead.
+    pub result: TypeRef,
+    pub span: Span,
+}
+
+/// Which kind of member an `extern` reaches, and the Java name that says which one.
+///
+/// A member with no receiver is named on its class, because nothing else says which class it is
+/// on. An instance method is named alone, and a constructor is named by nothing at all: the
+/// receiver's type and the result already say. `docs/specs/interop.md` states why that is not
+/// left for a check to report.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Reaches {
+    /// `= "java.lang.System.out"`: a static field, read by a call of no arguments.
+    Field(JavaName),
+    /// `= "java.nio.file.Files.readString"`: a static method.
+    Static(JavaName),
+    /// `= "toPath"`: an instance method, on the class the first parameter's type is.
+    Method(JavaName),
+    /// A constructor of the class the result is.
+    New,
+}
+
+impl Reaches {
+    /// The word written after `extern`, which is what says which member it reaches.
+    #[must_use]
+    pub const fn written(&self) -> &'static str {
+        match self {
+            Self::Field(_) => "field",
+            Self::Static(_) => "static",
+            Self::Method(_) => "method",
+            Self::New => "new",
+        }
+    }
+
+    /// The Java name it states, which a constructor states none of.
+    #[must_use]
+    pub const fn named(&self) -> Option<&JavaName> {
+        match self {
+            Self::Field(named) | Self::Static(named) | Self::Method(named) => Some(named),
+            Self::New => None,
+        }
+    }
 }
 
 /// `derive Eq for User`: the traits the compiler writes the instances of, and the type it writes
@@ -70,6 +147,11 @@ pub enum TypeDefinition {
     Record(Vec<RecordField>),
     /// Never empty: `type T =` with nothing after it is a parse error.
     Variants(Vec<Variant>),
+    /// `extern type File = "java.io.File"`: the Java class a value of this type is held as.
+    ///
+    /// It declares no field and no variant, so nothing reads what it holds and nothing matches
+    /// on it. `docs/specs/interop.md` states what a program may do with one.
+    Foreign(JavaName),
 }
 
 /// One variant of an algebraic data type, with whatever it carries.

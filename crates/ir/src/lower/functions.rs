@@ -1,8 +1,8 @@
 //! The prelude's own functions, written out where they are called.
 //!
 //! The prelude is Lumen source the compiler reads rather than a module it compiles, so there is
-//! no class to call one of its functions on. `or` is the one that lowers, and the two branches
-//! it amounts to are written here. `todo` is the other, and nothing lowers a hole:
+//! no class to call one of its functions on. `or` and `ok_or` are the ones that lower, and the
+//! two branches each amounts to are written here. `todo` is the other, and nothing lowers a hole:
 //! `docs/specs/holes.md` has `lumen build` refuse every one of them before a class file is
 //! written.
 
@@ -11,38 +11,45 @@ use lumen_ast::{Expr, Name, Span};
 use crate::code::{Comparison, FieldRef, Instruction, Label};
 use crate::descriptor::Descriptor;
 use crate::lower::body::{Builder, Slot};
-use crate::lower::shape::{SOME, TAG};
+use crate::lower::shape::{OK, SOME, TAG};
 
-/// What the prelude calls the one function version 0.1 lowers.
+/// What the prelude calls reading an `Option` with a fallback.
 const OR: &str = "or";
+
+/// What the prelude calls reading a `Result` with a fallback.
+const OK_OR: &str = "ok_or";
 
 impl Builder<'_> {
     /// A call of a function the prelude supplies, which version 0.1 writes out where it is used.
     ///
-    /// `or` is the only one that is lowered. There is no class to call it on, because the
-    /// prelude is read rather than compiled, so the two branches it amounts to are written here
-    /// instead. `todo` is the other, and nothing lowers a hole: `docs/specs/holes.md` has
-    /// `lumen build` refuse every one of them before a single class file is written.
+    /// `or` and `ok_or` are the ones that are lowered, and they are one body over which variant
+    /// carries the value: `Some` for the first and `Ok` for the second. There is no class to
+    /// call either on, because the prelude is read rather than compiled. `todo` is the other,
+    /// and nothing lowers a hole: `docs/specs/holes.md` has `lumen build` refuse every one of
+    /// them before a single class file is written.
     pub(crate) fn supplied(
         &mut self,
         name: &Name,
         arguments: &[&Expr],
         written: Span,
     ) -> Option<Descriptor> {
-        assert!(
-            name.text == OR,
-            "`or` is the one prelude function that lowers; `Whole` keeps a hole from reaching here"
-        );
-        let wanted = self.carried(written);
-        let [maybe, fallback] = arguments else {
-            unreachable!("inference gave `or` the two arguments it takes")
+        let carrying = match name.text.as_str() {
+            OR => SOME,
+            OK_OR => OK,
+            named => unreachable!(
+                "`{named}` is no prelude function that lowers; `Whole` keeps a hole from here"
+            ),
         };
-        let held = self.set_aside(maybe);
+        let wanted = self.carried(written);
+        let [answer, fallback] = arguments else {
+            unreachable!("inference gave `{}` the two arguments it takes", name.text)
+        };
+        let held = self.set_aside(answer);
         let otherwise_held = self.set_aside_as(fallback, wanted.clone());
         let otherwise = self.label();
         let end = self.label();
-        self.carrying(SOME, &held, otherwise);
-        self.read_carried(SOME, &held, wanted.clone());
+        self.carrying(carrying, &held, otherwise);
+        self.read_carried(carrying, &held, wanted.clone());
         self.emit(Instruction::Jump(end));
         self.emit(Instruction::Label(otherwise));
         self.reload(otherwise_held.as_ref());
@@ -50,12 +57,12 @@ impl Builder<'_> {
         wanted
     }
 
-    /// Puts the `Option` in a local, because the branch that reads it must load it again.
-    fn set_aside(&mut self, maybe: &Expr) -> Slot {
-        let Some(of) = self.carried(maybe.span) else {
-            unreachable!("`or` is handed an `Option`, which a reference always carries")
+    /// Puts the answer in a local, because the branch that reads it must load it again.
+    fn set_aside(&mut self, answer: &Expr) -> Slot {
+        let Some(of) = self.carried(answer.span) else {
+            unreachable!("an answer read with a fallback is one a reference always carries")
         };
-        let left = self.expr(maybe);
+        let left = self.expr(answer);
         self.adapt(left, Some(of.clone()));
         let at = self.temporary(&of);
         self.emit(Instruction::Store {
@@ -116,7 +123,7 @@ impl Builder<'_> {
     fn read_carried(&mut self, variant: &str, held: &Slot, wanted: Option<Descriptor>) {
         let shape = self.lowering.shapes.built(variant).clone();
         let Some(carried) = shape.carries.first() else {
-            unreachable!("`Some` carries the one value `or` gives back")
+            unreachable!("the variant read with a fallback carries the one value it gives back")
         };
         let Some(of) = carried.of.clone() else {
             unreachable!("`Some` carries its value as a reference, whatever the value is")

@@ -78,6 +78,7 @@ vocabulary! {
     Continue => "continue",
     Return => "return",
     Import => "import",
+    Extern => "extern",
     True => "true",
     False => "false",
     /// `_`, which is written on the left of `=` and nowhere else.

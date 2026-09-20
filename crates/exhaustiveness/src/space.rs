@@ -79,6 +79,7 @@ fn offers(offered: &OfferedType) -> Vec<Signature> {
     match offered.built_by() {
         BuiltBy::Record(one) => vec![offered_signature(one)],
         BuiltBy::Variants(variants) => variants.iter().map(offered_signature).collect(),
+        BuiltBy::Foreign(_) => Vec::new(),
     }
 }
 
@@ -97,6 +98,7 @@ fn constructors(declaration: &TypeDeclaration) -> Vec<Signature> {
             .iter()
             .map(|variant| signature(&variant.name.text, carried(&variant.payload)))
             .collect(),
+        TypeDefinition::Foreign(_) => Vec::new(),
     }
 }
 

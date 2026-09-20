@@ -5,6 +5,7 @@
 //! the answers sit beside it. `docs/specs/types.md` is the specification, and `docs/design.md`
 //! sections 3, 6, and 7 are the rules it enforces.
 
+mod boundary;
 mod bounds;
 mod derive;
 mod environment;
@@ -12,7 +13,6 @@ mod error;
 mod holds;
 mod infer;
 mod scheme;
-mod supplied;
 mod surface;
 mod table;
 mod types;
@@ -24,7 +24,6 @@ use lumen_ast::Span;
 use lumen_resolver::ResolvedProgram;
 
 pub use crate::error::TypeError;
-pub use crate::supplied::supplies;
 pub use crate::surface::{BuiltBy, GenericUse, Imported, OfferedConstructor};
 pub use crate::surface::{OfferedType, Surface};
 pub use crate::types::{Type, TypeParameter, TypeVar};

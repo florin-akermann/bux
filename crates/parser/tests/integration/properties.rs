@@ -9,6 +9,54 @@ fn source_text() -> impl hegel::Generator<String> {
     gs::text()
 }
 
+/// Every kind of member an `extern` reaches, each written with its name and result left open.
+const KINDS: [&str; 4] = [
+    "field {name}() -> {result} = \"java.lang.System.out\"",
+    "static {name}(path: File) -> {result} = \"java.nio.file.Files.readString\"",
+    "method {name}(file: File) -> {result} = \"toPath\"",
+    "new {name}(path: String) -> {result}",
+];
+
+/// The names a generated declaration is written under, none of which the prelude declares.
+const DECLARED: [&str; 3] = ["reached", "held_by", "opened"];
+
+/// Every type a generated declaration gives back, which is what the boundary carries.
+const RESULTS: [&str; 7] = [
+    "Bool",
+    "Int",
+    "String",
+    "File",
+    "()",
+    "Option<File>",
+    "Result<File, String>",
+];
+
+/// One `extern` declaration, written under a name and giving back a type the boundary carries.
+fn declaration(tc: &TestCase) -> String {
+    let kind = tc.draw(gs::sampled_from(&KINDS));
+    let name = tc.draw(gs::sampled_from(&DECLARED));
+    let result = tc.draw(gs::sampled_from(&RESULTS));
+    let written = kind.replace("{name}", name).replace("{result}", result);
+    format!("extern type File = \"java.io.File\"\n\nextern {written}\n")
+}
+
+#[hegel::test]
+fn no_extern_declaration_writes_a_body(tc: TestCase) {
+    let source = declaration(&tc);
+
+    let parsed = parse(&source).expect("a generated declaration parses");
+
+    assert!(
+        parsed.functions().next().is_none(),
+        "a declaration writes no function to hold a body"
+    );
+    let bodied = source.trim_end().to_owned() + " {\n}\n";
+    assert!(
+        parse(&bodied).is_err(),
+        "a body written after a declaration is refused"
+    );
+}
+
 #[hegel::test]
 fn parsing_never_panics_and_is_deterministic(tc: TestCase) {
     let source = tc.draw(source_text());
@@ -82,6 +130,7 @@ fn item_spans(program: &Program) -> Vec<Span> {
             Item::Instance(declaration) => declaration.span,
             Item::Derive(declaration) => declaration.span,
             Item::Function(function) => function.span,
+            Item::Extern(declaration) => declaration.span,
         })
         .collect()
 }

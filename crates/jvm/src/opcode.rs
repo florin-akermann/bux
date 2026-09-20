@@ -50,6 +50,7 @@ pub(crate) const ATHROW: u8 = 0xBF;
 pub(crate) const CHECKCAST: u8 = 0xC0;
 pub(crate) const INSTANCEOF: u8 = 0xC1;
 pub(crate) const WIDE: u8 = 0xC4;
+pub(crate) const IFNULL: u8 = 0xC6;
 
 /// How far a comparison's opcode sits from `ifeq`, which is as far as it sits from `if_icmpeq`.
 ///

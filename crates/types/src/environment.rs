@@ -2,13 +2,15 @@
 
 use std::collections::{HashMap, HashSet};
 
-use lumen_ast::{DeriveDeclaration, Function, InstanceDeclaration, TraitDeclaration};
+use lumen_ast::TraitDeclaration;
+use lumen_ast::{DeriveDeclaration, ExternDeclaration, Function, InstanceDeclaration};
 use lumen_ast::{Item, Name, Path, RecordField, Signature, TypeDeclaration, TypeDefinition};
 use lumen_ast::{TypeRef, TypeRefKind};
 use lumen_ast::{Variant, VariantPayload};
 use lumen_resolver::prelude;
 use lumen_resolver::{DefinitionKind, Namespace, ResolvedProgram};
 
+use crate::boundary::{self, Crossing};
 use crate::bounds::{self, Bounds};
 use crate::derive;
 use crate::error::{Count, TypeError, TypeErrorKind};
@@ -50,6 +52,8 @@ pub(crate) struct Environment {
     declares: HashMap<(String, String), Key>,
     /// The type each declaration declares, over its own parameters, by the name it declares it.
     declared: HashMap<String, Scheme>,
+    /// The Java class each extern type stands for, by the Lumen name an `extern type` gives it.
+    foreign: HashMap<String, String>,
 }
 
 impl Environment {
@@ -67,7 +71,7 @@ impl Environment {
         for offered in reached {
             environment.offered_by_another_module(offered);
         }
-        environment.note_arities(resolved);
+        environment.note_types(resolved);
         environment.declare_traits(resolved)?;
         environment.declare_items(resolved, table)?;
         derive::hold_what_they_need(&environment, resolved)?;
@@ -81,8 +85,15 @@ impl Environment {
     fn offered_by_another_module(&mut self, offered: &OfferedType) {
         let named = offered.name().to_owned();
         self.arities.insert(Key::reached(&named), offered.arity());
-        if let BuiltBy::Record(built) = offered.built_by() {
-            self.records.insert(named, Key::reached(built.name()));
+        match offered.built_by() {
+            BuiltBy::Record(built) => {
+                self.records
+                    .insert(named.clone(), Key::reached(built.name()));
+            }
+            BuiltBy::Foreign(class) => {
+                self.foreign.insert(named.clone(), class.clone());
+            }
+            BuiltBy::Variants(_) => {}
         }
         for built in offered.constructors() {
             let key = Key::reached(built.name());
@@ -91,10 +102,12 @@ impl Environment {
         }
     }
 
-    /// How many arguments each declared type takes, which every written type is then held to.
+    /// What each declared type is, before any declaration that writes one is read.
     ///
-    /// This is read while a declaration is being read, so it is gathered before any of them are.
-    fn note_arities(&mut self, resolved: &ResolvedProgram) {
+    /// How many arguments it takes is what every written type is held to, and the Java class it
+    /// stands for is what an `extern` signature naming it crosses as. A file reads top down and
+    /// a definition sits below what uses it, so both are gathered ahead of the declarations.
+    fn note_types(&mut self, resolved: &ResolvedProgram) {
         for item in &resolved.program().items {
             let Item::Type(declaration) = item else {
                 continue;
@@ -103,6 +116,10 @@ impl Environment {
                 self.declared_at(&declaration.name),
                 declaration.parameters.len(),
             );
+            if let TypeDefinition::Foreign(class) = &declaration.definition {
+                self.foreign
+                    .insert(declaration.name.text.clone(), class.text.clone());
+            }
         }
     }
 
@@ -215,6 +232,7 @@ impl Environment {
             Item::Instance(declaration) => self.declare_instance(resolved, declaration, table),
             Item::Derive(declaration) => self.declare_derive(resolved, declaration),
             Item::Function(function) => self.declare_function(resolved, function, table),
+            Item::Extern(declaration) => self.declare_extern(resolved, declaration),
         }
     }
 
@@ -385,22 +403,57 @@ impl Environment {
             declaration.name.text.clone(),
             Scheme::over(over.clone(), declared.clone()),
         );
-        let TypeDefinition::Variants(variants) = &declaration.definition else {
-            let TypeDefinition::Record(fields) = &declaration.definition else {
-                unreachable!("a type declaration is a record or variants")
-            };
-            self.records.insert(
-                declaration.name.text.clone(),
-                self.declared_at(&declaration.name),
-            );
-            let built = self.built_from(resolved, &declaration.name, fields)?;
-            self.build_with(built, &over, &declared);
-            return Ok(());
-        };
-        for variant in variants {
-            let built = self.built_variant(resolved, variant)?;
-            self.build_with(built, &over, &declared);
+        match &declaration.definition {
+            TypeDefinition::Foreign(class) => boundary::class(class)?,
+            TypeDefinition::Record(fields) => {
+                self.records.insert(
+                    declaration.name.text.clone(),
+                    self.declared_at(&declaration.name),
+                );
+                let built = self.built_from(resolved, &declaration.name, fields)?;
+                self.build_with(built, &over, &declared);
+            }
+            TypeDefinition::Variants(variants) => {
+                for variant in variants {
+                    let built = self.built_variant(resolved, variant)?;
+                    self.build_with(built, &over, &declared);
+                }
+            }
         }
+        Ok(())
+    }
+
+    /// An `extern`'s type as its signature reads, every part of it written out.
+    ///
+    /// There is no body below it for inference to read anything off, so every parameter states
+    /// its type and so does the result. What each of them may be is the boundary's own rule,
+    /// which `docs/specs/interop.md` states and `crate::boundary` holds it to.
+    fn declare_extern(
+        &mut self,
+        resolved: &ResolvedProgram,
+        declaration: &ExternDeclaration,
+    ) -> Result<(), TypeError> {
+        let mut parameters = Vec::new();
+        for parameter in &declaration.parameters {
+            let Some(written) = &parameter.type_ref else {
+                let kind = TypeErrorKind::SignatureWithoutType(parameter.name.text.clone());
+                return Err(TypeError::at(parameter.name.span, kind));
+            };
+            let held = self.written(resolved, written)?;
+            boundary::crosses(&held, Crossing::Taken, &self.foreign, written.span)?;
+            parameters.push(held);
+        }
+        let result = self.written(resolved, &declaration.result)?;
+        let given_back = declaration.result.span;
+        let crossing = Crossing::of(&declaration.reaches);
+        boundary::crosses(&result, crossing, &self.foreign, given_back)?;
+        boundary::reaches_a_class(declaration, &parameters, &result, &self.foreign)?;
+        boundary::stated_by(declaration)?;
+        let signature = Type::function(parameters, result);
+        self.bind(
+            self.declared_at(&declaration.name),
+            Scheme::monomorphic(signature),
+        );
         Ok(())
     }
 

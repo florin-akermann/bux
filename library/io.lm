@@ -1,0 +1,25 @@
+// Writing to the output a JVM starts with, which is how a program shows anybody anything.
+//
+// `docs/specs/io.md` states what each of these writes. Each is one `extern` declaration away from
+// a JVM method, which `docs/specs/interop.md` states, and nothing of that shows in a program.
+/// Writes `text` and nothing else.
+fn print(text: String) -> () {
+    put(out(), text)
+}
+
+/// Writes `text` and then a line break.
+fn println(text: String) -> () {
+    put_line(out(), text)
+}
+
+/// Writes `text` on `stream` and nothing else.
+extern method put(stream: PrintStream, text: String) -> () = "print"
+
+/// Writes `text` on `stream` and then a line break.
+extern method put_line(stream: PrintStream, text: String) -> () = "println"
+
+/// The output a JVM starts with, which is where `print` and `println` write.
+extern field out() -> PrintStream = "java.lang.System.out"
+
+/// An output a line of text is written on.
+extern type PrintStream = "java.io.PrintStream"

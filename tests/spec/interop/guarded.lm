@@ -1,0 +1,23 @@
+// expect-run
+// > 42
+// > that is no whole number
+// A result declared `Result<T, String>` guards the call, and anything thrown is an `Err`.
+// `Long.parseLong` throws where the text is no number, so the failure is a case the program
+// answers rather than something that reaches it. What the `Err` holds is what the throw said.
+import io
+
+fn main() -> () {
+    io.println(counted(text: "42"))
+    io.println(counted(text: "forty two"))
+}
+
+// example: counted(text: "42") == "42"
+// example: counted(text: "") == "that is no whole number"
+fn counted(text: String) -> String {
+    match parsed(text) {
+        Ok(number) => shown(number)
+        Err(_) => "that is no whole number"
+    }
+}
+
+extern static parsed(text: String) -> Result<Int, String> = "java.lang.Long.parseLong"

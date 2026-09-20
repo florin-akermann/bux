@@ -1,7 +1,7 @@
 //! The top-level declarations of a source file.
 
-use lumen_ast::{DeriveDeclaration, Function, Import, InstanceDeclaration, Item, Name};
-use lumen_ast::{Parameter, Program};
+use lumen_ast::{DeriveDeclaration, ExternDeclaration, Function, Import, InstanceDeclaration};
+use lumen_ast::{Item, JavaName, Name, Parameter, Program, Reaches};
 use lumen_ast::{RecordField, Signature, TraitDeclaration, TypeDeclaration, TypeDefinition};
 use lumen_ast::{Span, TypeRef, Variant, VariantPayload};
 use lumen_lexer::{Keyword, Punct, TokenKind};
@@ -9,6 +9,7 @@ use lumen_lexer::{Keyword, Punct, TokenKind};
 use crate::cursor::Cursor;
 use crate::error::{Expected, ParseError};
 use crate::list::{Emptiness, comma_separated, newline_separated};
+use crate::literal::decode_string;
 use crate::stmt::block;
 use crate::type_ref::{constrained_parameters, type_parameters, type_ref};
 
@@ -30,8 +31,136 @@ fn item(cursor: &mut Cursor) -> Result<Item, ParseError> {
         Some(TokenKind::Keyword(Keyword::Instance)) => instance(cursor).map(Item::Instance),
         Some(TokenKind::Keyword(Keyword::Derive)) => derive(cursor).map(Item::Derive),
         Some(TokenKind::Keyword(Keyword::Fn)) => function(cursor).map(Item::Function),
+        Some(TokenKind::Keyword(Keyword::Extern)) => reaching_java(cursor),
         _ => Err(cursor.error(Expected::Item)),
     }
+}
+
+/// `extern type File = "java.io.File"`, or an `extern` naming one member of a Java class.
+fn reaching_java(cursor: &mut Cursor) -> Result<Item, ParseError> {
+    if cursor.peek_kind(1) == Some(TokenKind::Keyword(Keyword::Type)) {
+        return foreign_type(cursor).map(Item::Type);
+    }
+    declared_extern(cursor).map(Item::Extern)
+}
+
+/// `extern type File = "java.io.File"`: a Lumen name for a class a value is held as.
+///
+/// It takes no type parameters, because a Java class the boundary reaches is reached as itself:
+/// `docs/specs/interop.md` gives a generic no descriptor to be written with.
+fn foreign_type(cursor: &mut Cursor) -> Result<TypeDeclaration, ParseError> {
+    let start = cursor.offset();
+    cursor.expect_keyword(Keyword::Extern)?;
+    cursor.expect_keyword(Keyword::Type)?;
+    let name = cursor.expect_name(Expected::Name)?;
+    cursor.expect_punct(Punct::Eq)?;
+    let class = java_name(cursor)?;
+    Ok(TypeDeclaration {
+        name,
+        parameters: Vec::new(),
+        definition: TypeDefinition::Foreign(class),
+        span: cursor.span_since(start),
+    })
+}
+
+/// `extern static read(path: Path) -> String = "java.nio.file.Files.readString"`, and the rest.
+///
+/// The word after `extern` says which kind of member it is, and how much of the rest is written:
+/// a `field` takes nothing, a `method` takes its receiver first, and a `new` names nothing more,
+/// because the result already says which class it builds.
+fn declared_extern(cursor: &mut Cursor) -> Result<ExternDeclaration, ParseError> {
+    let start = cursor.offset();
+    cursor.expect_keyword(Keyword::Extern)?;
+    let kind = extern_kind(cursor)?;
+    let name = cursor.expect_name(Expected::FunctionName)?;
+    cursor.expect_punct(Punct::LParen)?;
+    let parameters = kind.taken(cursor)?;
+    cursor.expect_punct(Punct::Arrow)?;
+    let result = type_ref(cursor)?;
+    let reaches = kind.reaching(cursor)?;
+    Ok(ExternDeclaration {
+        name,
+        reaches,
+        parameters,
+        result,
+        span: cursor.span_since(start),
+    })
+}
+
+/// The word after `extern`, which is read only there and is an ordinary name anywhere else.
+fn extern_kind(cursor: &mut Cursor) -> Result<ExternKind, ParseError> {
+    let written = cursor
+        .peek()
+        .filter(|token| token.kind == TokenKind::Identifier)
+        .and_then(|token| ExternKind::written(token.span.text(cursor.source())));
+    let Some(kind) = written else {
+        return Err(cursor.error(Expected::ExternKind));
+    };
+    cursor.advance();
+    Ok(kind)
+}
+
+/// Which kind of member an `extern` reaches, which is the word written after `extern`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum ExternKind {
+    Field,
+    Static,
+    Method,
+    New,
+}
+
+impl ExternKind {
+    /// The kind `word` spells, where it spells one of the four.
+    fn written(word: &str) -> Option<Self> {
+        match word {
+            "field" => Some(Self::Field),
+            "static" => Some(Self::Static),
+            "method" => Some(Self::Method),
+            "new" => Some(Self::New),
+            _ => None,
+        }
+    }
+
+    /// The parameters this kind is written with, the opening bracket already read.
+    ///
+    /// A `field` is read rather than called, so `docs/specs/grammar.md` writes it with `()` and
+    /// nothing a list could go in; a `method` is called on the first of them, so it takes at
+    /// least that one. Neither is a parameter a declaration states and the lowering then drops.
+    fn taken(self, cursor: &mut Cursor) -> Result<Vec<Parameter>, ParseError> {
+        let emptiness = match self {
+            Self::Field => {
+                cursor.expect_punct(Punct::RParen)?;
+                return Ok(Vec::new());
+            }
+            Self::Static | Self::New => Emptiness::Allowed,
+            Self::Method => Emptiness::Forbidden,
+        };
+        comma_separated(cursor, Punct::RParen, emptiness, parameter)
+    }
+
+    /// What the declaration names after its signature, which is the member this kind reaches.
+    ///
+    /// A constructor names nothing: the class it builds is the one its result already is.
+    fn reaching(self, cursor: &mut Cursor) -> Result<Reaches, ParseError> {
+        let reached: fn(JavaName) -> Reaches = match self {
+            Self::New => return Ok(Reaches::New),
+            Self::Field => Reaches::Field,
+            Self::Static => Reaches::Static,
+            Self::Method => Reaches::Method,
+        };
+        cursor.expect_punct(Punct::Eq)?;
+        Ok(reached(java_name(cursor)?))
+    }
+}
+
+/// The Java name in quotes that an `extern` states, which the JVM rather than the compiler holds.
+fn java_name(cursor: &mut Cursor) -> Result<JavaName, ParseError> {
+    let token = cursor.expect(TokenKind::String, Expected::JavaName)?;
+    let text = decode_string(token.span.text(cursor.source()), token.span)?;
+    Ok(JavaName {
+        text,
+        span: token.span,
+    })
 }
 
 fn import(cursor: &mut Cursor) -> Result<Import, ParseError> {

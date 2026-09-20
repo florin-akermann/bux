@@ -1,6 +1,6 @@
 //! Reading the examples out of the comments a module writes.
 
-use lumen_ast::{Function, Item, Program, Span};
+use lumen_ast::{Function, Item, Program, Span, TypeRef, TypeRefKind};
 use lumen_lexer::{TokenKind, lex};
 
 use crate::example::Example;
@@ -9,10 +9,9 @@ use crate::refusal::Refusal;
 /// What opens an example, after the comment marker and any blanks behind it.
 const MARKER: &str = "example:";
 
-/// The one function a module declares at the top level that states no example.
+/// The function a module declares at the top level that is run rather than called.
 ///
-/// It is reached by running the module rather than by calling it, so running the module is the
-/// example of it, and there is no expression over it to state.
+/// Running the module is the example of it, so there is no expression over it to state.
 pub(crate) const REACHED_BY_RUNNING: &str = "main";
 
 pub(crate) fn module(source: &str, program: &Program) -> Result<Vec<Example>, Vec<Refusal>> {
@@ -145,9 +144,26 @@ fn documented(program: &Program) -> impl Iterator<Item = &Function> {
             | Item::Type(_)
             | Item::Trait(_)
             | Item::Instance(_)
-            | Item::Derive(_) => None,
+            | Item::Derive(_)
+            | Item::Extern(_) => None,
         })
         .filter(|function| function.name.text != REACHED_BY_RUNNING)
+        .filter(|function| !gives_nothing_back(function))
+}
+
+/// Whether the signature says the function gives nothing back, which leaves nothing to state.
+///
+/// An example is an expression that is true, and an expression over a call giving nothing back
+/// is not one. `docs/specs/doc-examples.md` states it, and `main` is exempt for that same reason
+/// as well as for being run rather than called.
+fn gives_nothing_back(function: &Function) -> bool {
+    matches!(
+        function.result,
+        Some(TypeRef {
+            kind: TypeRefKind::Unit,
+            ..
+        })
+    )
 }
 
 /// Whether `between` is one line break and nothing else that carries meaning.

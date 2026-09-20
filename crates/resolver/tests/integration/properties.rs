@@ -87,6 +87,7 @@ fn declared_names(program: &Program) -> Vec<(Namespace, &Name)> {
         match item {
             Item::Import(import) => found.push((Namespace::Value, &import.module)),
             Item::Function(function) => found.push((Namespace::Value, &function.name)),
+            Item::Extern(declaration) => found.push((Namespace::Value, &declaration.name)),
             Item::Type(declaration) => found.push((Namespace::Type, &declaration.name)),
             Item::Trait(declaration) => {
                 found.push((Namespace::Type, &declaration.name));

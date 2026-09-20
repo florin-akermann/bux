@@ -175,6 +175,10 @@ impl Inference<'_> {
                 self.settle_method(method)?;
             }
         }
+        for declaration in resolved.program().externs() {
+            let written = self.offered_as(&declaration.name).body().clone();
+            self.types.insert(declaration.name.span, written);
+        }
         let written: Vec<&Function> = resolved.program().functions().collect();
         for function in written.into_iter().rev() {
             self.function(function)?;
@@ -201,6 +205,7 @@ impl Inference<'_> {
     /// One declared type as a module importing this one reads it, with what builds it.
     fn offered_type(&self, declaration: &TypeDeclaration) -> OfferedType {
         let built_by = match &declaration.definition {
+            TypeDefinition::Foreign(class) => BuiltBy::Foreign(class.text.clone()),
             TypeDefinition::Record(_) => BuiltBy::Record(self.built_with(&declaration.name)),
             TypeDefinition::Variants(variants) => BuiltBy::Variants(
                 variants
@@ -240,6 +245,13 @@ impl Inference<'_> {
         )
     }
 
+    /// The type one declaration of this module ended up with, which is what it offers.
+    fn offered_as(&self, name: &Name) -> &Scheme {
+        self.environment
+            .scheme(&Key::at(name))
+            .expect("every name a module declares is bound before any body is walked")
+    }
+
     /// The type of every function this module declares, which is what it offers.
     ///
     /// Inference walks bottom up and generalises each function as it leaves it, so by here
@@ -250,13 +262,14 @@ impl Inference<'_> {
             .items
             .iter()
             .filter_map(|item| match item {
-                Item::Function(function) => {
-                    let scheme = self
-                        .environment
-                        .scheme(&Key::at(&function.name))
-                        .expect("every function a module declares is bound before its body");
-                    Some((function.name.text.clone(), scheme.clone()))
-                }
+                Item::Function(function) => Some((
+                    function.name.text.clone(),
+                    self.offered_as(&function.name).clone(),
+                )),
+                Item::Extern(declaration) => Some((
+                    declaration.name.text.clone(),
+                    self.offered_as(&declaration.name).clone(),
+                )),
                 Item::Import(_)
                 | Item::Type(_)
                 | Item::Trait(_)

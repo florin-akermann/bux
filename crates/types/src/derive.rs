@@ -49,21 +49,44 @@ pub(crate) fn hold_what_they_need(
     resolved: &ResolvedProgram,
 ) -> Result<(), TypeError> {
     for writes in written_in(resolved) {
+        reads_what_it_holds(&writes)?;
         for held in holds(writes.declared) {
-            let of = environment.written(resolved, held.written)?;
-            if has_instance(environment, &writes.of.text, &of) {
-                continue;
-            }
-            let kind = TypeErrorKind::HeldTypeHasNoInstance {
-                of: writes.of.text.clone(),
-                deriving: writes.for_type.text.clone(),
-                held: of,
-                held_as: held.held_as,
-            };
-            return Err(TypeError::at(held.written.span, kind));
+            holds_an_instance(environment, resolved, &writes, held)?;
         }
     }
     Ok(())
+}
+
+/// Refuses a derive of a type an `extern type` declares, whose contents are the JVM's.
+///
+/// `docs/specs/interop.md` states it: a derive reads what a type holds, and an extern type holds
+/// what the JVM does, which an `instance` written over `extern` declarations is the answer to.
+fn reads_what_it_holds(writes: &Writes<'_>) -> Result<(), TypeError> {
+    if !matches!(&writes.declared.definition, TypeDefinition::Foreign(_)) {
+        return Ok(());
+    }
+    let kind = TypeErrorKind::DerivesAForeignType(writes.for_type.text.clone());
+    Err(TypeError::at(writes.for_type.span, kind))
+}
+
+/// Refuses one value a deriving type holds whose own type has no instance of the trait.
+fn holds_an_instance(
+    environment: &Environment,
+    resolved: &ResolvedProgram,
+    writes: &Writes<'_>,
+    held: Held<'_>,
+) -> Result<(), TypeError> {
+    let of = environment.written(resolved, held.written)?;
+    if has_instance(environment, &writes.of.text, &of) {
+        return Ok(());
+    }
+    let kind = TypeErrorKind::HeldTypeHasNoInstance {
+        of: writes.of.text.clone(),
+        deriving: writes.for_type.text.clone(),
+        held: of,
+        held_as: held.held_as,
+    };
+    Err(TypeError::at(held.written.span, kind))
 }
 
 /// Every instance a module's derives write, with the declaration each one follows from.
@@ -113,6 +136,8 @@ fn declared_as<'a>(resolved: &'a ResolvedProgram, named: &str) -> &'a TypeDeclar
 /// Every value a type holds, in the order a derived instance reads them.
 fn holds(declared: &TypeDeclaration) -> Vec<Held<'_>> {
     match &declared.definition {
+        // A Java class holds what the JVM holds, which no derived instance reads.
+        TypeDefinition::Foreign(_) => Vec::new(),
         TypeDefinition::Record(fields) => fields.iter().map(field_of).collect(),
         TypeDefinition::Variants(variants) => variants.iter().flat_map(carried_by).collect(),
     }

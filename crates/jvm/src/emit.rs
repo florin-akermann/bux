@@ -27,6 +27,7 @@ impl Assembling {
             Instruction::Widen => self.widen(),
             Instruction::Jump(label) => self.jump(*label, context),
             Instruction::JumpIfFalse(label) => self.jump_if_false(*label, context),
+            Instruction::JumpIfNull(label) => self.jump_if_null(*label, context),
             Instruction::New(class) => self.new_instance(class, context),
             Instruction::Construct(method) => self.construct(method, context),
             Instruction::GetField(field) => self.get_field(field, context),
@@ -358,5 +359,10 @@ impl Assembling {
     fn jump_if_false(&mut self, label: Label, context: &mut Context<'_>) {
         self.pop();
         self.branch(opcode::IFEQ, label, context);
+    }
+
+    fn jump_if_null(&mut self, label: Label, context: &mut Context<'_>) {
+        self.pop();
+        self.branch(opcode::IFNULL, label, context);
     }
 }

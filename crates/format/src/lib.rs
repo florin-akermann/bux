@@ -23,8 +23,9 @@ mod type_ref;
 use std::fmt;
 use std::fmt::Write as _;
 
+use lumen_ast::TypeDeclaration;
 use lumen_ast::TypeRef;
-use lumen_ast::{DeriveDeclaration, InstanceDeclaration, TraitDeclaration, TypeDeclaration};
+use lumen_ast::{DeriveDeclaration, ExternDeclaration, InstanceDeclaration, TraitDeclaration};
 use lumen_diagnostics::{Code, Diagnostic, Fix};
 use lumen_lexer::Span;
 use lumen_parser::{ParseError, parse};
@@ -87,6 +88,17 @@ pub fn type_declaration(declared: &TypeDeclaration) -> String {
 pub fn trait_declaration(declared: &TraitDeclaration) -> String {
     let mut printer = Printer::without_comments();
     item::trait_declaration(&mut printer, declared);
+    printer.finish()
+}
+
+/// The canonical text of `declared`, as a file holds it, and holding no comment.
+///
+/// An extern is all surface: it has no body, and the Java member it reaches is the whole of what
+/// it does, so `lumen api` prints the one line a file writes and hides nothing.
+#[must_use]
+pub fn extern_declaration(declared: &ExternDeclaration) -> String {
+    let mut printer = Printer::without_comments();
+    item::declared_extern(&mut printer, declared);
     printer.finish()
 }
 

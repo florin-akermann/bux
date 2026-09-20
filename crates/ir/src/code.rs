@@ -103,6 +103,11 @@ pub enum Instruction {
     Jump(Label),
     /// Jumps when the truth value on the stack is false.
     JumpIfFalse(Label),
+    /// Jumps when the reference on the stack is `null`, which is what a `None` is read from.
+    ///
+    /// `null` is nothing a Lumen program writes or holds. It arrives at the one place Java hands
+    /// one over, which `docs/specs/interop.md` states, and this is where it stops.
+    JumpIfNull(Label),
     /// Makes an uninitialised instance, which a constructor then takes.
     New(ClassName),
     /// Makes an array of the class, as long as the small whole number on the stack says.

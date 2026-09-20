@@ -178,7 +178,7 @@ A whole number written at a type that takes none is `L0400`, because a whole num
 settles is an `Int` and an `Int` is not that type.
 `L0402` also says the type reached through `.` is not known, when inference never settled it.
 A variant that carries its values in order has no field to write against, so that is `L0402` too.
-A name reached inside a module is never `L0402`: every module in scope is supplied or loaded, so
+A name reached inside a module is never `L0402`: every module in scope is one loading read, so
 what it declares is what answers, and a name it does not declare is `L0414`.
 A generic function a module declares is offered like every other, which `docs/specs/modules.md`
 states, so a call of one through an import is typed against the scheme that module wrote.

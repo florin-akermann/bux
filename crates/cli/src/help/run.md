@@ -18,8 +18,8 @@ rather than guessed at. The entry point a JVM starts at is written with the modu
 module class with `java --enable-preview` directly does exactly what `lumen run` does. The flag is
 there because every class Lumen writes is a value class, which JDK 28 holds in preview.
 
-A program reaches the console with `io` and the file system with `files`, two modules the compiler
-supplies rather than reading from a file:
+A program reaches the console with `io` and the file system with `files`, two library modules the
+compiler carries rather than reading from a file:
 
 ```text
 import files

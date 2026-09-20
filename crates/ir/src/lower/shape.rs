@@ -93,6 +93,8 @@ pub(crate) struct Shapes {
     /// The types this module declares itself, which are the ones another module reaches by
     /// writing this module's name in front.
     own: HashSet<String>,
+    /// The Java class each foreign type is held as, which is the whole of what one is.
+    foreign: HashMap<String, ClassName>,
 }
 
 impl Shapes {
@@ -104,6 +106,7 @@ impl Shapes {
             built_by: HashMap::new(),
             records: HashMap::new(),
             own: HashSet::new(),
+            foreign: HashMap::new(),
         };
         for item in &resolved.program().items {
             if let Item::Type(declaration) = item {
@@ -200,6 +203,10 @@ impl Shapes {
     fn declare_reached(&mut self, offered: &OfferedType) {
         let base = self.declared(offered.name());
         match offered.built_by() {
+            BuiltBy::Foreign(class) => {
+                self.foreign
+                    .insert(offered.name().to_owned(), class_of(class));
+            }
             BuiltBy::Record(one) => {
                 self.records
                     .insert(offered.name().to_owned(), one.name().to_owned());
@@ -216,17 +223,13 @@ impl Shapes {
             }
             BuiltBy::Variants(variants) => {
                 for (position, variant) in variants.iter().enumerate() {
-                    let carries = self.offered_carries(variant);
-                    let class = variant_class(&base, simple(variant.name()));
-                    self.built_by.insert(
-                        variant.name().to_owned(),
-                        Shape {
-                            class,
-                            base: base.clone(),
-                            tag: Some(i32::try_from(position).unwrap_or_default()),
-                            carries,
-                        },
-                    );
+                    let shape = Shape {
+                        class: variant_class(&base, simple(variant.name())),
+                        base: base.clone(),
+                        tag: Some(i32::try_from(position).unwrap_or_default()),
+                        carries: self.offered_carries(variant),
+                    };
+                    self.built_by.insert(variant.name().to_owned(), shape);
                 }
             }
         }
@@ -272,44 +275,47 @@ impl Shapes {
         declaration: &TypeDeclaration,
         base: ClassName,
     ) {
-        let TypeDefinition::Variants(variants) = &declaration.definition else {
-            let TypeDefinition::Record(fields) = &declaration.definition else {
-                unreachable!("a type declaration is a record or variants")
-            };
-            let carries = self.fields(resolved, fields);
-            self.records
-                .insert(declaration.name.text.clone(), declaration.name.text.clone());
-            self.declarations
-                .push(Declared::Record(declaration.name.text.clone()));
-            self.built_by.insert(
-                declaration.name.text.clone(),
-                Shape {
-                    class: base.clone(),
-                    base,
-                    tag: None,
-                    carries,
-                },
-            );
-            return;
-        };
-        let mut constructors = Vec::new();
-        for (position, variant) in variants.iter().enumerate() {
-            let carries = self.payload(resolved, variant);
-            let class = variant_class(&base, &variant.name.text);
-            let tag = i32::try_from(position).unwrap_or_default();
-            constructors.push(variant.name.text.clone());
-            self.built_by.insert(
-                variant.name.text.clone(),
-                Shape {
-                    class,
-                    base: base.clone(),
-                    tag: Some(tag),
-                    carries,
-                },
-            );
+        match &declaration.definition {
+            TypeDefinition::Foreign(class) => {
+                self.foreign
+                    .insert(declaration.name.text.clone(), class_of(&class.text));
+            }
+            TypeDefinition::Record(fields) => {
+                let carries = self.fields(resolved, fields);
+                self.declare_record(declaration.name.text.clone(), base, carries);
+            }
+            TypeDefinition::Variants(variants) => {
+                let mut constructors = Vec::new();
+                for (position, variant) in variants.iter().enumerate() {
+                    let named = variant.name.text.clone();
+                    let shape = Shape {
+                        class: variant_class(&base, &named),
+                        base: base.clone(),
+                        tag: Some(i32::try_from(position).unwrap_or_default()),
+                        carries: self.payload(resolved, variant),
+                    };
+                    constructors.push(named.clone());
+                    self.built_by.insert(named, shape);
+                }
+                self.declarations
+                    .push(Declared::Variants { base, constructors });
+            }
         }
-        self.declarations
-            .push(Declared::Variants { base, constructors });
+    }
+
+    /// The one class a record type is, which is its own class and carries all of its fields.
+    fn declare_record(&mut self, named: String, base: ClassName, carries: Vec<Carried>) {
+        self.records.insert(named.clone(), named.clone());
+        self.declarations.push(Declared::Record(named.clone()));
+        self.built_by.insert(
+            named,
+            Shape {
+                class: base.clone(),
+                base,
+                tag: None,
+                carries,
+            },
+        );
     }
 
     fn payload(&self, resolved: &ResolvedProgram, variant: &Variant) -> Vec<Carried> {
@@ -366,6 +372,9 @@ impl Shapes {
 
     /// What a value of the type called `named` is carried by.
     fn named(&self, named: &str) -> Descriptor {
+        if let Some(class) = self.foreign.get(named) {
+            return Descriptor::Reference(class.clone());
+        }
         match named {
             "Int" => Descriptor::Long,
             "Bool" => Descriptor::Boolean,
@@ -388,6 +397,11 @@ impl Shapes {
         };
         ClassName::new(&format!("{module}/{named}"))
     }
+}
+
+/// The class a Java name states, whose packages a JVM separates with slashes rather than dots.
+fn class_of(java: &str) -> ClassName {
+    ClassName::new(&java.replace('.', "/"))
 }
 
 /// A name as the module declaring it wrote it, which is what is left of a dot where one is.

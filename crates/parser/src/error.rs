@@ -125,6 +125,8 @@ pub(crate) enum Expected {
     Keyword(Keyword),
     Name,
     FunctionName,
+    ExternKind,
+    JavaName,
     Trait,
     Item,
     Expression,
@@ -140,10 +142,12 @@ impl fmt::Display for Expected {
             Self::Keyword(keyword) => write!(f, "`{}`", keyword.text()),
             Self::Name => write!(f, "a name"),
             Self::FunctionName => write!(f, "a function name"),
+            Self::ExternKind => write!(f, "`field`, `static`, `method`, or `new`"),
+            Self::JavaName => write!(f, "a Java name in quotes"),
             Self::Trait => write!(f, "a trait"),
             Self::Item => write!(
                 f,
-                "an import, a type, a trait, an instance, a derive, or a function"
+                "an import, a type, a trait, an instance, a derive, a function, or an extern"
             ),
             Self::Expression => write!(f, "an expression"),
             Self::Type => write!(f, "a type"),

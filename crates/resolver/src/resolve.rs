@@ -3,7 +3,8 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::LazyLock;
 
-use lumen_ast::{Block, Expr, ExprKind, ForHeader, ForLoop, Function, IfExpr, Item};
+use lumen_ast::{Block, Expr, ExprKind, ExternDeclaration, ForHeader, ForLoop, Function};
+use lumen_ast::{IfExpr, Item};
 use lumen_ast::{MatchExpr, Mutability, Name, Path, Program, RecordField};
 use lumen_ast::{Span, Statement, StatementKind, TypeDeclaration, TypeDefinition, TypeRef};
 use lumen_ast::{TypeRefKind, Variant, VariantPayload};
@@ -174,19 +175,30 @@ impl Resolver {
             Item::Function(function) => {
                 self.introduce_value(&function.name, DefinitionKind::Function)
             }
+            Item::Extern(declaration) => {
+                self.introduce_value(&declaration.name, DefinitionKind::Function)
+            }
         }
     }
 
     /// A type declaration names a type, and names the value each of its variants is built with.
+    ///
+    /// A Java class names no value: `docs/specs/interop.md` builds one with an `extern new` and
+    /// with nothing else, so its Lumen name is a type and never a constructor.
     fn declare_type(&mut self, declaration: &TypeDeclaration) -> Resolved {
         self.introduce_type(&declaration.name, DefinitionKind::Type)?;
-        let TypeDefinition::Variants(variants) = &declaration.definition else {
-            return self.introduce_value(&declaration.name, DefinitionKind::Constructor);
-        };
-        for variant in variants {
-            self.introduce_value(&variant.name, DefinitionKind::Constructor)?;
+        match &declaration.definition {
+            TypeDefinition::Foreign(_) => Ok(()),
+            TypeDefinition::Record(_) => {
+                self.introduce_value(&declaration.name, DefinitionKind::Constructor)
+            }
+            TypeDefinition::Variants(variants) => {
+                for variant in variants {
+                    self.introduce_value(&variant.name, DefinitionKind::Constructor)?;
+                }
+                Ok(())
+            }
         }
-        Ok(())
     }
 
     fn define(&mut self, item: &Item) -> Resolved {
@@ -197,7 +209,25 @@ impl Resolver {
             Item::Instance(declaration) => self.instance(declaration),
             Item::Derive(declaration) => self.derive(declaration),
             Item::Function(function) => self.function(function),
+            Item::Extern(declaration) => self.declared_extern(declaration),
         }
+    }
+
+    /// An `extern` names the types of its signature, and its parameters while it names them.
+    ///
+    /// There is no body below it, so nothing those names are in scope for; they are introduced
+    /// all the same, because two parameters of one name is the mistake it always was.
+    fn declared_extern(&mut self, declaration: &ExternDeclaration) -> Resolved {
+        self.values.enter();
+        for parameter in &declaration.parameters {
+            if let Some(type_ref) = &parameter.type_ref {
+                self.type_ref(type_ref)?;
+            }
+            self.introduce_value(&parameter.name, DefinitionKind::Parameter)?;
+        }
+        self.type_ref(&declaration.result)?;
+        self.values.leave();
+        Ok(())
     }
 
     fn type_declaration(&mut self, declaration: &TypeDeclaration) -> Resolved {
@@ -206,6 +236,8 @@ impl Resolver {
             self.introduce_type(parameter, DefinitionKind::TypeParameter)?;
         }
         match &declaration.definition {
+            // A Java class names no Lumen type below its own, so there is nothing to resolve.
+            TypeDefinition::Foreign(_) => {}
             TypeDefinition::Record(fields) => self.record_fields(fields)?,
             TypeDefinition::Variants(variants) => {
                 for variant in variants {

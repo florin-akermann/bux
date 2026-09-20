@@ -5,7 +5,7 @@
 
 use lumen_holes::Whole;
 use lumen_ir::{Asked, Body, Class, ClassName, Instruction, Lowered, Method, MethodRef, lower};
-use lumen_types::Imported;
+use lumen_types::{Imported, Surface};
 
 /// The classes `source` becomes, as a module named `demo`.
 pub fn lowered(source: &str) -> Lowered {
@@ -20,6 +20,75 @@ pub fn lowered_reaching(source: &str, imported: &Imported) -> Lowered {
         imported,
         asked: &Asked::default(),
     })
+}
+
+/// What the module `held` offers, which is a record and an algebraic data type.
+pub fn held() -> Imported {
+    let source = concat!(
+        "fn pending() -> Payment {\n    Pending\n}\n\n",
+        "type User = {\n    name: String\n}\n\n",
+        "type Payment =\n    | Sent(String)\n    | Pending\n"
+    );
+    Imported::default().offering("held", surface(source))
+}
+
+/// The library module an import of `named` reaches, as a test asks things of it.
+pub fn library(named: &'static str) -> LibraryModule {
+    LibraryModule { named }
+}
+
+/// One module of the library, which is Lumen source the compiler carries rather than a file.
+#[derive(Clone, Copy)]
+pub struct LibraryModule {
+    /// The name an import writes, which is also the class the module is lowered as.
+    named: &'static str,
+}
+
+impl LibraryModule {
+    /// The classes it becomes, lowered under the name it is reached by.
+    pub fn lowered(self) -> Lowered {
+        lowered_as(&Written {
+            source: self.source(),
+            named: self.named,
+            imported: &Imported::default(),
+            asked: &Asked::default(),
+        })
+    }
+
+    /// What it offers, as inference is given what a module importing it reaches.
+    pub fn offered(self) -> Imported {
+        Imported::default().offering(self.named, self.offers())
+    }
+
+    /// Every name a module importing it reaches, which is what it puts out.
+    pub fn offers(self) -> Surface {
+        surface(self.source())
+    }
+
+    /// The class it is, which is the class every function of it is a method of.
+    pub fn class(self) -> ClassName {
+        ClassName::new(self.named)
+    }
+
+    /// The source the compiler carries for it.
+    fn source(self) -> &'static str {
+        lumen_resolver::library::source_of(self.named).expect("the library carries the module")
+    }
+}
+
+/// A module declaring generics, which is what another module reaches one of through an import.
+///
+/// `held` writes its type parameter out, `passed` writes none and lets inference find it, and
+/// `counted` writes one that reaches no further than the inside of a `List`.
+pub const HOLDER: &str = concat!(
+    "fn held<T>(value: T) -> T {\n    value\n}\n\n",
+    "fn passed(value) {\n    value\n}\n\n",
+    "fn counted<T>(values: List<T>) -> Int {\n    1\n}\n"
+);
+
+/// What [`HOLDER`] offers, under the name `holder`, which is the name a test imports it by.
+pub fn holder() -> Imported {
+    Imported::default().offering("holder", surface(HOLDER))
 }
 
 /// One module a behaviour is about, as the phases before lowering are given it.
@@ -43,37 +112,13 @@ pub fn lowered_as(written: &Written<'_>) -> Lowered {
     lower(&whole, written.named, written.asked)
 }
 
-/// What the module `held` offers, which is a record and an algebraic data type.
-pub fn held() -> Imported {
-    let source = concat!(
-        "fn pending() -> Payment {\n    Pending\n}\n\n",
-        "type User = {\n    name: String\n}\n\n",
-        "type Payment =\n    | Sent(String)\n    | Pending\n"
-    );
+/// Every name a module importing `source` reaches, which is what `source` puts out.
+fn surface(source: &str) -> Surface {
     let program = lumen_parser::parse(source).expect("the offered module parses");
     let resolved = lumen_resolver::resolve(program).expect("the offered module resolves");
     let typed = lumen_types::check(resolved, &Imported::default())
         .expect("the offered module has a type for every expression");
-    Imported::default().offering("held", typed.surface().clone())
-}
-
-/// A module declaring generics, which is what another module reaches one of through an import.
-///
-/// `held` writes its type parameter out, `passed` writes none and lets inference find it, and
-/// `counted` writes one that reaches no further than the inside of a `List`.
-pub const HOLDER: &str = concat!(
-    "fn held<T>(value: T) -> T {\n    value\n}\n\n",
-    "fn passed(value) {\n    value\n}\n\n",
-    "fn counted<T>(values: List<T>) -> Int {\n    1\n}\n"
-);
-
-/// What [`HOLDER`] offers, under the name `holder`, which is the name a test imports it by.
-pub fn holder() -> Imported {
-    let program = lumen_parser::parse(HOLDER).expect("the offered module parses");
-    let resolved = lumen_resolver::resolve(program).expect("the offered module resolves");
-    let typed = lumen_types::check(resolved, &Imported::default())
-        .expect("the offered module has a type for every expression");
-    Imported::default().offering("holder", typed.surface().clone())
+    typed.surface().clone()
 }
 
 /// The body of the function `name` of the module.

@@ -8,6 +8,7 @@
 
 mod expr;
 mod item;
+mod java;
 mod name;
 mod path;
 mod pattern;
@@ -17,10 +18,12 @@ mod type_ref;
 pub use expr::{Arguments, BinaryOperator, Branch, Expr, ExprKind, FieldValue, IfExpr};
 pub use expr::{MatchArm, MatchExpr};
 pub use expr::{NamedArgument, UnaryOperator};
-pub use item::{Constraint, DeriveDeclaration, Function, Import, InstanceDeclaration, Item};
+pub use item::{Constraint, DeriveDeclaration, ExternDeclaration, Function, Import};
+pub use item::{InstanceDeclaration, Item, Reaches};
 pub use item::{Parameter, Program};
 pub use item::{RecordField, Signature, TraitDeclaration, TypeDeclaration, TypeDefinition};
 pub use item::{TypeParameter, Variant, VariantPayload};
+pub use java::JavaName;
 pub use name::Name;
 pub use path::Path;
 pub use pattern::{Pattern, PatternKind};

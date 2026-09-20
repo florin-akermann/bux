@@ -7,8 +7,10 @@ rather than reading a file.
 
 A function is printed as its signature and nothing after it: one line, and no body under it.
 A type declaration is printed exactly as canonical form writes it in a file, variants and fields
-included, so a caller sees what to build and what it may read. An import is not on the page: it
-brings a name in rather than putting one out. Neither is a comment, nor anything a body binds.
+included, so a caller sees what to build and what it may read. An `extern` declaration is printed
+whole, the Java name it states included, because it writes no body to leave off. An import is not
+on the page: it brings a name in rather than putting one out. Neither is a comment, nor anything
+a body binds.
 
 The page lists declarations in the order the file declares them. A file reads top down, and the
 page reads the same way, so a reader who knows the file knows where to look.

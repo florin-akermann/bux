@@ -36,6 +36,7 @@ fn stanza(typed: &TypedProgram, declared: &Item) -> Option<String> {
         Item::Trait(declaration) => Some(lumen_format::trait_declaration(declaration)),
         Item::Instance(declaration) => Some(lumen_format::instance_head(declaration)),
         Item::Derive(declaration) => Some(lumen_format::derived_head(declaration)),
+        Item::Extern(declaration) => Some(lumen_format::extern_declaration(declaration)),
         Item::Function(declaration) => Some(signature::of(typed, declaration)),
     }
 }

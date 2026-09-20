@@ -20,7 +20,7 @@ use lumen_jvm::ClassFile;
 use lumen_modules::{MANIFEST, SUFFIX};
 use lumen_types::TypedProgram;
 
-use crate::compiling::{Checked, Module, NotCompiled, Refusal, checked, typed};
+use crate::compiling::{Checked, Module, NotCompiled, Refusal, checked};
 
 mod compiling;
 
@@ -176,20 +176,16 @@ fn held(program: &Checked, run: &Run) -> Outcome {
     let Some(module) = named_module(root.path()) else {
         return Outcome::Unusable;
     };
-    let lowered = match typed(run.source(), program.imported())
-        .map_err(|diagnostic| vec![diagnostic])
-        .and_then(|inferred| compiled(&inferred, run.source(), &module, &Asked::default()))
+    let classes = match compiling::written(run.source(), root.path())
+        .and_then(|written| lowered_after_their_importers(written.modules(), Asked::default()))
     {
-        Ok(lowered) => lowered,
-        Err(refusals) => {
-            return refuse_each(&put_back(run, refusals), root.source(), root.path());
-        }
+        Ok(lowered) => lowered
+            .iter()
+            .flat_map(lumen_jvm::write)
+            .collect::<Vec<_>>(),
+        Err(NotCompiled::Unusable) => return Outcome::Unusable,
+        Err(NotCompiled::Refused(refusal)) => return refusing(run, &refusal, root),
     };
-    let mut classes = match imported_classes(program, &lowered.asks) {
-        Ok(classes) => classes,
-        Err(refusal) => return refused_as(refusal),
-    };
-    classes.extend(lumen_jvm::write(&lowered));
     let Some(java) = java() else {
         return Outcome::Unusable;
     };
@@ -207,17 +203,17 @@ fn held(program: &Checked, run: &Run) -> Outcome {
     outcome
 }
 
-/// The class files of every module the one under test imports, which a run needs beside it.
+/// A refusal of the run, shown against the file a reader would go and change.
 ///
-/// `asked` is what the run itself asks of them, which is why the module under test is lowered
-/// first: an example reaches a generic of an imported module as any other body does.
-fn imported_classes(program: &Checked, asked: &Asked) -> Result<Vec<ClassFile>, NotCompiled> {
-    let imported = program
-        .modules()
-        .split_last()
-        .map_or(&[][..], |(_root, rest)| rest);
-    let lowered = lowered_after_their_importers(imported, asked.clone())?;
-    Ok(lowered.iter().flat_map(lumen_jvm::write).collect())
+/// A refusal of the run's own module points into the module the compiler wrote, so it is put
+/// back into the file the author wrote first. One of a module that run imports points into that
+/// module's own file already, and is shown there.
+fn refusing(run: &Run, refusal: &Refusal, root: &Module) -> Outcome {
+    if refusal.path() != root.path() {
+        return refuse_each(refusal.diagnostics(), refusal.source(), refusal.path());
+    }
+    let refusals = put_back(run, refusal.diagnostics().to_vec());
+    refuse_each(&refusals, root.source(), root.path())
 }
 
 /// Reports every example the run wrote a line about, which is every one that did not hold.

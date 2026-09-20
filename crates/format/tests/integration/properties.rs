@@ -62,6 +62,50 @@ fn program(tc: &TestCase) -> String {
     items.join("\n\n") + "\n"
 }
 
+/// Every kind of member an `extern` reaches, each written with its name and result left open.
+const KINDS: [&str; 4] = [
+    "field {name}() -> {result} = \"java.lang.System.out\"",
+    "static {name}(path: File) -> {result} = \"java.nio.file.Files.readString\"",
+    "method {name}(file: File) -> {result} = \"toPath\"",
+    "new {name}(path: String) -> {result}",
+];
+
+/// The names a generated declaration is written under, none of which the prelude declares.
+const DECLARED: [&str; 3] = ["reached", "held_by", "opened"];
+
+/// Every type a generated declaration gives back, which is what the boundary carries.
+const RESULTS: [&str; 7] = [
+    "Bool",
+    "Int",
+    "String",
+    "File",
+    "()",
+    "Option<File>",
+    "Result<File, String>",
+];
+
+/// One `extern` declaration, written under a name and giving back a type the boundary carries.
+fn declaration(tc: &TestCase) -> String {
+    let kind = tc.draw(gs::sampled_from(&KINDS));
+    let name = tc.draw(gs::sampled_from(&DECLARED));
+    let result = tc.draw(gs::sampled_from(&RESULTS));
+    let written = kind.replace("{name}", name).replace("{result}", result);
+    format!("extern type File = \"java.io.File\"\n\nextern {written}\n")
+}
+
+#[hegel::test]
+fn every_extern_declaration_round_trips(tc: TestCase) {
+    let source = declaration(&tc);
+
+    let canonical = format(&source).expect("a generated declaration parses");
+
+    assert_eq!(
+        canonical, source,
+        "canonical form writes it as it is written"
+    );
+    assert_eq!(tree(&canonical), tree(&source));
+}
+
 #[hegel::test]
 fn formatting_is_deterministic_and_idempotent(tc: TestCase) {
     let source = program(&tc);

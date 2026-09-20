@@ -7,9 +7,9 @@ and checks that every `match` answers for every value it may meet. Nothing is wr
 Loading comes first. `import greeting` names `greeting.lm`, beside the file that writes it, and
 every module the file reaches is read before any of them is checked. There is no search path:
 a module is the file of that name beside the importing one, or nothing, and an import that names
-no such file is refused. `io` and `files` are supplied by the compiler, and `list`, `strings`,
-`map`, and `set` are modules of the library the compiler carries, so an import of any of them
-looks for no file at all and a file of that name beside the importing one does not shadow it.
+no such file is refused. `io`, `files`, `list`, `strings`, `map`, and `set` are modules of the
+library the compiler carries, so an import of any of them looks for no file at all and a file of
+that name beside the importing one does not shadow it.
 `map` holds `Map<K, V>`, built by `map.empty` and `map.insert` and read by `map.get`; `set` holds
 `Set<T>`, built the same way and read by `set.has_value`. A key is a type the prelude has an `Eq`
 instance for, which `Bool`, `Int`, and `String` are. Two modules that import each other are
@@ -46,6 +46,16 @@ each refused. A statement that leaves a value behind and gives it to nothing is 
 well, because a dropped `Result` is a swallowed failure; `_ = save(user)` throws a value away on
 purpose and says so. Inside a function the types are inferred, so a signature is written where it
 documents a boundary rather than on every line.
+
+An `extern` declaration is held here too. It names one member of one Java class and gives it a
+Lumen signature: `extern type PrintStream = "java.io.PrintStream"` names the class, and `field`,
+`static`, `method`, and `new` name the four kinds of member the JVM has. A parameter or a result
+is `Bool`, `Int`, `String`, or a type an `extern type` names, and nothing else crosses; a result
+may also be `()`, an `Option` whose `None` is the `null` the member gave back, or a `Result` whose
+`Err` holds what a throw said of itself. A signature naming anything else, a name that is no Java
+name, a `derive` of an extern type, and a `method` or a `new` whose signature names no class are
+each refused. `io` and `files` are written over these declarations, so a program reaches the
+console and the file system without writing one.
 
 `?` is settled here too. It hands the `Err` of a `Result` or the `None` of an `Option` back, and
 lands in a function that gives back the same kind, so it never converts one into the other.

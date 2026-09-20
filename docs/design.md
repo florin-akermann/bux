@@ -351,9 +351,10 @@ An operator is a function with other syntax, and syntax buys no exemption from t
 There is no panic and no trap, so there is no runtime failure for a program to catch or to observe.
 Rust panics on `x / 0` and calls the panic a design; Lumen refuses the trade, and the type answers.
 
-A module the compiler supplies may sit on a JVM operation that throws, and gives back a `Result`.
-The throw is caught where the module is built, and never reaches the program.
-`docs/specs/io.md` states it for the one read version 0.1 has.
+A library module may sit on a JVM operation that throws, and gives back a `Result` where it does.
+The throw is caught where the declaration that reaches the operation is written, and never reaches
+the program.
+`docs/specs/interop.md` states the catch, and `docs/specs/io.md` the one read version 0.1 has.
 
 So every operator that can fail gives back an `Option` or a `Result`, and never a bare answer.
 `/` and `%` are the ones version 0.1 has, and `17 / 0` is `None` rather than a crash.
@@ -1137,3 +1138,48 @@ one depends on.
 Nothing is fetched: a dependency is a directory that is already there, and the manifest names it.
 Two dependencies holding a module of one name are refused, because one name has one definition.
 `docs/specs/packages.md` states the manifest, the order an import is answered in, and the errors.
+
+---
+
+## 17. Reaching Java
+
+The JVM ecosystem is worth reaching, and the object model that comes with it is not.
+An `extern` declaration is the one place a Java member is named, and it names exactly one.
+It gives that member a Lumen signature, and from there it is a function like any other.
+
+```text
+extern type Path = "java.nio.file.Path"
+
+extern static read_string(path: Path) -> Result<String, String> = "java.nio.file.Files.readString"
+```
+
+There is one form per kind of member the JVM has, and no sixth kind to learn.
+`type` names a class a value is held as, `field` a static field, `static` a static method,
+`method` an instance method whose receiver is the first parameter, and `new` a constructor.
+A declaration says which it is, so nothing about a call is inferred from the shape of its
+signature.
+
+Every parameter and every result is a Lumen type, and the JVM class it compiles to is the one the
+member's own descriptor names.
+There is no subtyping, no widening, and no implicit conversion: a member taking `java.lang.Object`
+is not reachable, and the answer is to name one that takes what the caller holds.
+That is what keeps the boundary a signature rather than a second type system.
+
+Three things cross, and nothing else does.
+A value of a Lumen type crosses as itself.
+A `null` given back becomes `None`, which is what an `Option` result declares.
+Anything thrown becomes `Err`, holding what the throwable says of itself, which is what a `Result`
+result declares.
+
+An extern type has no identity a program can reach, exactly as every Lumen type has none.
+A Java object is held, handed on, and given back, and it is compared, hashed, or shown only where
+a trait instance written over `extern` declarations says how.
+There is no `equals`, no `hashCode`, and no `toString` reaching it, and no class hierarchy above
+it: section 2 is not suspended inside the boundary.
+
+An `extern` declares what it can fail with, and that claim is the author's rather than the
+compiler's.
+It is the one claim in the language nothing checks, which is why the boundary is narrow and lives
+in the library: `io` and `files` are Lumen modules over `extern` declarations, and a program
+reaches Java through them rather than through `extern` of its own.
+`docs/specs/interop.md` states the declaration, the two mappings, and the errors.

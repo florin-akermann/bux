@@ -1,0 +1,9 @@
+// expect-error: L0425
+// A parameter and a result are types a Java member's own descriptor names, and a `List` is not
+// one of them. What a declaration cannot say is not reachable, and the answer is another
+// declaration that names a type which crosses.
+fn main() -> () {
+    _ = written(["one"])
+}
+
+extern static written(lines: List<String>) -> String = "java.lang.String.join"
