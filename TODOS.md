@@ -21,7 +21,7 @@ A Java object a Lumen program holds is a value it cannot compare, hash, or print
 [048][e] - Executable examples under `tests/spec/interop/`, skipped by name when there is no JDK.
 [048][f] - `Show<Bool|Int|String>` and `Hash<String>` move to `library/prelude.lm` over `extern`.
 
-## 🔴 Item 049: A package is a directory of modules with a name and a version
+## 🟡 Item 049: A package is a directory of modules with a name and a version
 **Depends on:** Item 044, Item 045 — a package offers types; the library is the first package.
 `docs/implementation.md` section 10 names package management; no document says what a package is.
 Version 0.1 finds a module beside the importing file and nowhere else.
