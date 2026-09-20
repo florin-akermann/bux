@@ -54,7 +54,7 @@ none of them, so the author is the one who can say which it is.
 [055][c] - The lowering emits `InvokeInterface` on such a receiver, with the constant pool entry
   an interface method reference is, and `tests/spec/interop/` runs one on a JDK.
 
-## 🔴 Item 056: The IR's doc comments still say the compiler supplies an instance
+## 🟡 Item 056: The IR's doc comments still say the compiler supplies an instance
 Item 054 took the wording out of the specs, and the lowering's own comments still carry it.
 `crates/ir/src/lower/operator.rs`, `literal.rs`, `expr.rs`, `derive.rs`, and `pattern.rs` each
 say "a type the compiler supplies the instance for" where they mean one the JVM holds.
