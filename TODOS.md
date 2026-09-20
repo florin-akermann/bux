@@ -6,17 +6,6 @@
 
 ## Open
 
-## 🟢 Item 042: A record or a variant derives `Eq`
-**Depends on:** Item 041 — a derived instance is an instance.
-`docs/design.md` section 8 promises `derive Eq` for 0.2, and refuses `==` on a record until then.
-Equality is by state, so the compiler can write the instance: field by field, variant by variant.
-A record derives `Eq` only when every field's type has `Eq`, and the refusal names the field.
-The instance the compiler writes is the one the author would have, so nothing about `==` changes.
-[042][a] - Spec first in `docs/specs/derive.md`: the form, what is written, the missing-`Eq` error.
-[042][b] - Lowering writes the instance, test-first; a property: derived `==` agrees with state.
-[042][c] - `L0406` gains a `help:` that names the `derive` to write.
-[042][d] - Executable examples under `tests/spec/traits/`: a derived record, a field without `Eq`.
-
 ## 🔴 Item 043: `Ord`, `Hash`, and `Show` are standard traits, and derivable
 **Depends on:** Item 042 — the second derivable trait follows the first's path.
 `docs/design.md` section 8 names `Eq`, `Ord`, `Hash`, and `Show` as the standard traits.
