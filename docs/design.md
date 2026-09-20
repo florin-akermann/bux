@@ -130,7 +130,7 @@ In particular, the language should initially avoid:
 
 The JVM is where Lumen compiles first, and that is the whole of its authority over the language.
 None of its constraints is inherited.
-Not the object model: no identity, no `equals` on everything, no `hashCode`, no root class.
+Not the object model: no identity, no `is_equal` on everything, no `hashCode`, no root class.
 Not the eight primitive types that are special against every other; `Int` is a type like `User`.
 Not boxing, which a program never observes, and not erasure, which is why a generic boxes.
 What Lumen adopts instead is value semantics, in the shape Valhalla gives a value class.
@@ -427,14 +427,14 @@ The language should provide a simple form of typeclasses inspired by Haskell and
 
 ```text
 trait Eq<T> {
-    fn equals(a: T, b: T) -> Bool
+    fn is_equal(one: T, other: T) -> Bool
 }
 ```
 
 Generic functions can constrain their types:
 
 ```text
-fn contains<T: Eq<T>>(
+fn has_value<T: Eq<T>>(
     items: List<T>,
     value: T
 ) -> Bool {
@@ -442,9 +442,40 @@ fn contains<T: Eq<T>>(
 }
 ```
 
+A type gives a trait an instance:
+
+```text
+instance Eq<Point> {
+    fn is_equal(one: Point, other: Point) -> Bool {
+        one.across == other.across && one.down == other.down
+    }
+}
+```
+
+An instance writes a body for every method its trait declares, and for no other name.
+Each body has the trait's signature with the trait's type parameter standing for the instance's
+type, so an instance adds nothing the trait had not already said.
+A trait declares one type parameter, which is what `Eq<T>`, `Ord<T>`, and `IntegerLiteral<T>` each
+ask for and all the language has needed.
+An instance is for a type written by name: `Eq<Point>`, and not `Eq<List<Point>>`.
+The spec that derives an instance for a generic type settles how one is written for `List<T>`.
+
+An instance belongs in the module that declares the trait or in the module that declares the type.
+One trait and one type have one instance in a program, and a second is refused where it is written.
+That is what lets a constraint reach an instance without anyone saying which one:
+`T: Eq<T>` at `T = Point` reaches the one `Eq<Point>` there is.
+
+A constraint resolves while the program is compiled, because a generic is compiled once per set of
+types.
+`has_value` at `Point` is a method whose body calls the `is_equal` of `Eq<Point>` and nothing else.
+No dictionary is passed, no method table is built, and nothing about the call waits for the program
+to run.
+A trait method called at a type with no instance is refused where it is called, and a constrained
+generic used at such a type is refused the same way.
+
 `==` is `Eq`: a type is compared only when it has an instance, and a built-in type is no exception.
-Version 0.1 has no `derive`, so the library ships the three instances: `Int`, `Bool`, and `String`.
-`==` on a record or a variant is refused until its type derives `Eq`, which version 0.2 allows.
+The library ships the three instances: `Int`, `Bool`, and `String`.
+`==` on a record or a variant is refused until its type has one, which it writes or derives.
 
 Every operator is a trait method, and `==` is only the first to be written that way.
 `+` is `Add`, `-` is `Sub`, `*` is `Mul`, `/` is `Div`, `%` is `Rem`, and prefix `-` is `Neg`.
@@ -709,7 +740,7 @@ There is no exit status to write, because a program has nothing to say yet about
 ```text
 // Divides `total` among `people`, giving back nothing where there is nobody to divide among.
 //
-// example: or(shared(total: 17, people: 5), 0) == 3
+// example: shared(total: 17, people: 5).or(0) == 3
 fn shared(total: Int, people: Int) -> Option<Int> {
     total / people
 }
@@ -958,6 +989,8 @@ The compiler never has to guess which of the two was meant.
 A field of a record and a name of an imported module are each reached through something else.
 Neither is a name in scope.
 `user.name` is looked up in the record and `io.print` in the module, never in the file.
+`maybe.or(0)` is neither: its dot puts an argument in front, and `or` is looked up in scope.
+Section 11 states that form.
 
 An import names the file the module is written in, beside the file that writes the import.
 `import greeting` therefore reads `greeting.lm` from the same directory, and nowhere else is

@@ -6,7 +6,7 @@
 //! has by the time anything calls it, and a signature the author left unwritten counts exactly as
 //! one they wrote out.
 
-use lumen_ast::{Arguments, Expr, Function, Item, Name, NamedArgument, Span};
+use lumen_ast::{Arguments, Expr, Function, Name, NamedArgument, Span};
 use lumen_resolver::{DefinitionKind, Namespace, Origin};
 
 use crate::error::{TypeError, TypeErrorKind};
@@ -78,12 +78,8 @@ impl Inference<'_> {
         };
         self.resolved
             .program()
-            .items
-            .iter()
-            .find_map(|item| match item {
-                Item::Function(function) if function.name.span == at => Some(function),
-                _ => None,
-            })
+            .functions()
+            .find(|function| function.name.span == at)
     }
 }
 

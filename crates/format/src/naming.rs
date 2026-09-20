@@ -9,7 +9,8 @@
 
 use std::fmt;
 
-use lumen_ast::{Item, Name, Program, RecordField, Span, TypeDefinition, VariantPayload};
+use lumen_ast::{Function, Item, Name, Program, RecordField, Signature, Span};
+use lumen_ast::{TypeDefinition, VariantPayload};
 use lumen_diagnostics::Code;
 
 /// The shortest a declared name is, below which it is an initial rather than a word.
@@ -239,24 +240,50 @@ fn declared(program: &Program) -> Vec<(&Name, Kind)> {
                 );
                 definition(&mut names, &declared.definition);
             }
-            Item::Function(function) => {
-                names.push((&function.name, Kind::Function));
-                names.extend(
-                    function
-                        .type_parameters
-                        .iter()
-                        .map(|one| (one, Kind::TypeParameter)),
-                );
-                names.extend(
-                    function
-                        .parameters
-                        .iter()
-                        .map(|one| (&one.name, Kind::Parameter)),
-                );
+            Item::Trait(declared) => {
+                names.push((&declared.name, Kind::Type));
+                names.push((&declared.parameter, Kind::TypeParameter));
+                for method in &declared.methods {
+                    signature(&mut names, method);
+                }
             }
+            Item::Instance(declared) => {
+                for method in &declared.methods {
+                    function(&mut names, method);
+                }
+            }
+            Item::Function(declared) => function(&mut names, declared),
         }
     }
     names
+}
+
+/// The names one function declares: itself, the types it is written over, and its parameters.
+fn function<'a>(names: &mut Vec<(&'a Name, Kind)>, declared: &'a Function) {
+    names.push((&declared.name, Kind::Function));
+    names.extend(
+        declared
+            .type_parameters
+            .iter()
+            .map(|one| (&one.name, Kind::TypeParameter)),
+    );
+    names.extend(
+        declared
+            .parameters
+            .iter()
+            .map(|one| (&one.name, Kind::Parameter)),
+    );
+}
+
+/// The names one method of a trait declares, which is itself and its parameters.
+fn signature<'a>(names: &mut Vec<(&'a Name, Kind)>, declared: &'a Signature) {
+    names.push((&declared.name, Kind::Function));
+    names.extend(
+        declared
+            .parameters
+            .iter()
+            .map(|one| (&one.name, Kind::Parameter)),
+    );
 }
 
 /// The names a type definition declares below its own, which are its variants and their fields.

@@ -102,7 +102,14 @@ written, with the descriptor its signature gives.
 A module declares each name once, so no two functions share a method name.
 
 A function is reached by `invokestatic` on the module class.
-Version 0.1 has no function values, so nothing else calls one.
+There are no function values, so nothing else calls one.
+
+An instance's method is a method of the module class too, named for its trait, the type it is
+for, and itself, joined by `$`: `Eq$Point$is_equal`.
+It is written whether anything calls it or not, as a function that declares no type parameter is,
+and a call of its trait's method at that type is an `invokestatic` of it.
+An instance the compiler supplies has no method, and what it amounts to is written out where the
+call stands; `docs/specs/traits.md` states both cases.
 
 A function of a module the file imports is reached the same way, on that module's class.
 `greeting.hello("world")` is `invokestatic greeting.hello`, with the descriptor read off the type

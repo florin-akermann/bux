@@ -86,6 +86,14 @@ catalogue! {
     NoSuchModule => "L0306",
     /// A ring of imports, which leaves the modules in it no order to be compiled in.
     RingOfImports => "L0307",
+    /// A trait already has an instance for the type a second instance names.
+    InstanceDeclaredTwice => "L0308",
+    /// An instance does not write exactly the methods its trait declares.
+    InstanceMethods => "L0309",
+    /// Something that is not a trait is written where a trait belongs.
+    NotATrait => "L0310",
+    /// A trait is written where a type belongs.
+    TraitAsType => "L0311",
     /// A type met a type it does not match.
     TypeMismatch => "L0400",
     /// A call passes more or fewer arguments than the function takes.
@@ -122,6 +130,10 @@ catalogue! {
     TypeOfAnotherModule => "L0416",
     /// A generic function is reached through a module, which writes it where it is declared.
     GenericThroughModule => "L0417",
+    /// A trait method is used at a type that has no instance of that trait.
+    NoInstance => "L0418",
+    /// A parameter of a trait's method states no type, which nothing is left to infer.
+    SignatureWithoutType => "L0419",
     /// A `match` leaves a value of the type it matches unanswered.
     NonExhaustiveMatch => "L0500",
     /// A `match` lists its arms in an order the type does not declare its variants in.

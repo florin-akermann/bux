@@ -64,6 +64,9 @@ answering more than one.
 question it is.
 A function named for a command is `L0413`.
 
+A method a trait declares is held to the same rule, and the refusal lands where the trait wrote
+the name rather than on the first instance to write a body for it.
+
 The result read is the one inference settled, so a function that writes no result type is held to
 whatever type it turned out to have.
 That is the same reading `docs/specs/arguments.md` gives the flag rule, and for the same reason: a

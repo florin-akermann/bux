@@ -34,11 +34,12 @@ pub use crate::types::{Type, TypeParameter, TypeVar};
 /// expression whose type inference cannot give it.
 pub fn check(resolved: ResolvedProgram, imported: &Imported) -> Result<TypedProgram, TypeError> {
     holds::nothing_holds_itself(&resolved)?;
-    let (types, surface) = infer::infer(&resolved, imported)?;
+    let inferred = infer::infer(&resolved, imported)?;
     Ok(TypedProgram {
         resolved,
-        types,
-        surface,
+        types: inferred.types,
+        surface: inferred.surface,
+        methods: inferred.methods,
     })
 }
 
@@ -48,6 +49,7 @@ pub struct TypedProgram {
     resolved: ResolvedProgram,
     types: HashMap<Span, Type>,
     surface: Surface,
+    methods: HashMap<Span, Type>,
 }
 
 impl TypedProgram {
@@ -70,5 +72,15 @@ impl TypedProgram {
     #[must_use]
     pub fn type_of(&self, written: Span) -> Option<&Type> {
         self.types.get(&written)
+    }
+
+    /// The type a use of a trait method at `written` reached its instance at.
+    ///
+    /// Every use of a trait method has one, and nothing else does: that is what tells lowering
+    /// which instance the call is a call of, which `docs/specs/traits.md` states is settled
+    /// while the program is compiled.
+    #[must_use]
+    pub fn instance_at(&self, written: Span) -> Option<&Type> {
+        self.methods.get(&written)
     }
 }

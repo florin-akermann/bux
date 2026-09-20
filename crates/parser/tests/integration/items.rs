@@ -208,3 +208,99 @@ fn an_empty_file_is_a_program_with_no_items() {
     assert_eq!(shape(""), [] as [String; 0]);
     assert_eq!(shape("\n\n// nothing here\n"), [] as [String; 0]);
 }
+
+#[test]
+fn a_trait_declares_one_type_parameter_and_one_signature_per_line() {
+    assert_eq!(
+        shape("trait Eq<T> {\n    fn is_equal(one: T, other: T) -> Bool\n}"),
+        [
+            "trait Eq",
+            "  type-parameter T",
+            "  signature is_equal",
+            "    parameter one",
+            "      named-type T",
+            "    parameter other",
+            "      named-type T",
+            "    result",
+            "      named-type Bool",
+        ]
+    );
+}
+
+#[test]
+fn a_trait_declares_as_many_signatures_as_it_writes() {
+    assert_eq!(
+        shape(
+            "trait Show<T> {\n    fn shown(value: T) -> String\n    fn width(value: T) -> Int\n}"
+        ),
+        [
+            "trait Show",
+            "  type-parameter T",
+            "  signature shown",
+            "    parameter value",
+            "      named-type T",
+            "    result",
+            "      named-type String",
+            "  signature width",
+            "    parameter value",
+            "      named-type T",
+            "    result",
+            "      named-type Int",
+        ]
+    );
+}
+
+#[test]
+fn an_instance_names_a_trait_and_the_type_it_is_for() {
+    assert_eq!(
+        shape(
+            "instance Eq<Point> {\n    fn is_equal(one, other) -> Bool {\n        true\n    }\n}"
+        ),
+        [
+            "instance Eq<Point>",
+            "  function is_equal",
+            "    parameter one",
+            "    parameter other",
+            "    result",
+            "      named-type Bool",
+            "    block",
+            "      bool true",
+        ]
+    );
+}
+
+#[test]
+fn a_type_parameter_is_written_with_the_trait_it_is_constrained_by() {
+    assert_eq!(
+        shape("fn has_value<T: Eq<T>>(value: T) -> Bool {\n    true\n}"),
+        [
+            "function has_value",
+            "  type-parameter T",
+            "    constraint Eq",
+            "      named-type T",
+            "  parameter value",
+            "    named-type T",
+            "  result",
+            "    named-type Bool",
+            "  block",
+            "    bool true",
+        ]
+    );
+}
+
+#[test]
+fn a_type_parameter_without_a_constraint_is_written_as_it_always_was() {
+    assert_eq!(
+        shape("fn kept<T>(value: T) -> T {\n    value\n}"),
+        [
+            "function kept",
+            "  type-parameter T",
+            "  parameter value",
+            "    named-type T",
+            "  result",
+            "    named-type T",
+            "  block",
+            "    name value",
+        ]
+    );
+}

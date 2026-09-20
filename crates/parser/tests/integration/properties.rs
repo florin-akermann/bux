@@ -78,6 +78,8 @@ fn item_spans(program: &Program) -> Vec<Span> {
         .map(|item| match item {
             Item::Import(import) => import.span,
             Item::Type(declaration) => declaration.span,
+            Item::Trait(declaration) => declaration.span,
+            Item::Instance(declaration) => declaration.span,
             Item::Function(function) => function.span,
         })
         .collect()

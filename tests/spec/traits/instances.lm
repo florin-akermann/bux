@@ -1,0 +1,47 @@
+// expect-run
+// > one corner does not hold the far point
+// > both of them hold the far point
+// > a point is equal to itself
+// > a list of whole numbers holds 2
+// A type gives `Eq` an instance, and a constrained generic reaches it at each type it is used at.
+import io
+
+fn main() -> () {
+    corner := Point { across: 1, down: 2 }
+    far := Point { across: 3, down: 4 }
+    if has_value([corner], far) {
+        io.println("one corner holds the far point")
+    } else {
+        io.println("one corner does not hold the far point")
+    }
+    if has_value([corner, far], far) {
+        io.println("both of them hold the far point")
+    }
+    if corner == corner {
+        io.println("a point is equal to itself")
+    }
+    if has_value([1, 2], 2) {
+        io.println("a list of whole numbers holds 2")
+    }
+}
+
+// example: has_value([1, 2], 2)
+fn has_value<T: Eq<T>>(items: List<T>, value: T) -> Bool {
+    for item in items {
+        if is_equal(item, value) {
+            return true
+        }
+    }
+    false
+}
+
+instance Eq<Point> {
+    fn is_equal(one: Point, other: Point) -> Bool {
+        one.across == other.across && one.down == other.down
+    }
+}
+
+type Point = {
+    across: Int
+    down: Int
+}

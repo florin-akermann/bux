@@ -1,18 +1,19 @@
 //! The walk: every name of a module, pointed at the definition it means.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
-use lumen_ast::{
-    Block, Expr, ExprKind, ForHeader, ForLoop, Function, IfExpr, Item, MatchExpr, Mutability,
-};
-use lumen_ast::{Name, Pattern, PatternKind, Program, RecordField, Span, Statement, StatementKind};
-use lumen_ast::{TypeDeclaration, TypeDefinition, TypeRef, TypeRefKind, Variant, VariantPayload};
+use lumen_ast::{Block, Expr, ExprKind, ForHeader, ForLoop, Function, IfExpr, Item};
+use lumen_ast::{MatchExpr, Mutability, Name, Pattern, PatternKind, Program, RecordField};
+use lumen_ast::{Span, Statement, StatementKind, TypeDeclaration, TypeDefinition, TypeRef};
+use lumen_ast::{TypeRefKind, Variant, VariantPayload};
 
 use crate::definition::{Definition, DefinitionKind, Namespace, Origin};
 use crate::error::{ResolveError, ResolveErrorKind};
 use crate::order;
 use crate::prelude;
 use crate::scope::Scope;
+
+mod traits;
 
 /// Resolves every name of `program`, or reports the first one that has no definition.
 ///
@@ -67,6 +68,10 @@ struct Resolver {
     types: Scope,
     values: Scope,
     definitions: Definitions,
+    /// Every trait that has an instance for a type, which is what a second one is refused by.
+    instances: HashSet<(String, String)>,
+    /// The methods each trait this module declares declares, which its instances must write.
+    declared_traits: HashMap<String, Vec<String>>,
 }
 
 /// Every name that has a definition, keyed by the namespace it was written in and where.
@@ -75,15 +80,24 @@ type Definitions = HashMap<(Namespace, Span), Definition>;
 impl Resolver {
     fn new() -> Self {
         Self {
-            types: Scope::of_prelude(Namespace::Type, &[(&prelude::TYPES, DefinitionKind::Type)]),
+            types: Scope::of_prelude(
+                Namespace::Type,
+                &[
+                    (&prelude::TYPES, DefinitionKind::Type),
+                    (&prelude::TRAITS, DefinitionKind::Trait),
+                ],
+            ),
             values: Scope::of_prelude(
                 Namespace::Value,
                 &[
                     (&prelude::CONSTRUCTORS, DefinitionKind::Constructor),
                     (&prelude::FUNCTIONS, DefinitionKind::Function),
+                    (&prelude::TRAIT_METHODS, DefinitionKind::TraitMethod),
                 ],
             ),
             definitions: HashMap::new(),
+            instances: traits::supplied_instances(),
+            declared_traits: HashMap::new(),
         }
     }
 
@@ -104,6 +118,8 @@ impl Resolver {
         match item {
             Item::Import(import) => self.introduce_value(&import.module, DefinitionKind::Module),
             Item::Type(declaration) => self.declare_type(declaration),
+            Item::Trait(declaration) => self.declare_trait(declaration),
+            Item::Instance(_) => Ok(()),
             Item::Function(function) => {
                 self.introduce_value(&function.name, DefinitionKind::Function)
             }
@@ -126,6 +142,8 @@ impl Resolver {
         match item {
             Item::Import(_) => Ok(()),
             Item::Type(declaration) => self.type_declaration(declaration),
+            Item::Trait(declaration) => self.trait_declaration(declaration),
+            Item::Instance(declaration) => self.instance(declaration),
             Item::Function(function) => self.function(function),
         }
     }
@@ -171,7 +189,10 @@ impl Resolver {
         self.types.enter();
         self.values.enter();
         for parameter in &function.type_parameters {
-            self.introduce_type(parameter, DefinitionKind::TypeParameter)?;
+            self.introduce_type(&parameter.name, DefinitionKind::TypeParameter)?;
+        }
+        for parameter in &function.type_parameters {
+            self.constrained(parameter)?;
         }
         for parameter in &function.parameters {
             if let Some(type_ref) = &parameter.type_ref {
@@ -323,11 +344,13 @@ impl Resolver {
         let Some(found) = self.values.look_up(&name.text) else {
             return Ok(());
         };
-        if Some(found.kind) == position.also_takes() {
+        if position.takes(found.kind) {
             return Ok(());
         }
         match found.kind {
-            DefinitionKind::Function => Err(refused(name, ResolveErrorKind::NotCalled)),
+            DefinitionKind::Function | DefinitionKind::TraitMethod => {
+                Err(refused(name, ResolveErrorKind::NotCalled))
+            }
             DefinitionKind::Module => Err(refused(name, ResolveErrorKind::NotReachedThrough)),
             _ => Ok(()),
         }
@@ -399,11 +422,21 @@ impl Resolver {
         let TypeRefKind::Named { name, arguments } = &type_ref.kind else {
             return Ok(());
         };
-        self.use_type(name)?;
+        self.named_type(name)?;
         for argument in arguments {
             self.type_ref(argument)?;
         }
         Ok(())
+    }
+
+    /// A type as a type is written, refusing a trait, which names what a type can do and is none.
+    fn named_type(&mut self, name: &Name) -> Resolved {
+        self.use_type(name)?;
+        if self.types.look_up(&name.text).map(|one| one.kind) != Some(DefinitionKind::Trait) {
+            return Ok(());
+        }
+        let kind = ResolveErrorKind::TraitAsType(name.text.clone());
+        Err(ResolveError::at(name, kind))
     }
 
     fn use_type(&mut self, name: &Name) -> Resolved {
@@ -439,12 +472,12 @@ enum Position {
 }
 
 impl Position {
-    /// The one kind this position takes beyond a value, when it takes one at all.
-    const fn also_takes(self) -> Option<DefinitionKind> {
+    /// Whether a name defined as `kind` belongs here beyond an ordinary value.
+    const fn takes(self, kind: DefinitionKind) -> bool {
         match self {
-            Self::Value => None,
-            Self::Callee => Some(DefinitionKind::Function),
-            Self::Receiver => Some(DefinitionKind::Module),
+            Self::Value => false,
+            Self::Callee => matches!(kind, DefinitionKind::Function | DefinitionKind::TraitMethod),
+            Self::Receiver => matches!(kind, DefinitionKind::Module),
         }
     }
 }

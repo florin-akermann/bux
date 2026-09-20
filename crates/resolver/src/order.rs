@@ -28,18 +28,18 @@ pub(crate) fn out_of_order(
         }
         return Some(ResolveError::at(
             declared[meant].name,
-            ResolveErrorKind::written_above(
-                &declared[meant].name.text,
-                &declared[writes].name.text,
-            ),
+            ResolveErrorKind::written_above(&declared[meant].written, &declared[writes].written),
         ));
     }
     None
 }
 
-/// One declaration of a module: the name it declares, and how far it reaches in the source.
+/// One declaration of a module: the name it declares, how it is spoken of, and how far it
+/// reaches in the source.
 struct Declared<'a> {
     name: &'a Name,
+    /// What a refusal calls this declaration, which is its name for all but an instance.
+    written: String,
     extent: Span,
 }
 
@@ -53,14 +53,19 @@ fn declarations(program: &Program) -> Vec<Declared<'_>> {
         .iter()
         .filter_map(|item| match item {
             Item::Import(_) => None,
-            Item::Type(declaration) => Some(Declared {
-                name: &declaration.name,
+            Item::Type(declaration) => Some(named(&declaration.name, declaration.span)),
+            Item::Trait(declaration) => Some(named(&declaration.name, declaration.span)),
+            // An instance declares no name, so it is spoken of by the trait and the type it
+            // names: it is written below that trait, and below whatever its bodies reach.
+            Item::Instance(declaration) => Some(Declared {
+                name: &declaration.trait_name,
+                written: format!(
+                    "{}<{}>",
+                    declaration.trait_name.text, declaration.for_type.text
+                ),
                 extent: declaration.span,
             }),
-            Item::Function(function) => Some(Declared {
-                name: &function.name,
-                extent: function.span,
-            }),
+            Item::Function(function) => Some(named(&function.name, function.span)),
         })
         .collect()
 }
@@ -88,6 +93,15 @@ fn uses(
         }
     }
     found
+}
+
+/// A declaration a refusal speaks of by the one name it declares.
+fn named(name: &Name, extent: Span) -> Declared<'_> {
+    Declared {
+        name,
+        written: name.text.clone(),
+        extent,
+    }
 }
 
 /// Which declaration the source at `written` is inside, when it is inside one at all.

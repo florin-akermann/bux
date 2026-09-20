@@ -22,7 +22,7 @@ mod type_ref;
 
 use std::fmt;
 
-use lumen_ast::TypeDeclaration;
+use lumen_ast::{InstanceDeclaration, TraitDeclaration, TypeDeclaration, TypeRef};
 use lumen_diagnostics::{Code, Diagnostic, Fix};
 use lumen_lexer::Span;
 use lumen_parser::{ParseError, parse};
@@ -74,6 +74,37 @@ pub fn format(source: &str) -> Result<String, ParseError> {
 pub fn type_declaration(declared: &TypeDeclaration) -> String {
     let mut printer = Printer::without_comments();
     item::type_declaration(&mut printer, declared);
+    printer.finish()
+}
+
+/// The canonical text of `declared`, as a file holds it, and holding no comment.
+///
+/// A trait is all surface, as a type declaration is: it declares signatures and no body, so this
+/// is how `lumen api` prints one too.
+#[must_use]
+pub fn trait_declaration(declared: &TraitDeclaration) -> String {
+    let mut printer = Printer::without_comments();
+    item::trait_declaration(&mut printer, declared);
+    printer.finish()
+}
+
+/// `instance Eq<Point>`, which is what an instance puts on an API page.
+///
+/// What the instance writes is what its trait already declares, so the page states that the type
+/// has the trait and leaves the bodies where every other body is left.
+#[must_use]
+pub fn instance_head(declared: &InstanceDeclaration) -> String {
+    format!(
+        "instance {}<{}>\n",
+        declared.trait_name.text, declared.for_type.text
+    )
+}
+
+/// The canonical text of a type as it is written, which a constraint on a page is stated with.
+#[must_use]
+pub fn written_type(written: &TypeRef) -> String {
+    let mut printer = Printer::without_comments();
+    type_ref::type_ref(&mut printer, written);
     printer.finish()
 }
 

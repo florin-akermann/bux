@@ -7,3 +7,4 @@ mod errors;
 mod order;
 mod properties;
 mod scopes;
+mod traits;

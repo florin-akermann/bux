@@ -45,9 +45,9 @@ impl Instantiation {
             .type_parameters
             .iter()
             .map(|written| {
-                let origin = Origin::Declared(written.span);
+                let origin = Origin::Declared(written.name.span);
                 let at = found.get(&origin).cloned();
-                (origin, at.unwrap_or_else(|| itself(written)))
+                (origin, at.unwrap_or_else(|| itself(&written.name)))
             })
             .collect();
         Self { settled }

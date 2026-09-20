@@ -6,6 +6,26 @@
 /// The types the prelude supplies.
 pub(crate) const TYPES: [&str; 6] = ["Bool", "Int", "List", "Option", "Result", "String"];
 
+/// The traits the prelude supplies, which `docs/specs/traits.md` lists.
+pub(crate) const TRAITS: [&str; 1] = [EQ];
+
+/// The methods those traits declare, each a name in scope beside the functions.
+pub(crate) const TRAIT_METHODS: [&str; 1] = [EQUALS];
+
+/// The trait `==` is, which the library will ship once the prelude is Lumen source.
+pub(crate) const EQ: &str = "Eq";
+
+/// The one method `Eq` declares.
+const EQUALS: &str = "is_equal";
+
+/// The types the prelude has instances of `Eq` for, which `docs/design.md` section 8 names.
+pub(crate) const EQUATABLE: [&str; 3] = ["Bool", "Int", "String"];
+
+/// The methods the trait called `name` declares, when the prelude is the one that declares it.
+pub(crate) fn methods_of(name: &str) -> Option<&'static [&'static str]> {
+    (name == EQ).then_some(&TRAIT_METHODS)
+}
+
 /// The constructors the prelude supplies.
 pub(crate) const CONSTRUCTORS: [&str; 4] = ["Err", "None", "Ok", "Some"];
 

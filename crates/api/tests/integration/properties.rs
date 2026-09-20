@@ -78,11 +78,17 @@ fn declarations(source: &str) -> Vec<String> {
     let mut declared = Vec::new();
     for item in &tree(source).items {
         match item {
-            Item::Import(_) => {}
+            // An import names another module, and an instance declares no name of its own.
+            Item::Import(_) | Item::Instance(_) => {}
             Item::Function(function) => declared.push(function.name.text.clone()),
             Item::Type(declaration) => {
                 declared.push(declaration.name.text.clone());
                 declared.extend(variants(&declaration.definition));
+            }
+            Item::Trait(declaration) => {
+                declared.push(declaration.name.text.clone());
+                let methods = declaration.methods.iter();
+                declared.extend(methods.map(|method| method.name.text.clone()));
             }
         }
     }

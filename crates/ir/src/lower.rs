@@ -19,7 +19,7 @@ mod shape;
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 
-use lumen_ast::{Function, Item, Span};
+use lumen_ast::{Function, InstanceDeclaration, Item, Span};
 use lumen_holes::Whole;
 use lumen_types::{Type, TypedProgram};
 
@@ -45,6 +45,7 @@ pub fn lower(whole: &Whole<'_>, module: &str) -> Lowered {
         typed,
         shapes: Shapes::of(typed.resolved(), module),
         declared: declarations_of(typed),
+        answers: instances_of(typed),
         owed: RefCell::new(Vec::new()),
     };
     let module_class = lowering.module_class();
@@ -61,10 +62,19 @@ pub fn lower(whole: &Whole<'_>, module: &str) -> Lowered {
 pub(crate) struct Lowering<'a> {
     pub(crate) typed: &'a TypedProgram,
     pub(crate) shapes: Shapes,
-    /// Every function the module declares, by the span of the name declaring it.
-    declared: HashMap<Span, &'a Function>,
+    /// Every function the module writes, by the span of the name declaring it.
+    declared: HashMap<Span, Declared<'a>>,
+    /// The method each instance writes, by the trait method it answers and the type it is for.
+    answers: HashMap<(String, String), Span>,
     /// The methods still owed, which lowering a body adds to as it meets a use of a generic.
     owed: RefCell<Vec<Owed>>,
+}
+
+/// One function the module writes: the source of it, and what a JVM calls the method it becomes.
+struct Declared<'a> {
+    function: &'a Function,
+    /// An instance's method is named for its trait and its type; every other is named as written.
+    named: String,
 }
 
 /// One method the module still owes: a function, and what one use of it settled its types at.
@@ -110,27 +120,32 @@ impl Lowering<'_> {
         let mut written = HashSet::new();
         let mut methods = Vec::new();
         while let Some(owed) = self.next_owed() {
-            let function = self.declared[&owed.declared];
-            let named = owed.at.names(&function.name.text);
+            let declared = &self.declared[&owed.declared];
+            let named = owed.at.names(&declared.named);
             let signature = self.signature(owed.declared, &owed.at);
             if written.insert((named.clone(), signature.descriptor())) {
-                methods.push(self.method(function, named, &owed.at));
+                methods.push(self.method(declared.function, named, &owed.at));
             }
         }
         methods
     }
 
-    /// Every function the module declares, in the order it writes them.
+    /// Every function the module writes, in the order it writes them.
     fn functions(&self) -> impl Iterator<Item = &Function> {
-        self.typed
-            .resolved()
-            .program()
-            .items
-            .iter()
-            .filter_map(|item| match item {
-                Item::Function(function) => Some(function),
-                Item::Import(_) | Item::Type(_) => None,
-            })
+        self.typed.resolved().program().functions()
+    }
+
+    /// The method the instance for `at` writes for the trait method `method`, where there is one.
+    ///
+    /// An instance the compiler supplies has none, which is what says a call of it is written
+    /// out where it stands rather than made; `docs/specs/traits.md` states the two cases.
+    pub(crate) fn answering(&self, method: &str, at: &lumen_types::Type) -> Option<Span> {
+        let Type::Named { name, .. } = at else {
+            return None;
+        };
+        self.answers
+            .get(&(method.to_owned(), name.clone()))
+            .copied()
     }
 
     /// The method a use of `name` reaches: what it is called, and what it takes and gives back.
@@ -138,16 +153,16 @@ impl Lowering<'_> {
     /// Asking is what has the method written. A use inside a generic body is a use at the types
     /// the body was written for, so what that body settled is applied before the use is read.
     pub(crate) fn used(&self, declared: Span, at: Span, within: &Instantiation) -> Reaching {
-        let function = self.declared[&declared];
+        let function = self.declared[&declared].function;
         if function.type_parameters.is_empty() {
             return Reaching {
-                named: function.name.text.clone(),
+                named: self.declared[&declared].named.clone(),
                 signature: self.signature(declared, &Instantiation::whole()),
             };
         }
         let used = within.substituted(self.used_as(at));
         let settled = Instantiation::of(function, self.used_as(declared), &used);
-        let named = settled.names(&function.name.text);
+        let named = settled.names(&self.declared[&declared].named);
         let signature = self.signature(declared, &settled);
         self.owe(declared, settled);
         Reaching { named, signature }
@@ -214,18 +229,68 @@ pub(crate) struct Reaching {
     pub(crate) signature: Signature,
 }
 
-/// Every function the module declares, by the span of the name declaring it.
-fn declarations_of(typed: &TypedProgram) -> HashMap<Span, &Function> {
-    typed
-        .resolved()
-        .program()
-        .items
-        .iter()
-        .filter_map(|item| match item {
-            Item::Function(function) => Some((function.name.span, function)),
-            Item::Import(_) | Item::Type(_) => None,
-        })
-        .collect()
+/// Every function the module writes, by the span of the name declaring it.
+///
+/// An instance's method is one of them: it has a body like any other function's, and what tells
+/// it apart is the name a JVM reaches it by, which is its trait's and its type's as well as its
+/// own. `docs/specs/traits.md` states the name, and `$` is what joins the three.
+fn declarations_of(typed: &TypedProgram) -> HashMap<Span, Declared<'_>> {
+    let mut declared = HashMap::new();
+    for item in &typed.resolved().program().items {
+        match item {
+            Item::Function(function) => {
+                declared.insert(function.name.span, as_written(function));
+            }
+            Item::Instance(instance) => {
+                declared.extend(
+                    instance
+                        .methods
+                        .iter()
+                        .map(|method| (method.name.span, as_an_instance(instance, method))),
+                );
+            }
+            Item::Import(_) | Item::Type(_) | Item::Trait(_) => {}
+        }
+    }
+    declared
+}
+
+/// A function the module declares, which a JVM reaches by the name it is written with.
+fn as_written(function: &Function) -> Declared<'_> {
+    Declared {
+        function,
+        named: function.name.text.clone(),
+    }
+}
+
+/// One method of an instance, which a JVM reaches by its trait, its type, and its own name.
+fn as_an_instance<'a>(instance: &InstanceDeclaration, method: &'a Function) -> Declared<'a> {
+    let named = format!(
+        "{}${}${}",
+        instance.trait_name.text, instance.for_type.text, method.name.text
+    );
+    Declared {
+        function: method,
+        named,
+    }
+}
+
+/// The method each instance writes, by the trait method it answers and the type it is for.
+///
+/// One trait and one type have one instance, which name resolution has already held the module
+/// to, so what a trait method at a type reaches is settled by looking here and nowhere else.
+fn instances_of(typed: &TypedProgram) -> HashMap<(String, String), Span> {
+    let mut answers = HashMap::new();
+    for item in &typed.resolved().program().items {
+        let Item::Instance(instance) = item else {
+            continue;
+        };
+        for method in &instance.methods {
+            let answering = (method.name.text.clone(), instance.for_type.text.clone());
+            answers.insert(answering, method.name.span);
+        }
+    }
+    answers
 }
 
 /// What a function takes and gives back, with a place for each parameter the source wrote.

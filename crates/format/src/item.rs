@@ -1,7 +1,8 @@
 //! The top-level declarations of a source file.
 
-use lumen_ast::{Function, Import, Item, Parameter, Program, RecordField, TypeDeclaration};
-use lumen_ast::{Name, Span, TypeDefinition, Variant, VariantPayload};
+use lumen_ast::{Function, Import, InstanceDeclaration, Item, Name, Parameter, Program};
+use lumen_ast::{RecordField, Signature, Span, TraitDeclaration, TypeDeclaration};
+use lumen_ast::{TypeDefinition, TypeParameter, TypeRef, Variant, VariantPayload};
 
 use crate::printer::Printer;
 use crate::stmt::{block, close_block, open_block};
@@ -22,6 +23,8 @@ fn item(printer: &mut Printer, written: &Item) {
     match written {
         Item::Import(imported) => import(printer, imported),
         Item::Type(declared) => type_declaration(printer, declared),
+        Item::Trait(declared) => trait_declaration(printer, declared),
+        Item::Instance(declared) => instance(printer, declared),
         Item::Function(declared) => function(printer, declared),
     }
 }
@@ -117,26 +120,87 @@ fn record_body(printer: &mut Printer, fields: &[RecordField], enclosing: Span) {
     close_block(printer, enclosing.end());
 }
 
+/// `trait Eq<T> { … }`, with one signature per line and no blank line between two of them.
+pub(crate) fn trait_declaration(printer: &mut Printer, written: &TraitDeclaration) {
+    printer.comments_above(written.span);
+    printer.open_line();
+    printer.word("trait ");
+    printer.word(&written.name.text);
+    written_over(printer, &written.parameter.text);
+    open_block(printer);
+    for declared in &written.methods {
+        signature(printer, declared);
+    }
+    close_block(printer, written.span.end());
+    printer.end_line();
+}
+
+fn signature(printer: &mut Printer, written: &Signature) {
+    printer.comments_above(written.span);
+    printer.open_line();
+    printer.word("fn ");
+    printer.word(&written.name.text);
+    parameters(printer, &written.parameters);
+    result_type(printer, written.result.as_ref());
+    printer.end_line();
+}
+
+/// `instance Eq<Point> { … }`, with one blank line between two of the functions it writes.
+fn instance(printer: &mut Printer, written: &InstanceDeclaration) {
+    printer.comments_above(written.span);
+    printer.open_line();
+    printer.word("instance ");
+    printer.word(&written.trait_name.text);
+    written_over(printer, &written.for_type.text);
+    open_block(printer);
+    for (position, declared) in written.methods.iter().enumerate() {
+        if position > 0 {
+            printer.blank_line();
+        }
+        function(printer, declared);
+    }
+    close_block(printer, written.span.end());
+    printer.end_line();
+}
+
+/// `<T>`, which is what a trait is declared over and what an instance is written for.
+fn written_over(printer: &mut Printer, name: &str) {
+    printer.word("<");
+    printer.word(name);
+    printer.word(">");
+}
+
 fn function(printer: &mut Printer, written: &Function) {
     printer.comments_above(written.span);
     printer.open_line();
     printer.word("fn ");
     printer.word(&written.name.text);
-    type_parameters(printer, &written.type_parameters);
+    constrained_parameters(printer, &written.type_parameters);
+    parameters(printer, &written.parameters);
+    result_type(printer, written.result.as_ref());
+    block(printer, &written.body, true);
+    printer.end_line();
+}
+
+/// `(a: Int, b: Int)`, which a function and a trait's signature write the same way.
+fn parameters(printer: &mut Printer, written: &[Parameter]) {
     printer.word("(");
-    for (position, declared) in written.parameters.iter().enumerate() {
+    for (position, declared) in written.iter().enumerate() {
         if position > 0 {
             printer.word(", ");
         }
         parameter(printer, declared);
     }
     printer.word(")");
-    if let Some(result) = &written.result {
-        printer.word(" -> ");
-        type_ref(printer, result);
-    }
-    block(printer, &written.body, true);
-    printer.end_line();
+}
+
+/// ` -> Bool`, which a declaration writes only where the author wrote one.
+fn result_type(printer: &mut Printer, written: Option<&TypeRef>) {
+    let Some(result) = written else {
+        return;
+    };
+    printer.word(" -> ");
+    type_ref(printer, result);
 }
 
 fn parameter(printer: &mut Printer, written: &Parameter) {
@@ -150,15 +214,38 @@ fn parameter(printer: &mut Printer, written: &Parameter) {
 
 /// `<T, E>`, which most declarations do not have.
 fn type_parameters(printer: &mut Printer, parameters: &[Name]) {
-    if parameters.is_empty() {
+    listed(printer, parameters.len(), |printer, position| {
+        printer.word(&parameters[position].text);
+    });
+}
+
+/// `<T>` or `<T: Eq<T>>`, which a function writes and a type declaration does not.
+fn constrained_parameters(printer: &mut Printer, parameters: &[TypeParameter]) {
+    listed(printer, parameters.len(), |printer, position| {
+        let declared = &parameters[position];
+        printer.word(&declared.name.text);
+        let Some(constraint) = &declared.constraint else {
+            return;
+        };
+        printer.word(": ");
+        printer.word(&constraint.name.text);
+        printer.word("<");
+        type_ref(printer, &constraint.argument);
+        printer.word(">");
+    });
+}
+
+/// `<…>` around `count` type parameters, comma-separated, or nothing at all when there are none.
+fn listed(printer: &mut Printer, count: usize, mut one: impl FnMut(&mut Printer, usize)) {
+    if count == 0 {
         return;
     }
     printer.word("<");
-    for (position, parameter) in parameters.iter().enumerate() {
+    for position in 0..count {
         if position > 0 {
             printer.word(", ");
         }
-        printer.word(&parameter.text);
+        one(printer, position);
     }
     printer.word(">");
 }

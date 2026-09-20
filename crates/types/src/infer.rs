@@ -19,14 +19,24 @@ use lumen_resolver::{Definition, DefinitionKind, Namespace, ResolvedProgram};
 use crate::environment::{Environment, Key};
 use crate::error::{Count, TypeError, TypeErrorKind};
 use crate::infer::settle::Lookup;
-use crate::scheme::{Quantified, Scheme};
+use crate::scheme::{Quantified, Required, Scheme};
 use crate::surface::{Imported, Surface};
 use crate::table::Table;
 use crate::types::{OPTION, RESULT, Type, TypeVar};
 use crate::unify::{Clash, unify};
 
-/// The type of every expression of `resolved`, and what the module offers, or the first thing
-/// that has no type.
+/// What one run of inference answers: every type it settled, and everything read off them.
+pub(crate) struct Inferred {
+    /// The type of whatever is written at each span, which every expression and name has.
+    pub(crate) types: HashMap<Span, Type>,
+    /// What the module offers a module that imports it.
+    pub(crate) surface: Surface,
+    /// The type each use of a trait method reached its instance at, and nothing else has one.
+    pub(crate) methods: HashMap<Span, Type>,
+}
+
+/// The type of every expression of `resolved`, what the module offers, and the type each use of
+/// a trait method reached its instance at — or the first thing that has no type.
 ///
 /// # Errors
 ///
@@ -34,7 +44,7 @@ use crate::unify::{Clash, unify};
 pub(crate) fn infer(
     resolved: &ResolvedProgram,
     imported: &Imported,
-) -> Result<(HashMap<Span, Type>, Surface), TypeError> {
+) -> Result<Inferred, TypeError> {
     let mut table = Table::default();
     let environment = Environment::of(resolved, &mut table)?;
     let mut inference = Inference {
@@ -50,10 +60,18 @@ pub(crate) fn infer(
         discards: Vec::new(),
         lookups: Vec::new(),
         propagations: Vec::new(),
+        requirements: Vec::new(),
+        promised: Vec::new(),
+        methods_at: HashMap::new(),
     };
     inference.module()?;
-    let offered = inference.offered();
-    Ok((inference.solved(), Surface::of(resolved, offered)))
+    let surface = Surface::of(resolved, inference.offered());
+    let methods = inference.methods_at.clone();
+    Ok(Inferred {
+        types: inference.solved(),
+        surface,
+        methods,
+    })
 }
 
 /// Everything one run of inference is holding while it walks.
@@ -79,6 +97,12 @@ struct Inference<'a> {
     lookups: Vec<Lookup>,
     /// The `?`s of the current function that nothing had yet said which kind they propagate.
     propagations: Vec<Propagation>,
+    /// The traits the current function must answer for, each at the type it was asked of.
+    requirements: Vec<Requirement>,
+    /// The traits the current function's own type parameters promise, which answer for it.
+    promised: Vec<Required>,
+    /// The type each use of a trait method reached its instance at, by where the use is written.
+    methods_at: HashMap<Span, Type>,
 }
 
 impl Inference<'_> {
@@ -89,10 +113,17 @@ impl Inference<'_> {
     /// that declares no signature has been given one by the time anything calls it.
     fn module(&mut self) -> Result<(), TypeError> {
         let resolved = self.resolved;
-        for item in resolved.program().items.iter().rev() {
-            if let Item::Function(function) = item {
-                self.function(function)?;
+        for item in &resolved.program().items {
+            let Item::Trait(declaration) = item else {
+                continue;
+            };
+            for method in &declaration.methods {
+                self.settle_method(method)?;
             }
+        }
+        let written: Vec<&Function> = resolved.program().functions().collect();
+        for function in written.into_iter().rev() {
+            self.function(function)?;
         }
         Ok(())
     }
@@ -114,7 +145,7 @@ impl Inference<'_> {
                         .expect("every function a module declares is bound before its body");
                     Some((function.name.text.clone(), scheme.clone()))
                 }
-                Item::Import(_) | Item::Type(_) => None,
+                Item::Import(_) | Item::Type(_) | Item::Trait(_) | Item::Instance(_) => None,
             })
             .collect()
     }
@@ -122,7 +153,9 @@ impl Inference<'_> {
     fn function(&mut self, function: &Function) -> Result<(), TypeError> {
         let key = Key::at(&function.name);
         let scheme = self.scheme(&key);
+        self.promised = scheme.required().to_vec();
         self.types.insert(function.name.span, scheme.body().clone());
+        self.writes_the_method(&key, scheme.body(), function.name.span)?;
         let Type::Function { parameters, result } = scheme.body().clone() else {
             unreachable!("a function is declared with a function type")
         };
@@ -136,6 +169,7 @@ impl Inference<'_> {
         self.settle_propagations()?;
         self.settle_additions()?;
         self.settle_equalities()?;
+        self.settle_requirements()?;
         self.settle_discards()?;
         self.settle_parameters(function)?;
         self.settle_predicate(function)?;
@@ -144,6 +178,18 @@ impl Inference<'_> {
         }
         self.generalise(key);
         Ok(())
+    }
+
+    /// Holds an instance's method to the signature its trait gives it at the instance's type.
+    ///
+    /// A body may leave a type out and let this supply it, which is why the two are met rather
+    /// than compared: `fn equals(a, b)` in `instance Eq<Point>` takes two `Point`s because the
+    /// trait says so.
+    fn writes_the_method(&mut self, key: &Key, found: &Type, at: Span) -> Result<(), TypeError> {
+        let Some(declared) = self.environment.written_as(key).cloned() else {
+            return Ok(());
+        };
+        self.expect(&declared, &found.clone(), at)
     }
 
     /// What a block leaves behind, having refused every statement that leaves something unread.
@@ -497,10 +543,25 @@ impl Inference<'_> {
     }
 
     /// The type `name` has at this one use, fresh in whatever its definition is free over.
+    ///
+    /// A name written over a constrained type parameter asks its trait of whatever this use
+    /// settles that parameter on, and a trait's method asks its own trait the same way.
     fn value(&mut self, name: &Name) -> Type {
         let key = self.key_of(name);
         let scheme = self.scheme(&key);
-        scheme.instantiate(&mut self.table)
+        let (found, asked) = scheme.at_one_use(&mut self.table);
+        let how = match self.environment.of_a_trait(&key) {
+            Some(_) => Asked::Method,
+            None => Asked::Constraint,
+        };
+        for required in asked {
+            self.requirements.push(Requirement {
+                required,
+                written: name.span,
+                how,
+            });
+        }
+        found
     }
 
     /// Binds `name` to `scheme`, and records the type at the name, which is where it is declared.
@@ -546,7 +607,9 @@ impl Inference<'_> {
             .cloned()
             .chain(over.into_iter().map(Quantified::Var))
             .collect();
-        self.environment.bind(key, Scheme::over(quantified, body));
+        let required = shell.required().to_vec();
+        self.environment
+            .bind(key, Scheme::over(quantified, body).requiring(required));
     }
 
     /// A binding is as polymorphic as the value it was given, which is let-polymorphism.
@@ -582,6 +645,9 @@ impl Inference<'_> {
         }
         for (compared, _) in &self.equalities {
             self.table.unsettled(compared, &mut held);
+        }
+        for requirement in &self.requirements {
+            self.table.unsettled(&requirement.required.at, &mut held);
         }
         free.retain(|var| !held.contains(var));
         free
@@ -647,6 +713,25 @@ pub(crate) struct Propagation {
     pub(crate) inner: Span,
     /// Where the `?` is written, which a function of the wrong kind is reported at.
     pub(crate) at: Span,
+}
+
+/// One trait a use must answer for, at the type that use asked it of.
+pub(crate) struct Requirement {
+    pub(crate) required: Required,
+    /// Where the use is written, which is what an unanswered trait is reported against.
+    pub(crate) written: Span,
+    pub(crate) how: Asked,
+}
+
+/// How a trait came to be asked for, which is what an unanswered one is worded by.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum Asked {
+    /// A call of one of the trait's methods, which reaches the instance for that type.
+    Method,
+    /// A use of something whose type parameter the declaration constrained by the trait.
+    Constraint,
+    /// `==` or `!=`, which `docs/design.md` section 8 makes `Eq`'s and reports as its own.
+    Comparison,
 }
 
 /// Which case a `?` hands back, neither of which ever becomes the other.

@@ -3,7 +3,7 @@
 //! A behaviour is stated as a whole module, because that is what inference takes. The type of one
 //! expression of it is then read back by the text that expression is written with.
 
-use lumen_ast::{Block, Expr, ExprKind, ForHeader, IfExpr, Item, Program, Span};
+use lumen_ast::{Block, Expr, ExprKind, ForHeader, IfExpr, Program, Span};
 use lumen_ast::{Statement, StatementKind};
 use lumen_parser::parse;
 use lumen_resolver::{ResolvedProgram, resolve};
@@ -68,12 +68,12 @@ pub fn inferred_reaching(source: &str, imported: &Imported) -> TypedProgram {
 }
 
 /// Every expression `program` writes, each one exactly once.
+///
+/// An instance's method has a body like any other function's, so its expressions are among them.
 pub fn expressions(program: &Program) -> Vec<&Expr> {
     let mut found = Vec::new();
-    for item in &program.items {
-        if let Item::Function(function) = item {
-            from_block(&function.body, &mut found);
-        }
+    for function in program.functions() {
+        from_block(&function.body, &mut found);
     }
     found
 }

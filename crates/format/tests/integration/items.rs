@@ -87,3 +87,43 @@ fn a_function_without_a_result_type_writes_none() {
 fn an_empty_file_formats_to_nothing() {
     assert_eq!(formatted(""), "");
 }
+
+#[test]
+fn a_trait_writes_one_signature_per_line_with_no_blank_line_between_two() {
+    assert_eq!(
+        formatted("trait Show<T>{\nfn shown(value:T)->String\nfn width(value:T)->Int\n}\n"),
+        concat!(
+            "trait Show<T> {\n",
+            "    fn shown(value: T) -> String\n",
+            "    fn width(value: T) -> Int\n",
+            "}\n"
+        )
+    );
+}
+
+#[test]
+fn an_instance_writes_one_blank_line_between_two_of_its_functions() {
+    assert_eq!(
+        formatted(concat!(
+            "instance Show<Point>{\n",
+            "fn shown(value:Point)->String{\n\"point\"\n}\n",
+            "fn width(value:Point)->Int{\n5\n}\n",
+            "}\n"
+        )),
+        concat!(
+            "instance Show<Point> {\n",
+            "    fn shown(value: Point) -> String {\n        \"point\"\n    }\n",
+            "\n",
+            "    fn width(value: Point) -> Int {\n        5\n    }\n",
+            "}\n"
+        )
+    );
+}
+
+#[test]
+fn a_constrained_type_parameter_writes_its_trait_after_a_colon_and_a_space() {
+    assert_eq!(
+        formatted("fn has_value<T:Eq<T>>(value:T)->Bool{\ntrue\n}\n"),
+        "fn has_value<T: Eq<T>>(value: T) -> Bool {\n    true\n}\n"
+    );
+}

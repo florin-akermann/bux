@@ -31,7 +31,10 @@ How the formatter carries a comment through the round trip is decided in Item 00
 A type declaration declares a record or variants; there is no type alias, which `docs/design.md`
 never writes, and `type Ids = List<Int>` is therefore a parse error.
 
-Nothing from a later version is parsed: no `trait`, `derive`, `extern`, `spawn`, or effect arrow.
+A trait declares signatures and an instance writes bodies for them, which `docs/specs/traits.md`
+states; a trait is written over one type parameter and an instance is for a type written by name.
+
+Nothing from a later version is parsed: no `derive`, `extern`, `spawn`, or effect arrow.
 The lexer reserves no word for them, so each reads as an ordinary identifier and fails in place.
 
 ## Newlines
@@ -62,7 +65,7 @@ Uppercase and lowercase spellings are not distinguished; `Name` below is any ide
 ```text
 program        := { item }
 
-item           := import | type_declaration | function
+item           := import | type_declaration | trait | instance | function
 
 import         := "import" Name
 
@@ -74,7 +77,13 @@ variant          := Name [ "(" type { "," type } ")" | record_type ]
 
 type           := Name [ "<" type { "," type } ">" ] | "(" ")"
 
-function       := "fn" Name [ type_parameters ] "(" [ parameters ] ")" [ "->" type ] block
+trait          := "trait" Name "<" Name ">" "{" signature { signature } "}"
+signature      := "fn" Name "(" [ parameters ] ")" [ "->" type ]
+instance       := "instance" Name "<" Name ">" "{" function { function } "}"
+
+function       := "fn" Name [ constrained_parameters ] "(" [ parameters ] ")" [ "->" type ] block
+constrained_parameters := "<" constrained { "," constrained } ">"
+constrained    := Name [ ":" Name "<" type ">" ]
 parameters     := parameter { "," parameter }
 parameter      := Name [ ":" type ]
 
@@ -161,8 +170,8 @@ or, at the end of input, the last token.
 A parse error reads `expected <what>, found <what was there>`, in the voice of
 `docs/implementation.md` section 8.
 The expectation names a thing the reader writes, never a parser state: `a name`, `a type`,
-`an expression`, `a pattern`, `a function name`, `the end of the line`,
-`an import, a type, or a function`, or the exact token, as in `` `)` ``.
+`an expression`, `a pattern`, `a function name`, `a trait`, `the end of the line`,
+`an import, a type, a trait, an instance, or a function`, or the exact token, as in `` `)` ``.
 The found part names what is there the same way, or `the end of the file`.
 
 Every parse error carries a code, and `docs/specs/diagnostics.md` is the catalogue of them.

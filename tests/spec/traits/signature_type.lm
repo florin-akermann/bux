@@ -1,0 +1,9 @@
+// expect-error: L0419
+// A signature has no body, so a parameter of one states its type where it is written.
+fn main() -> () {
+    ()
+}
+
+trait Area<T> {
+    fn covered(shape) -> Int
+}

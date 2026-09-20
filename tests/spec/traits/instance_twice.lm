@@ -1,0 +1,24 @@
+// expect-error: L0308
+// One trait and one type have one instance, so a second is refused where it is written.
+fn main() -> () {
+    if is_equal(Point { across: 1 }, Point { across: 1 }) {
+        return ()
+    }
+    ()
+}
+
+instance Eq<Point> {
+    fn is_equal(one: Point, other: Point) -> Bool {
+        one.across == other.across
+    }
+}
+
+instance Eq<Point> {
+    fn is_equal(one: Point, other: Point) -> Bool {
+        false
+    }
+}
+
+type Point = {
+    across: Int
+}

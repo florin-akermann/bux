@@ -507,6 +507,11 @@ impl<'a> Builder<'a> {
         self.lowering.used(declared, at, &self.at)
     }
 
+    /// What the use this body is being written for settled each of its type parameters at.
+    pub(crate) const fn at(&self) -> &Instantiation {
+        &self.at
+    }
+
     pub(crate) fn definition(&self, name: &Name) -> Definition {
         self.lowering
             .typed

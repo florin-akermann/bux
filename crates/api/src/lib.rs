@@ -33,6 +33,8 @@ fn stanza(typed: &TypedProgram, declared: &Item) -> Option<String> {
     match declared {
         Item::Import(_) => None,
         Item::Type(declaration) => Some(lumen_format::type_declaration(declaration)),
+        Item::Trait(declaration) => Some(lumen_format::trait_declaration(declaration)),
+        Item::Instance(declaration) => Some(lumen_format::instance_head(declaration)),
         Item::Function(declaration) => Some(signature::of(typed, declaration)),
     }
 }

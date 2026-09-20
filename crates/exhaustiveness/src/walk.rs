@@ -1,7 +1,7 @@
 //! Every `match` of a module, checked where it is written.
 
 use lumen_ast::Program;
-use lumen_ast::{Block, Expr, ExprKind, ForHeader, ForLoop, IfExpr, Item, MatchExpr};
+use lumen_ast::{Block, Expr, ExprKind, ForHeader, ForLoop, IfExpr, MatchExpr};
 use lumen_ast::{Span, Statement, StatementKind};
 
 use crate::error::MatchError;
@@ -16,10 +16,8 @@ type Checked = Result<(), MatchError>;
 /// Checks every `match` of `program`, in the order they are written.
 pub(crate) fn module(program: &Program, reading: &Reading, space: &Space) -> Checked {
     let walk = Walk { reading, space };
-    for item in &program.items {
-        if let Item::Function(function) = item {
-            walk.block(&function.body)?;
-        }
+    for function in program.functions() {
+        walk.block(&function.body)?;
     }
     Ok(())
 }

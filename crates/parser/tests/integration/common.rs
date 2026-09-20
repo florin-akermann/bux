@@ -7,8 +7,9 @@
 use std::fmt::Write as _;
 
 use lumen_ast::{Arguments, Block, Expr, ExprKind, IfExpr, Item, MatchExpr, Pattern, PatternKind};
-use lumen_ast::{Function, Import, RecordField, TypeDeclaration, Variant, VariantPayload};
+use lumen_ast::{Function, Import, InstanceDeclaration, RecordField, Signature, TraitDeclaration};
 use lumen_ast::{Span, Statement, StatementKind, TypeDefinition, TypeRef, TypeRefKind};
+use lumen_ast::{TypeDeclaration, TypeParameter, Variant, VariantPayload};
 use lumen_parser::{ParseError, parse};
 
 /// The rendered tree of `source` below its first `above` lines, unindented by `depth` levels.
@@ -103,7 +104,58 @@ fn item_node(tree: &mut Tree, depth: usize, item: &Item) {
     match item {
         Item::Import(import) => import_node(tree, depth, import),
         Item::Type(declaration) => type_declaration_node(tree, depth, declaration),
+        Item::Trait(declaration) => trait_node(tree, depth, declaration),
+        Item::Instance(declaration) => instance_node(tree, depth, declaration),
         Item::Function(function) => function_node(tree, depth, function),
+    }
+}
+
+fn trait_node(tree: &mut Tree, depth: usize, declaration: &TraitDeclaration) {
+    tree.node(
+        depth,
+        &format!("trait {}", declaration.name.text),
+        declaration.span,
+    );
+    tree.node(
+        depth + 1,
+        &format!("type-parameter {}", declaration.parameter.text),
+        declaration.parameter.span,
+    );
+    for method in &declaration.methods {
+        signature_node(tree, depth + 1, method);
+    }
+}
+
+fn signature_node(tree: &mut Tree, depth: usize, method: &Signature) {
+    tree.node(
+        depth,
+        &format!("signature {}", method.name.text),
+        method.span,
+    );
+    for parameter in &method.parameters {
+        tree.node(
+            depth + 1,
+            &format!("parameter {}", parameter.name.text),
+            parameter.span,
+        );
+        if let Some(type_ref) = &parameter.type_ref {
+            type_ref_node(tree, depth + 2, type_ref);
+        }
+    }
+    if let Some(result) = &method.result {
+        tree.group(depth + 1, "result");
+        type_ref_node(tree, depth + 2, result);
+    }
+}
+
+fn instance_node(tree: &mut Tree, depth: usize, declaration: &InstanceDeclaration) {
+    let label = format!(
+        "instance {}<{}>",
+        declaration.trait_name.text, declaration.for_type.text
+    );
+    tree.node(depth, &label, declaration.span);
+    for method in &declaration.methods {
+        function_node(tree, depth + 1, method);
     }
 }
 
@@ -159,11 +211,7 @@ fn function_node(tree: &mut Tree, depth: usize, function: &Function) {
         function.span,
     );
     for parameter in &function.type_parameters {
-        tree.node(
-            depth + 1,
-            &format!("type-parameter {}", parameter.text),
-            parameter.span,
-        );
+        type_parameter_node(tree, depth + 1, parameter);
     }
     for parameter in &function.parameters {
         tree.node(
@@ -180,6 +228,23 @@ fn function_node(tree: &mut Tree, depth: usize, function: &Function) {
         type_ref_node(tree, depth + 2, result);
     }
     block_node(tree, depth + 1, &function.body);
+}
+
+/// A `<T>` of a function, with the trait it is constrained by when the author wrote one.
+fn type_parameter_node(tree: &mut Tree, depth: usize, parameter: &TypeParameter) {
+    tree.node(
+        depth,
+        &format!("type-parameter {}", parameter.name.text),
+        parameter.name.span,
+    );
+    if let Some(constraint) = &parameter.constraint {
+        tree.node(
+            depth + 1,
+            &format!("constraint {}", constraint.name.text),
+            constraint.span,
+        );
+        type_ref_node(tree, depth + 2, &constraint.argument);
+    }
 }
 
 fn record_fields(tree: &mut Tree, depth: usize, fields: &[RecordField]) {

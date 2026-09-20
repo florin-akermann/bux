@@ -1,13 +1,14 @@
 //! What a module declares, gathered before any body is inferred.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
-use lumen_ast::{Function, TypeRef, TypeRefKind, Variant, VariantPayload};
-use lumen_ast::{Item, Name, RecordField, Span, TypeDeclaration, TypeDefinition};
+use lumen_ast::{Function, InstanceDeclaration, TraitDeclaration, TypeRef, TypeRefKind};
+use lumen_ast::{Item, Name, RecordField, Signature, Span, TypeDeclaration, TypeDefinition};
+use lumen_ast::{Variant, VariantPayload};
 use lumen_resolver::{Definition, DefinitionKind, Namespace, Origin, ResolvedProgram};
 
 use crate::error::{Count, TypeError, TypeErrorKind};
-use crate::scheme::{Quantified, Scheme};
+use crate::scheme::{Quantified, Required, Scheme};
 use crate::table::Table;
 use crate::types::{Type, TypeParameter};
 
@@ -22,6 +23,14 @@ pub(crate) struct Environment {
     labels: HashMap<Key, Vec<String>>,
     records: HashMap<String, Key>,
     arities: HashMap<Key, usize>,
+    /// The stand-in each trait method's scheme is written over, which is its trait's parameter.
+    methods: HashMap<Key, Quantified>,
+    /// Every trait that has an instance for a type, by the two names that say so.
+    instances: HashSet<(String, String)>,
+    /// What each instance's method must be, which is its trait's method at the instance's type.
+    written_as: HashMap<Key, Type>,
+    /// Where each method of each trait is declared, which is what an instance is read against.
+    declares: HashMap<(String, String), Key>,
 }
 
 impl Environment {
@@ -32,18 +41,58 @@ impl Environment {
     /// Returns the first written type that names the wrong number of arguments.
     pub(crate) fn of(resolved: &ResolvedProgram, table: &mut Table) -> Result<Self, TypeError> {
         let mut environment = Self::of_prelude();
-        for item in &resolved.program().items {
-            if let Item::Type(declaration) = item {
-                let arity = declaration.parameters.len();
-                environment
-                    .arities
-                    .insert(Key::at(&declaration.name), arity);
-            }
-        }
+        environment.note_arities(resolved);
+        environment.declare_traits(resolved)?;
         for item in &resolved.program().items {
             environment.declare(resolved, item, table)?;
         }
         Ok(environment)
+    }
+
+    /// How many arguments each declared type takes, which every written type is then held to.
+    ///
+    /// This is read while a declaration is being read, so it is gathered before any of them are.
+    fn note_arities(&mut self, resolved: &ResolvedProgram) {
+        for item in &resolved.program().items {
+            let Item::Type(declaration) = item else {
+                continue;
+            };
+            self.arities
+                .insert(Key::at(&declaration.name), declaration.parameters.len());
+        }
+    }
+
+    /// Every trait the module declares, which an instance below it is read against.
+    ///
+    /// # Errors
+    ///
+    /// Returns the first written type that names the wrong number of arguments.
+    fn declare_traits(&mut self, resolved: &ResolvedProgram) -> Result<(), TypeError> {
+        for item in &resolved.program().items {
+            let Item::Trait(declaration) = item else {
+                continue;
+            };
+            self.declare_trait(resolved, declaration)?;
+        }
+        Ok(())
+    }
+
+    /// The stand-in the method defined at `key` is written over, when it is a trait's method.
+    ///
+    /// Only a trait's method has one, so this is also what says a name is one of them.
+    pub(crate) fn of_a_trait(&self, key: &Key) -> Option<&Quantified> {
+        self.methods.get(key)
+    }
+
+    /// Whether the trait called `of` has an instance for the type called `for_type`.
+    pub(crate) fn has_instance(&self, of: &str, for_type: &str) -> bool {
+        self.instances
+            .contains(&(of.to_owned(), for_type.to_owned()))
+    }
+
+    /// What the instance method defined at `key` must be, when `key` is one of them.
+    pub(crate) fn written_as(&self, key: &Key) -> Option<&Type> {
+        self.written_as.get(key)
     }
 
     /// The type of the name defined at `key`, when that name has one.
@@ -113,7 +162,36 @@ impl Environment {
         );
         environment.bind(Key::prelude("or"), or(&value));
         environment.bind(Key::prelude("todo"), todo(&value));
+        environment.supply_equality(&value);
         environment
+    }
+
+    /// `Eq`, and the instances of it the library will ship once the prelude is Lumen source.
+    ///
+    /// `docs/specs/traits.md` writes the trait out. It is declared here for the reason the
+    /// prelude's types are declared here: a module cannot be loaded from a file yet.
+    fn supply_equality(&mut self, value: &TypeParameter) {
+        let compared = Type::Parameter(value.clone());
+        let key = Key::prelude(EQUALS);
+        let asks = vec![Required {
+            trait_name: EQ.to_owned(),
+            at: compared.clone(),
+        }];
+        self.bind(
+            key.clone(),
+            Scheme::over(
+                vec![Quantified::Parameter(value.clone())],
+                Type::function(vec![compared.clone(), compared], Type::boolean()),
+            )
+            .requiring(asks),
+        );
+        self.methods
+            .insert(key.clone(), Quantified::Parameter(value.clone()));
+        self.declares
+            .insert((EQ.to_owned(), EQUALS.to_owned()), key);
+        for for_type in EQUATABLE {
+            self.instances.insert((EQ.to_owned(), for_type.to_owned()));
+        }
     }
 
     fn declare(
@@ -129,8 +207,118 @@ impl Environment {
                 Ok(())
             }
             Item::Type(declaration) => self.declare_type(resolved, declaration),
+            Item::Trait(_) => Ok(()),
+            Item::Instance(declaration) => self.declare_instance(resolved, declaration, table),
             Item::Function(function) => self.declare_function(resolved, function, table),
         }
+    }
+
+    /// A trait gives each of its methods a type, written over the one parameter it declares.
+    ///
+    /// The method is the name every instance answers for, so this is the type a call of it is
+    /// read against, whichever instance turns out to answer.
+    fn declare_trait(
+        &mut self,
+        resolved: &ResolvedProgram,
+        declaration: &TraitDeclaration,
+    ) -> Result<(), TypeError> {
+        let written = TypeParameter::written(&declaration.parameter);
+        let parameter = Quantified::Parameter(written.clone());
+        let asks = vec![Required {
+            trait_name: declaration.name.text.clone(),
+            at: Type::Parameter(written),
+        }];
+        for method in &declaration.methods {
+            let signature = self.signature(resolved, method)?;
+            let key = Key::at(&method.name);
+            let scheme = Scheme::over(vec![parameter.clone()], signature).requiring(asks.clone());
+            self.bind(key.clone(), scheme);
+            self.methods.insert(key.clone(), parameter.clone());
+            self.declares.insert(
+                (declaration.name.text.clone(), method.name.text.clone()),
+                key,
+            );
+        }
+        Ok(())
+    }
+
+    /// One signature of a trait, which names types and nothing that has to be inferred.
+    ///
+    /// A function leaves a parameter's type out and inference reads it off the body. A signature
+    /// has no body, so a type left out here is one nothing would ever settle, and it is refused
+    /// where it is missing rather than at the instance that is later held to whatever it became.
+    fn signature(&self, resolved: &ResolvedProgram, method: &Signature) -> Result<Type, TypeError> {
+        let mut parameters = Vec::new();
+        for parameter in &method.parameters {
+            let Some(written) = &parameter.type_ref else {
+                let kind = TypeErrorKind::SignatureWithoutType(parameter.name.text.clone());
+                return Err(TypeError::at(parameter.name.span, kind));
+            };
+            parameters.push(self.written(resolved, written)?);
+        }
+        let result = match &method.result {
+            Some(written) => self.written(resolved, written)?,
+            None => Type::Unit,
+        };
+        Ok(Type::function(parameters, result))
+    }
+
+    /// An instance: the methods it writes, and what each of them has to be.
+    ///
+    /// An instance's method is monomorphic — its trait's parameter has settled on the instance's
+    /// type — so it is declared as a function is, and held to the trait's signature at that type.
+    fn declare_instance(
+        &mut self,
+        resolved: &ResolvedProgram,
+        declaration: &InstanceDeclaration,
+        table: &mut Table,
+    ) -> Result<(), TypeError> {
+        self.takes_no_arguments(resolved, &declaration.for_type)?;
+        let of = declaration.trait_name.text.clone();
+        let for_type = declaration.for_type.text.clone();
+        self.instances.insert((of, for_type.clone()));
+        let given = Type::Named {
+            name: for_type,
+            arguments: Vec::new(),
+        };
+        for method in &declaration.methods {
+            self.declare_function(resolved, method, table)?;
+            let of = &declaration.trait_name.text;
+            let Some(declared) = self.method_at(of, &method.name.text, &given) else {
+                continue;
+            };
+            self.written_as.insert(Key::at(&method.name), declared);
+        }
+        Ok(())
+    }
+
+    /// An instance is for a whole type, so the type it names takes no arguments.
+    ///
+    /// `instance Eq<Option>` would be an instance of one name, and every `Option<T>` would then
+    /// reach it whatever `T` turned out to be. An instance per argument waits for the spec that
+    /// derives one, so a type that takes arguments is refused here, counted as anywhere else.
+    ///
+    /// # Errors
+    ///
+    /// Returns the instance whose type takes arguments that the instance does not name.
+    fn takes_no_arguments(
+        &self,
+        resolved: &ResolvedProgram,
+        for_type: &Name,
+    ) -> Result<(), TypeError> {
+        let definition = resolved
+            .definition(Namespace::Type, for_type)
+            .expect("name resolution gave the instance's type a definition");
+        let key = Key::of(definition, for_type);
+        Self::counted(for_type, *self.arities.get(&key).unwrap_or(&0), 0)
+    }
+
+    /// The type the trait `of` gives the method `method` at `given`, when it declares one.
+    fn method_at(&self, of: &str, method: &str, given: &Type) -> Option<Type> {
+        let key = self.declares.get(&(of.to_owned(), method.to_owned()))?;
+        let scheme = self.values.get(key)?;
+        let parameter = self.methods.get(key)?;
+        Some(scheme.settling(parameter, given.clone()))
     }
 
     /// A type declaration gives a type to each of the values its variants are built with.
@@ -183,10 +371,31 @@ impl Environment {
             Some(written) => self.written(resolved, written)?,
             None => table.fresh(),
         };
-        let over = quantified(&function.type_parameters);
+        let over = written_over(&function.type_parameters);
         let signature = Type::function(parameters, result);
-        self.bind(Key::at(&function.name), Scheme::over(over, signature));
+        let required = self.constraints(resolved, function)?;
+        let scheme = Scheme::over(over, signature).requiring(required);
+        self.bind(Key::at(&function.name), scheme);
         Ok(())
+    }
+
+    /// The traits a function's type parameters are constrained by, at the types they constrain.
+    fn constraints(
+        &self,
+        resolved: &ResolvedProgram,
+        function: &Function,
+    ) -> Result<Vec<Required>, TypeError> {
+        let mut required = Vec::new();
+        for parameter in &function.type_parameters {
+            let Some(constraint) = &parameter.constraint else {
+                continue;
+            };
+            required.push(Required {
+                trait_name: constraint.name.text.clone(),
+                at: self.written(resolved, &constraint.argument)?,
+            });
+        }
+        Ok(required)
     }
 
     fn built_variant(
@@ -331,6 +540,15 @@ impl Key {
     }
 }
 
+/// The trait `==` is, which `docs/design.md` section 8 makes the first operator written as one.
+const EQ: &str = "Eq";
+
+/// The one method `Eq` declares.
+const EQUALS: &str = "is_equal";
+
+/// The types the prelude has an instance of `Eq` for, which the library will ship.
+const EQUATABLE: [&str; 3] = ["Bool", "Int", "String"];
+
 /// The types the prelude supplies, with how many arguments each one is written with.
 const PRELUDE_TYPES: [(&str, usize); 6] = [
     ("Bool", 0),
@@ -352,6 +570,14 @@ fn quantified(parameters: &[Name]) -> Vec<Quantified> {
     parameters
         .iter()
         .map(|parameter| Quantified::Parameter(TypeParameter::written(parameter)))
+        .collect()
+}
+
+/// The stand-ins a function is written over, which are its type parameters constrained or not.
+fn written_over(parameters: &[lumen_ast::TypeParameter]) -> Vec<Quantified> {
+    parameters
+        .iter()
+        .map(|parameter| Quantified::Parameter(TypeParameter::written(&parameter.name)))
         .collect()
 }
 

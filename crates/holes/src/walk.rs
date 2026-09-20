@@ -1,6 +1,6 @@
 //! Every hole of a module, found where it is written.
 
-use lumen_ast::{Block, Branch, Expr, ExprKind, ForHeader, ForLoop, IfExpr, Item, MatchExpr, Name};
+use lumen_ast::{Block, Branch, Expr, ExprKind, ForHeader, ForLoop, IfExpr, MatchExpr, Name};
 use lumen_ast::{Statement, StatementKind};
 use lumen_resolver::{Namespace, Origin, ResolvedProgram};
 
@@ -13,10 +13,8 @@ const TODO: &str = "todo";
 pub(crate) fn module(resolved: &ResolvedProgram) -> Vec<Hole> {
     let walk = Walk { resolved };
     let mut found = Vec::new();
-    for item in &resolved.program().items {
-        if let Item::Function(function) = item {
-            walk.block(&function.body, &mut found);
-        }
+    for function in resolved.program().functions() {
+        walk.block(&function.body, &mut found);
     }
     found
 }

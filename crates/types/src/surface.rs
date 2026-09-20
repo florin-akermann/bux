@@ -53,7 +53,7 @@ impl Surface {
             .iter()
             .filter_map(|item| match item {
                 Item::Type(declaration) => Some(declaration.name.text.clone()),
-                Item::Import(_) | Item::Function(_) => None,
+                Item::Import(_) | Item::Trait(_) | Item::Instance(_) | Item::Function(_) => None,
             })
             .collect();
         let offered = functions

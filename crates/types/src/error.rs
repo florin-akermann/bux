@@ -118,6 +118,13 @@ pub(crate) enum TypeErrorKind {
         module: String,
         name: String,
     },
+    /// A trait method, or a constrained generic, used at a type that has no instance.
+    NoInstance {
+        of: String,
+        at: Type,
+    },
+    /// A parameter of a trait's method that states no type.
+    SignatureWithoutType(String),
     /// A declared type holds a value of itself, around a ring that comes back to it.
     HoldsItself {
         /// The types the ring runs through, beginning and ending at the one refused.
@@ -138,6 +145,8 @@ impl TypeErrorKind {
             Self::MissingField { .. } => Code::MissingField,
             Self::FieldWrittenTwice { .. } => Code::FieldWrittenTwice,
             Self::NotEquatable(_) => Code::NotEquatable,
+            Self::NoInstance { .. } => Code::NoInstance,
+            Self::SignatureWithoutType(_) => Code::SignatureWithoutType,
             Self::DivisorIsZero => Code::DivisorIsZero,
             Self::Discarded(_) => Code::Discarded,
             Self::Unnamed { .. } => Code::Unnamed,
@@ -172,7 +181,13 @@ impl TypeErrorKind {
             }
             Self::FieldWrittenTwice { .. } => "a record gives each of its fields one value",
             Self::NotEquatable(_) => {
-                "`==` and `!=` need `Eq`, which version 0.1 gives to `Int`, `Bool`, and `String`"
+                "`==` and `!=` need `Eq`; write an instance, or compare what the value holds"
+            }
+            Self::NoInstance { .. } => {
+                "write the instance, or constrain the type parameter the call is made at"
+            }
+            Self::SignatureWithoutType(_) => {
+                "a signature has no body to read a type off, so it writes each one out"
             }
             Self::DivisorIsZero => "a zero written here is never anything else; drop the division",
             Self::Discarded(_) => "write `_ = ` in front of it to throw the value away on purpose",
@@ -224,25 +239,9 @@ impl fmt::Display for TypeErrorKind {
                     "the type here is not known, so `{field}` cannot be found"
                 )
             }
-            Self::NotInModule { module, name } => {
-                write!(f, "`{module}` declares no `{name}`")
-            }
-            Self::TypeOfAnotherModule {
-                module,
-                name,
-                declared,
-            } => {
-                write!(
-                    f,
-                    "`{module}.{name}` names `{declared}`, which `{module}` keeps to itself"
-                )
-            }
-            Self::GenericThroughModule { module, name } => {
-                write!(
-                    f,
-                    "`{module}.{name}` is generic, so `{module}` alone writes it"
-                )
-            }
+            Self::NotInModule { .. }
+            | Self::TypeOfAnotherModule { .. }
+            | Self::GenericThroughModule { .. } => f.write_str(&self.how_a_module_is_reached()),
             Self::HoldsItself { ring } => {
                 let (first, rest) = ring.split_first().expect("a ring runs through one type");
                 write!(f, "`{first}` holds ")?;
@@ -262,6 +261,15 @@ impl fmt::Display for TypeErrorKind {
                 write!(
                     f,
                     "`{found}` has no `Eq`, so two of them cannot be compared"
+                )
+            }
+            Self::NoInstance { of, at } => {
+                write!(f, "`{at}` has no instance of `{of}`")
+            }
+            Self::SignatureWithoutType(name) => {
+                write!(
+                    f,
+                    "`{name}` states no type, and a signature is never inferred"
                 )
             }
             Self::DivisorIsZero => write!(f, "this divisor is zero, so there is no answer"),
@@ -286,6 +294,30 @@ impl TypeErrorKind {
     /// A kind reaches here only from the arm of [`fmt::Display`] that names it, so a new one is
     /// added to both or to neither: `Display` matches every variant, and leaving one out of that
     /// match is a compile error rather than a message nothing writes.
+    /// The message of a refusal about a name reached through a module.
+    ///
+    /// `docs/specs/modules.md` states these, and they read as one group: each says what the
+    /// module on the far side of the dot does or does not offer, rather than what type met what.
+    ///
+    /// A kind reaches here only from the arm of [`fmt::Display`] that names it, on the terms
+    /// [`Self::how_it_is_written`] states.
+    fn how_a_module_is_reached(&self) -> String {
+        match self {
+            Self::NotInModule { module, name } => format!("`{module}` declares no `{name}`"),
+            Self::TypeOfAnotherModule {
+                module,
+                name,
+                declared,
+            } => {
+                format!("`{module}.{name}` names `{declared}`, which `{module}` keeps to itself")
+            }
+            Self::GenericThroughModule { module, name } => {
+                format!("`{module}.{name}` is generic, so `{module}` alone writes it")
+            }
+            _ => unreachable!("a kind reaches here only from the arm of `Display` that names it"),
+        }
+    }
+
     fn how_it_is_written(&self) -> String {
         match self {
             Self::Unnamed { function, repeated } => {

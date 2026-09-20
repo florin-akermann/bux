@@ -62,9 +62,12 @@ Names live in two scopes that never mix: a type scope and a value scope.
 A type scope is searched where a type is written, and a value scope everywhere else.
 `type UserId = UserId(Int)` therefore declares a type and a constructor without a collision.
 
-A module's type scope holds the prelude's types and every type the file declares.
+A module's type scope holds the prelude's types and traits, and every type and trait the file
+declares.
 A module's value scope holds the prelude's constructors, every variant the file declares, every
-function it declares, and every module it imports.
+function and trait method it declares, and every module it imports.
+An instance declares nothing in either: its methods answer for the name its trait declares, which
+`docs/specs/traits.md` states.
 Both are collected before any body is walked, so a function may call one declared below it.
 
 A function adds its type parameters to the type scope, and its parameters to the value scope.
@@ -80,13 +83,16 @@ Every module has these names in scope without importing anything:
 
 ```text
 types:        Bool  Int  List  Option  Result  String
+traits:       Eq
 constructors: Err  None  Ok  Some
 functions:    or  todo
+methods:      is_equal
 ```
 
 `or(maybe, fallback)` is what an `Option` holds, or the fallback when it holds nothing, and
 `docs/specs/arithmetic.md` says why.
 `todo(reason)` is a hole, which `docs/specs/holes.md` states.
+`Eq` is the trait `==` is, with the instances `docs/specs/traits.md` names.
 
 They are ordinary declarations of a module the compiler supplies, not keywords.
 Loading does not reach the prelude: a prelude name is written bare, and an import brings a module

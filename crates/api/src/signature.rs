@@ -1,6 +1,6 @@
 //! A function as the page states it: its name, what it takes, and what it gives back.
 
-use lumen_ast::{Function, Name};
+use lumen_ast::{Function, Name, TypeParameter};
 use lumen_types::{Type, TypedProgram};
 
 /// `fn shared(total: Int, people: Int) -> Int`, and the newline that ends the line.
@@ -33,11 +33,24 @@ fn whole(typed: &TypedProgram, name: &Name) -> Type {
         .clone()
 }
 
-/// `<T, E>`, which most functions do not have.
-fn over(written: &[Name]) -> String {
+/// `<T, E>` or `<T: Eq<T>>`, which most functions do not have.
+fn over(written: &[TypeParameter]) -> String {
     if written.is_empty() {
         return String::new();
     }
-    let each: Vec<&str> = written.iter().map(|one| one.text.as_str()).collect();
+    let each: Vec<String> = written.iter().map(constrained).collect();
     format!("<{}>", each.join(", "))
+}
+
+/// One type parameter as the page states it, with the trait it is constrained by when it has one.
+fn constrained(written: &TypeParameter) -> String {
+    let Some(constraint) = &written.constraint else {
+        return written.name.text.clone();
+    };
+    format!(
+        "{}: {}<{}>",
+        written.name.text,
+        constraint.name.text,
+        lumen_format::written_type(&constraint.argument)
+    )
 }

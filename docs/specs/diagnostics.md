@@ -100,6 +100,10 @@ Name resolution raises these, in `crates/resolver/src/error.rs`:
 - `L0303` — a declaration is written above something that uses it.
 - `L0304` — a name that is not a value, such as a function or a module, is written as one.
 - `L0305` — an assignment names something other than a `var` binding.
+- `L0308` — a trait already has an instance for the type a second instance names.
+- `L0309` — an instance does not write exactly the methods its trait declares.
+- `L0310` — something that is not a trait is written where a trait belongs.
+- `L0311` — a trait is written where a type belongs.
 
 Loading raises these, in `crates/modules/src/error.rs`, before any module is resolved:
 
@@ -126,6 +130,8 @@ Type inference raises these, in `crates/types/src/error.rs`:
 - `L0415` — a declared type holds a value of itself, around a ring that comes back to it.
 - `L0416` — a function reached through a module names a type that module declares.
 - `L0417` — a generic function is reached through a module, which writes it where it is declared.
+- `L0418` — a trait method is used at a type that has no instance of that trait.
+- `L0419` — a parameter of a method a trait declares states no type.
 
 Exhaustiveness raises these, in `crates/exhaustiveness/src/error.rs`:
 

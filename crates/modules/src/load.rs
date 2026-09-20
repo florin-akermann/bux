@@ -106,7 +106,7 @@ fn beside(from: &Path, name: &str) -> PathBuf {
 fn imports(program: &Program) -> impl Iterator<Item = &Import> {
     program.items.iter().filter_map(|item| match item {
         Item::Import(import) => Some(import),
-        Item::Type(_) | Item::Function(_) => None,
+        Item::Type(_) | Item::Trait(_) | Item::Instance(_) | Item::Function(_) => None,
     })
 }
 

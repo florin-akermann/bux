@@ -58,13 +58,15 @@ macro_rules! vocabulary {
 }
 
 vocabulary! {
-    /// The words the version 0.1 grammar reserves.
+    /// The words the grammar reserves.
     ///
     /// `_` is reserved among them although it is no word: it spells the discard of
     /// `docs/specs/discarding.md` and is never an identifier, while `_x` is a name as ever.
     Keyword, KEYWORDS, "Every keyword, so that a word can be looked up among them.":
     Fn => "fn",
     Type => "type",
+    Trait => "trait",
+    Instance => "instance",
     Var => "var",
     If => "if",
     Else => "else",

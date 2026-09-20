@@ -15,3 +15,4 @@ mod predicate;
 mod propagating;
 mod properties;
 mod supplied;
+mod traits;

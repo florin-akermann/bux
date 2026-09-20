@@ -16,12 +16,16 @@ pub enum DefinitionKind {
     Module,
     /// A type declared by a `type` item.
     Type,
+    /// A trait declared by a `trait` item, which is a name beside the types and not one of them.
+    Trait,
     /// A `<T>` of a function or of a type declaration.
     TypeParameter,
     /// A variant, or the name a record type is built with.
     Constructor,
     /// A function declared by an `fn` item.
     Function,
+    /// A method a trait declares, which every instance of that trait writes a body for.
+    TraitMethod,
     /// A parameter of a function.
     Parameter,
     /// A binding made inside a body, by `:=`, a `for … in`, or a pattern, which never changes.

@@ -9,10 +9,11 @@ use std::mem;
 use lumen_ast::{Name, Span};
 
 use crate::error::{TypeError, TypeErrorKind};
-use crate::infer::{Inference, Propagated, Propagation, labelled};
+use crate::infer::{Asked, Inference, Propagated, Propagation, Requirement, labelled};
+use crate::scheme::Required;
 use crate::supplied;
 use crate::surface::Offered;
-use crate::types::Type;
+use crate::types::{EQ, Type};
 
 impl Inference<'_> {
     /// The fields of one function, now that its body has said what they are reached through.
@@ -79,12 +80,60 @@ impl Inference<'_> {
 
     /// The comparisons of one function, each between two values of a type that has `Eq`.
     ///
-    /// Version 0.1 has no `derive`, so the types that have `Eq` are the three the library ships:
-    /// `Int`, `Bool`, and `String`. A comparison still untyped once its function is inferred is
-    /// a comparison of `Int`s, as an addition still untyped is an addition of them.
+    /// `==` is `Eq`, which `docs/design.md` section 8 states, so a comparison asks the trait of
+    /// the type it compares exactly as a call of `equals` does. A comparison still untyped once
+    /// its function is inferred is a comparison of `Int`s, as an addition still untyped is an
+    /// addition of them, so the default is settled before the trait is asked.
     pub(crate) fn settle_equalities(&mut self) -> Result<(), TypeError> {
-        let waiting = mem::take(&mut self.equalities);
-        self.settled(waiting, &Type::int(), not_equatable)
+        for (found, at) in mem::take(&mut self.equalities) {
+            if matches!(self.table.shallow(&found), Type::Var(_)) {
+                self.expect(&Type::int(), &found, at)?;
+            }
+            self.requirements.push(Requirement {
+                required: Required {
+                    trait_name: EQ.to_owned(),
+                    at: found,
+                },
+                written: at,
+                how: Asked::Comparison,
+            });
+        }
+        Ok(())
+    }
+
+    /// The traits the current function asked for, each answered by an instance or refused.
+    ///
+    /// They settle after every default has been taken, so a comparison of two `1`s asks `Eq` of
+    /// `Int` rather than of a type nothing had settled. `docs/specs/traits.md` states what each
+    /// of the three kinds of type answers with.
+    pub(crate) fn settle_requirements(&mut self) -> Result<(), TypeError> {
+        for requirement in mem::take(&mut self.requirements) {
+            let at = self.table.solved(&requirement.required.at);
+            let of = &requirement.required.trait_name;
+            if !self.answers(of, &at) {
+                return Err(unanswered(&requirement, at));
+            }
+            if requirement.how == Asked::Method {
+                self.methods_at.insert(requirement.written, at);
+            }
+        }
+        Ok(())
+    }
+
+    /// Whether the trait `of` is answered at `at`, which is where a constraint is resolved.
+    ///
+    /// A named type is answered by the one instance there is for it; a type parameter of the
+    /// function being inferred is answered by the constraint that parameter declares; nothing
+    /// else names an instance at all.
+    fn answers(&self, of: &str, at: &Type) -> bool {
+        match at {
+            Type::Named { name, .. } => self.environment.has_instance(of, name),
+            Type::Parameter(_) => self
+                .promised
+                .iter()
+                .any(|promise| promise.trait_name == *of && promise.at == *at),
+            _ => false,
+        }
     }
 
     /// The statements of one function that nothing takes the value of.
@@ -196,14 +245,6 @@ fn not_addable(found: &Type) -> Option<TypeErrorKind> {
     (!addable).then(|| TypeErrorKind::NotAddable(found.clone()))
 }
 
-/// What is wrong with comparing two of `found`, which is that `==` needs `Eq`.
-///
-/// Version 0.1 has no `derive`, so `Eq` is the library's, on the three types it ships it for.
-fn not_equatable(found: &Type) -> Option<TypeErrorKind> {
-    let equatable = [Type::int(), Type::boolean(), Type::string()].contains(found);
-    (!equatable).then(|| TypeErrorKind::NotEquatable(found.clone()))
-}
-
 /// What is wrong with leaving a `found` behind, which is that nothing is there to take it.
 fn not_discardable(found: &Type) -> Option<TypeErrorKind> {
     (*found != Type::Unit).then(|| TypeErrorKind::Discarded(found.clone()))
@@ -230,4 +271,16 @@ fn unreachable_field(through: &Type, field: &Name) -> TypeError {
         }
     };
     TypeError::at(field.span, kind)
+}
+
+/// The refusal a trait nothing answers amounts to, worded by how it came to be asked.
+fn unanswered(requirement: &Requirement, at: Type) -> TypeError {
+    let kind = match requirement.how {
+        Asked::Comparison => TypeErrorKind::NotEquatable(at),
+        Asked::Method | Asked::Constraint => TypeErrorKind::NoInstance {
+            of: requirement.required.trait_name.clone(),
+            at,
+        },
+    };
+    TypeError::at(requirement.written, kind)
 }

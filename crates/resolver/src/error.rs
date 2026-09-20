@@ -75,6 +75,30 @@ pub(crate) enum ResolveErrorKind {
     NotReachedThrough(String),
     /// An assignment naming something other than a `var` binding.
     NotAVariable(String),
+    /// A second instance of one trait for one type, named by both.
+    InstanceTwice {
+        of: String,
+        for_type: String,
+    },
+    /// A method a trait declares that the instance does not write.
+    MethodMissing {
+        of: String,
+        method: String,
+    },
+    /// A method an instance writes that its trait never declared.
+    MethodUndeclared {
+        of: String,
+        method: String,
+    },
+    /// A method an instance writes a second body for, which its trait declares once.
+    MethodTwice {
+        of: String,
+        method: String,
+    },
+    /// Something that is not a trait, written where a trait belongs.
+    NotATrait(String),
+    /// A trait written where a type belongs.
+    TraitAsType(String),
 }
 
 impl ResolveErrorKind {
@@ -111,6 +135,12 @@ impl ResolveErrorKind {
             Self::WrittenAbove { .. } => Code::DefinitionBeforeUse,
             Self::NotCalled(_) | Self::NotReachedThrough(_) => Code::NotAValue,
             Self::NotAVariable(_) => Code::NotAVariable,
+            Self::InstanceTwice { .. } => Code::InstanceDeclaredTwice,
+            Self::MethodMissing { .. }
+            | Self::MethodUndeclared { .. }
+            | Self::MethodTwice { .. } => Code::InstanceMethods,
+            Self::NotATrait(_) => Code::NotATrait,
+            Self::TraitAsType(_) => Code::TraitAsType,
         }
     }
 
@@ -127,6 +157,12 @@ impl ResolveErrorKind {
                 "a module is what a name is reached through, as `io.println` is"
             }
             Self::NotAVariable(_) => "mutation is explicit: bind it with `var`, or bind a new name",
+            Self::InstanceTwice { .. } => "one trait and one type have one instance; join the two",
+            Self::MethodMissing { .. } => "an instance writes a body for every method it declares",
+            Self::MethodUndeclared { .. } => "an instance writes the trait's methods and no others",
+            Self::MethodTwice { .. } => "one method of a trait gets one body from an instance",
+            Self::NotATrait(_) => "a trait is declared with `trait`, and `Eq` is the one supplied",
+            Self::TraitAsType(_) => "name the type, and constrain it with `<T: Eq<T>>` where it is",
         }
     }
 }
@@ -156,6 +192,29 @@ impl fmt::Display for ResolveErrorKind {
             Self::NotAVariable(text) => {
                 write!(f, "`{text}` is not a `var`, so it is never assigned to")
             }
+            Self::InstanceTwice { of, for_type } => {
+                write!(f, "`{of}` already has an instance for `{for_type}`")
+            }
+            Self::MethodMissing { of, method } => {
+                write!(
+                    f,
+                    "`{of}` declares `{method}`, which this instance does not write"
+                )
+            }
+            Self::MethodUndeclared { of, method } => {
+                write!(
+                    f,
+                    "`{of}` declares no `{method}` for this instance to write"
+                )
+            }
+            Self::MethodTwice { of, method } => {
+                write!(
+                    f,
+                    "`{of}` declares `{method}` once, and this instance writes it twice"
+                )
+            }
+            Self::NotATrait(text) => write!(f, "`{text}` is not a trait"),
+            Self::TraitAsType(text) => write!(f, "`{text}` is a trait, not a type"),
         }
     }
 }

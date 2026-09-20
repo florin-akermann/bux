@@ -9,6 +9,9 @@ use crate::code::{Comparison, Instruction, MethodRef};
 use crate::descriptor::{ClassName, Descriptor, MethodDescriptor};
 use crate::lower::shape::object;
 
+/// The one method `Eq` declares, which `==` is a call of and an instance writes a body for.
+pub(crate) const EQUALS: &str = "is_equal";
+
 /// What decides whether two values above it on the stack are the same, or are not.
 ///
 /// A value carried by nothing has nothing on the stack, and there is only one of it, so the

@@ -1,0 +1,47 @@
+// expect-run
+// > a square of side 3 covers 9
+// > a circle of radius 2 covers about 12
+// > a square of side 4 is wider than one of side 1
+// A module declares a trait of its own, and two of its types each give it an instance.
+import io
+
+fn main() -> () {
+    if covered(Square { side: 3 }) == 9 {
+        io.println("a square of side 3 covers 9")
+    }
+    if covered(Circle { radius: 2 }) == 12 {
+        io.println("a circle of radius 2 covers about 12")
+    }
+    if is_wider(shape: Square { side: 4 }, other: Square { side: 1 }) {
+        io.println("a square of side 4 is wider than one of side 1")
+    }
+}
+
+// example: is_wider(shape: Square { side: 4 }, other: Square { side: 1 })
+fn is_wider<T: Area<T>>(shape: T, other: T) -> Bool {
+    covered(shape) > covered(other)
+}
+
+instance Area<Square> {
+    fn covered(shape: Square) -> Int {
+        shape.side * shape.side
+    }
+}
+
+instance Area<Circle> {
+    fn covered(shape: Circle) -> Int {
+        3 * shape.radius * shape.radius
+    }
+}
+
+trait Area<T> {
+    fn covered(shape: T) -> Int
+}
+
+type Square = {
+    side: Int
+}
+
+type Circle = {
+    radius: Int
+}

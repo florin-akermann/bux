@@ -34,10 +34,10 @@ fn a_function_without_a_name_is_a_parse_error() {
 }
 
 #[test]
-fn a_file_may_only_hold_an_import_a_type_or_a_function() {
+fn a_file_may_only_hold_an_import_a_type_a_trait_an_instance_or_a_function() {
     assert_eq!(
         message("total := 1"),
-        "expected an import, a type, or a function, found `total`"
+        "expected an import, a type, a trait, an instance, or a function, found `total`"
     );
 }
 
@@ -239,4 +239,43 @@ fn an_underscore_is_written_on_the_left_of_a_single_equals_and_nowhere_else() {
     for (source, said) in refused {
         assert_eq!(message(source), said, "{source:?}");
     }
+}
+
+#[test]
+fn a_trait_that_declares_no_method_is_a_parse_error() {
+    assert_eq!(message("trait Eq<T> {\n}"), "expected `fn`, found `}`");
+}
+
+#[test]
+fn an_instance_that_writes_no_method_is_a_parse_error() {
+    assert_eq!(
+        message("instance Eq<Point> {\n}"),
+        "expected `fn`, found `}`"
+    );
+}
+
+#[test]
+fn an_instance_is_for_a_type_written_by_name_and_without_arguments() {
+    assert_eq!(
+        message(
+            "instance Eq<List<Point>> {\n    fn is_equal(one, other) -> Bool {\n        true\n    }\n}"
+        ),
+        "expected `>`, found `<`"
+    );
+}
+
+#[test]
+fn a_trait_is_declared_over_one_type_parameter_and_no_more() {
+    assert_eq!(
+        message("trait Pair<T, U> {\n    fn first(both: T) -> U\n}"),
+        "expected `>`, found `,`"
+    );
+}
+
+#[test]
+fn a_signature_of_a_trait_writes_no_body() {
+    assert_eq!(
+        message("trait Eq<T> {\n    fn is_equal(one: T, other: T) -> Bool {\n    }\n}"),
+        "expected `fn`, found `{`"
+    );
 }

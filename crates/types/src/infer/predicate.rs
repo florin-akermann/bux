@@ -5,10 +5,12 @@
 //! settled, so a function that writes no result type is held to whatever type it turned out to
 //! have, exactly as the flag rule of `docs/specs/arguments.md` reads a signature.
 
-use lumen_ast::Function;
+use lumen_ast::{Function, Name, Signature};
 
+use crate::environment::Key;
 use crate::error::{TypeError, TypeErrorKind};
 use crate::infer::Inference;
+use crate::scheme::Scheme;
 use crate::types::Type;
 
 /// The four prefixes a name asks its question with, which are all the questions a program asks.
@@ -21,14 +23,36 @@ impl Inference<'_> {
     ///
     /// Returns the function whose result is `Bool` and whose name asks nothing.
     pub(crate) fn settle_predicate(&mut self, function: &Function) -> Result<(), TypeError> {
-        if self.table.solved(&self.result) != Type::boolean()
-            || asks_a_question(&function.name.text)
-        {
-            return Ok(());
-        }
-        let kind = TypeErrorKind::NotAPredicate(function.name.text.clone());
-        Err(TypeError::at(function.name.span, kind))
+        let found = self.table.solved(&self.result);
+        named_for(&function.name, &found)
     }
+
+    /// The name of one method a trait declares, held to the same question its result asks.
+    ///
+    /// A trait's signature is not a body, so nothing infers it and this reads the type the
+    /// environment gave it. The rule is the one rule: a method reads as a predicate where a
+    /// function would, and the refusal lands where the trait wrote the name.
+    ///
+    /// # Errors
+    ///
+    /// Returns the method whose result is `Bool` and whose name asks nothing.
+    pub(crate) fn settle_method(&self, method: &Signature) -> Result<(), TypeError> {
+        let key = Key::at(&method.name);
+        let Some(Type::Function { result, .. }) = self.environment.scheme(&key).map(Scheme::body)
+        else {
+            unreachable!("a trait gave each of its methods a function type")
+        };
+        named_for(&method.name, result)
+    }
+}
+
+/// `name`, held to the question a result of `found` says it answers.
+fn named_for(name: &Name, found: &Type) -> Result<(), TypeError> {
+    if *found != Type::boolean() || asks_a_question(&name.text) {
+        return Ok(());
+    }
+    let kind = TypeErrorKind::NotAPredicate(name.text.clone());
+    Err(TypeError::at(name.span, kind))
 }
 
 /// Whether `name` begins with one of the four prefixes, which is how it asks its question.
