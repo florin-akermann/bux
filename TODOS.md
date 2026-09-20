@@ -6,18 +6,6 @@
 
 ## Open
 
-## 🟢 Item 046: `Map<K, V>` and `Set<T>` are library types
-**Depends on:** Item 043, Item 053 — a key needs `Eq` and `Hash`; a library type is generic.
-`docs/implementation.md` section 4 names collections; version 0.1 has only `List`.
-`Map<K, V>` and `Set<T>` are declared in Lumen, and `K: Hash<K>` says what a key must be.
-Both are values: two maps holding the same entries are one value, and neither has identity.
-There is no literal for either yet; a map is built by `empty` and `insert`, and read by `get`.
-`get` gives an `Option<V>`, because a key that is absent is a case the type has to say.
-[046][a] - `docs/design.md` section 9 states the two types and what a key must have.
-[046][b] - Spec first in `docs/specs/collections.md`: each function, its type, and its cost.
-[046][c] - Both types in Lumen, test-first; a property: `get` after `insert` gives what went in.
-[046][d] - Executable examples under `tests/spec/library/`, including a key without `Hash`.
-
 ## 🔴 Item 048: A Java class is reached through an `extern` declaration
 **Depends on:** Item 044, Item 045 — a wrapper is a library module offering its own types.
 `docs/implementation.md` section 3 sketches `extern java class` and says nothing of the boundary.
