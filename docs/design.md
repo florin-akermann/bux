@@ -328,7 +328,7 @@ An error type there would carry nothing the caller is not already holding.
 `docs/specs/arithmetic.md` works the choice through for `/` and `%`.
 
 There is no `unwrap` and no `expect`, in the prelude or anywhere else.
-`or(maybe, fallback)` is the total default, named for what it does rather than for what it is not.
+`maybe.or(fallback)` is the total default, named for what it does rather than for what it is not.
 
 **A value nothing takes is a compile error**, because a dropped `Result` is a swallowed failure.
 A statement written for its effect has nothing to leave behind, so its type is `()`.
@@ -590,7 +590,7 @@ fn user_name(user: User) -> String {
     user.name
 }
 
-active_names := map(filter(users, is_active), user_name)
+active_names := users.filter(is_active).map(user_name)
 ```
 
 **There are no anonymous functions**.
@@ -604,6 +604,33 @@ A function name written as anything but the name of a call is refused rather tha
 Nothing then reaches code generation that it has no way to write.
 
 A name forces the author to say what the function is for, and gives the reader a word to search.
+
+### A call with its first argument in front
+
+`maybe.or(fallback)` is the call `or(maybe, fallback)`, written with its first argument in front.
+`or` is looked up in scope exactly as a plain call looks its callee up, and `maybe` is passed first.
+The two spellings are one call: the same function, the same type, and every rule of this section.
+Which function is called is settled by the name alone, before any type is known.
+
+Nothing is declared to earn the form, so a declared type has it exactly as `Option` and `Int` do.
+There is no method and no receiver type, because a function takes what it takes.
+The dot moves nothing but the reader's eye.
+
+The form reads in the order the work happens.
+`find_user(id).or(guest)` says what is looked for before what stands in for it.
+`or(find_user(id), guest)` says the same thing inside out.
+A chain of calls then reads left to right, as the snippet above does.
+
+The name before the dot says which of three things the dot does.
+`user.name` reads a field, and `io.print("hi")` reaches a function of a module.
+`maybe.or(0)` reaches `or` in scope, because `maybe` is a binding and a binding is never a module.
+A field and a call are told apart by the parentheses: `user.or` reads a field named `or`.
+
+The receiver is an argument, and it is never named.
+`old.rename(to: new)` names one argument and not the other, so it is refused as the rule below says.
+A call that has to name its arguments is written plainly.
+
+The formatter keeps whichever form the author wrote.
 
 ### Named arguments
 

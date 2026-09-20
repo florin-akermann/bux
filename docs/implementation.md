@@ -347,6 +347,8 @@ Add:
 * derived implementations
 * every operator a trait method, with the `Int` and `String` instances moved into the library
 * a whole-number literal typed by what its context expects, refused where it does not fit
+* a type a module declares reachable from the module that imports it
+* a call written with its first argument in front, `maybe.or(fallback)` for `or(maybe, fallback)`
 * collections
 * richer pattern matching
 * Java interop
@@ -376,7 +378,6 @@ Investigate:
 * effect inference
 * richer record types
 * anonymous structural records
-* JVM value types / Project Valhalla
 * improved Java interop
 * compiler optimizations
 * incremental compilation
