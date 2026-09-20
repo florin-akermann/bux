@@ -87,6 +87,7 @@ pub(crate) fn expression(printer: &mut Printer, written: &Expr, records: Records
             operand(printer, inner, POSTFIX, records);
             printer.word("?");
         }
+        ExprKind::List(elements) => written_list(printer, elements),
         ExprKind::Record { base, fields } => record(printer, &base.text, fields),
         ExprKind::If(chain) => if_expr(printer, chain),
         ExprKind::Match(matched) => match_expr(printer, matched, written.span),
@@ -164,15 +165,22 @@ fn call(printer: &mut Printer, callee: &Expr, arguments: &Arguments, records: Re
     operand(printer, callee, POSTFIX, records);
     printer.word("(");
     match arguments {
-        Arguments::Positional(values) => passed(printer, values),
+        Arguments::Positional(passed) => values(printer, passed),
         Arguments::Named(written) => named(printer, written),
     }
     printer.word(")");
 }
 
-/// `old, new`: the values alone, which the parameter types hold apart.
-fn passed(printer: &mut Printer, values: &[Expr]) {
-    for (position, value) in values.iter().enumerate() {
+/// `[first, second]`, and `[]`, which are spaced inside their brackets by nothing.
+fn written_list(printer: &mut Printer, elements: &[Expr]) {
+    printer.word("[");
+    values(printer, elements);
+    printer.word("]");
+}
+
+/// `old, new`: values in order, each written after the one before it with `, ` between.
+fn values(printer: &mut Printer, written: &[Expr]) {
+    for (position, value) in written.iter().enumerate() {
         if position > 0 {
             printer.word(", ");
         }

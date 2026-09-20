@@ -22,7 +22,7 @@ a function, written (Int, String) -> Bool
 
 `Int` is a whole number, 64 bits wide, and it is the only one.
 `()` is the type of a function that returns nothing interesting.
-`List<T>` is opaque: version 0.1 has no syntax that builds one, only `for` that walks one.
+`List<T>` is written `[first, second]`, and `for` is what walks one.
 `Option` and `Result` are ordinary algebraic data types supplied by the prelude.
 
 A type the author writes is the type they get.
@@ -55,6 +55,16 @@ contains it.
 
 Literals type as themselves: a whole number is `Int`, a quoted string is `String`, `true` is `Bool`,
 and `()` is `()`.
+
+A written list is a `List<T>` over the one type its elements share, so `[1, 2]` is a `List<Int>`.
+Each element is unified with the ones before it, and one that does not fit is `L0400` where it is
+written.
+`[]` writes a list of nothing, and takes the element type from whatever it is unified with; where
+nothing unifies with it, that type is left unsettled, and nothing downstream needs it.
+
+Writing a list builds one, and writing it inside a loop builds one each turn.
+Every element is evaluated once, left to right, in the order it is written.
+Version 0.1 has no way to add to a list it has already built, so a list is written whole.
 
 The operators are fixed:
 

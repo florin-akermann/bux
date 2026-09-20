@@ -713,6 +713,10 @@ fn active_names(users: List<User>) -> List<String> {
 }
 ```
 
+A list is written between brackets: `[first, second]`, and `[]` holds nothing.
+That is the language's own way to build a list, and it builds it whole.
+`List.empty` and `push` above are library code that a later version supplies.
+
 The control-flow surface is:
 
 * `if` / `else`

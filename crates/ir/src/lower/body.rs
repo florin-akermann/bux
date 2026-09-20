@@ -12,8 +12,8 @@ use crate::lower::generic::Instantiation;
 use crate::lower::shape::object;
 use crate::lower::{Lowering, Reaching, Signature, escape};
 
-/// The list a `for … in` walks, which is the one interface version 0.1 reaches.
-const LIST: &str = "java/util/List";
+/// The list a `for … in` walks and a written list builds, which `docs/specs/codegen.md` names.
+pub(crate) const LIST: &str = "java/util/List";
 
 /// Where a binding lives, which is one local of the method the function became.
 #[derive(Clone, Debug)]

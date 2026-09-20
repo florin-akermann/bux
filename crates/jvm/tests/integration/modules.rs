@@ -185,3 +185,34 @@ fn descriptor_of<'a>(module: &'a ClassFile, name: &str) -> &'a str {
         .unwrap_or_else(|| panic!("the module writes a method named {name}"));
     written.descriptor.as_str()
 }
+
+/// A module whose one function writes a list and walks it, which is both halves of `List`.
+const WRITES_A_LIST: &str = "fn counted() -> Int {
+    var total = 0
+    for count in [1, 2, 3] {
+        total += count
+    }
+    total
+}
+";
+
+#[test]
+fn a_module_that_writes_a_list_names_the_static_list_of_as_an_interface_method() {
+    let files = common::compiled(WRITES_A_LIST);
+
+    let module = common::one_of(&files, "demo.class");
+
+    assert!(
+        gathering(&module).is_some(),
+        "`List.of` is reached as an interface method, which `invokestatic` needs"
+    );
+}
+
+/// The `java.util.List.of` entry of the pool, which must be an interface method and not a method.
+fn gathering(module: &ClassFile) -> Option<&reader::Constant> {
+    module.pool.iter().find(|constant| {
+        matches!(constant, reader::Constant::InterfaceMethod { .. })
+            && reader::reaching(&module.pool, constant)
+                == Some(("java/util/List".to_owned(), "of".to_owned()))
+    })
+}

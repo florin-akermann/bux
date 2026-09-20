@@ -303,5 +303,10 @@ fn positional(position: usize) -> String {
 
 /// `java.lang.Object`, which is what every type a declaration leaves open erases to.
 pub(crate) fn object() -> Descriptor {
-    Descriptor::reference("java/lang/Object")
+    Descriptor::Reference(object_class())
+}
+
+/// The class `java.lang.Object` is, which an array of open values is made of.
+pub(crate) fn object_class() -> ClassName {
+    ClassName::new("java/lang/Object")
 }

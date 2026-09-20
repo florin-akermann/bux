@@ -42,8 +42,8 @@ The file neither begins nor ends with a blank line.
 The grammar forces four things apart:
 a block, a record type body, a variant list of two or more variants, and the body of a `match`.
 Each of those writes one entry per line, because the grammar separates its entries by newlines.
-Everything else — a call, a record literal, a parameter list, a match arm — is comma-separated
-or has one part, and is written on one line however long it runs.
+Everything else — a call, a record literal, a written list, a parameter list, a match arm — is
+comma-separated or has one part, and is written on one line however long it runs.
 
 There is no maximum line length.
 A length limit would need a rule for where to break every construct, and every such rule is a
@@ -56,7 +56,7 @@ A prefix `!` or `-` is written against what it negates, as is a `?`, a `.`, and 
 A `-` before something whose first character is a digit keeps its parentheses, as `-(7.abs())`.
 The grammar reads a `-` before a number as part of it, so `-7.abs()` is a different program.
 A `,` and a `:` are written against what precedes them and followed by one space.
-Nothing is written inside `(` or `<` and their closing partners.
+Nothing is written inside `(`, `[`, or `<` and their closing partners.
 A record literal with fields is spaced inside its braces, as `User { id: id }`; an empty one is
 `User {}`.
 

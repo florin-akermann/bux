@@ -298,6 +298,12 @@ fn expr_node(tree: &mut Tree, depth: usize, expr: &Expr) {
             tree.node(depth, "try", span);
             expr_node(tree, depth + 1, inner);
         }
+        ExprKind::List(elements) => {
+            tree.node(depth, "list", span);
+            for element in elements {
+                expr_node(tree, depth + 1, element);
+            }
+        }
         ExprKind::Record { base, fields } => {
             tree.node(depth, &format!("record {}", base.text), span);
             for field in fields {

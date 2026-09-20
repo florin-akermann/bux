@@ -3,7 +3,10 @@
 use crate::common::in_function;
 
 /// A source expression beside the canonical text of the same expression.
-const SPACING: [(&str, &str); 12] = [
+const SPACING: [(&str, &str); 15] = [
+    ("[ 1 , 2 ]", "[1, 2]"),
+    ("[ ]", "[]"),
+    ("[\n    1,\n    2\n]", "[1, 2]"),
     ("a+b", "a + b"),
     ("a&&b||c", "a && b || c"),
     ("!a", "!a"),
@@ -72,5 +75,13 @@ fn a_call_and_a_record_literal_stay_on_one_line_however_long_they_run() {
     assert_eq!(
         in_function("User {\n    id: id,\n    name: name\n}"),
         ["User { id: id, name: name }"]
+    );
+}
+
+#[test]
+fn a_written_list_keeps_a_record_literal_unparenthesised_in_a_for_header() {
+    assert_eq!(
+        in_function("for u in [User{id:1}] {\n    }"),
+        ["for u in [User { id: 1 }] {", "}"]
     );
 }

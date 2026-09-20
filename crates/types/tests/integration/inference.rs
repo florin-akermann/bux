@@ -173,3 +173,50 @@ fn a_call_of_or_gives_back_what_the_option_it_is_handed_holds() {
 
     assert_eq!(inferred_type(source, "or(total / count, 0)", 1), "Int");
 }
+
+#[test]
+fn a_written_list_is_a_list_of_what_its_elements_share() {
+    let source = "fn counts() -> List<Int> {\n    [1, 2, 3]\n}\n";
+
+    assert_eq!(inferred_type(source, "[1, 2, 3]", 1), "List<Int>");
+}
+
+#[test]
+fn a_written_list_takes_the_element_type_from_the_result_it_is_given_to() {
+    let source = "fn nothing_yet() -> List<String> {\n    []\n}\n";
+
+    assert_eq!(inferred_type(source, "[]", 1), "List<String>");
+}
+
+#[test]
+fn a_for_in_over_a_written_list_binds_the_element_type() {
+    let source = concat!(
+        "fn total() -> Int {\n",
+        "    var sum = 0\n",
+        "    for count in [1, 2] {\n",
+        "        sum += count\n",
+        "    }\n",
+        "    sum\n",
+        "}\n",
+    );
+
+    assert_eq!(inferred_type(source, "count", 2), "Int");
+}
+
+#[test]
+fn a_written_list_of_records_is_a_list_of_that_record() {
+    let source = concat!(
+        "fn baskets() -> List<Basket> {\n",
+        "    [Basket { apples: 1 }]\n",
+        "}\n",
+        "\n",
+        "type Basket = {\n",
+        "    apples: Int\n",
+        "}\n",
+    );
+
+    assert_eq!(
+        inferred_type(source, "[Basket { apples: 1 }]", 1),
+        "List<Basket>"
+    );
+}

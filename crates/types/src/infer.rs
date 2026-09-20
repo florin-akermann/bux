@@ -250,10 +250,25 @@ impl Inference<'_> {
             ExprKind::Call { callee, arguments } => self.call(callee, arguments, expr.span),
             ExprKind::Field { receiver, name } => self.field(receiver, name),
             ExprKind::Try(inner) => self.propagated(inner, expr.span),
+            ExprKind::List(elements) => self.written_list(elements),
             ExprKind::Record { base, fields } => self.record(base, fields, expr.span),
             ExprKind::If(chain) => self.if_expr(chain),
             ExprKind::Match(matched) => self.match_expr(matched),
         }
+    }
+
+    /// A written list, which is a `List` of the one type every element it writes shares.
+    ///
+    /// Each element is met against one variable, so the first settles what the list holds and
+    /// every one after it is held to that. A list of nothing leaves the variable free, and
+    /// whatever the list itself is unified with is what settles it.
+    fn written_list(&mut self, elements: &[Expr]) -> Result<Type, TypeError> {
+        let item = self.table.fresh();
+        for element in elements {
+            let found = self.expr(element)?;
+            self.expect(&item, &found, element.span)?;
+        }
+        Ok(Type::list(item))
     }
 
     fn unary(&mut self, operator: UnaryOperator, operand: &Expr) -> Result<Type, TypeError> {

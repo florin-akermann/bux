@@ -316,6 +316,18 @@ fn read_loadable(bytes: &[u8], pool: &[Constant]) -> Vec<String> {
     (0..count).map(|_| named(pool, reading.u2())).collect()
 }
 
+/// The class and member name of a method entry, which is how a call is read back out.
+pub fn reaching(pool: &[Constant], entry: &Constant) -> Option<(String, String)> {
+    let (Constant::Method { class, member } | Constant::InterfaceMethod { class, member }) = entry
+    else {
+        return None;
+    };
+    let Constant::NameAndType { name, .. } = &pool[*member as usize - 1] else {
+        panic!("a method entry names a name and a type")
+    };
+    Some((class_named(pool, *class), named(pool, *name)))
+}
+
 /// The class the pool names at `held`, which is the text the entry there points at.
 fn class_named(pool: &[Constant], held: u16) -> String {
     match &pool[held as usize - 1] {

@@ -1,12 +1,12 @@
 // The first Lumen program, and the one the README points at.
-// It is everyday Lumen: a record, an algebraic data type, a `match`, and a `for` loop.
+// It is everyday Lumen: a record, an algebraic data type, a `match`, and a loop over a list.
 // Nothing is written out, because version 0.1 has no way to write a number out.
 // Running to the end is what it shows, and `docs/specs/example-program.md` says why.
 // A file reads top down, so what a name is comes below the first line that uses it.
 fn main() -> () {
     ordered := Placed(Basket { apples: 3, pears: 4 })
     each := shared(total: picked(ordered) + picked(Unplaced), people: 2)
-    most := fullest(many: each)
+    most := fullest([Basket { apples: 1, pears: 1 }, Basket { apples: each, pears: each }])
     ()
 }
 
@@ -17,17 +17,15 @@ fn shared(total: Int, people: Int) -> Int {
     or(total / people, 0)
 }
 
-/// The fullest of `many` baskets, each one fuller than the last, which is how a loop reads.
-// example: fullest(many: 3) == 6
-fn fullest(many: Int) -> Int {
+/// The fullest of the baskets, which is what a loop over a written list reads like.
+// example: fullest([Basket { apples: 1, pears: 1 }, Basket { apples: 3, pears: 3 }]) == 6
+fn fullest(baskets: List<Basket>) -> Int {
     var most = 0
-    var left = many
-    for left > 0 {
-        held := picked(Placed(Basket { apples: left, pears: left }))
+    for basket in baskets {
+        held := picked(Placed(basket))
         if held > most {
             most = held
         }
-        left += -1
     }
     most
 }

@@ -7,7 +7,8 @@ use lumen_ir::{Arithmetic, ClassName, Comparison, Descriptor, Instruction, Lower
 use crate::common;
 
 /// The modules a property is checked over, each written in one construct or another.
-const SOURCES: [&str; 8] = [
+const SOURCES: [&str; 9] = [
+    "fn written() -> List<Int> {\n    [1, 2, 3]\n}\n",
     "fn answer() -> Int {\n    7\n}\n",
     "fn held(user: User) -> Int {\n    user.id\n}\n\ntype User = {\n    id: Int\n    active: Bool\n}\n",
     "fn told(payment: Payment) -> String {\n    match payment {\n        Pending => \"waiting\"\n        Failed(reason) => reason\n    }\n}\n\ntype Payment =\n    | Pending\n    | Failed(String)\n",
@@ -407,4 +408,42 @@ fn built_by(instructions: &[Instruction]) -> Vec<String> {
         })
         .filter(|built| built.starts_with("lumen/Result$"))
         .collect()
+}
+
+/// How many elements a generated list is written with, which is what its array must be as long as.
+const LENGTHS: [usize; 5] = [0, 1, 2, 3, 7];
+
+#[hegel::test]
+fn a_written_list_gathers_as_many_elements_as_it_writes_and_builds_one_list(tc: TestCase) {
+    let many = tc.draw(gs::sampled_from(&LENGTHS));
+    let elements: Vec<String> = (0..many).map(|at| at.to_string()).collect();
+    let source = format!(
+        "fn written() -> List<Int> {{\n    [{}]\n}}\n",
+        elements.join(", ")
+    );
+
+    let lowered = common::lowered(&source);
+
+    let body = common::body_of(&lowered, "written");
+    let stored = body
+        .instructions
+        .iter()
+        .filter(|step| **step == Instruction::StoreInArray)
+        .count();
+    let collected = body
+        .instructions
+        .iter()
+        .filter(|step| **step == Instruction::CollectList)
+        .count();
+    assert_eq!(
+        body.instructions.first(),
+        Some(&Instruction::Integer(counting(many)))
+    );
+    assert_eq!(stored, many, "one store per element");
+    assert_eq!(collected, 1, "one list however many elements it holds");
+}
+
+/// The length as the JVM counts it, which is what the array is made with.
+fn counting(many: usize) -> i32 {
+    i32::try_from(many).expect("a generated list is short")
 }

@@ -45,12 +45,6 @@ A compiler can check that an example is stated and that it holds, and it cannot 
 example is a good one.
 Requiring the name to appear would be a proxy for that, and it would refuse code that is right.
 
-`docs/specs/types.md` gives `List<T>` no syntax that builds one, only a `for` that walks one, so a
-function over a list is one that version 0.1 cannot call.
-There is nothing to state about such a function, and `// example: true` states exactly that much.
-It is the one example that says nothing about what it is written above, and it goes away when the
-value it cannot write becomes writable.
-
 ## The comment a function carries
 
 The comment above a declaration is the unbroken run of comment lines directly above it.

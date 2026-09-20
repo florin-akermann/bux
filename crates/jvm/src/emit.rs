@@ -34,6 +34,9 @@ impl Assembling {
             Instruction::InvokeStatic(method) => self.invoke_static(method, context),
             Instruction::InvokeVirtual(method) => self.invoke_virtual(method, context),
             Instruction::InvokeInterface(method) => self.invoke_interface(method, context),
+            Instruction::NewArray(class) => self.new_array(class, context),
+            Instruction::StoreInArray => self.store_in_array(),
+            Instruction::CollectList => self.collect_list(context),
             Instruction::Cast(class) => self.cast(class, context),
             Instruction::InstanceOf(class) => self.instance_of(class, context),
             Instruction::Increment { slot } => self.increment(*slot),
@@ -177,6 +180,44 @@ impl Assembling {
         self.byte(opcode::NEW);
         self.short(named);
         self.push(Held::Uninitialised(at));
+    }
+
+    /// An array as long as the number on the stack, which the length replaces.
+    fn new_array(&mut self, class: &lumen_ir::ClassName, context: &mut Context<'_>) {
+        let named = context.pool.class(class);
+        self.byte(opcode::ANEWARRAY);
+        self.short(named);
+        self.pop();
+        self.push(Held::of(&Descriptor::array(Descriptor::Reference(
+            class.clone(),
+        ))));
+    }
+
+    /// One element into the array, which takes the array, the index, and the value.
+    fn store_in_array(&mut self) {
+        self.byte(opcode::AASTORE);
+        self.pop();
+        self.pop();
+        self.pop();
+    }
+
+    /// The list of what the array holds, which `java.util.List` declares as a static method.
+    ///
+    /// It is declared on an interface, so the pool names it as an interface method; that is
+    /// what `invokestatic` needs to reach one, and it is the only place a module does.
+    fn collect_list(&mut self, context: &mut Context<'_>) {
+        let gathering = MethodRef {
+            class: lumen_ir::ClassName::new("java/util/List"),
+            name: "of".to_owned(),
+            descriptor: lumen_ir::MethodDescriptor::new(
+                vec![Descriptor::array(Descriptor::reference("java/lang/Object"))],
+                Some(Descriptor::reference("java/util/List")),
+            ),
+        };
+        let named = context.pool.interface_method(&gathering);
+        self.byte(opcode::INVOKESTATIC);
+        self.short(named);
+        self.called(&gathering, 0);
     }
 
     fn construct(&mut self, method: &MethodRef, context: &mut Context<'_>) {

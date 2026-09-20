@@ -1,0 +1,39 @@
+// expect-run
+// > 7
+// A list holds whatever its elements share: whole numbers here, and records below them.
+// A whole number crossing into a list is boxed and read back out, which no program can see.
+import io
+
+fn main() -> () {
+    io.println(named(total(baskets())))
+}
+
+/// The baskets an order came in, each one a record written straight into the list.
+// example: total(baskets()) == 7
+fn baskets() -> List<Basket> {
+    [Basket { apples: 3 }, Basket { apples: 4 }]
+}
+
+/// How many apples the baskets hold between them.
+// example: total([Basket { apples: 1 }]) == 1
+fn total(held: List<Basket>) -> Int {
+    var picked = 0
+    for basket in held {
+        picked += basket.apples
+    }
+    picked
+}
+
+/// A whole number as a word, which is all version 0.1 can say about one.
+// example: named(7) == "7"
+// example: named(1) == "many"
+fn named(count: Int) -> String {
+    match count {
+        7 => "7"
+        other => "many"
+    }
+}
+
+type Basket = {
+    apples: Int
+}

@@ -6,5 +6,6 @@ mod common;
 mod descriptors;
 mod escaping;
 mod io;
+mod lists;
 mod lowering;
 mod properties;

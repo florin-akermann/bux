@@ -40,7 +40,7 @@ git config core.hooksPath .githooks
 
 ## The example program
 
-`example/main.lm` is everyday Lumen in one screen: a record, an ADT, a `match`, and a `for` loop.
+`example/main.lm` is everyday Lumen in one screen: a record, an ADT, a `match`, and a list walked.
 
 ```sh
 cargo run --bin lumen -- run example/main.lm

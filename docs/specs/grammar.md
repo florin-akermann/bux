@@ -98,7 +98,8 @@ arguments      := expression { "," expression }
                 | named_argument { "," named_argument }
 named_argument := Name ":" expression
 primary        := Name [ record_literal ] | Integer | String | "true" | "false"
-                | "(" ")" | "(" expression ")" | if | match
+                | "(" ")" | "(" expression ")" | written_list | if | match
+written_list   := "[" [ expression { "," expression } ] "]"
 record_literal := "{" [ field_value { "," field_value } ] "}"
 field_value    := Name ":" expression
 
@@ -115,7 +116,8 @@ Every other binary operator is left-associative.
 
 A list the grammar writes with at least one element is not accepted empty.
 `List<>`, `fn f<>()`, `Failed()`, and the pattern `P {}` each name what was wanted instead.
-A call, a parameter list, and a record literal are the three lists the grammar writes as optional.
+A call, a parameter list, a record literal, and a written list are the four the grammar writes
+as optional.
 
 A call names all of its arguments or none of them, which the two alternatives above say.
 A name followed by `:` opens a named argument, so the first argument settles which list follows.

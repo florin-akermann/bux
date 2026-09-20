@@ -30,7 +30,7 @@ The program shows the four things everyday Lumen is made of:
 - a record, `Basket`, with two fields
 - an algebraic data type, `Order`, with a variant that carries a value and one that does not
 - a `match` over that type, with one arm per variant, in the order the type declares them
-- a `for` loop, which is what everyday Lumen is mostly made of
+- a `for … in` loop over a written list, which is what everyday Lumen is mostly made of
 
 It also uses `or`, so a reader meets `Option` in the one place version 0.1 hands them one.
 
@@ -55,15 +55,6 @@ The answer this program works out is an `Int`, and version 0.1 has no way to wri
 So a run that reaches the end is what this program shows, and the answer itself waits on that.
 
 ## What it cannot show yet
-
-`for … in` over a `List` is the one shape of loop the file does not write.
-
-`List<T>` is opaque: `docs/specs/types.md` states that version 0.1 has no syntax that builds one,
-only `for` that walks one.
-A function taking one is a function nothing can call, so the only example it could state is the
-one `docs/specs/doc-examples.md` keeps for that case, which says nothing about the function.
-The first program a reader meets should not teach that, so `fullest` counts its baskets rather
-than walking a list of them, and the `for … in` form waits on a way to build a `List` to walk.
 
 `main` binds names it does not use: there is nowhere for an answer to go, because version 0.1 has
 no way to write a number out.

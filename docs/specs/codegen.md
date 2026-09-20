@@ -96,6 +96,23 @@ twice, which the JVM tells apart by descriptor.
 Writing the entry point with the module is what makes running the module class the same thing as
 running the program, so `lumen run` supplies nothing of its own; `docs/specs/run.md` says how.
 
+## How a list is built
+
+A written list is gathered into a `java.lang.Object[]` and handed to `java.util.List.of`.
+The array is as long as the list has elements, and it is filled left to right, so each element
+is evaluated once and in the order it is written.
+An empty list is the same three steps with nothing between the array and the call.
+
+The array holds references, so a whole number or a truth value written in a list is boxed on the
+way in, exactly as one put in a field a type parameter left open is.
+
+`List.of` is what builds the list because what it gives back holds its elements and cannot be
+changed, which is what a Lumen value is.
+A list that was a view of the array it was gathered into would be a JVM object that something
+else could still reach through, and `docs/design.md` section 2 keeps that out.
+`List.of` is declared on an interface, so the call names it as one; that is the only place a
+module reaches a static method of an interface.
+
 ## How a generic is written
 
 A function that declares no type parameter is written once, named as the source names it.
@@ -278,3 +295,4 @@ These hold and are checked with property-based tests:
 11. A record bound with `:=` and mentioned only to read its fields is lowered without a `new`.
 12. Such a program computes what the same program computes when the record is built.
 13. Every descriptor a class asks to load first names another class the same build writes.
+14. A written list of `n` elements gathers them into an array of `n` and builds one list.

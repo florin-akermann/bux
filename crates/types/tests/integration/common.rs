@@ -99,6 +99,11 @@ fn from_expr<'a>(expr: &'a Expr, into: &mut Vec<&'a Expr>) {
         }
         ExprKind::Field { receiver, .. } => from_expr(receiver, into),
         ExprKind::Try(inner) => from_expr(inner, into),
+        ExprKind::List(elements) => {
+            for element in elements {
+                from_expr(element, into);
+            }
+        }
         ExprKind::Record { fields, .. } => {
             for field in fields {
                 from_expr(&field.value, into);

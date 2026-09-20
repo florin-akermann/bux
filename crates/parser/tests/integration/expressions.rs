@@ -232,3 +232,67 @@ fn a_record_literal_needs_parentheses_where_a_block_would_follow() {
         ]
     );
 }
+
+#[test]
+fn a_written_list_holds_the_elements_it_writes_in_order() {
+    assert_eq!(
+        in_function("[1, 2, 3]"),
+        ["list", "  integer 1", "  integer 2", "  integer 3"]
+    );
+}
+
+#[test]
+fn a_written_list_may_hold_nothing_at_all() {
+    assert_eq!(in_function("[]"), ["list"]);
+}
+
+#[test]
+fn an_element_of_a_written_list_is_any_expression() {
+    assert_eq!(
+        in_function("[a + 1, f(b)]"),
+        [
+            "list",
+            "  binary Add",
+            "    name a",
+            "    integer 1",
+            "  call",
+            "    name f",
+            "    name b",
+        ]
+    );
+}
+
+#[test]
+fn a_written_list_takes_a_record_literal_without_parentheses() {
+    assert_eq!(
+        in_function("[User { id: 1 }]"),
+        [
+            "list",
+            "  record User",
+            "    field-value id",
+            "      integer 1"
+        ]
+    );
+}
+
+#[test]
+fn a_written_list_spans_lines_after_a_comma_or_its_opening_bracket() {
+    assert_eq!(in_function("[\n    1,\n    2\n]"), in_function("[1, 2]"));
+}
+
+#[test]
+fn a_written_list_is_walked_by_a_for_in_without_parentheses() {
+    assert_eq!(
+        in_function("for n in [1] {\n    }"),
+        ["for-in n", "  list", "    integer 1", "  block"]
+    );
+}
+
+#[test]
+fn a_written_list_covers_both_of_its_brackets() {
+    let source = "fn f() {\n    [1]\n}";
+    let written = source.find('[').expect("the list is written here");
+    let rendered = crate::common::render(source);
+    let covering = format!("list {written}..{}", written + "[1]".len());
+    assert!(rendered.contains(&covering), "{rendered}");
+}

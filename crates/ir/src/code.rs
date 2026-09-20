@@ -103,6 +103,12 @@ pub enum Instruction {
     JumpIfFalse(Label),
     /// Makes an uninitialised instance, which a constructor then takes.
     New(ClassName),
+    /// Makes an array of the class, as long as the small whole number on the stack says.
+    NewArray(ClassName),
+    /// Puts the value on top into the array two below it, at the index between the two.
+    StoreInArray,
+    /// Makes a list of what the array on the stack holds, which is what a written list becomes.
+    CollectList,
     /// Runs a constructor over the values above the instance it initialises.
     Construct(MethodRef),
     /// Reads a field of the instance on the stack.

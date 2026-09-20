@@ -1,0 +1,28 @@
+// expect-run
+// > nothing was picked
+// A list of nothing is written `[]`, and it takes the type of the place it is written.
+// Walking one runs the body no times at all, which is what this program shows.
+import io
+
+fn main() -> () {
+    if is_empty(picked()) {
+        io.println("nothing was picked")
+    }
+}
+
+/// The fruit an order holds, which is none of it.
+// example: is_empty(picked())
+fn picked() -> List<String> {
+    []
+}
+
+/// Whether a list holds nothing, which walking it and setting a flag answers.
+// example: is_empty([])
+// example: !is_empty(["a"])
+fn is_empty(fruit: List<String>) -> Bool {
+    var held = false
+    for one in fruit {
+        held = true
+    }
+    !held
+}

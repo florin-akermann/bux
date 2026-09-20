@@ -73,6 +73,11 @@ impl Walk<'_> {
             ExprKind::Call { .. } => self.call(expr, found),
             ExprKind::Field { receiver, .. } => self.expr(receiver, found),
             ExprKind::Try(inner) => self.expr(inner, found),
+            ExprKind::List(elements) => {
+                for element in elements {
+                    self.expr(element, found);
+                }
+            }
             ExprKind::Record { fields, .. } => {
                 for field in fields {
                     self.expr(&field.value, found);

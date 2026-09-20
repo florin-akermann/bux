@@ -82,6 +82,7 @@ impl Walk<'_> {
                 self.expr(callee)?;
                 self.each(arguments.values().into_iter())
             }
+            ExprKind::List(elements) => self.each(elements.iter()),
             ExprKind::Record { fields, .. } => self.each(fields.iter().map(|field| &field.value)),
             ExprKind::If(branching) => self.if_expr(branching),
             ExprKind::Match(matching) => self.match_expr(matching, expr.span),

@@ -110,6 +110,11 @@ impl Walk<'_> {
                 }
             }
             ExprKind::Try(inner) => self.expr(inner),
+            ExprKind::List(elements) => {
+                for element in elements {
+                    self.expr(element);
+                }
+            }
             ExprKind::Record { base, fields } => {
                 self.let_go_of(base);
                 for field in fields {

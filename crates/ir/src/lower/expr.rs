@@ -6,9 +6,10 @@ use lumen_types::Type;
 
 use crate::code::{Arithmetic, Comparison, FieldRef, Instruction, MethodRef};
 use crate::descriptor::Descriptor;
-use crate::lower::body::{Builder, Held};
+use crate::lower::body::{Builder, Held, LIST};
 use crate::lower::equality::compared;
-use crate::lower::shape::{CONSTRUCTOR, Carried, ERR, NONE, OK, SOME, Shape, TAG, object};
+use crate::lower::shape::{CONSTRUCTOR, Carried, ERR, NONE, OK, SOME, Shape, TAG};
+use crate::lower::shape::{object, object_class};
 
 impl Builder<'_> {
     /// Lowers `expr`, leaving its value on the stack when its type is carried by anything.
@@ -37,10 +38,29 @@ impl Builder<'_> {
             }
             ExprKind::Field { receiver, name } => self.field(receiver, name),
             ExprKind::Try(inner) => self.propagated(inner, expr.span),
+            ExprKind::List(elements) => Some(self.written_list(elements)),
             ExprKind::Record { base, fields } => Some(self.record(base, fields)),
             ExprKind::If(chain) => self.if_expr(chain, expr.span),
             ExprKind::Match(matched) => self.match_expr(matched, expr.span),
         }
+    }
+
+    /// A written list: its elements gathered into an array, and the array made into a list.
+    ///
+    /// A list holds references, so an element whose type is carried by a whole number or a
+    /// truth value is boxed on the way in, which is what `docs/specs/codegen.md` states.
+    fn written_list(&mut self, elements: &[Expr]) -> Descriptor {
+        self.emit(Instruction::Integer(counting(elements.len())));
+        self.emit(Instruction::NewArray(object_class()));
+        for (at, element) in elements.iter().enumerate() {
+            self.emit(Instruction::Copy);
+            self.emit(Instruction::Integer(counting(at)));
+            let held = self.expr(element);
+            self.adapt(held, Some(object()));
+            self.emit(Instruction::StoreInArray);
+        }
+        self.emit(Instruction::CollectList);
+        Descriptor::reference(LIST)
     }
 
     /// A literal: one instruction, and the descriptor it leaves behind.
@@ -545,4 +565,12 @@ fn worked_on(operator: UnaryOperator) -> (Descriptor, Instruction) {
 /// The value a record literal writes for the field `carried`, where it writes one.
 fn written_for<'a>(fields: &'a [FieldValue], carried: &Carried) -> Option<&'a FieldValue> {
     fields.iter().find(|field| field.name.text == carried.name)
+}
+
+/// How many, as the JVM counts an array's length and an index into one.
+///
+/// A source file long enough to write more elements than that is one no filesystem holds, and
+/// clamping it would write an array of the wrong length rather than say so.
+fn counting(many: usize) -> i32 {
+    i32::try_from(many).expect("a written list is shorter than a file can hold")
 }

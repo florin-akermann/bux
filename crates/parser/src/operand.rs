@@ -126,6 +126,7 @@ fn primary_kind(cursor: &mut Cursor, records: RecordLiterals) -> Result<ExprKind
             Ok(ExprKind::Match(Box::new(match_expression(cursor)?)))
         }
         Some(TokenKind::Punct(Punct::LParen)) => parenthesised(cursor),
+        Some(TokenKind::Punct(Punct::LBracket)) => written_list(cursor),
         Some(TokenKind::Identifier) => name_or_record(cursor, records),
         _ => Err(cursor.error(Expected::Expression)),
     }
@@ -148,6 +149,18 @@ fn parenthesised(cursor: &mut Cursor) -> Result<ExprKind, ParseError> {
     let inner = expression(cursor, RecordLiterals::Allowed)?;
     cursor.expect_punct(Punct::RParen)?;
     Ok(inner.kind)
+}
+
+/// `[first, second]`, or `[]`, which is the one way a list is written.
+///
+/// The elements are an ordinary comma-separated list, so one spans lines wherever a call's
+/// arguments do, and a trailing comma is refused here as it is everywhere else.
+fn written_list(cursor: &mut Cursor) -> Result<ExprKind, ParseError> {
+    cursor.expect_punct(Punct::LBracket)?;
+    let elements = comma_separated(cursor, Punct::RBracket, Emptiness::Allowed, |cursor| {
+        expression(cursor, RecordLiterals::Allowed)
+    })?;
+    Ok(ExprKind::List(elements))
 }
 
 /// A name, or the record literal it heads.

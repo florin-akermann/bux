@@ -260,3 +260,12 @@ fn a_division_where_a_whole_number_belongs_is_an_ordinary_mismatch() {
         "expected `Int`, found `Option<Int>`"
     );
 }
+
+#[test]
+fn an_element_that_does_not_share_the_type_of_the_ones_before_it_is_refused() {
+    let source = "fn mixed() -> List<Int> {\n    [1, \"two\"]\n}\n";
+
+    let refused = refusal(source);
+    assert_eq!(refused.message(), "expected `Int`, found `String`");
+    assert_eq!(refused.span().text(source), "\"two\"");
+}

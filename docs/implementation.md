@@ -312,6 +312,7 @@ Support:
 * local variables
 * `if`, `for`, `break`, `continue`, `return`
 * records
+* lists, written and walked
 * enums / ADTs
 * pattern matching
 * `Option`

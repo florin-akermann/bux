@@ -79,6 +79,8 @@ pub enum ExprKind {
     },
     /// `find_user(id)?`, which propagates an error.
     Try(Box<Expr>),
+    /// `[first, second]`, which builds a list of what it writes; `[]` builds one holding nothing.
+    List(Vec<Expr>),
     /// `User { id: id }` building a record, or `user { name: "Bob" }` updating one.
     ///
     /// Which of the two it is depends on what `base` names, so name resolution decides.

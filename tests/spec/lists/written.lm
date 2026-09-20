@@ -1,0 +1,29 @@
+// expect-run
+// > apples
+// > pears
+// > plums
+// A list is written between brackets, walked by `for … in`, and given away like any value.
+// `docs/specs/types.md` states that writing one builds it, and that nothing adds to it after.
+import io
+
+fn main() -> () {
+    for fruit in picked() {
+        io.println(fruit)
+    }
+}
+
+/// The fruit an order holds, which is the one place this program writes a list.
+// example: counted(picked()) == 3
+fn picked() -> List<String> {
+    ["apples", "pears", "plums"]
+}
+
+/// How many a list holds, which is what walking one and counting says.
+// example: counted(["a", "b"]) == 2
+fn counted(fruit: List<String>) -> Int {
+    var many = 0
+    for one in fruit {
+        many += 1
+    }
+    many
+}

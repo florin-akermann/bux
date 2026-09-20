@@ -253,6 +253,12 @@ impl Resolver {
             }
             ExprKind::Field { receiver, name } => self.reached(receiver, name),
             ExprKind::Try(inner) => self.expr(inner),
+            ExprKind::List(elements) => {
+                for element in elements {
+                    self.expr(element)?;
+                }
+                Ok(())
+            }
             ExprKind::Record { base, fields } => {
                 self.use_value(base)?;
                 for field in fields {

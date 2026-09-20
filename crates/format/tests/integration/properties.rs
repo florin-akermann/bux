@@ -20,14 +20,15 @@ const ITEMS: [&str; 8] = [
 ];
 
 /// The atoms a generated expression is built from, one of which is a bare number.
-const ATOMS: [&str; 4] = ["a", "7", "0", "f(1, b)"];
+const ATOMS: [&str; 5] = ["a", "7", "0", "f(1, b)", "[]"];
 
 /// The ways a generated expression wraps the one inside it, `_` standing for that one.
 ///
 /// A `-` in front of a number is the pair that matters most: the grammar reads `-7` as one
 /// number, so a printer that drops the parentheses of `-(7.abs())` writes a different program.
-const WRAPPERS: [&str; 10] = [
-    "-_", "- _", "!_", "(_)", "_.abs()", "_?", "_ + b", "b * _", "(_) == b", "g( _ )",
+const WRAPPERS: [&str; 12] = [
+    "-_", "- _", "!_", "(_)", "_.abs()", "_?", "_ + b", "b * _", "(_) == b", "g( _ )", "[ _ ]",
+    "[b, _]",
 ];
 
 /// How many wrappers one generated expression carries at most, well inside the nesting budget.

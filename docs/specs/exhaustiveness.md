@@ -31,7 +31,7 @@ Int, String            more than a match can write down
 
 A match covers a type when it covers every constructor of it.
 `Int` and `String` have more values than a match can list, so only a name that binds covers them.
-`List<T>` has no pattern that builds one, so only a name that binds covers it too.
+`List<T>` has no pattern of its own, so only a name that binds covers it too.
 
 The arms are read together rather than one at a time.
 `Some(Ok(value))`, `Some(Err(problem))`, and `None` cover an `Option<Result<T, E>>` between them,
