@@ -296,7 +296,10 @@ fn load_user(id: UserId) -> Result<User, Error> {
 }
 ```
 
-The `?` operator propagates an error.
+The `?` operator propagates the case that has nothing to go on with.
+On a `Result` it hands the `Err` back, and on an `Option` it hands the `None` back.
+Each lands in a function that gives back the same kind, so `?` has nothing to convert.
+A `None` met where the function gives back a `Result` is refused, because it names no error.
 
 **No program throws, catches, or observes an exception, and no operation is partial**.
 An operation without an answer for some of its input says so in its type rather than at runtime.
@@ -319,7 +322,7 @@ Which of the two an operation reaches for is settled by what the failure has to 
 `Option` is for the case that explains itself, where the absence is the whole story.
 An error type there would carry nothing the caller is not already holding.
 `Result` is for the failure with something to say that the caller could not work out.
-`?` propagates a `Result`.
+`?` propagates either, each into a function that gives back its kind.
 `docs/specs/arithmetic.md` works the choice through for `/` and `%`.
 
 There is no `unwrap` and no `expect`, in the prelude or anywhere else.

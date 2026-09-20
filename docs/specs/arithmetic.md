@@ -58,7 +58,7 @@ and `Result<T, ()>` is `Option<T>` written the long way round.
 A `Result` propagates into the error type of the function it is written in, so a division
 returning one would make every function that divides declare an error type for it, and would
 need a way to turn one error type into another.
-`Option` costs none of that.
+An `Option` propagates into an `Option`, and costs none of that.
 
 The rule is not about division.
 Every operator that can fail gives back an `Option` or a `Result`, and which one is settled the
@@ -68,8 +68,19 @@ say that the caller could not work out.
 
 ## Getting the answer out
 
-An `Option` comes apart by `match`.
-`?` is `Result`'s alone in version 0.1, so `(a / b)?` is refused as any other type mismatch is.
+An `Option` comes apart by `match`, or by `?` in a function that gives back an `Option`.
+`(a / b)?` is the quotient where the divisor is not zero, and the function's `None` where it is.
+That keeps arithmetic readable, because `?` marks the one operation that can have no answer:
+
+```text
+fn scaled(total: Int, count: Int) -> Option<Int> {
+    ((total / count)? / 2)? + 2 * 5
+}
+```
+
+Each `/` gives an `Option<Int>` and carries its own `?`; `+` and `*` give an `Int` and carry none.
+In a function that gives back a `Result`, `(a / b)?` is refused, because a `None` names no error.
+A `match` there states which error a zero divisor is, and there is no shorter way to say it.
 The prelude supplies `or` for the case where a fallback is what the author means:
 
 ```text
@@ -93,6 +104,8 @@ A `Result` comes apart by `match` or by `?` until then.
 Neither `/` nor `%` lowers to a bare `ldiv` or `lrem`, because both throw on a zero divisor.
 Each lowers to a test of the divisor, which yields `None` when it is zero and the quotient or the
 remainder wrapped in `Some` when it is not.
+`?` on an `Option` lowers as `?` on a `Result` does: a test of the tag, which gives the `None` it
+was handed back as the function's answer, and otherwise reads the value out of the `Some`.
 
 No method a module writes can throw.
 The one `athrow` code generation emits sits after an exhaustive `match`, where every value of the
@@ -113,6 +126,8 @@ help: a zero written here is never anything else; drop the division
 Every other refusal is an ordinary mismatch.
 `Int` met where `Option<Int>` belongs is `L0400`, as any other mismatch is.
 `total / count + 1` is refused for that reason: `+` joins two `Int`s, and the left is an `Option`.
+`(total / count)? + 1` is what an author who meant to propagate the `None` writes.
+A `Result` function refusing `(total / count)?` is `L0400` too, because `Option` is not `Result`.
 
 ## Properties
 
@@ -121,6 +136,7 @@ These hold over any module that divides, and are checked with property-based tes
 1. Every `/` and `%` tests its divisor before it divides, whatever it is written over.
 2. Every `/` and `%` builds both answers a divisor can have: a `Some` and a `None`.
 3. `or` is written out where it is used, calling nothing of its own and reading both branches.
+4. Every `?` on an `Option` gives the `None` it was handed back unchanged, wherever it is written.
 
 `tests/spec/arithmetic/division.lm` runs the arithmetic this spec states on a JDK, and is
 skipped when none is present.

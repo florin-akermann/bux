@@ -42,3 +42,15 @@ Where an import finds its file, and what a missing one says, is what the spec mu
 [039][c] - A name reached through an import resolves and types against what that file declares.
 [039][d] - `lumen build` writes the class files of every module the program reaches.
 [039][e] - Executable examples under `tests/spec/modules/`: two files, and a missing import.
+
+## 🔴 Item 040: `?` propagates an `Option`
+**Depends on:** nothing; `docs/design.md` section 5 and `docs/specs/arithmetic.md` state the rule.
+`/` and `%` give an `Option<Int>`, and today `?` is `Result`'s alone, so `(a / b)?` is refused.
+Arithmetic that divides is then a `match` or an `or` per division, and stops reading as arithmetic.
+`?` on an `Option` in a function that gives back an `Option` gives the value, or the `None` back.
+`((total / count)? / 2)? + 2 * 5` is then the readable form, and each `?` marks a division.
+A `None` met where the function gives back a `Result` stays `L0400`, because it names no error.
+Nothing converts: `?` propagates each kind into a function that gives back the same kind.
+[040][a] - Inference takes `?` on an `Option` in an `Option` function, test-first; `Result` as before.
+[040][b] - Lowering hands the held `None` back as the answer; a property covers the shape it emits.
+[040][c] - `tests/spec/arithmetic/division.lm` divides through `?`; a `Result` function is refused.
