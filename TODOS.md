@@ -6,7 +6,7 @@
 
 ## Open
 
-## 🔴 Item 065: A hashed map and set
+## 🟡 Item 065: A hashed map and set
 **Depends on:** Item 063, Item 064 — a table bucketed by `Hash<K>` needs the program's own keys.
 `Map` is a linked list, and a compiler with thousands of names is quadratic over it.
 `docs/specs/collections.md` says the table waits on an array, which `extern` may name by then.
