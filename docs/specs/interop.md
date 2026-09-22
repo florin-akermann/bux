@@ -69,13 +69,24 @@ own descriptor names.
 | `()`          | `void`                  | a result       |
 | `Option<T>`   | what `T` is, or `null`  | a result       |
 | `Result<T, String>` | what `T` is, or thrown | a result |
+| `List<T>`     | `java.util.List`        | a parameter    |
 
 Nothing else crosses.
-A `List`, a record, a variant, and a type parameter are each a Lumen type a Java member has no
-descriptor for, and an `extern` naming one is `L0425`.
+A record, a variant, and a type parameter are each a Lumen type a Java member has no descriptor
+for, and an `extern` naming one is `L0425`.
 The JVM's `double` and the rest of its primitives are types no Lumen type compiles to, so a
 member whose descriptor names one is not reachable and the answer is to name one that does not.
 The two widths are the exception, and the sections on them state each one.
+
+A `List<T>` is a `java.util.List` already, which `docs/specs/codegen.md` states, so a member takes
+one the way it takes any other value.
+It is a parameter and never a result.
+A list a member gives back is a JVM object that member may still reach through and change, and
+`docs/design.md` section 2 keeps a value that something else can change out of the language.
+What a list holds is held to this same table, so `List<String>` and `List<Int>` each cross and
+`List<User>` does not.
+The JVM writes no element type into a descriptor, so which Java type the elements are is the
+author's claim, exactly as the member itself is.
 
 An extern type is a type like any other from where a program stands.
 It is held, handed on, given back, and matched by nothing, because it declares no variants and no
@@ -265,7 +276,7 @@ says the wrong one is the author's claim failing the way naming a member the JVM
 
 | name                  | code    | message                                                    |
 |-----------------------|---------|------------------------------------------------------------|
-| type does not cross   | `L0425` | `List<Int>` is no type a Java member takes                 |
+| type does not cross   | `L0425` | `User` is no type a Java member takes                      |
 | not a Java name       | `L0426` | `java..File` is no Java name                               |
 | derive of an extern type | `L0427` | `File` is an extern type, and a derive reads what a type holds |
 | no class to reach     | `L0428` | a `method` reaches a class, and this signature names none  |
@@ -273,7 +284,8 @@ says the wrong one is the author's claim failing the way naming a member the JVM
 | builds an interface   | `L0430` | a `new` builds a class, and `Path` is an interface          |
 | narrows, no `Option`  | `L0431` | an `int` parameter narrows an `Int`, and this gives back `Int` |
 
-`L0425` helps with ``a boundary carries `Bool`, `Int`, `String`, and a type an `extern` names``.
+`L0425` helps with ``a boundary carries `Bool`, `Int`, `String`, a `List`, and a type an `extern`
+names``.
 It points at the type as the signature writes it, and is raised for a result as well as for a
 parameter, with `()`, `Option`, and `Result` accepted only as a result.
 The message says what the member does with a value written there — takes it, gives it back, or,
@@ -328,6 +340,7 @@ These hold and are checked with property-based tests:
 5. No `extern` declaration writes a body, so no two of them can disagree about one member.
 6. A declaration written `int` reaches the member for an `int` and leaves a `long` behind it.
 7. A `method` on a type written `interface` is lowered to the call the JVM makes on one.
-8. A declaration written `char` reaches the member for a `char` and leaves a `long` behind it.
-9. A declaration that narrows a parameter answers `None` for every argument outside the `int`
-   range, and reaches its member for none of them.
+8. A `List<T>` is accepted where a member takes one, and refused where a member gives one back.
+9. A declaration written `char` reaches the member for a `char` and leaves a `long` behind it.
+10. A declaration that narrows a parameter answers `None` for every argument outside the `int`
+    range, and reaches its member for none of them.

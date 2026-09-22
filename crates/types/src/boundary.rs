@@ -11,7 +11,7 @@ use lumen_ast::{Called, ExternDeclaration, ExternParameter, JavaName, Reaches, S
 
 use crate::error::TypeError;
 use crate::error::reaching_java::ReachingJava;
-use crate::types::{OPTION, RESULT, Type};
+use crate::types::{LIST, OPTION, RESULT, Type};
 
 /// How a method of each extern type is called, by the Lumen name an `extern type` gives it.
 pub(crate) type Foreign = HashMap<String, Called>;
@@ -31,7 +31,7 @@ pub(crate) enum Crossing {
 }
 
 impl Crossing {
-    /// Where the result of `reaches` is written, which a `field` alone holds rather than gives.
+    /// Where the result of `declaration` is written, which a `field` holds rather than gives.
     ///
     /// The JVM has no field of type `void`, so a `field` declared `()` reaches nothing to read,
     /// and refusing it here is what leaves the lowering with a value to get in every case.
@@ -74,8 +74,7 @@ pub(crate) fn crosses(
     foreign: &Foreign,
     span: Span,
 ) -> Result<(), TypeError> {
-    let boundary = Boundary { crossing, foreign };
-    if boundary.carries(held) {
+    if (Boundary { crossing, foreign }).carries(held) {
         return Ok(());
     }
     let kind = ReachingJava::DoesNotCross {
@@ -85,7 +84,10 @@ pub(crate) fn crosses(
     Err(TypeError::at(span, kind.into()))
 }
 
-/// Where a type is written and what an `extern type` has named, which say what crosses there.
+/// One place in an `extern` signature, as the reading of what may be written there holds it.
+///
+/// Where a type is written and which classes the declaring module named are both read to answer
+/// whether it crosses, so the two travel together rather than down every call apart.
 struct Boundary<'a> {
     crossing: Crossing,
     foreign: &'a Foreign,
@@ -94,39 +96,59 @@ struct Boundary<'a> {
 impl Boundary<'_> {
     /// Whether a Java member carries `held` where this boundary says it is written.
     ///
-    /// `Option` and `Result` are answers rather than values, so each is a result and never a
-    /// parameter, and each is read for what it wraps the same way. Neither wraps `()`, because a
-    /// variant carrying nothing at all is not a thing a constructor of one builds. `()` itself is
-    /// the one a `field` parts company over: a member gives nothing back, and a field holds
-    /// something or is no field.
+    /// `()` is the one a `field` parts company over: a member gives nothing back, and a field
+    /// holds something or is no field.
+    ///
+    /// `List<T>` is a `java.util.List` already, so a member takes one as it takes any other
+    /// value. It is a parameter and never a result: a list a member gives back is a JVM object
+    /// the member may still reach through and change, and a Lumen value is never that. What it
+    /// holds is held to the same rule, so a list of a type no member takes is none either.
     fn carries(&self, held: &Type) -> bool {
         let Type::Named { name, arguments } = held else {
             return matches!(held, Type::Unit) && self.crossing.of_a_call();
         };
-        let a_result = self.crossing != Crossing::Taken;
         match (name.as_str(), arguments.as_slice()) {
             ("Bool" | "Int" | "String", []) => true,
-            (OPTION, [value]) if a_result => self.optionally(value),
-            (RESULT, [value, Type::Named { name, .. }]) if a_result && name == "String" => {
+            (LIST, [element]) => self.crossing == Crossing::Taken && self.taken().carries(element),
+            (_, []) => self.foreign.contains_key(name),
+            _ => self.is_an_answer(held),
+        }
+    }
+
+    /// Whether `held` is an answer a member gives back, carrying what it wraps where it is.
+    ///
+    /// `Option` and `Result` are answers rather than values, so each is a result and never a
+    /// parameter, and each is read for what it wraps the same way. Neither wraps `()`, because a
+    /// variant carrying nothing at all is not a thing a constructor of one builds.
+    fn is_an_answer(&self, held: &Type) -> bool {
+        let Type::Named { name, arguments } = held else {
+            return false;
+        };
+        if self.crossing == Crossing::Taken {
+            return false;
+        }
+        match (name.as_str(), arguments.as_slice()) {
+            (OPTION, [value]) => self.optionally(value),
+            (RESULT, [value, Type::Named { name, .. }]) if name == "String" => {
                 !matches!(value, Type::Unit) && self.carries(value)
             }
-            (_, []) => self.foreign.contains_key(name),
             _ => false,
         }
     }
 
     /// Whether a `None` says anything about `held` where an `Option` is written around it.
     ///
-    /// A `null` is the `None` wherever the member gives back a reference. A declaration that
-    /// narrows an argument has a second reason for one, which `docs/specs/interop.md` states, so
-    /// there the `Option` carries whatever this boundary carries as a value of its own.
+    /// A `null` is the `None` wherever the member gives back a reference. `Option<Int>` is
+    /// otherwise neither a value nor an answer: a `long` is never `null`, so nothing it held
+    /// could say `None`. A declaration that narrows an argument has a second reason for one,
+    /// which `docs/specs/interop.md` states, so there a number says something after all.
     fn optionally(&self, held: &Type) -> bool {
         is_a_reference(held, self.foreign)
-            || (self.crossing == Crossing::Narrowed && self.taking().carries(held))
+            || (self.crossing == Crossing::Narrowed && is_a_number(held))
     }
 
-    /// This boundary read as a parameter is, which is where a value and no answer crosses.
-    fn taking(&self) -> Self {
+    /// The same classes, read where a member takes a value, which an element of a list is.
+    const fn taken(&self) -> Self {
         Self {
             crossing: Crossing::Taken,
             foreign: self.foreign,
@@ -248,6 +270,12 @@ pub(crate) fn narrows(declaration: &ExternDeclaration, result: &Type) -> Result<
 /// Whether `held` is the `Option` a `None` is one answer of.
 fn is_optional(held: &Type) -> bool {
     matches!(held, Type::Named { name, arguments } if name == OPTION && arguments.len() == 1)
+}
+
+/// Whether the JVM holds a value of `held` as a number, which is what no `null` is.
+fn is_a_number(held: &Type) -> bool {
+    matches!(held, Type::Named { name, arguments }
+        if arguments.is_empty() && (name == "Bool" || name == "Int"))
 }
 
 /// Whether `held` is the `Int` a widened `int` becomes.

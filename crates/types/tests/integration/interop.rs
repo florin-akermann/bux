@@ -14,22 +14,30 @@ fn declaring(written: &str) -> String {
 
 #[test]
 fn a_type_no_java_member_takes_is_refused_where_the_signature_writes_it() {
-    let error = refusal(&declaring(
-        "static written(lines: List<String>) -> String = \"java.lang.String.join\"",
+    let declared = declaring("static written(user: User) -> String = \"java.lang.String.valueOf\"");
+    let error = refusal(&format!(
+        "{declared}\ntype User = {{\n    name: String\n}}\n"
     ));
 
-    assert_eq!(
-        error.message(),
-        "`List<String>` is no type a Java member takes"
-    );
+    assert_eq!(error.message(), "`User` is no type a Java member takes");
     assert_eq!(
         error.help(),
-        "a boundary carries `Bool`, `Int`, `String`, and a type an `extern` names"
+        "a boundary carries `Bool`, `Int`, `String`, a `List`, and a type an `extern` names"
     );
 }
 
 #[test]
-fn a_type_no_java_member_gives_back_is_refused_the_same_way() {
+fn a_list_is_taken_as_the_java_util_list_a_jvm_already_holds_it_as() {
+    let source = "fn built() -> ProcessBuilder {\n    of_command([\"java\"])\n}\n\nextern new of_command(command: List<String>) -> ProcessBuilder\n\nextern type ProcessBuilder = \"java.lang.ProcessBuilder\"\n";
+
+    assert_eq!(
+        inferred_type(source, "of_command([\"java\"])", 1),
+        "ProcessBuilder"
+    );
+}
+
+#[test]
+fn a_list_a_member_gives_back_is_refused_because_that_member_may_still_change_it() {
     let error = refusal(&declaring(
         "static written(path: Path) -> List<String> = \"java.nio.file.Files.readAllLines\"",
     ));
@@ -73,7 +81,7 @@ fn a_field_holding_nothing_at_all_is_no_field_because_the_jvm_has_no_void_one() 
     assert_eq!(error.message(), "`()` is no type a Java member holds");
     assert_eq!(
         error.help(),
-        "a boundary carries `Bool`, `Int`, `String`, and a type an `extern` names"
+        "a boundary carries `Bool`, `Int`, `String`, a `List`, and a type an `extern` names"
     );
 }
 

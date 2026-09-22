@@ -393,6 +393,7 @@ Add, in the language and the library:
 * a library generic used at a type the program declares
 * an instance written over a generic type, and `derive` reaching through a `List`
 * a hashed map and set
+* a list that grows in amortized constant time, held as a buffer and a length
 
 Then, the compiler phase by phase, lexer first, each checked against the Rust one on `tests/spec`.
 Then the bootstrap of section 6, and the deletion of the Rust crates.

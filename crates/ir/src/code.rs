@@ -100,8 +100,10 @@ pub enum Instruction {
     Widen,
     /// Turns the whole number on the stack into a small one, dropping what does not fit.
     ///
-    /// It is written only where the range has already been read, which `docs/specs/interop.md`
-    /// states: an argument outside it is a `None`, and the member is not reached at all.
+    /// It is written only where something has already proved the number fits one: the guard on
+    /// an index a JVM array is read by, which `docs/specs/codegen.md` states, or the range an
+    /// `extern` reads before it reaches a member, which `docs/specs/interop.md` states. An
+    /// argument outside that range is a `None`, and the member is not reached at all.
     Narrow,
     /// Names a place a jump lands.
     Label(Label),

@@ -7,9 +7,9 @@ and checks that every `match` answers for every value it may meet. Nothing is wr
 Loading comes first. `import greeting` names `greeting.lm`, beside the file that writes it, and
 every module the file reaches is read before any of them is checked. There is no search path:
 a module is the file of that name beside the importing one, or nothing, and an import that names
-no such file is refused. `io`, `files`, `list`, `strings`, `map`, and `set` are modules of the
-library the compiler carries, so an import of any of them looks for no file at all and a file of
-that name beside the importing one does not shadow it.
+no such file is refused. `io`, `files`, `process`, `list`, `strings`, `map`, and `set` are modules
+of the library the compiler carries, so an import of any of them looks for no file at all and a
+file of that name beside the importing one does not shadow it.
 `map` holds `Map<K, V>`, built by `map.empty` and `map.insert` and read by `map.get`; `set` holds
 `Set<T>`, built the same way and read by `set.has_value`. A key is a type the prelude has an `Eq`
 instance for, which `Bool`, `Int`, and `String` are. Two modules that import each other are
@@ -52,19 +52,21 @@ Lumen signature: `extern type PrintStream = "java.io.PrintStream"` names the cla
 `static`, `method`, and `new` name the four kinds of member the JVM has. A parameter or a result
 is `Bool`, `Int`, `String`, or a type an `extern type` names, and nothing else crosses; a result
 may also be `()`, an `Option` whose `None` is the `null` the member gave back, or a `Result` whose
-`Err` holds what a throw said of itself. `Int` compiles to a `long`, and `int` or `char` after
-the kind says the member's own descriptor gives one of those instead, which the call widens to
-the `Int` the signature declares: `extern method int length(text: String) -> Int = "length"`. A
-parameter writes `int` before its name to say the member takes one there, and the argument is then
-narrowed: narrowing loses whatever does not fit, so such a declaration gives back an `Option`, and
-an argument outside the `int` range is a `None` that reaches the member not at all. The JVM calls
-a method of an interface its own way, and `interface` written after `type` says the class is one:
-`extern type interface Path = "java.nio.file.Path"`. A signature naming anything else, a name that
-is no Java name, a `derive` of an extern type, a `method` or a `new` whose signature names no
-class, a width written where the result is no `Int`, a narrowed parameter whose result is no
-`Option`, and a `new` whose result is an interface are each refused. `io`, `files`, and the
-readings of a string in `strings` are written over these declarations, so a program reaches the
-console, the file system, and the code units of a string without writing one.
+`Err` holds what a throw said of itself, and a parameter may also be a `List`, which is the
+`java.util.List` a JVM already holds one as. `Int` compiles to a `long`, and `int` or `char`
+after the kind says the member's own descriptor gives one of those instead, which the call widens
+to the `Int` the signature declares: `extern method int length(text: String) -> Int = "length"`.
+A parameter writes `int` before its name to say the member takes one there, and the argument is
+then narrowed: narrowing loses whatever does not fit, so such a declaration gives back an
+`Option`, and an argument outside the `int` range is a `None` that reaches the member not at all.
+The JVM calls a method of an interface its own way, and `interface` after `type` says the class
+is one: `extern type interface Path = "java.nio.file.Path"`. A signature naming anything else, a
+name that is no Java name, a `derive` of an extern type, a `method` or a `new` whose signature
+names no class, a width written where the result is no `Int`, a narrowed parameter whose result
+is no `Option`, and a `new` whose result is an interface are each refused. `io`, `files`,
+`process`, and the readings of a string in `strings` are written over these declarations, so a
+program reaches the console, the file system, another program, and the code units of a string
+without writing one.
 
 `?` is settled here too. It hands the `Err` of a `Result` or the `None` of an `Option` back, and
 lands in a function that gives back the same kind, so it never converts one into the other.

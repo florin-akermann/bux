@@ -1,9 +1,13 @@
 // expect-error: L0425
-// A parameter and a result are types a Java member's own descriptor names, and a `List` is not
-// one of them. What a declaration cannot say is not reachable, and the answer is another
-// declaration that names a type which crosses.
+// A parameter and a result are types a Java member's own descriptor names, and a record a
+// program declares is not one of them. What a declaration cannot say is not reachable, and the
+// answer is another declaration that names a type which crosses.
 fn main() -> () {
-    _ = written(["one"])
+    _ = written(User { name: "one" })
 }
 
-extern static written(lines: List<String>) -> String = "java.lang.String.join"
+extern static written(user: User) -> String = "java.lang.String.valueOf"
+
+type User = {
+    name: String
+}

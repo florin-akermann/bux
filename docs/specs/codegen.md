@@ -141,6 +141,26 @@ else could still reach through, and `docs/design.md` section 2 keeps that out.
 `List.of` is declared on an interface, so the call names it as one; that is the only place a
 module reaches a static method of an interface.
 
+## How a list is grown and read at an index
+
+`list.push` and `list.at` are the compiler's, which `docs/specs/library.md` states, so neither is
+a method the `list` class declares.
+A call of either is written out where it stands, the way an operator over `Int` is.
+
+`push` gathers the list it is handed and the value after it, and hands the gathering to `List.of`.
+It builds a `java.util.ArrayList` out of the list, adds the value to it, and reads it back as an
+array, which is the array the three steps above gather a written list into.
+The value is boxed on the way in, exactly as one written in a list is.
+The list that comes back is a `List.of` list like any other, so what the push was handed is
+untouched and what it gives back cannot be changed.
+
+`at` reads `List.size` and then `List.get`, and each is one step.
+The index is an `Int`, which is a `long`, and each of those members counts in `int`, so the index
+is narrowed to the width the member takes.
+The narrowing is total because the read is guarded: an index below zero and an index at or above
+the size are each `None`, and every index that gets past the guard fits an `int`.
+What the guard lets through is `Some` of the element, carried as the reference an `Option` holds.
+
 ## How a generic is written
 
 A function that declares no type parameter is written once, named as the source names it.
@@ -350,3 +370,4 @@ These hold and are checked with property-based tests:
 13. Every descriptor a class asks to load first names another class the same build writes.
 14. A written list of `n` elements gathers them into an array of `n` and builds one list.
 15. As many values stand for nothing as there are `()`s written where a reference is wanted.
+16. A call of `list.push` or of `list.at` asks the `list` class for no method.

@@ -379,11 +379,17 @@ fn a_bool_function_compiles_exactly_when_its_name_asks_a_question(tc: TestCase) 
     assert_eq!(accepts(&source), asks || gives != "Bool", "{source}");
 }
 
-/// Every name the two library modules of `docs/specs/io.md` declare, and what each gives back.
-const REACHED: [(&str, &str, &str); 3] = [
-    ("io", "print", "()"),
-    ("io", "println", "()"),
-    ("files", "read", "Result<String, String>"),
+/// Every name the library modules of `docs/specs/io.md` declare, with what each takes and gives.
+const REACHED: [(&str, &str, &str, &str); 4] = [
+    ("io", "print", "\"text\"", "()"),
+    ("io", "println", "\"text\"", "()"),
+    ("files", "read", "\"text\"", "Result<String, String>"),
+    (
+        "process",
+        "run",
+        "\"text\", []",
+        "Result<process.Finished, String>",
+    ),
 ];
 
 /// The letters a generated name is drawn from, which are the ones a Lumen name may hold.
@@ -401,9 +407,9 @@ const PLACES: [&str; 3] = [
 
 #[hegel::test]
 fn a_name_a_library_module_declares_has_one_type_wherever_it_is_written(tc: TestCase) {
-    let (module, name, result) = tc.draw(gs::sampled_from(&REACHED));
+    let (module, name, argument, result) = tc.draw(gs::sampled_from(&REACHED));
     let place = tc.draw(gs::sampled_from(&PLACES));
-    let call = format!("{module}.{name}(\"text\")");
+    let call = format!("{module}.{name}({argument})");
     let body = place.replace("{call}", &call);
     let source = format!("import {module}\n\nfn go() -> () {{\n{body}}}\n");
 
@@ -419,11 +425,11 @@ fn a_name_a_library_module_declares_has_one_type_wherever_it_is_written(tc: Test
 
 #[hegel::test]
 fn a_name_a_library_module_does_not_declare_is_refused_naming_the_module_and_it(tc: TestCase) {
-    let (module, _, _) = tc.draw(gs::sampled_from(&REACHED));
+    let (module, _, _, _) = tc.draw(gs::sampled_from(&REACHED));
     let opener = tc.draw(gs::sampled_from(&["a", "w", "r"]));
     let rest: String = tc.draw(gs::text().alphabet(NAME_LETTERS).max_size(NAME_LONGEST));
     let name = format!("{opener}{rest}");
-    tc.assume(!REACHED.iter().any(|(_, declared, _)| *declared == name));
+    tc.assume(!REACHED.iter().any(|(_, declared, _, _)| *declared == name));
     let source = format!("import {module}\n\nfn go() -> () {{\n    _ = {module}.{name}()\n}}\n");
 
     assert_eq!(
@@ -433,20 +439,39 @@ fn a_name_a_library_module_does_not_declare_is_refused_naming_the_module_and_it(
 }
 
 /// Every type that does not cross the boundary, which `docs/specs/interop.md` names each of.
-const CROSSES_NOT: [&str; 4] = ["List<String>", "User", "Paid", "Option<Int>"];
+const CROSSES_NOT: [&str; 4] = ["User", "Paid", "Option<Int>", "List<Option<Int>>"];
 
-/// Every place a signature writes a type, `{written}` standing for the one it writes there.
-const POSITIONS: [&str; 4] = [
-    "static held(one: {written}) -> String = \"java.lang.String.valueOf\"",
-    "static held(one: String, two: {written}) -> String = \"java.lang.String.valueOf\"",
-    "static held(one: String) -> {written} = \"java.lang.String.valueOf\"",
-    "method held(file: File, one: {written}) -> String = \"toString\"",
+/// Every place a signature writes a type, and whether a member takes what is written there.
+///
+/// `{written}` stands for the type the position writes, and the flag is what tells a parameter
+/// from a result, which is the whole of where a `List` crosses.
+const POSITIONS: [(&str, bool); 5] = [
+    (
+        "static held(one: {written}) -> String = \"java.lang.String.valueOf\"",
+        true,
+    ),
+    (
+        "static held(one: String, two: {written}) -> String = \"java.lang.String.valueOf\"",
+        true,
+    ),
+    (
+        "static held(one: String) -> {written} = \"java.lang.String.valueOf\"",
+        false,
+    ),
+    (
+        "method held(file: File, one: {written}) -> String = \"toString\"",
+        true,
+    ),
+    (
+        "field held() -> {written} = \"java.lang.System.out\"",
+        false,
+    ),
 ];
 
 #[hegel::test]
 fn a_type_that_does_not_cross_is_refused_whichever_position_it_is_in(tc: TestCase) {
     let written = tc.draw(gs::sampled_from(&CROSSES_NOT));
-    let position = tc.draw(gs::sampled_from(&POSITIONS));
+    let (position, _) = tc.draw(gs::sampled_from(&POSITIONS));
     let declared = position.replace("{written}", written);
     let source = format!(
         "extern {declared}\n\nextern type File = \"java.io.File\"\n\ntype User = {{\n    paid: Paid\n}}\n\ntype Paid = Paid(Int)\n"
@@ -467,6 +492,19 @@ fn a_type_that_does_not_cross_is_refused_whichever_position_it_is_in(tc: TestCas
         "{}",
         error.message()
     );
+}
+
+/// Every element type a list that crosses is written over.
+const HELD: [&str; 4] = ["Bool", "Int", "String", "File"];
+
+#[hegel::test]
+fn a_list_crosses_where_a_member_takes_one_and_nowhere_else(tc: TestCase) {
+    let held = tc.draw(gs::sampled_from(&HELD));
+    let (position, taken) = tc.draw(gs::sampled_from(&POSITIONS));
+    let declared = position.replace("{written}", &format!("List<{held}>"));
+    let source = format!("extern {declared}\n\nextern type File = \"java.io.File\"\n");
+
+    assert_eq!(accepts(&source), taken, "{source}");
 }
 
 /// The names a generated ring or chain of records is declared under, in the order it runs.

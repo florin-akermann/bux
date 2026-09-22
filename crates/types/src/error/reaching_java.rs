@@ -58,7 +58,7 @@ impl ReachingJava {
     pub(super) const fn the_rule(&self) -> &'static str {
         match self {
             Self::DoesNotCross { .. } => {
-                "a boundary carries `Bool`, `Int`, `String`, and a type an `extern` names"
+                "a boundary carries `Bool`, `Int`, `String`, a `List`, and a type an `extern` names"
             }
             Self::NotAJavaName(_) => {
                 "a Java name is its segments, each a name, with a dot between two of them"

@@ -177,7 +177,11 @@ impl Assembling {
         self.push(Held::Long);
     }
 
-    /// A whole number becomes a small one, which the range was read for before it got here.
+    /// A whole number becomes a small one, which takes one slot rather than two.
+    ///
+    /// Nothing is lost where it is written: a guard or a range has already proved the number is
+    /// one a small whole number holds, which `docs/specs/codegen.md` and
+    /// `docs/specs/interop.md` each state of the place they write it.
     fn narrow(&mut self) {
         self.byte(opcode::L2I);
         self.pop();

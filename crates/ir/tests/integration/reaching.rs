@@ -1,8 +1,8 @@
 //! What an `extern` declaration becomes, which `docs/specs/interop.md` states.
 //!
 //! Each one is a static method of the module that declares it, holding the member it names and
-//! the mapping the declaration asks for. `docs/specs/io.md` states what `io` and `files` reach
-//! through theirs, and the last of these hold the two library modules to it.
+//! the mapping the declaration asks for. `docs/specs/io.md` states what `io`, `files`, and
+//! `process` reach through theirs, and the last of these hold those library modules to it.
 
 use lumen_ir::{Asked, Body, ClassName, Comparison, Descriptor, FieldRef, Guard, Instruction};
 use lumen_ir::{Label, Lowered, MethodDescriptor, MethodRef};
@@ -373,6 +373,74 @@ fn the_path_is_asked_of_a_file_before_the_file_is_read_whole() {
     );
 }
 
+/// Every member of `process`, in the order the module declares them.
+const REACHED_BY_A_RUN: [&str; 12] = [
+    "of_command",
+    "reading_from",
+    "inherited",
+    "started",
+    "output_of",
+    "errors_of",
+    "ended",
+    "over",
+    "delimited",
+    "token",
+    "closed",
+    "nothing_at_all",
+];
+
+/// The JVM classes `docs/specs/io.md` names for `process`, apart from the mapping around them.
+const STARTS_A_PROGRAM: [&str; 4] = [
+    "java/lang/ProcessBuilder",
+    "java/lang/Process",
+    "java/util/Scanner",
+    "java/io/InputStream",
+];
+
+/// The static field a run reads, which is the standard input the program it starts reads.
+const READS_WHAT_WE_READ: &str = "java/lang/ProcessBuilder$Redirect";
+
+#[test]
+fn a_run_reaches_the_jvm_classes_that_start_a_program_and_read_what_it_wrote() {
+    let written = library("process").lowered();
+
+    let reached: Vec<String> = REACHED_BY_A_RUN
+        .into_iter()
+        .flat_map(|named| reached_by(body_of_module(&written, library("process"), named)))
+        .filter(|call| STARTS_A_PROGRAM.iter().any(|class| call.starts_with(class)))
+        .collect();
+
+    assert_eq!(
+        reached,
+        vec![
+            "java/lang/ProcessBuilder.<init>".to_owned(),
+            "java/lang/ProcessBuilder.redirectInput".to_owned(),
+            "java/lang/ProcessBuilder.start".to_owned(),
+            "java/lang/Process.getInputStream".to_owned(),
+            "java/lang/Process.getErrorStream".to_owned(),
+            "java/lang/Process.waitFor".to_owned(),
+            "java/util/Scanner.<init>".to_owned(),
+            "java/util/Scanner.useDelimiter".to_owned(),
+            "java/util/Scanner.next".to_owned(),
+            "java/util/Scanner.close".to_owned(),
+            "java/io/InputStream.nullInputStream".to_owned(),
+        ]
+    );
+}
+
+#[test]
+fn the_command_a_run_is_given_crosses_as_the_java_util_list_a_jvm_holds_it_as() {
+    let written = library("process").lowered();
+    let list = Descriptor::reference("java/util/List");
+
+    let built = method_of(
+        class_of(&written, &library("process").class()),
+        "of_command",
+    );
+
+    assert_eq!(built.descriptor.parameters, [list]);
+}
+
 #[test]
 fn the_only_method_of_a_library_module_that_guards_a_span_gives_back_a_result() {
     assert!(guarding("io").is_empty(), "nothing `io` reaches throws");
@@ -380,6 +448,26 @@ fn the_only_method_of_a_library_module_that_guards_a_span_gives_back_a_result() 
         guarding("files"),
         ["read_whole", "as_a_path"],
         "the two declarations `files` writes with a `Result` are the two guarded spans"
+    );
+    assert_eq!(
+        guarding("process"),
+        ["started", "ended", "token"],
+        "the three declarations `process` writes with a `Result` are its guarded spans"
+    );
+}
+
+#[test]
+fn a_run_points_the_standard_input_of_the_program_at_the_one_this_program_reads() {
+    let written = library("process").lowered();
+
+    let read = body_of_module(&written, library("process"), "inherited");
+
+    assert!(
+        read.instructions.iter().any(|instruction| matches!(
+            instruction,
+            Instruction::GetStatic(field) if field.class == ClassName::new(READS_WHAT_WE_READ)
+        )),
+        "`inherited` reads the redirect off the class that holds it"
     );
 }
 
