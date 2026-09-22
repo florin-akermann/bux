@@ -150,8 +150,9 @@ Type inference raises these, in `crates/types/src/error.rs`:
 - `L0426` — an `extern` states something that is no Java name.
 - `L0427` — a derive names a type an `extern type` declares, whose contents are the JVM's.
 - `L0428` — an `extern method` or an `extern new` reaches a class, and its signature names none.
-- `L0429` — an `extern` says its member gives an `int`, and its result is no `Int` to widen one to.
+- `L0429` — an `extern` writes a width where there is no `Int` to widen to or to narrow from.
 - `L0430` — an `extern new` gives back a type an `extern type` named an interface.
+- `L0431` — an `extern` narrows a parameter and gives back something other than an `Option`.
 
 Exhaustiveness raises these, in `crates/exhaustiveness/src/error.rs`:
 

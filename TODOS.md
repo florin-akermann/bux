@@ -6,14 +6,6 @@
 
 ## Open
 
-## 🔴 Item 059: A string is read one code unit at a time
-No function reads a character of a string, so a lexer cannot be written in Bux.
-`String.charAt` and `String.substring` each take an `int`, and `extern` widens a result only.
-The spec settles how an `Int` argument reaches an `int` parameter without a partial operation.
-[059][a] - `docs/specs/interop.md` states how an `Int` argument crosses to an `int` parameter.
-[059][b] - `strings.at(text, index)` gives the code unit as an `Int`, or `None` past the end.
-[059][c] - `strings.cut(text, from, to)` gives the substring, or `None` where it does not fit.
-[059][d] - An executable example under `tests/spec/library` walks a string and counts its spaces.
 
 ## 🔴 Item 060: A program takes arguments, exits with a code, and writes to standard error
 `main` takes nothing and gives back nothing, and `io` writes to standard output only.

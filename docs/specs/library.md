@@ -153,12 +153,13 @@ what `docs/specs/collections.md` does of a map.
 
 `list`, `strings`, `map`, and `set` each hold what a `for` loop writes the same way twice, and
 `io`, `files`, `process`, and `environment` hold what no `for` loop writes at all.
-`strings` holds one of each: `join` is the loop, and `length` is what no loop reads.
+`strings` holds each of them: `join` is the loop, `length` is what no loop reads, and `at` and
+`cut` are a check written over two more `extern` declarations.
 `list` holds two more, `push` and `at`, which the section above states are the compiler's.
 
 ```text
 list:        length  has_value  index_of  push  at
-strings:     join  length
+strings:     at  cut  join  length
 map:         empty  insert  get
 set:         empty  insert  has_value
 io:          print  println
@@ -177,9 +178,10 @@ module read out of a file, so nothing about the order a module is read in change
 `docs/specs/interop.md` states and `docs/specs/io.md` says what each of the four reaches. Each
 declares those declarations beside its functions, and every top-level name is public, so every one
 of those surfaces is wider than the names above; `docs/specs/io.md` names the rest.
-`strings.length` is one such declaration itself.
-It reaches `String.length`, whose descriptor gives an `int` that the declaration widens to the
-`Int` it gives back.
+`strings` is written over three of them, which is the same again: `length` is one declaration
+itself, and `at` and `cut` are a check over the two the section below states.
+`strings.length` reaches `String.length`, whose descriptor gives an `int` that the declaration
+widens to the `Int` it gives back.
 What it counts is what a JVM counts, which is UTF-16 code units: a character the JVM holds as a
 pair of units, such as an emoji, counts as two.
 
@@ -187,6 +189,22 @@ pair of units, such as an emoji, counts as two.
 steps of its own walks beside them, which `docs/specs/collections.md` lists.
 One module holds one type, because `empty` has one definition and a module holding both maps and
 sets would need two.
+
+`strings.at(text, index)` gives the UTF-16 code unit at `index` as an `Int`.
+It gives `None` where `index` is below `0`, or is not below `strings.length(text)`.
+`strings.cut(text, from, to)` gives the part of the text from `from` up to but not including `to`.
+It gives `None` where `from` is below `0`, where `to` is above the length, or where `from` is
+above `to`.
+`at` costs constant time, and `cut` costs time linear in the length of the part it gives back.
+
+Each of the two is written in Bux: a bounds check over `strings.length`, and then one `extern`
+call.
+The one reaches `String.charAt`, declared with a `char` width and a narrowed `index`, and the
+other reaches `String.substring`, declared with a narrowed `from` and a narrowed `to`.
+Each of the two declarations gives back `Result<Option<T>, String>`: the `Option` is what
+`docs/specs/interop.md` asks of a declaration that narrows an argument, and the `Result` is what
+keeps the declaration itself total, because every top-level name of a module is public.
+Every index counts UTF-16 code units, which is what `strings.length` counts.
 
 `join` runs the parts of a `List<String>` together, with a separator between each pair.
 

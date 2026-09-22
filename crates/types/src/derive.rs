@@ -9,6 +9,7 @@ use lumen_ast::{TypeRef, Variant, VariantPayload};
 use lumen_resolver::{ResolvedProgram, prelude};
 
 use crate::environment::{Environment, signature_of};
+use crate::error::reaching_java::ReachingJava;
 use crate::error::{TypeError, TypeErrorKind};
 use crate::types::Type;
 
@@ -65,8 +66,8 @@ fn reads_what_it_holds(writes: &Writes<'_>) -> Result<(), TypeError> {
     if !matches!(&writes.declared.definition, TypeDefinition::Foreign { .. }) {
         return Ok(());
     }
-    let kind = TypeErrorKind::DerivesAForeignType(writes.for_type.text.clone());
-    Err(TypeError::at(writes.for_type.span, kind))
+    let kind = ReachingJava::DerivesAForeignType(writes.for_type.text.clone());
+    Err(TypeError::at(writes.for_type.span, kind.into()))
 }
 
 /// Refuses one value a deriving type holds whose own type has no instance of the trait.

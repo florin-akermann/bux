@@ -19,8 +19,8 @@ pub use expr::{Arguments, BinaryOperator, Branch, Expr, ExprKind, FieldValue, If
 pub use expr::{MatchArm, MatchExpr};
 pub use expr::{NamedArgument, UnaryOperator};
 pub use item::{Called, Constraint, DeriveDeclaration, ExternDeclaration, Function, Import};
-pub use item::{Gives, InstanceDeclaration, Item, Reaches};
-pub use item::{Parameter, Program};
+pub use item::{ExternParameter, Gives, InstanceDeclaration, Item, Reaches};
+pub use item::{Parameter, Program, Takes};
 pub use item::{RecordField, Signature, TraitDeclaration, TypeDeclaration, TypeDefinition};
 pub use item::{TypeParameter, Variant, VariantPayload};
 pub use java::JavaName;

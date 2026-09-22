@@ -69,29 +69,94 @@ pub struct ExternDeclaration {
     /// What the member's own descriptor gives back, which the result alone does not say.
     pub gives: Gives,
     /// Empty for a `field`, and never empty for a `method`, whose receiver is the first of them.
-    pub parameters: Vec<Parameter>,
+    pub parameters: Vec<ExternParameter>,
     /// Always written: there is no body for inference to read a result off instead.
     pub result: TypeRef,
     pub span: Span,
 }
 
-/// Which width the member's own descriptor gives back, where two of them answer to one Lumen type.
+impl ExternDeclaration {
+    /// Whether any parameter is narrowed, which is what asks the result to be an `Option`.
+    ///
+    /// Narrowing a `long` to an `int` loses whatever does not fit, and nothing in Bux is partial,
+    /// so an argument outside the `int` range is the `None` this result carries.
+    #[must_use]
+    pub fn narrows(&self) -> bool {
+        self.parameters
+            .iter()
+            .any(|parameter| parameter.takes == Takes::AnInt)
+    }
+}
+
+/// One parameter of an `extern`: the parameter itself, and what the member takes it as.
 ///
-/// `Int` compiles to a `long` and a great many Java members give back an `int` instead. Which of
-/// the two a member gives is written in that member's class file, and the compiler reads none, so
-/// the declaration says it. `docs/specs/interop.md` states the widening and what it refuses.
+/// `docs/specs/interop.md` states the narrowing. Every other declaration writes a parameter
+/// alone, because no other declaration reaches a member whose descriptor says something else.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ExternParameter {
+    /// The parameter as any signature writes it: its name, and the Lumen type written after it.
+    pub declared: Parameter,
+    /// What the member's own descriptor takes, which the declared type alone does not say.
+    pub takes: Takes,
+}
+
+/// Which width the member's own descriptor takes, where two of them answer to one Lumen type.
+///
+/// `Int` compiles to a `long` and a great many Java members take an `int` instead: `String.charAt`
+/// and `String.substring` each do. `docs/specs/interop.md` states the narrowing and what it asks
+/// of the result.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Takes {
+    /// The descriptor the parameter compiles to, which a parameter writing no width says.
+    WhatTheParameterIs,
+    /// `extern method char at(text: String, int index: Int)`: an `int`, narrowed from the `Int`.
+    AnInt,
+}
+
+impl Takes {
+    /// The word written before the name, which a parameter taken as it is written writes none of.
+    #[must_use]
+    pub const fn written(self) -> Option<&'static str> {
+        match self {
+            Self::WhatTheParameterIs => None,
+            Self::AnInt => Some(Gives::AN_INT),
+        }
+    }
+}
+
+/// Which width the member's own descriptor gives back, where three of them answer to one Lumen
+/// type.
+///
+/// `Int` compiles to a `long` and a great many Java members give back an `int` or a `char`
+/// instead. Which of the three a member gives is written in that member's class file, and the
+/// compiler reads none, so the declaration says it. `docs/specs/interop.md` states the widening
+/// and what it refuses.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Gives {
     /// The descriptor the result compiles to, which is what a declaration writing no width says.
     WhatTheResultIs,
     /// `extern method int length(text: String) -> Int`: an `int`, widened to the `Int` declared.
     AnInt,
+    /// `extern method char at(text: String, int index: Int)`: a `char`, widened the same way.
+    AChar,
 }
 
 impl Gives {
-    /// The word a declaration writes before its name to say the member's descriptor gives an
-    /// `int`, which is an ordinary name everywhere else.
-    pub const WIDTH: &'static str = "int";
+    /// The word that says the member's own descriptor holds an `int`, which is a name elsewhere.
+    pub const AN_INT: &'static str = "int";
+
+    /// The word that says the member's own descriptor gives a `char`, which is a name elsewhere.
+    pub const A_CHAR: &'static str = "char";
+
+    /// The width `word` spells, where it spells one of the two.
+    #[must_use]
+    pub fn spelled(word: &str) -> Option<Self> {
+        match word {
+            Self::AN_INT => Some(Self::AnInt),
+            Self::A_CHAR => Some(Self::AChar),
+            _ => None,
+        }
+    }
 
     /// The word written before the name, which a declaration giving what its result is writes none
     /// of.
@@ -99,7 +164,8 @@ impl Gives {
     pub const fn written(self) -> Option<&'static str> {
         match self {
             Self::WhatTheResultIs => None,
-            Self::AnInt => Some(Self::WIDTH),
+            Self::AnInt => Some(Self::AN_INT),
+            Self::AChar => Some(Self::A_CHAR),
         }
     }
 }

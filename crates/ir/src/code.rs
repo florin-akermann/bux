@@ -98,10 +98,12 @@ pub enum Instruction {
     Not,
     /// Turns the small whole number on the stack into a whole number.
     Widen,
-    /// Turns the whole number on the stack into the small whole number a JVM indexes by.
+    /// Turns the whole number on the stack into a small one, dropping what does not fit.
     ///
-    /// It is written where a guard has already proved the number fits one, which
-    /// `docs/specs/codegen.md` states of the one place version 0.1 writes it.
+    /// It is written only where something has already proved the number fits one: the guard on
+    /// an index a JVM array is read by, which `docs/specs/codegen.md` states, or the range an
+    /// `extern` reads before it reaches a member, which `docs/specs/interop.md` states. An
+    /// argument outside that range is a `None`, and the member is not reached at all.
     Narrow,
     /// Names a place a jump lands.
     Label(Label),

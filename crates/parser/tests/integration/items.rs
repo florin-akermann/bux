@@ -372,3 +372,39 @@ fn int_is_the_width_only_where_a_name_follows_it_and_is_an_ordinary_name_otherwi
         ]
     );
 }
+
+#[test]
+fn an_extern_says_its_member_gives_a_char_the_same_way_it_says_it_gives_an_int() {
+    assert_eq!(
+        shape("extern method char at(text: String, int index: Int) -> Option<Int> = \"charAt\""),
+        [
+            "extern method char at",
+            "  java charAt",
+            "  parameter text",
+            "    named-type String",
+            "  parameter int index",
+            "    named-type Int",
+            "  result",
+            "    named-type Option",
+            "      named-type Int",
+        ]
+    );
+}
+
+#[test]
+fn a_parameter_named_int_is_a_name_and_not_the_width_the_member_takes() {
+    assert_eq!(
+        shape("extern method held(text: String, int: Int) -> Option<Int> = \"charAt\""),
+        [
+            "extern method held",
+            "  java charAt",
+            "  parameter text",
+            "    named-type String",
+            "  parameter int",
+            "    named-type Int",
+            "  result",
+            "    named-type Option",
+            "      named-type Int",
+        ]
+    );
+}

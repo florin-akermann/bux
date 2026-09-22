@@ -4,8 +4,8 @@
 //! the mapping the declaration asks for. `docs/specs/io.md` states what `io`, `files`, and
 //! `process` reach through theirs, and the last of these hold those library modules to it.
 
-use lumen_ir::{Asked, Body, ClassName, Descriptor, FieldRef, Guard, Instruction, Label};
-use lumen_ir::{Lowered, MethodDescriptor, MethodRef};
+use lumen_ir::{Asked, Body, ClassName, Comparison, Descriptor, FieldRef, Guard, Instruction};
+use lumen_ir::{Label, Lowered, MethodDescriptor, MethodRef};
 use lumen_types::Imported;
 
 use crate::common::{LibraryModule, Written, body_of, called, class_of, library};
@@ -38,6 +38,15 @@ const GUARDED: &str = concat!(
 const WIDENED: &str = concat!(
     "extern method int length(text: String) -> Int = \"length\"\n\n",
     "extern method int counted(text: String) -> Result<Int, String> = \"hashCode\"\n",
+);
+
+/// A module whose declarations narrow an argument, which is the range-reading shape.
+///
+/// The first gives back a number, which is never `null`, and the second gives back a reference,
+/// which may be. `docs/specs/interop.md` states that the two reasons for a `None` compose.
+const NARROWED: &str = concat!(
+    "extern method char at(text: String, int index: Int) -> Option<Int> = \"charAt\"\n\n",
+    "extern method cut(text: String, int from: Int) -> Option<String> = \"substring\"\n",
 );
 
 /// A module whose one declaration gives back an `Option`, which is the null-reading shape.
@@ -534,4 +543,114 @@ fn built_in(instructions: &[Instruction]) -> Vec<String> {
             _ => None,
         })
         .collect()
+}
+
+#[test]
+fn a_narrowed_argument_is_read_against_the_int_range_before_the_member_is_reached() {
+    let written = lowered(NARROWED);
+    let body = body_of(&written, "at");
+    let opened = at(body, Label(0));
+
+    assert_eq!(
+        &body.instructions[..opened],
+        [
+            read_against(i64::from(i32::MIN), Comparison::GreaterOrEqual),
+            read_against(i64::from(i32::MAX), Comparison::LessOrEqual),
+        ]
+        .concat()
+    );
+}
+
+#[test]
+fn a_narrowed_argument_reaches_the_member_as_an_int_and_a_char_widens_to_the_int_declared() {
+    let written = lowered(NARROWED);
+    let body = body_of(&written, "at");
+
+    assert!(
+        body.instructions
+            .contains(&Instruction::InvokeVirtual(MethodRef {
+                class: ClassName::new("java/lang/String"),
+                name: "charAt".to_owned(),
+                descriptor: MethodDescriptor::new(
+                    vec![Descriptor::Integer],
+                    Some(Descriptor::Character)
+                ),
+            }))
+    );
+    assert!(body.instructions.contains(&Instruction::Narrow));
+    assert!(body.instructions.contains(&Instruction::Widen));
+}
+
+#[test]
+fn an_argument_outside_the_range_is_a_none_that_reaches_the_member_not_at_all() {
+    let written = lowered(NARROWED);
+    let body = body_of(&written, "at");
+    let unfit = at(body, Label(4));
+
+    assert_eq!(
+        built_in(&body.instructions[unfit..]),
+        vec!["lumen/Option$None".to_owned()]
+    );
+    assert_eq!(
+        reached_in(&body.instructions[unfit..]),
+        vec!["lumen/Option$None.<init>".to_owned()],
+        "the `None` is built, and the member the declaration names is not reached"
+    );
+}
+
+#[test]
+fn a_number_the_member_gave_back_is_a_some_because_a_number_is_never_null() {
+    let written = lowered(NARROWED);
+    let body = body_of(&written, "at");
+    let opened = at(body, Label(0));
+
+    assert!(
+        !body.instructions[opened..]
+            .iter()
+            .any(|instruction| matches!(instruction, Instruction::JumpIfNull(_))),
+        "a number is never `null`, so the one `None` there is is the unfit argument's"
+    );
+}
+
+#[test]
+fn a_reference_the_member_gave_back_reads_a_null_as_well_as_the_range() {
+    let written = lowered(NARROWED);
+    let body = body_of(&written, "cut");
+
+    assert!(
+        body.instructions
+            .iter()
+            .any(|instruction| matches!(instruction, Instruction::JumpIfNull(_))),
+        "the two reasons for a `None` compose into the one answer"
+    );
+    assert_eq!(
+        built_in(&body.instructions),
+        vec![
+            "lumen/Option$Some".to_owned(),
+            "lumen/Option$None".to_owned(),
+            "lumen/Option$None".to_owned(),
+        ]
+    );
+}
+
+#[test]
+fn a_declaration_that_narrows_nothing_reads_no_range_and_narrows_no_argument() {
+    let written = lowered(WIDENED);
+    let body = body_of(&written, "length");
+
+    assert!(!body.instructions.contains(&Instruction::Narrow));
+    assert_eq!(at(body, Label(0)), 0, "nothing stands before the member");
+}
+
+/// The whole number in the second slot read against `bound`, which is what `fitting` writes.
+fn read_against(bound: i64, how: Comparison) -> Vec<Instruction> {
+    vec![
+        Instruction::Load {
+            slot: 1,
+            of: Descriptor::Long,
+        },
+        Instruction::Long(bound),
+        Instruction::CompareLongs(how),
+        Instruction::JumpIfFalse(Label(4)),
+    ]
 }

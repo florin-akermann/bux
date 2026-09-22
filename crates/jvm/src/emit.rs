@@ -92,7 +92,7 @@ impl Assembling {
     fn load(&mut self, slot: u16, of: &Descriptor) {
         let opcode = match of {
             Descriptor::Long => opcode::LLOAD,
-            Descriptor::Boolean | Descriptor::Integer => opcode::ILOAD,
+            Descriptor::Boolean | Descriptor::Integer | Descriptor::Character => opcode::ILOAD,
             Descriptor::Reference(_) | Descriptor::Array(_) => opcode::ALOAD,
         };
         self.indexed(opcode, slot);
@@ -102,7 +102,7 @@ impl Assembling {
     fn store(&mut self, slot: u16, of: &Descriptor) {
         let opcode = match of {
             Descriptor::Long => opcode::LSTORE,
-            Descriptor::Boolean | Descriptor::Integer => opcode::ISTORE,
+            Descriptor::Boolean | Descriptor::Integer | Descriptor::Character => opcode::ISTORE,
             Descriptor::Reference(_) | Descriptor::Array(_) => opcode::ASTORE,
         };
         self.indexed(opcode, slot);
@@ -177,10 +177,11 @@ impl Assembling {
         self.push(Held::Long);
     }
 
-    /// A whole number becomes the small whole number a JVM indexes by, which takes one slot.
+    /// A whole number becomes a small one, which takes one slot rather than two.
     ///
-    /// Nothing is lost where it is written: `docs/specs/codegen.md` writes it only behind a
-    /// guard that has already proved the number is one a small whole number holds.
+    /// Nothing is lost where it is written: a guard or a range has already proved the number is
+    /// one a small whole number holds, which `docs/specs/codegen.md` and
+    /// `docs/specs/interop.md` each state of the place they write it.
     fn narrow(&mut self) {
         self.byte(opcode::L2I);
         self.pop();
@@ -349,7 +350,9 @@ impl Assembling {
         let opcode = match of {
             None => opcode::RETURN,
             Some(Descriptor::Long) => opcode::LRETURN,
-            Some(Descriptor::Boolean | Descriptor::Integer) => opcode::IRETURN,
+            Some(Descriptor::Boolean | Descriptor::Integer | Descriptor::Character) => {
+                opcode::IRETURN
+            }
             Some(Descriptor::Reference(_) | Descriptor::Array(_)) => opcode::ARETURN,
         };
         self.byte(opcode);

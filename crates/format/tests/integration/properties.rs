@@ -65,13 +65,22 @@ fn program(tc: &TestCase) -> String {
 /// Every kind of member an `extern` reaches, each written with its name and result left open.
 const KINDS: [&str; 4] = [
     "field {width}{name}() -> {result} = \"java.lang.System.out\"",
-    "static {width}{name}(path: File) -> {result} = \"java.nio.file.Files.readString\"",
-    "method {width}{name}(file: File) -> {result} = \"toPath\"",
-    "new {width}{name}(path: String) -> {result}",
+    "static {width}{name}(path: File, {taken}{at}: Int) -> {result} = \"java.lang.System.identityHashCode\"",
+    "method {width}{name}(file: File, {taken}{at}: Int) -> {result} = \"toPath\"",
+    "new {width}{name}(path: String, {taken}{at}: Int) -> {result}",
 ];
 
 /// What a declaration says its member's own descriptor gives back, which is written or is not.
-const WIDTHS: [&str; 2] = ["", "int "];
+const WIDTHS: [&str; 3] = ["", "int ", "char "];
+
+/// What a declaration says its member's own descriptor takes, which is written or is not.
+const TAKEN: [&str; 2] = ["", "int "];
+
+/// The names a generated parameter is written under, which `int` is one of.
+///
+/// A parameter named `int` is still `int: Int`, because a width is the width only where a name
+/// follows it, and `:` is no name.
+const AT: [&str; 2] = ["held", "int"];
 
 /// Which kind of class the type a generated declaration reaches is, written or not written.
 const CLASSES: [&str; 2] = ["", "interface "];
@@ -83,13 +92,14 @@ const CLASSES: [&str; 2] = ["", "interface "];
 const DECLARED: [&str; 4] = ["reached", "held_by", "opened", "int"];
 
 /// Every type a generated declaration gives back, which is what the boundary carries.
-const RESULTS: [&str; 7] = [
+const RESULTS: [&str; 8] = [
     "Bool",
     "Int",
     "String",
     "File",
     "()",
     "Option<File>",
+    "Option<Int>",
     "Result<File, String>",
 ];
 
@@ -100,6 +110,8 @@ fn declaration(tc: &TestCase) -> String {
     let result = tc.draw(gs::sampled_from(&RESULTS));
     let written = kind
         .replace("{width}", tc.draw(gs::sampled_from(&WIDTHS)))
+        .replace("{taken}", tc.draw(gs::sampled_from(&TAKEN)))
+        .replace("{at}", tc.draw(gs::sampled_from(&AT)))
         .replace("{name}", name)
         .replace("{result}", result);
     let class = tc.draw(gs::sampled_from(&CLASSES));

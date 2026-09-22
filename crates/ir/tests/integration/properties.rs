@@ -462,10 +462,25 @@ const NUMBERS: [&str; 3] = [
 ];
 
 /// What a declaration says its member's own descriptor gives back, which is written or is not.
-const WIDTHS: [&str; 2] = ["", "int "];
+const WIDTHS: [&str; 3] = ["", "int ", "char "];
 
 /// Every way a declaration wraps a number, which is never an `Option` because none is `null`.
 const AROUND: [&str; 2] = ["Int", "Result<Int, String>"];
+
+/// Every way an `extern` reaches a member that takes a number, with the narrowing left open.
+const TAKING: [&str; 2] = [
+    "extern static worded({taken}index: Int) -> {result} = \"java.lang.String.valueOf\"",
+    "extern method charred(text: String, {taken}index: Int) -> {result} = \"substring\"",
+];
+
+/// What a declaration says its member's own descriptor takes, which is written or is not.
+const NARROWING: [&str; 2] = ["", "int "];
+
+/// Every way a declaration that narrows an argument wraps what its member gives back.
+const ANSWERING: [&str; 2] = ["Option<String>", "Result<Option<String>, String>"];
+
+/// Where an argument outside the `int` range lands, which the lowering writes only where one may.
+const UNFIT: lumen_ir::Label = lumen_ir::Label(4);
 
 #[hegel::test]
 fn a_call_into_a_library_module_reaches_that_module_s_class_and_nothing_else(tc: TestCase) {
@@ -497,7 +512,7 @@ fn every_class_a_library_module_reaches_is_one_the_spec_names(tc: TestCase) {
 
     for class in &lowered.classes {
         for method in &class.methods {
-            for reached in reached_in(&method.body) {
+            for reached in reached_in(&method.body.instructions) {
                 assert!(
                     REACHED.contains(&reached.as_str()) || !reached.starts_with("java/"),
                     "{module}.{} reaches {reached}, which `docs/specs/io.md` does not name",
@@ -539,38 +554,92 @@ fn a_result_leaves_an_ok_down_the_path_taken_and_an_err_down_the_one_thrown(tc: 
     let [guard] = body.guards.as_slice() else {
         panic!("a `Result` guards one span")
     };
-    let (taken, thrown) = body.instructions.split_at(written_at(body, guard.handler));
+    let (taken, thrown) = body.instructions.split_at(
+        landed_at(body, guard.handler).expect("a guard writes the label its handler begins at"),
+    );
     assert_eq!(built_by(taken), vec!["lumen/Result$Ok".to_owned()]);
     assert_eq!(built_by(thrown), vec!["lumen/Result$Err".to_owned()]);
 }
 
 #[hegel::test]
-fn a_declaration_written_int_reaches_its_member_for_one_and_leaves_a_long_behind_it(tc: TestCase) {
+fn a_declaration_written_with_a_width_reaches_its_member_for_one_and_leaves_a_long(tc: TestCase) {
     let declared = tc.draw(gs::sampled_from(&NUMBERS));
     let width = tc.draw(gs::sampled_from(&WIDTHS));
     let result = tc.draw(gs::sampled_from(&AROUND));
     let written = declared.replace("{width}", width);
     let widens = !width.is_empty();
+    let gives = match width.trim() {
+        "int" => Descriptor::Integer,
+        "char" => Descriptor::Character,
+        _ => Descriptor::Long,
+    };
 
     let lowered = common::lowered(&declaring(&written, result));
 
     let body = common::body_of(&lowered, declared_name(&written));
-    let reached = if widens {
-        Descriptor::Integer
-    } else {
-        Descriptor::Long
-    };
     assert_eq!(
         gives_back(body),
-        Some(reached),
+        Some(gives),
         "`{written}` reaches its member for what it says that member gives back"
     );
     assert_eq!(
         body.instructions.contains(&Instruction::Widen),
         widens,
-        "an `int` is widened to the `Int` declared, and what is already a `long` is not"
+        "a width is widened to the `Int` declared, and what is already a `long` is not"
     );
 }
+
+#[hegel::test]
+fn a_narrowed_argument_outside_the_int_range_answers_none_and_reaches_no_member(tc: TestCase) {
+    let declared = tc.draw(gs::sampled_from(&TAKING));
+    let taken = tc.draw(gs::sampled_from(&NARROWING));
+    let result = tc.draw(gs::sampled_from(&ANSWERING));
+    let written = declared.replace("{taken}", taken);
+    let narrows = !taken.is_empty();
+
+    let lowered = common::lowered(&declaring(&written, result));
+
+    let body = common::body_of(&lowered, declared_name(&written));
+    assert_eq!(
+        body.instructions.contains(&Instruction::Narrow),
+        narrows,
+        "`{written}` narrows the argument its member takes an `int` for, and no other"
+    );
+    let Some(unfit) = landed_at(body, UNFIT) else {
+        assert!(!narrows, "a narrowed argument has a `None` to land on");
+        return;
+    };
+    assert!(narrows, "nothing lands there where no argument is narrowed");
+    let reached = reached_in(answered_from(body, unfit));
+    assert_eq!(
+        reached
+            .iter()
+            .filter(|class| !class.starts_with(BUILT))
+            .count(),
+        0,
+        "an argument outside the `int` range reaches the member not at all, and reached {reached:?}"
+    );
+}
+
+/// The path from `from` to the answer it gives back, which is where an unfit argument goes.
+fn answered_from(body: &lumen_ir::Body, from: usize) -> &[Instruction] {
+    let path = &body.instructions[from..];
+    let answered = path
+        .iter()
+        .position(|instruction| matches!(instruction, Instruction::Return(_)))
+        .expect("every path out of a body gives an answer back");
+    &path[..=answered]
+}
+
+/// Where `label` is written among `body`'s instructions, where the lowering wrote one.
+fn landed_at(body: &lumen_ir::Body, label: lumen_ir::Label) -> Option<usize> {
+    body.instructions
+        .iter()
+        .position(|instruction| instruction == &Instruction::Label(label))
+}
+
+/// What the name of every class the compiler writes begins with, Java's own carrying no such thing.
+const BUILT: &str = "lumen/";
 
 /// Which kind of class the type a generated `method` is called on is, written or not written.
 const CLASSES: [&str; 2] = ["", "interface "];
@@ -632,12 +701,12 @@ fn declared_name(declared: &str) -> &str {
 
 /// Every class the method `name` of the module reaches, by a call or by a field.
 fn reached_by(lowered: &Lowered, name: &str) -> Vec<String> {
-    reached_in(common::body_of(lowered, name))
+    reached_in(&common::body_of(lowered, name).instructions)
 }
 
-/// Every class `body` reaches, by a call or by a field.
-fn reached_in(body: &lumen_ir::Body) -> Vec<String> {
-    body.instructions
+/// Every class `instructions` reaches, by a call or by a field.
+fn reached_in(instructions: &[Instruction]) -> Vec<String> {
+    instructions
         .iter()
         .filter_map(|instruction| match instruction {
             Instruction::New(class) | Instruction::Cast(class) => Some(class.written().to_owned()),
@@ -645,14 +714,6 @@ fn reached_in(body: &lumen_ir::Body) -> Vec<String> {
             other => common::called(other).map(|called| called.class.written().to_owned()),
         })
         .collect()
-}
-
-/// Where `label` is written among `body`'s instructions.
-fn written_at(body: &lumen_ir::Body, label: lumen_ir::Label) -> usize {
-    body.instructions
-        .iter()
-        .position(|instruction| instruction == &Instruction::Label(label))
-        .unwrap_or_else(|| panic!("{label:?} is written in the body"))
 }
 
 /// The answers `instructions` builds, in the order they are built.

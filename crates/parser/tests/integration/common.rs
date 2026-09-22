@@ -129,12 +129,17 @@ fn extern_node(tree: &mut Tree, depth: usize, declaration: &ExternDeclaration) {
         tree.node(depth + 1, &format!("java {}", named.text), named.span);
     }
     for parameter in &declaration.parameters {
+        let narrowed = parameter
+            .takes
+            .written()
+            .map_or(String::new(), |word| format!("{word} "));
+        let declared = &parameter.declared;
         tree.node(
             depth + 1,
-            &format!("parameter {}", parameter.name.text),
-            parameter.span,
+            &format!("parameter {narrowed}{}", declared.name.text),
+            declared.span,
         );
-        if let Some(type_ref) = &parameter.type_ref {
+        if let Some(type_ref) = &declared.type_ref {
             type_ref_node(tree, depth + 2, type_ref);
         }
     }
