@@ -6,7 +6,7 @@
 
 ## Open
 
-## 🔴 Item 051: Identity is quarantined, not abolished
+## 🟡 Item 051: Identity is quarantined, not abolished
 `docs/design.md` section 15 argues that no two spawned functions ever hold the same value.
 The section's own example refutes it: `events` is held by the parent and by the spawned `produce`.
 A channel is identity-bearing, because two holders of one channel is the whole point of a channel.
