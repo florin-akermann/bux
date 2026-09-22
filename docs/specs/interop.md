@@ -83,6 +83,13 @@ It is compared, hashed, or shown only where an `instance` written over `extern` 
 how, and a `derive` naming one is `L0427`: a derive reads what a type holds, and what this one
 holds is the JVM's.
 
+What a program cannot reach, the Java object still has: identity, and mutation.
+A value of an extern type is a foreign reference, and section 14 of `docs/design.md` refuses one
+that escapes the block it was reached in.
+That check is stated there and not restated here, because it is one check over a resource and a
+foreign reference alike rather than a rule this boundary writes for itself.
+Version 0.1 has neither the check nor the `spawn` it answers, so nothing here is refused yet.
+
 ## The one width
 
 `Int` compiles to a `long`, and a Java member that gives back a number often gives an `int`

@@ -86,9 +86,10 @@ A feature that needs a name, type, or operator treated apart from the rest is re
 
 A rule also states the scope it holds over, because an unstated scope reads as a rule it is not.
 The no-identity rule is the one that needs saying: every type a program declares is a value.
-A channel and a scoped resource have identity, and a `type` declaration writes neither of them.
+A channel, a scoped resource, and a foreign reference have identity.
+A `type` declaration writes none of the three.
 They stand outside the rule rather than exempt from it, so the rule itself keeps no exception.
-`docs/design.md` sections 10, 14, and 15 state the rule and both of the things outside it.
+`docs/design.md` sections 10, 14, 15, and 17 state the rule and all three of the things outside it.
 
 ### 11. Does it have an answer for every input?
 

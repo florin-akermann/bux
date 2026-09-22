@@ -663,8 +663,8 @@ Mutation is explicit, which means it is visible at the binding rather than only 
 
 **Every type a program declares is a value with no identity**.
 Nothing can ask whether two of them are one object, so nothing can be reached into from elsewhere.
-Two things do have identity: a channel, and the scoped resource of section 14.
-A `type` declaration writes neither of them, and sections 14 and 15 state what each one is for.
+Three things do have identity: a channel, a scoped resource, and a foreign reference.
+A `type` declaration writes none of them, and sections 14, 15, and 17 state what each one is.
 
 ---
 
@@ -983,8 +983,12 @@ It is released on every exit path, and it is never used after release.
 Go's `defer` and Java's try-with-resources give only the first; a closed handle can still escape.
 The second needs the type system; the classic answer is linear types, which are ownership's family.
 The intended answer is instead an escape check.
-A resource-typed value may be passed as an argument but not returned, stored in a field, or sent.
+A resource-typed value may be passed as an argument to an ordinary call, and nothing else.
+It may not be returned, stored in a field, sent on a channel, or passed to a spawned function.
 It therefore cannot outlive the block that opened it.
+A foreign reference is held to the same four clauses, and the reason is the object behind it.
+A Java object has identity and mutates, so one a spawned function holds is shared state again.
+That is the escape check doing one job rather than a second rule written for the boundary.
 An effect is a capability passed the same way, so effects and resources are one mechanism, not two.
 Elsewhere most of the cost of such a check is closures, which capture capabilities silently.
 Lumen has no anonymous functions, and a named function cannot capture a local.
@@ -996,8 +1000,9 @@ It is a JVM interface, and the JVM is a target, not a model.
 
 **A resource has identity, and a `type` declaration does not write one**.
 The file it names is one file, and releasing it is a change every later use would see.
-A channel is the other thing with identity, which section 15 states and says why.
-Section 10 states the rule both of them stand outside, which is about a type a program declares.
+A channel and a foreign reference are the other two, which sections 15 and 17 state.
+Section 10 states the rule all three stand outside, which is about a type a program declares.
+The escape check above holds two of the three, and a channel is the one it lets across a spawn.
 
 ---
 
@@ -1041,13 +1046,15 @@ A named function cannot capture a local, and `spawn` passes its arguments by val
 The one mutable thing, a `var` binding, is therefore never visible from another spawned function.
 There is no mutable global state, which section 14 lists as an effect for the same reason.
 A sender never knows its receivers, and no value a program declared is ever shared.
+A foreign reference is no value a program declared either.
+Section 14 refuses one passed to a spawned function, which is the clause that keeps it out.
 
-**Two things have identity, and a `type` declaration writes neither of them**.
+**Three things have identity, and a `type` declaration writes none of them**.
 The example above shows the first: `produce` sends on the `events` the parent holds.
 `send` changes the queue behind the channel, and `receive` sees the change.
 Two holders of one channel is the whole of what a channel is for, so a channel has identity.
-The scoped resource of section 14 is the second, and section 10 states the rule both stand outside.
-A program therefore has no type of its own to lock on, which is the claim this section rests on.
+A scoped resource is the second and a foreign reference the third, which section 14 holds both of.
+Section 10 states the rule all three stand outside, and a program has no type of its own to lock on.
 
 **A one-place channel is a lock, and the language gives no other**.
 Go writes a mutex that way, and Lumen has no reason to refuse it.
@@ -1214,6 +1221,12 @@ A Java object is held, handed on, and given back, and it is compared, hashed, or
 a trait instance written over `extern` declarations says how.
 There is no `equals`, no `hashCode`, and no `toString` reaching it, and no class hierarchy above
 it: section 2 is not suspended inside the boundary.
+
+What a program cannot reach, the object still has: a Java object has identity, and it mutates.
+That is why section 14 names a foreign reference among what its escape check refuses.
+One a spawned function holds is shared mutable state, which section 15 has no answer for.
+The clause already written is that answer, rather than a rule of the boundary's own.
+An `extern` declaration is where a foreign reference comes from, and the check is what it goes to.
 
 An `extern` declares what it can fail with, and that claim is the author's rather than the
 compiler's.
