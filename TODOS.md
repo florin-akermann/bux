@@ -33,6 +33,17 @@ A textbook list grows in amortized constant time, which asks for a buffer and a 
 [076][c] - A push leaves the list it was handed holding what it held, which stays a property.
 [076][d] - `docs/specs/library.md` drops the paragraph that writes the copy cost down.
 
+## 🔴 Item 077: An instance is reached from the module that imports its type
+**Depends on:** Item 063 — a constrained generic now calls the instance by name, in any module.
+`docs/design.md` section 8 says a constraint at `Point` reaches the one `Eq<Point>` there is.
+`docs/specs/modules.md` says a module's surface carries no instances, so `demo.User == demo.User`
+is `L0418` in every module but `demo`, and a map keyed by `demo.User` is refused there too.
+The Bux parser compares the token kinds the lexer module declares, so no phase compiles without it.
+[077][a] - `docs/specs/modules.md` states that the instances of a type travel with the type.
+[077][b] - `==`, `<`, and `+` reach the instance of an imported type where they are written.
+[077][c] - `map.insert` at a key another module declares compiles, and `derive` sees the instance.
+[077][d] - `L0418` fires only where no module in the program declares the instance.
+
 ## 🔴 Item 066: The lexer is written in Bux
 **Depends on:** Item 059, Item 076 — a lexer builds a token list from the code units of a string.
 Self-hosting starts with the smallest phase, and the lexer is 286 lines of Rust.
@@ -42,7 +53,7 @@ The Rust `bux` compiles the Bux lexer, and `tests/spec/lexer` holds both to one 
 [066][c] - `docs/implementation.md` section 6 names `compiler/` as where the Bux compiler lives.
 
 ## 🔴 Item 067: The parser and the AST are written in Bux
-**Depends on:** Item 066 — the parser consumes the tokens the Bux lexer gives.
+**Depends on:** Item 066, Item 077 — the parser reads the tokens the Bux lexer gives, by kind.
 [067][a] - `compiler/ast.bx` declares the tree `docs/specs/grammar.md` describes.
 [067][b] - `compiler/parser.bx` parses tokens into it, with every `docs/specs/parser` error.
 [067][c] - The harness compares the printed tree with the Rust parser's on every parser fixture.
