@@ -71,7 +71,7 @@ impl ReachingJava {
                 "a `new` builds a class; reach one through a member of a class instead"
             }
             Self::WidensNoInt { .. } => {
-                "an `int` widens to an `Int`; drop the word, or give an `Int` back"
+                "a width widens to an `Int`; drop the word, or give an `Int` back"
             }
             Self::NarrowsNoInt(_) => "an `int` narrows an `Int`; drop the word, or take an `Int`",
             Self::NarrowsWithoutOption(_) => {

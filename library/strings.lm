@@ -6,7 +6,8 @@
 // `length` meets neither test, because no loop reaches the characters of a string. It is one
 // `extern` declaration away from a JVM method, which `docs/specs/interop.md` states.
 // `at` and `cut` are the bounds check each such call needs, written once here rather than at
-// every reading of a string.
+// every reading of a string. Every name here is public, so each of the two declarations they
+// call guards its member: nothing this module offers is partial.
 /// The UTF-16 code unit at `index`, and `None` where `index` is past either end of the text.
 ///
 /// It counts the units a JVM counts, which `length` counts too: a character the JVM holds as a
@@ -19,7 +20,10 @@ fn at(text: String, index: Int) -> Option<Int> {
     if index >= length(text) {
         return None
     }
-    code_unit_at(text, index)
+    match code_unit_at(text, index) {
+        Ok(unit) => unit
+        Err(_) => None
+    }
 }
 
 /// The part of the text from `from` up to but not including `to`.
@@ -37,7 +41,10 @@ fn cut(text: String, from: Int, to: Int) -> Option<String> {
     if from > to {
         return None
     }
-    cut_out(text, from, to)
+    match cut_out(text, from, to) {
+        Ok(part) => part
+        Err(_) => None
+    }
 }
 
 /// The parts run together, with `between` written between each pair of them.
@@ -66,12 +73,14 @@ extern method int length(text: String) -> Int = "length"
 
 /// The code unit at `index`, which the JVM gives as a `char` and takes an `int` for.
 ///
-/// `at` reads the bounds before it calls this, so the `None` this result carries is the one an
-/// index outside the `int` range answers with, which `docs/specs/interop.md` states.
-extern method char code_unit_at(text: String, int index: Int) -> Option<Int> = "charAt"
+/// The `None` is the answer an index outside the `int` range gets, which
+/// `docs/specs/interop.md` states, and the `Err` is what the member throws for an index inside
+/// that range and outside the text. `at` reads the bounds before it calls this, so neither
+/// reaches a caller of `at`.
+extern method char code_unit_at(text: String, int index: Int) -> Result<Option<Int>, String> = "charAt"
 
 /// The part of the text between two indices, which the JVM takes two `int` values for.
 ///
-/// `cut` reads the bounds before it calls this, so the `None` this result carries is the one an
-/// index outside the `int` range answers with.
-extern method cut_out(text: String, int from: Int, int to: Int) -> Option<String> = "substring"
+/// The `None` is the answer an index outside the `int` range gets, and the `Err` is what the
+/// member throws for a pair of indices inside that range and outside the text.
+extern method cut_out(text: String, int from: Int, int to: Int) -> Result<Option<String>, String> = "substring"

@@ -41,8 +41,8 @@ A `method` declares at least one parameter, because its receiver is the first of
 `field` declares none; both are the shape above rather than a refusal.
 Every one of them writes its result, because there is no body for inference to read one off.
 
-A width after the kind says what the member's descriptor gives back, a width before a
-parameter's name says what it takes, and `interface` after `type` says the class is one.
+A width after the kind says what the member's descriptor gives back, `int` before a parameter's
+name says the member takes one there, and `interface` after `type` says the class is one.
 Each is an ordinary identifier everywhere else, including as the name of the declaration itself.
 Telling a word from a name is the one place the grammar needs a second token: each is the word
 where a name follows it and the name where `(`, `:`, `,`, `)`, or `=` does.

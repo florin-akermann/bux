@@ -185,7 +185,7 @@ fn a_width_written_where_the_member_gives_back_no_int_has_nothing_to_widen_to() 
     );
     assert_eq!(
         error.help(),
-        "an `int` widens to an `Int`; drop the word, or give an `Int` back"
+        "a width widens to an `Int`; drop the word, or give an `Int` back"
     );
 }
 
@@ -222,6 +222,11 @@ fn a_char_is_held_to_the_same_result_the_other_width_is() {
     assert_eq!(
         error.message(),
         "`char` widens to an `Int`, and this signature gives back `Path`"
+    );
+    assert_eq!(
+        error.help(),
+        "a width widens to an `Int`; drop the word, or give an `Int` back",
+        "the help names no word the author did not write"
     );
 }
 

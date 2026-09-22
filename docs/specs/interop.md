@@ -155,8 +155,10 @@ of what it gave back.
 
 `L0431` refuses a declaration that narrows a parameter and gives back anything but an `Option`.
 `Option<Int>` is a result of such a declaration, and so is `Option<T>` for every other `T` that
-crosses, because there is now something for `None` to say.
+crosses as a value, because there is now something for `None` to say.
 A declaration that narrows no parameter keeps the rule above: `Option` over a number is `L0425`.
+`()` crosses as a result and not as a value, so `Option<()>` is no result of anything, and a
+member that gives nothing back and takes an `int` is not reachable in version 0.1.
 
 `Result<Option<T>, String>` composes as it always did.
 The guard is outside, so an argument that does not fit is `Ok(None)`.
@@ -269,7 +271,7 @@ says the wrong one is the author's claim failing the way naming a member the JVM
 | no class to reach     | `L0428` | a `method` reaches a class, and this signature names none  |
 | no `int` to widen     | `L0429` | `int` widens to an `Int`, and this signature gives back `File` |
 | builds an interface   | `L0430` | a `new` builds a class, and `Path` is an interface          |
-| narrows with no `Option` | `L0431` | an `int` parameter narrows an `Int`, and this signature gives back `Int` |
+| narrows, no `Option`  | `L0431` | an `int` parameter narrows an `Int`, and this gives back `Int` |
 
 `L0425` helps with ``a boundary carries `Bool`, `Int`, `String`, and a type an `extern` names``.
 It points at the type as the signature writes it, and is raised for a result as well as for a
@@ -290,7 +292,7 @@ A `method` reads its class off its first parameter and a `new` off its result, s
 has to name one; a signature that names none leaves the declaration with no class to reach, and
 that is refused where it is written rather than met as a state the lowering has no answer for.
 
-`L0429` helps with ``an `int` widens to an `Int`; drop the word, or give an `Int` back``.
+`L0429` helps with ``a width widens to an `Int`; drop the word, or give an `Int` back``.
 It is raised where a `new` writes a width and where the result a member gives back, with a
 `Result` or an `Option` around it read through, is not `Int`.
 It reads `char` exactly as it reads `int`, because each of the two widens to the same `Int`.
@@ -307,6 +309,8 @@ none of.
 It is raised where a declaration narrows a parameter and the result, with a `Result` around it
 read through, is not an `Option`, because a narrowed argument that does not fit has nothing to
 say otherwise.
+A result of `()` is refused by it too, and has no answer: the help asks for an `Option`, and
+`Option<()>` is then `L0425`.
 
 A Java class or member that is not there is not refused, because nothing is loaded to refuse it
 against: `docs/specs/library.md` states that the library is read with no classpath and no JDK.

@@ -112,7 +112,7 @@ Everything else a module's body is held to, an instance body is held to.
 `list`, `strings`, `map`, and `set` each hold what a `for` loop writes the same way twice, and
 `io` and `files` hold what no `for` loop writes at all.
 `strings` holds each of them: `join` is the loop, `length` is what no loop reads, and `at` and
-`cut` are a check written over one more `extern` declaration.
+`cut` are a check written over two more `extern` declarations.
 
 ```text
 list:    length  has_value  index_of
@@ -149,8 +149,9 @@ Each of the two is written in Bux: a bounds check over `strings.length`, and the
 call.
 The one reaches `String.charAt`, declared with a `char` width and a narrowed `index`, and the
 other reaches `String.substring`, declared with a narrowed `from` and a narrowed `to`.
-Each of the two declarations gives back an `Option`, which is what `docs/specs/interop.md` asks
-of a declaration that narrows an argument.
+Each of the two declarations gives back `Result<Option<T>, String>`: the `Option` is what
+`docs/specs/interop.md` asks of a declaration that narrows an argument, and the `Result` is what
+keeps the declaration itself total, because every top-level name of a module is public.
 Every index counts UTF-16 code units, which is what `strings.length` counts.
 
 `join` runs the parts of a `List<String>` together, with a separator between each pair.

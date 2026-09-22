@@ -160,7 +160,7 @@ catalogue! {
     DerivesAForeignType => "L0427",
     /// An `extern method` or an `extern new` reaches a class, and its signature names none.
     ReachesNoClass => "L0428",
-    /// An `extern` says its member gives an `int`, and its result is no `Int` to widen one to.
+    /// An `extern` writes a width where there is no `Int` to widen to or to narrow from.
     WidensNoInt => "L0429",
     /// An `extern new` gives back a type an `extern type` named an interface.
     BuildsAnInterface => "L0430",
