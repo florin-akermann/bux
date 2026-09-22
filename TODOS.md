@@ -6,14 +6,6 @@
 
 ## Open
 
-## 🟢 Item 064: An instance is written over a generic type
-`Eq<List<T>>` cannot be written, and `derive` refuses a record that holds a `List`.
-An AST, a `Type`, and a constant pool each hold lists and each needs equality and hashing.
-[064][a] - `docs/specs/traits.md` states an instance for a type written with type parameters.
-[064][b] - The library writes `Eq`, `Ord`, `Hash`, and `Show` for `List<T>`, constrained on `T`.
-[064][c] - `derive` reaches through a field of type `List<T>` when `T` has the instance.
-[064][d] - `L0422` fires only where the element type has no instance.
-
 ## 🔴 Item 065: A hashed map and set
 **Depends on:** Item 063, Item 064 — a table bucketed by `Hash<K>` needs the program's own keys.
 `Map` is a linked list, and a compiler with thousands of names is quadratic over it.
