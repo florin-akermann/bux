@@ -50,7 +50,7 @@ impl LibraryModule {
         lowered_as(&Written {
             source: self.source(),
             named: self.named,
-            imported: &Imported::default(),
+            imported: &self.imports(),
             asked: &Asked::default(),
         })
     }
@@ -62,7 +62,7 @@ impl LibraryModule {
 
     /// Every name a module importing it reaches, which is what it puts out.
     pub fn offers(self) -> Surface {
-        surface(self.source())
+        surface_reaching(self.source(), &self.imports())
     }
 
     /// The class it is, which is the class every function of it is a method of.
@@ -70,10 +70,27 @@ impl LibraryModule {
         ClassName::new(self.named)
     }
 
+    /// What the library modules it imports offer it, which is nothing for most of them.
+    ///
+    /// The library carries every module an import of it names, so this walks the same way the
+    /// loader walks: what a module imports is read before that module is.
+    fn imports(self) -> Imported {
+        imported_by(self.source()).fold(Imported::default(), |imported, module| {
+            imported.offering(module, library(module).offers())
+        })
+    }
+
     /// The source the compiler carries for it.
     fn source(self) -> &'static str {
         lumen_resolver::library::source_of(self.named).expect("the library carries the module")
     }
+}
+
+/// Every module `source` imports, which canonical form writes one to a line of its own.
+fn imported_by(source: &'static str) -> impl Iterator<Item = &'static str> {
+    source
+        .lines()
+        .filter_map(|line| line.strip_prefix("import "))
 }
 
 /// A module declaring generics, which is what another module reaches one of through an import.
@@ -114,9 +131,14 @@ pub fn lowered_as(written: &Written<'_>) -> Lowered {
 
 /// Every name a module importing `source` reaches, which is what `source` puts out.
 fn surface(source: &str) -> Surface {
+    surface_reaching(source, &Imported::default())
+}
+
+/// The same, of a module that reaches what `imported` offers it.
+fn surface_reaching(source: &str, imported: &Imported) -> Surface {
     let program = lumen_parser::parse(source).expect("the offered module parses");
     let resolved = lumen_resolver::resolve(program).expect("the offered module resolves");
-    let typed = lumen_types::check(resolved, &Imported::default())
+    let typed = lumen_types::check(resolved, imported)
         .expect("the offered module has a type for every expression");
     typed.surface().clone()
 }

@@ -152,7 +152,7 @@ what `docs/specs/collections.md` does of a map.
 `prelude` is every name above, and nothing else.
 
 `list`, `strings`, `map`, and `set` each hold what a `for` loop writes the same way twice, and
-`io` and `files` hold what no `for` loop writes at all.
+`io`, `files`, and `process` hold what no `for` loop writes at all.
 `strings` holds one of each: `join` is the loop, and `length` is what no loop reads.
 `list` holds two more, `push` and `at`, which the section above states are the compiler's.
 
@@ -163,12 +163,16 @@ map:     empty  insert  get
 set:     empty  insert  has_value
 io:      print  println
 files:   read
+process: run
 ```
 
-`io` and `files` are written over `extern` declarations, which `docs/specs/interop.md` states and
-`docs/specs/io.md` says what each of the two reaches. Each declares those declarations beside its
-functions, and every top-level name is public, so both surfaces are wider than the three names
-above; `docs/specs/io.md` names the rest.
+`process` imports `list`, and it is the one module here that imports another at all.
+It grows the list a JVM starts a program from with `list.push`, which `docs/specs/io.md` states.
+
+`io`, `files`, and `process` are written over `extern` declarations, which
+`docs/specs/interop.md` states and `docs/specs/io.md` says what each of the three reaches. Each
+declares those declarations beside its functions, and every top-level name is public, so all
+three surfaces are wider than the four names above; `docs/specs/io.md` names the rest.
 `strings.length` is one such declaration itself.
 It reaches `String.length`, whose descriptor gives an `int` that the declaration widens to the
 `Int` it gives back.

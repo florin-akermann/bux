@@ -31,6 +31,9 @@ pub(crate) const OPTION: &str = "Option";
 /// The type an attempt is written as, which a `?` hands an `Err` back from.
 pub(crate) const RESULT: &str = "Result";
 
+/// The type a run of values is written as, which the JVM holds as a `java.util.List`.
+pub(crate) const LIST: &str = "List";
+
 impl Type {
     /// A whole number, 64 bits wide, and the only one the language has.
     #[must_use]
