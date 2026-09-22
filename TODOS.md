@@ -6,7 +6,7 @@
 
 ## Open
 
-## 🟡 Item 052: A foreign reference is not sendable
+## 🟢 Item 052: A foreign reference is not sendable
 `docs/design.md` section 14 refuses a resource-typed value returned, stored in a field, or sent.
 That "or sent" clause is the whole of the concurrency rule, and section 15 leans on it unsaid.
 A Java object has identity and mutation, so one sent on a channel is shared mutable state again.
