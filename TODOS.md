@@ -6,7 +6,7 @@
 
 ## Open
 
-## 🔴 Item 058: A list grows and is read at an index
+## 🟡 Item 058: A list grows and is read at an index
 A program builds a list only as a literal, so no phase of a compiler can produce one.
 `docs/specs/library.md` says `push` waits on a JVM member no `extern` can name.
 `List` is a type the compiler holds, so the spec chooses between codegen and `extern` for it.
