@@ -26,7 +26,7 @@ This file is that anchor; consistency is the throughline, and the bar is Code He
 - Likewise null, checked exceptions, macros, implicit runtime magic, or Java's type system.
 - **Concurrency is Go's**: spawn, channels, blocking calls; no async/await, no function colouring.
 - **The JVM is the first target, not the model**; its constraints, the object model first, stay out.
-- **Values, not objects.** Nothing has identity: no reference equality, `hashCode`, or `toString`.
+- **Values, not objects.** A declared type has no identity, `hashCode`, or `toString`.
 - Equality is opt-in: `==` needs `Eq`, which a type derives, and compares what a value holds.
 - **No built-in type is special.** `Int`, `Bool`, and `String` are types like any declared one.
 - Boxing and the primitive/reference split live inside the compiler; no program can observe them.

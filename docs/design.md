@@ -7,7 +7,7 @@
 
 A small, statically typed language for building practical software.
 It is built on Valhalla, the JVM's value classes, and every Lumen value is a value.
-Nothing has identity, and equality is by state, only where a type asks for it.
+No type a program declares has identity, and equality is by state, only where a type asks for it.
 No built-in type is special: a type a library declares can do everything `Int` can.
 It inherits neither Java's object model, Rust's ownership model, nor Haskell's complexity.
 
@@ -661,6 +661,11 @@ There is then one way to change what a name holds, and none to reach inside a va
 A parameter, a `for … in` binding, and a name a pattern binds never change either.
 Mutation is explicit, which means it is visible at the binding rather than only at the change.
 
+**Every type a program declares is a value with no identity**.
+Nothing can ask whether two of them are one object, so nothing can be reached into from elsewhere.
+Two things do have identity: a channel, and the scoped resource of section 14.
+A `type` declaration writes neither of them, and sections 14 and 15 state what each one is for.
+
 ---
 
 ## 11. Functions
@@ -989,6 +994,11 @@ No syntax is committed.
 The block that opens a resource compiles to try/finally, and `AutoCloseable` never surfaces.
 It is a JVM interface, and the JVM is a target, not a model.
 
+**A resource has identity, and a `type` declaration does not write one**.
+The file it names is one file, and releasing it is a change every later use would see.
+A channel is the other thing with identity, which section 15 states and says why.
+Section 10 states the rule both of them stand outside, which is about a type a program declares.
+
 ---
 
 ## 15. Concurrency
@@ -1021,18 +1031,30 @@ event := events.receive()
 
 `spawn` takes a named function call, never an anonymous block.
 
-**A channel is the only way two spawned functions communicate.**
-There is no mutex, no atomic, no condition variable, and nothing to build one from.
+**A channel is the only way two spawned functions communicate**.
+There is no mutex, no atomic, and no condition variable.
 This is not a rule the compiler polices but a consequence of the value model.
-A lock protects shared mutable state, and Lumen has nothing to share.
-A value has no identity, so two functions never hold the same one.
+A lock protects shared mutable state, and no type a program declares holds any.
+Every type a program declares is a value with no identity, so two functions never hold one.
 A record is rebuilt rather than reached into, as section 10 says.
 A named function cannot capture a local, and `spawn` passes its arguments by value.
 The one mutable thing, a `var` binding, is therefore never visible from another spawned function.
 There is no mutable global state, which section 14 lists as an effect for the same reason.
-A sender never knows its receivers, and no value is ever shared between spawned functions.
+A sender never knows its receivers, and no value a program declared is ever shared.
 
-**A slow receiver makes the sender wait.**
+**Two things have identity, and a `type` declaration writes neither of them**.
+The example above shows the first: `produce` sends on the `events` the parent holds.
+`send` changes the queue behind the channel, and `receive` sees the change.
+Two holders of one channel is the whole of what a channel is for, so a channel has identity.
+The scoped resource of section 14 is the second, and section 10 states the rule both stand outside.
+A program therefore has no type of its own to lock on, which is the claim this section rests on.
+
+**A one-place channel is a lock, and the language gives no other**.
+Go writes a mutex that way, and Lumen has no reason to refuse it.
+It is a channel like any other: it blocks, it is not reentrant, and there is nothing else to learn.
+What the language refuses is a second mechanism beside the channel, not this use of the channel.
+
+**A slow receiver makes the sender wait**.
 That is the whole of backpressure, and every channel gives the same answer.
 A shared counter, cache, or pool is a spawned function that owns the state and receives requests.
 That is slower than a lock on a hot path, and the trade is accepted.
@@ -1044,14 +1066,14 @@ A channel closes, and `for … in` over it ends when it does, so a producer can 
 Cancellation is a channel that closes; the spec names the idiom rather than adding a primitive.
 These are 0.3 work, and each gets a spec under `docs/specs/` before it lands.
 
-**Fan-out is a library type, not a primitive.**
+**Fan-out is a library type, not a primitive**.
 A topic delivers every message to every subscriber.
 It is a spawned owner holding subscriber channels, written in Lumen when a program needs it.
 A topic chooses what a slow subscriber sees: the sender waits, or a bounded buffer drops the oldest.
 The dropping topic reports the loss as a typed result on receive, never silently.
 A latest-value cell is a third type, not a mode on the first; a policy knob is refused.
 A subscription is a scoped resource, released as section 14 releases a file, and yields a channel.
-Nothing has identity, so there is no other way to unsubscribe.
+Releasing it is what unsubscribes, and a subscriber has no name to hand back instead.
 The derivation runs one way: a worker pool takes each job exactly once, which fan-out cannot say.
 That is why the channel is underneath and the topic on top.
 
@@ -1187,7 +1209,7 @@ A `null` given back becomes `None`, which is what an `Option` result declares.
 Anything thrown becomes `Err`, holding what the throwable says of itself, which is what a `Result`
 result declares.
 
-An extern type has no identity a program can reach, exactly as every Lumen type has none.
+An extern type has no identity a program can reach, as every type a program declares has none.
 A Java object is held, handed on, and given back, and it is compared, hashed, or shown only where
 a trait instance written over `extern` declarations says how.
 There is no `equals`, no `hashCode`, and no `toString` reaching it, and no class hierarchy above

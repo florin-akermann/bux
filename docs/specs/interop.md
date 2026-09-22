@@ -78,7 +78,7 @@ member whose descriptor names one is not reachable and the answer is to name one
 An extern type is a type like any other from where a program stands.
 It is held, handed on, given back, and matched by nothing, because it declares no variants and no
 fields.
-It has no identity a program can reach, as every Lumen type has none.
+It has no identity a program can reach, as every type a program declares has none.
 It is compared, hashed, or shown only where an `instance` written over `extern` declarations says
 how, and a `derive` naming one is `L0427`: a derive reads what a type holds, and what this one
 holds is the JVM's.

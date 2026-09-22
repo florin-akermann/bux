@@ -82,8 +82,13 @@ A rule that holds for every type, function, and operator but one is a special ca
 A prelude type is a type a library could have declared, and question 8 holds it to that.
 An operator is a function with other syntax, and `docs/design.md` section 5 gives it no exemption.
 `main` is a function like any other: it declares what it gives back, and that is `()`.
-A feature that needs one name, type, or operator treated apart from the rest is reshaped until it
-does not, or refused.
+A feature that needs a name, type, or operator treated apart from the rest is reshaped or refused.
+
+A rule also states the scope it holds over, because an unstated scope reads as a rule it is not.
+The no-identity rule is the one that needs saying: every type a program declares is a value.
+A channel and a scoped resource have identity, and a `type` declaration writes neither of them.
+They stand outside the rule rather than exempt from it, so the rule itself keeps no exception.
+`docs/design.md` sections 10, 14, and 15 state the rule and both of the things outside it.
 
 ### 11. Does it have an answer for every input?
 

@@ -13,7 +13,7 @@ Four things set the everyday code apart:
 - Source that is not in canonical form does not compile; `lumen fmt` produces that form.
 - There are no anonymous functions; every function has a name, and names are first-class values.
 - Control flow is Go's: `if`, `for`, `match`, `break`, `continue`, `return`.
-- Values, not objects: nothing has identity, and `Int` is no more special than a type you declare.
+- Values, not objects: no type you declare has identity, and `Int` is no more special than one.
 
 The JVM is a target, not a model: none of its constraints is kept, its object model least of all.
 Every type is a Valhalla value class from day one: identity-free, null-free, equal by state.
