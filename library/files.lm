@@ -3,6 +3,8 @@
 // `docs/specs/io.md` states what each of these gives back. Each is written over `extern`
 // declarations, which `docs/specs/interop.md` states, and every step that can throw gives a
 // `Result`, so nothing here throws through a program.
+import list
+
 /// The whole file at `path` as text, or what went wrong reading it.
 // example: ok_or(read(""), "nothing there") == "nothing there"
 fn read(path: String) -> Result<String, String> {
@@ -32,9 +34,9 @@ fn sent(sink: Writer, text: String, to: String) -> Result<String, String> {
     Ok(to)
 }
 
-/// The name of everything the directory at `path` holds, one to a line and in order.
-// example: ok_or(listed("no-such-directory"), "nothing listed") == "nothing listed"
-fn listed(path: String) -> Result<String, String> {
+/// The name of everything the directory at `path` holds, in order.
+// example: list.length(ok_or(listed("no-such-directory"), [])) == 0
+fn listed(path: String) -> Result<List<String>, String> {
     match as_a_path(named(path)) {
         Ok(found) => names_within(found)
         Err(why) => Err(why)
@@ -42,8 +44,8 @@ fn listed(path: String) -> Result<String, String> {
 }
 
 /// The names the directory at `found` holds, or what went wrong reading them.
-// example: ok_or(listed("no-such-directory"), "nothing listed") == "nothing listed"
-fn names_within(found: Path) -> Result<String, String> {
+// example: list.length(ok_or(listed("no-such-directory"), [])) == 0
+fn names_within(found: Path) -> Result<List<String>, String> {
     match entries(found) {
         Ok(stream) => every_name(stream)
         Err(why) => Err(why)
@@ -53,26 +55,25 @@ fn names_within(found: Path) -> Result<String, String> {
 /// The names `stream` holds, read out of it whole so that no step of the walk below can throw.
 ///
 /// The directory goes back to the file system here, whether the reading worked or did not.
-// example: ok_or(listed("no-such-directory"), "nothing listed") == "nothing listed"
-fn every_name(stream: Entries) -> Result<String, String> {
+// example: list.length(ok_or(listed("no-such-directory"), [])) == 0
+fn every_name(stream: Entries) -> Result<List<String>, String> {
     held := all_of(in_order(stream))
     released(stream)
     match held {
-        Ok(names) => Ok(one_to_a_line(names))
+        Ok(names) => Ok(each_bare_name(names))
         Err(why) => Err(why)
     }
 }
 
-/// The name of every entry `names` holds, each on a line of its own.
-// example: ok_or(listed("no-such-directory"), "nothing listed") == "nothing listed"
-fn one_to_a_line(names: Held) -> String {
+/// The name of every entry `names` holds, each pushed onto the list the walk fills.
+// example: list.length(ok_or(listed("no-such-directory"), [])) == 0
+fn each_bare_name(names: Held) -> List<String> {
     walk := one_by_one(names)
-    var joined = ""
+    var found = []
     for has_another(walk) {
-        joined += bare_name(named(as_text(next_value(walk))))
-        joined += "\n"
+        found = list.push(found, bare_name(named(as_text(next_value(walk)))))
     }
-    joined
+    found
 }
 
 /// The directory made at `path`, with `path` back where it was made.

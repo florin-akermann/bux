@@ -392,7 +392,12 @@ const REACHED: [(&str, &str, &str, &str); 8] = [
         "\"text\", \"text\"",
         "Result<String, String>",
     ),
-    ("files", "listed", "\"text\"", "Result<String, String>"),
+    (
+        "files",
+        "listed",
+        "\"text\"",
+        "Result<List<String>, String>",
+    ),
     ("files", "made", "\"text\"", "Result<String, String>"),
     ("files", "removed", "\"text\"", "Result<Bool, String>"),
     ("environment", "read", "\"text\"", "Option<String>"),

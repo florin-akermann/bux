@@ -58,14 +58,14 @@ file.
 
 ```text
 files.write(path: String, text: String) -> Result<String, String>
-files.listed(path: String) -> Result<String, String>
+files.listed(path: String) -> Result<List<String>, String>
 files.made(path: String) -> Result<String, String>
 files.removed(path: String) -> Result<Bool, String>
 environment.read(name: String) -> Option<String>
 ```
 
 `files.write` writes `text` as the whole of the file at `path`, and empties whatever was there.
-`files.listed` gives the name of everything the directory at `path` holds, one to a line.
+`files.listed` gives the name of everything the directory at `path` holds, in order.
 `files.made` makes one directory at `path`, and makes no parent of it.
 `files.removed` removes what is at `path`, and gives back whether anything was there to remove.
 `environment.read` gives the variable called `name`, and `None` where nothing set it.
@@ -75,8 +75,8 @@ The line is what the JVM said of itself, except for the two members that say not
 A caller opens the `Result` to reach the answer, so a directory that is not there is a case rather
 than a failure, exactly as `files.read` already has it.
 
-The first three give back `path` in the `Ok`, so a caller writes the next step over what the last
-one said.
+`files.write` and `files.made` give back `path` in the `Ok`, so a caller writes the next step
+over what the last one said.
 `Ok` carries the path rather than nothing at all for a second reason.
 `docs/specs/doc-examples.md` asks every function for an example that is an expression and is true,
 and no expression over a `Result<(), String>` is one.
@@ -115,12 +115,12 @@ it cannot do.
 
 `files.listed` is `java.nio.file.Files.list`, whose `java.util.stream.Stream` an `extern type`
 names as it names any other class.
-The names run together into one text, with a line break after each, because a `List<String>` is
-the one shape they cannot come back in.
-`docs/specs/library.md` says `list.push` is not there yet, so no library function builds a list a
-walk fills.
-A name that holds a line break cannot then be told from two names, which is what the text costs,
-and the shape changes when a list can be built.
+A `List<String>` crosses no `extern` boundary, so the names are not handed over as one.
+`files` reads them one at a time and pushes each onto a list of its own with `list.push`, which
+`docs/specs/library.md` states, so the list a caller reads is one the library built.
+`files` imports `list` for that one name, and it is the one library module that imports another.
+Loading hands `list` over below `files`, as it does for any module an import names.
+A failure anywhere in that walk is an `Err`, and a caller is never handed part of a listing.
 
 The entries come back sorted.
 `java.nio.file.Files.list` states no order, and a listing a program compares, or a build that is
@@ -143,10 +143,12 @@ The JVM classes these reach are `java.lang.String`, `java.lang.System`, `java.la
 `java.io.PrintWriter`, `java.io.File`, `java.nio.file.Path`, `java.nio.file.Files`,
 `java.nio.charset.Charset`, `java.nio.charset.StandardCharsets`, `java.util.stream.Stream`,
 `java.util.List`, and `java.util.Iterator`.
-A class file is built of three more that no declaration here writes.
-`java.lang.Boolean` is what the `Bool` an `Ok` carries is boxed as, and `java.lang.Throwable` and
-`java.lang.AssertionError` are what a guard and an unreachable arm are made of, which
-`docs/specs/codegen.md` states.
+A class file is built of four more that no declaration here writes.
+`java.util.ArrayList` is what a `List` is held as, and `java.lang.Boolean` is what the `Bool` an
+`Ok` carries is boxed as.
+`java.lang.Throwable` and `java.lang.AssertionError` are what a guard and an unreachable arm are
+made of.
+`docs/specs/codegen.md` states each of the four.
 `java.util.stream.Stream`, `java.util.List`, and `java.util.Iterator` are each an interface, which
 the declaration says with the word `docs/specs/interop.md` gives it.
 `java.lang.Object` is what an entry of a listing is held as, because `java.util.Iterator.next`
@@ -154,7 +156,7 @@ gives one back, and asking it for its text is how the path is read.
 
 `docs/specs/api-surface.md` makes every top-level name public, so each `extern` declaration and
 each step written beside these is reachable by name, as `files.read_whole` already is.
-`files` adds `sent`, `names_within`, `every_name`, `one_to_a_line`, `opened`, `put`, `closed`,
+`files` adds `sent`, `names_within`, `every_name`, `each_bare_name`, `opened`, `put`, `closed`,
 `failed`, `make`, `delete`, `entries`, `in_order`, `all_of`, `one_by_one`, `released`,
 `has_another`, `next_value`, `as_text`, `bare_name`, `Writer`, `Entries`, `Held`, `Walk`, and
 `Anything`.

@@ -166,6 +166,11 @@ files:       read  write  listed  made  removed
 environment: read
 ```
 
+A library module may import another, and `files` is the one that does: it imports `list`, because
+building the list `files.listed` gives back needs `list.push`.
+Loading hands an imported library module over below the one that imports it, as it does for a
+module read out of a file, so nothing about the order a module is read in changes.
+
 `io`, `files`, and `environment` are written over `extern` declarations, which
 `docs/specs/interop.md` states and `docs/specs/io.md` says what each of the three reaches. Each
 declares those declarations beside its functions, and every top-level name is public, so every one

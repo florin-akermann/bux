@@ -42,6 +42,7 @@ fn a_library_module_is_handed_over_below_the_module_that_imports_it() {
     assert_eq!(order_of(&loaded), ["strings", "main"]);
 }
 
+/// `files` imports `list`, so loading `files` hands `list` over below it without being asked.
 #[test]
 fn every_library_module_a_file_imports_is_handed_over_below_it() {
     let beside = Beside::holding(&[(
@@ -50,9 +51,10 @@ fn every_library_module_a_file_imports_is_handed_over_below_it() {
     )]);
     let loaded = load(&beside.file_of("main")).expect("a library module needs no file");
 
-    assert_eq!(order_of(&loaded), ["files", "io", "main"]);
+    assert_eq!(order_of(&loaded), ["list", "files", "io", "main"]);
     assert_eq!(source_of(&loaded, "io"), library::source_of("io"));
     assert_eq!(source_of(&loaded, "files"), library::source_of("files"));
+    assert_eq!(source_of(&loaded, "list"), library::source_of("list"));
 }
 
 #[test]
@@ -86,13 +88,24 @@ fn a_root_module_named_as_the_library_is_no_ring_for_the_module_that_imports_it(
 }
 
 #[test]
-fn no_module_the_library_carries_imports_another() {
+fn every_module_a_module_the_library_carries_imports_is_one_the_library_carries() {
     for (name, source) in library::carried() {
-        assert!(
-            !source.contains("\nimport "),
-            "library/{name}.lm imports a module, which the order loading follows relies on it not doing"
-        );
+        for imported in imports_of(source) {
+            assert!(
+                library::source_of(imported).is_some(),
+                "library/{name}.lm imports {imported}, which the library does not carry"
+            );
+        }
     }
+}
+
+/// The name each `import` of `source` writes, which is the whole of the line after the word.
+fn imports_of(source: &str) -> Vec<&str> {
+    source
+        .lines()
+        .filter_map(|line| line.strip_prefix("import "))
+        .map(str::trim)
+        .collect()
 }
 
 /// The names of every module loaded, in the order they are handed over.

@@ -8,19 +8,21 @@
 /// Every module the library holds, each with the source it is written in.
 ///
 /// The prelude comes first because every other module of it is read with the prelude's names
-/// already in scope, which is what `docs/specs/modules.md` says of every module.
+/// already in scope, which is what `docs/specs/modules.md` says of every module. A module one of
+/// these imports comes before it for the same reason, so reading them in this order reads each
+/// one with everything it names already in scope.
 const CARRIED: [(&str, &str); 8] = [
     (PRELUDE, include_str!("../../../library/prelude.lm")),
+    ("list", include_str!("../../../library/list.lm")),
+    ("strings", include_str!("../../../library/strings.lm")),
+    ("map", include_str!("../../../library/map.lm")),
+    ("set", include_str!("../../../library/set.lm")),
     ("io", include_str!("../../../library/io.lm")),
     ("files", include_str!("../../../library/files.lm")),
     (
         "environment",
         include_str!("../../../library/environment.lm"),
     ),
-    ("list", include_str!("../../../library/list.lm")),
-    ("strings", include_str!("../../../library/strings.lm")),
-    ("map", include_str!("../../../library/map.lm")),
-    ("set", include_str!("../../../library/set.lm")),
 ];
 
 /// The module whose names are in scope everywhere without being imported.
