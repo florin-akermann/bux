@@ -6,7 +6,7 @@
 
 ## Open
 
-## 🔴 Item 064: An instance is written over a generic type
+## 🟡 Item 064: An instance is written over a generic type
 `Eq<List<T>>` cannot be written, and `derive` refuses a record that holds a `List`.
 An AST, a `Type`, and a constant pool each hold lists and each needs equality and hashing.
 [064][a] - `docs/specs/traits.md` states an instance for a type written with type parameters.
