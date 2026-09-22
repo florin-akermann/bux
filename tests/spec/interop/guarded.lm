@@ -6,9 +6,10 @@
 // answers rather than something that reaches it. What the `Err` holds is what the throw said.
 import io
 
-fn main() -> () {
+fn main(arguments: List<String>) -> Int {
     io.println(counted(text: "42"))
     io.println(counted(text: "forty two"))
+    0
 }
 
 // example: counted(text: "42") == "42"

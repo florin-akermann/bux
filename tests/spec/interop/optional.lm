@@ -5,8 +5,9 @@
 // `None`. Nothing in the program says `null`, and nothing in it could.
 import io
 
-fn main() -> () {
+fn main(arguments: List<String>) -> Int {
     io.println(told(name: "LUMEN_NO_SUCH_VARIABLE"))
+    0
 }
 
 // example: told(name: "LUMEN_NO_SUCH_VARIABLE") == "no such variable"

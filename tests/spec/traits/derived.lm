@@ -7,7 +7,7 @@
 // A record and a variant each derive `Eq`, and `==` reaches what the derive wrote.
 import io
 
-fn main() -> () {
+fn main(arguments: List<String>) -> Int {
     ada := User { id: 1, name: "ada" }
     also_ada := User { id: 1, name: "ada" }
     bo := User { id: 2, name: "ada" }
@@ -28,6 +28,7 @@ fn main() -> () {
     if late != lost {
         io.println("a failure differs from one with another reason")
     }
+    0
 }
 
 derive Eq for User

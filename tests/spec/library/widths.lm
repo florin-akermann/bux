@@ -11,7 +11,8 @@ import list
 
 import strings
 
-fn main() -> () {
+fn main(arguments: List<String>) -> Int {
     io.println(shown(strings.length("hello")))
     io.println(shown(or(list.index_of([1, 2], 2), 0)))
+    0
 }

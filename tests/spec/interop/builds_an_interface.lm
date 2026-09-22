@@ -3,8 +3,9 @@
 // reaches nothing to call.
 // The compiler knows which it is, because the `extern type` says so, and refuses the
 // declaration where it is written rather than leaving the JVM to refuse the class file.
-fn main() -> () {
+fn main(arguments: List<String>) -> Int {
     _ = opened("a")
+    0
 }
 
 extern new opened(name: String) -> Path

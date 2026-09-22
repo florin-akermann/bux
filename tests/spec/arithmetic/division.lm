@@ -11,7 +11,7 @@
 // checked rather than asserted: a wrong answer writes a different line and the harness says so.
 import io
 
-fn main() -> () {
+fn main(arguments: List<String>) -> Int {
     io.println(answered(claim: "17 / 5 is Some(3)", answer: divided(of: 17, by: 5), wanted: 3))
     io.println(nothing(claim: "17 / 0 is None", answer: divided(of: 17, by: 0)))
     io.println(answered(claim: "17 % 5 is Some(2)", answer: leftover(of: 17, by: 5), wanted: 2))
@@ -19,6 +19,7 @@ fn main() -> () {
     eleven := scaled(total: 17, count: 5)
     io.println(answered(claim: "17 scaled by 5 is 11", answer: eleven, wanted: 11))
     io.println(nothing(claim: "17 scaled by 0 is None", answer: scaled(total: 17, count: 0)))
+    0
 }
 
 // Arithmetic over `Int` divides through `?`, one per division, and reads as arithmetic.

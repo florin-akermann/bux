@@ -159,7 +159,8 @@ class of mistake, never where it removes typing.
 A rule of this document holds for every type, every function, and every operator, or it is no rule.
 A prelude type is a type a library could have declared, and `Int` has nothing a declared type lacks.
 An operator is a function with other syntax, and section 5 gives it no exemption from its type.
-`main` is a function like any other: it declares what it gives back, and section 11 makes that `()`.
+`main` is a function like any other: it declares what it takes and gives back, and section 11
+makes that `List<String>` and `Int`.
 A feature that works only because one name is treated apart from the rest is reshaped or refused.
 `docs/principles.md` question 10 asks it of every proposal.
 
@@ -802,18 +803,31 @@ Nothing is given up: the one place such a parameter can be written is the one pl
 A program starts at `main`:
 
 ```text
-fn main() -> () {
+fn main(arguments: List<String>) -> Int {
     greet("world")
+    0
 }
 ```
 
-`main` takes nothing and gives back nothing: a program is run for what it does.
-It is a function like any other, and `-> ()` is its return type written, not a form it is spared.
-The JVM starts at a `main(String[])` of its own; the compiler writes that, and no program sees it.
-A module declaring it can be run; one that does not is a library, and running it is refused.
+`main` takes the words the program was run with and gives back the status the run ends with.
+That is the one shape a program starts at: the one parameter is `List<String>`, and the result
+is `Int`.
+It is a function like any other, and the signature is written out, not a form it is spared.
+A module declaring `main` at that shape can be run.
+A module declaring `main` at any other shape is a library, exactly as one declaring no `main` is,
+and running it is refused with a message naming the shape to write.
 
-A run is over when `main` is.
-There is no exit status to write, because a program has nothing to say yet about how it went.
+`arguments` holds every word written after the file, in the order the command wrote them.
+The name of the program is not one of them, because a program already knows what it is.
+The JVM starts at a `main(String[])` of its own; the compiler writes that, and no program sees it.
+That entry point gathers the array into the `List<String>` it hands `main`.
+
+A run is over when `main` is, and the `Int` it gave back is the status the run ends with.
+A program that has nothing to say gives back `0`.
+A status is eight bits wide on every system the JDK runs on, so the entry point hands the system
+the low eight bits of that answer and nothing else.
+Every `Int` maps to one status that way, so giving back a status is never a partial operation.
+`docs/specs/run.md` states how a run passes the arguments and reads the status.
 
 ### Every function carries an example
 

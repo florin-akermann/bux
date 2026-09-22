@@ -1,10 +1,10 @@
 // expect-error: L0308
 // One trait and one type have one instance, so a second is refused where it is written.
-fn main() -> () {
+fn main(arguments: List<String>) -> Int {
     if is_equal(Point { across: 1 }, Point { across: 1 }) {
-        return ()
+        return 0
     }
-    ()
+    0
 }
 
 instance Eq<Point> {

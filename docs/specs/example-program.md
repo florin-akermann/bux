@@ -40,7 +40,9 @@ Every function but `main` states an example, which `docs/specs/doc-examples.md` 
 A reader therefore meets a signature and what it works out on the same screen, and `lumen test`
 holds the file to both.
 
-`main` returns `()` and takes nothing, which is what `docs/specs/run.md` requires of it.
+`main` takes a `List<String>` and gives back an `Int`, which is what `docs/specs/run.md` requires
+of it.
+It reads no argument and gives back `0`, because everything it works out it writes.
 
 ## What running it does
 

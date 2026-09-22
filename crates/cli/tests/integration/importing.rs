@@ -10,7 +10,7 @@ use crate::common::{Example, Sibling, jdk, lumen};
 const GREETING: &str = "// example: greeting(name: \"world\") == \"hello, world\"\nfn greeting(name: String) -> String {\n    \"hello, \" + name\n}\n";
 
 /// A program reaching that function, which is the module every test here names.
-const PROGRAM: &str = "import greeting\n\nimport io\n\nfn main() -> () {\n    io.println(greeting.greeting(\"world\"))\n}\n";
+const PROGRAM: &str = "import greeting\n\nimport io\n\nfn main(arguments: List<String>) -> Int {\n    io.println(greeting.greeting(\"world\"))\n    0\n}\n";
 
 /// An example of `PROGRAM` with `GREETING` written beside it under the name it is imported by.
 fn program() -> Example {

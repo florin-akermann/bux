@@ -7,10 +7,11 @@ import holder
 
 import io
 
-fn main() -> () {
+fn main(arguments: List<String>) -> Int {
     io.println(named(user: holder.User { id: 2, name: "world" }))
     io.println(said(payment: holder.Sent("post")))
     io.println(said(payment: holder.Pending))
+    0
 }
 
 // A record of another module is built by its name and read field by field.

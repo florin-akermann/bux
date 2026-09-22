@@ -5,7 +5,7 @@
 // A file reads top down, so what a name is comes below the first line that uses it.
 import io
 
-fn main() -> () {
+fn main(arguments: List<String>) -> Int {
     ordered := Placed(Basket { apples: 3, pears: 4 })
     held := picked(ordered) + picked(Unplaced)
     each := shared(total: held, people: 2)
@@ -13,6 +13,7 @@ fn main() -> () {
     io.println("held: " + shown(held))
     io.println("each: " + shown(each))
     io.println("most: " + shown(most))
+    0
 }
 
 /// What each of `people` gets, which is nothing when there is nobody to give it to.

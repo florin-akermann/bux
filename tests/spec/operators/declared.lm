@@ -16,7 +16,7 @@
 // nothing and the harness says the header was not met.
 import io
 
-fn main() -> () {
+fn main(arguments: List<String>) -> Int {
     one := Money { cents: 3 }
     other := Money { cents: 7 }
     if is_worth(one + other, 10) {
@@ -52,6 +52,7 @@ fn main() -> () {
     if is_at_least(one: other, other: one) {
         io.println("7 cents is at least 3 cents")
     }
+    0
 }
 
 // `+=` is `Add` too, so it reaches the same instance `+` does.

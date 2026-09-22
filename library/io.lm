@@ -12,6 +12,11 @@ fn println(text: String) -> () {
     put_line(out(), text)
 }
 
+/// Writes `text` and then a line break, on standard error rather than standard output.
+fn eprintln(text: String) -> () {
+    put_line(err(), text)
+}
+
 /// Writes `text` on `stream` and nothing else.
 extern method put(stream: PrintStream, text: String) -> () = "print"
 
@@ -20,6 +25,9 @@ extern method put_line(stream: PrintStream, text: String) -> () = "println"
 
 /// The output a JVM starts with, which is where `print` and `println` write.
 extern field out() -> PrintStream = "java.lang.System.out"
+
+/// The error output a JVM starts with, which is where `eprintln` writes.
+extern field err() -> PrintStream = "java.lang.System.err"
 
 /// An output a line of text is written on.
 extern type PrintStream = "java.io.PrintStream"

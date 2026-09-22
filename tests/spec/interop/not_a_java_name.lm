@@ -1,8 +1,9 @@
 // expect-error: L0426
 // A Java name is its segments, each a name, with a dot between two of them.
 // `java..File` writes an empty segment, so it names no class the JVM could ever hold.
-fn main() -> () {
+fn main(arguments: List<String>) -> Int {
     _ = named("notes.txt")
+    0
 }
 
 extern new named(path: String) -> File

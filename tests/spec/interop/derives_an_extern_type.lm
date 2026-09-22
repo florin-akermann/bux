@@ -1,8 +1,9 @@
 // expect-error: L0427
 // A derive reads what a type holds, and what an extern type holds is the JVM's.
 // Comparing two of them is written as an `instance` over `extern` declarations instead.
-fn main() -> () {
+fn main(arguments: List<String>) -> Int {
     _ = named("notes.txt")
+    0
 }
 
 extern new named(path: String) -> File

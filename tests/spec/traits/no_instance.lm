@@ -1,10 +1,10 @@
 // expect-error: L0418
 // A constrained generic used at a type with no instance is refused where it is used.
-fn main() -> () {
+fn main(arguments: List<String>) -> Int {
     if has_value([Point { across: 1 }], Point { across: 2 }) {
-        return ()
+        return 0
     }
-    ()
+    0
 }
 
 // example: has_value([1, 2], 2)

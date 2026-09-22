@@ -15,7 +15,7 @@ use lumen_diagnostics::{Code, Diagnostic, json, render};
 use lumen_examples::{Example, Refusal as ExampleRefusal, Run, stated_by};
 use lumen_format::format;
 use lumen_holes::{Hole, Whole};
-use lumen_ir::{Asked, Lowered, is_a_program, lower};
+use lumen_ir::{Asked, Lowered, THE_ONE_SHAPE, is_a_program, lower};
 use lumen_jvm::ClassFile;
 use lumen_modules::{MANIFEST, SUFFIX};
 use lumen_types::TypedProgram;
@@ -49,8 +49,16 @@ enum Command {
     #[command(long_about = concat!(include_str!("help/build.md"), include_str!("help/packages.md")))]
     Build { path: PathBuf },
     /// Compile a source file and run the program it holds
-    #[command(long_about = include_str!("help/run.md"))]
-    Run { file: PathBuf },
+    ///
+    /// Every word after the file belongs to the program, `--help` among them, so this command
+    /// has no help flag of its own; `lumen help run` is where its topic is read.
+    #[command(long_about = include_str!("help/run.md"), disable_help_flag = true)]
+    Run {
+        file: PathBuf,
+        /// The words the program is run with, which reach it as the list `main` takes
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        arguments: Vec<String>,
+    },
     /// Run the examples a module states about its functions
     #[command(long_about = include_str!("help/test.md"))]
     Test { file: PathBuf },
@@ -72,7 +80,7 @@ fn run(command: &Command) -> Outcome {
         Command::Fmt { file } => fmt(file),
         Command::Check { path, json } => check(path, *json),
         Command::Build { path } => build(path),
-        Command::Run { file } => started(file),
+        Command::Run { file, arguments } => started(file, arguments),
         Command::Test { file } => tested(file),
         Command::Api { file } => api(file),
         Command::Explain { code } => explain(code),
@@ -245,8 +253,10 @@ fn put_back(run: &Run, refusals: Vec<Diagnostic>) -> Vec<Diagnostic> {
 }
 
 /// What the module wrote to standard output, or nothing where it could not be run to the end.
+///
+/// The module is the one the run wrote, which reads no argument, so it is started with none.
 fn wrote(java: &Path, module: &str, beside: &Path) -> Option<String> {
-    match starting(java, module, beside).output() {
+    match starting(java, module, beside, &[]).output() {
         Ok(ended) if ended.status.success() => String::from_utf8(ended.stdout).ok(),
         Ok(ended) => {
             eprint!("{}", String::from_utf8_lossy(&ended.stderr));
@@ -338,15 +348,16 @@ fn modules_of(directory: &Path) -> Option<Vec<PathBuf>> {
 /// Builds `path` and runs the program it holds, which ends however that program ends.
 ///
 /// The program is compiled before the JDK is looked for, so a program that does not compile is
-/// told so on a machine that could not have run it anyway.
-fn started(path: &Path) -> Outcome {
+/// told so on a machine that could not have run it anyway. `arguments` is every word written
+/// after the file, which reaches the program and nothing else.
+fn started(path: &Path, arguments: &[String]) -> Outcome {
     let built = match built(path) {
         Ok(built) => built,
         Err(refusal) => return refusal,
     };
     if !built.starts {
         eprintln!(
-            "error: {}: a module is run through `fn main() -> ()`, which this one does not declare",
+            "error: {}: a module is run through `{THE_ONE_SHAPE}`, which this one does not declare",
             path.display()
         );
         return Outcome::Unusable;
@@ -354,7 +365,7 @@ fn started(path: &Path) -> Outcome {
     let Some(java) = java() else {
         return Outcome::Unusable;
     };
-    ran(&java, &built)
+    ran(&java, &built, arguments)
 }
 
 /// Compiles `path` and every module it reaches, writing the class files of each beside it.
@@ -470,8 +481,8 @@ fn named_module(path: &Path) -> Option<String> {
 ///
 /// Every class written is a value class, which JDK 28 holds in preview, so the JVM is told to
 /// load preview class files; `docs/implementation.md` section 1 says why.
-fn ran(java: &Path, built: &Built) -> Outcome {
-    match starting(java, &built.module, &built.beside).status() {
+fn ran(java: &Path, built: &Built, arguments: &[String]) -> Outcome {
+    match starting(java, &built.module, &built.beside, arguments).status() {
         Ok(status) => Outcome::Ended(status.code().unwrap_or(STOPPED)),
         Err(error) => {
             eprintln!("error: {}: {error}", java.display());
@@ -481,7 +492,15 @@ fn ran(java: &Path, built: &Built) -> Outcome {
 }
 
 /// A JVM told to start `module`, with the classes under `beside` and preview classes loadable.
-fn starting(java: &Path, module: &str, beside: &Path) -> std::process::Command {
+///
+/// Every word of `arguments` goes to the program unchanged and in order, after the class the
+/// JVM starts on, so nothing the runner writes is ever read as one of them.
+fn starting(
+    java: &Path,
+    module: &str,
+    beside: &Path,
+    arguments: &[String],
+) -> std::process::Command {
     let mut command = std::process::Command::new(java);
     command.args([
         OsStr::new("--enable-preview"),
@@ -489,6 +508,7 @@ fn starting(java: &Path, module: &str, beside: &Path) -> std::process::Command {
         beside.as_os_str(),
     ]);
     command.arg(module);
+    command.args(arguments);
     command
 }
 

@@ -194,6 +194,10 @@ room, and `L0604` says so before anything is compiled.
 `lumen check`, `lumen build`, and `lumen run` take such a module as they always did: it is the
 run, and only the run, that has no room.
 
+The `main` the run writes takes the words a program is run with, under the name `arguments`.
+A module that declares `arguments` at the top level leaves the run no room for that name either,
+and `L0604` says so the same way.
+
 ## The errors
 
 | name                    | code    | message                             |

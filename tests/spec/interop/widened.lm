@@ -4,8 +4,9 @@
 // Which of the two a member gives is written in that member's own class file, and the compiler
 // reads none, so `int` after the kind is how the declaration says it.
 // The call reaches `length` for its `int`, and widens the answer to the `Int` declared here.
-fn main() -> () {
+fn main(arguments: List<String>) -> Int {
     put_line(out(), shown(length("hello")))
+    0
 }
 
 extern method int length(text: String) -> Int = "length"

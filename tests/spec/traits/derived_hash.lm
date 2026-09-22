@@ -5,7 +5,7 @@
 // A record and a variant each derive `Hash`, and equal values hash alike.
 import io
 
-fn main() -> () {
+fn main(arguments: List<String>) -> Int {
     ada := User { id: 1, name: "ada" }
     also_ada := User { id: 1, name: "ada" }
     if hashed(ada) == hashed(also_ada) {
@@ -17,6 +17,7 @@ fn main() -> () {
     if hashed(Failed("late")) == hashed(Failed("late")) {
         io.println("two failures with the same reason hash alike")
     }
+    0
 }
 
 derive Eq, Hash for User

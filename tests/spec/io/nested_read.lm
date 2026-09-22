@@ -5,11 +5,12 @@ import files
 
 import io
 
-fn main() -> () {
+fn main(arguments: List<String>) -> Int {
     match wrapped() {
         Some(result) => io.println(told(result: result))
         None => io.println("nothing")
     }
+    0
 }
 
 // example: told(result: or(wrapped(), Ok(""))) == "the read failed and said why"

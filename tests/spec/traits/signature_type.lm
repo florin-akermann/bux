@@ -1,7 +1,7 @@
 // expect-error: L0419
 // A signature has no body, so a parameter of one states its type where it is written.
-fn main() -> () {
-    ()
+fn main(arguments: List<String>) -> Int {
+    0
 }
 
 trait Area<T> {

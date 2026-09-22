@@ -5,7 +5,7 @@
 // A module declares a trait of its own, and two of its types each give it an instance.
 import io
 
-fn main() -> () {
+fn main(arguments: List<String>) -> Int {
     if covered(Square { side: 3 }) == 9 {
         io.println("a square of side 3 covers 9")
     }
@@ -15,6 +15,7 @@ fn main() -> () {
     if is_wider(shape: Square { side: 4 }, other: Square { side: 1 }) {
         io.println("a square of side 4 is wider than one of side 1")
     }
+    0
 }
 
 // example: is_wider(shape: Square { side: 4 }, other: Square { side: 1 })

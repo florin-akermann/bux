@@ -6,7 +6,7 @@
 // A type gives `Eq` an instance, and a constrained generic reaches it at each type it is used at.
 import io
 
-fn main() -> () {
+fn main(arguments: List<String>) -> Int {
     corner := Point { across: 1, down: 2 }
     far := Point { across: 3, down: 4 }
     if has_value([corner], far) {
@@ -23,6 +23,7 @@ fn main() -> () {
     if has_value([1, 2], 2) {
         io.println("a list of whole numbers holds 2")
     }
+    0
 }
 
 // example: has_value([1, 2], 2)

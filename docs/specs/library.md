@@ -118,14 +118,16 @@ list:    length  has_value  index_of
 strings: join  length
 map:     empty  insert  get
 set:     empty  insert  has_value
-io:      print  println
+io:      print  println  eprintln
 files:   read
 ```
 
 `io` and `files` are written over `extern` declarations, which `docs/specs/interop.md` states and
 `docs/specs/io.md` says what each of the two reaches. Each declares those declarations beside its
-functions, and every top-level name is public, so both surfaces are wider than the three names
+functions, and every top-level name is public, so both surfaces are wider than the four names
 above; `docs/specs/io.md` names the rest.
+`io.println` writes to standard output and `io.eprintln` writes to standard error, and the two
+are the one `io.put_line` over two streams.
 `strings.length` is one such declaration itself.
 It reaches `String.length`, whose descriptor gives an `int` that the declaration widens to the
 `Int` it gives back.

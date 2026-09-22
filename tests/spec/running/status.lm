@@ -1,0 +1,12 @@
+// expect-run
+// > nothing to count
+// status 3
+// The run ends with the `Int` `main` gives back, which is how a program says how it went.
+// A program with nothing to report gives back `0`; this one has something to report, so it
+// gives back another number. `docs/specs/run.md` states what a status is.
+import io
+
+fn main(arguments: List<String>) -> Int {
+    io.println("nothing to count")
+    3
+}

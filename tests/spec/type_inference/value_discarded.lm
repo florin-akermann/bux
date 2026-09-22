@@ -1,8 +1,8 @@
 // expect-error: L0408
 // `save` gives back a `Result`, and this line drops it where nothing can read it.
-fn main() -> () {
+fn main(arguments: List<String>) -> Int {
     save(1)
-    ()
+    0
 }
 
 fn save(value: Int) -> Result<(), String> {

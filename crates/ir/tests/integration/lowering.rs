@@ -1,6 +1,6 @@
 //! What each construct of version 0.1 becomes, which `docs/specs/codegen.md` states.
 
-use lumen_ir::{ClassName, Descriptor, Extending, Instruction, Reached};
+use lumen_ir::{ClassName, Descriptor, Extending, Instruction, Reached, THE_ONE_SHAPE};
 
 use crate::common;
 
@@ -515,7 +515,7 @@ fn a_declared_type_named_for_nothing_interesting_does_not_take_that_name_from_it
 
 #[test]
 fn a_main_that_declares_a_type_parameter_is_still_what_the_module_is_run_through() {
-    let lowered = common::lowered("fn main<T>() -> () {\n    ()\n}\n");
+    let lowered = common::lowered("fn main<T>(arguments: List<String>) -> Int {\n    0\n}\n");
 
     assert!(common::has_method(&lowered, "main"));
     assert!(lumen_ir::is_a_program(&lowered));
@@ -535,7 +535,7 @@ fn a_generic_used_at_one_type_with_two_arguments_is_written_once_for_that_type()
 }
 
 /// A module that can be run, which is one declaring the `main` a program starts at.
-const PROGRAM: &str = "fn main() -> () {\n    ()\n}\n";
+const PROGRAM: &str = "fn main(arguments: List<String>) -> Int {\n    0\n}\n";
 
 #[test]
 fn a_module_declaring_main_is_written_with_the_entry_point_a_jvm_starts_at() {
@@ -555,10 +555,31 @@ fn a_module_declaring_main_is_written_with_the_entry_point_a_jvm_starts_at() {
     );
     assert_eq!(
         started.descriptor.to_string(),
-        "()V",
+        "(Ljava/util/List;)J",
         "the one written first"
     );
     assert!(lumen_ir::is_a_program(&lowered));
+}
+
+/// The text a refusal names and the type the lowering reads are one shape, and this is both.
+#[test]
+fn a_module_written_at_the_shape_a_refusal_names_is_the_program_that_refusal_asks_for() {
+    let lowered = common::lowered(&format!("{THE_ONE_SHAPE} {{\n    0\n}}\n"));
+
+    assert!(
+        lumen_ir::is_a_program(&lowered),
+        "`{THE_ONE_SHAPE}` is what a refusal tells an author to write"
+    );
+}
+
+#[test]
+fn a_module_declaring_main_at_another_shape_is_a_library_the_way_one_declaring_none_is() {
+    let lowered = common::lowered("fn main() -> () {\n    ()\n}\n");
+
+    assert!(
+        !lumen_ir::is_a_program(&lowered),
+        "a program starts at `fn main(arguments: List<String>) -> Int` and at no other shape"
+    );
 }
 
 #[test]
@@ -577,15 +598,54 @@ fn the_entry_point_takes_what_a_jvm_hands_a_program_and_calls_the_main_beside_it
 
     let module = common::class_of(&lowered, &ClassName::new("demo"));
 
-    let started = module
-        .methods
-        .iter()
-        .find(|method| method.descriptor.to_string() == "([Ljava/lang/String;)V")
-        .expect("the module is written with an entry point");
+    let started = entry_point(module);
     assert_eq!(started.name, "main");
     assert!(common::calls(
         &started.body,
         &ClassName::new("demo"),
         "main"
     ));
+}
+
+#[test]
+fn the_entry_point_gathers_what_a_jvm_hands_it_into_the_list_main_takes() {
+    let lowered = common::lowered(PROGRAM);
+
+    let started = entry_point(common::class_of(&lowered, &ClassName::new("demo")));
+
+    assert_eq!(
+        started.body.instructions[..2],
+        [
+            Instruction::Load {
+                slot: 0,
+                of: Descriptor::array(Descriptor::reference("java/lang/String")),
+            },
+            Instruction::CollectList,
+        ],
+        "the array a JVM hands it, gathered into a list"
+    );
+}
+
+#[test]
+fn the_entry_point_ends_the_run_with_the_low_eight_bits_of_what_main_gave_back() {
+    let lowered = common::lowered(PROGRAM);
+
+    let started = entry_point(common::class_of(&lowered, &ClassName::new("demo")));
+
+    let ending = &started.body.instructions[started.body.instructions.len() - 3..];
+    assert_eq!(ending[0], Instruction::LowEightBits, "a status is a byte");
+    assert!(
+        common::calls(&started.body, &ClassName::new("java/lang/System"), "exit"),
+        "the run ends with the status the program gave back"
+    );
+    assert_eq!(ending[2], Instruction::Return(None));
+}
+
+/// The method a JVM starts the module class at, which is the one taking the array it hands over.
+fn entry_point(module: &lumen_ir::Class) -> &lumen_ir::Method {
+    module
+        .methods
+        .iter()
+        .find(|method| method.descriptor.to_string() == "([Ljava/lang/String;)V")
+        .expect("the module is written with an entry point")
 }

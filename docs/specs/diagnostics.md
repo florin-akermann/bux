@@ -248,6 +248,11 @@ A file that cannot be read and a code that does not exist are both `2`: neither 
 program.
 Diagnostics go to standard error, and only what was asked for goes to standard output.
 
+`lumen run` is the one command that can end with a status of somebody else's choosing.
+Once the program it was given runs, the run ends with the status that program ended with, which
+`docs/specs/run.md` states.
+Both `1` and `2` are given before a program runs, so neither is ever a status a program chose.
+
 ## Properties
 
 These hold and are checked with property-based tests:

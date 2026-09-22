@@ -6,9 +6,10 @@ import greeting
 
 import io
 
-fn main() -> () {
+fn main(arguments: List<String>) -> Int {
     io.println(greeting.greeting("world"))
     io.println(counted())
+    0
 }
 
 // example: counted() == "6"

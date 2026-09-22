@@ -1,6 +1,6 @@
 // expect-run
 // A discarded value is worked out and dropped, whatever width the JVM holds it in.
-fn main() -> () {
+fn main(arguments: List<String>) -> Int {
     _ = plain(2)
     _ = "thrown away"
     _ = wrapped(3)
@@ -11,7 +11,7 @@ fn main() -> () {
         _ = wrapped(count)
         count += 1
     }
-    ()
+    0
 }
 
 // example: plain(2) == 3

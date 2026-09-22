@@ -9,10 +9,11 @@ import io
 
 import list
 
-fn main() -> () {
+fn main(arguments: List<String>) -> Int {
     io.println(shown(list.length([1, 2, 3])))
     io.println(shown(list.length(["one", "two"])))
     io.println(shown(length(kept())))
+    0
 }
 
 // A list of a type this module declares settles the type parameter on that type.

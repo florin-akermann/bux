@@ -1,10 +1,10 @@
 // expect-run
 // A function whose parameters and result are all `Bool` is about `Bool`, so its operands stay.
-fn main() -> () {
+fn main(arguments: List<String>) -> Int {
     if is_implied(first: true, second: true) && is_both(left: true, right: true) {
-        return ()
+        return 0
     }
-    ()
+    0
 }
 
 /// Every parameter and the result is `Bool`, so these are operands rather than choices.

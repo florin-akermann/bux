@@ -19,8 +19,9 @@ The language removes the case instead, the way it removes a null: the program do
 A statement written for its effect has nothing to leave behind, so its type is `()`.
 
 ```text
-fn main() -> () {
+fn main(arguments: List<String>) -> Int {
     save(user)
+    0
 }
 ```
 
@@ -43,8 +44,9 @@ it, and `()` is what is expected there.
 `_ = save(user)` discards the value and says so.
 
 ```text
-fn main() -> () {
+fn main(arguments: List<String>) -> Int {
     _ = save(user)
+    0
 }
 ```
 

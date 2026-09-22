@@ -5,9 +5,10 @@
 // The two are one call, so the prelude declares nothing to earn the second spelling.
 import io
 
-fn main() -> () {
+fn main(arguments: List<String>) -> Int {
     io.println(shown(shared(total: 17, people: 5).or(0)))
     io.println(shown(shared(total: 17, people: 0).or(0)))
+    0
 }
 
 /// What each of `people` gets of `total`, which is nothing at all when there is nobody.

@@ -3,11 +3,11 @@
 // A `()` given to a declared type a type parameter left open, which holds a reference.
 import io
 
-fn main() -> () {
+fn main(arguments: List<String>) -> Int {
     if is_boxed(Boxed { held: () }) && is_held(Held(())) {
         io.println("nothing, boxed")
     }
-    ()
+    0
 }
 
 /// Whether the nothing a record field left open holds is read back out.

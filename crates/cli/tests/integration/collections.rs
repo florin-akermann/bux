@@ -122,7 +122,7 @@ fn a_program(module: &str, built: &str, asked: &[i64], read: &dyn Fn(i64) -> Str
         .collect();
     let reading = lines.concat();
     format!(
-        "import io\n\nimport {module}\n\nfn main() -> () {{\n    held := {built}\n{reading}}}\n"
+        "import io\n\nimport {module}\n\nfn main(arguments: List<String>) -> Int {{\n    held := {built}\n{reading}    0\n}}\n"
     )
 }
 

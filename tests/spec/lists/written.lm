@@ -6,10 +6,11 @@
 // `docs/specs/types.md` states that writing one builds it, and that nothing adds to it after.
 import io
 
-fn main() -> () {
+fn main(arguments: List<String>) -> Int {
     for fruit in picked() {
         io.println(fruit)
     }
+    0
 }
 
 /// The fruit an order holds, which is the one place this program writes a list.

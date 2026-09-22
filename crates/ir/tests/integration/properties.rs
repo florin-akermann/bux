@@ -16,7 +16,7 @@ const SOURCES: [&str; 10] = [
     "fn walked(counts: List<Int>) -> Int {\n    var total = 0\n    for count in counts {\n        total += count\n    }\n    total\n}\n",
     "fn used() -> Result<Int, String> {\n    value := held()?\n    Ok(value + 1)\n}\n\nfn held() -> Result<Int, String> {\n    Ok(1)\n}\n",
     "fn wrapped() -> Option<Int> {\n    Some(identity(2))\n}\n\nfn identity<T>(value: T) -> T {\n    value\n}\n",
-    "fn counted() -> Int {\n    2\n}\n\nfn main() -> () {\n    ()\n}\n",
+    "fn counted() -> Int {\n    2\n}\n\nfn main(arguments: List<String>) -> Int {\n    0\n}\n",
     "fn is_same(word: String, count: Int) -> Bool {\n    word == \"one\" && count != 2\n}\n",
 ];
 
@@ -97,8 +97,8 @@ fn a_module_is_written_with_an_entry_point_exactly_when_it_declares_main(tc: Tes
 
     assert_eq!(
         lumen_ir::is_a_program(&lowered),
-        source.contains("fn main() -> () {"),
-        "a program is a module that declares `main`, and nothing else is"
+        source.contains("fn main(arguments: List<String>) -> Int {"),
+        "a program is a module that declares `main` at the one shape, and nothing else is"
     );
 }
 

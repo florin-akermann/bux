@@ -5,6 +5,7 @@ import io
 
 import relay
 
-fn main() -> () {
+fn main(arguments: List<String>) -> Int {
     io.println(relay.got().name)
+    0
 }

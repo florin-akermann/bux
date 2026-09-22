@@ -38,10 +38,11 @@ fn a_written_module_tries_each_example_and_writes_the_one_that_did_not_hold() {
 
     assert!(
         written.source().contains(concat!(
-            "fn main() -> () {\n",
+            "fn main(arguments: List<String>) -> Int {\n",
             "    if !(shared(total: 7) == 7) {\n",
             "        io.println(\"lumen: example 0\")\n",
             "    }\n",
+            "    0\n",
             "}\n",
         )),
         "{written:?}"
@@ -57,7 +58,7 @@ fn a_written_module_carries_the_declarations_the_module_makes_comment_and_all() 
 
 #[test]
 fn a_written_module_leaves_out_the_main_the_module_declares_of_its_own() {
-    let source = format!("fn main() -> () {{\n    7\n}}\n\n{SHARED}");
+    let source = format!("fn main(arguments: List<String>) -> Int {{\n    7\n}}\n\n{SHARED}");
 
     let written = run(&source);
 
@@ -99,6 +100,30 @@ fn a_module_that_declares_the_name_the_run_reaches_for_is_refused() {
         .expect_err("the module declares `io`, which the run reaches for");
 
     assert_eq!(refused.span().text(&source), "io");
+}
+
+#[test]
+fn a_written_module_starts_at_the_one_shape_a_program_starts_at() {
+    let written = run(SHARED);
+
+    assert!(
+        written
+            .source()
+            .contains("fn main(arguments: List<String>) -> Int {\n"),
+        "{written:?}"
+    );
+}
+
+#[test]
+fn a_module_that_declares_the_name_the_written_entry_takes_is_refused() {
+    let source =
+        format!("{SHARED}\n// example: arguments() == 7\nfn arguments() -> Int {{\n    7\n}}\n");
+    let program = parsed(&source);
+
+    let refused = Run::of_module(&source, &program, stated(&source))
+        .expect_err("the module declares `arguments`, which the `main` the run writes takes");
+
+    assert_eq!(refused.span().text(&source), "arguments");
 }
 
 #[test]

@@ -1,8 +1,8 @@
 // expect-run
 // A record built and read inside one function is kept in locals, and computes what it always did.
-fn main() -> () {
+fn main(arguments: List<String>) -> Int {
     _ = summed(times: 3)
-    ()
+    0
 }
 
 // example: summed(times: 1) == 3

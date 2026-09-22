@@ -18,12 +18,18 @@ importing one is never read; `docs/specs/modules.md` states that.
 ```text
 io.print(text: String) -> ()
 io.println(text: String) -> ()
+io.eprintln(text: String) -> ()
 files.read(path: String) -> Result<String, String>
 ```
 
 `io.print` writes `text` and nothing else.
 `io.println` writes `text` and then a line break.
 Both go to the standard output a JVM starts with, and neither gives anything back.
+
+`io.eprintln` writes `text` and then a line break, on standard error rather than standard output.
+Standard error is where a program says what went wrong, so what it says there stays apart from
+the answer it writes on standard output, and a reader of either channel reads one thing.
+`docs/specs/run.md` has `lumen run` pass both through unchanged.
 
 `files.read` reads the whole file at `path` and gives back its text.
 Reading can fail, so it gives back a `Result`, as `docs/design.md` section 5 requires of one.
@@ -34,8 +40,8 @@ The file is read as UTF-8, and a file that is not UTF-8 is an `Err` like any oth
 Each module declares the `extern` declarations those are written over, and `io` declares the type
 one of them names.
 `docs/specs/api-surface.md` makes every top-level name public, and neither module is exempt, so
-`io.out`, `io.put`, `io.put_line`, `io.PrintStream`, `files.read_whole`, `files.as_a_path`,
-`files.named`, `files.File`, and `files.Path` are each reachable by name.
+`io.out`, `io.err`, `io.put`, `io.put_line`, `io.PrintStream`, `files.read_whole`,
+`files.as_a_path`, `files.named`, `files.File`, and `files.Path` are each reachable by name.
 That is what writing these two in Lumen costs, and it is the price of their being modules rather
 than a table inside the compiler.
 A program that wants a line written writes `io.println`, and the rest is how that is built.
@@ -67,7 +73,9 @@ Each `extern` those are written over is a static method of the same class, whose
 member and the mapping around it; `docs/specs/interop.md` states what that body is.
 
 `io.put` and `io.put_line` call the method of `java.io.PrintStream` they name, on the stream
-`io.out` reads off `java.lang.System`.
+`io.out` or `io.err` reads off `java.lang.System`.
+The two streams are the one difference between `io.println` and `io.eprintln`, which write over
+the same `io.put_line`.
 
 `files.read` builds a `java.io.File`, asks it for a `java.nio.file.Path`, and reads that whole with
 `java.nio.file.Files.readString`.

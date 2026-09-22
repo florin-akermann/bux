@@ -5,9 +5,10 @@
 // What a program can see is this: the value read back is the value that was put in.
 import io
 
-fn main() -> () {
+fn main(arguments: List<String>) -> Int {
     user := User { id: 1, home: Address { number: 7, zone: 2 } }
     io.println(told(user: user))
+    0
 }
 
 // example: told(user: User { id: 1, home: Address { number: 7, zone: 2 } }) == "the number it was built with is the number it holds"

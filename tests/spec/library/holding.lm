@@ -8,7 +8,7 @@ import io
 
 import list
 
-fn main() -> () {
+fn main(arguments: List<String>) -> Int {
     if list.has_value([1, 2, 3], 2) {
         io.println("the list holds 2")
     }
@@ -18,4 +18,5 @@ fn main() -> () {
     if list.has_value(["one", "two"], "one") {
         io.println("the words hold one")
     }
+    0
 }

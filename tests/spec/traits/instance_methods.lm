@@ -1,10 +1,10 @@
 // expect-error: L0309
 // An instance writes a body for every method its trait declares, and for no other name.
-fn main() -> () {
+fn main(arguments: List<String>) -> Int {
     if covered(Square { side: 2 }) == 4 {
-        return ()
+        return 0
     }
-    ()
+    0
 }
 
 instance Area<Square> {

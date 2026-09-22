@@ -11,7 +11,7 @@
 // nothing and the harness says the header was not met.
 import io
 
-fn main() -> () {
+fn main(arguments: List<String>) -> Int {
     if is_worth(counted(), 42) {
         io.println("a literal in a result is the type the result declares")
     }
@@ -31,6 +31,7 @@ fn main() -> () {
     if from_literal(42) == 42 {
         io.println("from_literal at Int is the whole number it is given")
     }
+    0
 }
 
 // example: is_worth(counted(), 42)

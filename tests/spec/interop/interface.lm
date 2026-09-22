@@ -5,8 +5,9 @@
 // reads none, so `interface` after `type` is how the declaration says it.
 // `toPath` gives back a `java.nio.file.Path`, which is an interface, so `as_text` is called as
 // one; a call written the other way is a class file the JVM refuses to link.
-fn main() -> () {
+fn main(arguments: List<String>) -> Int {
     put_line(out(), as_text(to_path(opened("spec/interop"))))
+    0
 }
 
 extern method as_text(path: Path) -> String = "toString"

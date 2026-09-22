@@ -4,8 +4,9 @@
 // stays in the module that declares it, which `docs/specs/modules.md` states.
 import map
 
-fn main() -> () {
+fn main(arguments: List<String>) -> Int {
     _ = map.insert(map.empty(), Kept("one"), 1)
+    0
 }
 
 derive Eq for Kept

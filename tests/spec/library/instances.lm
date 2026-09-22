@@ -6,10 +6,11 @@ import io
 
 import list
 
-fn main() -> () {
+fn main(arguments: List<String>) -> Int {
     if list.has_value([Kept("a")], Kept("a")) {
         io.println("kept")
     }
+    0
 }
 
 derive Eq for Kept

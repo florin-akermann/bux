@@ -6,6 +6,9 @@ use crate::code::{Assembling, Context};
 use crate::frame::Held;
 use crate::opcode;
 
+/// Every one of the eight bits a status is wide, which is what a status is masked down to.
+const ALL_EIGHT_BITS: u16 = 0x00FF;
+
 impl Assembling {
     /// Writes `instruction`, and follows what it does to the stack and the locals.
     pub(crate) fn write(&mut self, instruction: &Instruction, context: &mut Context<'_>) {
@@ -25,6 +28,7 @@ impl Assembling {
             Instruction::CompareIntegers(how) => self.compare_integers(*how, context),
             Instruction::Not => self.not(),
             Instruction::Widen => self.widen(),
+            Instruction::LowEightBits => self.low_eight_bits(),
             Instruction::Jump(label) => self.jump(*label, context),
             Instruction::JumpIfFalse(label) => self.jump_if_false(*label, context),
             Instruction::JumpIfNull(label) => self.jump_if_null(*label, context),
@@ -174,6 +178,18 @@ impl Assembling {
         self.byte(opcode::I2L);
         self.pop();
         self.push(Held::Long);
+    }
+
+    /// The low eight bits of the whole number on the stack, which is how wide a status is.
+    fn low_eight_bits(&mut self) {
+        self.byte(opcode::L2I);
+        self.pop();
+        self.push(Held::Integer);
+        self.byte(opcode::SIPUSH);
+        self.short(ALL_EIGHT_BITS);
+        self.push(Held::Integer);
+        self.byte(opcode::IAND);
+        self.pop();
     }
 
     fn not(&mut self) {

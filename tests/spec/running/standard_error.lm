@@ -1,0 +1,13 @@
+// expect-run
+// > the answer
+// ! there was nothing to divide among
+// `io.eprintln` writes a line to standard error, which is where a program says what went wrong.
+// The two channels are apart: what the program writes on one is never read off the other.
+// `docs/specs/io.md` states what each of them writes.
+import io
+
+fn main(arguments: List<String>) -> Int {
+    io.println("the answer")
+    io.eprintln("there was nothing to divide among")
+    0
+}

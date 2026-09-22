@@ -34,7 +34,7 @@ use crate::Lowered;
 use crate::asked::{Asked, Specialisation};
 use crate::class::{Class, Method, Reached};
 use crate::code::{Body, Instruction, MethodRef};
-use crate::descriptor::{Descriptor, MethodDescriptor};
+use crate::descriptor::{ClassName, Descriptor, MethodDescriptor};
 use crate::lower::body::Builder;
 use crate::lower::generic::Instantiation;
 use crate::lower::shape::Shapes;
@@ -125,7 +125,7 @@ impl Lowering<'_> {
         self.owe_every_method_nothing_has_to_ask_for();
         self.owe_every_method_another_module_asked_for(asked);
         class.methods = self.methods_owed();
-        class.methods.extend(entry_point(&class));
+        class.methods.extend(self.entry_point(&class));
         class
     }
 
@@ -166,6 +166,56 @@ impl Lowering<'_> {
                 Instantiation::asked_for(function, one.settled()),
             );
         }
+    }
+
+    /// What the JVM starts at, which a module declaring `main` is written with and no other is.
+    ///
+    /// The entry point is not a function anyone wrote: it is the shape `java` looks for. It
+    /// gathers the words the program was run with into the list `main` takes, calls `main`, and
+    /// ends the run with the status `main` gave back. Writing it with the module means running
+    /// the module class directly is running the program, so `lumen run` supplies nothing of its
+    /// own.
+    fn entry_point(&self, class: &Class) -> Option<Method> {
+        let started = self.started()?;
+        Some(Method {
+            name: START.to_owned(),
+            descriptor: MethodDescriptor::new(vec![arguments()], None),
+            reached: Reached::ThroughTheClass,
+            body: Body {
+                instructions: vec![
+                    Instruction::Load {
+                        slot: 0,
+                        of: arguments(),
+                    },
+                    Instruction::CollectList,
+                    Instruction::InvokeStatic(MethodRef {
+                        class: class.name.clone(),
+                        name: START.to_owned(),
+                        descriptor: started,
+                    }),
+                    Instruction::LowEightBits,
+                    Instruction::InvokeStatic(ended()),
+                    Instruction::Return(None),
+                ],
+                locals: 0,
+                guards: Vec::new(),
+            },
+        })
+    }
+
+    /// The method `main` is written as, where the module declares `main` at the one shape.
+    ///
+    /// The whole signature is read, so a module declaring `main` at another shape is a library,
+    /// exactly as one declaring no `main` is.
+    fn started(&self) -> Option<MethodDescriptor> {
+        let function = self.declares(START)?;
+        if *self.used_as(function.name.span) != what_a_program_starts_at() {
+            return None;
+        }
+        Some(
+            self.signature(function.name.span, &Instantiation::whole())
+                .descriptor(),
+        )
     }
 
     /// The function this module declares as `named`, where it declares one.
@@ -497,40 +547,31 @@ pub fn is_a_program(lowered: &Lowered) -> bool {
     })
 }
 
-/// What the JVM starts at, which a module declaring `main` is written with and no other is.
+/// The one shape a program starts at, written the way an author writes it.
 ///
-/// The entry point is not a function anyone wrote: it is the shape `java` looks for, and all it
-/// does is call the `main` the module declares. Writing it with the module means running the
-/// module class directly is running the program, so `lumen run` supplies nothing of its own.
-fn entry_point(class: &Class) -> Option<Method> {
-    let started = MethodDescriptor::new(Vec::new(), None);
-    let declared = class
-        .methods
-        .iter()
-        .any(|method| method.name == START && method.descriptor == started);
-    if !declared {
-        return None;
-    }
-    Some(Method {
-        name: START.to_owned(),
-        descriptor: MethodDescriptor::new(vec![arguments()], None),
-        reached: Reached::ThroughTheClass,
-        body: Body {
-            instructions: vec![
-                Instruction::InvokeStatic(MethodRef {
-                    class: class.name.clone(),
-                    name: START.to_owned(),
-                    descriptor: started,
-                }),
-                Instruction::Return(None),
-            ],
-            locals: 0,
-            guards: Vec::new(),
-        },
-    })
+/// A refusal names this, so an author reads what to write rather than that what they wrote is
+/// wrong. `what_a_program_starts_at` is the same shape as a type, and a test reads the two
+/// together so neither moves without the other.
+pub const THE_ONE_SHAPE: &str = "fn main(arguments: List<String>) -> Int";
+
+/// The one shape a program starts at, which `docs/design.md` section 11 states.
+///
+/// A program is run with the words written after its file and ends with a status, so `main`
+/// takes the one and gives back the other.
+fn what_a_program_starts_at() -> Type {
+    Type::function(vec![Type::list(Type::string())], Type::int())
 }
 
 /// What a JVM hands the entry point, which is the one thing Lumen never looks at.
 fn arguments() -> Descriptor {
     Descriptor::array(Descriptor::reference("java/lang/String"))
+}
+
+/// The method a JVM ends a run through, which is where a program's status reaches the system.
+fn ended() -> MethodRef {
+    MethodRef {
+        class: ClassName::new("java/lang/System"),
+        name: "exit".to_owned(),
+        descriptor: MethodDescriptor::new(vec![Descriptor::Integer], None),
+    }
 }

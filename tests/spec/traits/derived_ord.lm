@@ -8,7 +8,7 @@
 // A record and a variant each derive `Ord`, and `<` reaches what the derive wrote.
 import io
 
-fn main() -> () {
+fn main(arguments: List<String>) -> Int {
     ada := User { id: 1, name: "ada" }
     bo := User { id: 2, name: "ada" }
     zoe := User { id: 1, name: "zoe" }
@@ -31,6 +31,7 @@ fn main() -> () {
     if is_transitive(payments) {
         io.println("the order of two payments is transitive")
     }
+    0
 }
 
 // example: is_a_total_order([Pending, Failed("late")])

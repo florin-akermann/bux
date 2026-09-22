@@ -3,11 +3,11 @@
 // A list of nothings, which holds each of them as a reference.
 import io
 
-fn main() -> () {
+fn main(arguments: List<String>) -> Int {
     if counted([(), (), ()]) == 3 {
         io.println("three nothings")
     }
-    ()
+    0
 }
 
 /// How many nothings the list holds.

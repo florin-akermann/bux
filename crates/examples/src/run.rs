@@ -12,7 +12,19 @@ use crate::refusal::Refusal;
 const WRITES_A_LINE: &str = "io";
 
 /// The signature a JVM starts a module on, which the run writes for itself.
-const ENTRY: &str = "fn main() -> ()";
+const ENTRY: &str = "fn main(arguments: List<String>) -> Int";
+
+/// The name `ENTRY` takes its arguments under, which the module under test may not also declare.
+///
+/// A module declaring the same name at the top level would put two of it in scope, so a run says
+/// so rather than writing a module the author cannot read a refusal of.
+const TAKES_THE_ARGUMENTS: &str = "arguments";
+
+/// What the written `main` ends with, which is the status a run that reached the end gives back.
+///
+/// The run says which example did not hold by writing a line, so the status says nothing more
+/// than that the run reached the end.
+const ENDS: &str = "    0\n}\n";
 
 /// What a line the run wrote opens with, which is what tells it from the program's own output.
 ///
@@ -41,15 +53,18 @@ impl Run {
     ///
     /// # Errors
     ///
-    /// Returns the declaration of `io` where the module makes one, because the run reaches `io`
-    /// to say which example did not hold and a module declares a name once.
+    /// Returns the declaration of a name the run writes with where the module makes one, because
+    /// a module declares a name once. The run reaches `io` to say which example did not hold,
+    /// and the `main` it writes takes its arguments under a name of its own.
     pub fn of_module(
         source: &str,
         program: &Program,
         stated: Vec<Example>,
     ) -> Result<Self, Refusal> {
-        if let Some(declared) = declaring(program, WRITES_A_LINE) {
-            return Err(Refusal::reaches_for(WRITES_A_LINE, declared));
+        for named in [WRITES_A_LINE, TAKES_THE_ARGUMENTS] {
+            if let Some(declared) = declaring(program, named) {
+                return Err(Refusal::reaches_for(named, declared));
+            }
         }
         let mut written = Written::default();
         written.wrote(&imports_of(program));
@@ -57,7 +72,7 @@ impl Run {
         for (ordinal, example) in stated.iter().enumerate() {
             written.around(ordinal, &tried(example, ordinal));
         }
-        written.wrote("}\n");
+        written.wrote(ENDS);
         for declaration in declarations_of(source, program) {
             written.wrote("\n");
             written.copied(source, declaration);

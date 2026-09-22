@@ -95,7 +95,7 @@ fn hold_to_its_expectation(path: &Path) {
                 run.stderr
             );
         }
-        Expectation::Runs(written) => started(&opened, &written),
+        Expectation::Runs(stated) => started(&opened, &stated),
     }
 }
 
@@ -103,7 +103,7 @@ fn hold_to_its_expectation(path: &Path) {
 ///
 /// Every module beside it is copied too, under its own name, because an import names the file
 /// beside the one that writes it and an example may be written across several.
-fn started(opened: &Opened, written: &str) {
+fn started(opened: &Opened, stated: &Ran) {
     let shown = opened.path.display();
     if jdk().is_none() {
         eprintln!("skipped: {shown}: JAVA_HOME names no JDK, and an example that is run needs one");
@@ -116,16 +116,23 @@ fn started(opened: &Opened, written: &str) {
             content: &source,
         });
     }
-    let run = lumen(&["run", copy.path.to_str().expect("a UTF-8 path")]);
+    let mut command = vec!["run", copy.path.to_str().expect("a UTF-8 path")];
+    command.extend(stated.arguments.iter().map(String::as_str));
+    let run = lumen(&command);
     assert_eq!(
-        run.code, 0,
-        "{shown} does not run to the end:\n{}",
-        run.stderr
+        run.code, stated.status,
+        "{shown} ends with {} where its header states {}:\n{}",
+        run.code, stated.status, run.stderr
     );
     assert_eq!(
-        run.stdout, written,
-        "{shown} writes {:?} where its header states {written:?}",
-        run.stdout
+        run.stdout, stated.output,
+        "{shown} writes {:?} where its header states {:?}",
+        run.stdout, stated.output
+    );
+    assert_eq!(
+        run.stderr, stated.errors,
+        "{shown} writes {:?} to standard error where its header states {:?}",
+        run.stderr, stated.errors
     );
 }
 
@@ -159,17 +166,30 @@ enum Expectation {
     Compiles,
     /// The file opens with `// expect-error:` and the code it must be refused with.
     Refused(Code),
-    /// The file opens with `// expect-run`, so it must compile, run to the end, and write
-    /// exactly the lines stated under the header.
-    Runs(String),
+    /// The file opens with `// expect-run`, so it must compile and run exactly as the header
+    /// and the lines under it state.
+    Runs(Ran),
+}
+
+/// What an example headed `// expect-run` says its run amounts to.
+#[derive(Debug, Default, PartialEq, Eq)]
+struct Ran {
+    /// The words written after the header, which reach the program as the list `main` takes.
+    arguments: Vec<String>,
+    /// What it writes to standard output, each line with its line break.
+    output: String,
+    /// What it writes to standard error, each line with its line break.
+    errors: String,
+    /// The status it ends with, which is `0` where the header states none.
+    status: i32,
 }
 
 impl Expectation {
     fn of(opened: &Opened) -> Self {
         let source = opened.source;
         let first = source.lines().next().unwrap_or_default().trim_end();
-        if first == RUNS {
-            return Self::Runs(written_out(opened));
+        if let Some(arguments) = run_with(first) {
+            return Self::Runs(ran(opened, arguments));
         }
         states_nothing_written(opened);
         let Some(written) = source
@@ -195,35 +215,55 @@ impl Expectation {
 /// What an example writes to name the diagnostic it is refused with.
 const HEADER: &str = "// expect-error:";
 
-/// What an example writes to say it is run, and must run to the end.
+/// What an example writes to say it is run, with the words it is run with after it.
 const RUNS: &str = "// expect-run";
 
-/// What an example writes before each line the program must write.
+/// What an example writes before each line the program writes to standard output.
 const WRITES: &str = "// >";
 
-/// The text the lines under the header say the program writes, each with its line break.
+/// What an example writes before each line the program writes to standard error.
+const COMPLAINS: &str = "// !";
+
+/// What an example writes before the status the program ends with.
+const ENDS: &str = "// status";
+
+/// The words `first` says the program is run with, where `first` is the header at all.
 ///
-/// They come directly under the header, so the first line that is not one of them ends the
-/// output an example states, and an example that states none of them writes nothing at all.
-/// A line below that block which still opens with the marker is a line the author meant to
-/// state and the harness would not have compared, so it fails the run rather than being read
-/// as a program that wrote the wrong thing.
-fn written_out(opened: &Opened) -> String {
-    let lines: Vec<&str> = opened.source.lines().skip(1).collect();
-    let stated: Vec<&str> = lines.iter().copied().map_while(stated).collect();
-    assert!(
-        !lines[stated.len()..].iter().copied().any(marked),
-        "{}: a line stating output comes directly under the header, and this one does not",
-        opened.path.display()
-    );
-    stated.iter().fold(String::new(), |mut written, line| {
-        written.push_str(line);
-        written.push('\n');
-        written
-    })
+/// Every word after the header is one argument, in the order the program is handed them, and a
+/// header with nothing after it runs the program with none.
+fn run_with(first: &str) -> Option<Vec<String>> {
+    let rest = first.strip_prefix(RUNS)?;
+    if !rest.is_empty() && !rest.starts_with(' ') {
+        return None;
+    }
+    Some(rest.split_whitespace().map(str::to_owned).collect())
 }
 
-/// An example that is not run states no output, because nothing would ever compare it.
+/// What the lines under the header say the run amounts to.
+///
+/// They come directly under the header, so the first line that is not one of them ends what an
+/// example states, and an example that states none of them writes nothing and ends with `0`.
+/// A line below that block which still opens with a marker is a line the author meant to state
+/// and the harness would not have compared, so it fails the run rather than being read as a
+/// program that did the wrong thing.
+fn ran(opened: &Opened, arguments: Vec<String>) -> Ran {
+    let lines: Vec<&str> = opened.source.lines().skip(1).collect();
+    let stated: Vec<Stated<'_>> = lines.iter().copied().map_while(states).collect();
+    assert!(
+        !lines[stated.len()..].iter().copied().any(marked),
+        "{}: a line stating a run comes directly under the header, and this one does not",
+        opened.path.display()
+    );
+    stated.iter().fold(
+        Ran {
+            arguments,
+            ..Ran::default()
+        },
+        Stated::added_to,
+    )
+}
+
+/// An example that is not run states nothing about a run, because nothing would compare it.
 fn states_nothing_written(opened: &Opened) {
     assert!(
         !opened.source.lines().any(marked),
@@ -232,17 +272,64 @@ fn states_nothing_written(opened: &Opened) {
     );
 }
 
-/// Whether `line` opens the way a line stating output does, however it goes on.
+/// Whether `line` opens the way a line stating a run does, however it goes on.
+///
+/// A marker ends at the end of the line or at a space, so an ordinary comment whose first word
+/// merely opens with one, such as `// statuses are read elsewhere`, states nothing about a run.
 fn marked(line: &str) -> bool {
-    line.starts_with(WRITES)
+    [WRITES, COMPLAINS, ENDS]
+        .iter()
+        .filter_map(|marker| line.strip_prefix(marker))
+        .any(|rest| after_the_marker(rest).is_some())
 }
 
-/// The line `written` states the program writes, where it states one.
+/// One line under the header, as what it says about the run.
+#[derive(Debug, PartialEq, Eq)]
+enum Stated<'a> {
+    /// One line the program writes to standard output.
+    Output(&'a str),
+    /// One line the program writes to standard error.
+    Errors(&'a str),
+    /// The status the program ends with.
+    Status(i32),
+}
+
+impl Stated<'_> {
+    /// `ran` with what this line states added to it.
+    fn added_to(mut ran: Ran, stated: &Self) -> Ran {
+        match stated {
+            Self::Output(line) => written(&mut ran.output, line),
+            Self::Errors(line) => written(&mut ran.errors, line),
+            Self::Status(status) => ran.status = *status,
+        }
+        ran
+    }
+}
+
+/// Adds `line`, and the line break after it, to what the program writes on one channel.
+fn written(channel: &mut String, line: &str) {
+    channel.push_str(line);
+    channel.push('\n');
+}
+
+/// What `line` states about the run, where it states anything at all.
+fn states(line: &str) -> Option<Stated<'_>> {
+    if let Some(rest) = line.strip_prefix(WRITES) {
+        return after_the_marker(rest).map(Stated::Output);
+    }
+    if let Some(rest) = line.strip_prefix(COMPLAINS) {
+        return after_the_marker(rest).map(Stated::Errors);
+    }
+    let rest = line.strip_prefix(ENDS)?;
+    rest.strip_prefix(' ')?.parse().ok().map(Stated::Status)
+}
+
+/// The line written after a marker, where the marker is followed the way it has to be.
 ///
 /// A line is written after a space, which canonical form does not keep where there is nothing
 /// after it, so a line the program writes empty is stated with the marker and nothing else.
-fn stated(written: &str) -> Option<&str> {
-    let rest = written.strip_prefix(WRITES)?;
+/// Anything else after the marker leaves it another word, and the line an ordinary comment.
+fn after_the_marker(rest: &str) -> Option<&str> {
     if rest.is_empty() {
         return Some(rest);
     }
@@ -279,72 +366,139 @@ fn an_example_may_not_name_a_diagnostic_the_compiler_cannot_raise() {
     let _ = said_by("// expect-error: L9999\n");
 }
 
+/// An example headed `// expect-run`, stating `stated` about a run that does nothing at all.
+fn run_of(stated: &str) -> String {
+    format!("// expect-run\n{stated}fn main(arguments: List<String>) -> Int {{\n}}\n")
+}
+
 #[test]
 fn an_example_that_is_run_says_so_on_its_first_line() {
-    assert_eq!(
-        said_by("// expect-run\nfn main() -> () {\n    ()\n}\n"),
-        Expectation::Runs(String::new())
-    );
+    assert_eq!(said_by(&run_of("")), Expectation::Runs(Ran::default()));
 }
 
 #[test]
 fn an_example_that_writes_nothing_states_nothing_which_is_as_much_a_claim_as_any_other() {
     assert_eq!(
-        said_by("// expect-run\n// an ordinary comment\nfn main() -> () {\n}\n"),
-        Expectation::Runs(String::new())
+        said_by(&run_of("// an ordinary comment\n")),
+        Expectation::Runs(Ran::default())
     );
 }
 
 #[test]
 fn an_example_states_each_line_it_writes_under_the_header_and_each_ends_with_a_line_break() {
     assert_eq!(
-        said_by("// expect-run\n// > one\n// > two\nfn main() -> () {\n}\n"),
-        Expectation::Runs("one\ntwo\n".to_owned())
+        said_by(&run_of("// > one\n// > two\n")),
+        Expectation::Runs(Ran {
+            output: "one\ntwo\n".to_owned(),
+            ..Ran::default()
+        })
+    );
+}
+
+#[test]
+fn an_example_states_each_line_it_writes_to_standard_error_after_its_own_marker() {
+    assert_eq!(
+        said_by(&run_of("// > said\n// ! went wrong\n")),
+        Expectation::Runs(Ran {
+            output: "said\n".to_owned(),
+            errors: "went wrong\n".to_owned(),
+            ..Ran::default()
+        })
+    );
+}
+
+#[test]
+fn an_example_states_the_status_the_program_ends_with_where_it_is_not_zero() {
+    assert_eq!(
+        said_by(&run_of("// status 3\n")),
+        Expectation::Runs(Ran {
+            status: 3,
+            ..Ran::default()
+        })
+    );
+}
+
+#[test]
+fn an_example_is_run_with_every_word_after_the_header_in_the_order_it_writes_them() {
+    assert_eq!(
+        said_by("// expect-run one two\nfn main(arguments: List<String>) -> Int {\n}\n"),
+        Expectation::Runs(Ran {
+            arguments: vec!["one".to_owned(), "two".to_owned()],
+            ..Ran::default()
+        })
     );
 }
 
 #[test]
 fn a_line_an_example_states_is_taken_as_it_is_written_spaces_and_all() {
     assert_eq!(
-        said_by("// expect-run\n// >   held  \nfn main() -> () {\n}\n"),
-        Expectation::Runs("  held  \n".to_owned())
+        said_by(&run_of("// >   held  \n")),
+        Expectation::Runs(Ran {
+            output: "  held  \n".to_owned(),
+            ..Ran::default()
+        })
     );
 }
 
 #[test]
 fn a_line_the_program_writes_empty_is_stated_with_the_marker_and_nothing_after_it() {
     assert_eq!(
-        said_by("// expect-run\n// > one\n// >\n// > two\nfn main() -> () {\n}\n"),
-        Expectation::Runs("one\n\ntwo\n".to_owned())
+        said_by(&run_of("// > one\n// >\n// > two\n")),
+        Expectation::Runs(Ran {
+            output: "one\n\ntwo\n".to_owned(),
+            ..Ran::default()
+        })
     );
 }
 
 #[test]
 fn a_line_an_example_states_may_itself_begin_with_the_marker_it_is_stated_after() {
     assert_eq!(
-        said_by("// expect-run\n// > > held\nfn main() -> () {\n}\n"),
-        Expectation::Runs("> held\n".to_owned())
+        said_by(&run_of("// > > held\n")),
+        Expectation::Runs(Ran {
+            output: "> held\n".to_owned(),
+            ..Ran::default()
+        })
     );
 }
 
 #[test]
 fn an_ordinary_comment_below_the_stated_lines_ends_what_an_example_says_it_writes() {
     assert_eq!(
-        said_by("// expect-run\n// > one\n// a comment\nfn main() -> () {\n}\n"),
-        Expectation::Runs("one\n".to_owned())
+        said_by(&run_of("// > one\n// a comment\n")),
+        Expectation::Runs(Ran {
+            output: "one\n".to_owned(),
+            ..Ran::default()
+        })
     );
 }
 
 #[test]
-#[should_panic(expected = "demo.lm: a line stating output comes directly under the header")]
-fn a_marker_with_no_space_after_it_fails_rather_than_stating_one_line_fewer() {
-    let _ = said_by("// expect-run\n// >one\nfn main() -> () {\n}\n");
+fn a_marker_with_no_space_after_it_is_an_ordinary_comment_rather_than_a_marker() {
+    assert_eq!(
+        said_by(&run_of("// >one\n")),
+        Expectation::Runs(Ran::default())
+    );
 }
 
 #[test]
-#[should_panic(expected = "demo.lm: a line stating output comes directly under the header")]
+fn a_comment_whose_first_word_merely_opens_with_a_marker_states_nothing_about_a_run() {
+    assert_eq!(
+        said_by(&run_of("// statuses are read elsewhere\n")),
+        Expectation::Runs(Ran::default())
+    );
+}
+
+#[test]
+#[should_panic(expected = "demo.lm: a line stating a run comes directly under the header")]
 fn a_line_stating_output_below_the_block_fails_rather_than_being_left_uncompared() {
-    let _ = said_by("// expect-run\n// > one\n// a note\n// > two\nfn main() -> () {\n}\n");
+    let _ = said_by(&run_of("// > one\n// a note\n// > two\n"));
+}
+
+#[test]
+#[should_panic(expected = "demo.lm: a line stating a run comes directly under the header")]
+fn a_status_that_is_no_whole_number_fails_rather_than_being_read_as_a_comment() {
+    let _ = said_by(&run_of("// status soon\n"));
 }
 
 #[test]
@@ -357,4 +511,18 @@ fn an_example_that_is_refused_may_not_state_output_that_nothing_would_compare() 
 #[should_panic(expected = "demo.lm: only an example that is run states what it writes")]
 fn an_example_with_no_header_may_not_state_output_either() {
     let _ = said_by("// > one\nimport io\n");
+}
+
+#[test]
+#[should_panic(expected = "demo.lm: only an example that is run states what it writes")]
+fn an_example_with_no_header_may_not_state_a_status_either() {
+    let _ = said_by("// status 1\nimport io\n");
+}
+
+#[test]
+fn an_example_with_no_header_may_write_a_comment_that_merely_opens_with_a_marker() {
+    assert_eq!(
+        said_by("// statuses are read elsewhere\nimport io\n"),
+        Expectation::Compiles
+    );
 }

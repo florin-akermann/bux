@@ -1,7 +1,7 @@
 // expect-error: L0312
 // `Add` is not a trait a type derives, so the derive is refused naming it.
-fn main() -> () {
-    ()
+fn main(arguments: List<String>) -> Int {
+    0
 }
 
 derive Add for User

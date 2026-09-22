@@ -57,7 +57,9 @@ fn every_example_a_library_module_states_holds() {
 
 #[test]
 fn a_program_that_imports_no_library_module_reaches_none_of_their_names() {
-    let example = Example::new("fn main() -> () {\n    _ = strings.join([], \"-\")\n}\n");
+    let example = Example::new(
+        "fn main(arguments: List<String>) -> Int {\n    _ = strings.join([], \"-\")\n    0\n}\n",
+    );
 
     let run = lumen(&["check", example.path.to_str().expect("a UTF-8 path")]);
 

@@ -4,10 +4,11 @@
 // Walking one runs the body no times at all, which is what this program shows.
 import io
 
-fn main() -> () {
+fn main(arguments: List<String>) -> Int {
     if is_empty(picked()) {
         io.println("nothing was picked")
     }
+    0
 }
 
 /// The fruit an order holds, which is none of it.

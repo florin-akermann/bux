@@ -4,11 +4,12 @@
 // A program reaches the console through `io`, which is a module of the library.
 import io
 
-fn main() -> () {
+fn main(arguments: List<String>) -> Int {
     io.print("one")
     io.print(" and ")
     io.println("two")
     io.println(joined(word: "three"))
+    0
 }
 
 // example: joined(word: "three") == "and three"

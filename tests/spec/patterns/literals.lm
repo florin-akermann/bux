@@ -8,13 +8,13 @@
 // A literal written inside what a variant carries is compared at the type that variant carries.
 import io
 
-fn main() -> () {
+fn main(arguments: List<String>) -> Int {
     io.println(counted(0))
     io.println(counted(1))
     io.println(counted(7))
     io.println(unwrapped(Box(1)))
     io.println(unwrapped(Box(7)))
-    ()
+    0
 }
 
 // example: counted(0) == "none"

@@ -2,6 +2,7 @@
 // An import names a file beside the one that writes it, and nothing else is looked in.
 import nowhere
 
-fn main() -> () {
+fn main(arguments: List<String>) -> Int {
     nowhere.held()
+    0
 }

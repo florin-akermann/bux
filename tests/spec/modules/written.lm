@@ -9,12 +9,13 @@ import holder
 
 import io
 
-fn main() -> () {
+fn main(arguments: List<String>) -> Int {
     io.println(shown(holder.held(1)))
     io.println(holder.held("held"))
     match holder.held(Kept("kept")) {
         Kept(inner) => io.println(inner)
     }
+    0
 }
 
 type Kept = Kept(String)

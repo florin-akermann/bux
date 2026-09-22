@@ -1,8 +1,8 @@
 // expect-run
 // The two-variant type the flag rule asks for, and the call that reads because of it.
-fn main() -> () {
+fn main(arguments: List<String>) -> Int {
     _ = open("notes.txt", ReadOnly)
-    ()
+    0
 }
 
 // example: open("notes.txt", ReadOnly) == "notes.txt"

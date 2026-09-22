@@ -1,0 +1,14 @@
+// expect-run one two
+// > one
+// > two
+// A program is run with the words written after its file, and it reads them as the list `main`
+// takes. They arrive in the order the command wrote them, and the program's own name is not one
+// of them. `docs/specs/run.md` states how the runner hands them over.
+import io
+
+fn main(arguments: List<String>) -> Int {
+    for argument in arguments {
+        io.println(argument)
+    }
+    0
+}

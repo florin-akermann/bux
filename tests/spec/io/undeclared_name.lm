@@ -2,6 +2,7 @@
 // `io` is a module of the library, and it declares no `write`.
 import io
 
-fn main() -> () {
+fn main(arguments: List<String>) -> Int {
     io.write("one")
+    0
 }

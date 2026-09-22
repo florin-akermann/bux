@@ -7,11 +7,12 @@ import files
 
 import io
 
-fn main() -> () {
+fn main(arguments: List<String>) -> Int {
     match files.read("no-such-file.txt") {
         Ok(text) => io.println(text)
         Err(why) => io.println(told(why: why))
     }
+    0
 }
 
 // example: told(why: "") == "the read failed and said nothing"

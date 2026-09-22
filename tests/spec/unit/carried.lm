@@ -3,11 +3,11 @@
 // A `()` an `Option` and a `Result` carry, which each holds as a reference.
 import io
 
-fn main() -> () {
+fn main(arguments: List<String>) -> Int {
     if is_read(held()) && is_saved() {
         io.println("carried and read back")
     }
-    ()
+    0
 }
 
 /// Whether the nothing an `Option` carries is read back out.

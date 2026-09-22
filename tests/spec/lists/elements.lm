@@ -4,8 +4,9 @@
 // A whole number crossing into a list is boxed and read back out, which no program can see.
 import io
 
-fn main() -> () {
+fn main(arguments: List<String>) -> Int {
     io.println(named(total(baskets())))
+    0
 }
 
 /// The baskets an order came in, each one a record written straight into the list.

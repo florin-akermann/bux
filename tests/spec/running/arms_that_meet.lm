@@ -7,9 +7,10 @@
 // the verifier refuses to load.
 import io
 
-fn main() -> () {
+fn main(arguments: List<String>) -> Int {
     io.println(shown(size(picked(from: One(1), onto: Nothing))))
     io.println(shown(size(picked(from: Nothing, onto: Nothing))))
+    0
 }
 
 /// How many values the pick holds.

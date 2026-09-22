@@ -98,6 +98,11 @@ pub enum Instruction {
     Not,
     /// Turns the small whole number on the stack into a whole number.
     Widen,
+    /// Leaves the low eight bits of the whole number on the stack, as a small whole number.
+    ///
+    /// A status is eight bits wide on every system the JDK runs on, so this is what a program's
+    /// answer reaches the system as; `docs/specs/run.md` states it.
+    LowEightBits,
     /// Names a place a jump lands.
     Label(Label),
     Jump(Label),

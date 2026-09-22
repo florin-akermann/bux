@@ -7,7 +7,7 @@ import io
 
 import strings
 
-fn main() -> () {
+fn main(arguments: List<String>) -> Int {
     io.println(strings.join(["a", "b"], "-"))
-    ()
+    0
 }

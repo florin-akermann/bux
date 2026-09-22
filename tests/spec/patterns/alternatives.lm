@@ -5,11 +5,11 @@
 // One arm answers for two variants, and the arm is placed by the first alternative it writes.
 import io
 
-fn main() -> () {
+fn main(arguments: List<String>) -> Int {
     io.println(described(Running))
     io.println(described(Failed("no funds")))
     io.println(described(Done))
-    ()
+    0
 }
 
 // example: described(Pending) == "in flight"

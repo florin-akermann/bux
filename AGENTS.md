@@ -32,7 +32,7 @@ This file is that anchor; consistency is the throughline, and the bar is Code He
 - Boxing and the primitive/reference split live inside the compiler; no program can observe them.
 - **No special cases.** A rule holds for every type, function, and operator alike, or it is no rule.
 - A prelude type is one a library could have declared; what `Int` can do, a declared type can do.
-- An operator is a function with other syntax; `main` is a function whose return type is `()`.
+- An operator is a function with other syntax; `main` is `fn main(arguments: List<String>) -> Int`.
 - **Nothing panics, ever.** No operation is partial: `17 / 0` is `None`, and there is no `unwrap`.
 - Rust panics on a zero divisor and calls that a design; Bux does not, and the type says so.
 - The compiler is held to the same: a program it cannot compile gets a diagnostic, never a crash.

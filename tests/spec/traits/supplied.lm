@@ -10,7 +10,7 @@
 // The prelude supplies `Eq`, `Ord`, `Hash`, and `Show` for `Bool`, `Int`, and `String`.
 import io
 
-fn main() -> () {
+fn main(arguments: List<String>) -> Int {
     if false < true && !(true < false) {
         io.println("false comes before true")
     }
@@ -29,6 +29,7 @@ fn main() -> () {
     io.println(shown(42))
     io.println(shown(true))
     io.println(shown("ada"))
+    0
 }
 
 // example: has_alike_hashes()

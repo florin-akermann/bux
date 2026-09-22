@@ -117,8 +117,16 @@ inference gave the use.
 That is the very descriptor the other module wrote the method with, because a module offers only
 functions written once and in types both modules have; `docs/specs/modules.md` states both rules.
 
-A module that declares `main` is written with one method more: `main([Ljava/lang/String;)V`, the
-shape a JVM starts at, whose whole body is a call of the `main` the module declares.
+A module that declares `main` at the shape a program starts at is written with one method more:
+`main([Ljava/lang/String;)V`, the shape a JVM starts at.
+`docs/design.md` section 11 states that shape, and the whole declared signature settles whether
+the entry point is written: the one parameter is `List<String>`, and the result is `Int`.
+
+The body of the entry point is four steps.
+It hands the array a JVM gave it to `java.util.List.of`, which is how a written list is built
+too, and calls the `main` the module declares with the list that comes out.
+It takes the low eight bits of the whole number `main` gave back, because a status is that wide,
+and it hands those to `java.lang.System.exit`.
 It is the one method of a module class no function wrote, and the one name a module class carries
 twice, which the JVM tells apart by descriptor.
 Writing the entry point with the module is what makes running the module class the same thing as
