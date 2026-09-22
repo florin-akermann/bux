@@ -12,6 +12,7 @@ mod escape;
 mod expr;
 mod functions;
 mod generic;
+mod lists;
 mod literal;
 mod modules;
 mod operator;

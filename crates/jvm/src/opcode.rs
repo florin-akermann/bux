@@ -29,6 +29,7 @@ pub(crate) const LNEG: u8 = 0x75;
 pub(crate) const IXOR: u8 = 0x82;
 pub(crate) const IINC: u8 = 0x84;
 pub(crate) const I2L: u8 = 0x85;
+pub(crate) const L2I: u8 = 0x88;
 pub(crate) const LCMP: u8 = 0x94;
 pub(crate) const IFEQ: u8 = 0x99;
 pub(crate) const IF_ICMPEQ: u8 = 0x9F;

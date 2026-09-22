@@ -135,3 +135,13 @@ The writer has 172 sites of narrow integers, and a `bytes` module hides `% 256` 
 [075][a] - Stage 1, built by the Rust `bux`, builds stage 2 from the same source.
 [075][b] - A harness holds stage 2 equal to stage 1 byte for byte.
 [075][c] - The Rust crates are deleted, and `docs/implementation.md` section 6 says what remains.
+
+## 🔴 Item 076: A list grows in amortized constant time
+**Depends on:** Item 058 — the two functions land there, and this item changes what carries one.
+`docs/specs/library.md` writes down that `push` costs what the list holds.
+A list is one `java.util.List`, and a push copies the whole of it.
+A textbook list grows in amortized constant time, which asks for a buffer and a length beside it.
+[076][a] - `docs/specs/codegen.md` states what carries a list, and what a push does to it.
+[076][b] - `push` costs amortized constant time, and `at` still costs the same at every index.
+[076][c] - A push leaves the list it was handed holding what it held, which stays a property.
+[076][d] - `docs/specs/library.md` drops the paragraph that writes the copy cost down.

@@ -98,6 +98,11 @@ pub enum Instruction {
     Not,
     /// Turns the small whole number on the stack into a whole number.
     Widen,
+    /// Turns the whole number on the stack into the small whole number a JVM indexes by.
+    ///
+    /// It is written where a guard has already proved the number fits one, which
+    /// `docs/specs/codegen.md` states of the one place version 0.1 writes it.
+    Narrow,
     /// Names a place a jump lands.
     Label(Label),
     Jump(Label),
