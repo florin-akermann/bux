@@ -6,16 +6,6 @@
 
 ## Open
 
-## 🟢 Item 076: A list grows in amortized constant time
-**Depends on:** Item 058, Item 077 — the `List` instances are Bux bodies before a list changes.
-`docs/specs/library.md` writes down that `push` costs what the list holds.
-A list is one `java.util.List`, and a push copies the whole of it.
-A textbook list grows in amortized constant time, which asks for a buffer and a length beside it.
-[076][a] - `docs/specs/codegen.md` states what carries a list, and what a push does to it.
-[076][b] - `push` costs amortized constant time, and `at` still costs the same at every index.
-[076][c] - A push leaves the list it was handed holding what it held, which stays a property.
-[076][d] - `docs/specs/library.md` drops the paragraph that writes the copy cost down.
-
 ## 🔴 Item 066: The lexer is written in Bux
 **Depends on:** Item 059, Item 076 — a lexer builds a token list from the code units of a string.
 Self-hosting starts with the smallest phase, and the lexer is 286 lines of Rust.
