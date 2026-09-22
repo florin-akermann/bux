@@ -25,7 +25,7 @@ The spec settles how an `Int` argument reaches an `int` parameter without a part
 [059][c] - `strings.cut(text, from, to)` gives the substring, or `None` where it does not fit.
 [059][d] - An executable example under `tests/spec/library` walks a string and counts its spaces.
 
-## 🔴 Item 060: A program takes arguments, exits with a code, and writes to standard error
+## 🟡 Item 060: A program takes arguments, exits with a code, and writes to standard error
 `main` takes nothing and gives back nothing, and `io` writes to standard output only.
 `docs/specs/diagnostics.md` demands exit codes `0`, `1`, and `2`, and errors on standard error.
 A `bux` written in Bux cannot be a command line tool without the three.
