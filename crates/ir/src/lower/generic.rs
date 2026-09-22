@@ -80,7 +80,7 @@ impl Instantiation {
             .map(|written| Settled {
                 origin: Origin::Declared(written.name.span),
                 at: at(&written.name).unwrap_or_else(|| itself(&written.name)),
-                constrained: written.constraint.is_some(),
+                constrained: !written.constraints.is_empty(),
             })
             .collect();
         Self { settled }
@@ -173,11 +173,11 @@ fn settle(declared: &Type, used: &Type, into: &mut HashMap<Origin, Type>) {
 /// `$` is legal in a method name and Lumen writes no operator with it, so a name reached this way
 /// is one no source collides with. A module asking another for a method names it the same way,
 /// which is what has the two agree without either reading the other's tree.
-pub(crate) fn names(function: &str, at: &[Type], constrained: &[Option<String>]) -> String {
+pub(crate) fn names(function: &str, at: &[Type], constrained: &[Vec<String>]) -> String {
     at.iter()
         .zip(constrained)
         .fold(function.to_owned(), |mut named, (at, of)| {
-            let _ = write!(named, "${}", named_at(at, of.is_some()));
+            let _ = write!(named, "${}", named_at(at, !of.is_empty()));
             named
         })
 }

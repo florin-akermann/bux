@@ -243,8 +243,13 @@ fn has_value<T: Eq<T>>(items: List<T>, value: T) -> Bool {
 A type parameter is written with the trait it is constrained by, which is what lets the body call
 that trait's methods at it.
 
-A type parameter takes one constraint.
-The spec that puts a second trait on one parameter settles how the two are written.
+A type parameter takes one constraint for each trait its body asks of it.
+Two of them are written with `+` between them: `K: Eq<K> + Hash<K>` is a key a body compares and
+hashes, and it is the constraint every function of `map` and `set` writes over a key.
+The order is the author's and nothing reorders it, because the constraints are one set of promises
+however they are written down.
+A body written over such a parameter calls the methods of either trait at it, and a use of the
+generic is accepted only where what the parameter settled on has an instance of each of them.
 
 A call of a trait method at a type parameter is accepted only where the parameter is constrained
 by that method's trait.

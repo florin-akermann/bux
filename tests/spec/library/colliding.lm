@@ -1,0 +1,18 @@
+// expect-run
+// > 1
+// > 2
+// > 0
+// A list is a key, because the prelude writes `Hash<List<T>>` beside `Eq<List<T>>`. Two keys
+// whose whole hashes are equal share one leaf of the trie, and `Eq` tells them apart there:
+// `[0, 31]` and `[1, 0]` hash alike and are two keys all the same.
+import io
+
+import map
+
+fn main(arguments: List<String>) -> Int {
+    held := map.insert(map.insert(map.empty(), [0, 31], 1), [1, 0], 2)
+    io.println(shown(or(map.get(held, [0, 31]), 0)))
+    io.println(shown(or(map.get(held, [1, 0]), 0)))
+    io.println(shown(or(map.get(held, [31, 0]), 0)))
+    0
+}

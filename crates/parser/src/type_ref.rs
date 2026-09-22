@@ -58,20 +58,21 @@ pub(crate) fn constrained_parameters(
     )
 }
 
-/// One type parameter, with the trait it is constrained by when the author wrote one.
+/// One type parameter, with the traits it is constrained by when the author wrote any.
+///
+/// `+` separates two of them, which `docs/specs/traits.md` states, and each one is read the same
+/// way the first is.
 fn constrained_parameter(cursor: &mut Cursor) -> Result<TypeParameter, ParseError> {
     let name = cursor.expect_name(Expected::Name)?;
+    let mut constraints = Vec::new();
     if cursor.eat_punct(Punct::Colon).is_none() {
-        return Ok(TypeParameter {
-            name,
-            constraint: None,
-        });
+        return Ok(TypeParameter { name, constraints });
     }
-    let constraint = constraint(cursor)?;
-    Ok(TypeParameter {
-        name,
-        constraint: Some(constraint),
-    })
+    constraints.push(constraint(cursor)?);
+    while cursor.eat_punct(Punct::Plus).is_some() {
+        constraints.push(constraint(cursor)?);
+    }
+    Ok(TypeParameter { name, constraints })
 }
 
 /// `Eq<T>`: a trait, written over the one type it constrains.

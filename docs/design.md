@@ -512,6 +512,10 @@ One trait and one type have one instance in a program, and a second is refused w
 That is what lets a constraint reach an instance without anyone saying which one:
 `T: Eq<T>` at `T = Point` reaches the one `Eq<Point>` there is.
 
+A type parameter takes one constraint for each trait the body asks of it, joined by `+`.
+`K: Eq<K> + Hash<K>` is what a hashed map asks of a key, and a use of it is accepted only where the
+key's type has both instances.
+
 A constraint resolves while the program is compiled, because a generic is compiled once per set of
 types.
 `has_value` at `Point` is a method whose body calls the `is_equal` of `Eq<Point>` and nothing else.
@@ -617,9 +621,9 @@ found := map.get(ages, "ada")
 `Map<K, V>` holds one value for each key it is given, and `Set<T>` holds a value once however
 often it is given.
 Neither has identity, as no record has: nothing can ask whether two of them are one object.
-A key is a type equality is written over, so `K` is constrained by `Eq<K>` and by nothing else.
-Hashing asks for a table to bucket into, which asks for an array the language cannot yet name,
-and a constraint no body reads is a promise a caller keeps for nothing.
+A key is a type a program compares and hashes, so `K` is constrained by `Eq<K>` and `Hash<K>`.
+Each of the two is a hash array mapped trie: a branch holds thirty-two children, indexed by five
+bits of the key's hash, and a leaf holds the entries whose keys hash alike.
 `get` gives an `Option<V>`, because a key the map has no entry for is a case the type has to say.
 There is no literal for either: a map is built by `empty` and `insert`, and read by `get`.
 `docs/specs/collections.md` states each function, its type, and what it costs.

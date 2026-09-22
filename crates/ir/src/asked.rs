@@ -46,7 +46,7 @@ impl Asked {
 /// module declared are what say how the method is named; `docs/specs/codegen.md` states both.
 pub(crate) struct Asking {
     pub(crate) settled: Vec<Type>,
-    pub(crate) constrained: Vec<Option<String>>,
+    pub(crate) constrained: Vec<Vec<String>>,
 }
 
 /// One method a module owes another: a generic it declares, at one set of types.

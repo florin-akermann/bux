@@ -93,12 +93,12 @@ impl Scheme {
             .collect()
     }
 
-    /// The trait constraining each stand-in the declaration wrote, in the order it wrote them.
+    /// The traits constraining each stand-in the declaration wrote, in the order it wrote them.
     ///
     /// A constrained one reaches the instance of whatever it settled on, so `docs/specs/codegen.md`
     /// names the method written for it after the whole of that type rather than after its head,
     /// and has the module that settled the type write the instance method that method calls.
-    fn constrained_stand_ins(&self) -> Vec<Option<String>> {
+    fn constrained_stand_ins(&self) -> Vec<Vec<String>> {
         self.quantified
             .iter()
             .filter_map(|one| match one {
@@ -108,13 +108,14 @@ impl Scheme {
             .collect()
     }
 
-    /// The trait one of this scheme's constraints is written over `parameter` by, where one is.
-    fn required_of(&self, parameter: &TypeParameter) -> Option<String> {
+    /// The traits this scheme's constraints are written over `parameter` by, in their own order.
+    fn required_of(&self, parameter: &TypeParameter) -> Vec<String> {
         let written = Type::Parameter(parameter.clone());
         self.required
             .iter()
-            .find(|required| required.at == written)
+            .filter(|required| required.at == written)
             .map(|required| required.trait_name.clone())
+            .collect()
     }
 
     /// This scheme with `one` of its stand-ins settled on `given`, which is what an instance is.
@@ -164,8 +165,8 @@ pub(crate) struct AtOneUse {
     pub(crate) required: Vec<Required>,
     /// What each stand-in the declaration wrote settled on, in the order it wrote them.
     pub(crate) settling: Vec<Type>,
-    /// The trait constraining each of those stand-ins, in the same order.
-    pub(crate) constrained: Vec<Option<String>>,
+    /// The traits constraining each of those stand-ins, in the same order.
+    pub(crate) constrained: Vec<Vec<String>>,
     /// The type the method written for this use has, which is not the type the use has.
     ///
     /// `docs/specs/codegen.md` writes a generic at the types its written type parameters settled

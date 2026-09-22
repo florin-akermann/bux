@@ -48,8 +48,8 @@ pub(crate) struct Environment {
     ///
     /// An instance over a type written with arguments is constrained on them, which
     /// `docs/specs/traits.md` states, so `Eq<List<T>>` at `T: Eq<T>` is filed with one ask of
-    /// `Eq`. An argument the instance leaves unconstrained asks nothing and is filed as `None`.
-    instances: HashMap<(String, String), Vec<Option<String>>>,
+    /// `Eq`. An argument the instance leaves unconstrained is filed with no ask at all.
+    instances: HashMap<(String, String), Vec<Vec<String>>>,
     /// What each type's instance of `IntegerLiteral` says it holds, by the name of that type.
     holds: HashMap<String, Bounds>,
     /// What each instance's method must be, which is its trait's method at the instance's type.
@@ -197,15 +197,13 @@ impl Environment {
     /// Whether every argument of a type answers what the instance asks of it, where it asks.
     fn each_argument_answers(
         &self,
-        asks: &[Option<String>],
+        asks: &[Vec<String>],
         arguments: &[Type],
         promised: &[Required],
     ) -> bool {
-        asks.iter().zip(arguments).all(|(asked, argument)| {
-            asked
-                .as_deref()
-                .is_none_or(|of| self.answers(of, argument, promised))
-        })
+        asks.iter()
+            .zip(arguments)
+            .all(|(asked, argument)| asked.iter().all(|of| self.answers(of, argument, promised)))
     }
 
     /// What the instance method defined at `key` must be, when `key` is one of them.
@@ -574,13 +572,12 @@ impl Environment {
     ) -> Result<Vec<Required>, TypeError> {
         let mut required = Vec::new();
         for parameter in &function.type_parameters {
-            let Some(constraint) = &parameter.constraint else {
-                continue;
-            };
-            required.push(Required {
-                trait_name: constraint.name.text.clone(),
-                at: self.written(resolved, &constraint.argument)?,
-            });
+            for constraint in &parameter.constraints {
+                required.push(Required {
+                    trait_name: constraint.name.text.clone(),
+                    at: self.written(resolved, &constraint.argument)?,
+                });
+            }
         }
         Ok(required)
     }
@@ -737,13 +734,14 @@ fn standing_for(declaration: &InstanceDeclaration) -> Vec<Type> {
 }
 
 /// What the instance asks of each argument its type is written with, in the order it writes them.
-fn asked_of(declaration: &InstanceDeclaration) -> Vec<Option<String>> {
+fn asked_of(declaration: &InstanceDeclaration) -> Vec<Vec<String>> {
     declares_each(declaration)
         .map(|parameter| {
             parameter
-                .constraint
-                .as_ref()
+                .constraints
+                .iter()
                 .map(|constraint| constraint.name.text.clone())
+                .collect()
         })
         .collect()
 }

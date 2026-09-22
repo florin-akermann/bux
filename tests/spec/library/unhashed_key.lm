@@ -1,0 +1,13 @@
+// expect-error: L0418
+// A key is a type a program hashes as well as compares, so `map` writes `Hash<K>` beside
+// `Eq<K>` and a type holding only the one instance is refused where the call is written.
+import map
+
+fn main(arguments: List<String>) -> Int {
+    _ = map.insert(map.empty(), Kept("ada"), 36)
+    0
+}
+
+derive Eq for Kept
+
+type Kept = Kept(String)

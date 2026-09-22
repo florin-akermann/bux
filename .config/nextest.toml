@@ -9,6 +9,7 @@ filter = """
     test(=examples::every_example_is_accepted_refused_or_run_exactly_as_it_says)
     or test(=collections::a_map_gives_back_the_value_last_put_in_at_each_key)
     or test(=collections::a_set_holds_every_value_put_into_it_and_no_other)
+    or test(=collections::hundreds_of_keys_read_back_out_of_a_map_and_a_set_however_many_hash_alike)
     or test(=lists::a_list_grown_by_push_reads_back_at_every_index_it_holds)
     or test(=lists::a_push_leaves_the_list_it_was_handed_holding_what_it_held)
 """

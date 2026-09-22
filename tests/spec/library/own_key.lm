@@ -5,9 +5,9 @@
 // > true
 // > 1
 // A library generic is written once per set of types it is used at, by the module that declares
-// it, and the constraint it writes over a key is answered by the instance that key's own type
-// has. `Kept` is this module's, and so is the `Eq` this module derives for it, so `map` writes
-// `insert$main$Kept$Int` and that method calls `main.Eq$Kept$is_equal`.
+// it, and each constraint it writes over a key is answered by the instance that key's own type
+// has. `Kept` is this module's, and so are the `Eq` and the `Hash` this module derives for it, so
+// `map` writes `insert$main$Kept$Int` and that method calls `main.Eq$Kept$is_equal`.
 import io
 
 import list
@@ -36,6 +36,6 @@ fn named(age: Option<Int>) -> String {
     }
 }
 
-derive Eq for Kept
+derive Eq, Hash for Kept
 
 type Kept = Kept(String)

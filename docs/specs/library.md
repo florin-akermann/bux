@@ -187,9 +187,12 @@ process:     run
 environment: read
 ```
 
-A library module may import another, and `files` and `process` are the two that do.
-Each imports `list`: `files` builds the list `files.listed` gives back with `list.push`, and
-`process` grows the list a JVM starts a program from the same way.
+A library module may import another, and `map`, `set`, `files`, and `process` are the four
+that do.
+Three of them import `list`: `map` grows the children of a node with `list.push` and reads one
+with `list.at`, `files` builds the list `files.listed` gives back the same way, and `process`
+grows the list a JVM starts a program from.
+`set` imports `map`, because a set is the trie a map is, at a key for each value it holds.
 Loading hands an imported library module over below the one that imports it, as it does for a
 module read out of a file, so nothing about the order a module is read in changes.
 
@@ -206,8 +209,8 @@ widens to the `Int` it gives back.
 What it counts is what a JVM counts, which is UTF-16 code units: a character the JVM holds as a
 pair of units, such as an emoji, counts as two.
 
-`map` and `set` declare the types they are about as well as the functions, and each declares the
-steps of its own walks beside them, which `docs/specs/collections.md` lists.
+`map` and `set` declare the types they are about as well as the functions, and `map` declares
+the steps of the walk of the trie beside them, which `docs/specs/collections.md` lists.
 One module holds one type, because `empty` has one definition and a module holding both maps and
 sets would need two.
 
@@ -239,11 +242,14 @@ at all only when a reader would otherwise write the same loop twice.
 `strings` has a `length` and so does `list`, and neither of the two is a prelude name: one name
 has one definition, and a prelude holding both would break that.
 
-A library function may be generic, and every function of `list`, `map`, and `set` is.
+A library function may be generic, and every function of `list` and `set` is, as is every
+function of `map` that a map is written into or read out of.
 A generic is written once per set of types it is used at, which `docs/specs/codegen.md` states,
 so the module declaring it writes the method and the module calling it writes the call.
 `list.has_value` and `list.index_of` each constrain the type parameter by `Eq`, and the method
 written for one set of types calls the instance the type in that set has, wherever it is declared.
+`map` and `set` constrain a key by `Eq` and by `Hash`, which `docs/specs/traits.md` states is
+written with `+` between the two, and the method reaches an instance of each.
 `docs/specs/codegen.md` states how: the library names the program's instance by the module the
 type carries in front of its name, so a program's own `Eq` answers a constraint the library wrote.
 The trait is the prelude's, which is what has both modules name it; `L0424` refuses a constraint

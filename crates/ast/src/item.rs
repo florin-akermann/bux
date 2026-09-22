@@ -364,11 +364,14 @@ pub struct Function {
     pub span: Span,
 }
 
-/// `T`, or `T: Eq<T>` — a type parameter a function declares, with what it may be asked to do.
+/// `T`, or `T: Eq<T> + Hash<T>` — a type parameter, with what it may be asked to do.
+///
+/// The list is empty where the author wrote no constraint, and holds one trait for each the
+/// author wrote, in the order they are written; `docs/specs/traits.md` states the form.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TypeParameter {
     pub name: Name,
-    pub constraint: Option<Constraint>,
+    pub constraints: Vec<Constraint>,
 }
 
 /// `Eq<T>`: the trait a type parameter is constrained by, written over what it constrains.

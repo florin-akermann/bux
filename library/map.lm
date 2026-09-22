@@ -1,10 +1,16 @@
 // The `Map<K, V>` a program builds by `empty` and `insert`, and reads by `get`.
 //
 // `docs/specs/collections.md` states each function, its type, and what it costs. A map holds one
-// value for each key it was given, and a key is any type that has an `Eq` instance.
+// value for each key it was given, and a key is any type with an `Eq` and a `Hash` instance.
+// The map is a hash array mapped trie: a branch holds thirty-two children, indexed by the five
+// bits of the key's hash that are left where the branch stands, and a leaf holds the entries
+// whose keys hash alike. A walk carries what is left of the hash, so a leaf holds what was left
+// of it where the leaf stands, and nothing counts how deep the walk has gone.
 // Every walk here is a `for` loop over a `var`, because a walk written as a function that calls
 // itself runs out of stack on a map a program can build; the steps of that walk are the
 // functions below, because a `match` arm is an expression and cannot assign.
+import list
+
 /// The map that holds nothing, which every map is built out of.
 // example: or(get(empty(), 1), "none") == "none"
 fn empty<K, V>() -> Map<K, V> {
@@ -13,76 +19,247 @@ fn empty<K, V>() -> Map<K, V> {
 
 /// The map this one becomes with `value` at `key`, in place of whatever was there.
 // example: or(get(insert(empty(), 1, "a"), 1), "none") == "a"
-fn insert<K: Eq<K>, V>(into: Map<K, V>, key: K, value: V) -> Map<K, V> {
-    var rest = into
-    var passed = Empty
-    for is_at_another_key(rest, key) {
-        passed = moved(from: rest, onto: passed)
-        rest = behind(rest)
+fn insert<K: Eq<K> + Hash<K>, V>(into: Map<K, V>, key: K, value: V) -> Map<K, V> {
+    var node = into
+    var rest = hashed(key)
+    var walked = []
+    for has_children(node) {
+        walked = list.push(walked, Step(digit_of(rest), node))
+        node = child_at(node, digit_of(rest))
+        rest = without_digit(rest)
     }
-    var built = Entry(key, value, behind(rest))
-    for is_an_entry(passed) {
-        built = moved(from: passed, onto: built)
-        passed = behind(passed)
+    var built = merged(node, rest, key, value)
+    var above = list.length(walked) - 1
+    for above >= 0 {
+        step := or(list.at(walked, above), Step(0, Empty))
+        built = Branch(with_child(children_of(branch_of(step)), slot_of(step), built))
+        above = above - 1
     }
     built
 }
 
 /// The value at `key`, and `None` where the map holds no entry for it.
 // example: or(get(insert(empty(), 1, "a"), 2), "none") == "none"
-fn get<K: Eq<K>, V>(within: Map<K, V>, key: K) -> Option<V> {
-    var rest = within
-    for is_at_another_key(rest, key) {
-        rest = behind(rest)
+fn get<K: Eq<K> + Hash<K>, V>(within: Map<K, V>, key: K) -> Option<V> {
+    var node = within
+    var rest = hashed(key)
+    for has_children(node) {
+        node = child_at(node, digit_of(rest))
+        rest = without_digit(rest)
     }
-    value_at(rest)
+    value_among(entries_of(node), key)
 }
 
-/// Whether there is an entry here, at a key other than the one being looked for.
-// example: is_at_another_key(insert(empty(), 1, "a"), 2)
-fn is_at_another_key<K: Eq<K>, V>(within: Map<K, V>, key: K) -> Bool {
+/// The node the walk ended on, with `value` at `key`, which `rest` of the hash is left for.
+// example: or(value_among(entries_of(merged(Empty, 1, 1, "a")), 1), "b") == "a"
+fn merged<K: Eq<K>, V>(node: Map<K, V>, rest: Int, key: K, value: V) -> Map<K, V> {
+    if hash_within(node, rest) == rest {
+        return Leaf(rest, replaced(entries_of(node), key, value))
+    }
+    pushed(node, rest, key, value)
+}
+
+/// The branches that hold the leaf for `rest` and the leaf already here in two different slots.
+///
+/// `merged` calls this only where the two hashes are not equal, so they part at one of the
+/// thirteen slots that are left of them, and the branches above that slot hold nothing else.
+/// Each of the two leaves stands one slot below the branch that parts them, so each holds what
+/// is left of its own hash once that branch has taken its slot out of it.
+/// Two hashes that are equal part at no slot at all, and both leaves would go to the one slot;
+/// `merged` is what reads two equal hashes, and it writes one leaf that holds both.
+// example: has_children(pushed(Leaf(2, [Entry(2, "b")]), 1, 1, "a"))
+fn pushed<K, V>(node: Map<K, V>, rest: Int, key: K, value: V) -> Map<K, V> {
+    var ours = rest
+    var theirs = hash_within(node, rest)
+    var shared = []
+    for ours != theirs && digit_of(ours) == digit_of(theirs) {
+        shared = list.push(shared, digit_of(ours))
+        ours = without_digit(ours)
+        theirs = without_digit(theirs)
+    }
+    held := Leaf(without_digit(theirs), entries_of(node))
+    apart := with_child(no_children(), digit_of(theirs), held)
+    mine := Leaf(without_digit(ours), [Entry(key, value)])
+    var built = Branch(with_child(apart, digit_of(ours), mine))
+    var above = list.length(shared) - 1
+    for above >= 0 {
+        built = Branch(with_child(no_children(), or(list.at(shared, above), 0), built))
+        above = above - 1
+    }
+    built
+}
+
+/// `children` with `child` at `slot`, pushed one at a time onto a list of its own.
+///
+/// A list is read at an index and grown at the end, and nothing writes into one, so the whole
+/// node is written again; that is what changing one child of a node this wide costs.
+/// The node written is as wide as `no_children` whatever `children` holds, and a slot
+/// `children` is too short to reach is the empty map, so a branch a program wrote by hand with
+/// fewer children than that gains the rest of them here rather than losing the child.
+// example: list.length(with_child([], 0, Leaf(0, [Entry(0, "a")]))) == 32
+fn with_child<K, V>(children: List<Map<K, V>>, slot: Int, child: Map<K, V>) -> List<Map<K, V>> {
+    var built = []
+    var at = 0
+    for nothing in no_children() {
+        if at == slot {
+            built = list.push(built, child)
+        } else {
+            built = list.push(built, or(list.at(children, at), nothing))
+        }
+        at = at + 1
+    }
+    built
+}
+
+/// The children the branch here holds, which is a row of empty maps where there is no branch.
+// example: list.length(children_of(Empty)) == 32
+fn children_of<K, V>(within: Map<K, V>) -> List<Map<K, V>> {
     match within {
-        Empty => false
-        Entry(held, _, _) => held != key
+        Empty => no_children()
+        Leaf(_, _) => no_children()
+        Branch(children) => children
     }
 }
 
-/// Whether there is an entry here at all.
-// example: !is_an_entry(empty())
-fn is_an_entry<K, V>(within: Map<K, V>) -> Bool {
-    match within {
-        Empty => false
-        Entry(_, _, _) => true
+/// Thirty-two empty maps, which is what a branch holds before anything is put in it.
+// example: list.length(no_children()) == 32
+fn no_children<K, V>() -> List<Map<K, V>> {
+    var children = []
+    var slot = 0
+    for slot < 32 {
+        children = list.push(children, Empty)
+        slot = slot + 1
+    }
+    children
+}
+
+/// `entries` with `value` at `key`, in place of the entry there where there is one already.
+// example: list.length(replaced([Entry(1, "a")], 1, "b")) == 1
+fn replaced<K: Eq<K>, V>(entries: List<Entry<K, V>>, key: K, value: V) -> List<Entry<K, V>> {
+    var built = []
+    var written = false
+    for entry in entries {
+        if is_at_key(entry, key) {
+            built = list.push(built, Entry(key, value))
+            written = true
+        } else {
+            built = list.push(built, entry)
+        }
+    }
+    if written {
+        return built
+    }
+    list.push(built, Entry(key, value))
+}
+
+/// The value `entries` holds at `key`, and `None` where none of them is at that key.
+// example: or(value_among([Entry(1, "a")], 1), "b") == "a"
+fn value_among<K: Eq<K>, V>(entries: List<Entry<K, V>>, key: K) -> Option<V> {
+    for entry in entries {
+        if is_at_key(entry, key) {
+            return Some(value_of(entry))
+        }
+    }
+    None
+}
+
+/// Whether the entry is the one at the key being looked for.
+// example: is_at_key(Entry(1, "a"), 1)
+fn is_at_key<K: Eq<K>, V>(entry: Entry<K, V>, key: K) -> Bool {
+    match entry {
+        Entry(held, _) => held == key
     }
 }
 
-/// The value of the entry here, and `None` where there is no entry here.
-// example: or(value_at(insert(empty(), 1, "a")), "none") == "a"
-fn value_at<K, V>(within: Map<K, V>) -> Option<V> {
-    match within {
-        Empty => None
-        Entry(_, value, _) => Some(value)
+/// The value the entry holds.
+// example: value_of(Entry(1, "a")) == "a"
+fn value_of<K, V>(entry: Entry<K, V>) -> V {
+    match entry {
+        Entry(_, value) => value
     }
 }
 
-/// What is behind the entry here, which is nothing where there is no entry here.
-// example: !is_an_entry(behind(insert(empty(), 1, "a")))
-fn behind<K, V>(within: Map<K, V>) -> Map<K, V> {
+/// The slot the walk took out of the branch the step stands on.
+// example: slot_of(Step(3, Empty)) == 3
+fn slot_of<K, V>(step: Step<K, V>) -> Int {
+    match step {
+        Step(slot, _) => slot
+    }
+}
+
+/// The branch the step stands on, which the walk took one of thirty-two children out of.
+// example: has_children(branch_of(Step(3, Branch(no_children()))))
+fn branch_of<K, V>(step: Step<K, V>) -> Map<K, V> {
+    match step {
+        Step(_, branch) => branch
+    }
+}
+
+/// The child the branch here holds at `slot`, which is the empty map where there is no branch.
+// example: !has_children(child_at(insert(empty(), 1, "a"), 0))
+fn child_at<K, V>(within: Map<K, V>, slot: Int) -> Map<K, V> {
     match within {
         Empty => Empty
-        Entry(_, _, rest) => rest
+        Leaf(_, _) => Empty
+        Branch(children) => or(list.at(children, slot), Empty)
     }
 }
 
-/// `onto` with the entry at the front of `from` put in front of it.
-// example: or(get(moved(from: insert(empty(), 1, "a"), onto: empty()), 1), "none") == "a"
-fn moved<K, V>(from: Map<K, V>, onto: Map<K, V>) -> Map<K, V> {
-    match from {
-        Empty => onto
-        Entry(key, value, _) => Entry(key, value, onto)
+/// `code` with its lowest five bits taken off, rounded down so that the sign is kept.
+// example: without_digit(-1) == -1
+fn without_digit(code: Int) -> Int {
+    whole := or(code / 32, 0)
+    if or(code % 32, 0) < 0 {
+        return whole - 1
+    }
+    whole
+}
+
+/// The lowest five bits of `code`, counted up from zero however the sign of `code` runs.
+// example: digit_of(-1) == 31
+fn digit_of(code: Int) -> Int {
+    left := or(code % 32, 0)
+    if left < 0 {
+        return left + 32
+    }
+    left
+}
+
+/// Whether there is a branch here, which is the one node a walk goes on through.
+// example: !has_children(insert(empty(), 1, "a"))
+fn has_children<K, V>(within: Map<K, V>) -> Bool {
+    match within {
+        Empty => false
+        Leaf(_, _) => false
+        Branch(_) => true
     }
 }
+
+/// What was left of the hash where the leaf here stands, and `fallback` where there is no leaf.
+// example: hash_within(Empty, 7) == 7
+fn hash_within<K, V>(within: Map<K, V>, fallback: Int) -> Int {
+    match within {
+        Empty => fallback
+        Leaf(held, _) => held
+        Branch(_) => fallback
+    }
+}
+
+/// The entries the leaf here holds, which is none where there is no leaf here.
+// example: list.length(entries_of(Empty)) == 0
+fn entries_of<K, V>(within: Map<K, V>) -> List<Entry<K, V>> {
+    match within {
+        Empty => []
+        Leaf(_, entries) => entries
+        Branch(_) => []
+    }
+}
+
+type Step<K, V> = Step(Int, Map<K, V>)
 
 type Map<K, V> =
     | Empty
-    | Entry(K, V, Map<K, V>)
+    | Leaf(Int, List<Entry<K, V>>)
+    | Branch(List<Map<K, V>>)
+
+type Entry<K, V> = Entry(K, V)

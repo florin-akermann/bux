@@ -108,14 +108,13 @@ impl Builder<'_> {
     /// knows what the instance's own type parameters settled on. `docs/specs/codegen.md` states
     /// the rule, and an instance over a type written by name alone is written whether anything
     /// asks for it or not, so asking for it again costs nothing.
-    fn owes_each_instance(&self, constrained: &[Option<String>], settled: &[Type]) {
-        for (of, at) in constrained.iter().zip(settled) {
-            let Some(of) = of else {
-                continue;
-            };
-            let method =
-                prelude::method_of(of).expect("a trait two modules both name the prelude declares");
-            self.lowering.answering(method, at);
+    fn owes_each_instance(&self, constrained: &[Vec<String>], settled: &[Type]) {
+        for (traits, at) in constrained.iter().zip(settled) {
+            for of in traits {
+                let method = prelude::method_of(of)
+                    .expect("a trait two modules both name the prelude declares");
+                self.lowering.answering(method, at);
+            }
         }
     }
 }

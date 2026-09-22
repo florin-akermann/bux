@@ -42,15 +42,21 @@ fn over(written: &[TypeParameter]) -> String {
     format!("<{}>", each.join(", "))
 }
 
-/// One type parameter as the page states it, with the trait it is constrained by when it has one.
+/// One type parameter as the page states it, with each trait it is constrained by.
 fn constrained(written: &TypeParameter) -> String {
-    let Some(constraint) = &written.constraint else {
+    if written.constraints.is_empty() {
         return written.name.text.clone();
-    };
-    format!(
-        "{}: {}<{}>",
-        written.name.text,
-        constraint.name.text,
-        lumen_format::written_type(&constraint.argument)
-    )
+    }
+    let each: Vec<String> = written
+        .constraints
+        .iter()
+        .map(|constraint| {
+            format!(
+                "{}<{}>",
+                constraint.name.text,
+                lumen_format::written_type(&constraint.argument)
+            )
+        })
+        .collect();
+    format!("{}: {}", written.name.text, each.join(" + "))
 }

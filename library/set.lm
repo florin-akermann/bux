@@ -1,62 +1,39 @@
 // The `Set<T>` a program builds by `empty` and `insert`, and reads by `has_value`.
 //
 // `docs/specs/collections.md` states each function, its type, and what it costs. A set holds a
-// value once however often it is given, and a member is any type that has an `Eq` instance.
-// Every walk here is a `for` loop over a `var`, because a walk written as a function that calls
-// itself runs out of stack on a set a program can build; the steps of that walk are the
-// functions below, because a `match` arm is an expression and cannot assign.
+// value once however often it is given, and a member is any type with an `Eq` and a `Hash`
+// instance.
+// A set is the trie `map` holds, at a key for each value and one value at every key, so a set
+// costs what a map costs and the walk of the trie is written once rather than twice.
+import map
+
 /// The set that holds nothing, which every set is built out of.
 // example: !has_value(empty(), 1)
 fn empty<T>() -> Set<T> {
-    Nothing
+    Set(map.empty())
 }
 
 /// The set this one becomes with `value` in it, which is this one where it is in it already.
 // example: has_value(insert(empty(), 1), 1)
-fn insert<T: Eq<T>>(into: Set<T>, value: T) -> Set<T> {
-    if has_value(into, value) {
-        return into
-    }
-    Held(value, into)
+fn insert<T: Eq<T> + Hash<T>>(into: Set<T>, value: T) -> Set<T> {
+    Set(map.insert(held_by(into), value, true))
 }
 
 /// Whether the set holds a value equal to this one.
 // example: !has_value(insert(empty(), 1), 2)
-fn has_value<T: Eq<T>>(within: Set<T>, value: T) -> Bool {
-    var rest = within
-    for is_at_another_value(rest, value) {
-        rest = behind(rest)
+fn has_value<T: Eq<T> + Hash<T>>(within: Set<T>, value: T) -> Bool {
+    match map.get(held_by(within), value) {
+        Some(_) => true
+        None => false
     }
-    is_a_value(rest)
 }
 
-/// Whether there is a value here, and it is not the one being looked for.
-// example: is_at_another_value(insert(empty(), 1), 2)
-fn is_at_another_value<T: Eq<T>>(within: Set<T>, value: T) -> Bool {
+/// The map the set is written over, which holds one value at a key for each member.
+// example: or(map.get(held_by(insert(empty(), 1)), 1), false)
+fn held_by<T>(within: Set<T>) -> map.Map<T, Bool> {
     match within {
-        Nothing => false
-        Held(held, _) => held != value
+        Set(held) => held
     }
 }
 
-/// Whether there is a value here at all.
-// example: !is_a_value(empty())
-fn is_a_value<T>(within: Set<T>) -> Bool {
-    match within {
-        Nothing => false
-        Held(_, _) => true
-    }
-}
-
-/// What is behind the value here, which is nothing where there is no value here.
-// example: !is_a_value(behind(insert(empty(), 1)))
-fn behind<T>(within: Set<T>) -> Set<T> {
-    match within {
-        Nothing => Nothing
-        Held(_, rest) => rest
-    }
-}
-
-type Set<T> =
-    | Nothing
-    | Held(T, Set<T>)
+type Set<T> = Set(map.Map<T, Bool>)

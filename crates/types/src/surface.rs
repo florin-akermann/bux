@@ -63,14 +63,14 @@ impl Offered {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct GenericUse {
     settled: Vec<Type>,
-    constrained: Vec<Option<String>>,
+    constrained: Vec<Vec<String>>,
     written_as: Type,
 }
 
 impl GenericUse {
     pub(crate) const fn reaching(
         settled: Vec<Type>,
-        constrained: Vec<Option<String>>,
+        constrained: Vec<Vec<String>>,
         written_as: Type,
     ) -> Self {
         Self {
@@ -95,13 +95,13 @@ impl GenericUse {
         &self.settled
     }
 
-    /// The trait constraining each of those type parameters, in the same order.
+    /// The traits constraining each of those type parameters, in the same order.
     ///
     /// A constrained one reaches the instance of whatever it settled on, which is what has the
     /// method written for it named after the whole of that type, and what has the module writing
-    /// the use write that instance's method; `docs/specs/codegen.md` states both.
+    /// the use write each of those instances' methods; `docs/specs/codegen.md` states both.
     #[must_use]
-    pub fn constrained(&self) -> &[Option<String>] {
+    pub fn constrained(&self) -> &[Vec<String>] {
         &self.constrained
     }
 

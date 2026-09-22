@@ -120,16 +120,16 @@ impl Resolver {
         Err(ResolveError::at(for_type, kind))
     }
 
-    /// The trait a type parameter is constrained by, when the author wrote one.
+    /// Each trait a type parameter is constrained by, in the order the author wrote them.
     ///
-    /// The constraint is read after every type parameter is in scope, so `<T: Eq<T>>` names `T`
+    /// A constraint is read after every type parameter is in scope, so `<T: Eq<T>>` names `T`
     /// where the declaration has just introduced it.
     pub(super) fn constrained(&mut self, parameter: &TypeParameter) -> Resolved {
-        let Some(constraint) = &parameter.constraint else {
-            return Ok(());
-        };
-        self.trait_named(&constraint.name)?;
-        self.type_ref(&constraint.argument)
+        for constraint in &parameter.constraints {
+            self.trait_named(&constraint.name)?;
+            self.type_ref(&constraint.argument)?;
+        }
+        Ok(())
     }
 
     /// The names of the methods the trait `name` declares, refusing anything that is no trait.

@@ -108,7 +108,8 @@ width          := "int" | "char"
 
 function       := "fn" Name [ constrained_parameters ] "(" [ parameters ] ")" [ "->" type ] block
 constrained_parameters := "<" constrained { "," constrained } ">"
-constrained    := Name [ ":" Name "<" type ">" ]
+constrained    := Name [ ":" constraint { "+" constraint } ]
+constraint     := Name "<" type ">"
 parameters     := parameter { "," parameter }
 parameter      := Name [ ":" type ]
 

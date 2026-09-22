@@ -342,19 +342,18 @@ fn type_parameters(printer: &mut Printer, parameters: &[Name]) {
     });
 }
 
-/// `<T>` or `<T: Eq<T>>`, which a function writes and a type declaration does not.
+/// `<T>` or `<T: Eq<T> + Hash<T>>`, which a function writes and a type declaration does not.
 fn constrained_parameters(printer: &mut Printer, parameters: &[TypeParameter]) {
     listed(printer, parameters.len(), |printer, position| {
         let declared = &parameters[position];
         printer.word(&declared.name.text);
-        let Some(constraint) = &declared.constraint else {
-            return;
-        };
-        printer.word(": ");
-        printer.word(&constraint.name.text);
-        printer.word("<");
-        type_ref(printer, &constraint.argument);
-        printer.word(">");
+        for (position, constraint) in declared.constraints.iter().enumerate() {
+            printer.word(if position == 0 { ": " } else { " + " });
+            printer.word(&constraint.name.text);
+            printer.word("<");
+            type_ref(printer, &constraint.argument);
+            printer.word(">");
+        }
     });
 }
 

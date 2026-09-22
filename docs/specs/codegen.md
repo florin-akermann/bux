@@ -272,6 +272,9 @@ What the call takes and gives back is the trait method's own signature at that t
 signature the instance was held to when the other module wrote it.
 `Hash<K>` and `Ord<K>` land the same way wherever a constraint is written over one of them: the
 trait's own name is the only part of the method name that changes.
+A type parameter constrained by two traits reaches two instances, one for each, and the module
+writing the use writes the method of each of them; the name of the generic is unchanged by the
+second constraint, because the name is read off the types the use settled and nothing else.
 
 The module writing the use is the one that proves the instance is there.
 It settled the type, so it is the module that can see the instance, and `docs/specs/types.md`

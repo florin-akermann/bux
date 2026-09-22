@@ -11,9 +11,10 @@ no such file is refused. `io`, `files`, `process`, `list`, `strings`, `map`, and
 of the library the compiler carries, so an import of any of them looks for no file at all and a
 file of that name beside the importing one does not shadow it.
 `map` holds `Map<K, V>`, built by `map.empty` and `map.insert` and read by `map.get`; `set` holds
-`Set<T>`, built the same way and read by `set.has_value`. A key is a type the prelude has an `Eq`
-instance for, which `Bool`, `Int`, and `String` are. Two modules that import each other are
-refused as well, because each would have to be compiled first.
+`Set<T>`, built the same way and read by `set.has_value`. Each is a hash array mapped trie. A key
+is a type with both an `Eq` and a `Hash` instance, which `Bool`, `Int`, `String`, and a list of
+one of those are, and which a declared type gets from `derive Eq, Hash`. Two modules that import
+each other are refused as well, because each would have to be compiled first.
 
 Every module reached is then held to everything below, and a refusal names the file it is in
 rather than the file the command named. A module is checked after everything it imports, so a

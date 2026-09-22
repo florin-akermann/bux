@@ -287,14 +287,14 @@ fn function_node(tree: &mut Tree, depth: usize, function: &Function) {
     block_node(tree, depth + 1, &function.body);
 }
 
-/// A `<T>` of a function, with the trait it is constrained by when the author wrote one.
+/// A `<T>` of a function, with each trait it is constrained by when the author wrote any.
 fn type_parameter_node(tree: &mut Tree, depth: usize, parameter: &TypeParameter) {
     tree.node(
         depth,
         &format!("type-parameter {}", parameter.name.text),
         parameter.name.span,
     );
-    if let Some(constraint) = &parameter.constraint {
+    for constraint in &parameter.constraints {
         tree.node(
             depth + 1,
             &format!("constraint {}", constraint.name.text),
