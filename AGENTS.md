@@ -8,9 +8,11 @@ AI agents write most of the code, and agents drift without a fixed anchor.
 This file is that anchor; consistency is the throughline, and the bar is Code Health 10.0.
 
 ## Project Scope
-- **Goal**: Go's simplicity, Haskell's types, Valhalla's values, a Rust compiler.
+- **Goal**: Go's simplicity, Haskell's types, Valhalla's values, a  compiler written in Rust.
 - Everyday Bux code reads like Go: basically a bunch of `for` loops, plus ADTs and `match`.
 - **Dogfood as early as possible.** Bux replaces Rust wherever it can, until no Rust remains.
+- Dogfooding is the sanity check that Bux works, and it finds the features that Bux lacks.
+- Every missing feature it finds is scrutinized: a real need, or only a bigger language surface?
 - **Self-hosting comes first.** Version 0.3 is what the Bux compiler needs, in the order needed.
 - The Bux compiler runs on the JVM; a native binary, concurrency, HTTP, and JSON are version 0.4.
 - **Formatting is a compile error.** Source that is not in canonical form does not compile.
@@ -44,16 +46,14 @@ This file is that anchor; consistency is the throughline, and the bar is Code He
 - **The language is Bux.** Lumen is the old name, and it survives only where nothing has moved yet.
 - Every new name is the new one: a `bux` binary, `bux-*` crates, `.bx` sources, "Bux" in prose.
 - There is no big-bang rename; a task moves what it touches, Boy Scout style, and stops there.
-- A rename that spans the tree, such as a crate, the binary, or the extension, is its own item.
-- Such an item lives in `TODOS.md` like any other, and lands whole so the tooling never disagrees.
+- A tree-wide rename (a crate, the binary, the extension) is its own `TODOS.md` item, landed whole.
 
 ## Agent TL;DR
 - **Code Health is authoritative** — the single source of truth for maintainability.
-- **Target Code Health 10.0.** The standard for AI-friendly code; 9+ is not "good enough."
+- **Target Code Health 10.0**; 9+ is not "good enough," and a regression is refactored, not done.
 - **Run `mycs check` on your changes first** — ahead of anything else.
 - **The hook sweeps the whole tree on every commit** — a bare `mycs check`; nothing is grandfathered.
 - A carve-out (`[ignore]`, `default_skip`, `[disable]`) is a debt needing a reason beside it.
-- If Code Health regresses, **refactor — don't declare done.**
 - **Boy Scout Rule: always leave the code cleaner than you found it**; a touched file leaves better.
 - When in doubt, call the appropriate CodeScene MCP tool — don't guess.
 - No `#[allow]` attributes in source; a lint is fixed, or allowed in `Cargo.toml` with its reason.
