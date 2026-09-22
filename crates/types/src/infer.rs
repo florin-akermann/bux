@@ -54,18 +54,8 @@ pub(crate) fn infer(
     reached: &[OfferedType],
 ) -> Result<Inferred, TypeError> {
     let mut table = Table::default();
-    let environment = Environment::of(resolved, reached, &mut table)?;
-    let mut inference = Inference::over(resolved, imported, environment, table);
-    inference.module()?;
-    let surface = Surface::of(inference.offered(), inference.offered_types());
-    let methods = inference.methods_at.clone();
-    let generics_reached = inference.each_generic_reached();
-    Ok(Inferred {
-        types: inference.solved(),
-        surface,
-        methods,
-        generics_reached,
-    })
+    let environment = Environment::of(resolved, reached, &imported.every_instance(), &mut table)?;
+    Inference::over(resolved, imported, environment, table).inferred()
 }
 
 /// The prelude's own bodies, walked with every check a module's bodies are walked with.
@@ -78,16 +68,19 @@ pub(crate) fn infer(
 /// It imports nothing and is imported by nothing, which is the one scope it fits: its own names
 /// are in scope in every module, so a module reaching it is not reaching an import.
 ///
+/// What it answers is kept, because the prelude's instances over a list are lowered from their
+/// bodies, which `docs/specs/codegen.md` states.
+///
 /// # Errors
 ///
 /// Returns the first body of it that does not have the type its declaration gives it.
-pub(crate) fn of_the_prelude() -> Result<(), TypeError> {
+pub(crate) fn of_the_prelude() -> Result<Inferred, TypeError> {
     let resolved = lumen_resolver::prelude_resolved();
     crate::holds::nothing_holds_itself(resolved)?;
     let imported = Imported::default();
     let mut table = Table::default();
-    let environment = Environment::of(resolved, &[], &mut table)?;
-    Inference::over(resolved, &imported, environment, table).module()
+    let environment = Environment::of(resolved, &[], &[], &mut table)?;
+    Inference::over(resolved, &imported, environment, table).inferred()
 }
 
 /// Everything one run of inference is holding while it walks.
@@ -160,6 +153,19 @@ impl Inference<'_> {
     /// A module is written top down: a definition sits below what uses it, which `docs/design.md`
     /// section 13 requires. Walking the other way is therefore walking uses last, and a function
     /// that declares no signature has been given one by the time anything calls it.
+    /// Walks the whole module, and gives back everything the walk settled.
+    fn inferred(mut self) -> Result<Inferred, TypeError> {
+        self.module()?;
+        let given = self.environment.given(self.resolved);
+        let surface = Surface::of(self.offered(), self.offered_types(), given);
+        Ok(Inferred {
+            types: self.solved(),
+            surface,
+            methods: self.methods_at.clone(),
+            generics_reached: self.each_generic_reached(),
+        })
+    }
+
     fn module(&mut self) -> Result<(), TypeError> {
         let resolved = self.resolved;
         for writes in derive::written_in(resolved) {

@@ -1,0 +1,25 @@
+// expect-run
+// > 7
+// A module's own trait may have an instance over `Int`. Only an instance of a prelude trait over
+// a type the JVM holds is written out where it is called, so this one is a method like any other.
+import io
+
+fn main(arguments: List<String>) -> Int {
+    io.println(kept(7))
+    0
+}
+
+// example: kept(7) == "7"
+fn kept<T: Secret<T>>(value: T) -> String {
+    told(value)
+}
+
+instance Secret<Int> {
+    fn told(value: Int) -> String {
+        shown(value)
+    }
+}
+
+trait Secret<T> {
+    fn told(value: T) -> String
+}

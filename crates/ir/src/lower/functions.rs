@@ -1,10 +1,10 @@
 //! The prelude's own functions, written out where they are called.
 //!
-//! The prelude is Lumen source the compiler reads rather than a module it compiles, so there is
-//! no class to call one of its functions on. `or` and `ok_or` are the ones that lower, and the
-//! two branches each amounts to are written here. `todo` is the other, and nothing lowers a hole:
-//! `docs/specs/holes.md` has `lumen build` refuse every one of them before a class file is
-//! written.
+//! `or` and `ok_or` are the ones that lower, and the two branches each amounts to are written
+//! here rather than called on the prelude's class. `todo` is the other, and nothing lowers a
+//! hole: `docs/specs/holes.md` has `lumen build` refuse every one of them before a class file is
+//! written. The prelude's own source also calls `at` by its bare name, and that is the list read
+//! the compiler holds.
 
 use lumen_ast::{Expr, Name, Span};
 
@@ -23,16 +23,20 @@ impl Builder<'_> {
     /// A call of a function the prelude supplies, which version 0.1 writes out where it is used.
     ///
     /// `or` and `ok_or` are the ones that are lowered, and they are one body over which variant
-    /// carries the value: `Some` for the first and `Ok` for the second. There is no class to
-    /// call either on, because the prelude is read rather than compiled. `todo` is the other,
-    /// and nothing lowers a hole: `docs/specs/holes.md` has `lumen build` refuse every one of
-    /// them before a single class file is written.
+    /// carries the value: `Some` for the first and `Ok` for the second. Each is written where it
+    /// is called, and the prelude's class writes only its instances. `todo` is the other, and
+    /// nothing lowers a hole: `docs/specs/holes.md` has `lumen build` refuse every one of them
+    /// before a single class file is written. The bare `at` of the prelude's own source is the
+    /// list read the compiler holds.
     pub(crate) fn supplied(
         &mut self,
         name: &Name,
         arguments: &[&Expr],
         written: Span,
     ) -> Option<Descriptor> {
+        if let Some(held) = self.held_named(&name.text, arguments) {
+            return Some(held);
+        }
         let carrying = match name.text.as_str() {
             OR => SOME,
             OK_OR => OK,

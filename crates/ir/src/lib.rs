@@ -17,7 +17,7 @@ pub use crate::code::{
     Arithmetic, Body, Comparison, FieldRef, Guard, Instruction, Label, MethodRef,
 };
 pub use crate::descriptor::{ClassName, Descriptor, MethodDescriptor};
-pub use crate::lower::{THE_ONE_SHAPE, is_a_program, lower};
+pub use crate::lower::{THE_ONE_SHAPE, is_a_program, lower, lower_prelude};
 
 /// Every class a module becomes, in the order they are written.
 #[derive(Clone, Debug, PartialEq, Eq)]

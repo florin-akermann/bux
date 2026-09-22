@@ -3,12 +3,14 @@
 //! `docs/specs/modules.md` states what that is: every function a module declares and every type
 //! it declares, each reached through the module's name. A type is offered whole, with what
 //! builds it and what each of those carries, because an importing module writes values of it and
-//! matches them. A trait and its instances are not offered: they stay where they are declared.
+//! matches them. A trait is not offered: it stays where it is declared. The instances a module
+//! gives a type it declares travel with that type, which `docs/design.md` section 8 settles.
 
 use std::collections::{HashMap, HashSet};
 
 use lumen_ast::Called;
 
+use crate::bounds::Bounds;
 use crate::scheme::{Quantified, Scheme};
 use crate::types::Type;
 
@@ -17,6 +19,29 @@ use crate::types::Type;
 pub struct Surface {
     functions: HashMap<String, Offered>,
     types: Vec<OfferedType>,
+    /// The instances of the prelude's traits the module gives the types it declares.
+    instances: Vec<OfferedInstance>,
+}
+
+/// One instance a module gives a type it declares, which travels with that type.
+///
+/// It is the trait the prelude declares and the type the module declares, with what the instance
+/// asks of each argument of that type. An `IntegerLiteral` also says what its type holds.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct OfferedInstance {
+    pub(crate) of: String,
+    pub(crate) for_type: String,
+    pub(crate) asks: Vec<Vec<String>>,
+    pub(crate) holds: Option<Bounds>,
+}
+
+impl OfferedInstance {
+    fn reached_as(self, module: &str) -> Self {
+        Self {
+            for_type: reached(&self.for_type, module),
+            ..self
+        }
+    }
 }
 
 /// What one function of a module amounts to for a module that imports it.
@@ -253,8 +278,13 @@ impl OfferedConstructor {
 }
 
 impl Surface {
-    /// What a module offers: the scheme of each of its functions, and each type it declares.
-    pub(crate) fn of(functions: HashMap<String, Scheme>, types: Vec<OfferedType>) -> Self {
+    /// What a module offers: the scheme of each of its functions, each type it declares, and the
+    /// instances it gives those types.
+    pub(crate) fn of(
+        functions: HashMap<String, Scheme>,
+        types: Vec<OfferedType>,
+        instances: Vec<OfferedInstance>,
+    ) -> Self {
         let offered = functions
             .into_iter()
             .map(|(name, scheme)| (name, Offered::of(scheme)))
@@ -262,6 +292,7 @@ impl Surface {
         Self {
             functions: offered,
             types,
+            instances,
         }
     }
 
@@ -285,7 +316,16 @@ impl Surface {
             .into_iter()
             .map(|offered| offered.reached_as(module, &own))
             .collect();
-        Self { functions, types }
+        let instances = self
+            .instances
+            .into_iter()
+            .map(|offered| offered.reached_as(module))
+            .collect();
+        Self {
+            functions,
+            types,
+            instances,
+        }
     }
 
     /// The same surface, with the functions the compiler holds for `module` beside its own.
@@ -359,6 +399,17 @@ impl Imported {
             .collect();
         offered.sort_by(|one, other| one.name.cmp(&other.name));
         offered
+    }
+
+    /// Every instance every module loaded so far gives a type it declares.
+    ///
+    /// An instance travels with its type, so it reaches every module that reaches the type, and
+    /// that is every module a value of the type can reach: `every_type` states why.
+    pub(crate) fn every_instance(&self) -> Vec<OfferedInstance> {
+        self.surfaces
+            .values()
+            .flat_map(|surface| surface.instances.iter().cloned())
+            .collect()
     }
 }
 

@@ -14,15 +14,15 @@ use clap::{Parser, Subcommand};
 use lumen_diagnostics::{Code, Diagnostic, json, render};
 use lumen_examples::{Example, Refusal as ExampleRefusal, Run, stated_by};
 use lumen_format::format;
-use lumen_holes::{Hole, Whole};
-use lumen_ir::{Asked, Lowered, THE_ONE_SHAPE, is_a_program, lower};
+use lumen_ir::{THE_ONE_SHAPE, is_a_program};
 use lumen_jvm::ClassFile;
 use lumen_modules::{MANIFEST, SUFFIX};
-use lumen_types::TypedProgram;
 
 use crate::compiling::{Checked, Module, NotCompiled, Refusal, checked};
+use crate::lowering::lowered;
 
 mod compiling;
+mod lowering;
 
 /// The Lumen compiler.
 #[derive(Parser)]
@@ -185,7 +185,7 @@ fn held(program: &Checked, run: &Run) -> Outcome {
         return Outcome::Unusable;
     };
     let classes = match compiling::written(run.source(), root.path())
-        .and_then(|written| lowered_after_their_importers(written.modules(), Asked::default()))
+        .and_then(|written| lowered(written.modules()))
     {
         Ok(lowered) => lowered
             .iter()
@@ -377,8 +377,7 @@ fn built(path: &Path) -> Result<Built, Outcome> {
     let Some(module) = named_module(program.root().path()) else {
         return Err(Outcome::Unusable);
     };
-    let lowered =
-        lowered_after_their_importers(program.modules(), Asked::default()).map_err(refused_as)?;
+    let lowered = lowered(program.modules()).map_err(refused_as)?;
     let starts = lowered.last().is_some_and(is_a_program);
     let classes: Vec<ClassFile> = lowered.iter().flat_map(lumen_jvm::write).collect();
     let beside = path.parent().unwrap_or(Path::new(".")).to_path_buf();
@@ -390,58 +389,6 @@ fn built(path: &Path) -> Result<Built, Outcome> {
         }),
         refusal => Err(refusal),
     }
-}
-
-/// Every module of `modules`, lowered, in the order their classes are written.
-///
-/// A generic is written by the module that declares it, at each set of types a use settled it
-/// at, which `docs/specs/codegen.md` states, and a use in one module asks the module it reaches
-/// into. So a module is lowered after everything that imports it: loading orders them
-/// dependencies first, and this runs that order backwards and turns the answer back around.
-///
-/// `asked` is what has been asked of them already, which is nothing for a build and what the
-/// module under test asks for a run of its examples.
-fn lowered_after_their_importers(
-    modules: &[Module],
-    asked: Asked,
-) -> Result<Vec<Lowered>, NotCompiled> {
-    let mut asked = asked;
-    let mut lowered = Vec::new();
-    for module in modules.iter().rev() {
-        let one = lowered_from(module, &asked)?;
-        asked = asked.and(&one.asks);
-        lowered.push(one);
-    }
-    lowered.reverse();
-    Ok(lowered)
-}
-
-/// The module `module` becomes, or every refusal that stops it becoming one.
-fn lowered_from(module: &Module, asked: &Asked) -> Result<Lowered, NotCompiled> {
-    compiled(module.typed(), module.source(), module.name(), asked)
-        .map_err(|refusals| NotCompiled::refused(refusals, module.path(), module.source()))
-}
-
-/// The module `inferred` becomes, or every refusal that stops it becoming one.
-///
-/// Two things a build asks of a module that a check does not are asked here: every body is
-/// written, which `docs/specs/holes.md` states, and every function says what it does, which
-/// `docs/specs/doc-examples.md` states.
-fn compiled(
-    inferred: &TypedProgram,
-    source: &str,
-    module: &str,
-    asked: &Asked,
-) -> Result<Lowered, Vec<Diagnostic>> {
-    let whole = Whole::of_module(inferred)
-        .map_err(|holes| holes.iter().map(Hole::diagnostic).collect::<Vec<_>>())?;
-    stated_by(source, inferred.resolved().program()).map_err(|refused| {
-        refused
-            .iter()
-            .map(ExampleRefusal::diagnostic)
-            .collect::<Vec<_>>()
-    })?;
-    Ok(lower(&whole, module, asked))
 }
 
 /// A module written out, which is what running one starts from.

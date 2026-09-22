@@ -7,6 +7,8 @@
 
 use lumen_types::Type;
 
+use crate::lower::shape::Reached;
+
 /// Every method a build has asked a module for, in the order they were asked.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Asked {
@@ -14,15 +16,6 @@ pub struct Asked {
 }
 
 impl Asked {
-    /// Everything `module` has been asked for, which is what its own lowering writes on top of
-    /// what its body reaches.
-    pub(crate) fn of_module<'a>(
-        &'a self,
-        module: &'a str,
-    ) -> impl Iterator<Item = &'a Specialisation> {
-        self.of.iter().filter(move |one| one.module == module)
-    }
-
     /// The same, with everything `other` asked for asked as well.
     #[must_use]
     pub fn and(mut self, other: &Self) -> Self {
@@ -30,6 +23,23 @@ impl Asked {
             self.note(one.clone());
         }
         self
+    }
+
+    /// Whether this asks `module` for a method that `before` did not ask it for.
+    ///
+    /// A module lowered knowing `before` wrote none of those methods, so a build lowers it again.
+    #[must_use]
+    pub fn asks_more_of(&self, module: &str, before: &Self) -> bool {
+        self.of_module(module).any(|one| !before.of.contains(one))
+    }
+
+    /// Everything `module` has been asked for, which is what its own lowering writes on top of
+    /// what its body reaches.
+    pub(crate) fn of_module<'a>(
+        &'a self,
+        module: &'a str,
+    ) -> impl Iterator<Item = &'a Specialisation> {
+        self.of.iter().filter(move |one| one.module == module)
     }
 
     /// Asks for `one`, unless the same set of types has already been asked for.
@@ -42,8 +52,9 @@ impl Asked {
 
 /// One use of another module's generic, as the module writing the use reads it.
 ///
-/// The set it settled is what the other module writes the method for, and the constraints that
-/// module declared are what say how the method is named; `docs/specs/codegen.md` states both.
+/// The set it settled is what the other module writes the method for, written as this module
+/// writes it, and the constraints that module declared are what say how the method is named;
+/// `docs/specs/codegen.md` states both.
 pub(crate) struct Asking {
     pub(crate) settled: Vec<Type>,
     pub(crate) constrained: Vec<Vec<String>>,
@@ -52,21 +63,31 @@ pub(crate) struct Asking {
 /// One method a module owes another: a generic it declares, at one set of types.
 ///
 /// The types are written as the module being asked writes them, which `docs/specs/codegen.md`
-/// states, so the module writing the method reads them as it reads its own.
+/// states, so the module writing the method reads them as it reads its own. A foreign type in the
+/// set is a Java class only the module that declares it names, so the ask carries that class.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Specialisation {
     module: String,
     function: String,
     settled: Vec<Type>,
+    foreign: Vec<(String, Reached)>,
 }
 
 impl Specialisation {
     /// A use of `function` in `module`, which settled its type parameters on `settled`.
-    pub(crate) fn of(module: &str, function: &str, settled: Vec<Type>) -> Self {
+    ///
+    /// `foreign` is each foreign type `settled` names, by that name, and the class it is held as.
+    pub(crate) fn of(
+        module: &str,
+        function: &str,
+        settled: Vec<Type>,
+        foreign: Vec<(String, Reached)>,
+    ) -> Self {
         Self {
             module: module.to_owned(),
             function: function.to_owned(),
             settled,
+            foreign,
         }
     }
 
@@ -78,5 +99,10 @@ impl Specialisation {
     /// What the use settled each type parameter on, in the order they are declared.
     pub(crate) fn settled(&self) -> &[Type] {
         &self.settled
+    }
+
+    /// Each foreign type the set names, and the Java class it is held as.
+    pub(crate) fn foreign(&self) -> &[(String, Reached)] {
+        &self.foreign
     }
 }

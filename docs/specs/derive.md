@@ -131,6 +131,8 @@ nothing for `Eq`; `derive Eq, Ord for User` writes both and is the usual way to 
 
 The check reads the instances the module has, so a field whose type derives the trait further down
 the file counts as having it, and a variant and a record that hold each other derive it together.
+A field of a type of another module has the instances that travel with that type.
+So `derive Eq for Order` over a field of `demo.User` is accepted where `demo` gives `User` an `Eq`.
 Two records that hold each other never reach the check: `docs/specs/types.md` refuses a ring of
 records with `L0415` before any derive is read, because no such value could be built.
 

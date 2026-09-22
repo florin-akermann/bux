@@ -16,15 +16,16 @@ use crate::derive;
 use crate::error::{Count, TypeError, TypeErrorKind};
 use crate::held;
 use crate::scheme::{Quantified, Required, Scheme};
-use crate::surface::{BuiltBy, OfferedType};
+use crate::surface::{BuiltBy, OfferedInstance, OfferedType};
 use crate::table::Table;
 use crate::types::{Type, TypeParameter};
 
 mod carried;
+mod given;
 mod key;
 
 use carried::Keyed;
-pub(crate) use carried::{prelude_checked, signature_of};
+pub(crate) use carried::signature_of;
 pub(crate) use key::Key;
 use key::{Built, parameter_of, quantified, written_over};
 
@@ -71,12 +72,16 @@ impl Environment {
     pub(crate) fn of(
         resolved: &ResolvedProgram,
         reached: &[OfferedType],
+        given: &[OfferedInstance],
         table: &mut Table,
     ) -> Result<Self, TypeError> {
         let mut environment = Self::of_prelude();
         environment.held_by_the_compiler(resolved.module());
         for offered in reached {
             environment.offered_by_another_module(offered);
+        }
+        for instance in given {
+            environment.given_by_another_module(instance);
         }
         environment.note_types(resolved);
         environment.declare_traits(resolved)?;
