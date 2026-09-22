@@ -16,7 +16,7 @@ A program builds a list only as a literal, so no phase of a compiler can produce
 [058][d] - `list.at(values, index)` gives `Some` of the element there, and `None` past either end.
 [058][e] - An executable example under `tests/spec/library` builds a list in a `for` loop.
 
-## 🟡 Item 059: A string is read one code unit at a time
+## 🟢 Item 059: A string is read one code unit at a time
 No function reads a character of a string, so a lexer cannot be written in Bux.
 `String.charAt` and `String.substring` each take an `int`, and `extern` widens a result only.
 The spec settles how an `Int` argument reaches an `int` parameter without a partial operation.
