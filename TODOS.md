@@ -25,15 +25,6 @@ The spec settles how an `Int` argument reaches an `int` parameter without a part
 [059][c] - `strings.cut(text, from, to)` gives the substring, or `None` where it does not fit.
 [059][d] - An executable example under `tests/spec/library` walks a string and counts its spaces.
 
-## 🟢 Item 060: A program takes arguments, exits with a code, and writes to standard error
-`main` takes nothing and gives back nothing, and `io` writes to standard output only.
-`docs/specs/diagnostics.md` demands exit codes `0`, `1`, and `2`, and errors on standard error.
-A `bux` written in Bux cannot be a command line tool without the three.
-[060][a] - `docs/design.md` section 11 states what `main` takes and what a run's exit code is.
-[060][b] - `docs/specs/run.md` states how `bux run` passes the arguments and reads the code.
-[060][c] - `io.eprintln` writes a line to standard error.
-[060][d] - Executable examples under `tests/spec/running` show each of the three.
-
 ## 🔴 Item 061: The file system is listed, made, and written
 `files` reads one file whole, and a compiler needs the rest of what `crates/cli` reaches.
 That is a directory listed, made, and deleted, a file written, and a variable read.
