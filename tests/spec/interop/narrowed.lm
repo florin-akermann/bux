@@ -1,0 +1,51 @@
+// expect-run
+// > 101
+// > no such index
+// > no such index
+// > the member threw
+// `Int` compiles to a `long`, and `String.charAt` takes an `int`.
+// `int` before a parameter's name says so, and the argument is narrowed to one.
+// Narrowing loses whatever does not fit, so the range is read before the member is reached, and
+// an argument outside it is the `None` this result carries rather than a partial operation.
+// The guard stands outside that reading, so an argument that does not fit is `Ok(None)`, and an
+// index the member itself refuses is the `Err`.
+import io
+
+fn main(arguments: List<String>) -> Int {
+    io.println(read("hello", 1))
+    io.println(read("hello", 3000000000))
+    io.println(guarded("hello", 3000000000))
+    io.println(guarded("hello", 99))
+    0
+}
+
+/// The code unit at `index`, shown, and the word for an index no `int` holds.
+// example: read("hello", 1) == "101"
+fn read(text: String, index: Int) -> String {
+    match code_unit_at(text, index) {
+        Some(unit) => shown(unit)
+        None => "no such index"
+    }
+}
+
+/// The same reading with the member guarded, which tells the two answers apart.
+// example: guarded("hello", 3000000000) == "no such index"
+fn guarded(text: String, index: Int) -> String {
+    match caught(text, index) {
+        Ok(held) => read_out(held)
+        Err(_) => "the member threw"
+    }
+}
+
+/// What the guard handed back, shown.
+// example: read_out(None) == "no such index"
+fn read_out(held: Option<Int>) -> String {
+    match held {
+        Some(unit) => shown(unit)
+        None => "no such index"
+    }
+}
+
+extern method char code_unit_at(text: String, int index: Int) -> Option<Int> = "charAt"
+
+extern method char caught(text: String, int index: Int) -> Result<Option<Int>, String> = "charAt"

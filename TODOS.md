@@ -6,42 +6,6 @@
 
 ## Open
 
-## 🔴 Item 058: A list grows and is read at an index
-A program builds a list only as a literal, so no phase of a compiler can produce one.
-`docs/specs/library.md` says `push` waits on a JVM member no `extern` can name.
-`List` is a type the compiler holds, so the spec chooses between codegen and `extern` for it.
-[058][a] - `docs/specs/library.md` states `list.push` and `list.at`, their types, and their costs.
-[058][b] - `push` costs amortized constant time and `at` constant time, as a textbook list does.
-[058][c] - `list.push(values, value)` gives the list with `value` after the last element.
-[058][d] - `list.at(values, index)` gives `Some` of the element there, and `None` past either end.
-[058][e] - An executable example under `tests/spec/library` builds a list in a `for` loop.
-
-## 🔴 Item 059: A string is read one code unit at a time
-No function reads a character of a string, so a lexer cannot be written in Bux.
-`String.charAt` and `String.substring` each take an `int`, and `extern` widens a result only.
-The spec settles how an `Int` argument reaches an `int` parameter without a partial operation.
-[059][a] - `docs/specs/interop.md` states how an `Int` argument crosses to an `int` parameter.
-[059][b] - `strings.at(text, index)` gives the code unit as an `Int`, or `None` past the end.
-[059][c] - `strings.cut(text, from, to)` gives the substring, or `None` where it does not fit.
-[059][d] - An executable example under `tests/spec/library` walks a string and counts its spaces.
-
-## 🔴 Item 061: The file system is listed, made, and written
-`files` reads one file whole, and a compiler needs the rest of what `crates/cli` reaches.
-That is a directory listed, made, and deleted, a file written, and a variable read.
-[061][a] - `docs/specs/io.md` states each function, its type, and the `Result` each gives back.
-[061][b] - `files.write(path, text)` writes a file whole.
-[061][c] - `files.listed(path)` gives the names in a directory.
-[061][d] - `files.made(path)` makes a directory, and `files.removed(path)` deletes one.
-[061][e] - `environment.read(name)` gives `Some` of a variable and `None` where it is unset.
-[061][f] - Executable examples under `tests/spec/io` show each function.
-
-## 🔴 Item 062: A process is started and its output read
-`bux run` and `bux test` start `java`, and Bux has no way to start a process.
-`ProcessBuilder` takes a `List<String>` of the JVM's own, which no `extern` names yet.
-[062][a] - `docs/specs/io.md` states `process.run(command, arguments)` and what it gives back.
-[062][b] - The result carries the exit code, standard output, and standard error as text.
-[062][c] - An executable example under `tests/spec/io` runs `java -version` when a JDK is present.
-
 ## 🔴 Item 063: A library generic is used at a type the program declares
 `L0424` refuses `map.get` at a key the program declares, because the instance is not the library's.
 A compiler keys its tables by names, spans, and type variables, and every one is a declared type.
@@ -66,8 +30,18 @@ The table is a textbook hash table: constant time on average, plain, correct, an
 [065][b] - `map.get` and `set.has_value` are constant time over a full table.
 [065][c] - Every executable example under `tests/spec/library` still passes unchanged.
 
+## 🔴 Item 076: A list grows in amortized constant time
+**Depends on:** Item 058 — the two functions land there, and this item changes what carries one.
+`docs/specs/library.md` writes down that `push` costs what the list holds.
+A list is one `java.util.List`, and a push copies the whole of it.
+A textbook list grows in amortized constant time, which asks for a buffer and a length beside it.
+[076][a] - `docs/specs/codegen.md` states what carries a list, and what a push does to it.
+[076][b] - `push` costs amortized constant time, and `at` still costs the same at every index.
+[076][c] - A push leaves the list it was handed holding what it held, which stays a property.
+[076][d] - `docs/specs/library.md` drops the paragraph that writes the copy cost down.
+
 ## 🔴 Item 066: The lexer is written in Bux
-**Depends on:** Item 058, Item 059 — a lexer builds a token list from the code units of a string.
+**Depends on:** Item 059, Item 076 — a lexer builds a token list from the code units of a string.
 Self-hosting starts with the smallest phase, and the lexer is 286 lines of Rust.
 The Rust `bux` compiles the Bux lexer, and `tests/spec/lexer` holds both to one answer.
 [066][a] - `compiler/lexer.bx` lexes a module into the tokens `docs/specs/lexer.md` states.

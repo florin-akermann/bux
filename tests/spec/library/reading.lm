@@ -1,0 +1,29 @@
+// expect-run
+// > 2
+// > 0
+// `strings.at` gives the UTF-16 code unit at an index, which is what a walk over a string reads:
+// `strings.length` says how far to walk, and `at` reads one unit at a time.
+// A space is code unit 32, and an index past either end is `None` rather than a failure.
+import io
+
+import strings
+
+fn main(arguments: List<String>) -> Int {
+    io.println(shown(spaces("a b c")))
+    io.println(shown(or(strings.at("ab", 9), 0)))
+    0
+}
+
+/// How many spaces the text holds, counted one code unit at a time.
+// example: spaces("a b") == 1
+fn spaces(text: String) -> Int {
+    var counted = 0
+    var index = 0
+    for index < strings.length(text) {
+        if or(strings.at(text, index), 0) == 32 {
+            counted += 1
+        }
+        index += 1
+    }
+    counted
+}

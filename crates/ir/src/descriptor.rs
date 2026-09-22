@@ -11,6 +11,8 @@ pub enum Descriptor {
     Boolean,
     /// A small whole number, which nothing in Lumen is carried by; a variant's tag is one.
     Integer,
+    /// One UTF-16 code unit, which nothing in Lumen is carried by; `String.charAt` gives one.
+    Character,
     Reference(ClassName),
     /// An array of what it holds, which only the entry point of a program is written with.
     Array(Box<Descriptor>),
@@ -49,6 +51,7 @@ impl fmt::Display for Descriptor {
             Self::Long => f.write_str("J"),
             Self::Boolean => f.write_str("Z"),
             Self::Integer => f.write_str("I"),
+            Self::Character => f.write_str("C"),
             Self::Reference(class) => write!(f, "L{class};"),
             Self::Array(held) => write!(f, "[{held}"),
         }

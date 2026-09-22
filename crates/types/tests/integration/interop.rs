@@ -14,22 +14,30 @@ fn declaring(written: &str) -> String {
 
 #[test]
 fn a_type_no_java_member_takes_is_refused_where_the_signature_writes_it() {
-    let error = refusal(&declaring(
-        "static written(lines: List<String>) -> String = \"java.lang.String.join\"",
+    let declared = declaring("static written(user: User) -> String = \"java.lang.String.valueOf\"");
+    let error = refusal(&format!(
+        "{declared}\ntype User = {{\n    name: String\n}}\n"
     ));
 
-    assert_eq!(
-        error.message(),
-        "`List<String>` is no type a Java member takes"
-    );
+    assert_eq!(error.message(), "`User` is no type a Java member takes");
     assert_eq!(
         error.help(),
-        "a boundary carries `Bool`, `Int`, `String`, and a type an `extern` names"
+        "a boundary carries `Bool`, `Int`, `String`, a `List`, and a type an `extern` names"
     );
 }
 
 #[test]
-fn a_type_no_java_member_gives_back_is_refused_the_same_way() {
+fn a_list_is_taken_as_the_java_util_list_a_jvm_already_holds_it_as() {
+    let source = "fn built() -> ProcessBuilder {\n    of_command([\"java\"])\n}\n\nextern new of_command(command: List<String>) -> ProcessBuilder\n\nextern type ProcessBuilder = \"java.lang.ProcessBuilder\"\n";
+
+    assert_eq!(
+        inferred_type(source, "of_command([\"java\"])", 1),
+        "ProcessBuilder"
+    );
+}
+
+#[test]
+fn a_list_a_member_gives_back_is_refused_because_that_member_may_still_change_it() {
     let error = refusal(&declaring(
         "static written(path: Path) -> List<String> = \"java.nio.file.Files.readAllLines\"",
     ));
@@ -73,7 +81,7 @@ fn a_field_holding_nothing_at_all_is_no_field_because_the_jvm_has_no_void_one() 
     assert_eq!(error.message(), "`()` is no type a Java member holds");
     assert_eq!(
         error.help(),
-        "a boundary carries `Bool`, `Int`, `String`, and a type an `extern` names"
+        "a boundary carries `Bool`, `Int`, `String`, a `List`, and a type an `extern` names"
     );
 }
 
@@ -185,7 +193,7 @@ fn a_width_written_where_the_member_gives_back_no_int_has_nothing_to_widen_to() 
     );
     assert_eq!(
         error.help(),
-        "an `int` widens to an `Int`; drop the word, or give an `Int` back"
+        "a width widens to an `Int`; drop the word, or give an `Int` back"
     );
 }
 
@@ -210,5 +218,88 @@ fn a_width_is_accepted_through_the_result_a_declaration_wraps_it_in() {
     assert_eq!(
         inferred_type(&source, "counted(text)", 1),
         "Result<Int, String>"
+    );
+}
+
+#[test]
+fn a_char_is_held_to_the_same_result_the_other_width_is() {
+    let error = refusal(&declaring(
+        "method char as_a_path(file: File) -> Path = \"toPath\"",
+    ));
+
+    assert_eq!(
+        error.message(),
+        "`char` widens to an `Int`, and this signature gives back `Path`"
+    );
+    assert_eq!(
+        error.help(),
+        "a width widens to an `Int`; drop the word, or give an `Int` back",
+        "the help names no word the author did not write"
+    );
+}
+
+#[test]
+fn a_narrowed_parameter_takes_an_int_and_nothing_else() {
+    let error = refusal(&declaring(
+        "method int at(text: String, int held: String) -> Option<Int> = \"charAt\"",
+    ));
+
+    assert_eq!(
+        error.message(),
+        "`int` narrows an `Int`, and this parameter takes `String`"
+    );
+    assert_eq!(
+        error.help(),
+        "an `int` narrows an `Int`; drop the word, or take an `Int`"
+    );
+}
+
+#[test]
+fn a_declaration_that_narrows_an_argument_gives_back_an_option_to_say_none_with() {
+    let error = refusal(&declaring(
+        "method char at(text: String, int index: Int) -> Int = \"charAt\"",
+    ));
+
+    assert_eq!(
+        error.message(),
+        "an `int` parameter narrows an `Int`, and this signature gives back `Int`"
+    );
+    assert_eq!(
+        error.help(),
+        "give back an `Option`, which is `None` where an argument does not fit"
+    );
+}
+
+#[test]
+fn an_option_over_a_number_is_the_result_of_a_declaration_that_narrows_an_argument() {
+    let source = "fn held(text: String) -> Option<Int> {\n    at(text, 0)\n}\n\n".to_owned()
+        + &declaring("method char at(text: String, int index: Int) -> Option<Int> = \"charAt\"");
+
+    assert_eq!(inferred_type(&source, "at(text, 0)", 1), "Option<Int>");
+}
+
+#[test]
+fn an_option_over_a_number_is_no_result_where_nothing_is_narrowed() {
+    let error = refusal(&declaring(
+        "method int at(text: String, index: Int) -> Option<Int> = \"charAt\"",
+    ));
+
+    assert_eq!(
+        error.message(),
+        "`Option<Int>` is no type a Java member gives back"
+    );
+}
+
+#[test]
+fn a_guard_stands_outside_the_option_a_narrowed_argument_answers_with() {
+    let written = "method cut(text: String, int from: Int) -> Result<Option<String>, String>";
+    let source =
+        "fn held(text: String) -> Result<Option<String>, String> {\n    cut(text, 0)\n}\n\n"
+            .to_owned()
+            + &declaring(&format!("{written} = \"substring\""));
+
+    assert_eq!(
+        inferred_type(&source, "cut(text, 0)", 1),
+        "Result<Option<String>, String>"
     );
 }

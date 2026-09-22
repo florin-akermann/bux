@@ -1,0 +1,21 @@
+// expect-run
+// > a line
+// A file is written whole and read back, so a program keeps what it works out.
+// `files.write` gives back the path it wrote to, so the read is written over what the write said.
+import files
+
+import io
+
+fn main(arguments: List<String>) -> Int {
+    io.println(ok_or(kept("written.txt"), "the file was not written"))
+    0
+}
+
+/// The text the file at `path` holds after it is written whole.
+// example: ok_or(kept(""), "nothing") == "nothing"
+fn kept(path: String) -> Result<String, String> {
+    match files.write(path, "a line") {
+        Ok(at) => files.read(at)
+        Err(why) => Err(why)
+    }
+}

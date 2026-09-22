@@ -1,0 +1,22 @@
+// expect-run
+// > something
+// > nothing
+// A variable the process was started with is `Some`, and one it was started without is `None`.
+// `JAVA_HOME` is set wherever a program runs at all, because it is what names the JVM.
+import environment
+
+import io
+
+fn main(arguments: List<String>) -> Int {
+    io.println(whether(found: environment.read("JAVA_HOME")))
+    io.println(whether(found: environment.read("BUX_NOTHING_SETS_THIS")))
+    0
+}
+
+// example: whether(found: None) == "nothing"
+fn whether(found: Option<String>) -> String {
+    match found {
+        Some(_) => "something"
+        None => "nothing"
+    }
+}

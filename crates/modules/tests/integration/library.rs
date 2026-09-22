@@ -12,6 +12,12 @@ use crate::common::Beside;
 /// A module importing `strings`, which is the library module version 0.1 offers.
 const IMPORTING: &str = "import strings\n\nfn main() -> () {\n}\n";
 
+/// A module importing `process`, which is one of the two library modules that import another.
+const IMPORTING_PROCESS: &str = "import process\n\nfn main() -> () {\n}\n";
+
+/// A module importing `files`, which is the other of the two.
+const IMPORTING_FILES: &str = "import files\n\nfn main() -> () {\n}\n";
+
 /// A module importing the prelude, which is a name no import reaches.
 const IMPORTING_THE_PRELUDE: &str = "import prelude\n\nfn main() -> () {\n}\n";
 
@@ -50,9 +56,10 @@ fn every_library_module_a_file_imports_is_handed_over_below_it() {
     )]);
     let loaded = load(&beside.file_of("main")).expect("a library module needs no file");
 
-    assert_eq!(order_of(&loaded), ["files", "io", "main"]);
+    assert_eq!(order_of(&loaded), ["list", "files", "io", "main"]);
     assert_eq!(source_of(&loaded, "io"), library::source_of("io"));
     assert_eq!(source_of(&loaded, "files"), library::source_of("files"));
+    assert_eq!(source_of(&loaded, "list"), library::source_of("list"));
 }
 
 #[test]
@@ -86,12 +93,28 @@ fn a_root_module_named_as_the_library_is_no_ring_for_the_module_that_imports_it(
 }
 
 #[test]
-fn no_module_the_library_carries_imports_another() {
+fn every_import_a_module_the_library_carries_writes_names_another_it_carries() {
     for (name, source) in library::carried() {
-        assert!(
-            !source.contains("\nimport "),
-            "library/{name}.lm imports a module, which the order loading follows relies on it not doing"
-        );
+        for imported in source
+            .lines()
+            .filter_map(|line| line.strip_prefix("import "))
+        {
+            assert!(
+                library::imported(imported).is_some(),
+                "library/{name}.lm imports `{imported}`, which no import reaches"
+            );
+        }
+    }
+}
+
+/// `files` and `process` each import `list`, and they are the two that import anything at all.
+#[test]
+fn a_library_module_that_imports_another_is_handed_over_below_the_one_it_imports() {
+    for (importer, importing) in [("files", IMPORTING_FILES), ("process", IMPORTING_PROCESS)] {
+        let beside = Beside::holding(&[("main", importing)]);
+        let loaded = load(&beside.file_of("main")).expect("a library module needs no file");
+
+        assert_eq!(order_of(&loaded), ["list", importer, "main"]);
     }
 }
 

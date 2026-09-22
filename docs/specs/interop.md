@@ -13,8 +13,8 @@ This spec says what an `extern` declaration is, what crosses the boundary, and w
 The boundary is a signature and nothing more.
 Java's object model does not come with it: there is no subtyping, no overload to pick between,
 no class hierarchy, and no `equals`, `hashCode`, or `toString` reaching a value.
-One width crosses, `int` widened to the `Int` a signature declares, and the declaration is what
-says so.
+Two widths cross, `int` and `char`, each widened to the `Int` a signature declares, and the
+declaration is what says so.
 What a declaration cannot say is not reachable, and the answer to that is another declaration.
 
 ## What a declaration is
@@ -30,6 +30,7 @@ extern field out() -> PrintStream = "java.lang.System.out"
 extern static read_string(path: Path) -> Result<String, String> = "java.nio.file.Files.readString"
 extern method to_path(file: File) -> Path = "toPath"
 extern method int length(text: String) -> Int = "length"
+extern method char at(text: String, int index: Int) -> Option<Int> = "charAt"
 extern new opened(name: String) -> File
 ```
 
@@ -39,8 +40,8 @@ extern new opened(name: String) -> File
 `method` names an instance method of a class, whose receiver is the first parameter.
 `new` names a constructor, of the class its result is.
 `interface` after `type` says the class is an interface rather than an ordinary class.
-`int` after the kind says the member's own descriptor gives an `int`, which the next section
-states.
+A width after the kind says what the member's own descriptor gives back, and a width before a
+parameter's name says what it takes; the two sections on the widths state both.
 
 A declaration says which kind it is, so nothing about a call is worked out from the shape of a
 signature.
@@ -68,13 +69,24 @@ own descriptor names.
 | `()`          | `void`                  | a result       |
 | `Option<T>`   | what `T` is, or `null`  | a result       |
 | `Result<T, String>` | what `T` is, or thrown | a result |
+| `List<T>`     | `java.util.List`        | a parameter    |
 
 Nothing else crosses.
-A `List`, a record, a variant, and a type parameter are each a Lumen type a Java member has no
-descriptor for, and an `extern` naming one is `L0425`.
+A record, a variant, and a type parameter are each a Lumen type a Java member has no descriptor
+for, and an `extern` naming one is `L0425`.
 The JVM's `double` and the rest of its primitives are types no Lumen type compiles to, so a
 member whose descriptor names one is not reachable and the answer is to name one that does not.
-`int` is the one exception, and the section after next states it.
+The two widths are the exception, and the sections on them state each one.
+
+A `List<T>` is a `java.util.List` already, which `docs/specs/codegen.md` states, so a member takes
+one the way it takes any other value.
+It is a parameter and never a result.
+A list a member gives back is a JVM object that member may still reach through and change, and
+`docs/design.md` section 2 keeps a value that something else can change out of the language.
+What a list holds is held to this same table, so `List<String>` and `List<Int>` each cross and
+`List<User>` does not.
+The JVM writes no element type into a descriptor, so which Java type the elements are is the
+author's claim, exactly as the member itself is.
 
 An extern type is a type like any other from where a program stands.
 It is held, handed on, given back, and matched by nothing, because it declares no variants and no
@@ -91,7 +103,7 @@ That check is stated there and not restated here, because it is one check over a
 foreign reference alike rather than a rule this boundary writes for itself.
 Version 0.1 has neither the check nor the `spawn` it answers, so nothing here is refused yet.
 
-## The one width
+## The two widths
 
 `Int` compiles to a `long`, and a Java member that gives back a number often gives an `int`
 instead: `String.length`, `String.hashCode`, and `List.indexOf` each do.
@@ -106,25 +118,68 @@ extern method int hashed_text(value: String) -> Int = "hashCode"
 `library/prelude.lm` writes the second of those, and `instance Hash<String>` is written over it.
 
 The member is reached for its `int` and the answer is widened to the `Int` the signature declares.
-Nothing else moves: the parameters are what they were, `int` is no Lumen type, no program can
-write one, and no type a signature writes compiles to one.
+`int` is no Lumen type, no program can write one, and no type a signature writes compiles to one.
 It is a fact about the member, written where every other fact about the member is written.
 
-One thing is refused: a declaration writing the width whose result is not `Int`, because there is
-then nothing for an `int` to widen to.
-That one rule holds for every kind, and a `new` writing the width meets it the way any other does,
-since the class a constructor gives back is not `Int`.
+`char` is the other width, and a result reads it exactly as it reads `int`.
+`String.charAt` gives back a `char`, which is no type Lumen has and no type a signature writes.
+`char` after the kind says the member's own descriptor gives one, whose descriptor letter is `C`,
+and the answer is widened to the `Int` the signature declares:
+
+```text
+extern method char at(text: String, int index: Int) -> Option<Int> = "charAt"
+```
+
+A declaration writes at most one width word on its result, because a member gives back one value.
+
+One thing is refused: a declaration writing a width whose result is not `Int`, because there is
+then nothing to widen to.
+That one rule holds for both words and for every kind, and a `new` writing a width meets it the
+way any other does, since the class a constructor gives back is not `Int`.
 `L0429` is what says so.
 
-The width is a word and not a keyword.
-It is read as the width only where a name follows it, so `extern static int(text: String) -> Int`
-declares a function named `int` as it always did, and `int` is an ordinary name wherever a program
-writes one.
-
-`Option` and `Result` compose with it as they do with anything else.
+`Result` composes with a width as it does with anything else.
 A result declared `Result<Int, String>` and written `int` guards the member, widens what it gave
-back, and wraps that; `Option<Int>` is no result at all with the width or without it, because a
-number is never `null`.
+back, and wraps that.
+`Option<Int>` is no result of a declaration that narrows no parameter, with a width or without
+one, because a number is never `null`; the next section states the declaration it is a result of.
+
+## The width a parameter is narrowed to
+
+`String.charAt` takes an `int` as well as giving back a `char`, and `String.substring` takes two.
+A parameter says so by writing `int` before its name, as a result writes a width after the kind:
+
+```text
+extern method char at(text: String, int index: Int) -> Option<Int> = "charAt"
+extern method cut_out(text: String, int from: Int, int to: Int) -> Option<String> = "substring"
+```
+
+The parameter's Lumen type stays `Int`, and a caller hands over the whole number it always did.
+The member is reached for an `int` there, so the argument is narrowed to one.
+
+Narrowing a `long` to an `int` loses whatever does not fit, and nothing in Bux is partial, so the
+result of a declaration that narrows a parameter is an `Option`.
+Before the member is reached, each narrowed argument is compared with the `int` range.
+If any argument is outside that range, the answer is `None` and the member is not reached at all.
+Otherwise each narrowed argument becomes an `int`, the member is called, and the answer is `Some`
+of what it gave back.
+
+`L0431` refuses a declaration that narrows a parameter and gives back anything but an `Option`.
+`Option<Int>` is a result of such a declaration, and so is `Option<T>` for every other `T` that
+crosses as a value, because there is now something for `None` to say.
+A declaration that narrows no parameter keeps the rule above: `Option` over a number is `L0425`.
+`()` crosses as a result and not as a value, so `Option<()>` is no result of anything, and a
+member that gives nothing back and takes an `int` is not reachable in version 0.1.
+
+`Result<Option<T>, String>` composes as it always did.
+The guard is outside, so an argument that does not fit is `Ok(None)`.
+Where the result is a reference, a `None` still also reads a `null` the member gave back, and the
+two reasons for a `None` compose into the one answer.
+
+A width is a word and not a keyword, wherever it is written.
+It is read as the width only where a name follows it, so `extern static int(text: String) -> Int`
+declares a function named `int` as it always did, and a parameter named `int` is still `int: Int`.
+`int` and `char` are ordinary names wherever a program writes one.
 
 ## Which kind of class it is
 
@@ -221,14 +276,16 @@ says the wrong one is the author's claim failing the way naming a member the JVM
 
 | name                  | code    | message                                                    |
 |-----------------------|---------|------------------------------------------------------------|
-| type does not cross   | `L0425` | `List<Int>` is no type a Java member takes                 |
+| type does not cross   | `L0425` | `User` is no type a Java member takes                      |
 | not a Java name       | `L0426` | `java..File` is no Java name                               |
 | derive of an extern type | `L0427` | `File` is an extern type, and a derive reads what a type holds |
 | no class to reach     | `L0428` | a `method` reaches a class, and this signature names none  |
 | no `int` to widen     | `L0429` | `int` widens to an `Int`, and this signature gives back `File` |
 | builds an interface   | `L0430` | a `new` builds a class, and `Path` is an interface          |
+| narrows, no `Option`  | `L0431` | an `int` parameter narrows an `Int`, and this gives back `Int` |
 
-`L0425` helps with ``a boundary carries `Bool`, `Int`, `String`, and a type an `extern` names``.
+`L0425` helps with ``a boundary carries `Bool`, `Int`, `String`, a `List`, and a type an `extern`
+names``.
 It points at the type as the signature writes it, and is raised for a result as well as for a
 parameter, with `()`, `Option`, and `Result` accepted only as a result.
 The message says what the member does with a value written there — takes it, gives it back, or,
@@ -247,14 +304,25 @@ A `method` reads its class off its first parameter and a `new` off its result, s
 has to name one; a signature that names none leaves the declaration with no class to reach, and
 that is refused where it is written rather than met as a state the lowering has no answer for.
 
-`L0429` helps with ``an `int` widens to an `Int`; drop the word, or give an `Int` back``.
-It is raised where a `new` writes the width and where the result a member gives back, with a
+`L0429` helps with ``a width widens to an `Int`; drop the word, or give an `Int` back``.
+It is raised where a `new` writes a width and where the result a member gives back, with a
 `Result` or an `Option` around it read through, is not `Int`.
+It reads `char` exactly as it reads `int`, because each of the two widens to the same `Int`.
+A parameter meets the rule from the other side: one written `int` whose type is not `Int` has no
+`Int` to narrow, and there the help reads ``an `int` narrows an `Int`; drop the word, or take an
+`Int```.
 
 `L0430` helps with ``a `new` builds a class; reach one through a member of a class instead``.
 It is raised where a `new` gives back a type an `extern type` wrote `interface`, with a `Result`
 or an `Option` around it read through, because a constructor is the one member an interface has
 none of.
+
+`L0431` helps with ``give back an `Option`, which is `None` where an argument does not fit``.
+It is raised where a declaration narrows a parameter and the result, with a `Result` around it
+read through, is not an `Option`, because a narrowed argument that does not fit has nothing to
+say otherwise.
+A result of `()` is refused by it too, and has no answer: the help asks for an `Option`, and
+`Option<()>` is then `L0425`.
 
 A Java class or member that is not there is not refused, because nothing is loaded to refuse it
 against: `docs/specs/library.md` states that the library is read with no classpath and no JDK.
@@ -272,3 +340,7 @@ These hold and are checked with property-based tests:
 5. No `extern` declaration writes a body, so no two of them can disagree about one member.
 6. A declaration written `int` reaches the member for an `int` and leaves a `long` behind it.
 7. A `method` on a type written `interface` is lowered to the call the JVM makes on one.
+8. A `List<T>` is accepted where a member takes one, and refused where a member gives one back.
+9. A declaration written `char` reaches the member for a `char` and leaves a `long` behind it.
+10. A declaration that narrows a parameter answers `None` for every argument outside the `int`
+    range, and reaches its member for none of them.

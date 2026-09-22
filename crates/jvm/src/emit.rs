@@ -28,6 +28,7 @@ impl Assembling {
             Instruction::CompareIntegers(how) => self.compare_integers(*how, context),
             Instruction::Not => self.not(),
             Instruction::Widen => self.widen(),
+            Instruction::Narrow => self.narrow(),
             Instruction::LowEightBits => self.low_eight_bits(),
             Instruction::Jump(label) => self.jump(*label, context),
             Instruction::JumpIfFalse(label) => self.jump_if_false(*label, context),
@@ -95,7 +96,7 @@ impl Assembling {
     fn load(&mut self, slot: u16, of: &Descriptor) {
         let opcode = match of {
             Descriptor::Long => opcode::LLOAD,
-            Descriptor::Boolean | Descriptor::Integer => opcode::ILOAD,
+            Descriptor::Boolean | Descriptor::Integer | Descriptor::Character => opcode::ILOAD,
             Descriptor::Reference(_) | Descriptor::Array(_) => opcode::ALOAD,
         };
         self.indexed(opcode, slot);
@@ -105,7 +106,7 @@ impl Assembling {
     fn store(&mut self, slot: u16, of: &Descriptor) {
         let opcode = match of {
             Descriptor::Long => opcode::LSTORE,
-            Descriptor::Boolean | Descriptor::Integer => opcode::ISTORE,
+            Descriptor::Boolean | Descriptor::Integer | Descriptor::Character => opcode::ISTORE,
             Descriptor::Reference(_) | Descriptor::Array(_) => opcode::ASTORE,
         };
         self.indexed(opcode, slot);
@@ -180,7 +181,21 @@ impl Assembling {
         self.push(Held::Long);
     }
 
+    /// A whole number becomes a small one, which takes one slot rather than two.
+    ///
+    /// Nothing is lost where it is written: a guard or a range has already proved the number is
+    /// one a small whole number holds, which `docs/specs/codegen.md` and
+    /// `docs/specs/interop.md` each state of the place they write it.
+    fn narrow(&mut self) {
+        self.byte(opcode::L2I);
+        self.pop();
+        self.push(Held::Integer);
+    }
+
     /// The low eight bits of the whole number on the stack, which is how wide a status is.
+    ///
+    /// The mask is what makes the width right, so nothing has to prove the number fits first:
+    /// every whole number has low eight bits, which `docs/specs/run.md` states of a status.
     fn low_eight_bits(&mut self) {
         self.byte(opcode::L2I);
         self.pop();
@@ -354,7 +369,9 @@ impl Assembling {
         let opcode = match of {
             None => opcode::RETURN,
             Some(Descriptor::Long) => opcode::LRETURN,
-            Some(Descriptor::Boolean | Descriptor::Integer) => opcode::IRETURN,
+            Some(Descriptor::Boolean | Descriptor::Integer | Descriptor::Character) => {
+                opcode::IRETURN
+            }
             Some(Descriptor::Reference(_) | Descriptor::Array(_)) => opcode::ARETURN,
         };
         self.byte(opcode);

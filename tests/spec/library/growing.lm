@@ -1,0 +1,44 @@
+// expect-run
+// > the list holds 3
+// > at 0 it holds 1
+// > at 2 it holds 3
+// > at -1 it holds nothing
+// > at 3 it holds nothing
+// A list grows one value at a time, and is read at an index rather than from the front.
+// `list.push` and `list.at` are the compiler's, which `docs/specs/library.md` states, so neither
+// is a method the `list` class declares and a use of either is written where it stands.
+import io
+
+import list
+
+fn main(arguments: List<String>) -> Int {
+    counted := counting(3)
+    io.println("the list holds " + shown(list.length(counted)))
+    io.println("at 0 it holds " + read_at(counted, 0))
+    io.println("at 2 it holds " + read_at(counted, 2))
+    io.println("at -1 it holds " + read_at(counted, -1))
+    io.println("at 3 it holds " + read_at(counted, 3))
+    0
+}
+
+/// The whole numbers from one up to `last`, each pushed onto the list the loop keeps.
+// example: list.length(counting(3)) == 3
+fn counting(last: Int) -> List<Int> {
+    var counted = []
+    var next = 1
+    for next <= last {
+        counted = list.push(counted, next)
+        next += 1
+    }
+    counted
+}
+
+/// What the list holds at `index`, as a word, and `nothing` where it holds none there.
+// example: read_at([1], 0) == "1"
+// example: read_at([1], 1) == "nothing"
+fn read_at(values: List<Int>, index: Int) -> String {
+    match list.at(values, index) {
+        Some(value) => shown(value)
+        None => "nothing"
+    }
+}

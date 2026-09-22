@@ -7,7 +7,7 @@
 use lumen_format::format;
 use lumen_resolver::library;
 
-use crate::common::{Example, jdk, lumen};
+use crate::common::{Example, jdk, lumen, lumen_within};
 
 #[test]
 fn every_library_module_is_in_canonical_form() {
@@ -37,6 +37,10 @@ fn every_library_module_a_program_may_import_is_accepted_as_a_module_of_its_own(
     }
 }
 
+/// The examples are run in the copy's own directory, because `files` states some of its own.
+///
+/// An example of `files` names a path, and a relative one is read against the directory the run
+/// started in, so a run started anywhere else would read, and could remove, a file of this tree.
 #[test]
 fn every_example_a_library_module_states_holds() {
     if jdk().is_none() {
@@ -49,7 +53,10 @@ fn every_example_a_library_module_states_holds() {
         };
         let example = Example::new(source);
 
-        let run = lumen(&["test", example.path.to_str().expect("a UTF-8 path")]);
+        let run = lumen_within(
+            &["test", example.path.to_str().expect("a UTF-8 path")],
+            &example.directory,
+        );
 
         assert_eq!(run.code, 0, "library/{name}.lm: {}", run.stderr);
     }

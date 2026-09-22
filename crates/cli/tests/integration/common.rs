@@ -81,6 +81,17 @@ pub fn lumen(arguments: &[&str]) -> Run {
     finished(running(arguments))
 }
 
+/// The same run, started in `directory`, which is where a program writes what it writes.
+///
+/// A program reaches the file system through a path of its own, and a relative one is read
+/// against the directory the program was started in. Starting it in its own directory is what
+/// keeps a run that writes a file from writing it inside the repository.
+pub fn lumen_within(arguments: &[&str], directory: &Path) -> Run {
+    let mut command = running(arguments);
+    command.current_dir(directory);
+    finished(command)
+}
+
 /// The same run, as if `JAVA_HOME` named `home`, or named nothing at all.
 pub fn lumen_finding(arguments: &[&str], home: Option<&Path>) -> Run {
     let mut command = running(arguments);

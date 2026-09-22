@@ -261,7 +261,7 @@ fn declared(program: &Program) -> Vec<(&Name, Kind)> {
                     declared
                         .parameters
                         .iter()
-                        .map(|one| (&one.name, Kind::Parameter)),
+                        .map(|one| (&one.declared.name, Kind::Parameter)),
                 );
             }
         }

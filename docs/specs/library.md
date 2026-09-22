@@ -105,32 +105,85 @@ The rule is about the types an author chose, which `docs/design.md` states, so i
 instance method through its trait: `trait Hash<T>` is held to it and `instance Hash<Bool>` is not.
 Everything else a module's body is held to, an instance body is held to.
 
+## A list grown and read at an index
+
+`list.push` and `list.at` are the compiler's, and no `extern` declaration names either of them.
+
+`List` is the compiler's, which the section above states, so what a list does is the compiler's
+too.
+Neither function has a body in `library/list.lm`, because neither can be said in Bux.
+A list is built whole by a literal, and no expression the grammar writes builds a list from a
+list, so `push` has no body to write.
+`at` has one a `for` loop writes, and that body counts to the index and costs what the list holds.
+
+An `extern` is one Java member under a Lumen signature, and neither of the two is one member.
+A signature for either writes a type parameter, and `docs/specs/interop.md` refuses one: a type
+parameter is carried by nothing a Java descriptor names.
+The member that reads a list at an index takes an `int` and throws past the end, and `at` gives
+`None` there.
+So the two are written out where they are called, the way an operator over `Int` is, and
+`docs/specs/codegen.md` states the instructions each one becomes.
+
+```text
+fn push<T>(values: List<T>, value: T) -> List<T>
+fn at<T>(values: List<T>, index: Int) -> Option<T>
+```
+
+`push` gives back the list with `value` after the last element.
+The list it was handed is unchanged, because a list is a value and nothing reaches into one.
+`at` gives `Some` of the element at `index`.
+It gives `None` where the index is below zero, and where it is the length or above it.
+Neither is partial, and neither panics.
+
+`at` costs the same whatever the list holds, because the member behind it reads one slot.
+
+`push` costs what the list holds, and that cost is the shape of a list rather than the lowering.
+The list a push is handed keeps every element it had, so the list it gives back holds them again.
+A list grown a thousand times by `push` therefore costs the square of what it ends up holding.
+A `push` that cost the same whatever the list holds asks for a buffer whose slots past the end of
+every list sharing it are free.
+That is a length beside a buffer rather than one `java.util.List`, which is what
+`docs/specs/codegen.md` holds a list as.
+Until a list is held as one of those, the cost is written down here rather than hidden, which is
+what `docs/specs/collections.md` does of a map.
+
 ## The library modules
 
 `prelude` is every name above, and nothing else.
 
 `list`, `strings`, `map`, and `set` each hold what a `for` loop writes the same way twice, and
-`io` and `files` hold what no `for` loop writes at all.
-`strings` holds one of each: `join` is the loop, and `length` is what no loop reads.
+`io`, `files`, `process`, and `environment` hold what no `for` loop writes at all.
+`strings` holds each of them: `join` is the loop, `length` is what no loop reads, and `at` and
+`cut` are a check written over two more `extern` declarations.
+`list` holds two more, `push` and `at`, which the section above states are the compiler's.
 
 ```text
-list:    length  has_value  index_of
-strings: join  length
-map:     empty  insert  get
-set:     empty  insert  has_value
-io:      print  println  eprintln
-files:   read
+list:        length  has_value  index_of  push  at
+strings:     at  cut  join  length
+map:         empty  insert  get
+set:         empty  insert  has_value
+io:          print  println  eprintln
+files:       read  write  listed  made  removed
+process:     run
+environment: read
 ```
 
-`io` and `files` are written over `extern` declarations, which `docs/specs/interop.md` states and
-`docs/specs/io.md` says what each of the two reaches. Each declares those declarations beside its
-functions, and every top-level name is public, so both surfaces are wider than the four names
-above; `docs/specs/io.md` names the rest.
-`io.println` writes to standard output and `io.eprintln` writes to standard error, and the two
-are the one `io.put_line` over two streams.
-`strings.length` is one such declaration itself.
-It reaches `String.length`, whose descriptor gives an `int` that the declaration widens to the
-`Int` it gives back.
+A library module may import another, and `files` and `process` are the two that do.
+Each imports `list`: `files` builds the list `files.listed` gives back with `list.push`, and
+`process` grows the list a JVM starts a program from the same way.
+Loading hands an imported library module over below the one that imports it, as it does for a
+module read out of a file, so nothing about the order a module is read in changes.
+
+`io`, `files`, `process`, and `environment` are written over `extern` declarations, which
+`docs/specs/interop.md` states and `docs/specs/io.md` says what each of the four reaches. Each
+declares those declarations beside its functions, and every top-level name is public, so every one
+of those surfaces is wider than the names above; `docs/specs/io.md` names the rest.
+`io.println` writes to standard output and `io.eprintln` writes to standard error, and the two are
+the one `io.put_line` over two streams.
+`strings` is written over three of them, which is the same again: `length` is one declaration
+itself, and `at` and `cut` are a check over the two the section below states.
+`strings.length` reaches `String.length`, whose descriptor gives an `int` that the declaration
+widens to the `Int` it gives back.
 What it counts is what a JVM counts, which is UTF-16 code units: a character the JVM holds as a
 pair of units, such as an emoji, counts as two.
 
@@ -138,6 +191,22 @@ pair of units, such as an emoji, counts as two.
 steps of its own walks beside them, which `docs/specs/collections.md` lists.
 One module holds one type, because `empty` has one definition and a module holding both maps and
 sets would need two.
+
+`strings.at(text, index)` gives the UTF-16 code unit at `index` as an `Int`.
+It gives `None` where `index` is below `0`, or is not below `strings.length(text)`.
+`strings.cut(text, from, to)` gives the part of the text from `from` up to but not including `to`.
+It gives `None` where `from` is below `0`, where `to` is above the length, or where `from` is
+above `to`.
+`at` costs constant time, and `cut` costs time linear in the length of the part it gives back.
+
+Each of the two is written in Bux: a bounds check over `strings.length`, and then one `extern`
+call.
+The one reaches `String.charAt`, declared with a `char` width and a narrowed `index`, and the
+other reaches `String.substring`, declared with a narrowed `from` and a narrowed `to`.
+Each of the two declarations gives back `Result<Option<T>, String>`: the `Option` is what
+`docs/specs/interop.md` asks of a declaration that narrows an argument, and the `Result` is what
+keeps the declaration itself total, because every top-level name of a module is public.
+Every index counts UTF-16 code units, which is what `strings.length` counts.
 
 `join` runs the parts of a `List<String>` together, with a separator between each pair.
 
@@ -151,8 +220,7 @@ at all only when a reader would otherwise write the same loop twice.
 `strings` has a `length` and so does `list`, and neither of the two is a prelude name: one name
 has one definition, and a prelude holding both would break that.
 
-A library function may be generic, and `list.length`, `list.has_value`, `list.index_of`, and
-every function of `map` and `set` are.
+A library function may be generic, and every function of `list`, `map`, and `set` is.
 A generic is written once per set of types it is used at, which `docs/specs/codegen.md` states,
 so the module declaring it writes the method and the module calling it writes the call.
 `list.has_value` and `list.index_of` each constrain the type parameter by `Eq`, and the body
@@ -162,9 +230,9 @@ the parameter on anything else.
 
 ## What is not here yet
 
-`push` and `split` each need a JVM method whose descriptor names a type no `extern` declaration
-can name: a `List` for the one and an array of `String` for the other.
-`docs/specs/interop.md` states what crosses, and they land with whatever names such a member.
+`split` needs a JVM method whose descriptor names an array of `String`, which no `extern`
+declaration can name.
+`docs/specs/interop.md` states what crosses, and it lands with whatever names such a member.
 
 A mapping and a filtering over a list need a parameter whose type is a function, which the
 grammar of `docs/specs/grammar.md` does not write.
@@ -195,6 +263,8 @@ These hold and are checked with property-based tests:
 2. A program that writes no import sees every prelude name and no library module's name.
 3. The prelude's declarations are the same whichever module asks for them.
 4. Every instance body the prelude writes has the type its trait gives it at the instance's type.
+5. `list.at` gives `Some` of the element at every index a list holds, and `None` at every other.
+6. `list.push` gives back what the list held, with the value after it, and leaves the list alone.
 
 The prelude is not among the modules of property 1 that compile on their own.
 Its own names are in scope in every module, so a compiler reading it as a module would refuse

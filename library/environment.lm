@@ -1,0 +1,7 @@
+// The variables the process a program runs in was started with.
+//
+// `docs/specs/io.md` states what a read gives back. It is one `extern` declaration away from a
+// JVM method, which `docs/specs/interop.md` states, and a variable nothing set is `None` rather
+// than a failure, because a process that was started without one is an ordinary case.
+/// The variable called `name`, and `None` where the process was started without it.
+extern static read(name: String) -> Option<String> = "java.lang.System.getenv"

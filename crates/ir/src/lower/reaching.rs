@@ -8,10 +8,10 @@
 //! Every one of these is a method of its own, which is what makes a guard writable: a guarded
 //! span begins with an empty stack, and a call may be written wherever an expression is.
 
-use lumen_ast::{Called, ExternDeclaration, Gives, JavaName, Reaches};
+use lumen_ast::{Called, ExternDeclaration, Gives, JavaName, Reaches, Takes};
 use lumen_types::Type;
 
-use crate::code::{Body, FieldRef, Guard, Instruction, Label, MethodRef};
+use crate::code::{Body, Comparison, FieldRef, Guard, Instruction, Label, MethodRef};
 use crate::descriptor::{ClassName, Descriptor, MethodDescriptor};
 use crate::lower::body::as_a_reference;
 use crate::lower::shape::{CONSTRUCTOR, ERR, NONE, OK, OPTION, RESULT, SOME};
@@ -36,6 +36,9 @@ const CAUGHT: Label = Label(2);
 /// Where a `null` the member gave back lands, which is the `None` it becomes.
 const EMPTY: Label = Label(3);
 
+/// Where an argument outside the `int` range lands, which is the other `None` there is.
+const UNFIT: Label = Label(4);
+
 /// What `declaration` runs: the member it names, and the mapping the declaration asks for.
 pub(crate) fn body(
     lowering: &Lowering<'_>,
@@ -46,23 +49,23 @@ pub(crate) fn body(
     let declared = lowering.used_as(declaration.name.span);
     let answer = Answer::of(shapes, declared, declaration.gives);
     let called = shapes.called(received_by(declared));
-    let held = signature
-        .parameters
-        .iter()
-        .flatten()
-        .map(Descriptor::width)
-        .sum();
-    let taken: Vec<Descriptor> = signature.parameters.iter().flatten().cloned().collect();
-    let mut instructions = vec![Instruction::Label(OPENED)];
+    let arguments = Arguments::of(signature, declaration);
+    let held = arguments.beyond();
+    let mut instructions = arguments.fitting();
+    instructions.push(Instruction::Label(OPENED));
     instructions.extend(reached(
         &declaration.reaches,
-        &taken,
+        &arguments,
         answer.member.as_ref(),
         called,
     ));
     instructions.push(Instruction::Label(CLOSED));
     instructions.extend(answer.widening());
-    instructions.extend(given_back(shapes, &answer, held));
+    instructions.extend(answer.given_back(shapes, held));
+    if arguments.narrows() {
+        instructions.push(Instruction::Label(UNFIT));
+        instructions.extend(answer.none_of(shapes, held));
+    }
     if answer.guarded {
         instructions.push(Instruction::Label(CAUGHT));
         instructions.extend(caught(shapes, held));
@@ -72,6 +75,105 @@ pub(crate) fn body(
         locals: answer.widened.as_ref().map_or(1, Descriptor::width).max(1),
         guards: guards(answer.guarded),
     }
+}
+
+/// The arguments the member is reached with: what each arrives as, and what it is reached for.
+///
+/// The two differ where a parameter is written `int`: the method takes the `long` an `Int` is,
+/// and the member's own descriptor takes the `int` it is narrowed to. `docs/specs/interop.md`
+/// states the narrowing and the range that is read before it.
+struct Arguments {
+    /// What each parameter arrives as, which is the descriptor this method is written with.
+    arriving: Vec<Descriptor>,
+    /// What the member's own descriptor takes, an `int` wherever the declaration narrows one.
+    reaching: Vec<Descriptor>,
+}
+
+impl Arguments {
+    /// What `declaration` takes, read off the signature inference gave it and the words it wrote.
+    fn of(signature: &Signature, declaration: &ExternDeclaration) -> Self {
+        let arriving: Vec<Descriptor> = signature.parameters.iter().flatten().cloned().collect();
+        let reaching = arriving
+            .iter()
+            .zip(&declaration.parameters)
+            .map(|(of, parameter)| match parameter.takes {
+                Takes::WhatTheParameterIs => of.clone(),
+                Takes::AnInt => Descriptor::Integer,
+            })
+            .collect();
+        Self { arriving, reaching }
+    }
+
+    /// Whether any argument is narrowed, which is what the range is read for and the `None` says.
+    fn narrows(&self) -> bool {
+        self.arriving != self.reaching
+    }
+
+    /// The first slot no parameter occupies, which is where the body holds what it needs to.
+    fn beyond(&self) -> u16 {
+        self.arriving.iter().map(Descriptor::width).sum()
+    }
+
+    /// Every narrowed argument read against the `int` range, which a `None` answers outside it.
+    ///
+    /// It stands before the member is reached, so an argument that does not fit reaches nothing.
+    fn fitting(&self) -> Vec<Instruction> {
+        let mut instructions = Vec::new();
+        for (slot, narrowed) in self.narrowed() {
+            if !narrowed {
+                continue;
+            }
+            instructions.extend(within(
+                slot,
+                i64::from(i32::MIN),
+                Comparison::GreaterOrEqual,
+            ));
+            instructions.extend(within(slot, i64::from(i32::MAX), Comparison::LessOrEqual));
+        }
+        instructions
+    }
+
+    /// Every argument loaded from the slot it arrives in, narrowed where the member takes an
+    /// `int`.
+    fn loaded(&self) -> Vec<Instruction> {
+        let mut instructions = Vec::new();
+        for ((slot, narrowed), arrived) in self.narrowed().zip(&self.arriving) {
+            instructions.push(Instruction::Load {
+                slot,
+                of: arrived.clone(),
+            });
+            if narrowed {
+                instructions.push(Instruction::Narrow);
+            }
+        }
+        instructions
+    }
+
+    /// Each argument's slot and whether it is narrowed, where a whole number takes two slots.
+    fn narrowed(&self) -> impl Iterator<Item = (u16, bool)> {
+        let mut slot = 0;
+        self.reaching
+            .iter()
+            .zip(&self.arriving)
+            .map(move |(reached, arrived)| {
+                let at = slot;
+                slot += arrived.width();
+                (at, reached != arrived)
+            })
+    }
+}
+
+/// The whole number in `slot` read against `bound`, jumping to the `None` where it is outside it.
+fn within(slot: u16, bound: i64, how: Comparison) -> Vec<Instruction> {
+    vec![
+        Instruction::Load {
+            slot,
+            of: Descriptor::Long,
+        },
+        Instruction::Long(bound),
+        Instruction::CompareLongs(how),
+        Instruction::JumpIfFalse(UNFIT),
+    ]
 }
 
 /// What the member gives back, and what the declaration wraps that in before handing it on.
@@ -108,13 +210,80 @@ impl Answer {
     fn widening(&self) -> Option<Instruction> {
         (self.member != self.widened).then_some(Instruction::Widen)
     }
+
+    /// What the method gives back, once the member has left its own answer on the stack.
+    ///
+    /// Each way out gives back on its own rather than meeting the others, because two variants
+    /// of one type are two classes and nothing here needs them to meet.
+    fn given_back(&self, shapes: &Shapes, held: u16) -> Vec<Instruction> {
+        let Some(of) = self.widened.clone().filter(|_| self.optional) else {
+            return self.handed_on(shapes, self.widened.clone(), held);
+        };
+        let mut instructions = vec![Instruction::Store {
+            slot: held,
+            of: of.clone(),
+        }];
+        if !matches!(of, Descriptor::Reference(_)) {
+            // A number is never `null`, so the one `None` such a result has is an unfit
+            // argument's.
+            instructions.extend(self.some_of(shapes, &of, held));
+            return instructions;
+        }
+        instructions.push(Instruction::Load {
+            slot: held,
+            of: of.clone(),
+        });
+        instructions.push(Instruction::JumpIfNull(EMPTY));
+        instructions.extend(self.some_of(shapes, &of, held));
+        instructions.push(Instruction::Label(EMPTY));
+        instructions.extend(self.none_of(shapes, held));
+        instructions
+    }
+
+    /// A `Some` of what the slot holds, handed on the way the declaration's result asks.
+    fn some_of(&self, shapes: &Shapes, of: &Descriptor, held: u16) -> Vec<Instruction> {
+        let mut instructions = building(shapes.built(SOME), Some((held, of.clone())));
+        instructions.extend(self.handed_on(shapes, Some(optional(shapes)), held));
+        instructions
+    }
+
+    /// A `None`, which is what a `null` and an argument outside the `int` range each become.
+    fn none_of(&self, shapes: &Shapes, held: u16) -> Vec<Instruction> {
+        let mut instructions = building(shapes.built(NONE), None);
+        instructions.extend(self.handed_on(shapes, Some(optional(shapes)), held));
+        instructions
+    }
+
+    /// What is on the stack given back, wrapped in `Ok` where the declaration guards the call.
+    fn handed_on(
+        &self,
+        shapes: &Shapes,
+        on_the_stack: Option<Descriptor>,
+        held: u16,
+    ) -> Vec<Instruction> {
+        if !self.guarded {
+            return vec![Instruction::Return(on_the_stack)];
+        }
+        let of = on_the_stack.expect("a `Result` wraps a value the member gives back");
+        let ok = shapes.built(OK);
+        let mut instructions = vec![Instruction::Store {
+            slot: held,
+            of: of.clone(),
+        }];
+        instructions.extend(building(ok, Some((held, of))));
+        instructions.push(Instruction::Return(Some(Descriptor::Reference(
+            ok.base.clone(),
+        ))));
+        instructions
+    }
 }
 
-/// The descriptor the member is reached for, which `int` says is narrower than the result is.
+/// The descriptor the member is reached for, which a width says is narrower than the result is.
 fn reached_for(widened: Option<&Descriptor>, gives: Gives) -> Option<Descriptor> {
     match gives {
         Gives::WhatTheResultIs => widened.cloned(),
         Gives::AnInt => widened.map(|_| Descriptor::Integer),
+        Gives::AChar => widened.map(|_| Descriptor::Character),
     }
 }
 
@@ -153,10 +322,11 @@ fn received_by(declared: &Type) -> &Type {
 /// The member itself: every parameter loaded from the slot it arrived in, and the access.
 fn reached(
     reaches: &Reaches,
-    taken: &[Descriptor],
+    arguments: &Arguments,
     gives: Option<&Descriptor>,
     called: Called,
 ) -> Vec<Instruction> {
+    let taken = arguments.reaching.as_slice();
     match reaches {
         Reaches::Field(named) => vec![Instruction::GetStatic(FieldRef {
             class: class_of(named),
@@ -169,7 +339,7 @@ fn reached(
                 name: member_of(named),
                 descriptor: MethodDescriptor::new(taken.to_vec(), gives.cloned()),
             };
-            with(loaded(taken, 0), Instruction::InvokeStatic(member))
+            with(arguments.loaded(), Instruction::InvokeStatic(member))
         }
         Reaches::Method(named) => {
             let [receiver, rest @ ..] = taken else {
@@ -180,7 +350,7 @@ fn reached(
                 name: named.text.clone(),
                 descriptor: MethodDescriptor::new(rest.to_vec(), gives.cloned()),
             };
-            with(loaded(taken, 0), calling(called, member))
+            with(arguments.loaded(), calling(called, member))
         }
         Reaches::New => {
             let class = class_named_by(gives.expect("a constructor gives back what it built"));
@@ -190,7 +360,7 @@ fn reached(
                 descriptor: MethodDescriptor::new(taken.to_vec(), None),
             };
             let mut instructions = vec![Instruction::New(class), Instruction::Copy];
-            instructions.extend(loaded(taken, 0));
+            instructions.extend(arguments.loaded());
             with(instructions, Instruction::Construct(built))
         }
     }
@@ -204,69 +374,9 @@ fn calling(called: Called, method: MethodRef) -> Instruction {
     }
 }
 
-/// Every parameter loaded, each from the slot it arrives in, in the order they are written.
-fn loaded(taken: &[Descriptor], first: u16) -> Vec<Instruction> {
-    let mut slot = first;
-    let mut instructions = Vec::new();
-    for of in taken {
-        instructions.push(Instruction::Load {
-            slot,
-            of: of.clone(),
-        });
-        slot += of.width();
-    }
-    instructions
-}
-
-/// What the method gives back, once the member has left its own answer on the stack.
-///
-/// Each way out gives back on its own rather than meeting the others, because two variants of
-/// one type are two classes and nothing here needs them to meet.
-fn given_back(shapes: &Shapes, answer: &Answer, held: u16) -> Vec<Instruction> {
-    let Some(of) = answer.widened.clone().filter(|_| answer.optional) else {
-        return handed_on(shapes, answer, answer.widened.clone(), held);
-    };
-    let mut instructions = vec![
-        Instruction::Store {
-            slot: held,
-            of: of.clone(),
-        },
-        Instruction::Load {
-            slot: held,
-            of: of.clone(),
-        },
-        Instruction::JumpIfNull(EMPTY),
-    ];
-    let option = Descriptor::Reference(shapes.built(SOME).base.clone());
-    instructions.extend(building(shapes.built(SOME), Some((held, of))));
-    instructions.extend(handed_on(shapes, answer, Some(option.clone()), held));
-    instructions.push(Instruction::Label(EMPTY));
-    instructions.extend(building(shapes.built(NONE), None));
-    instructions.extend(handed_on(shapes, answer, Some(option), held));
-    instructions
-}
-
-/// What is on the stack given back, wrapped in `Ok` where the declaration guards the call.
-fn handed_on(
-    shapes: &Shapes,
-    answer: &Answer,
-    on_the_stack: Option<Descriptor>,
-    held: u16,
-) -> Vec<Instruction> {
-    if !answer.guarded {
-        return vec![Instruction::Return(on_the_stack)];
-    }
-    let of = on_the_stack.expect("a `Result` wraps a value the member gives back");
-    let ok = shapes.built(OK);
-    let mut instructions = vec![Instruction::Store {
-        slot: held,
-        of: of.clone(),
-    }];
-    instructions.extend(building(ok, Some((held, of))));
-    instructions.push(Instruction::Return(Some(Descriptor::Reference(
-        ok.base.clone(),
-    ))));
-    instructions
+/// What an `Option` stands on the stack as, which both of its variants are folded into.
+fn optional(shapes: &Shapes) -> Descriptor {
+    Descriptor::Reference(shapes.built(SOME).base.clone())
 }
 
 /// What a throw becomes: the `Err` holding what the throwable says of itself, given back.

@@ -1,11 +1,11 @@
 //! What an `extern` declaration becomes, which `docs/specs/interop.md` states.
 //!
 //! Each one is a static method of the module that declares it, holding the member it names and
-//! the mapping the declaration asks for. `docs/specs/io.md` states what `io` and `files` reach
-//! through theirs, and the last of these hold the two library modules to it.
+//! the mapping the declaration asks for. `docs/specs/io.md` states what `io`, `files`, and
+//! `process` reach through theirs, and the last of these hold those library modules to it.
 
-use lumen_ir::{Asked, Body, ClassName, Descriptor, FieldRef, Guard, Instruction, Label};
-use lumen_ir::{Lowered, MethodDescriptor, MethodRef};
+use lumen_ir::{Asked, Body, ClassName, Comparison, Descriptor, FieldRef, Guard, Instruction};
+use lumen_ir::{Label, Lowered, MethodDescriptor, MethodRef};
 use lumen_types::Imported;
 
 use crate::common::{LibraryModule, Written, body_of, called, class_of, library};
@@ -38,6 +38,15 @@ const GUARDED: &str = concat!(
 const WIDENED: &str = concat!(
     "extern method int length(text: String) -> Int = \"length\"\n\n",
     "extern method int counted(text: String) -> Result<Int, String> = \"hashCode\"\n",
+);
+
+/// A module whose declarations narrow an argument, which is the range-reading shape.
+///
+/// The first gives back a number, which is never `null`, and the second gives back a reference,
+/// which may be. `docs/specs/interop.md` states that the two reasons for a `None` compose.
+const NARROWED: &str = concat!(
+    "extern method char at(text: String, int index: Int) -> Option<Int> = \"charAt\"\n\n",
+    "extern method cut(text: String, int from: Int) -> Option<String> = \"substring\"\n",
 );
 
 /// A module whose one declaration gives back an `Option`, which is the null-reading shape.
@@ -364,13 +373,108 @@ fn the_path_is_asked_of_a_file_before_the_file_is_read_whole() {
     );
 }
 
+/// Every member of `process`, in the order the module declares them.
+const REACHED_BY_A_RUN: [&str; 12] = [
+    "of_command",
+    "reading_from",
+    "inherited",
+    "started",
+    "output_of",
+    "errors_of",
+    "ended",
+    "over",
+    "delimited",
+    "token",
+    "closed",
+    "nothing_at_all",
+];
+
+/// The JVM classes `docs/specs/io.md` names for `process`, apart from the mapping around them.
+const STARTS_A_PROGRAM: [&str; 4] = [
+    "java/lang/ProcessBuilder",
+    "java/lang/Process",
+    "java/util/Scanner",
+    "java/io/InputStream",
+];
+
+/// The static field a run reads, which is the standard input the program it starts reads.
+const READS_WHAT_WE_READ: &str = "java/lang/ProcessBuilder$Redirect";
+
 #[test]
-fn the_only_method_of_a_library_module_that_guards_a_span_gives_back_a_result() {
+fn a_run_reaches_the_jvm_classes_that_start_a_program_and_read_what_it_wrote() {
+    let written = library("process").lowered();
+
+    let reached: Vec<String> = REACHED_BY_A_RUN
+        .into_iter()
+        .flat_map(|named| reached_by(body_of_module(&written, library("process"), named)))
+        .filter(|call| STARTS_A_PROGRAM.iter().any(|class| call.starts_with(class)))
+        .collect();
+
+    assert_eq!(
+        reached,
+        vec![
+            "java/lang/ProcessBuilder.<init>".to_owned(),
+            "java/lang/ProcessBuilder.redirectInput".to_owned(),
+            "java/lang/ProcessBuilder.start".to_owned(),
+            "java/lang/Process.getInputStream".to_owned(),
+            "java/lang/Process.getErrorStream".to_owned(),
+            "java/lang/Process.waitFor".to_owned(),
+            "java/util/Scanner.<init>".to_owned(),
+            "java/util/Scanner.useDelimiter".to_owned(),
+            "java/util/Scanner.next".to_owned(),
+            "java/util/Scanner.close".to_owned(),
+            "java/io/InputStream.nullInputStream".to_owned(),
+        ]
+    );
+}
+
+#[test]
+fn the_command_a_run_is_given_crosses_as_the_java_util_list_a_jvm_holds_it_as() {
+    let written = library("process").lowered();
+    let list = Descriptor::reference("java/util/List");
+
+    let built = method_of(
+        class_of(&written, &library("process").class()),
+        "of_command",
+    );
+
+    assert_eq!(built.descriptor.parameters, [list]);
+}
+
+#[test]
+fn every_method_of_a_library_module_that_guards_a_span_gives_back_a_result() {
     assert!(guarding("io").is_empty(), "nothing `io` reaches throws");
     assert_eq!(
         guarding("files"),
-        ["read_whole", "as_a_path"],
-        "the two declarations `files` writes with a `Result` are the two guarded spans"
+        [
+            "read_whole",
+            "opened",
+            "entries",
+            "all_of",
+            "delete",
+            "as_a_path"
+        ],
+        "the declarations `files` writes with a `Result` are the guarded spans"
+    );
+    assert_eq!(
+        guarding("process"),
+        ["started", "ended", "token"],
+        "the three declarations `process` writes with a `Result` are its guarded spans"
+    );
+}
+
+#[test]
+fn a_run_points_the_standard_input_of_the_program_at_the_one_this_program_reads() {
+    let written = library("process").lowered();
+
+    let read = body_of_module(&written, library("process"), "inherited");
+
+    assert!(
+        read.instructions.iter().any(|instruction| matches!(
+            instruction,
+            Instruction::GetStatic(field) if field.class == ClassName::new(READS_WHAT_WE_READ)
+        )),
+        "`inherited` reads the redirect off the class that holds it"
     );
 }
 
@@ -439,4 +543,114 @@ fn built_in(instructions: &[Instruction]) -> Vec<String> {
             _ => None,
         })
         .collect()
+}
+
+#[test]
+fn a_narrowed_argument_is_read_against_the_int_range_before_the_member_is_reached() {
+    let written = lowered(NARROWED);
+    let body = body_of(&written, "at");
+    let opened = at(body, Label(0));
+
+    assert_eq!(
+        &body.instructions[..opened],
+        [
+            read_against(i64::from(i32::MIN), Comparison::GreaterOrEqual),
+            read_against(i64::from(i32::MAX), Comparison::LessOrEqual),
+        ]
+        .concat()
+    );
+}
+
+#[test]
+fn a_narrowed_argument_reaches_the_member_as_an_int_and_a_char_widens_to_the_int_declared() {
+    let written = lowered(NARROWED);
+    let body = body_of(&written, "at");
+
+    assert!(
+        body.instructions
+            .contains(&Instruction::InvokeVirtual(MethodRef {
+                class: ClassName::new("java/lang/String"),
+                name: "charAt".to_owned(),
+                descriptor: MethodDescriptor::new(
+                    vec![Descriptor::Integer],
+                    Some(Descriptor::Character)
+                ),
+            }))
+    );
+    assert!(body.instructions.contains(&Instruction::Narrow));
+    assert!(body.instructions.contains(&Instruction::Widen));
+}
+
+#[test]
+fn an_argument_outside_the_range_is_a_none_that_reaches_the_member_not_at_all() {
+    let written = lowered(NARROWED);
+    let body = body_of(&written, "at");
+    let unfit = at(body, Label(4));
+
+    assert_eq!(
+        built_in(&body.instructions[unfit..]),
+        vec!["lumen/Option$None".to_owned()]
+    );
+    assert_eq!(
+        reached_in(&body.instructions[unfit..]),
+        vec!["lumen/Option$None.<init>".to_owned()],
+        "the `None` is built, and the member the declaration names is not reached"
+    );
+}
+
+#[test]
+fn a_number_the_member_gave_back_is_a_some_because_a_number_is_never_null() {
+    let written = lowered(NARROWED);
+    let body = body_of(&written, "at");
+    let opened = at(body, Label(0));
+
+    assert!(
+        !body.instructions[opened..]
+            .iter()
+            .any(|instruction| matches!(instruction, Instruction::JumpIfNull(_))),
+        "a number is never `null`, so the one `None` there is is the unfit argument's"
+    );
+}
+
+#[test]
+fn a_reference_the_member_gave_back_reads_a_null_as_well_as_the_range() {
+    let written = lowered(NARROWED);
+    let body = body_of(&written, "cut");
+
+    assert!(
+        body.instructions
+            .iter()
+            .any(|instruction| matches!(instruction, Instruction::JumpIfNull(_))),
+        "the two reasons for a `None` compose into the one answer"
+    );
+    assert_eq!(
+        built_in(&body.instructions),
+        vec![
+            "lumen/Option$Some".to_owned(),
+            "lumen/Option$None".to_owned(),
+            "lumen/Option$None".to_owned(),
+        ]
+    );
+}
+
+#[test]
+fn a_declaration_that_narrows_nothing_reads_no_range_and_narrows_no_argument() {
+    let written = lowered(WIDENED);
+    let body = body_of(&written, "length");
+
+    assert!(!body.instructions.contains(&Instruction::Narrow));
+    assert_eq!(at(body, Label(0)), 0, "nothing stands before the member");
+}
+
+/// The whole number in the second slot read against `bound`, which is what `fitting` writes.
+fn read_against(bound: i64, how: Comparison) -> Vec<Instruction> {
+    vec![
+        Instruction::Load {
+            slot: 1,
+            of: Descriptor::Long,
+        },
+        Instruction::Long(bound),
+        Instruction::CompareLongs(how),
+        Instruction::JumpIfFalse(Label(4)),
+    ]
 }

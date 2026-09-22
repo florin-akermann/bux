@@ -9,7 +9,7 @@ use std::path::{Path, PathBuf};
 use lumen_diagnostics::Code;
 use lumen_format::format;
 
-use crate::common::{Example, Sibling, jdk, lumen};
+use crate::common::{Example, Sibling, jdk, lumen, lumen_within};
 
 #[test]
 fn every_example_is_accepted_refused_or_run_exactly_as_it_says() {
@@ -103,6 +103,9 @@ fn hold_to_its_expectation(path: &Path) {
 ///
 /// Every module beside it is copied too, under its own name, because an import names the file
 /// beside the one that writes it and an example may be written across several.
+///
+/// The run is started in the copy's own directory, because an example that writes a file names
+/// it with a path of its own and a relative one is read against the directory it started in.
 fn started(opened: &Opened, stated: &Ran) {
     let shown = opened.path.display();
     if jdk().is_none() {
@@ -118,7 +121,7 @@ fn started(opened: &Opened, stated: &Ran) {
     }
     let mut command = vec!["run", copy.path.to_str().expect("a UTF-8 path")];
     command.extend(stated.arguments.iter().map(String::as_str));
-    let run = lumen(&command);
+    let run = lumen_within(&command, &copy.directory);
     assert_eq!(
         run.code, stated.status,
         "{shown} ends with {} where its header states {}:\n{}",

@@ -121,6 +121,11 @@ An example headed `// expect-run` is run with `lumen run`, and with the words th
 It must end with the status the header states, which is `0` where the header states none.
 `docs/specs/run.md` says what running amounts to and where the JDK comes from.
 
+The example is copied into a directory of its own, with every module beside it, and is run there.
+An example that writes a file therefore writes it into that directory, which is taken away again
+when the example has run.
+Nothing an example writes reaches the tree it was read out of.
+
 What the program writes to standard output is compared with what the header states.
 What it writes to standard error is compared the same way, against the lines stated with `!`.
 The stated lines are each followed by a line break, and the comparison is exact.

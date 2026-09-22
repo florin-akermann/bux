@@ -1,0 +1,9 @@
+// expect-error: L0425
+// A `List` crosses as a parameter and never as a result. A list a member gives back is a JVM
+// object that member may still reach through and change, and a Bux value is never that.
+fn main(arguments: List<String>) -> Int {
+    _ = a_list_of("one")
+    0
+}
+
+extern static a_list_of(value: String) -> List<String> = "java.util.List.of"

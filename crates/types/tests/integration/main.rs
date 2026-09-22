@@ -16,6 +16,7 @@ mod inference;
 mod interop;
 mod io;
 mod library;
+mod lists;
 mod literals;
 mod operators;
 mod patterns;

@@ -563,7 +563,9 @@ fn boxing(of: &Descriptor) -> Option<Boxing> {
         Descriptor::Long => ("java/lang/Long", "longValue"),
         Descriptor::Boolean => ("java/lang/Boolean", "booleanValue"),
         Descriptor::Integer => ("java/lang/Integer", "intValue"),
-        Descriptor::Reference(_) | Descriptor::Array(_) => return None,
+        // A `char` is no Lumen type, so nothing carries one to where a reference is wanted: it
+        // stands on the stack between a member and the `Int` it is widened to, and nowhere else.
+        Descriptor::Character | Descriptor::Reference(_) | Descriptor::Array(_) => return None,
     };
     Some(Boxing {
         class: ClassName::new(class),
@@ -573,7 +575,7 @@ fn boxing(of: &Descriptor) -> Option<Boxing> {
 }
 
 /// A method of the list a `for … in` walks.
-fn reaching(name: &str, parameters: Vec<Descriptor>, result: Descriptor) -> MethodRef {
+pub(crate) fn reaching(name: &str, parameters: Vec<Descriptor>, result: Descriptor) -> MethodRef {
     MethodRef {
         class: ClassName::new(LIST),
         name: name.to_owned(),

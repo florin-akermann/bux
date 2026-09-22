@@ -47,10 +47,11 @@ pub struct LibraryModule {
 impl LibraryModule {
     /// The classes it becomes, lowered under the name it is reached by.
     pub fn lowered(self) -> Lowered {
+        let library = reaching_the_library();
         lowered_as(&Written {
             source: self.source(),
             named: self.named,
-            imported: &Imported::default(),
+            imported: &library,
             asked: &Asked::default(),
         })
     }
@@ -62,7 +63,7 @@ impl LibraryModule {
 
     /// Every name a module importing it reaches, which is what it puts out.
     pub fn offers(self) -> Surface {
-        surface(self.source())
+        surface_reaching(self.source(), &reaching_the_library())
     }
 
     /// The class it is, which is the class every function of it is a method of.
@@ -114,11 +115,29 @@ pub fn lowered_as(written: &Written<'_>) -> Lowered {
 
 /// Every name a module importing `source` reaches, which is what `source` puts out.
 fn surface(source: &str) -> Surface {
+    surface_reaching(source, &Imported::default())
+}
+
+/// The same, of a module that reaches what `imported` offers it.
+fn surface_reaching(source: &str, imported: &Imported) -> Surface {
     let program = lumen_parser::parse(source).expect("the offered module parses");
     let resolved = lumen_resolver::resolve(program).expect("the offered module resolves");
-    let typed = lumen_types::check(resolved, &Imported::default())
+    let typed = lumen_types::check(resolved, imported)
         .expect("the offered module has a type for every expression");
     typed.surface().clone()
+}
+
+/// What every library module offers, each inferred reaching the ones handed over before it.
+///
+/// `files` and `process` each import `list`, so lowering either is given what `list` offers,
+/// exactly as the compiler gives it when a program imports one of them.
+pub fn reaching_the_library() -> Imported {
+    lumen_resolver::library::carried()
+        .filter(|(module, _)| *module != lumen_resolver::library::PRELUDE)
+        .fold(Imported::default(), |imported, (module, source)| {
+            let surface = surface_reaching(source, &imported);
+            imported.offering(module, surface)
+        })
 }
 
 /// The body of the function `name` of the module.

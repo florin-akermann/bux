@@ -1,6 +1,7 @@
 //! The top-level declarations of a source file.
 
-use lumen_ast::{DeriveDeclaration, ExternDeclaration, Function, Import, InstanceDeclaration};
+use lumen_ast::InstanceDeclaration;
+use lumen_ast::{DeriveDeclaration, ExternDeclaration, ExternParameter, Function, Import};
 use lumen_ast::{Item, Name};
 use lumen_ast::{Parameter, Program};
 use lumen_ast::{RecordField, Signature, Span, TraitDeclaration, TypeDeclaration};
@@ -49,7 +50,7 @@ pub(crate) fn declared_extern(printer: &mut Printer, written: &ExternDeclaration
         printer.word(" ");
     }
     printer.word(&written.name.text);
-    parameters(printer, &written.parameters);
+    taken(printer, &written.parameters);
     printer.word(" -> ");
     type_ref(printer, &written.result);
     if let Some(named) = written.reaches.named() {
@@ -245,6 +246,25 @@ fn function(printer: &mut Printer, written: &Function) {
     result_type(printer, written.result.as_ref());
     block(printer, &written.body, true);
     printer.end_line();
+}
+
+/// `(text: String, int index: Int)`: the parameters of an `extern`, each with its width.
+///
+/// A width before a parameter's name says the member's own descriptor takes an `int` there,
+/// which `docs/specs/interop.md` states. No other declaration writes one.
+fn taken(printer: &mut Printer, written: &[ExternParameter]) {
+    printer.word("(");
+    for (position, declared) in written.iter().enumerate() {
+        if position > 0 {
+            printer.word(", ");
+        }
+        if let Some(width) = declared.takes.written() {
+            printer.word(width);
+            printer.word(" ");
+        }
+        parameter(printer, &declared.declared);
+    }
+    printer.word(")");
 }
 
 /// `(a: Int, b: Int)`, which a function and a trait's signature write the same way.
