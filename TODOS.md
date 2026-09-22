@@ -6,7 +6,7 @@
 
 ## Open
 
-## 🟡 Item 077: An instance is reached from the module that imports its type
+## 🟢 Item 077: An instance is reached from the module that imports its type
 **Depends on:** Item 063 — a constrained generic now calls the instance by name, in any module.
 `docs/design.md` section 8 says a constraint at `Point` reaches the one `Eq<Point>` there is.
 `docs/specs/modules.md` says a module's surface carries no instances, so `demo.User == demo.User`
