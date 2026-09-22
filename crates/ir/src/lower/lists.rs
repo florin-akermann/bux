@@ -1,17 +1,18 @@
 //! What a call of `list.push` or of `list.at` runs, written out where the call stands.
 //!
 //! `docs/specs/library.md` says the two are the compiler's rather than the `list` module's, and
-//! `docs/specs/codegen.md` says what each of them becomes. Neither is a method of a class, so
-//! neither is ever called: a use is the instructions it always was, the way an operator over
-//! `Int` is.
+//! `docs/specs/codegen.md` says what each of them becomes. Neither is a method of the `list`
+//! class: `at` is the instructions it always was, the way an operator over `Int` is, and `push`
+//! is a call of the class that carries a list, because a push branches and copies.
 
 use lumen_ast::Expr;
 
-use crate::code::{Comparison, Instruction, Label, MethodRef};
-use crate::descriptor::{ClassName, Descriptor, MethodDescriptor};
-use crate::lower::body::{Builder, LIST, reaching};
+use crate::code::{Comparison, Instruction, Label};
+use crate::descriptor::Descriptor;
+use crate::lower::body::Builder;
+use crate::lower::carrier;
 use crate::lower::modules::Through;
-use crate::lower::shape::{CONSTRUCTOR, NONE, SOME, object};
+use crate::lower::shape::{NONE, SOME, object};
 
 /// The one module either of them is reached through, which the library carries.
 const MODULE: &str = "list";
@@ -21,12 +22,6 @@ const PUSH: &str = "push";
 
 /// The name of the one that reads a list at an index.
 const AT: &str = "at";
-
-/// The growable list a push gathers into, which is the one a JVM already has.
-const GATHERING: &str = "java/util/ArrayList";
-
-/// Everything a growable list is built out of, which is what its constructor takes.
-const COLLECTION: &str = "java/util/Collection";
 
 impl Builder<'_> {
     /// What the call runs, where it is a call of one of the two the compiler holds.
@@ -59,36 +54,15 @@ impl Builder<'_> {
         }
     }
 
-    /// `list.push(values, value)`: the list gathered again, with the value after its last element.
+    /// `list.push(values, value)`: the list with the value after its last element.
     ///
-    /// The gathering is a growable list, the value goes on the end of it, and the array it is
-    /// read back as is the array a written list is built from. What comes back is a list built
-    /// the one way a list is built, so the list the push was handed is untouched.
+    /// It is a call of `lumen.List.push`, which claims the next slot of the buffer where it is
+    /// free and copies first where it is not, so the list the push was handed is untouched.
     fn pushed(&mut self, values: &Expr, value: &Expr) -> Descriptor {
-        let holding = Descriptor::reference(LIST);
-        self.emit(Instruction::New(ClassName::new(GATHERING)));
-        self.emit(Instruction::Copy);
-        self.handed(values, Some(holding.clone()));
-        self.emit(Instruction::Construct(MethodRef {
-            class: ClassName::new(GATHERING),
-            name: CONSTRUCTOR.to_owned(),
-            descriptor: MethodDescriptor::new(vec![Descriptor::reference(COLLECTION)], None),
-        }));
-        self.emit(Instruction::Copy);
+        self.handed(values, Some(carrier::list()));
         self.handed(value, Some(object()));
-        self.emit(Instruction::InvokeVirtual(gathered(
-            "add",
-            vec![object()],
-            Descriptor::Boolean,
-        )));
-        self.emit(Instruction::Drop(Descriptor::Boolean));
-        self.emit(Instruction::InvokeVirtual(gathered(
-            "toArray",
-            Vec::new(),
-            Descriptor::array(object()),
-        )));
-        self.emit(Instruction::CollectList);
-        holding
+        self.emit(Instruction::InvokeStatic(carrier::pushed()));
+        carrier::list()
     }
 
     /// `list.at(values, index)`: `Some` of the element there, and `None` past either end.
@@ -96,7 +70,7 @@ impl Builder<'_> {
     /// Both stand in locals because the guard reads each of them twice. A call evaluates its
     /// arguments in the order they are written, and each is evaluated once.
     fn read_at(&mut self, values: &Expr, index: &Expr) -> Descriptor {
-        let holding = Descriptor::reference(LIST);
+        let holding = carrier::list();
         self.handed(values, Some(holding.clone()));
         let list = self.temporary(&holding);
         self.emit(Instruction::Store {
@@ -123,7 +97,7 @@ impl Builder<'_> {
     /// Jumps to `empty` unless the index is one the list holds, which is the whole of the guard.
     ///
     /// It is what makes the narrowing below total: an index that gets past here is at least zero
-    /// and below a size a JVM counts in a small whole number, so a small whole number holds it.
+    /// and below a length a JVM counts in a small whole number, so a small whole number holds it.
     fn within(&mut self, list: u16, at: u16, empty: Label) {
         self.loaded_index(at);
         self.emit(Instruction::Long(0));
@@ -131,29 +105,22 @@ impl Builder<'_> {
         self.emit(Instruction::JumpIfFalse(empty));
         self.loaded_index(at);
         self.loaded_list(list);
-        self.emit(Instruction::InvokeInterface(reaching(
-            "size",
-            Vec::new(),
-            Descriptor::Integer,
-        )));
+        self.emit(Instruction::GetField(carrier::length()));
         self.emit(Instruction::Widen);
         self.emit(Instruction::CompareLongs(Comparison::Less));
         self.emit(Instruction::JumpIfFalse(empty));
     }
 
-    /// The element the list holds at the index, carried as the reference a `Some` holds.
+    /// The element the buffer holds at the index, carried as the reference a `Some` holds.
     fn some_of(&mut self, list: u16, at: u16) -> Descriptor {
         let shape = self.lowering.shapes.built(SOME).clone();
         self.emit(Instruction::New(shape.class.clone()));
         self.emit(Instruction::Copy);
         self.loaded_list(list);
+        self.emit(Instruction::GetField(carrier::slots()));
         self.loaded_index(at);
         self.emit(Instruction::Narrow);
-        self.emit(Instruction::InvokeInterface(reaching(
-            "get",
-            vec![Descriptor::Integer],
-            object(),
-        )));
+        self.emit(Instruction::LoadFromArray);
         self.constructed(&shape)
     }
 
@@ -166,7 +133,7 @@ impl Builder<'_> {
     fn loaded_list(&mut self, list: u16) {
         self.emit(Instruction::Load {
             slot: list,
-            of: Descriptor::reference(LIST),
+            of: carrier::list(),
         });
     }
 
@@ -175,14 +142,5 @@ impl Builder<'_> {
             slot: at,
             of: Descriptor::Long,
         });
-    }
-}
-
-/// A method of the growable list a push gathers into.
-fn gathered(name: &str, parameters: Vec<Descriptor>, result: Descriptor) -> MethodRef {
-    MethodRef {
-        class: ClassName::new(GATHERING),
-        name: name.to_owned(),
-        descriptor: MethodDescriptor::new(parameters, Some(result)),
     }
 }

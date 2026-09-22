@@ -14,7 +14,7 @@ pub enum Descriptor {
     /// One UTF-16 code unit, which nothing in Lumen is carried by; `String.charAt` gives one.
     Character,
     Reference(ClassName),
-    /// An array of what it holds, which only the entry point of a program is written with.
+    /// An array of what it holds: the entry point of a program takes one, and a list holds one.
     Array(Box<Descriptor>),
 }
 

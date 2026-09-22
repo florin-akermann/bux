@@ -8,7 +8,7 @@ use lumen_ir::{Asked, Body, ClassName, Comparison, Descriptor, FieldRef, Guard, 
 use lumen_ir::{Label, Lowered, MethodDescriptor, MethodRef};
 use lumen_types::Imported;
 
-use crate::common::{LibraryModule, Written, body_of, called, class_of, library};
+use crate::common::{LibraryModule, Written, a_list, body_of, called, class_of, library};
 use crate::common::{lowered_as, method_of};
 
 /// A module declaring the two ways of writing a line out, over the types those name.
@@ -429,16 +429,30 @@ fn a_run_reaches_the_jvm_classes_that_start_a_program_and_read_what_it_wrote() {
 }
 
 #[test]
-fn the_command_a_run_is_given_crosses_as_the_java_util_list_a_jvm_holds_it_as() {
+fn the_command_a_run_is_given_crosses_as_a_java_util_list_of_what_it_holds() {
     let written = library("process").lowered();
-    let list = Descriptor::reference("java/util/List");
 
     let built = method_of(
         class_of(&written, &library("process").class()),
         "of_command",
     );
 
-    assert_eq!(built.descriptor.parameters, [list]);
+    assert_eq!(built.descriptor.parameters, [a_list()]);
+    let reached: Vec<String> = built
+        .body
+        .instructions
+        .iter()
+        .filter_map(called)
+        .map(|method| format!("{}.{}{}", method.class, method.name, method.descriptor))
+        .collect();
+    assert_eq!(
+        reached,
+        [
+            "lumen/List.listed(Llumen/List;)Ljava/util/List;",
+            "java/lang/ProcessBuilder.<init>(Ljava/util/List;)V",
+        ],
+        "the list is copied into a `java.util.List`, and the member takes that"
+    );
 }
 
 #[test]

@@ -206,10 +206,8 @@ A node is a `List<Map<K, V>>` of thirty-two children, and nothing writes into a 
 So `with_child` is a `for` loop that pushes every child onto a fresh list, putting the new child
 in where the slot it is given comes round.
 That loop costs the width of the node, which is the thirty-two children the copy above is.
-`list.push` costs what the list holds today, which `docs/specs/library.md` states, so writing a
-node again costs the square of its width rather than its width.
-A node is thirty-two children wide whatever the map holds, so that square is a fixed cost that
-what the map holds never grows.
+Each push is onto the most recent list, so it costs amortized constant time.
+`docs/specs/library.md` states that cost, so writing a node again costs its width.
 
 The five bits a node indexes by are read with `%` and `/` rather than with a bit operator, which
 the language does not write.

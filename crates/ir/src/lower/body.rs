@@ -11,10 +11,7 @@ use crate::code::{Body, Instruction, Label, MethodRef};
 use crate::descriptor::{ClassName, Descriptor, MethodDescriptor};
 use crate::lower::generic::Instantiation;
 use crate::lower::shape::{CONSTRUCTOR, object, object_class};
-use crate::lower::{Lowering, Reaching, Signature, escape};
-
-/// The list a `for … in` walks and a written list builds, which `docs/specs/codegen.md` names.
-pub(crate) const LIST: &str = "java/util/List";
+use crate::lower::{Lowering, Reaching, Signature, carrier, escape};
 
 /// Where a binding lives, which is one local of the method the function became.
 #[derive(Clone, Debug)]
@@ -267,7 +264,7 @@ impl<'a> Builder<'a> {
             ForHeader::Forever => Turn::Forever,
             ForHeader::While(condition) => Turn::While(condition),
             ForHeader::In { binding, iterable } => {
-                let of = Descriptor::reference(LIST);
+                let of = carrier::list();
                 let left = self.expr(iterable);
                 self.adapt(left, Some(of.clone()));
                 let list = self.temporary(&of);
@@ -305,31 +302,23 @@ impl<'a> Builder<'a> {
         let Turn::Walk { list, index, item } = turn else {
             return;
         };
-        let of = Descriptor::reference(LIST);
         let counting = Instruction::Load {
             slot: *index,
             of: Descriptor::Integer,
         };
         let walking = Instruction::Load {
             slot: *list,
-            of: of.clone(),
+            of: carrier::list(),
         };
         self.emit(counting.clone());
         self.emit(walking.clone());
-        self.emit(Instruction::InvokeInterface(reaching(
-            "size",
-            Vec::new(),
-            Descriptor::Integer,
-        )));
+        self.emit(Instruction::GetField(carrier::length()));
         self.emit(Instruction::CompareIntegers(crate::code::Comparison::Less));
         self.emit(Instruction::JumpIfFalse(done));
         self.emit(walking);
+        self.emit(Instruction::GetField(carrier::slots()));
         self.emit(counting);
-        self.emit(Instruction::InvokeInterface(reaching(
-            "get",
-            vec![Descriptor::Integer],
-            object(),
-        )));
+        self.emit(Instruction::LoadFromArray);
         let held = item.clone();
         self.held(held, Some(object()));
     }
@@ -581,13 +570,4 @@ fn boxing(of: &Descriptor) -> Option<Boxing> {
         of: of.clone(),
         read,
     })
-}
-
-/// A method of the list a `for … in` walks.
-pub(crate) fn reaching(name: &str, parameters: Vec<Descriptor>, result: Descriptor) -> MethodRef {
-    MethodRef {
-        class: ClassName::new(LIST),
-        name: name.to_owned(),
-        descriptor: MethodDescriptor::new(parameters, Some(result)),
-    }
 }

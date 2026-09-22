@@ -4,7 +4,7 @@
 //! `docs/specs/library.md` states, so a call of either is written out where it stands rather than
 //! reached on the `list` class.
 
-use lumen_ir::{ClassName, Descriptor, Instruction, Lowered};
+use lumen_ir::{ClassName, Instruction, Lowered};
 
 use crate::common;
 
@@ -31,7 +31,7 @@ fn a_written_list_gathers_its_elements_into_an_array_and_collects_them() {
         body.instructions
             .contains(&Instruction::NewArray(ClassName::new("java/lang/Object")))
     );
-    assert!(body.instructions.contains(&Instruction::CollectList));
+    assert!(body.instructions.contains(&common::building_a_list()));
 }
 
 #[test]
@@ -45,8 +45,8 @@ fn a_written_list_of_nothing_gathers_an_array_of_nothing() {
         [
             Instruction::Integer(0),
             Instruction::NewArray(ClassName::new("java/lang/Object")),
-            Instruction::CollectList,
-            Instruction::Return(Some(Descriptor::reference("java/util/List"))),
+            common::building_a_list(),
+            Instruction::Return(Some(common::a_list())),
         ]
     );
 }
@@ -97,17 +97,22 @@ fn a_push_asks_the_list_module_for_no_method() {
 }
 
 #[test]
-fn a_push_gathers_the_list_and_the_value_after_it_into_one_list() {
+fn a_push_is_one_call_of_the_class_that_carries_a_list() {
     let lowered = pushing();
 
     let body = common::body_of(&lowered, "read");
 
-    assert!(common::calls(
-        body,
-        &ClassName::new("java/util/ArrayList"),
-        "add"
-    ));
-    assert!(body.instructions.contains(&Instruction::CollectList));
+    let reached: Vec<String> = body
+        .instructions
+        .iter()
+        .filter_map(common::called)
+        .filter(|method| method.class != ClassName::new("java/lang/Long"))
+        .map(|method| format!("{}.{}{}", method.class, method.name, method.descriptor))
+        .collect();
+    assert_eq!(
+        reached,
+        ["lumen/List.push(Llumen/List;Ljava/lang/Object;)Llumen/List;"]
+    );
 }
 
 #[test]
@@ -120,21 +125,45 @@ fn a_read_at_an_index_asks_the_list_module_for_no_method() {
 }
 
 #[test]
-fn a_read_at_an_index_reaches_the_two_members_that_each_read_one_slot() {
+fn a_read_at_an_index_reads_the_length_and_one_slot_of_the_buffer() {
     let lowered = reading();
 
     let body = common::body_of(&lowered, "read");
 
-    assert!(common::calls(
-        body,
-        &ClassName::new("java/util/List"),
-        "get"
-    ));
-    assert!(common::calls(
-        body,
-        &ClassName::new("java/util/List"),
-        "size"
-    ));
+    let read: Vec<&str> = body
+        .instructions
+        .iter()
+        .filter_map(|step| match step {
+            Instruction::GetField(field) if field.class == ClassName::new("lumen/List") => {
+                Some(field.name.as_str())
+            }
+            _ => None,
+        })
+        .collect();
+    assert_eq!(read, ["length", "slots"]);
+    assert_eq!(
+        body.instructions
+            .iter()
+            .filter(|step| **step == Instruction::LoadFromArray)
+            .count(),
+        1,
+        "one slot, whatever the list holds"
+    );
+}
+
+#[test]
+fn every_class_carries_a_list_in_a_buffer_and_a_length() {
+    let lowered = pushing();
+
+    let carrier = common::class_of(&lowered, &ClassName::new("lumen/List"));
+
+    assert_eq!(common::holds(carrier), ["slots", "length"]);
+    let methods: Vec<&str> = carrier
+        .methods
+        .iter()
+        .map(|method| method.name.as_str())
+        .collect();
+    assert_eq!(methods, ["<init>", "of", "push", "listed"]);
 }
 
 #[test]

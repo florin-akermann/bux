@@ -137,10 +137,7 @@ fn a_type_parameter_that_reaches_no_further_than_a_list_still_names_the_set() {
     assert_eq!(reached.name, "counted$Int");
     assert_eq!(
         reached.descriptor,
-        MethodDescriptor::new(
-            vec![Descriptor::reference("java/util/List")],
-            Some(Descriptor::Long)
-        )
+        MethodDescriptor::new(vec![common::a_list()], Some(Descriptor::Long))
     );
 }
 

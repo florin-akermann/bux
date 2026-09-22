@@ -83,16 +83,23 @@ fn read_out_of(grown: &[i64]) -> String {
 }
 
 /// A program that pushes two values onto one list and reads all three of the lists back.
+///
+/// Both pushes are made before any list is read. The first claims the slot after `held` in the
+/// buffer they share, so the second has to copy rather than write over what the first holds.
 fn two_pushes_onto(grown: &[i64]) -> String {
     let last = i64::try_from(grown.len()).expect("a case grows a list of at most six values");
     let read = vec![
         "list.length(held)".to_owned(),
         read_at("held", last),
-        read_at(&format!("list.push(held, {ONE})"), last),
-        read_at(&format!("list.push(held, {OTHER})"), last),
+        read_at("first", last),
+        read_at("second", last),
         read_at("held", last),
     ];
-    a_program(&pushed_onto("[]", grown), &read)
+    let built = format!(
+        "{}\n    first := list.push(held, {ONE})\n    second := list.push(held, {OTHER})",
+        pushed_onto("[]", grown)
+    );
+    a_program(&built, &read)
 }
 
 /// What that program has to write: the list is as long as it was, and holds what it held.

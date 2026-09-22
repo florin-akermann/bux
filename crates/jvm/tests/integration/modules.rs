@@ -34,7 +34,7 @@ fn every_function_of_a_module_is_a_public_static_method_of_the_module_class() {
         .collect();
     assert_eq!(named, ["counted", "told"], "in the order they are written");
     assert_eq!(module.methods[0].access, PUBLIC_STATIC);
-    assert_eq!(module.methods[0].descriptor, "(Ljava/util/List;)J");
+    assert_eq!(module.methods[0].descriptor, "(Llumen/List;)J");
     assert_eq!(
         module.methods[1].descriptor,
         "(Ldemo/Payment;)Ljava/lang/String;"
@@ -197,13 +197,13 @@ const WRITES_A_LIST: &str = "fn counted() -> Int {
 ";
 
 #[test]
-fn a_module_that_writes_a_list_names_the_static_list_of_as_an_interface_method() {
+fn the_class_that_carries_a_list_names_the_static_list_of_as_an_interface_method() {
     let files = common::compiled(WRITES_A_LIST);
 
-    let module = common::one_of(&files, "demo.class");
+    let carrier = common::one_of(&files, "lumen/List.class");
 
     assert!(
-        gathering(&module).is_some(),
+        gathering(&carrier).is_some(),
         "`List.of` is reached as an interface method, which `invokestatic` needs"
     );
 }

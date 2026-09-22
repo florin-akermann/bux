@@ -4,7 +4,8 @@
 //! one, because what the lowering says is only ever about a module the compiler has accepted.
 
 use lumen_holes::Whole;
-use lumen_ir::{Asked, Body, Class, ClassName, Instruction, Lowered, Method, MethodRef, lower};
+use lumen_ir::{Asked, Body, Class, ClassName, Descriptor, Instruction, Lowered, Method};
+use lumen_ir::{MethodDescriptor, MethodRef, lower};
 use lumen_types::{Imported, Surface};
 
 /// `holder`, lowered knowing everything `source` asked of it.
@@ -205,9 +206,27 @@ pub fn called(instruction: &Instruction) -> Option<&MethodRef> {
         Instruction::Construct(reference)
         | Instruction::InvokeStatic(reference)
         | Instruction::InvokeVirtual(reference)
-        | Instruction::InvokeInterface(reference) => Some(reference),
+        | Instruction::InvokeInterface(reference)
+        | Instruction::InvokeStaticOfInterface(reference) => Some(reference),
         _ => None,
     }
+}
+
+/// The call that builds a list from the array on the stack, which a written list ends with.
+pub fn building_a_list() -> Instruction {
+    Instruction::InvokeStatic(MethodRef {
+        class: ClassName::new("lumen/List"),
+        name: "of".to_owned(),
+        descriptor: MethodDescriptor::new(
+            vec![Descriptor::array(Descriptor::reference("java/lang/Object"))],
+            Some(a_list()),
+        ),
+    })
+}
+
+/// What a value of `List<T>` is carried by, which `docs/specs/codegen.md` names.
+pub fn a_list() -> Descriptor {
+    Descriptor::reference("lumen/List")
 }
 
 /// The names of the classes the module writes, in the order it writes them.

@@ -41,9 +41,13 @@ impl Assembling {
             Instruction::InvokeStatic(method) => self.invoke_static(method, context),
             Instruction::InvokeVirtual(method) => self.invoke_virtual(method, context),
             Instruction::InvokeInterface(method) => self.invoke_interface(method, context),
+            Instruction::InvokeStaticOfInterface(method) => {
+                self.invoke_static_of_interface(method, context);
+            }
             Instruction::NewArray(class) => self.new_array(class, context),
             Instruction::StoreInArray => self.store_in_array(),
-            Instruction::CollectList => self.collect_list(context),
+            Instruction::LoadFromArray => self.load_from_array(),
+            Instruction::ArrayLength => self.array_length(),
             Instruction::Cast(class) => self.cast(class, context),
             Instruction::InstanceOf(class) => self.instance_of(class, context),
             Instruction::Increment { slot } => self.increment(*slot),
@@ -241,23 +245,31 @@ impl Assembling {
         self.pop();
     }
 
-    /// The list of what the array holds, which `java.util.List` declares as a static method.
+    /// One element out of the array, which takes the array and the index.
     ///
-    /// It is declared on an interface, so the pool names it as an interface method; that is
-    /// what `invokestatic` needs to reach one, and it is the only place a module does.
-    fn collect_list(&mut self, context: &mut Context<'_>) {
-        let gathering = MethodRef {
-            class: lumen_ir::ClassName::new("java/util/List"),
-            name: "of".to_owned(),
-            descriptor: lumen_ir::MethodDescriptor::new(
-                vec![Descriptor::array(Descriptor::reference("java/lang/Object"))],
-                Some(Descriptor::reference("java/util/List")),
-            ),
-        };
-        let named = context.pool.interface_method(&gathering);
+    /// Every array a body reads holds references, so what comes out is a `java.lang.Object`.
+    fn load_from_array(&mut self) {
+        self.byte(opcode::AALOAD);
+        self.pop();
+        self.pop();
+        self.push(Held::Object(lumen_ir::ClassName::new("java/lang/Object")));
+    }
+
+    /// How many slots the array on the stack has, which replaces it.
+    fn array_length(&mut self) {
+        self.byte(opcode::ARRAYLENGTH);
+        self.pop();
+        self.push(Held::Integer);
+    }
+
+    /// A static method declared on an interface.
+    ///
+    /// The pool names it as an interface method, which is what `invokestatic` needs to reach one.
+    fn invoke_static_of_interface(&mut self, method: &MethodRef, context: &mut Context<'_>) {
+        let named = context.pool.interface_method(method);
         self.byte(opcode::INVOKESTATIC);
         self.short(named);
-        self.called(&gathering, 0);
+        self.called(method, 0);
     }
 
     fn construct(&mut self, method: &MethodRef, context: &mut Context<'_>) {

@@ -14,6 +14,7 @@ use lumen_types::Type;
 use crate::code::{Body, Comparison, FieldRef, Guard, Instruction, Label, MethodRef};
 use crate::descriptor::{ClassName, Descriptor, MethodDescriptor};
 use crate::lower::body::as_a_reference;
+use crate::lower::carrier;
 use crate::lower::shape::{CONSTRUCTOR, ERR, NONE, OK, OPTION, RESULT, SOME};
 use crate::lower::shape::{Shape, Shapes};
 use crate::lower::{Lowering, Signature};
@@ -82,10 +83,16 @@ pub(crate) fn body(
 /// The two differ where a parameter is written `int`: the method takes the `long` an `Int` is,
 /// and the member's own descriptor takes the `int` it is narrowed to. `docs/specs/interop.md`
 /// states the narrowing and the range that is read before it.
+///
+/// They differ too where a parameter is a list: the method takes the `lumen.List` that carries
+/// one, and the member takes the `java.util.List` of what it holds, which `docs/specs/codegen.md`
+/// states.
 struct Arguments {
     /// What each parameter arrives as, which is the descriptor this method is written with.
     arriving: Vec<Descriptor>,
-    /// What the member's own descriptor takes, an `int` wherever the declaration narrows one.
+    /// What each argument becomes between the slot it arrives in and the member.
+    crossings: Vec<Crossing>,
+    /// What the member's own descriptor takes, which each crossing gives.
     reaching: Vec<Descriptor>,
 }
 
@@ -93,20 +100,30 @@ impl Arguments {
     /// What `declaration` takes, read off the signature inference gave it and the words it wrote.
     fn of(signature: &Signature, declaration: &ExternDeclaration) -> Self {
         let arriving: Vec<Descriptor> = signature.parameters.iter().flatten().cloned().collect();
-        let reaching = arriving
+        let crossings: Vec<Crossing> = arriving
             .iter()
             .zip(&declaration.parameters)
             .map(|(of, parameter)| match parameter.takes {
-                Takes::WhatTheParameterIs => of.clone(),
-                Takes::AnInt => Descriptor::Integer,
+                Takes::WhatTheParameterIs if *of == carrier::list() => Crossing::Listed,
+                Takes::WhatTheParameterIs => Crossing::AsItIs,
+                Takes::AnInt => Crossing::Narrowed,
             })
             .collect();
-        Self { arriving, reaching }
+        let reaching = arriving
+            .iter()
+            .zip(&crossings)
+            .map(|(of, crossing)| crossing.reaching(of))
+            .collect();
+        Self {
+            arriving,
+            crossings,
+            reaching,
+        }
     }
 
     /// Whether any argument is narrowed, which is what the range is read for and the `None` says.
     fn narrows(&self) -> bool {
-        self.arriving != self.reaching
+        self.crossings.contains(&Crossing::Narrowed)
     }
 
     /// The first slot no parameter occupies, which is where the body holds what it needs to.
@@ -119,8 +136,8 @@ impl Arguments {
     /// It stands before the member is reached, so an argument that does not fit reaches nothing.
     fn fitting(&self) -> Vec<Instruction> {
         let mut instructions = Vec::new();
-        for (slot, narrowed) in self.narrowed() {
-            if !narrowed {
+        for (slot, crossing) in self.slotted() {
+            if crossing != Crossing::Narrowed {
                 continue;
             }
             instructions.extend(within(
@@ -133,33 +150,61 @@ impl Arguments {
         instructions
     }
 
-    /// Every argument loaded from the slot it arrives in, narrowed where the member takes an
-    /// `int`.
+    /// Every argument loaded from the slot it arrives in, and made what the member takes.
     fn loaded(&self) -> Vec<Instruction> {
         let mut instructions = Vec::new();
-        for ((slot, narrowed), arrived) in self.narrowed().zip(&self.arriving) {
+        for ((slot, crossing), arrived) in self.slotted().zip(&self.arriving) {
             instructions.push(Instruction::Load {
                 slot,
                 of: arrived.clone(),
             });
-            if narrowed {
-                instructions.push(Instruction::Narrow);
-            }
+            instructions.extend(crossing.made());
         }
         instructions
     }
 
-    /// Each argument's slot and whether it is narrowed, where a whole number takes two slots.
-    fn narrowed(&self) -> impl Iterator<Item = (u16, bool)> {
+    /// Each argument's slot and how it crosses, where a whole number takes two slots.
+    fn slotted(&self) -> impl Iterator<Item = (u16, Crossing)> {
         let mut slot = 0;
-        self.reaching
+        self.crossings
             .iter()
             .zip(&self.arriving)
-            .map(move |(reached, arrived)| {
+            .map(move |(crossing, arrived)| {
                 let at = slot;
                 slot += arrived.width();
-                (at, reached != arrived)
+                (at, *crossing)
             })
+    }
+}
+
+/// What an argument becomes between the slot it arrives in and the member it reaches.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Crossing {
+    /// The member takes what the argument arrives as.
+    AsItIs,
+    /// The member takes the `int` the `Int` is narrowed to.
+    Narrowed,
+    /// The member takes the `java.util.List` of what the list holds.
+    Listed,
+}
+
+impl Crossing {
+    /// What the member's own descriptor takes where the argument arrives as `arrived`.
+    fn reaching(self, arrived: &Descriptor) -> Descriptor {
+        match self {
+            Self::AsItIs => arrived.clone(),
+            Self::Narrowed => Descriptor::Integer,
+            Self::Listed => carrier::java_list(),
+        }
+    }
+
+    /// What makes the argument on the stack into what the member takes.
+    fn made(self) -> Option<Instruction> {
+        match self {
+            Self::AsItIs => None,
+            Self::Narrowed => Some(Instruction::Narrow),
+            Self::Listed => Some(Instruction::InvokeStatic(carrier::crossed())),
+        }
     }
 }
 

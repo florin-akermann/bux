@@ -99,10 +99,11 @@ impl Boundary<'_> {
     /// `()` is the one a `field` parts company over: a member gives nothing back, and a field
     /// holds something or is no field.
     ///
-    /// `List<T>` is a `java.util.List` already, so a member takes one as it takes any other
-    /// value. It is a parameter and never a result: a list a member gives back is a JVM object
-    /// the member may still reach through and change, and a Lumen value is never that. What it
-    /// holds is held to the same rule, so a list of a type no member takes is none either.
+    /// `List<T>` crosses as a `java.util.List` copy of what it holds, so a member takes one as
+    /// it takes any other value. It is a parameter and never a result: a list a member gives
+    /// back is a JVM object the member may still reach through and change, and a Lumen value is
+    /// never that. What it holds is held to the same rule, so a list of a type no member takes
+    /// is none either.
     fn carries(&self, held: &Type) -> bool {
         let Type::Named { name, arguments } = held else {
             return matches!(held, Type::Unit) && self.crossing.of_a_call();

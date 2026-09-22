@@ -24,6 +24,7 @@ demo.class                 the module: one static method per function
 demo/User.class            one class per type the module declares
 demo/Payment$Failed.class  one class per variant of an algebraic data type
 lumen/Option.class         the prelude types, which every module may reach
+lumen/List.class           what carries a list: a buffer and a length
 lumen/prelude.class        the prelude's instances over a list, at each set of types asked
 ```
 
@@ -38,6 +39,7 @@ name and not only of the one that would otherwise clash with its own type.
 
 The prelude types are written on every build, in the package `lumen`.
 They are `Option` with `Some` and `None`, and `Result` with `Ok` and `Err`.
+`lumen/List` is written with them, and "How a list is carried" below states it.
 Writing them with the module keeps a build self-contained: there is no runtime jar to install and
 no version of one to agree with.
 
@@ -59,7 +61,7 @@ String          java.lang.String
 a declared type the class written for it
 Option<T>       lumen.Option
 Result<T, E>    lumen.Result
-List<T>         java.util.List
+List<T>         lumen.List
 ```
 
 A type parameter written in a function signature is carried by nothing, because no method written
@@ -129,7 +131,7 @@ A module that declares `main` at the shape a program starts at is written with o
 the entry point is written: the one parameter is `List<String>`, and the result is `Int`.
 
 The body of the entry point is four steps.
-It hands the array a JVM gave it to `java.util.List.of`, which is how a written list is built
+It hands the array a JVM gave it to `lumen.List.of`, which is how a written list is built
 too, and calls the `main` the module declares with the list that comes out.
 It takes the low eight bits of the whole number `main` gave back, because a status is that wide,
 and it hands those to `java.lang.System.exit`.
@@ -138,9 +140,30 @@ twice, which the JVM tells apart by descriptor.
 Writing the entry point with the module is what makes running the module class the same thing as
 running the program, so `lumen run` supplies nothing of its own; `docs/specs/run.md` says how.
 
+## How a list is carried
+
+A list is carried by `lumen.List`, a value class that every build writes with the prelude types.
+It holds two fields: a buffer, which is a `java.lang.Object[]`, and a length, which is an `int`.
+The list holds the first `length` elements of the buffer, and nothing past them.
+Two lists can share one buffer, and each of them reads only its own first `length` slots.
+
+The buffer also records how many of its slots are filled.
+A slot is filled when it holds an element, and an empty slot holds `null`.
+No element is `null`, because `docs/design.md` has no null and a `()` stands as a fresh object.
+The filled slots are always the first ones, because a push fills only the first empty slot.
+So the filled count of a buffer is the index of its first empty slot, or its capacity.
+
+The buffer, the length, and the filled count are inside the compiler and this class only.
+No Bux program can observe them.
+Equality, the order, the hash, and the text of a list each read only its first `length` elements.
+`docs/specs/library.md` states that each of the four reads a list with `at` and nothing else.
+
+`lumen.List` declares its constructor and three static methods: `of`, `push`, and `listed`.
+It declares no method that a JVM class inherits, as no class that a module writes does.
+
 ## How a list is built
 
-A written list is gathered into a `java.lang.Object[]` and handed to `java.util.List.of`.
+A written list is gathered into a `java.lang.Object[]` and handed to `lumen.List.of`.
 The array is as long as the list has elements, and it is filled left to right, so each element
 is evaluated once and in the order it is written.
 An empty list is the same three steps with nothing between the array and the call.
@@ -148,32 +171,58 @@ An empty list is the same three steps with nothing between the array and the cal
 The array holds references, so a whole number or a truth value written in a list is boxed on the
 way in, exactly as one put in a field a type parameter left open is.
 
-`List.of` is what builds the list because what it gives back holds its elements and cannot be
-changed, which is what a Lumen value is.
-A list that was a view of the array it was gathered into would be a JVM object that something
-else could still reach through, and `docs/design.md` section 2 keeps that out.
-`List.of` is declared on an interface, so the call names it as one; that is the only place a
-module reaches a static method of an interface.
+`of` keeps the array as the buffer of the list, and the list is as long as the array.
+Nothing else holds the array, so nothing else can change what the list holds.
+The array is full, so the first push onto a written list copies it, as the next section states.
 
 ## How a list is grown and read at an index
 
 `list.push` and `list.at` are the compiler's, which `docs/specs/library.md` states, so neither is
 a method the `list` class declares.
-A call of either is written out where it stands, the way an operator over `Int` is.
+A call of `at` is written out where it stands, the way an operator over `Int` is.
+A call of `push` is a call of `lumen.List.push`, because a push branches and copies.
 
-`push` gathers the list it is handed and the value after it, and hands the gathering to `List.of`.
-It builds a `java.util.ArrayList` out of the list, adds the value to it, and reads it back as an
-array, which is the array the three steps above gather a written list into.
+A push onto a list whose length equals the filled count of its buffer claims the next slot.
+It writes the element into that slot, and gives back a new list with the same buffer and one more.
+If the buffer is full, the push first copies the elements into a new buffer.
+The new buffer has twice the old capacity and one slot more, so an empty buffer grows too.
+This is the textbook growth, and it costs amortized constant time.
+
+A push onto a list whose length is less than the filled count copies before it writes.
+Another push already extended that buffer past this list, so the next slot holds another element.
+The push copies the first `length` elements into a new buffer, and appends the element there.
+The new buffer has twice the length of the list and one slot more.
+So an old list never sees a later element, and a later list never sees an element of another push.
+
 The value is boxed on the way in, exactly as one written in a list is.
-The list that comes back is a `List.of` list like any other, so what the push was handed is
-untouched and what it gives back cannot be changed.
 
-`at` reads `List.size` and then `List.get`, and each is one step.
-The index is an `Int`, which is a `long`, and each of those members counts in `int`, so the index
-is narrowed to the width the member takes.
+The cost is exact.
+A push onto the most recent list of a buffer costs amortized constant time.
+A push onto an older list costs what that list holds, because the push copies it.
+`at` costs the same at every index, because it reads one slot of the buffer.
+
+A program runs on one thread in version 0.3, so the claim of a slot is a plain write.
+When concurrency lands in version 0.4, the claim of a slot becomes atomic.
+Two pushes onto one list from two threads then claim the slot once, and the other push copies.
+
+`at` reads the length of the list, and then the slot of the buffer at the index.
+The index is an `Int`, which is a `long`, and a JVM array counts in `int`, so the index is
+narrowed to that width.
 The narrowing is total because the read is guarded: an index below zero and an index at or above
-the size are each `None`, and every index that gets past the guard fits an `int`.
+the length are each `None`, and every index that gets past the guard fits an `int`.
 What the guard lets through is `Some` of the element, carried as the reference an `Option` holds.
+
+A `for … in` over a list reads the same two fields.
+It counts from zero up to the length, and reads the slot of the buffer at each count.
+
+A list that crosses into a Java member is a `java.util.List`, which `docs/specs/interop.md` states.
+`lumen.List.listed` copies the first `length` elements into a new array, and hands that to
+`java.util.List.of`.
+The member gets a list that it cannot change, and that holds nothing the Bux list does not hold.
+An element that is a list crosses the same way, so each inner list is a `java.util.List` too.
+`tests/spec/interop/a_list_of_lists_is_taken.lm` holds a member to that.
+`List.of` is declared on an interface, so the call names it as one; that is the only place a
+class that a build writes reaches a static method of an interface.
 
 ## How a generic is written
 
@@ -484,8 +533,14 @@ These hold and are checked with property-based tests:
 14. A written list of `n` elements gathers them into an array of `n` and builds one list.
 15. As many values stand for nothing as there are `()`s written where a reference is wanted.
 16. A call of `list.push` or of `list.at` asks the `list` class for no method.
+    A push is a call of `lumen.List.push`, and `at` calls nothing but a constructor of `Option`.
 17. A method written for a set of types calls the instance each type in that set has.
 
 That a constrained type parameter settled on two types with one head is written as two methods is
 a claim about a running program, so it is held to by `tests/spec/traits/over_a_list.lm` and
 `tests/spec/traits/over_a_generic_type.lm` rather than by a property.
+
+What a push does to a buffer is a claim about a running program too.
+`crates/cli/tests/integration/lists.rs` holds that two pushes onto one list leave three lists.
+Each of the three holds what it held when it was made.
+`tests/spec/library/growing_long.lm` pushes a million elements, which a copy on each push cannot.

@@ -184,7 +184,7 @@ fn a_written_list_gathers_as_many_elements_as_it_writes_and_builds_one_list(tc: 
     let collected = body
         .instructions
         .iter()
-        .filter(|step| **step == Instruction::CollectList)
+        .filter(|step| **step == common::building_a_list())
         .count();
     assert_eq!(
         body.instructions.first(),

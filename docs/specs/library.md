@@ -135,17 +135,10 @@ The list it was handed is unchanged, because a list is a value and nothing reach
 It gives `None` where the index is below zero, and where it is the length or above it.
 Neither is partial, and neither panics.
 
-`at` costs the same whatever the list holds, because the member behind it reads one slot.
-
-`push` costs what the list holds, and that cost is the shape of a list rather than the lowering.
-The list a push is handed keeps every element it had, so the list it gives back holds them again.
-A list grown a thousand times by `push` therefore costs the square of what it ends up holding.
-A `push` that cost the same whatever the list holds asks for a buffer whose slots past the end of
-every list sharing it are free.
-That is a length beside a buffer rather than one `java.util.List`, which is what
-`docs/specs/codegen.md` holds a list as.
-Until a list is held as one of those, the cost is written down here rather than hidden, which is
-what `docs/specs/collections.md` does of a map.
+`at` costs the same at every index, because it reads one slot.
+`push` onto the most recent list costs amortized constant time.
+`push` onto an older list costs what that list holds.
+`docs/specs/codegen.md` states the buffer and the length that give both costs.
 
 ## The instances a list has
 

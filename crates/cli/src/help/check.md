@@ -53,8 +53,8 @@ Lumen signature: `extern type PrintStream = "java.io.PrintStream"` names the cla
 `static`, `method`, and `new` name the four kinds of member the JVM has. A parameter or a result
 is `Bool`, `Int`, `String`, or a type an `extern type` names, and nothing else crosses; a result
 may also be `()`, an `Option` whose `None` is the `null` the member gave back, or a `Result` whose
-`Err` holds what a throw said of itself, and a parameter may also be a `List`, which is the
-`java.util.List` a JVM already holds one as. `Int` compiles to a `long`, and `int` or `char`
+`Err` holds what a throw said of itself, and a parameter may also be a `List`, which crosses as a
+`java.util.List` of what it holds. `Int` compiles to a `long`, and `int` or `char`
 after the kind says the member's own descriptor gives one of those instead, which the call widens
 to the `Int` the signature declares: `extern method int length(text: String) -> Int = "length"`.
 A parameter writes `int` before its name to say the member takes one there, and the argument is

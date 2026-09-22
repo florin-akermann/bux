@@ -78,8 +78,8 @@ The JVM's `double` and the rest of its primitives are types no Lumen type compil
 member whose descriptor names one is not reachable and the answer is to name one that does not.
 The two widths are the exception, and the sections on them state each one.
 
-A `List<T>` is a `java.util.List` already, which `docs/specs/codegen.md` states, so a member takes
-one the way it takes any other value.
+A `List<T>` crosses as a `java.util.List` that holds what the list holds, and nothing more.
+`docs/specs/codegen.md` states the copy that builds it, so the member cannot change the Bux list.
 It is a parameter and never a result.
 A list a member gives back is a JVM object that member may still reach through and change, and
 `docs/design.md` section 2 keeps a value that something else can change out of the language.

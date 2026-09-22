@@ -1,0 +1,28 @@
+// expect-run
+// > the list holds 1000000
+// > at 999999 it holds 1000000
+// A push onto the most recent list of a buffer costs amortized constant time, which
+// `docs/specs/codegen.md` states. A million pushes therefore run at once, where a push that
+// copied the whole list each time would copy the square of a million elements.
+import io
+
+import list
+
+fn main(arguments: List<String>) -> Int {
+    counted := counting(1000000)
+    io.println("the list holds " + shown(list.length(counted)))
+    io.println("at 999999 it holds " + shown(or(list.at(counted, 999999), 0)))
+    0
+}
+
+/// The whole numbers from one up to `last`, each pushed onto the list the loop keeps.
+// example: list.length(counting(3)) == 3
+fn counting(last: Int) -> List<Int> {
+    var counted = []
+    var next = 1
+    for next <= last {
+        counted = list.push(counted, next)
+        next += 1
+    }
+    counted
+}

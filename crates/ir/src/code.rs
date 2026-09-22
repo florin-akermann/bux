@@ -126,8 +126,12 @@ pub enum Instruction {
     NewArray(ClassName),
     /// Puts the value on top into the array two below it, at the index between the two.
     StoreInArray,
-    /// Makes a list of what the array on the stack holds, which is what a written list becomes.
-    CollectList,
+    /// Reads the value of the array one below the top, at the index on the top.
+    ///
+    /// Every array a body reads holds references, which is what the buffer of a list is.
+    LoadFromArray,
+    /// Replaces the array on the stack with how many slots it has.
+    ArrayLength,
     /// Runs a constructor over the values above the instance it initialises.
     Construct(MethodRef),
     /// Reads a field of the instance on the stack.
@@ -138,8 +142,12 @@ pub enum Instruction {
     PutField(FieldRef),
     InvokeStatic(MethodRef),
     InvokeVirtual(MethodRef),
-    /// Calls a method of an interface, which is how a `for … in` walks a list.
+    /// Calls a method of an interface, which is how an `extern` reaches one.
     InvokeInterface(MethodRef),
+    /// Calls a static method of an interface.
+    ///
+    /// `java.util.List.of` is the one there is, which is how a list crosses into a Java member.
+    InvokeStaticOfInterface(MethodRef),
     /// Refuses the value on the stack unless it is an instance of the class.
     Cast(ClassName),
     /// Asks whether the value on the stack is an instance of the class, leaving a truth value.

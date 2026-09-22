@@ -31,7 +31,7 @@ impl Shapes {
 }
 
 /// A record: one class holding one field per field the type declares, and nothing extends it.
-fn record_class(shape: &Shape) -> Class {
+pub(crate) fn record_class(shape: &Shape) -> Class {
     let mut class = Class::new(shape.class.clone());
     class.fields = held(shape);
     class.methods = vec![constructor(shape, &object_class())];

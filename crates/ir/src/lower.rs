@@ -6,6 +6,7 @@
 //! `match` tests — are all made here, so that writing the bytes never has to make one.
 
 mod body;
+pub(crate) mod carrier;
 mod classes;
 mod derive;
 mod escape;
@@ -82,6 +83,7 @@ fn lowered(typed: &TypedProgram, module: &str, mut shapes: Shapes, asked: &Asked
     let lowering = Lowering::of(typed, module, shapes);
     let mut classes = vec![lowering.module_class(asked)];
     classes.extend(lowering.shapes.classes());
+    classes.push(carrier::carrier());
     Lowered {
         classes,
         asks: lowering.asks.into_inner(),
@@ -252,7 +254,7 @@ impl Lowering<'_> {
                         slot: 0,
                         of: arguments(),
                     },
-                    Instruction::CollectList,
+                    Instruction::InvokeStatic(carrier::built()),
                     Instruction::InvokeStatic(MethodRef {
                         class: class.name.clone(),
                         name: START.to_owned(),

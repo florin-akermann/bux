@@ -1,0 +1,16 @@
+// expect-run
+// > 1
+// > -1
+// A list of lists crosses as a `java.util.List` whose each element is a `java.util.List` too.
+// `java.util.Collections.indexOfSubList` compares the elements it is given with `equals`, which
+// answers by what two `java.util.List` values hold, so it finds `[["b"]]` where it stands.
+import io
+
+fn main(arguments: List<String>) -> Int {
+    words := [["a"], ["b"]]
+    io.println(shown(index_of_part(words, [["b"]])))
+    io.println(shown(index_of_part(words, [["c"]])))
+    0
+}
+
+extern static int index_of_part(whole: List<List<String>>, part: List<List<String>>) -> Int = "java.util.Collections.indexOfSubList"

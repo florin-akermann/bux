@@ -14,6 +14,7 @@ use lumen_types::{BuiltBy, OfferedConstructor, OfferedType, Type};
 
 use crate::asked::Specialisation;
 use crate::descriptor::{ClassName, Descriptor, MethodDescriptor};
+use crate::lower::carrier;
 
 /// The type a value of, or nothing, is written as, which a `?` hands a `None` back from.
 pub(crate) const OPTION: &str = "Option";
@@ -465,7 +466,7 @@ impl Shapes {
             "Int" => Descriptor::Long,
             "Bool" => Descriptor::Boolean,
             "String" => Descriptor::reference("java/lang/String"),
-            "List" => Descriptor::reference("java/util/List"),
+            "List" => carrier::list(),
             declared if prelude::declares_type(declared) => {
                 Descriptor::Reference(prelude_class(declared))
             }

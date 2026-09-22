@@ -10,7 +10,8 @@ use lumen_types::Type;
 use crate::code::{Arithmetic, Comparison, FieldRef, Instruction, MethodRef};
 use crate::descriptor::Descriptor;
 use crate::lower::Instance;
-use crate::lower::body::{Builder, Held, LIST};
+use crate::lower::body::{Builder, Held};
+use crate::lower::carrier;
 use crate::lower::modules::Through;
 use crate::lower::operator::is_negation;
 use crate::lower::shape::{CONSTRUCTOR, Carried, ERR, NONE, OK, OPTION, RESULT};
@@ -62,8 +63,8 @@ impl Builder<'_> {
             self.handed(element, Some(object()));
             self.emit(Instruction::StoreInArray);
         }
-        self.emit(Instruction::CollectList);
-        Descriptor::reference(LIST)
+        self.emit(Instruction::InvokeStatic(carrier::built()));
+        carrier::list()
     }
 
     /// A literal: one instruction, and the descriptor it leaves behind.

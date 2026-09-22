@@ -1,6 +1,6 @@
 //! What a `()` becomes where something holding a reference is handed one.
 
-use lumen_ir::{ClassName, Descriptor, Instruction, MethodDescriptor, MethodRef};
+use lumen_ir::{ClassName, Instruction, MethodDescriptor, MethodRef};
 
 use crate::common;
 
@@ -36,8 +36,8 @@ fn a_unit_written_in_a_list_fills_the_element_it_is_written_at() {
             Instruction::Copy,
             Instruction::Construct(built()),
             Instruction::StoreInArray,
-            Instruction::CollectList,
-            Instruction::Return(Some(Descriptor::reference("java/util/List"))),
+            common::building_a_list(),
+            Instruction::Return(Some(common::a_list())),
         ]
     );
 }

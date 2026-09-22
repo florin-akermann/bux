@@ -171,7 +171,7 @@ fn a_variant_is_named_after_its_type_so_that_the_two_may_share_a_name() {
 }
 
 #[test]
-fn the_prelude_types_are_written_with_every_module() {
+fn the_prelude_types_and_the_class_that_carries_a_list_are_written_with_every_module() {
     let lowered = common::lowered("fn answer() -> Int {\n    7\n}\n");
 
     let written = common::written(&lowered);
@@ -186,6 +186,7 @@ fn the_prelude_types_are_written_with_every_module() {
             "lumen/Result",
             "lumen/Result$Ok",
             "lumen/Result$Err",
+            "lumen/List",
         ]
     );
 }
@@ -212,6 +213,11 @@ fn no_class_a_module_writes_declares_a_method_beyond_its_constructor() {
 
     for class in &lowered.classes {
         let declared = names_of(class);
+        if class.name == ClassName::new("lumen/List") {
+            // The class that carries a list is the compiler's, and a push is a call of it.
+            assert_eq!(declared, ["<init>", "of", "push", "listed"]);
+            continue;
+        }
         assert!(
             declared.iter().all(|name| *name == "<init>"),
             "{} declares {declared:?}",
@@ -277,16 +283,20 @@ fn a_for_in_counts_through_the_list_it_was_given() {
     let lowered = common::lowered(source);
 
     let walked = common::body_of(&lowered, "walked");
-    assert!(common::calls(
-        walked,
-        &ClassName::new("java/util/List"),
-        "size"
-    ));
-    assert!(common::calls(
-        walked,
-        &ClassName::new("java/util/List"),
-        "get"
-    ));
+    let read: Vec<&str> = walked
+        .instructions
+        .iter()
+        .filter_map(|step| match step {
+            Instruction::GetField(field) => Some(field.name.as_str()),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(
+        read,
+        ["length", "slots"],
+        "the length each turn, then its slot"
+    );
+    assert!(walked.instructions.contains(&Instruction::LoadFromArray));
     assert!(
         walked
             .instructions
@@ -555,7 +565,7 @@ fn a_module_declaring_main_is_written_with_the_entry_point_a_jvm_starts_at() {
     );
     assert_eq!(
         started.descriptor.to_string(),
-        "(Ljava/util/List;)J",
+        "(Llumen/List;)J",
         "the one written first"
     );
     assert!(lumen_ir::is_a_program(&lowered));
@@ -620,7 +630,7 @@ fn the_entry_point_gathers_what_a_jvm_hands_it_into_the_list_main_takes() {
                 slot: 0,
                 of: Descriptor::array(Descriptor::reference("java/lang/String")),
             },
-            Instruction::CollectList,
+            common::building_a_list(),
         ],
         "the array a JVM hands it, gathered into a list"
     );

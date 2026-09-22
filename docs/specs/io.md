@@ -150,12 +150,12 @@ The JVM classes these reach are `java.lang.String`, `java.lang.System`, `java.la
 `java.io.PrintWriter`, `java.io.File`, `java.nio.file.Path`, `java.nio.file.Files`,
 `java.nio.charset.Charset`, `java.nio.charset.StandardCharsets`, `java.util.stream.Stream`,
 `java.util.List`, and `java.util.Iterator`.
-A class file is built of four more that no declaration here writes.
-`java.util.ArrayList` is what a `List` is held as, and `java.lang.Boolean` is what the `Bool` an
-`Ok` carries is boxed as.
+A class file is built of three more that no declaration here writes.
+`java.lang.Boolean` is what the `Bool` an `Ok` carries is boxed as.
 `java.lang.Throwable` and `java.lang.AssertionError` are what a guard and an unreachable arm are
 made of.
-`docs/specs/codegen.md` states each of the four.
+`docs/specs/codegen.md` states each of the three.
+A `List` is held as `lumen.List`, which the build writes, so it is no JVM class that these reach.
 `java.util.stream.Stream`, `java.util.List`, and `java.util.Iterator` are each an interface, which
 the declaration says with the word `docs/specs/interop.md` gives it.
 `java.lang.Object` is what an entry of a listing is held as, because `java.util.Iterator.next`
@@ -268,8 +268,8 @@ A program that wants a program started writes `process.run`, and the rest is how
 `run` builds the one `java.util.List` a `java.lang.ProcessBuilder` is built from: it starts from
 a list holding `command` alone and pushes each value of `arguments` after it, with `list.push` in
 a `for` loop.
-A Bux `List<String>` is that JVM list already, which `docs/specs/codegen.md` states, so it
-crosses the boundary as itself; `docs/specs/interop.md` states the rule that lets it.
+A Bux `List<String>` crosses the boundary as a `java.util.List` of what it holds.
+`docs/specs/interop.md` states the rule that lets it, and `docs/specs/codegen.md` states the copy.
 `run` then builds a `java.lang.ProcessBuilder`, points its standard input at the one this program
 reads, starts it, and reads each stream with a `java.util.Scanner`.
 The scanner is given a delimiter no text holds, so the whole stream is one token, and the scanner

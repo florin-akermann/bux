@@ -11,11 +11,11 @@ use crate::common;
 
 /// Every JVM class the library modules reach, which `docs/specs/io.md` names each of.
 ///
-/// The last four are what the class file itself is made of rather than anything Bux writes: a
-/// `List` is held as a `java/util/ArrayList`, the `Bool` an `Ok` carries is boxed, a guarded
-/// declaration asks whatever it caught what it says of itself, and the arm of a `match` nothing
-/// reaches says so rather than runs on, which `docs/specs/codegen.md` states.
-const REACHED: [&str; 17] = [
+/// The last three are what the class file itself is made of rather than anything Bux writes: the
+/// `Bool` an `Ok` carries is boxed, a guarded declaration asks whatever it caught what it says of
+/// itself, and the arm of a `match` nothing reaches says so rather than runs on, which
+/// `docs/specs/codegen.md` states.
+const REACHED: [&str; 16] = [
     "java/lang/String",
     "java/lang/System",
     "java/io/PrintStream",
@@ -29,7 +29,6 @@ const REACHED: [&str; 17] = [
     "java/util/List",
     "java/util/Iterator",
     "java/lang/Object",
-    "java/util/ArrayList",
     "java/lang/Boolean",
     "java/lang/Throwable",
     "java/lang/AssertionError",

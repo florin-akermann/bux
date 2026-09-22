@@ -1,8 +1,8 @@
 // Starting a program and reading what it wrote, which is how one command line tool runs another.
 //
 // `docs/specs/io.md` states what a run gives back. It is written over `extern` declarations,
-// which `docs/specs/interop.md` states, and the list a JVM starts a program from crosses as the
-// `java.util.List` a Bux list already is.
+// which `docs/specs/interop.md` states, and the list a JVM starts a program from crosses as a
+// `java.util.List` of what the Bux list holds.
 import list
 
 /// Runs `command`, waits for it to end, and gives back what it wrote and the code it ended with.
