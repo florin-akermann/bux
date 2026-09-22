@@ -3,10 +3,10 @@
 > Go's simplicity.
 > Haskell's types.
 > Valhalla's values.
-> A Rust compiler.
+> A compiler written in Rust, until Lumen compiles itself.
 
 Lumen is a small, statically typed language for practical software, built on Valhalla.
-Its compiler is written in Rust and emits JVM bytecode.
+Its compiler emits JVM bytecode and is written in Rust until a compiler in Lumen replaces it.
 
 Four things set the everyday code apart:
 
@@ -38,12 +38,19 @@ cargo nextest run
 git config core.hooksPath .githooks
 ```
 
+The build puts the `lumen` binary in `target/debug`.
+Put that directory on the `PATH` to use `lumen` like any other installed compiler:
+
+```sh
+export PATH="$PWD/target/debug:$PATH"
+```
+
 ## The example program
 
 `example/main.lm` is everyday Lumen in one screen: a record, an ADT, a `match`, and a list walked.
 
 ```sh
-cargo run --bin lumen -- run example/main.lm
+lumen run example/main.lm
 ```
 
 It writes each answer it works out and exits `0`:
@@ -59,5 +66,5 @@ most: 6
 Its public surface is one page, which is what a reader consults to learn a signature:
 
 ```sh
-cargo run --bin lumen -- api example/main.lm
+lumen api example/main.lm
 ```
