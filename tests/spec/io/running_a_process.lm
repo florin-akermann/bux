@@ -1,0 +1,31 @@
+// expect-run
+// > java ran, said nothing on its output, and wrote its version on its errors
+// A run gives back a `Result`, so a command that never starts is a case, not a failure.
+// `java -version` writes what it has to say on standard error and ends with the code 0, and
+// what it says is the JDK's own wording, so the program states what it read rather than that.
+import io
+
+import process
+
+import strings
+
+fn main() -> () {
+    match process.run(["java", "-version"]) {
+        Ok(ran) => io.println(told(ran: ran))
+        Err(why) => io.println(why)
+    }
+}
+
+// example: told(ran: process.Finished { code: 1, output: "", errors: "" }) == "java did not run the way it does"
+fn told(ran: process.Finished) -> String {
+    if has_run_as_java_does(ran: ran) {
+        "java ran, said nothing on its output, and wrote its version on its errors"
+    } else {
+        "java did not run the way it does"
+    }
+}
+
+// example: has_run_as_java_does(ran: process.Finished { code: 0, output: "", errors: "28" })
+fn has_run_as_java_does(ran: process.Finished) -> Bool {
+    ran.code == 0 && strings.length(ran.output) == 0 && strings.length(ran.errors) > 0
+}

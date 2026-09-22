@@ -1,0 +1,90 @@
+// Starting a program and reading what it wrote, which is how one command line tool runs another.
+//
+// `docs/specs/io.md` states what a run gives back. It is written over `extern` declarations,
+// which `docs/specs/interop.md` states, and the command crosses as the `java.util.List` a Bux
+// list already is.
+/// Runs `command`, waits for it to end, and gives back what it wrote and the code it ended with.
+///
+/// `command` holds the program and every argument it is given, in that order, because that is
+/// what a JVM starts a program from. An `Err` is a command that never started at all.
+///
+/// The program reads the standard input this one reads, so a program that asks for input reads
+/// it from whoever started this one rather than from a pipe nobody ever writes on.
+// example: ok_or(run([]), Finished { code: 9, output: "", errors: "" }).code == 9
+fn run(command: List<String>) -> Result<Finished, String> {
+    ran := started(reading_from(of_command(command), inherited()))?
+    output := whole(output_of(ran))
+    errors := whole(errors_of(ran))
+    code := ended(ran)?
+    Ok(Finished { code: code, output: output, errors: errors })
+}
+
+/// The whole of what was written on `stream`, which is nothing where nothing was written.
+///
+/// The scanner is given a delimiter no text holds, so the whole stream is one token, and reading
+/// that token waits for whoever writes on the stream to close it.
+// example: whole(nothing_at_all()) == ""
+fn whole(stream: InputStream) -> String {
+    scanner := delimited(over(stream), "\\A")
+    text := ok_or(token(scanner), "")
+    closed(scanner)
+    text
+}
+
+/// A builder of the program `command` names, given every argument `command` holds after it.
+extern new of_command(command: List<String>) -> ProcessBuilder
+
+/// The builder, with the program reading what `input` names rather than a pipe of its own.
+extern method reading_from(builder: ProcessBuilder, input: Redirect) -> ProcessBuilder = "redirectInput"
+
+/// Reading what the program that started this one reads, which is one thing a program may read.
+extern field inherited() -> Redirect = "java.lang.ProcessBuilder$Redirect.INHERIT"
+
+/// Starts the program the builder names, or says why the program never started.
+extern method started(builder: ProcessBuilder) -> Result<Process, String> = "start"
+
+/// The standard output of the program, which it holds open until it ends.
+extern method output_of(ran: Process) -> InputStream = "getInputStream"
+
+/// The standard error of the program, which it holds open until it ends.
+extern method errors_of(ran: Process) -> InputStream = "getErrorStream"
+
+/// Waits for the program to end and gives the code it ended with, widened from the JVM's `int`.
+extern method int ended(ran: Process) -> Result<Int, String> = "waitFor"
+
+/// A scanner over `stream`, which is what reads the text a program wrote on one.
+extern new over(stream: InputStream) -> Scanner
+
+/// The scanner, reading `pattern` as what stands between one token and the next.
+extern method delimited(scanner: Scanner, pattern: String) -> Scanner = "useDelimiter"
+
+/// The next token, or why there was none, which an empty stream is one case of.
+extern method token(scanner: Scanner) -> Result<String, String> = "next"
+
+/// Closes the scanner and the stream it reads, which is what gives the JVM the handle back.
+extern method closed(scanner: Scanner) -> () = "close"
+
+/// A stream nobody ever wrote on, which is what the whole of nothing is read off.
+extern static nothing_at_all() -> InputStream = "java.io.InputStream.nullInputStream"
+
+/// What a program that ran left behind.
+type Finished = {
+    code: Int
+    output: String
+    errors: String
+}
+
+/// The program a run starts, built from the command that names it.
+extern type ProcessBuilder = "java.lang.ProcessBuilder"
+
+/// A program that is running, or has run, which is what a start gives back.
+extern type Process = "java.lang.Process"
+
+/// Text a program wrote, which is read in the order the program wrote it.
+extern type InputStream = "java.io.InputStream"
+
+/// A reading of a stream, one token at a time.
+extern type Scanner = "java.util.Scanner"
+
+/// Where a program a run starts reads its standard input from.
+extern type Redirect = "java.lang.ProcessBuilder$Redirect"

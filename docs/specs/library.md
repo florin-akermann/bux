@@ -110,7 +110,7 @@ Everything else a module's body is held to, an instance body is held to.
 `prelude` is every name above, and nothing else.
 
 `list`, `strings`, `map`, and `set` each hold what a `for` loop writes the same way twice, and
-`io` and `files` hold what no `for` loop writes at all.
+`io`, `files`, and `process` hold what no `for` loop writes at all.
 `strings` holds one of each: `join` is the loop, and `length` is what no loop reads.
 
 ```text
@@ -120,12 +120,13 @@ map:     empty  insert  get
 set:     empty  insert  has_value
 io:      print  println
 files:   read
+process: run
 ```
 
-`io` and `files` are written over `extern` declarations, which `docs/specs/interop.md` states and
-`docs/specs/io.md` says what each of the two reaches. Each declares those declarations beside its
-functions, and every top-level name is public, so both surfaces are wider than the three names
-above; `docs/specs/io.md` names the rest.
+`io`, `files`, and `process` are written over `extern` declarations, which
+`docs/specs/interop.md` states and `docs/specs/io.md` says what each of the three reaches. Each
+declares those declarations beside its functions, and every top-level name is public, so all
+three surfaces are wider than the four names above; `docs/specs/io.md` names the rest.
 `strings.length` is one such declaration itself.
 It reaches `String.length`, whose descriptor gives an `int` that the declaration widens to the
 `Int` it gives back.
@@ -160,9 +161,13 @@ the parameter on anything else.
 
 ## What is not here yet
 
-`push` and `split` each need a JVM method whose descriptor names a type no `extern` declaration
-can name: a `List` for the one and an array of `String` for the other.
-`docs/specs/interop.md` states what crosses, and they land with whatever names such a member.
+`push` and `split` each need a JVM member whose descriptor names something no `extern`
+declaration reaches.
+`push` needs one that gives a list back, and a `List` crosses as a parameter and never as a
+result; `split` needs one that gives an array of `String` back, and no Lumen type is an array.
+`docs/specs/interop.md` states what crosses, and each lands with whatever names such a member.
+`process.run` takes one `List<String>` rather than a program and its arguments apart for that
+reason, which `docs/specs/io.md` states.
 
 A mapping and a filtering over a list need a parameter whose type is a function, which the
 grammar of `docs/specs/grammar.md` does not write.

@@ -10,7 +10,7 @@ use std::collections::HashMap;
 use lumen_ast::{Called, ExternDeclaration, Gives, JavaName, Reaches, Span};
 
 use crate::error::{TypeError, TypeErrorKind};
-use crate::types::{OPTION, RESULT, Type};
+use crate::types::{LIST, OPTION, RESULT, Type};
 
 /// How a method of each extern type is called, by the Lumen name an `extern type` gives it.
 pub(crate) type Foreign = HashMap<String, Called>;
@@ -59,7 +59,7 @@ pub(crate) fn crosses(
     foreign: &Foreign,
     span: Span,
 ) -> Result<(), TypeError> {
-    if carries(held, crossing, foreign) {
+    if (Boundary { crossing, foreign }).carries(held) {
         return Ok(());
     }
     let kind = TypeErrorKind::DoesNotCross {
@@ -69,27 +69,65 @@ pub(crate) fn crosses(
     Err(TypeError::at(span, kind))
 }
 
-/// Whether a Java member carries `held` where `crossing` says it is written.
+/// One place in an `extern` signature, as the reading of what may be written there holds it.
 ///
-/// `Option` and `Result` are answers rather than values, so each is a result and never a
-/// parameter, and each is read for what it wraps the same way. `Option<Int>` is neither: a
-/// `long` is never `null`, so nothing it held could say `None`. Neither wraps `()` either,
-/// because a variant carrying nothing at all is not a thing a constructor of one builds.
-/// `()` itself is the one a `field` parts company over: a member gives nothing back, and a
-/// field holds something or is no field.
-fn carries(held: &Type, crossing: Crossing, foreign: &Foreign) -> bool {
-    let Type::Named { name, arguments } = held else {
-        return matches!(held, Type::Unit) && crossing == Crossing::GivenBack;
-    };
-    let a_result = crossing != Crossing::Taken;
-    match (name.as_str(), arguments.as_slice()) {
-        ("Bool" | "Int" | "String", []) => true,
-        (OPTION, [value]) if a_result => is_a_reference(value, foreign),
-        (RESULT, [value, Type::Named { name, .. }]) if a_result && name == "String" => {
-            !matches!(value, Type::Unit) && carries(value, crossing, foreign)
+/// Where a type is written and which classes the declaring module named are both read to answer
+/// whether it crosses, so the two travel together rather than down every call apart.
+struct Boundary<'a> {
+    crossing: Crossing,
+    foreign: &'a Foreign,
+}
+
+impl Boundary<'_> {
+    /// Whether a Java member carries `held` where this boundary says it is written.
+    ///
+    /// `()` is the one a `field` parts company over: a member gives nothing back, and a field
+    /// holds something or is no field.
+    ///
+    /// `List<T>` is a `java.util.List` already, so a member takes one as it takes any other
+    /// value. It is a parameter and never a result: a list a member gives back is a JVM object
+    /// the member may still reach through and change, and a Lumen value is never that. What it
+    /// holds is held to the same rule, so a list of a type no member takes is none either.
+    fn carries(&self, held: &Type) -> bool {
+        let Type::Named { name, arguments } = held else {
+            return matches!(held, Type::Unit) && self.crossing == Crossing::GivenBack;
+        };
+        match (name.as_str(), arguments.as_slice()) {
+            ("Bool" | "Int" | "String", []) => true,
+            (LIST, [element]) => self.crossing == Crossing::Taken && self.taken().carries(element),
+            (_, []) => self.foreign.contains_key(name),
+            _ => self.is_an_answer(held),
         }
-        (_, []) => foreign.contains_key(name),
-        _ => false,
+    }
+
+    /// Whether `held` is an answer a member gives back, carrying what it wraps where it is.
+    ///
+    /// `Option` and `Result` are answers rather than values, so each is a result and never a
+    /// parameter, and each is read for what it wraps the same way. `Option<Int>` is neither: a
+    /// `long` is never `null`, so nothing it held could say `None`. Neither wraps `()` either,
+    /// because a variant carrying nothing at all is not a thing a constructor of one builds.
+    fn is_an_answer(&self, held: &Type) -> bool {
+        let Type::Named { name, arguments } = held else {
+            return false;
+        };
+        if self.crossing == Crossing::Taken {
+            return false;
+        }
+        match (name.as_str(), arguments.as_slice()) {
+            (OPTION, [value]) => is_a_reference(value, self.foreign),
+            (RESULT, [value, Type::Named { name, .. }]) if name == "String" => {
+                !matches!(value, Type::Unit) && self.carries(value)
+            }
+            _ => false,
+        }
+    }
+
+    /// The same classes, read where a member takes a value, which an element of a list is.
+    const fn taken(&self) -> Self {
+        Self {
+            crossing: Crossing::Taken,
+            foreign: self.foreign,
+        }
     }
 }
 
