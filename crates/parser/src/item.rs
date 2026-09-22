@@ -1,6 +1,7 @@
 //! The top-level declarations of a source file.
 
-use lumen_ast::{Called, DeriveDeclaration, ExternDeclaration, Function, Gives};
+use lumen_ast::{Called, DeriveDeclaration, ExternDeclaration, ExternParameter, Function};
+use lumen_ast::{Gives, Takes};
 use lumen_ast::{Import, InstanceDeclaration};
 use lumen_ast::{Item, JavaName, Name, Parameter, Program, Reaches};
 use lumen_ast::{RecordField, Signature, TraitDeclaration, TypeDeclaration, TypeDefinition};
@@ -70,7 +71,7 @@ fn foreign_type(cursor: &mut Cursor) -> Result<TypeDeclaration, ParseError> {
 /// It is that word only where a name follows it, exactly as the width is, so
 /// `extern type interface = "…"` still names the type `interface`.
 fn how_it_is_called(cursor: &mut Cursor) -> Called {
-    if !word_before_a_name(cursor, Called::INTERFACE) {
+    if word_before_a_name(cursor) != Some(Called::INTERFACE) {
         return Called::AsAClass;
     }
     cursor.advance();
@@ -103,29 +104,50 @@ fn declared_extern(cursor: &mut Cursor) -> Result<ExternDeclaration, ParseError>
     })
 }
 
-/// `int` before the name, which says the member's own descriptor gives one rather than a `long`.
+/// `int` or `char` before the name, which says what the member's own descriptor gives back.
 ///
 /// It is the width only where a name follows it, so `extern static int(text: String) -> Int` still
 /// declares a function named `int`. `docs/specs/grammar.md` states that telling the two apart is
 /// the one place the grammar reads a second token.
 fn given_back(cursor: &mut Cursor) -> Gives {
-    if !word_before_a_name(cursor, Gives::WIDTH) {
+    let Some(gives) = word_before_a_name(cursor).and_then(Gives::spelled) else {
         return Gives::WhatTheResultIs;
-    }
+    };
     cursor.advance();
-    Gives::AnInt
+    gives
 }
 
-/// Whether the cursor is at `word` with a name after it, which is where such a word is read.
+/// One parameter of an `extern`, with `int` before its name where the member narrows it.
+///
+/// A parameter named `int` is still `int: Int`, because the word is the width only where a name
+/// follows it, which is the rule every such word is read by.
+fn extern_parameter(cursor: &mut Cursor) -> Result<ExternParameter, ParseError> {
+    let takes = narrowed(cursor);
+    let declared = parameter(cursor)?;
+    Ok(ExternParameter { declared, takes })
+}
+
+/// `int` before a parameter's name, which says the member's descriptor takes one.
+fn narrowed(cursor: &mut Cursor) -> Takes {
+    if word_before_a_name(cursor) != Some(Gives::AN_INT) {
+        return Takes::WhatTheParameterIs;
+    }
+    cursor.advance();
+    Takes::AnInt
+}
+
+/// The word the cursor is at where a name follows it, which is where such a word is read.
 ///
 /// `docs/specs/grammar.md` states that a word written before a declared name is that word only
 /// where a name follows it, which is the one place the grammar reads a second token.
-fn word_before_a_name(cursor: &Cursor, word: &str) -> bool {
+fn word_before_a_name<'a>(cursor: &Cursor<'a>) -> Option<&'a str> {
+    if cursor.peek_kind(1) != Some(TokenKind::Identifier) {
+        return None;
+    }
     cursor
         .peek()
         .filter(|token| token.kind == TokenKind::Identifier)
-        .is_some_and(|token| token.span.text(cursor.source()) == word)
-        && cursor.peek_kind(1) == Some(TokenKind::Identifier)
+        .map(|token| token.span.text(cursor.source()))
 }
 
 /// The word after `extern`, which is read only there and is an ordinary name anywhere else.
@@ -167,7 +189,7 @@ impl ExternKind {
     /// A `field` is read rather than called, so `docs/specs/grammar.md` writes it with `()` and
     /// nothing a list could go in; a `method` is called on the first of them, so it takes at
     /// least that one. Neither is a parameter a declaration states and the lowering then drops.
-    fn taken(self, cursor: &mut Cursor) -> Result<Vec<Parameter>, ParseError> {
+    fn taken(self, cursor: &mut Cursor) -> Result<Vec<ExternParameter>, ParseError> {
         let emptiness = match self {
             Self::Field => {
                 cursor.expect_punct(Punct::RParen)?;
@@ -176,7 +198,7 @@ impl ExternKind {
             Self::Static | Self::New => Emptiness::Allowed,
             Self::Method => Emptiness::Forbidden,
         };
-        comma_separated(cursor, Punct::RParen, emptiness, parameter)
+        comma_separated(cursor, Punct::RParen, emptiness, extern_parameter)
     }
 
     /// What the declaration names after its signature, which is the member this kind reaches.

@@ -41,11 +41,11 @@ A `method` declares at least one parameter, because its receiver is the first of
 `field` declares none; both are the shape above rather than a refusal.
 Every one of them writes its result, because there is no body for inference to read one off.
 
-`int` after the kind says the member's descriptor gives one, and `interface` after `type` says
-the class is one.
+A width after the kind says what the member's descriptor gives back, a width before a
+parameter's name says what it takes, and `interface` after `type` says the class is one.
 Each is an ordinary identifier everywhere else, including as the name of the declaration itself.
 Telling a word from a name is the one place the grammar needs a second token: each is the word
-where a name follows it and the name where `(` or `=` does.
+where a name follows it and the name where `(`, `:`, `,`, `)`, or `=` does.
 
 Nothing from a later version is parsed: no `spawn` and no effect arrow.
 The lexer reserves no word for them, so each reads as an ordinary identifier and fails in place.
@@ -99,10 +99,12 @@ derive         := "derive" Name { "," Name } "for" Name
 extern_type    := "extern" "type" [ "interface" ] Name "=" String
 extern         := "extern" ( extern_field | extern_static | extern_method | extern_new )
 extern_field   := "field" [ width ] Name "(" ")" "->" type "=" String
-extern_static  := "static" [ width ] Name "(" [ parameters ] ")" "->" type "=" String
-extern_method  := "method" [ width ] Name "(" parameters ")" "->" type "=" String
-extern_new     := "new" [ width ] Name "(" [ parameters ] ")" "->" type
-width          := "int"
+extern_static  := "static" [ width ] Name "(" [ taken ] ")" "->" type "=" String
+extern_method  := "method" [ width ] Name "(" taken ")" "->" type "=" String
+extern_new     := "new" [ width ] Name "(" [ taken ] ")" "->" type
+taken          := extern_parameter { "," extern_parameter }
+extern_parameter := [ "int" ] parameter
+width          := "int" | "char"
 
 function       := "fn" Name [ constrained_parameters ] "(" [ parameters ] ")" [ "->" type ] block
 constrained_parameters := "<" constrained { "," constrained } ">"

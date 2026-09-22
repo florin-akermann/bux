@@ -164,6 +164,8 @@ catalogue! {
     WidensNoInt => "L0429",
     /// An `extern new` gives back a type an `extern type` named an interface.
     BuildsAnInterface => "L0430",
+    /// An `extern` narrows a parameter and gives back something other than an `Option`.
+    NarrowsWithoutOption => "L0431",
     /// A `match` leaves a value of the type it matches unanswered.
     NonExhaustiveMatch => "L0500",
     /// A `match` lists its arms in an order the type does not declare its variants in.

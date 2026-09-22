@@ -6,10 +6,11 @@ use lumen_ast::Span;
 use lumen_diagnostics::{Code, Diagnostic};
 use lumen_resolver::prelude;
 
-use crate::boundary::Crossing;
 use crate::types::Type;
 
-mod reaching_java;
+pub(crate) mod reaching_java;
+
+use reaching_java::ReachingJava;
 
 /// Why inference failed, and where.
 ///
@@ -57,6 +58,12 @@ impl TypeError {
     #[must_use]
     pub fn help(&self) -> String {
         self.kind.help()
+    }
+}
+
+impl From<ReachingJava> for TypeErrorKind {
+    fn from(reaching: ReachingJava) -> Self {
+        Self::ReachingJava(reaching)
     }
 }
 
@@ -159,22 +166,8 @@ pub(crate) enum TypeErrorKind {
     },
     /// A parameter of a trait's method that states no type.
     SignatureWithoutType(String),
-    /// An `extern` signature names a type no Java member takes or gives back.
-    DoesNotCross {
-        written: Type,
-        /// Where in the signature the type sits, which is what decides whether it may be there.
-        crossing: Crossing,
-    },
-    /// An `extern` states something that is no Java name, in the place it states one.
-    NotAJavaName(String),
-    /// A derive names a type an `extern type` declares.
-    DerivesAForeignType(String),
-    /// An `extern` whose kind reaches a class is written with a signature naming none.
-    ReachesNoClass(String),
-    /// An `extern new` builds what it gives back, and an `extern type` named that an interface.
-    BuildsAnInterface(Type),
-    /// An `extern` says its member gives an `int`, and what it gives back is no `Int`.
-    WidensNoInt(Type),
+    /// An `extern` declaration does not reach what it names, which its own kind says how.
+    ReachingJava(ReachingJava),
     /// A declared type holds a value of itself, around a ring that comes back to it.
     HoldsItself {
         /// The types the ring runs through, beginning and ending at the one refused.
@@ -201,12 +194,7 @@ impl TypeErrorKind {
             Self::InstanceStaysInItsModule { .. } => Code::InstanceStaysInItsModule,
             Self::HeldTypeHasNoInstance { .. } => Code::HeldTypeHasNoInstance,
             Self::SignatureWithoutType(_) => Code::SignatureWithoutType,
-            Self::DoesNotCross { .. } => Code::DoesNotCross,
-            Self::NotAJavaName(_) => Code::NotAJavaName,
-            Self::DerivesAForeignType(_) => Code::DerivesAForeignType,
-            Self::ReachesNoClass(_) => Code::ReachesNoClass,
-            Self::BuildsAnInterface(_) => Code::BuildsAnInterface,
-            Self::WidensNoInt(_) => Code::WidensNoInt,
+            Self::ReachingJava(reaching) => reaching.code(),
             Self::DivisorIsZero => Code::DivisorIsZero,
             Self::Discarded(_) => Code::Discarded,
             Self::Unnamed { .. } => Code::Unnamed,
@@ -251,6 +239,7 @@ impl TypeErrorKind {
 
     const fn stated(&self) -> &'static str {
         match self {
+            Self::ReachingJava(reaching) => reaching.the_rule(),
             Self::Mismatch { .. } => "one type is not another, however alike they are held",
             Self::WrongArgumentCount(_) => {
                 "a call passes one argument for each the declaration lists"
@@ -288,12 +277,6 @@ impl TypeErrorKind {
             Self::SignatureWithoutType(_) => {
                 "a signature has no body to read a type off, so it writes each one out"
             }
-            Self::DoesNotCross { .. }
-            | Self::NotAJavaName(_)
-            | Self::DerivesAForeignType(_)
-            | Self::ReachesNoClass(_)
-            | Self::BuildsAnInterface(_)
-            | Self::WidensNoInt(_) => reaching_java::the_rule(self),
             Self::DivisorIsZero => "a zero written here is never anything else; drop the division",
             Self::Discarded(_) => "write `_ = ` in front of it to throw the value away on purpose",
             Self::Unnamed { .. }
@@ -351,6 +334,7 @@ impl TypeErrorKind {
 impl fmt::Display for TypeErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Self::ReachingJava(reaching) => reaching.fmt(f),
             Self::Mismatch { expected, found } => {
                 write!(f, "expected `{expected}`, found `{found}`")
             }
@@ -400,12 +384,6 @@ impl fmt::Display for TypeErrorKind {
                     "`{name}` states no type, and a signature is never inferred"
                 )
             }
-            Self::DoesNotCross { .. }
-            | Self::NotAJavaName(_)
-            | Self::DerivesAForeignType(_)
-            | Self::ReachesNoClass(_)
-            | Self::BuildsAnInterface(_)
-            | Self::WidensNoInt(_) => f.write_str(&reaching_java::what_it_reached(self)),
             Self::DivisorIsZero => write!(f, "this divisor is zero, so there is no answer"),
             Self::Discarded(left) => write!(f, "`{left}` is left here and nothing takes it"),
             Self::Unnamed { .. }

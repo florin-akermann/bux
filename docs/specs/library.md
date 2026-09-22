@@ -111,11 +111,12 @@ Everything else a module's body is held to, an instance body is held to.
 
 `list`, `strings`, `map`, and `set` each hold what a `for` loop writes the same way twice, and
 `io` and `files` hold what no `for` loop writes at all.
-`strings` holds one of each: `join` is the loop, and `length` is what no loop reads.
+`strings` holds each of them: `join` is the loop, `length` is what no loop reads, and `at` and
+`cut` are a check written over one more `extern` declaration.
 
 ```text
 list:    length  has_value  index_of
-strings: join  length
+strings: at  cut  join  length
 map:     empty  insert  get
 set:     empty  insert  has_value
 io:      print  println
@@ -136,6 +137,21 @@ pair of units, such as an emoji, counts as two.
 steps of its own walks beside them, which `docs/specs/collections.md` lists.
 One module holds one type, because `empty` has one definition and a module holding both maps and
 sets would need two.
+
+`strings.at(text, index)` gives the UTF-16 code unit at `index` as an `Int`.
+It gives `None` where `index` is below `0`, or is not below `strings.length(text)`.
+`strings.cut(text, from, to)` gives the part of the text from `from` up to but not including `to`.
+It gives `None` where `from` is below `0`, where `to` is above the length, or where `from` is
+above `to`.
+`at` costs constant time, and `cut` costs time linear in the length of the part it gives back.
+
+Each of the two is written in Bux: a bounds check over `strings.length`, and then one `extern`
+call.
+The one reaches `String.charAt`, declared with a `char` width and a narrowed `index`, and the
+other reaches `String.substring`, declared with a narrowed `from` and a narrowed `to`.
+Each of the two declarations gives back an `Option`, which is what `docs/specs/interop.md` asks
+of a declaration that narrows an argument.
+Every index counts UTF-16 code units, which is what `strings.length` counts.
 
 `join` runs the parts of a `List<String>` together, with a separator between each pair.
 

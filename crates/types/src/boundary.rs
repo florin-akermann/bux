@@ -7,9 +7,10 @@
 
 use std::collections::HashMap;
 
-use lumen_ast::{Called, ExternDeclaration, Gives, JavaName, Reaches, Span};
+use lumen_ast::{Called, ExternDeclaration, ExternParameter, JavaName, Reaches, Span, Takes};
 
-use crate::error::{TypeError, TypeErrorKind};
+use crate::error::TypeError;
+use crate::error::reaching_java::ReachingJava;
 use crate::types::{OPTION, RESULT, Type};
 
 /// How a method of each extern type is called, by the Lumen name an `extern type` gives it.
@@ -22,6 +23,9 @@ pub(crate) enum Crossing {
     Taken,
     /// The result of a call, which is where nothing given back and the two answers are written.
     GivenBack,
+    /// The result of a call whose declaration narrows an argument, where a `None` also says that
+    /// an argument did not fit, so an `Option` over a number says something after all.
+    Narrowed,
     /// The result of a `field`, which is a value a class holds and so is never nothing at all.
     Held,
 }
@@ -31,18 +35,29 @@ impl Crossing {
     ///
     /// The JVM has no field of type `void`, so a `field` declared `()` reaches nothing to read,
     /// and refusing it here is what leaves the lowering with a value to get in every case.
-    pub(crate) const fn of(reaches: &Reaches) -> Self {
-        match reaches {
+    pub(crate) fn of(declaration: &ExternDeclaration) -> Self {
+        match &declaration.reaches {
             Reaches::Field(_) => Self::Held,
-            Reaches::Static(_) | Reaches::Method(_) | Reaches::New => Self::GivenBack,
+            Reaches::Static(_) | Reaches::Method(_) | Reaches::New => {
+                if declaration.narrows() {
+                    Self::Narrowed
+                } else {
+                    Self::GivenBack
+                }
+            }
         }
+    }
+
+    /// Whether the result of a call is written here, which is where `()` may be.
+    const fn of_a_call(self) -> bool {
+        matches!(self, Self::GivenBack | Self::Narrowed)
     }
 
     /// What a member does with a value written here, as the message of `L0425` reads it.
     pub(crate) const fn what_a_member_does(self) -> &'static str {
         match self {
             Self::Taken => "takes",
-            Self::GivenBack => "gives back",
+            Self::GivenBack | Self::Narrowed => "gives back",
             Self::Held => "holds",
         }
     }
@@ -59,37 +74,63 @@ pub(crate) fn crosses(
     foreign: &Foreign,
     span: Span,
 ) -> Result<(), TypeError> {
-    if carries(held, crossing, foreign) {
+    let boundary = Boundary { crossing, foreign };
+    if boundary.carries(held) {
         return Ok(());
     }
-    let kind = TypeErrorKind::DoesNotCross {
+    let kind = ReachingJava::DoesNotCross {
         written: held.clone(),
         crossing,
     };
-    Err(TypeError::at(span, kind))
+    Err(TypeError::at(span, kind.into()))
 }
 
-/// Whether a Java member carries `held` where `crossing` says it is written.
-///
-/// `Option` and `Result` are answers rather than values, so each is a result and never a
-/// parameter, and each is read for what it wraps the same way. `Option<Int>` is neither: a
-/// `long` is never `null`, so nothing it held could say `None`. Neither wraps `()` either,
-/// because a variant carrying nothing at all is not a thing a constructor of one builds.
-/// `()` itself is the one a `field` parts company over: a member gives nothing back, and a
-/// field holds something or is no field.
-fn carries(held: &Type, crossing: Crossing, foreign: &Foreign) -> bool {
-    let Type::Named { name, arguments } = held else {
-        return matches!(held, Type::Unit) && crossing == Crossing::GivenBack;
-    };
-    let a_result = crossing != Crossing::Taken;
-    match (name.as_str(), arguments.as_slice()) {
-        ("Bool" | "Int" | "String", []) => true,
-        (OPTION, [value]) if a_result => is_a_reference(value, foreign),
-        (RESULT, [value, Type::Named { name, .. }]) if a_result && name == "String" => {
-            !matches!(value, Type::Unit) && carries(value, crossing, foreign)
+/// Where a type is written and what an `extern type` has named, which say what crosses there.
+struct Boundary<'a> {
+    crossing: Crossing,
+    foreign: &'a Foreign,
+}
+
+impl Boundary<'_> {
+    /// Whether a Java member carries `held` where this boundary says it is written.
+    ///
+    /// `Option` and `Result` are answers rather than values, so each is a result and never a
+    /// parameter, and each is read for what it wraps the same way. Neither wraps `()`, because a
+    /// variant carrying nothing at all is not a thing a constructor of one builds. `()` itself is
+    /// the one a `field` parts company over: a member gives nothing back, and a field holds
+    /// something or is no field.
+    fn carries(&self, held: &Type) -> bool {
+        let Type::Named { name, arguments } = held else {
+            return matches!(held, Type::Unit) && self.crossing.of_a_call();
+        };
+        let a_result = self.crossing != Crossing::Taken;
+        match (name.as_str(), arguments.as_slice()) {
+            ("Bool" | "Int" | "String", []) => true,
+            (OPTION, [value]) if a_result => self.optionally(value),
+            (RESULT, [value, Type::Named { name, .. }]) if a_result && name == "String" => {
+                !matches!(value, Type::Unit) && self.carries(value)
+            }
+            (_, []) => self.foreign.contains_key(name),
+            _ => false,
         }
-        (_, []) => foreign.contains_key(name),
-        _ => false,
+    }
+
+    /// Whether a `None` says anything about `held` where an `Option` is written around it.
+    ///
+    /// A `null` is the `None` wherever the member gives back a reference. A declaration that
+    /// narrows an argument has a second reason for one, which `docs/specs/interop.md` states, so
+    /// there the `Option` carries whatever this boundary carries as a value of its own.
+    fn optionally(&self, held: &Type) -> bool {
+        is_a_reference(held, self.foreign)
+            || (self.crossing == Crossing::Narrowed && self.taking().carries(held))
+    }
+
+    /// This boundary read as a parameter is, which is where a value and no answer crosses.
+    fn taking(&self) -> Self {
+        Self {
+            crossing: Crossing::Taken,
+            foreign: self.foreign,
+        }
     }
 }
 
@@ -116,8 +157,8 @@ pub(crate) fn reaches_a_class(
     if reached.is_some_and(|held| is_a_reference(held, foreign)) {
         return Ok(());
     }
-    let kind = TypeErrorKind::ReachesNoClass(declaration.reaches.written().to_owned());
-    Err(TypeError::at(span, kind))
+    let kind = ReachingJava::ReachesNoClass(declaration.reaches.written().to_owned());
+    Err(TypeError::at(span, kind.into()))
 }
 
 /// The class a `new` builds, held to being a class rather than an interface.
@@ -138,8 +179,8 @@ pub(crate) fn builds_a_class(
     if declaration.reaches != Reaches::New || !is_an_interface(built, foreign) {
         return Ok(());
     }
-    let kind = TypeErrorKind::BuildsAnInterface(built.clone());
-    Err(TypeError::at(declaration.result.span, kind))
+    let kind = ReachingJava::BuildsAnInterface(built.clone());
+    Err(TypeError::at(declaration.result.span, kind.into()))
 }
 
 /// Whether `held` is a type an `extern type` named an interface.
@@ -159,12 +200,54 @@ fn is_an_interface(held: &Type, foreign: &Foreign) -> bool {
 ///
 /// Returns what a declaration written `int` gives back, where that is not an `Int`.
 pub(crate) fn widens(declaration: &ExternDeclaration, result: &Type) -> Result<(), TypeError> {
+    let Some(width) = declaration.gives.written() else {
+        return Ok(());
+    };
     let given = given_back(result);
-    if declaration.gives == Gives::WhatTheResultIs || is_an_int(given) {
+    if is_an_int(given) {
         return Ok(());
     }
-    let kind = TypeErrorKind::WidensNoInt(given.clone());
-    Err(TypeError::at(declaration.result.span, kind))
+    let kind = ReachingJava::WidensNoInt {
+        width: width.to_owned(),
+        written: given.clone(),
+    };
+    Err(TypeError::at(declaration.result.span, kind.into()))
+}
+
+/// The width `parameter` writes, held to a type there is an `Int` to narrow to an `int`.
+///
+/// # Errors
+///
+/// Returns what a parameter written `int` takes, where that is not an `Int`.
+pub(crate) fn narrowed(parameter: &ExternParameter, held: &Type) -> Result<(), TypeError> {
+    if parameter.takes == Takes::WhatTheParameterIs || is_an_int(held) {
+        return Ok(());
+    }
+    let kind = ReachingJava::NarrowsNoInt(held.clone());
+    Err(TypeError::at(parameter.declared.name.span, kind.into()))
+}
+
+/// A declaration that narrows an argument, held to a result there is a `None` to answer with.
+///
+/// Narrowing a `long` to an `int` loses whatever does not fit, and nothing in Bux is partial, so
+/// an argument outside the `int` range is a `None`. A `Result` around the result is read through,
+/// because the guard is outside and such an argument is an `Ok(None)`.
+///
+/// # Errors
+///
+/// Returns what a declaration that narrows an argument gives back, where that is no `Option`.
+pub(crate) fn narrows(declaration: &ExternDeclaration, result: &Type) -> Result<(), TypeError> {
+    let given = inside(RESULT, result);
+    if !declaration.narrows() || is_optional(given) {
+        return Ok(());
+    }
+    let kind = ReachingJava::NarrowsWithoutOption(given.clone());
+    Err(TypeError::at(declaration.result.span, kind.into()))
+}
+
+/// Whether `held` is the `Option` a `None` is one answer of.
+fn is_optional(held: &Type) -> bool {
+    matches!(held, Type::Named { name, arguments } if name == OPTION && arguments.len() == 1)
 }
 
 /// Whether `held` is the `Int` a widened `int` becomes.
@@ -177,7 +260,7 @@ fn receiver_of(declaration: &ExternDeclaration) -> Span {
     declaration
         .parameters
         .first()
-        .map_or(declaration.span, |parameter| parameter.span)
+        .map_or(declaration.span, |parameter| parameter.declared.span)
 }
 
 /// What the member's own descriptor gives back, which is the result with its answers read off.
@@ -240,8 +323,8 @@ fn held_to(named: &JavaName, enough: impl Fn(usize) -> bool) -> Result<(), TypeE
     if enough(segments.len()) && segments.iter().all(|segment| is_a_segment(segment)) {
         return Ok(());
     }
-    let kind = TypeErrorKind::NotAJavaName(named.text.clone());
-    Err(TypeError::at(named.span, kind))
+    let kind = ReachingJava::NotAJavaName(named.text.clone());
+    Err(TypeError::at(named.span, kind.into()))
 }
 
 /// Whether `segment` is one segment of a Java name, which is what Java calls an identifier.

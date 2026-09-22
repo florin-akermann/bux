@@ -434,21 +434,28 @@ impl Environment {
     ) -> Result<(), TypeError> {
         let mut parameters = Vec::new();
         for parameter in &declaration.parameters {
-            let Some(written) = &parameter.type_ref else {
-                let kind = TypeErrorKind::SignatureWithoutType(parameter.name.text.clone());
-                return Err(TypeError::at(parameter.name.span, kind));
+            let declared = &parameter.declared;
+            let Some(written) = &declared.type_ref else {
+                let kind = TypeErrorKind::SignatureWithoutType(declared.name.text.clone());
+                return Err(TypeError::at(declared.name.span, kind));
             };
             let held = self.written(resolved, written)?;
             boundary::crosses(&held, Crossing::Taken, &self.foreign, written.span)?;
+            boundary::narrowed(parameter, &held)?;
             parameters.push(held);
         }
         let result = self.written(resolved, &declaration.result)?;
         let given_back = declaration.result.span;
-        let crossing = Crossing::of(&declaration.reaches);
-        boundary::crosses(&result, crossing, &self.foreign, given_back)?;
+        boundary::crosses(
+            &result,
+            Crossing::of(declaration),
+            &self.foreign,
+            given_back,
+        )?;
         boundary::reaches_a_class(declaration, &parameters, &result, &self.foreign)?;
         boundary::builds_a_class(declaration, &result, &self.foreign)?;
         boundary::widens(declaration, &result)?;
+        boundary::narrows(declaration, &result)?;
         boundary::stated_by(declaration)?;
         let signature = Type::function(parameters, result);
         self.bind(

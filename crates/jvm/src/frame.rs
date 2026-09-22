@@ -157,7 +157,7 @@ impl Held {
     pub(crate) fn of(descriptor: &Descriptor) -> Self {
         match descriptor {
             Descriptor::Long => Self::Long,
-            Descriptor::Boolean | Descriptor::Integer => Self::Integer,
+            Descriptor::Boolean | Descriptor::Integer | Descriptor::Character => Self::Integer,
             Descriptor::Reference(class) => Self::Object(class.clone()),
             // An array names itself the way a descriptor writes it, which is what the class a
             // frame points at is called when the thing it holds is an array.

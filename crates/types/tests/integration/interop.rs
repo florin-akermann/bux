@@ -212,3 +212,81 @@ fn a_width_is_accepted_through_the_result_a_declaration_wraps_it_in() {
         "Result<Int, String>"
     );
 }
+
+#[test]
+fn a_char_is_held_to_the_same_result_the_other_width_is() {
+    let error = refusal(&declaring(
+        "method char as_a_path(file: File) -> Path = \"toPath\"",
+    ));
+
+    assert_eq!(
+        error.message(),
+        "`char` widens to an `Int`, and this signature gives back `Path`"
+    );
+}
+
+#[test]
+fn a_narrowed_parameter_takes_an_int_and_nothing_else() {
+    let error = refusal(&declaring(
+        "method int at(text: String, int held: String) -> Option<Int> = \"charAt\"",
+    ));
+
+    assert_eq!(
+        error.message(),
+        "`int` narrows an `Int`, and this parameter takes `String`"
+    );
+    assert_eq!(
+        error.help(),
+        "an `int` narrows an `Int`; drop the word, or take an `Int`"
+    );
+}
+
+#[test]
+fn a_declaration_that_narrows_an_argument_gives_back_an_option_to_say_none_with() {
+    let error = refusal(&declaring(
+        "method char at(text: String, int index: Int) -> Int = \"charAt\"",
+    ));
+
+    assert_eq!(
+        error.message(),
+        "an `int` parameter narrows an `Int`, and this signature gives back `Int`"
+    );
+    assert_eq!(
+        error.help(),
+        "give back an `Option`, which is `None` where an argument does not fit"
+    );
+}
+
+#[test]
+fn an_option_over_a_number_is_the_result_of_a_declaration_that_narrows_an_argument() {
+    let source = "fn held(text: String) -> Option<Int> {\n    at(text, 0)\n}\n\n".to_owned()
+        + &declaring("method char at(text: String, int index: Int) -> Option<Int> = \"charAt\"");
+
+    assert_eq!(inferred_type(&source, "at(text, 0)", 1), "Option<Int>");
+}
+
+#[test]
+fn an_option_over_a_number_is_no_result_where_nothing_is_narrowed() {
+    let error = refusal(&declaring(
+        "method int at(text: String, index: Int) -> Option<Int> = \"charAt\"",
+    ));
+
+    assert_eq!(
+        error.message(),
+        "`Option<Int>` is no type a Java member gives back"
+    );
+}
+
+#[test]
+fn a_guard_stands_outside_the_option_a_narrowed_argument_answers_with() {
+    let written = "method cut(text: String, int from: Int) -> Result<Option<String>, String>";
+    let source =
+        "fn held(text: String) -> Result<Option<String>, String> {\n    cut(text, 0)\n}\n\n"
+            .to_owned()
+            + &declaring(&format!("{written} = \"substring\""));
+
+    assert_eq!(
+        inferred_type(&source, "cut(text, 0)", 1),
+        "Result<Option<String>, String>"
+    );
+}

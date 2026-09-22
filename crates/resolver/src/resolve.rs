@@ -220,10 +220,10 @@ impl Resolver {
     fn declared_extern(&mut self, declaration: &ExternDeclaration) -> Resolved {
         self.values.enter();
         for parameter in &declaration.parameters {
-            if let Some(type_ref) = &parameter.type_ref {
+            if let Some(type_ref) = &parameter.declared.type_ref {
                 self.type_ref(type_ref)?;
             }
-            self.introduce_value(&parameter.name, DefinitionKind::Parameter)?;
+            self.introduce_value(&parameter.declared.name, DefinitionKind::Parameter)?;
         }
         self.type_ref(&declaration.result)?;
         self.values.leave();

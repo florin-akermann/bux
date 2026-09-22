@@ -98,6 +98,11 @@ pub enum Instruction {
     Not,
     /// Turns the small whole number on the stack into a whole number.
     Widen,
+    /// Turns the whole number on the stack into a small one, dropping what does not fit.
+    ///
+    /// It is written only where the range has already been read, which `docs/specs/interop.md`
+    /// states: an argument outside it is a `None`, and the member is not reached at all.
+    Narrow,
     /// Names a place a jump lands.
     Label(Label),
     Jump(Label),

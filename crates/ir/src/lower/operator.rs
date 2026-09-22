@@ -325,7 +325,7 @@ pub(crate) const fn is_negation(operator: UnaryOperator) -> bool {
 fn written_out_add(of: &Descriptor) -> Instruction {
     match of {
         Descriptor::Reference(_) | Descriptor::Array(_) => Instruction::Concat,
-        Descriptor::Long | Descriptor::Boolean | Descriptor::Integer => {
+        Descriptor::Long | Descriptor::Boolean | Descriptor::Integer | Descriptor::Character => {
             Instruction::Arithmetic(Arithmetic::Add)
         }
     }

@@ -5,6 +5,41 @@
 // what the language already gives, and it lands only where a reader would write the loop twice.
 // `length` meets neither test, because no loop reaches the characters of a string. It is one
 // `extern` declaration away from a JVM method, which `docs/specs/interop.md` states.
+// `at` and `cut` are the bounds check each such call needs, written once here rather than at
+// every reading of a string.
+/// The UTF-16 code unit at `index`, and `None` where `index` is past either end of the text.
+///
+/// It counts the units a JVM counts, which `length` counts too: a character the JVM holds as a
+/// pair of units, such as an emoji, is read one unit at a time.
+// example: or(at("ab", 1), 0) == 98
+fn at(text: String, index: Int) -> Option<Int> {
+    if index < 0 {
+        return None
+    }
+    if index >= length(text) {
+        return None
+    }
+    code_unit_at(text, index)
+}
+
+/// The part of the text from `from` up to but not including `to`.
+///
+/// It is `None` where `from` is below zero, where `to` is past the end, or where `from` is above
+/// `to`. Every index counts UTF-16 code units, which is what `length` counts.
+// example: or(cut(text: "abcd", from: 1, to: 3), "") == "bc"
+fn cut(text: String, from: Int, to: Int) -> Option<String> {
+    if from < 0 {
+        return None
+    }
+    if to > length(text) {
+        return None
+    }
+    if from > to {
+        return None
+    }
+    cut_out(text, from, to)
+}
+
 /// The parts run together, with `between` written between each pair of them.
 // example: join(["a", "b"], "-") == "a-b"
 fn join(parts: List<String>, between: String) -> String {
@@ -28,3 +63,15 @@ fn join(parts: List<String>, between: String) -> String {
 /// It is the length a JVM reports and not always the number of characters: a character the JVM
 /// holds as a pair of units, such as an emoji, counts as two.
 extern method int length(text: String) -> Int = "length"
+
+/// The code unit at `index`, which the JVM gives as a `char` and takes an `int` for.
+///
+/// `at` reads the bounds before it calls this, so the `None` this result carries is the one an
+/// index outside the `int` range answers with, which `docs/specs/interop.md` states.
+extern method char code_unit_at(text: String, int index: Int) -> Option<Int> = "charAt"
+
+/// The part of the text between two indices, which the JVM takes two `int` values for.
+///
+/// `cut` reads the bounds before it calls this, so the `None` this result carries is the one an
+/// index outside the `int` range answers with.
+extern method cut_out(text: String, int from: Int, int to: Int) -> Option<String> = "substring"
