@@ -31,7 +31,7 @@ Item 048 lands the declaration that makes such a reference writable, so this ite
 [052][b] - Section 15 cites the clause where it argues nothing is shared, so the two sections agree.
 [052][c] - Item 048's `docs/specs/interop.md` points at the clause rather than restating the rule.
 
-## 🟡 Item 053: An `extern` reaches a member whose descriptor gives an `int`
+## 🟢 Item 053: An `extern` reaches a member whose descriptor gives an `int`
 `docs/specs/interop.md` carries `Int` as a `long`, and a JVM `int` is a type no Lumen type is.
 `String.hashCode`, `String.length`, and `List.indexOf` each give one, so none of them is reachable.
 `Hash<String>` therefore stays the compiler's own, which Item 048 left as the one supplied instance.
