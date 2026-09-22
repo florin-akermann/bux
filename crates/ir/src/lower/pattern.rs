@@ -255,14 +255,7 @@ impl Builder<'_> {
                     self.emit(instruction);
                 }
             }
-            Some(declared) => {
-                let reached = self.reaching(declared, written);
-                self.emit(Instruction::InvokeStatic(MethodRef {
-                    class: self.lowering.shapes.module().clone(),
-                    name: reached.named,
-                    descriptor: reached.signature.descriptor(),
-                }));
-            }
+            Some(instance) => self.emit(instance.called()),
         }
         self.emit(Instruction::JumpIfFalse(against.next));
     }

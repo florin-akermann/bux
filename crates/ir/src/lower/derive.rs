@@ -15,7 +15,7 @@ use lumen_ast::{Variant, VariantPayload};
 use lumen_resolver::prelude;
 use lumen_types::Type;
 
-use crate::code::{Body, Comparison, FieldRef, Instruction, Label, MethodRef};
+use crate::code::{Body, Comparison, FieldRef, Instruction, Label};
 use crate::descriptor::{ClassName, Descriptor};
 use crate::lower::Lowering;
 use crate::lower::shape::{Carried, Shape, TAG};
@@ -124,18 +124,13 @@ impl<'a> Writing<'a> {
             arguments: Vec::new(),
         };
         let method = prelude::method_of(of).expect("a derivable trait declares one method");
-        let Some(declared) = self.lowering.answering(method, &at) else {
+        let Some(instance) = self.lowering.answering(method, &at) else {
             for instruction in supplied(of, &holds.of) {
                 self.emit(instruction);
             }
             return;
         };
-        let reached = self.lowering.plainly(declared);
-        self.emit(Instruction::InvokeStatic(MethodRef {
-            class: self.lowering.shapes.module().clone(),
-            name: reached.named,
-            descriptor: reached.signature.descriptor(),
-        }));
+        self.emit(instance.called());
     }
 
     /// Jumps to `elsewhere` unless what `ONE` holds is the variant `shape` builds.

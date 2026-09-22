@@ -145,7 +145,7 @@ Type inference raises these, in `crates/types/src/error.rs`:
 - `L0421` — a bound of an `IntegerLiteral` instance is not one whole number.
 - `L0422` — a type derives a trait and holds a value of a type that has no instance of it.
 - `L0423` — a call written with its first argument in front names its arguments.
-- `L0424` — a generic of another module is used at a type whose instance stays in a module.
+- `L0424` — a generic of another module is constrained by a trait that stays in that module.
 - `L0425` — an `extern` signature names a type no Java member takes or gives back.
 - `L0426` — an `extern` states something that is no Java name.
 - `L0427` — a derive names a type an `extern type` declares, whose contents are the JVM's.

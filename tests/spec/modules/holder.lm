@@ -15,6 +15,22 @@ fn passed(value) {
     value
 }
 
+// A trait this module declares is this module's own, and so is the constraint written over it.
+// example: labelled(value: "a") == "a"
+fn labelled<T: Named<T>>(value: T) -> String {
+    named_as(value)
+}
+
+instance Named<String> {
+    fn named_as(value: String) -> String {
+        value
+    }
+}
+
+trait Named<T> {
+    fn named_as(value: T) -> String
+}
+
 type Held = Held(String)
 
 type User = {

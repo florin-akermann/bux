@@ -150,8 +150,8 @@ catalogue! {
     HeldTypeHasNoInstance => "L0422",
     /// A call written with its first argument in front names its arguments.
     NamedInFront => "L0423",
-    /// A generic of another module is used at a type whose instance stays in a module.
-    InstanceStaysInItsModule => "L0424",
+    /// A generic of another module is constrained by a trait that stays in that module.
+    TraitStaysInItsModule => "L0424",
     /// An `extern` signature names a type no Java member takes or gives back.
     DoesNotCross => "L0425",
     /// An `extern` states something that is no Java name.

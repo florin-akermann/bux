@@ -266,13 +266,38 @@ impl Lowering<'_> {
     ///
     /// An instance over a type the JVM holds has none, which is what says a call of it is written
     /// out where it stands rather than made; `docs/specs/traits.md` states the two cases.
-    pub(crate) fn answering(&self, method: &str, at: &lumen_types::Type) -> Option<Span> {
+    ///
+    /// A type another module declares is named with that module in front, so its instance is
+    /// that module's and the call is written against that module's class. Nothing of that
+    /// module's tree is read: the method is named for its trait, its type, and itself, exactly as
+    /// that module names its own, and what it takes and gives back is the trait method's own
+    /// signature at that type. That is how a generic written here for a type the program declares
+    /// reaches the program's own instance, which `docs/specs/codegen.md` states.
+    pub(crate) fn answering(&self, method: &str, at: &Type) -> Option<Instance> {
         let Type::Named { name, .. } = at else {
             return None;
         };
-        self.answers
-            .get(&(method.to_owned(), name.clone()))
-            .copied()
+        let Some((module, declared)) = name.split_once('.') else {
+            return self.written_here(method, name);
+        };
+        let of = prelude::trait_of(method)
+            .expect("a trait two modules both name is one the prelude declares");
+        Some(Instance {
+            class: ClassName::new(module),
+            reaching: Reaching {
+                named: format!("{of}${declared}${method}"),
+                signature: self.written_as(&lumen_types::instance_signature(of, method, at)),
+            },
+        })
+    }
+
+    /// The instance this module writes for a type of its own, where it writes one at all.
+    fn written_here(&self, method: &str, named: &str) -> Option<Instance> {
+        let declared = *self.answers.get(&(method.to_owned(), named.to_owned()))?;
+        Some(Instance {
+            class: self.shapes.module().clone(),
+            reaching: self.plainly(declared),
+        })
     }
 
     /// The method a use of `name` reaches: what it is called, and what it takes and gives back.
@@ -388,6 +413,32 @@ impl Lowering<'_> {
 pub(crate) struct Reaching {
     pub(crate) named: String,
     pub(crate) signature: Signature,
+}
+
+/// The method one instance writes, and the class it is written into.
+///
+/// An instance of a type this module declares is a method of this module's own class, and one of
+/// a type another module declares is a method of that module's class. Nothing calling one reads
+/// which of the two it is: it asks for the call and is handed it.
+pub(crate) struct Instance {
+    class: ClassName,
+    reaching: Reaching,
+}
+
+impl Instance {
+    /// The call that reaches it, which is a static call like every other function's.
+    pub(crate) fn called(&self) -> Instruction {
+        Instruction::InvokeStatic(MethodRef {
+            class: self.class.clone(),
+            name: self.reaching.named.clone(),
+            descriptor: self.reaching.signature.descriptor(),
+        })
+    }
+
+    /// What it takes, one place per parameter, and what it gives back.
+    pub(crate) const fn signature(&self) -> &Signature {
+        &self.reaching.signature
+    }
 }
 
 /// Every function the module writes, by the span of the name declaring it.

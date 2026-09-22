@@ -5,7 +5,6 @@
 //! the set is asked of that module and the method comes back under a name both work out alike.
 
 use lumen_ir::{ClassName, Descriptor, Instruction, Lowered, MethodDescriptor};
-use lumen_types::Imported;
 
 use crate::common;
 
@@ -32,17 +31,6 @@ fn reached_from(source: &str, named: &str) -> lumen_ir::MethodRef {
             _ => None,
         })
         .expect("a call into another module is a call of that module's class")
-}
-
-/// `holder`, lowered knowing everything `source` asked of it.
-fn holder_asked_by(source: &str) -> Lowered {
-    let asked = common::lowered_reaching(source, &common::holder()).asks;
-    common::lowered_as(&common::Written {
-        source: common::HOLDER,
-        named: "holder",
-        imported: &Imported::default(),
-        asked: &asked,
-    })
 }
 
 #[test]
@@ -80,7 +68,7 @@ fn the_module_writing_the_use_writes_no_method_for_it() {
 
 #[test]
 fn the_module_declaring_it_writes_the_method_the_use_asked_for() {
-    let holder = holder_asked_by(&reaching("", "Int", "holder.held(1)"));
+    let holder = common::holder_asked_by(&reaching("", "Int", "holder.held(1)"));
 
     assert_eq!(
         method_named(&holder, "held$Int"),
@@ -93,7 +81,7 @@ fn the_module_declaring_it_writes_the_method_the_use_asked_for() {
 
 #[test]
 fn a_set_nothing_asked_for_is_written_by_nobody() {
-    let holder = holder_asked_by(&reaching("", "Int", "holder.held(1)"));
+    let holder = common::holder_asked_by(&reaching("", "Int", "holder.held(1)"));
 
     assert_eq!(method_named(&holder, "held$String"), None);
 }
@@ -102,7 +90,7 @@ fn a_set_nothing_asked_for_is_written_by_nobody() {
 fn two_uses_at_two_types_ask_for_two_methods() {
     let source = reaching("", "String", "_ = holder.held(1)\n    holder.held(\"two\")");
 
-    let holder = holder_asked_by(&source);
+    let holder = common::holder_asked_by(&source);
 
     assert!(method_named(&holder, "held$Int").is_some());
     assert!(method_named(&holder, "held$String").is_some());
@@ -112,7 +100,7 @@ fn two_uses_at_two_types_ask_for_two_methods() {
 fn two_uses_at_one_type_ask_for_the_one_method_once() {
     let source = reaching("", "Int", "_ = holder.held(1)\n    holder.held(2)");
 
-    let holder = holder_asked_by(&source);
+    let holder = common::holder_asked_by(&source);
 
     assert_eq!(
         holder_methods(&holder)
@@ -186,7 +174,7 @@ fn a_stand_in_inference_made_is_erased_rather_than_named_in_the_method() {
 
 #[test]
 fn the_module_declaring_an_inferred_generic_writes_it_erased_too() {
-    let holder = holder_asked_by(&reaching("", "Int", "holder.passed(1)"));
+    let holder = common::holder_asked_by(&reaching("", "Int", "holder.passed(1)"));
 
     assert_eq!(
         method_named(&holder, "passed"),
@@ -240,7 +228,7 @@ fn every_method_a_use_asks_for_is_one_the_module_asked_writes(tc: hegel::TestCas
     );
 
     let reached = calling(&source);
-    let holder = holder_asked_by(&source);
+    let holder = common::holder_asked_by(&source);
 
     assert_eq!(
         method_named(&holder, &reached.name),

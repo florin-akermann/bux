@@ -1,12 +1,39 @@
-// expect-error: L0424
-// A key is a type the library itself reaches an `Eq` instance for, and those are the prelude's.
-// `Kept` is not one of them however this module came by its own instance, because an instance
-// stays in the module that declares it, which `docs/specs/modules.md` states.
+// expect-run
+// > 36
+// > none
+// > true
+// > true
+// > 1
+// A library generic is written once per set of types it is used at, by the module that declares
+// it, and the constraint it writes over a key is answered by the instance that key's own type
+// has. `Kept` is this module's, and so is the `Eq` this module derives for it, so `map` writes
+// `insert$main$Kept$Int` and that method calls `main.Eq$Kept$is_equal`.
+import io
+
+import list
+
 import map
 
+import set
+
 fn main(arguments: List<String>) -> Int {
-    _ = map.insert(map.empty(), Kept("one"), 1)
+    ages := map.insert(map.insert(map.empty(), Kept("ada"), 36), Kept("alan"), 41)
+    io.println(shown(or(map.get(ages, Kept("ada")), 0)))
+    io.println(named(map.get(ages, Kept("grace"))))
+    seen := set.insert(set.insert(set.empty(), Kept("a")), Kept("a"))
+    io.println(shown(set.has_value(seen, Kept("a"))))
+    io.println(shown(list.has_value([Kept("a"), Kept("b")], Kept("b"))))
+    io.println(shown(or(list.index_of([Kept("a"), Kept("b")], Kept("b")), 0)))
     0
+}
+
+/// The age as it is written, and `none` where the map holds no entry at that key.
+// example: named(None) == "none"
+fn named(age: Option<Int>) -> String {
+    match age {
+        Some(held) => shown(held)
+        None => "none"
+    }
 }
 
 derive Eq for Kept

@@ -236,6 +236,50 @@ by `main` is `main.Foo`.
 A type of a third module, and a type of the prelude, are written the same way in both and cross
 unchanged.
 
+## How a constrained generic reaches an instance
+
+A generic may constrain a type parameter by a trait, and the body written for one set of types
+calls the instance each type in that set has.
+The method is written into the class of the module that declares the generic, which is where every
+method of that generic is written.
+The instance it calls is a static method of the class of the module that declares the type, which
+is where every instance is written.
+So `list.has_value` at a `Kept` that `main` declares is `has_value$main$Kept` on the `list` class,
+and the body of it calls `Eq$Kept$is_equal` on the `main` class.
+
+The name of that call is read off the type and nothing else.
+A type of the module writing the method is named plainly, and its instance is a method of that
+same class, named for its trait, its type, and itself as every instance is.
+A type of another module carries that module's name in front, which the ask above put there, so
+`main.Kept` names the class `main` and the method `Eq$Kept$is_equal` on it.
+The module writing the method therefore arrives at the call from the type alone, and reads nothing
+of the other module's tree.
+What the call takes and gives back is the trait method's own signature at that type, which is the
+signature the instance was held to when the other module wrote it.
+`Hash<K>` and `Ord<K>` land the same way wherever a constraint is written over one of them: the
+trait's own name is the only part of the method name that changes.
+
+The module writing the use is the one that proves the instance is there.
+It settled the type, so it is the module that can see the instance, and `docs/specs/types.md`
+states what is refused where there is none.
+The module writing the method asks nothing of its own: it is handed a type and writes the call that
+type names.
+A trait is what both modules have to name, once in the constraint and once in the instance, so a
+constraint over a trait that stays in one module is refused before any of this, as `L0424`.
+
+A generic is still written once per set of types it is used at.
+The instance a call reaches follows from the set alone, because one type has one instance of one
+trait, so two uses that settled the same set reach the same instances and need the one method.
+Nothing in a set says which module settled it, so a second module settling the same set asks for
+the method already written rather than for one of its own.
+
+The alternative weighed was to write the method into the class of the module that uses the generic,
+which would let it name every instance the way it names its own.
+That module holds no tree but its own: it has the generic's type and none of its body, so it has
+nothing to write the method from.
+Writing the body where the body is, and naming the instance from the type, is what leaves no tree
+to cross.
+
 ## How a type is laid out
 
 Every class written is a value class: its identity bit is clear, so the JVM may flatten a value
@@ -379,3 +423,4 @@ These hold and are checked with property-based tests:
 14. A written list of `n` elements gathers them into an array of `n` and builds one list.
 15. As many values stand for nothing as there are `()`s written where a reference is wanted.
 16. A call of `list.push` or of `list.at` asks the `list` class for no method.
+17. A method written for a set of types calls the instance each type in that set has.

@@ -110,6 +110,15 @@ pub fn declares_type(name: &str) -> bool {
     declared_types().any(|declaration| declaration.name.text == name)
 }
 
+/// Whether the prelude declares a trait of this name, which is a trait every module reaches.
+///
+/// A trait a module declares is that module's own, which `docs/specs/modules.md` states, so a
+/// trait two modules both name is one of these and no other.
+#[must_use]
+pub fn declares_trait(name: &str) -> bool {
+    traits().any(|declaration| declaration.name.text == name)
+}
+
 /// The constructors in scope everywhere, which are the variants of the types the prelude declares.
 pub(crate) fn constructors() -> Vec<&'static str> {
     declared_types()

@@ -54,9 +54,10 @@ It is written once per set of types it is used at, which `docs/specs/codegen.md`
 page says how a set settled in one module is asked of another.
 A function is generic by the type inference settled on it, not by what it wrote: one that writes
 no type parameter and leaves its type free is generic in the same way, and is reached the same way.
-A constraint such a function writes over one of its type parameters is answered by an instance the
-module declaring it reaches, because the body asking is that module's; those are the prelude's,
-which `docs/specs/types.md` states as `L0424`.
+A constraint such a function writes over one of its type parameters is answered by the instance
+the type that use settled it on has, wherever that type is declared.
+The module writing the use is the one that proves the instance is there, and the method written
+for the set calls it by name, which `docs/specs/codegen.md` states.
 
 A module offers the types it declares as well as the functions.
 A type is reached through the module's name, as a function is: `demo.User` is the type the module
@@ -87,11 +88,13 @@ A trait is reached through no module either: `demo.Eq` is not written.
 Version 0.1 keeps both where they are declared, and `docs/specs/traits.md` states what an instance
 is; what a module offers is the names a reader can write, and an instance has no name to write.
 
-An instance either module declares therefore answers no constraint on an imported generic.
-The declaring module's is one this module cannot know it has, because neither offers the other its
-instances, and this module's is one that module could not reach.
-The prelude's are the only ones left, so a use settling such a type parameter anywhere else is
-refused as `L0424` rather than asking for a body the other module could not write.
+A constraint on an imported generic is therefore answered where the use is written, and by the
+instances that module reaches: its own, and the prelude's.
+A use settling the type parameter on `demo.User` is refused as `L0418` however `demo` came by an
+instance, because this module cannot know it has one; one settling it on a type this module
+declares an instance for is written, and the method reaches that instance by name.
+The trait is what has to be named twice over, once in the constraint and once in the instance, so
+a constraint over a trait the declaring module keeps to itself is refused as `L0424`.
 
 ## Scopes
 

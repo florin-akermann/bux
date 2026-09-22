@@ -23,7 +23,7 @@ mod carried;
 mod key;
 
 use carried::Keyed;
-pub(crate) use carried::{of_the_prelude, prelude_checked, signature_of};
+pub(crate) use carried::{prelude_checked, signature_of};
 pub(crate) use key::Key;
 use key::{Built, parameter_of, quantified, written_over};
 

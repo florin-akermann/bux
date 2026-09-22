@@ -7,8 +7,9 @@
 use std::mem;
 
 use lumen_ast::Name;
+use lumen_resolver::prelude;
 
-use crate::environment::{self, Key};
+use crate::environment::Key;
 use crate::error::{TypeError, TypeErrorKind};
 use crate::infer::{Asked, Inference, Propagated, Propagation, Requirement, labelled};
 use crate::scheme::Required;
@@ -102,7 +103,7 @@ impl Inference<'_> {
         for requirement in mem::take(&mut self.requirements) {
             let at = self.table.solved(&requirement.required.at);
             let of = &requirement.required.trait_name;
-            if let Some(kind) = left_behind_by(&requirement.how, of, &at) {
+            if let Some(kind) = left_behind_by(&requirement.how, of) {
                 return Err(TypeError::at(requirement.written, kind));
             }
             if !self.answers(of, &at) {
@@ -250,28 +251,25 @@ fn how_it_is_asked(offered: &Offered, module: &str, field: &Name) -> Asked {
     }
 }
 
-/// What is wrong with asking another module's generic for an instance that does not reach it.
+/// What is wrong with asking another module's generic for a trait that has no name here.
 ///
-/// A trait and its instances stay where they are declared, which `docs/specs/modules.md` states,
-/// and a module offers neither, so the prelude's are the only instances this module can know
-/// another one has. A constraint on a generic that module writes is answered in its body, so a
-/// use settling that type parameter anywhere else asks for a body nothing could write.
+/// A trait stays where it is declared, which `docs/specs/modules.md` states, and a module offers
+/// no trait of its own, so the prelude's are the only traits two modules both name. A constraint
+/// written over one of those is answered by the instance the type has, wherever that type is
+/// declared, which `docs/specs/codegen.md` states the generic is written against. A constraint
+/// written over a trait the declaring module keeps to itself is answered by nothing here: this
+/// module cannot write the instance, because it cannot write the trait's name.
 ///
-/// It is refused before the instance is looked for at all: an instance this module reaches is no
-/// answer either, and saying to write one would be saying to write what would then be refused.
-fn left_behind_by(asked: &Asked, of: &str, at: &Type) -> Option<TypeErrorKind> {
+/// It is refused before the instance is looked for at all, because saying which type has no
+/// instance would be saying to write one that cannot be written.
+fn left_behind_by(asked: &Asked, of: &str) -> Option<TypeErrorKind> {
     let Asked::OfAnotherModule { module, name } = asked else {
         return None;
     };
-    let reached = match at {
-        Type::Named { name, .. } => environment::of_the_prelude(of, name),
-        _ => false,
-    };
-    (!reached).then(|| TypeErrorKind::InstanceStaysInItsModule {
+    (!prelude::declares_trait(of)).then(|| TypeErrorKind::TraitStaysInItsModule {
         module: module.clone(),
         name: name.clone(),
         of: of.to_owned(),
-        at: at.clone(),
     })
 }
 

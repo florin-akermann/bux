@@ -29,6 +29,20 @@ pub use crate::surface::{BuiltBy, GenericUse, Imported, OfferedConstructor};
 pub use crate::surface::{OfferedType, Surface};
 pub use crate::types::{Type, TypeParameter, TypeVar};
 
+/// The type the method `method` of the prelude's trait `trait_name` has, at the type `for_type`.
+///
+/// A generic written for a type another module declares calls that module's instance, and this
+/// is what that call takes and gives back: `docs/specs/codegen.md` states it. The prelude writes
+/// every one of these signatures, so this reads the declaration rather than restating it.
+///
+/// # Panics
+///
+/// Panics where the prelude declares no such trait, or no such method of it.
+#[must_use]
+pub fn instance_signature(trait_name: &str, method: &str, for_type: &Type) -> Type {
+    environment::signature_of(trait_name, method, for_type)
+}
+
 /// Gives every expression of `resolved` the type it has, reaching `imported` through an import.
 ///
 /// # Errors

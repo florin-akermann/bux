@@ -4,11 +4,12 @@
 //! instance a module wrote gets an `invokestatic` of that instance's method, and one of the
 //! types the JVM holds gets the instruction the operator always was, written out in place.
 
-use lumen_ast::{BinaryOperator, Expr, Name, Span, UnaryOperator};
+use lumen_ast::{BinaryOperator, Expr, Name, UnaryOperator};
 use lumen_resolver::prelude;
 
-use crate::code::{Arithmetic, Comparison, Instruction, MethodRef};
+use crate::code::{Arithmetic, Comparison, Instruction};
 use crate::descriptor::Descriptor;
+use crate::lower::Instance;
 use crate::lower::body::{Builder, Slot};
 use crate::lower::standard::{compared, hashed_as, shown_as};
 
@@ -24,10 +25,10 @@ impl Builder<'_> {
         right: &Expr,
     ) -> Option<Descriptor> {
         let asked = asked_by(operator).expect("`&&` and `||` are written before this is reached");
-        let Some(declared) = self.instance_written(method_of(asked.of), left.span) else {
+        let Some(instance) = self.instance_written(method_of(asked.of), left.span) else {
             return self.written_out_operator(operator, left, right);
         };
-        Some(self.through_the_operator(&asked, declared, [left, right]))
+        Some(self.through_the_operator(&asked, &instance, [left, right]))
     }
 
     /// A direct call of one of the prelude's trait methods, at a type the prelude has an
@@ -85,34 +86,30 @@ impl Builder<'_> {
             slot: slot.at,
             of: slot.of.clone(),
         });
-        let Some(declared) = self.instance_written(method_of(prelude::ADD), value.span) else {
+        let Some(instance) = self.instance_written(method_of(prelude::ADD), value.span) else {
             let left = self.expr(value);
             self.adapt(left, Some(slot.of.clone()));
             self.emit(written_out_add(&slot.of));
             return slot.of.clone();
         };
-        let reached = self.reaching(declared, declared);
-        self.handed(value, reached.signature.parameters[1].clone());
-        self.emit(Instruction::InvokeStatic(MethodRef {
-            class: self.lowering.shapes.module().clone(),
-            name: reached.named,
-            descriptor: reached.signature.descriptor(),
-        }));
-        reached
-            .signature
+        self.handed(value, instance.signature().parameters[1].clone());
+        self.emit(instance.called());
+        instance
+            .signature()
             .result
+            .clone()
             .expect("`add` gives back the type it was given, which a local holds")
     }
 
     /// Prefix `-` is `Neg`, so a type whose instance a module wrote negates by that instance.
     pub(crate) fn negated(&mut self, operand: &Expr) -> Descriptor {
-        let Some(declared) = self.instance_written(method_of(prelude::NEG), operand.span) else {
+        let Some(instance) = self.instance_written(method_of(prelude::NEG), operand.span) else {
             let held = self.expr(operand);
             self.adapt(held, Some(Descriptor::Long));
             self.emit(Instruction::Arithmetic(Arithmetic::Negate));
             return Descriptor::Long;
         };
-        self.statically(declared, operand.span, &[operand])
+        self.calling(&instance, &[operand])
             .expect("`negate` gives back the type it was given, which is carried by something")
     }
 
@@ -120,13 +117,13 @@ impl Builder<'_> {
     fn through_the_operator(
         &mut self,
         asked: &Asked,
-        declared: Span,
+        instance: &Instance,
         operands: [&Expr; 2],
     ) -> Descriptor {
         let given = if asked.reversed {
-            self.the_other_way_round(declared, operands)
+            self.the_other_way_round(instance, operands)
         } else {
-            self.statically(declared, declared, &operands)
+            self.calling(instance, &operands)
         };
         if asked.flipped {
             self.emit(Instruction::Not);
@@ -138,10 +135,13 @@ impl Builder<'_> {
     ///
     /// Both sides are run in the order they are written and kept in locals, because a side may
     /// be a call and the method takes the two the other way round.
-    fn the_other_way_round(&mut self, declared: Span, operands: [&Expr; 2]) -> Option<Descriptor> {
-        let reached = self.reaching(declared, declared);
+    fn the_other_way_round(
+        &mut self,
+        instance: &Instance,
+        operands: [&Expr; 2],
+    ) -> Option<Descriptor> {
         let mut kept = Vec::new();
-        for (operand, wanted) in operands.iter().zip(&reached.signature.parameters) {
+        for (operand, wanted) in operands.iter().zip(&instance.signature().parameters) {
             let Some(of) = wanted.clone() else {
                 self.value(operand);
                 continue;
@@ -152,12 +152,8 @@ impl Builder<'_> {
         for (slot, of) in kept {
             self.emit(Instruction::Load { slot, of });
         }
-        self.emit(Instruction::InvokeStatic(MethodRef {
-            class: self.lowering.shapes.module().clone(),
-            name: reached.named,
-            descriptor: reached.signature.descriptor(),
-        }));
-        reached.signature.result
+        self.emit(instance.called());
+        instance.signature().result.clone()
     }
 
     /// What the prelude's instance amounts to, written out where the operator is called.

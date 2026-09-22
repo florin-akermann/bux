@@ -1,7 +1,7 @@
 // The `Set<T>` a program builds by `empty` and `insert`, and reads by `has_value`.
 //
 // `docs/specs/collections.md` states each function, its type, and what it costs. A set holds a
-// value once however often it is given, and a member is a type the prelude reaches `Eq` for.
+// value once however often it is given, and a member is any type that has an `Eq` instance.
 // Every walk here is a `for` loop over a `var`, because a walk written as a function that calls
 // itself runs out of stack on a set a program can build; the steps of that walk are the
 // functions below, because a `match` arm is an expression and cannot assign.

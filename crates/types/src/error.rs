@@ -148,12 +148,11 @@ pub(crate) enum TypeErrorKind {
         of: String,
         at: Type,
     },
-    /// A generic another module declares, used at a type whose instance stays in this one.
-    InstanceStaysInItsModule {
+    /// A generic another module declares, constrained by a trait that has no name here.
+    TraitStaysInItsModule {
         module: String,
         name: String,
         of: String,
-        at: Type,
     },
     /// A type deriving a trait that holds a value of a type that has no instance of it.
     HeldTypeHasNoInstance {
@@ -191,7 +190,7 @@ impl TypeErrorKind {
             Self::LiteralDoesNotFit { .. } => Code::LiteralDoesNotFit,
             Self::BoundIsNotAWholeNumber { .. } => Code::BoundIsNotAWholeNumber,
             Self::NoInstance { .. } => Code::NoInstance,
-            Self::InstanceStaysInItsModule { .. } => Code::InstanceStaysInItsModule,
+            Self::TraitStaysInItsModule { .. } => Code::TraitStaysInItsModule,
             Self::HeldTypeHasNoInstance { .. } => Code::HeldTypeHasNoInstance,
             Self::SignatureWithoutType(_) => Code::SignatureWithoutType,
             Self::ReachingJava(reaching) => reaching.code(),
@@ -268,8 +267,8 @@ impl TypeErrorKind {
             Self::NoInstance { .. } => {
                 "write the instance, or constrain the type parameter the call is made at"
             }
-            Self::InstanceStaysInItsModule { .. } => {
-                "call it at a type the prelude has an instance for, or write the loop here"
+            Self::TraitStaysInItsModule { .. } => {
+                "a trait has no name outside its module, so write the loop here instead"
             }
             Self::HeldTypeHasNoInstance { .. } => {
                 "a derived instance reads what it holds by that type's own; give the held one"
@@ -349,7 +348,7 @@ impl fmt::Display for TypeErrorKind {
             }
             Self::NotInModule { .. }
             | Self::NotCalled { .. }
-            | Self::InstanceStaysInItsModule { .. } => f.write_str(&self.how_a_module_is_reached()),
+            | Self::TraitStaysInItsModule { .. } => f.write_str(&self.how_a_module_is_reached()),
             Self::HoldsItself { ring } => {
                 let (first, rest) = ring.split_first().expect("a ring runs through one type");
                 write!(f, "`{first}` holds ")?;
@@ -412,14 +411,8 @@ impl TypeErrorKind {
             Self::NotCalled { module, name } => {
                 format!("`{module}.{name}` is a function, so it is written as a call")
             }
-            Self::InstanceStaysInItsModule {
-                module,
-                name,
-                of,
-                at,
-            } => format!(
-                "`{module}.{name}` requires `{of}` of `{at}`, \
-                 and only the prelude's instances reach `{module}`"
+            Self::TraitStaysInItsModule { module, name, of } => format!(
+                "`{module}.{name}` requires `{of}`, which `{module}` declares and nothing here names"
             ),
             _ => unreachable!("a kind reaches here only from the arm of `Display` that names it"),
         }

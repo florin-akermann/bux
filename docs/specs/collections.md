@@ -57,10 +57,10 @@ So `Hash<K>` would be a constraint no body here reads, and a constraint nothing 
 a caller keeps for nothing.
 It joins `Eq<K>` in the version that has the table, and not before.
 
-A constraint on a library generic is answered by an instance the library itself reaches, which
-`docs/specs/modules.md` states are the prelude's.
-A key is therefore a `Bool`, an `Int`, or a `String` in version 0.1, and a type the program itself
-declares is refused as `L0424` however the program came by its own `Eq`.
+A constraint on a library generic is answered by the instance the key's own type has, which
+`docs/specs/codegen.md` states the specialised method calls by name.
+A key is therefore a `Bool`, an `Int`, or a `String`, or any type the program declares an `Eq` for:
+the program settles the key, so the program is what proves the instance is there.
 
 ## The functions
 
@@ -142,11 +142,11 @@ it reads out rather than the map itself.
 
 | code    | what it refuses                                                           |
 | ------- | ------------------------------------------------------------------------- |
-| `L0424` | a key, or a member, at a type the prelude reaches no `Eq` instance for     |
+| `L0418` | a key, or a member, at a type this module reaches no `Eq` instance for     |
 | `L0406` | `==` over a `Map` or a `Set`, which have no instance of `Eq`               |
 
-Neither code is new, and neither is about collections: a library generic and a type with no
-instance are refused here exactly as they are refused anywhere.
+Neither code is new, and neither is about collections: a constraint with no instance and a type
+with no instance are refused here exactly as they are refused anywhere.
 
 ## Properties
 

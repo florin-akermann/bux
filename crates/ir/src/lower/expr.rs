@@ -9,6 +9,7 @@ use lumen_types::Type;
 
 use crate::code::{Arithmetic, Comparison, FieldRef, Instruction, MethodRef};
 use crate::descriptor::Descriptor;
+use crate::lower::Instance;
 use crate::lower::body::{Builder, Held, LIST};
 use crate::lower::modules::Through;
 use crate::lower::operator::is_negation;
@@ -218,7 +219,7 @@ impl Builder<'_> {
     /// One of the types the JVM holds has no declaration of its own to reach, even where
     /// `library/prelude.lm` writes the instance: what that instance amounts to is written out
     /// in place rather than called, so there is nothing here.
-    pub(crate) fn instance_written(&self, method: &str, of: Span) -> Option<Span> {
+    pub(crate) fn instance_written(&self, method: &str, of: Span) -> Option<Instance> {
         let at = self.lowering.typed.type_of(of)?;
         self.lowering.answering(method, &self.at().substituted(at))
     }
@@ -282,9 +283,22 @@ impl Builder<'_> {
             .lowering
             .answering(&name.text, &self.at().substituted(at));
         match reached {
-            Some(declared) => self.statically(declared, name.span, arguments),
+            Some(instance) => self.calling(&instance, arguments),
             None => Some(self.written_out_instance(name, arguments)),
         }
+    }
+
+    /// A call of the method an instance writes, over the values it is handed in order.
+    pub(crate) fn calling(
+        &mut self,
+        instance: &Instance,
+        arguments: &[&Expr],
+    ) -> Option<Descriptor> {
+        for (argument, wanted) in arguments.iter().zip(&instance.signature().parameters) {
+            self.handed(argument, wanted.clone());
+        }
+        self.emit(instance.called());
+        instance.signature().result.clone()
     }
 
     /// A call of the method declared at `at`, which is a static method of the module class.

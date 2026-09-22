@@ -223,10 +223,12 @@ has one definition, and a prelude holding both would break that.
 A library function may be generic, and every function of `list`, `map`, and `set` is.
 A generic is written once per set of types it is used at, which `docs/specs/codegen.md` states,
 so the module declaring it writes the method and the module calling it writes the call.
-`list.has_value` and `list.index_of` each constrain the type parameter by `Eq`, and the body
-asking for that instance is the library's, so the instance answering is one the library reaches.
-Those are the prelude's, which every module has alike, and `L0424` refuses a call that settles
-the parameter on anything else.
+`list.has_value` and `list.index_of` each constrain the type parameter by `Eq`, and the method
+written for one set of types calls the instance the type in that set has, wherever it is declared.
+`docs/specs/codegen.md` states how: the library names the program's instance by the module the
+type carries in front of its name, so a program's own `Eq` answers a constraint the library wrote.
+The trait is the prelude's, which is what has both modules name it; `L0424` refuses a constraint
+written over a trait that stays in the module declaring the generic.
 
 ## What is not here yet
 
@@ -249,7 +251,7 @@ A program that cannot be written without one is what lands it.
 | code    | what it refuses                                                      |
 | ------- | -------------------------------------------------------------------- |
 | `L0306` | an import names a module neither the library, a file beside, nor a package holds |
-| `L0424` | a call of a constrained library generic, at a type the library reaches no instance of |
+| `L0418` | a call of a constrained library generic, at a type with no instance of that trait |
 
 A refusal inside the library is the compiler's own failure and not the program's.
 The library is compiled with every check a program is compiled with, and a library that does not

@@ -302,20 +302,17 @@ fn a_constraint_on_an_imported_generic_is_answered_by_the_prelude_s_instances() 
 }
 
 #[test]
-fn an_instance_the_module_declaring_the_generic_has_is_no_answer_for_a_use_here() {
+fn a_constraint_settled_at_a_type_of_the_declaring_module_has_no_instance_here() {
     let source = reaching("_ = greeting.is_same(greeting.wrapped(\"a\"), greeting.wrapped(\"b\"))");
 
     assert_eq!(
         refusal_reaching(&source, &offered(SAME)).message(),
-        concat!(
-            "`greeting.is_same` requires `Eq` of `greeting.Greeting`, ",
-            "and only the prelude's instances reach `greeting`"
-        )
+        "`greeting.Greeting` has no instance of `Eq`"
     );
 }
 
 #[test]
-fn an_instance_this_module_declares_is_no_answer_for_a_use_of_an_imported_generic() {
+fn an_instance_this_module_declares_answers_a_constraint_on_an_imported_generic() {
     let source = concat!(
         "import greeting\n\n",
         "fn main() -> () {\n",
@@ -325,12 +322,30 @@ fn an_instance_this_module_declares_is_no_answer_for_a_use_of_an_imported_generi
         "type Kept = Kept(String)\n"
     );
 
+    inferred_reaching(source, &offered(SAME));
+}
+
+/// A module whose generic writes a constraint over a trait it declares itself.
+const LABELLING: &str = concat!(
+    "fn labelled<T: Named<T>>(value: T) -> String {\n    named_as(value)\n}\n\n",
+    "instance Named<String> {\n",
+    "    fn named_as(value: String) -> String {\n        value\n    }\n}\n\n",
+    "trait Named<T> {\n    fn named_as(value: T) -> String\n}\n"
+);
+
+#[test]
+fn a_constraint_over_a_trait_the_other_module_keeps_to_itself_is_answered_by_nothing_here() {
+    let source = concat!(
+        "import greeting\n\n",
+        "fn main() -> () {\n",
+        "    _ = greeting.labelled(Kept(\"a\"))\n",
+        "}\n\n",
+        "type Kept = Kept(String)\n"
+    );
+
     assert_eq!(
-        refusal_reaching(source, &offered(SAME)).message(),
-        concat!(
-            "`greeting.is_same` requires `Eq` of `Kept`, ",
-            "and only the prelude's instances reach `greeting`"
-        )
+        refusal_reaching(source, &offered(LABELLING)).message(),
+        "`greeting.labelled` requires `Named`, which `greeting` declares and nothing here names"
     );
 }
 

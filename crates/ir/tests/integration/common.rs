@@ -7,6 +7,17 @@ use lumen_holes::Whole;
 use lumen_ir::{Asked, Body, Class, ClassName, Instruction, Lowered, Method, MethodRef, lower};
 use lumen_types::{Imported, Surface};
 
+/// `holder`, lowered knowing everything `source` asked of it.
+pub fn holder_asked_by(source: &str) -> Lowered {
+    let asked = lowered_reaching(source, &holder()).asks;
+    lowered_as(&Written {
+        source: HOLDER,
+        named: "holder",
+        imported: &Imported::default(),
+        asked: &asked,
+    })
+}
+
 /// The classes `source` becomes, as a module named `demo`.
 pub fn lowered(source: &str) -> Lowered {
     lowered_reaching(source, &Imported::default())
@@ -79,12 +90,14 @@ impl LibraryModule {
 
 /// A module declaring generics, which is what another module reaches one of through an import.
 ///
-/// `held` writes its type parameter out, `passed` writes none and lets inference find it, and
-/// `counted` writes one that reaches no further than the inside of a `List`.
+/// `held` writes its type parameter out, `passed` writes none and lets inference find it,
+/// `counted` writes one that reaches no further than the inside of a `List`, and `is_same`
+/// constrains one by `Eq`, so the method written for a set calls that set's own instance.
 pub const HOLDER: &str = concat!(
     "fn held<T>(value: T) -> T {\n    value\n}\n\n",
     "fn passed(value) {\n    value\n}\n\n",
-    "fn counted<T>(values: List<T>) -> Int {\n    1\n}\n"
+    "fn counted<T>(values: List<T>) -> Int {\n    1\n}\n\n",
+    "fn is_same<T: Eq<T>>(one: T, other: T) -> Bool {\n    one == other\n}\n"
 );
 
 /// What [`HOLDER`] offers, under the name `holder`, which is the name a test imports it by.

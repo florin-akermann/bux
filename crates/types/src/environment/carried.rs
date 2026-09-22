@@ -122,14 +122,6 @@ pub(crate) fn prelude_checked() {
     LazyLock::force(&CHECKED);
 }
 
-/// Whether the prelude itself has the instance of `of` for the type called `at`.
-///
-/// A module's own instances are its own: `docs/specs/modules.md` keeps a trait and its instances
-/// where they are declared, so the prelude's are the only ones two modules both reach.
-pub(crate) fn of_the_prelude(of: &str, at: &str) -> bool {
-    DECLARED.has_instance(of, at)
-}
-
 /// The type one method of one prelude trait has, at the type `at`.
 ///
 /// The prelude writes every one of these signatures itself, so this reads the declaration rather

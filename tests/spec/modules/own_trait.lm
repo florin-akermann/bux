@@ -1,0 +1,13 @@
+// expect-error: L0424
+// A trait stays where it is declared, and a module offers no trait of its own, so the prelude's
+// are the only traits two modules both name. `holder.labelled` writes its constraint over
+// `Named`, which `holder` declares, so nothing written here can answer it: this module can write
+// neither the instance nor the trait's name.
+import holder
+
+fn main(arguments: List<String>) -> Int {
+    _ = holder.labelled(Kept("a"))
+    0
+}
+
+type Kept = Kept(String)

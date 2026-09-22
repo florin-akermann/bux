@@ -169,7 +169,7 @@ the value it was given.
 | name inside a module that is no value | `L0304` | `holding.held` is a function, so it is written as a call |
 | literal misfit    | `L0420` | `5000000000` does not fit `Int32`, which holds `-2147483648` to `2147483647` |
 | bound is not a number | `L0421` | `lowest` of `Int32` is read rather than run, so it is one whole number |
-| instance stays in its module | `L0424` | `list.has_value` is written in `list`, which has no `Eq` for `Kept` |
+| trait stays in its module | `L0424` | `holder.labelled` requires `Named`, which `holder` declares and nothing here names |
 
 `L0406` covers every operator, because every operator is a trait method and a type is written
 with one exactly where it has that trait's instance, which `docs/specs/operators.md` states.
@@ -183,12 +183,14 @@ A name reached inside a module is never `L0402`: every module in scope is one lo
 what it declares is what answers, and a name it does not declare is `L0414`.
 A generic function a module declares is offered like every other, which `docs/specs/modules.md`
 states, so a call of one through an import is typed against the scheme that module wrote.
-`L0424` is the one thing such a call is held to beyond what a call of any other is: a constraint
-the declaration wrote over a type parameter is answered on behalf of a body that module writes,
-so the instance answering is one that module itself reaches.
-A trait and its instances stay where they are declared, which `docs/specs/modules.md` states, so
-those are the prelude's and no others: a use that settles such a parameter on a type of this
-module, or on a type parameter of its own, is refused rather than compiled.
+A constraint the declaration wrote over a type parameter is answered here, by the instance the
+type this use settles it on has, and `docs/specs/codegen.md` states how the method written for
+that set of types calls that instance by name.
+`L0424` is the one thing such a call is held to beyond what a call of any other is: a trait stays
+where it is declared, which `docs/specs/modules.md` states, so a constraint over a trait the
+declaring module keeps to itself is answered by nothing here and is refused rather than compiled.
+The prelude's traits are the ones two modules both name, and a constraint over one of those is
+answered as every other constraint is, or refused as `L0418`.
 A generic whose type parameters carry no constraint is reached at any type at all.
 A type that module declares is offered, and a signature naming one is reached like any other.
 `L0414` is also a type reached through a module that the module does not declare, because a type

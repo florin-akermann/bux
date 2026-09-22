@@ -5,8 +5,8 @@
 // > true
 // > false
 // `map` and `set` are modules of the library the compiler carries, and each function in them is
-// generic. A key is a type the prelude reaches an `Eq` instance for, which `Int` and `String`
-// are, and `docs/specs/collections.md` states what each of these functions costs.
+// generic. A key is any type with an `Eq` instance, which `Int` and `String` both are, and
+// `docs/specs/collections.md` states what each of these functions costs.
 import io
 
 import map

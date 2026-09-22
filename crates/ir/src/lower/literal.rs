@@ -7,7 +7,7 @@
 use lumen_ast::{Expr, Span};
 use lumen_resolver::prelude;
 
-use crate::code::{Instruction, MethodRef};
+use crate::code::Instruction;
 use crate::descriptor::Descriptor;
 use crate::lower::body::Builder;
 
@@ -15,18 +15,14 @@ impl Builder<'_> {
     /// A whole number, at whichever type inference settled it on.
     pub(crate) fn whole_number(&mut self, value: i64, written: Span) -> Descriptor {
         self.emit(Instruction::Long(value));
-        let Some(declared) = self.instance_written(prelude::FROM_LITERAL, written) else {
+        let Some(instance) = self.instance_written(prelude::FROM_LITERAL, written) else {
             return Descriptor::Long;
         };
-        let reached = self.reaching(declared, written);
-        self.emit(Instruction::InvokeStatic(MethodRef {
-            class: self.lowering.shapes.module().clone(),
-            name: reached.named,
-            descriptor: reached.signature.descriptor(),
-        }));
-        reached
-            .signature
+        self.emit(instance.called());
+        instance
+            .signature()
             .result
+            .clone()
             .expect("`from_literal` gives back the type the literal is written at")
     }
 
