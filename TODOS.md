@@ -6,16 +6,6 @@
 
 ## Open
 
-## 🟢 Item 058: A list grows and is read at an index
-A program builds a list only as a literal, so no phase of a compiler can produce one.
-`docs/specs/library.md` says `push` waits on a JVM member no `extern` can name.
-`List` is a type the compiler holds, so the spec chooses between codegen and `extern` for it.
-[058][a] - `docs/specs/library.md` states `list.push` and `list.at`, their types, and their costs.
-[058][b] - `push` costs amortized constant time and `at` constant time, as a textbook list does.
-[058][c] - `list.push(values, value)` gives the list with `value` after the last element.
-[058][d] - `list.at(values, index)` gives `Some` of the element there, and `None` past either end.
-[058][e] - An executable example under `tests/spec/library` builds a list in a `for` loop.
-
 ## 🔴 Item 059: A string is read one code unit at a time
 No function reads a character of a string, so a lexer cannot be written in Bux.
 `String.charAt` and `String.substring` each take an `int`, and `extern` widens a result only.
