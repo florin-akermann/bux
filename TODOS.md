@@ -35,6 +35,8 @@ The Bux parser compares the token kinds the lexer module declares, so no phase c
 [077][b] - `==`, `<`, and `+` reach the instance of an imported type where they are written.
 [077][c] - `map.insert` at a key another module declares compiles, and `derive` sees the instance.
 [077][d] - `L0418` fires only where no module in the program declares the instance.
+[077][e] - The four `List` instances move from the prelude to `list`, lowered from their Bux bodies.
+[077][f] - `crates/ir/src/lower/elements.rs`, which generates those bodies in Rust, is deleted.
 
 ## 🔴 Item 066: The lexer is written in Bux
 **Depends on:** Item 059, Item 076 — a lexer builds a token list from the code units of a string.
