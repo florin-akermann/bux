@@ -79,6 +79,11 @@ A refused example that parses is still in canonical form, so `L0200` is never wh
 An example headed `// expect-run` is run with `lumen run`, and must end with status 0.
 `docs/specs/run.md` says what running amounts to and where the JDK comes from.
 
+The example is copied into a directory of its own, with every module beside it, and is run there.
+An example that writes a file therefore writes it into that directory, which is taken away again
+when the example has run.
+Nothing an example writes reaches the tree it was read out of.
+
 What the program writes to standard output is compared with what the header states.
 The stated lines are each followed by a line break, and the comparison is exact.
 An output ending without a line break cannot be stated yet; the example needing it adds a form.

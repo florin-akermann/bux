@@ -33,7 +33,7 @@ pub fn offering(offered: &Offered<'_>) -> Imported {
     Imported::default().offering(offered.module, surface)
 }
 
-/// What `io` and `files` put out, which is what a module importing either of them reaches.
+/// What the library modules of `docs/specs/io.md` put out, which a module importing one reaches.
 ///
 /// They are library modules like `list` and `strings`, read out of the source the compiler
 /// carries, so inference is given their surfaces exactly as it is given a loaded module's.
@@ -46,8 +46,8 @@ pub fn reaching_the_library() -> Imported {
         })
 }
 
-/// The library modules these tests reach, which are the two `docs/specs/io.md` states.
-const LIBRARY: [&str; 2] = ["io", "files"];
+/// The library modules these tests reach, which are the ones `docs/specs/io.md` states.
+const LIBRARY: [&str; 3] = ["environment", "files", "io"];
 
 /// The type of the occurrence of `written` numbered `occurrence`, counting from one.
 pub fn inferred_type(source: &str, written: &str, occurrence: usize) -> String {

@@ -1,7 +1,8 @@
-// Reading a file whole, which is the one thing version 0.1 does with a file system.
+// Reading a file, writing one, and listing, making, and removing a directory.
 //
-// `docs/specs/io.md` states what the read gives back. It is written over `extern` declarations,
-// which `docs/specs/interop.md` states, and each of the two steps that can throw gives a `Result`.
+// `docs/specs/io.md` states what each of these gives back. Each is written over `extern`
+// declarations, which `docs/specs/interop.md` states, and every step that can throw gives a
+// `Result`, so nothing here throws through a program.
 /// The whole file at `path` as text, or what went wrong reading it.
 // example: ok_or(read(""), "nothing there") == "nothing there"
 fn read(path: String) -> Result<String, String> {
@@ -11,8 +12,139 @@ fn read(path: String) -> Result<String, String> {
     }
 }
 
+/// `text` written as the whole of the file at `path`, with `path` back where that worked.
+// example: ok_or(write(path: "", text: ""), "nothing written") == "nothing written"
+fn write(path: String, text: String) -> Result<String, String> {
+    match opened(path, as_utf_8()) {
+        Ok(sink) => sent(sink: sink, text: text, to: path)
+        Err(why) => Err(why)
+    }
+}
+
+/// `text` put on `sink` and `sink` closed, because a file left open is a file not written.
+// example: ok_or(write(path: "", text: ""), "nothing written") == "nothing written"
+fn sent(sink: Writer, text: String, to: String) -> Result<String, String> {
+    put(sink, text)
+    closed(sink)
+    if failed(sink) {
+        return Err("the whole of the text did not reach " + to)
+    }
+    Ok(to)
+}
+
+/// The name of everything the directory at `path` holds, one to a line and in order.
+// example: ok_or(listed("no-such-directory"), "nothing listed") == "nothing listed"
+fn listed(path: String) -> Result<String, String> {
+    match as_a_path(named(path)) {
+        Ok(found) => names_within(found)
+        Err(why) => Err(why)
+    }
+}
+
+/// The names the directory at `found` holds, or what went wrong reading them.
+// example: ok_or(listed("no-such-directory"), "nothing listed") == "nothing listed"
+fn names_within(found: Path) -> Result<String, String> {
+    match entries(found) {
+        Ok(stream) => every_name(stream)
+        Err(why) => Err(why)
+    }
+}
+
+/// The names `stream` holds, read out of it whole so that no step of the walk below can throw.
+///
+/// The directory goes back to the file system here, whether the reading worked or did not.
+// example: ok_or(listed("no-such-directory"), "nothing listed") == "nothing listed"
+fn every_name(stream: Entries) -> Result<String, String> {
+    held := all_of(in_order(stream))
+    released(stream)
+    match held {
+        Ok(names) => Ok(one_to_a_line(names))
+        Err(why) => Err(why)
+    }
+}
+
+/// The name of every entry `names` holds, each on a line of its own.
+// example: ok_or(listed("no-such-directory"), "nothing listed") == "nothing listed"
+fn one_to_a_line(names: Held) -> String {
+    walk := one_by_one(names)
+    var joined = ""
+    for has_another(walk) {
+        joined += bare_name(named(as_text(next_value(walk))))
+        joined += "\n"
+    }
+    joined
+}
+
+/// The directory made at `path`, with `path` back where it was made.
+///
+/// A JVM says whether it made one and says no more, so the reason a failure holds is this line.
+// example: ok_or(made(""), "nothing made") == "nothing made"
+fn made(path: String) -> Result<String, String> {
+    if make(named(path)) {
+        return Ok(path)
+    }
+    Err("no directory was made at " + path)
+}
+
+/// Whether anything was at `path` to remove, or what stopped the removal.
+// example: !ok_or(removed("no-such-directory"), true)
+fn removed(path: String) -> Result<Bool, String> {
+    match as_a_path(named(path)) {
+        Ok(found) => delete(found)
+        Err(why) => Err(why)
+    }
+}
+
 /// The whole file at `path`, read as UTF-8.
 extern static read_whole(path: Path) -> Result<String, String> = "java.nio.file.Files.readString"
+
+/// A file at `path` opened to be written whole, which is a file emptied of whatever it held.
+extern new opened(path: String, written_as: Encoding) -> Result<Writer, String>
+
+/// UTF-8, which is the encoding a write uses because it is the one a read is read with.
+extern field as_utf_8() -> Encoding = "java.nio.charset.StandardCharsets.UTF_8"
+
+/// Writes `text` on `sink` and nothing else.
+extern method put(sink: Writer, text: String) -> () = "print"
+
+/// Closes `sink`, which is what puts the last of what was written on it into the file.
+extern method closed(sink: Writer) -> () = "close"
+
+/// Whether anything written on `sink` did not reach the file, which is all a sink reports.
+extern method failed(sink: Writer) -> Bool = "checkError"
+
+/// Everything the directory at `path` holds, as the stream a JVM answers with.
+extern static entries(path: Path) -> Result<Entries, String> = "java.nio.file.Files.list"
+
+/// The same entries, each after the ones it sorts behind, so a listing reads the same twice.
+extern method in_order(stream: Entries) -> Entries = "sorted"
+
+/// Every entry of `stream`, read out of it here, which is the one step of a listing that throws.
+extern method all_of(stream: Entries) -> Result<Held, String> = "toList"
+
+/// The entries `names` holds, to be taken one at a time, which throws nothing on the way.
+extern method one_by_one(names: Held) -> Walk = "iterator"
+
+/// Lets `stream` go, which gives the directory it was reading back to the file system.
+extern method released(stream: Entries) -> () = "close"
+
+/// Whether `walk` has an entry left to give.
+extern method has_another(walk: Walk) -> Bool = "hasNext"
+
+/// The next entry of `walk`, which is there whenever `has_another` says it is.
+extern method next_value(walk: Walk) -> Anything = "next"
+
+/// `value` as the text a JVM writes it as, which for an entry of a directory is its path.
+extern method as_text(value: Anything) -> String = "toString"
+
+/// The last part of the path of `file`, which is the name the directory holds it under.
+extern method bare_name(file: File) -> String = "getName"
+
+/// Whether a directory was made at `file`, which is `false` where anything is there already.
+extern method make(file: File) -> Bool = "mkdir"
+
+/// Whether the file system held anything at `path` to remove.
+extern static delete(path: Path) -> Result<Bool, String> = "java.nio.file.Files.deleteIfExists"
 
 /// The path `file` names, which is how a file is reached to be read.
 extern method as_a_path(file: File) -> Result<Path, String> = "toPath"
@@ -22,6 +154,24 @@ extern new named(path: String) -> File
 
 /// A file the file system holds, named rather than opened.
 extern type File = "java.io.File"
+
+/// A file a program writes text on, one piece of text at a time.
+extern type Writer = "java.io.PrintWriter"
+
+/// How the characters of a text are held as bytes, which a write is told and a read is not.
+extern type Encoding = "java.nio.charset.Charset"
+
+/// Everything a directory holds, which a JVM answers a listing with.
+extern type interface Entries = "java.util.stream.Stream"
+
+/// The same entries once they are read out, which is what a walk over them reads.
+extern type interface Held = "java.util.List"
+
+/// Entries taken one at a time, which is how a program reads what a listing holds.
+extern type interface Walk = "java.util.Iterator"
+
+/// A value of the JVM's own, which is what an entry of a listing is before it is read as text.
+extern type Anything = "java.lang.Object"
 
 /// Where a file the file system holds is, which is what a read takes.
 extern type interface Path = "java.nio.file.Path"

@@ -1,0 +1,31 @@
+// expect-run
+// > it was removed
+// > nothing was there
+// A removal says whether there was anything to remove, so removing twice is no failure.
+// What a failure says of itself is the JDK's wording, so the program states its own instead.
+import files
+
+import io
+
+fn main() -> () {
+    io.println(told(answer: once("gone.txt")))
+    io.println(told(answer: files.removed("gone.txt")))
+}
+
+/// Whether the file written at `path` was there to remove, which it is where it was written.
+// example: told(answer: once("")) == "the removal failed"
+fn once(path: String) -> Result<Bool, String> {
+    match files.write(path, "a line") {
+        Ok(at) => files.removed(at)
+        Err(why) => Err(why)
+    }
+}
+
+// example: told(answer: Ok(false)) == "nothing was there"
+fn told(answer: Result<Bool, String>) -> String {
+    match answer {
+        Ok(true) => "it was removed"
+        Ok(false) => "nothing was there"
+        Err(_) => "the removal failed"
+    }
+}

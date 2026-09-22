@@ -379,11 +379,23 @@ fn a_bool_function_compiles_exactly_when_its_name_asks_a_question(tc: TestCase) 
     assert_eq!(accepts(&source), asks || gives != "Bool", "{source}");
 }
 
-/// Every name the two library modules of `docs/specs/io.md` declare, and what each gives back.
-const REACHED: [(&str, &str, &str); 3] = [
-    ("io", "print", "()"),
-    ("io", "println", "()"),
-    ("files", "read", "Result<String, String>"),
+/// Every name the library modules of `docs/specs/io.md` declare as a function of their surface.
+///
+/// Each row is the module, the name, the arguments a call writes, and what the call gives back.
+const REACHED: [(&str, &str, &str, &str); 8] = [
+    ("io", "print", "\"text\"", "()"),
+    ("io", "println", "\"text\"", "()"),
+    ("files", "read", "\"text\"", "Result<String, String>"),
+    (
+        "files",
+        "write",
+        "\"text\", \"text\"",
+        "Result<String, String>",
+    ),
+    ("files", "listed", "\"text\"", "Result<String, String>"),
+    ("files", "made", "\"text\"", "Result<String, String>"),
+    ("files", "removed", "\"text\"", "Result<Bool, String>"),
+    ("environment", "read", "\"text\"", "Option<String>"),
 ];
 
 /// The letters a generated name is drawn from, which are the ones a Lumen name may hold.
@@ -401,9 +413,9 @@ const PLACES: [&str; 3] = [
 
 #[hegel::test]
 fn a_name_a_library_module_declares_has_one_type_wherever_it_is_written(tc: TestCase) {
-    let (module, name, result) = tc.draw(gs::sampled_from(&REACHED));
+    let (module, name, arguments, result) = tc.draw(gs::sampled_from(&REACHED));
     let place = tc.draw(gs::sampled_from(&PLACES));
-    let call = format!("{module}.{name}(\"text\")");
+    let call = format!("{module}.{name}({arguments})");
     let body = place.replace("{call}", &call);
     let source = format!("import {module}\n\nfn go() -> () {{\n{body}}}\n");
 
@@ -419,11 +431,11 @@ fn a_name_a_library_module_declares_has_one_type_wherever_it_is_written(tc: Test
 
 #[hegel::test]
 fn a_name_a_library_module_does_not_declare_is_refused_naming_the_module_and_it(tc: TestCase) {
-    let (module, _, _) = tc.draw(gs::sampled_from(&REACHED));
+    let (module, _, _, _) = tc.draw(gs::sampled_from(&REACHED));
     let opener = tc.draw(gs::sampled_from(&["a", "w", "r"]));
     let rest: String = tc.draw(gs::text().alphabet(NAME_LETTERS).max_size(NAME_LONGEST));
     let name = format!("{opener}{rest}");
-    tc.assume(!REACHED.iter().any(|(_, declared, _)| *declared == name));
+    tc.assume(!REACHED.iter().any(|(_, declared, _, _)| *declared == name));
     let source = format!("import {module}\n\nfn go() -> () {{\n    _ = {module}.{name}()\n}}\n");
 
     assert_eq!(

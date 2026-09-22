@@ -110,22 +110,23 @@ Everything else a module's body is held to, an instance body is held to.
 `prelude` is every name above, and nothing else.
 
 `list`, `strings`, `map`, and `set` each hold what a `for` loop writes the same way twice, and
-`io` and `files` hold what no `for` loop writes at all.
+`io`, `files`, and `environment` hold what no `for` loop writes at all.
 `strings` holds one of each: `join` is the loop, and `length` is what no loop reads.
 
 ```text
-list:    length  has_value  index_of
-strings: join  length
-map:     empty  insert  get
-set:     empty  insert  has_value
-io:      print  println
-files:   read
+list:        length  has_value  index_of
+strings:     join  length
+map:         empty  insert  get
+set:         empty  insert  has_value
+io:          print  println
+files:       read  write  listed  made  removed
+environment: read
 ```
 
-`io` and `files` are written over `extern` declarations, which `docs/specs/interop.md` states and
-`docs/specs/io.md` says what each of the two reaches. Each declares those declarations beside its
-functions, and every top-level name is public, so both surfaces are wider than the three names
-above; `docs/specs/io.md` names the rest.
+`io`, `files`, and `environment` are written over `extern` declarations, which
+`docs/specs/interop.md` states and `docs/specs/io.md` says what each of the three reaches. Each
+declares those declarations beside its functions, and every top-level name is public, so every one
+of those surfaces is wider than the names above; `docs/specs/io.md` names the rest.
 `strings.length` is one such declaration itself.
 It reaches `String.length`, whose descriptor gives an `int` that the declaration widens to the
 `Int` it gives back.
@@ -163,6 +164,8 @@ the parameter on anything else.
 `push` and `split` each need a JVM method whose descriptor names a type no `extern` declaration
 can name: a `List` for the one and an array of `String` for the other.
 `docs/specs/interop.md` states what crosses, and they land with whatever names such a member.
+`files.listed` gives its names as one text for the same reason: no library function builds a list
+a walk fills until `push` lands, which `docs/specs/io.md` states.
 
 A mapping and a filtering over a list need a parameter whose type is a function, which the
 grammar of `docs/specs/grammar.md` does not write.

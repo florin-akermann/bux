@@ -1,0 +1,39 @@
+// expect-run
+// > one.txt
+// > two.txt
+// A directory is made, written into, and listed.
+// The names come back in order, so a listing reads the same however a file system holds them.
+import files
+
+import io
+
+fn main() -> () {
+    io.print(ok_or(names("box"), "the directory was not listed"))
+}
+
+/// The names the directory made at `at` holds, which are the two files written into it.
+// example: ok_or(names(""), "nothing") == "nothing"
+fn names(at: String) -> Result<String, String> {
+    match files.made(at) {
+        Ok(made) => the_later_name_first(made)
+        Err(why) => Err(why)
+    }
+}
+
+/// The names the directory at `at` holds, after the name that sorts second is written first.
+// example: ok_or(the_later_name_first("no-such-directory"), "nothing") == "nothing"
+fn the_later_name_first(at: String) -> Result<String, String> {
+    match files.write(at + "/two.txt", "two") {
+        Ok(_) => the_earlier_name_second(at)
+        Err(why) => Err(why)
+    }
+}
+
+/// The names the directory at `at` holds, after the name that sorts first is written second.
+// example: ok_or(the_earlier_name_second("no-such-directory"), "nothing") == "nothing"
+fn the_earlier_name_second(at: String) -> Result<String, String> {
+    match files.write(at + "/one.txt", "one") {
+        Ok(_) => files.listed(at)
+        Err(why) => Err(why)
+    }
+}

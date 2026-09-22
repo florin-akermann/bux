@@ -393,29 +393,45 @@ fn methods_of(lowered: &Lowered) -> impl Iterator<Item = &Vec<Instruction>> {
         .map(|method| &method.body.instructions)
 }
 
-/// Every JVM class the two library modules reach, which `docs/specs/io.md` names each of.
+/// Every JVM class the library modules reach, which `docs/specs/io.md` names each of.
 ///
-/// The last three are what the class file itself is made of rather than anything Lumen writes:
-/// every class a JVM holds is built on `java/lang/Object`, a guarded declaration asks whatever it
-/// caught what it says of itself, and the arm of a `match` nothing reaches says so rather than
-/// runs on, which `docs/specs/codegen.md` states.
-const REACHED: [&str; 9] = [
+/// The last three are what the class file itself is made of rather than anything Bux writes: the
+/// `Bool` an `Ok` carries is boxed, a guarded declaration asks whatever it caught what it says of
+/// itself, and the arm of a `match` nothing reaches says so rather than runs on, which
+/// `docs/specs/codegen.md` states.
+const REACHED: [&str; 16] = [
     "java/lang/String",
     "java/lang/System",
     "java/io/PrintStream",
+    "java/io/PrintWriter",
     "java/io/File",
     "java/nio/file/Path",
     "java/nio/file/Files",
+    "java/nio/charset/Charset",
+    "java/nio/charset/StandardCharsets",
+    "java/util/stream/Stream",
+    "java/util/List",
+    "java/util/Iterator",
     "java/lang/Object",
+    "java/lang/Boolean",
     "java/lang/Throwable",
     "java/lang/AssertionError",
 ];
 
-/// The two library modules that reach outside a program, which is what `docs/specs/io.md` is about.
-const LIBRARY: [&str; 2] = ["io", "files"];
+/// The library modules that reach outside a program, which is what `docs/specs/io.md` is about.
+const LIBRARY: [&str; 3] = ["environment", "files", "io"];
 
-/// A call of each name the two library modules declare, with the text it is given.
-const CALLS: [&str; 3] = ["io.print(text)", "io.println(text)", "_ = files.read(text)"];
+/// A call of each name the library modules declare, with the text it is given.
+const CALLS: [&str; 8] = [
+    "io.print(text)",
+    "io.println(text)",
+    "_ = files.read(text)",
+    "_ = files.write(text, text)",
+    "_ = files.listed(text)",
+    "_ = files.made(text)",
+    "_ = files.removed(text)",
+    "_ = environment.read(text)",
+];
 
 /// Every way an `extern` reaches a member, each written with the result left to be filled in.
 const REACHES: [(&str, &str); 4] = [
@@ -453,8 +469,9 @@ const AROUND: [&str; 2] = ["Int", "Result<Int, String>"];
 #[hegel::test]
 fn a_call_into_a_library_module_reaches_that_module_s_class_and_nothing_else(tc: TestCase) {
     let call = tc.draw(gs::sampled_from(&CALLS));
-    let source =
-        format!("import files\n\nimport io\n\nfn go(text: String) -> () {{\n    {call}\n}}\n");
+    let source = format!(
+        "import environment\n\nimport files\n\nimport io\n\nfn go(text: String) -> () {{\n    {call}\n}}\n"
+    );
 
     let reaching = LIBRARY
         .iter()

@@ -49,6 +49,127 @@ An import naming neither module names a file, which `docs/specs/modules.md` stat
 That is the ordinary rule for a module, which `docs/specs/modules.md` states, and neither of
 these two adds anything to it.
 
+## Writing a file, listing a directory, and reading a variable
+
+`files` read one file whole and did no more.
+A compiler writes a file too, and makes, lists, and removes a directory, and reads a variable.
+`environment` is a module of its own, because one module holds one thing and a variable is no
+file.
+
+```text
+files.write(path: String, text: String) -> Result<String, String>
+files.listed(path: String) -> Result<String, String>
+files.made(path: String) -> Result<String, String>
+files.removed(path: String) -> Result<Bool, String>
+environment.read(name: String) -> Option<String>
+```
+
+`files.write` writes `text` as the whole of the file at `path`, and empties whatever was there.
+`files.listed` gives the name of everything the directory at `path` holds, one to a line.
+`files.made` makes one directory at `path`, and makes no parent of it.
+`files.removed` removes what is at `path`, and gives back whether anything was there to remove.
+`environment.read` gives the variable called `name`, and `None` where nothing set it.
+
+Every failure is an `Err` that holds one line of text, and nothing here throws through a program.
+The line is what the JVM said of itself, except for the two members that say nothing, below.
+A caller opens the `Result` to reach the answer, so a directory that is not there is a case rather
+than a failure, exactly as `files.read` already has it.
+
+The first three give back `path` in the `Ok`, so a caller writes the next step over what the last
+one said.
+`Ok` carries the path rather than nothing at all for a second reason.
+`docs/specs/doc-examples.md` asks every function for an example that is an expression and is true,
+and no expression over a `Result<(), String>` is one.
+
+`environment.read` gives an `Option` and not a `Result`.
+A process started without a variable is an ordinary case, and there is nothing that went wrong to
+report.
+
+## Which members these are written over
+
+`docs/specs/interop.md` states what crosses: `Bool`, `Int`, `String`, a type an `extern` names,
+and `Option` or `Result` around one of those.
+An array crosses neither way, and a member that gives nothing back leaves an `Ok` nothing to
+carry, so four plain members are out of reach for one of those two reasons.
+
+| the member                            | what it holds that does not cross        |
+|---------------------------------------|------------------------------------------|
+| `java.io.File.list`                   | gives back an array of `String`          |
+| `java.nio.file.Files.writeString`     | takes an array of `OpenOption`           |
+| `java.nio.file.Files.createDirectory` | takes an array of `FileAttribute`        |
+| `java.nio.file.Files.delete`          | gives nothing back for an `Ok` to carry  |
+
+Each is written over a member that is reachable instead.
+
+`files.write` opens a `java.io.PrintWriter` on the path, writes the text, and closes it.
+A `PrintWriter` throws nothing while it writes and answers `checkError` instead, so `write` asks
+it and builds the `Err` itself, naming the path.
+
+`files.made` asks `java.io.File.mkdir`, which answers `true` or `false` and says no more, so the
+`Err` of `made` is the library's own wording and names the path.
+
+`files.removed` is `java.nio.file.Files.deleteIfExists`, which gives back a `Bool` and throws what
+it cannot do.
+`files.removed` hands that `Bool` on unchanged: `Ok(true)` says something was there, and
+`Ok(false)` says nothing was.
+
+`files.listed` is `java.nio.file.Files.list`, whose `java.util.stream.Stream` an `extern type`
+names as it names any other class.
+The names run together into one text, with a line break after each, because a `List<String>` is
+the one shape they cannot come back in.
+`docs/specs/library.md` says `list.push` is not there yet, so no library function builds a list a
+walk fills.
+A name that holds a line break cannot then be told from two names, which is what the text costs,
+and the shape changes when a list can be built.
+
+The entries come back sorted.
+`java.nio.file.Files.list` states no order, and a listing a program compares, or a build that is
+repeated, needs one.
+Each entry is a path, so `files.listed` reads the last part of it and gives the name alone.
+
+A `java.util.stream.Stream` reads the directory as it is walked, and throws where that read fails,
+so `files.listed` reads the whole stream out into a `java.util.List` first.
+That one step is an `extern` declared with a `Result`, and the walk over the list that follows it
+throws nothing.
+The stream is let go whether the reading worked or did not, which gives the directory back to the
+file system.
+
+`environment.read` is `java.lang.System.getenv`, which gives back `null` where nothing set the
+variable, and `docs/specs/interop.md` maps that `null` to `None`.
+
+`environment` is a class of its own, as `io` and `files` each are, and a call of
+`environment.read` is a static call of that class.
+The JVM classes these reach are `java.lang.String`, `java.lang.System`, `java.lang.Object`,
+`java.io.PrintWriter`, `java.io.File`, `java.nio.file.Path`, `java.nio.file.Files`,
+`java.nio.charset.Charset`, `java.nio.charset.StandardCharsets`, `java.util.stream.Stream`,
+`java.util.List`, and `java.util.Iterator`.
+A class file is built of three more that no declaration here writes.
+`java.lang.Boolean` is what the `Bool` an `Ok` carries is boxed as, and `java.lang.Throwable` and
+`java.lang.AssertionError` are what a guard and an unreachable arm are made of, which
+`docs/specs/codegen.md` states.
+`java.util.stream.Stream`, `java.util.List`, and `java.util.Iterator` are each an interface, which
+the declaration says with the word `docs/specs/interop.md` gives it.
+`java.lang.Object` is what an entry of a listing is held as, because `java.util.Iterator.next`
+gives one back, and asking it for its text is how the path is read.
+
+`docs/specs/api-surface.md` makes every top-level name public, so each `extern` declaration and
+each step written beside these is reachable by name, as `files.read_whole` already is.
+`files` adds `sent`, `names_within`, `every_name`, `one_to_a_line`, `opened`, `put`, `closed`,
+`failed`, `make`, `delete`, `entries`, `in_order`, `all_of`, `one_by_one`, `released`,
+`has_another`, `next_value`, `as_text`, `bare_name`, `Writer`, `Entries`, `Held`, `Walk`, and
+`Anything`.
+`environment` declares `read` and nothing else.
+That is what writing these in Bux costs, and a program that wants a file written writes
+`files.write`.
+
+## Properties of the file system and the environment
+
+These hold and are checked with property-based tests:
+
+1. Every JVM class `files` and `environment` reach is one this spec names.
+2. A call of a name of `environment` is a static call of that module's class and of nothing else.
+3. Every method of `files` that guards a span is an `extern` whose result is a `Result`.
+
 ## The errors
 
 ```text
@@ -85,4 +206,4 @@ These hold and are checked with property-based tests:
 2. A name either module does not declare is refused with `L0414`, naming the module and it.
 3. A call of a name of either is a static call of that module's class and of nothing else.
 4. Every JVM class either module reaches is one this spec names.
-5. The only method of either that guards a span is an `extern` whose result is a `Result`.
+5. Every method of either that guards a span is an `extern` whose result is a `Result`.

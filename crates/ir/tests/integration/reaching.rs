@@ -365,12 +365,19 @@ fn the_path_is_asked_of_a_file_before_the_file_is_read_whole() {
 }
 
 #[test]
-fn the_only_method_of_a_library_module_that_guards_a_span_gives_back_a_result() {
+fn every_method_of_a_library_module_that_guards_a_span_gives_back_a_result() {
     assert!(guarding("io").is_empty(), "nothing `io` reaches throws");
     assert_eq!(
         guarding("files"),
-        ["read_whole", "as_a_path"],
-        "the two declarations `files` writes with a `Result` are the two guarded spans"
+        [
+            "read_whole",
+            "opened",
+            "entries",
+            "all_of",
+            "delete",
+            "as_a_path"
+        ],
+        "the declarations `files` writes with a `Result` are the guarded spans"
     );
 }
 
