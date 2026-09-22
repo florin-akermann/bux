@@ -10,10 +10,9 @@ This file is that anchor; consistency is the throughline, and the bar is Code He
 ## Project Scope
 - **Goal**: Go's simplicity, Haskell's types, Valhalla's values, a Rust compiler.
 - Everyday Bux code reads like Go: basically a bunch of `for` loops, plus ADTs and `match`.
-- **Dogfood as early and as much as possible.** Bux replaces Rust wherever Bux can express it.
-- The end state is self-hosting: the compiler and the whole toolchain are written in Bux.
-- The Rust compiler is only the bootstrap; no Rust remains once Bux can compile itself.
-- The self-hosted toolchain preferably ships as native binaries via GraalVM native-image.
+- **Dogfood as early as possible.** Bux replaces Rust wherever it can, until no Rust remains.
+- **Self-hosting comes first.** Version 0.3 is what the Bux compiler needs, in the order needed.
+- The Bux compiler runs on the JVM; a native binary, concurrency, HTTP, and JSON are version 0.4.
 - **Formatting is a compile error.** Source that is not in canonical form does not compile.
 - **No anonymous functions.** Every function has a name; functions are first-class by name.
 - **No syntactic sugar.** A second way to write what the language already writes is refused.
@@ -22,6 +21,7 @@ This file is that anchor; consistency is the throughline, and the bar is Code He
 - Plain loops are the default idiom; higher-order functions are library, not a second paradigm.
 - **The standard library is small, and the fewer methods a type has, the better.**
 - A method lands only where a `for` loop cannot write it; a map has no iterator.
+- A library data structure has the best known asymptotic cost, written plainly and never tuned.
 - **Non-goals** — never implement, suggest, or plan: ownership, borrowing, lifetimes, inheritance.
 - Likewise null, checked exceptions, macros, implicit runtime magic, or Java's type system.
 - **Concurrency is Go's**: spawn, channels, blocking calls; no async/await, no function colouring.

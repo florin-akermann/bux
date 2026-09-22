@@ -118,6 +118,11 @@ A method lands only where a plain loop over what the type already exposes cannot
 A map has no iterator, and the same holds for every convenience a loop already writes.
 `docs/principles.md` question 12 is what a proposed method answers.
 
+A data structure the library holds has the best asymptotic cost known for what it does.
+A map looks a key up in constant time, and a list is read at an index in constant time.
+The implementation is a textbook one, written as a school project writes it: plain and correct.
+Tuning beyond that cost is refused until a measurement on a real program asks for it.
+
 Initial areas:
 
 ```text
@@ -175,7 +180,19 @@ for normal language development.
 
 ## 6. Compiler implementation
 
-The compiler should be written in Rust.
+The compiler is written in Bux, and the Rust compiler is the bootstrap that gets it there.
+Self-hosting comes before every feature the self-hosted compiler does not need.
+Section 11 is the ladder of items it needs, and an item on the ladder is picked before one off it.
+
+The self-hosted compiler runs on the JVM under `--enable-preview`, started by a `bux` launcher.
+No native binary is needed to compile the compiler with itself.
+GraalVM native-image waits until GraalVM tracks JDK 28 and Valhalla, and section 12 holds it.
+
+The bootstrap has three stages.
+Stage 0 is the Rust `bux`, which compiles the Bux-written compiler to stage 1.
+Stage 1 compiles the same source to stage 2.
+The Rust crates are deleted when stage 2 equals stage 1 byte for byte and both pass `tests/spec`.
+Until then, the Rust compiler is the one that ships, and the crate structure below is its shape.
 
 Crate structure:
 
@@ -363,17 +380,35 @@ Add:
 
 ## 11. Version 0.3
 
-Add:
+Version 0.3 is self-hosting, and each item below is one the Bux-written compiler cannot do without.
+`TODOS.md` holds the items in the order they are picked, and the order here is that order.
+
+Add, in the language and the library:
+
+* a list that grows and is read at an index
+* a string read one code unit at a time and cut into a substring
+* a program that takes arguments, exits with a code, and writes to standard error
+* a file system surface: list, make, and delete a directory, and write a file
+* a process started and its output read, which is how `bux run` starts `java`
+* a library generic used at a type the program declares
+* an instance written over a generic type, and `derive` reaching through a `List`
+* a hashed map and set
+
+Then, the compiler phase by phase, lexer first, each checked against the Rust one on `tests/spec`.
+Then the bootstrap of section 6, and the deletion of the Rust crates.
+
+---
+
+## 12. Version 0.4+
+
+Add, once the compiler is Bux:
 
 * concurrency: `spawn`, channels, `select`, close, and the cancellation idiom
 * JVM virtual-thread integration
 * HTTP
 * JSON
 * database support
-
----
-
-## 12. Version 0.4+
+* a native binary via GraalVM native-image, once GraalVM tracks JDK 28 and Valhalla
 
 Investigate:
 
