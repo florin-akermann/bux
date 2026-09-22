@@ -6,19 +6,6 @@
 
 ## Open
 
-## 🔴 Item 077: An instance is reached from the module that imports its type
-**Depends on:** Item 063 — a constrained generic now calls the instance by name, in any module.
-`docs/design.md` section 8 says a constraint at `Point` reaches the one `Eq<Point>` there is.
-`docs/specs/modules.md` says a module's surface carries no instances, so `demo.User == demo.User`
-is `L0418` in every module but `demo`, and a map keyed by `demo.User` is refused there too.
-The Bux parser compares the token kinds the lexer module declares, so no phase compiles without it.
-[077][a] - `docs/specs/modules.md` states that the instances of a type travel with the type.
-[077][b] - `==`, `<`, and `+` reach the instance of an imported type where they are written.
-[077][c] - `map.insert` at a key another module declares compiles, and `derive` sees the instance.
-[077][d] - `L0418` fires only where no module in the program declares the instance.
-[077][e] - The four `List` instances stay in the prelude and are lowered from their Bux bodies.
-[077][f] - `crates/ir/src/lower/elements.rs`, which generates those bodies in Rust, is deleted.
-
 ## 🔴 Item 076: A list grows in amortized constant time
 **Depends on:** Item 058, Item 077 — the `List` instances are Bux bodies before a list changes.
 `docs/specs/library.md` writes down that `push` costs what the list holds.

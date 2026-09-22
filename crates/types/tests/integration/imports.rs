@@ -47,7 +47,7 @@ fn a_function_of_an_imported_module_has_the_type_that_module_gave_it() {
 }
 
 #[test]
-fn what_a_function_of_an_imported_module_gives_back_is_what_its_result_says() {
+fn a_call_through_an_import_gives_back_what_the_result_of_the_function_says() {
     let source = "import greeting\n\nfn greet() -> String {\n    greeting.hello(\"world\")\n}\n";
 
     inferred_reaching(source, &offered(GREETING));
@@ -217,21 +217,6 @@ fn a_type_the_imported_module_does_not_declare_is_refused_where_it_is_written() 
 }
 
 #[test]
-fn a_type_of_another_module_has_no_instance_here_however_that_module_came_by_one() {
-    let greeting = concat!(
-        "derive Eq for Greeting\n\n",
-        "fn wrapped(name: String) -> Greeting {\n    Greeting(name)\n}\n\n",
-        "type Greeting = Greeting(String)\n"
-    );
-    let source = reaching("_ = greeting.Greeting(\"a\") == greeting.Greeting(\"b\")");
-
-    assert_eq!(
-        refusal_reaching(&source, &offered(greeting)).message(),
-        "`greeting.Greeting` has no `Eq`, so `==` is not written over it"
-    );
-}
-
-#[test]
 fn a_module_may_declare_a_type_and_still_offer_what_is_written_without_it() {
     let greeting = "fn hello(name: String) -> String {\n    \"hi \" + name\n}\n\ntype Greeting = Greeting(String)\n";
     let source = reaching("_ = greeting.hello(\"world\")");
@@ -302,13 +287,10 @@ fn a_constraint_on_an_imported_generic_is_answered_by_the_prelude_s_instances() 
 }
 
 #[test]
-fn a_constraint_settled_at_a_type_of_the_declaring_module_has_no_instance_here() {
+fn a_constraint_settled_at_a_type_of_the_declaring_module_is_answered_by_its_instance() {
     let source = reaching("_ = greeting.is_same(greeting.wrapped(\"a\"), greeting.wrapped(\"b\"))");
 
-    assert_eq!(
-        refusal_reaching(&source, &offered(SAME)).message(),
-        "`greeting.Greeting` has no instance of `Eq`"
-    );
+    inferred_reaching(&source, &offered(SAME));
 }
 
 #[test]

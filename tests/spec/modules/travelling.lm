@@ -1,0 +1,50 @@
+// expect-run
+// > == reaches the instance the module of the type derived
+// > < reaches it too
+// > + reaches the instance the module of the type wrote
+// > a generic instance is written by the module of the type
+// > a list of the type is compared by the prelude's instance
+// > a map is keyed by the type
+// > a derive here reaches the instances of a field of the type
+// > Money(3)
+// The instances of a type travel with the type, which `docs/specs/modules.md` states, so a module
+// that reaches `money.Money` reaches every instance `money` gives it and the prelude's as well.
+// Each line is written only where the answer is the one it claims.
+import io
+
+import map
+
+import money
+
+fn main(arguments: List<String>) -> Int {
+    one := money.cents(1)
+    two := money.cents(2)
+    if one == money.cents(1) {
+        io.println("== reaches the instance the module of the type derived")
+    }
+    if one < two {
+        io.println("< reaches it too")
+    }
+    if one + two == money.cents(3) {
+        io.println("+ reaches the instance the module of the type wrote")
+    }
+    if money.Box(one) == money.Box(one) {
+        io.println("a generic instance is written by the module of the type")
+    }
+    if [one, two] == [one, two] {
+        io.println("a list of the type is compared by the prelude's instance")
+    }
+    match map.get(map.insert(map.empty(), two, "two"), two) {
+        Some(named) => io.println("a map is keyed by the type")
+        None => ()
+    }
+    if Wallet(one) == Wallet(one) {
+        io.println("a derive here reaches the instances of a field of the type")
+    }
+    io.println(shown(one + two))
+    0
+}
+
+derive Eq for Wallet
+
+type Wallet = Wallet(money.Money)

@@ -543,28 +543,6 @@ pub(crate) fn as_a_reference(of: &Descriptor) -> Option<Instruction> {
     Some(holding(&boxing(of)?))
 }
 
-/// The reference on the stack read back as `of`, which is what a list holds one of its values as.
-///
-/// A list holds every value as a reference, so reading one out gives an `Object` and this is what
-/// turns that back into the whole number, truth value, or class inference says it is.
-pub(crate) fn read_back_as(of: &Descriptor) -> Vec<Instruction> {
-    match boxing(of) {
-        Some(held) => read_out_of(&held),
-        None => cast_to(of),
-    }
-}
-
-/// The reference on the stack read as the class it is, which an `Object` alone needs none of.
-fn cast_to(of: &Descriptor) -> Vec<Instruction> {
-    let Descriptor::Reference(class) = of else {
-        return Vec::new();
-    };
-    if *class == object_class() {
-        return Vec::new();
-    }
-    vec![Instruction::Cast(class.clone())]
-}
-
 /// The calls that read a whole number or a truth value back out of the reference holding it.
 fn read_out_of(held: &Boxing) -> Vec<Instruction> {
     vec![

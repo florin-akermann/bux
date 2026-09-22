@@ -20,6 +20,7 @@ mod types;
 mod unify;
 
 use std::collections::HashMap;
+use std::sync::LazyLock;
 
 use lumen_ast::Span;
 use lumen_resolver::ResolvedProgram;
@@ -50,19 +51,41 @@ pub fn instance_signature(trait_name: &str, method: &str, for_type: &Type) -> Ty
 /// Returns the first declaration that holds a value of itself, or, where none does, the first
 /// expression whose type inference cannot give it.
 pub fn check(resolved: ResolvedProgram, imported: &Imported) -> Result<TypedProgram, TypeError> {
-    environment::prelude_checked();
+    LazyLock::force(&PRELUDE);
     holds::nothing_holds_itself(&resolved)?;
     let reached = imported.every_type();
     let inferred = infer::infer(&resolved, imported, &reached)?;
-    Ok(TypedProgram {
-        resolved,
-        types: inferred.types,
-        surface: inferred.surface,
-        methods: inferred.methods,
-        generics_reached: inferred.generics_reached,
-        reached,
-    })
+    Ok(TypedProgram::of(resolved, inferred, reached))
 }
+
+/// The prelude, with every expression of its bodies given the type it has.
+///
+/// The prelude's instances over a list are lowered from their bodies, so lowering reads the
+/// prelude as it reads any module; `docs/specs/codegen.md` states the class they are written into.
+#[must_use]
+pub fn prelude() -> &'static TypedProgram {
+    &PRELUDE
+}
+
+/// The prelude's own bodies, walked once against what reading it declared.
+///
+/// `docs/specs/library.md` says the library is compiled with every check a program is compiled
+/// with, so what its source says an instruction does is held to the declarations above it rather
+/// than read by a person alone. It is walked the first time any module is checked, and once for
+/// however many modules a build has, so a library that does not hold together is the compiler's
+/// own failure before it is anything else.
+///
+/// # Panics
+///
+/// Panics where a body of the prelude does not have the type its declaration gives it. That is
+/// the compiler's own failure and no program's, which `docs/specs/library.md` states, and the
+/// compiler's own tests are where it is caught.
+static PRELUDE: LazyLock<TypedProgram> = LazyLock::new(|| {
+    let resolved = lumen_resolver::prelude_resolved().clone();
+    let inferred = infer::of_the_prelude()
+        .expect("the prelude the compiler carries is a module that compiles");
+    TypedProgram::of(resolved, inferred, Vec::new())
+});
 
 /// A program whose every expression, and every name that declares one, has the type it has.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -76,6 +99,17 @@ pub struct TypedProgram {
 }
 
 impl TypedProgram {
+    fn of(resolved: ResolvedProgram, inferred: infer::Inferred, reached: Vec<OfferedType>) -> Self {
+        Self {
+            resolved,
+            types: inferred.types,
+            surface: inferred.surface,
+            methods: inferred.methods,
+            generics_reached: inferred.generics_reached,
+            reached,
+        }
+    }
+
     /// The program this was inferred from, with every name still pointed at its definition.
     #[must_use]
     pub const fn resolved(&self) -> &ResolvedProgram {

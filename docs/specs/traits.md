@@ -79,8 +79,8 @@ declares that name, and the instances say what it does at each type.
 
 An instance is written in the module that declares the trait or in the module that declares the
 type it is for.
-Version 0.2 has one module reach another's functions and nothing more, so both are this module,
-and the rule is stated here for the change that makes the two differ.
+The instances of a type travel with the type, so every module that reaches the type reaches them.
+`docs/specs/modules.md` states what a module that imports the type reaches.
 
 One trait and one type have one instance.
 A second instance of one trait for one type is refused where it is written.
@@ -307,14 +307,14 @@ A module writing `instance Eq<Int>` is refused with `L0308`, because there alrea
 module declaring its own `Eq` is refused with `L0302`, exactly as one declaring its own `todo` is.
 Which of the two wrote the one already there makes no difference to either refusal.
 
-No instance over those four types has a body anything calls.
+No instance over `Bool`, `Int`, or `String` has a body anything calls.
 `is_equal` at `Int`, at `Bool`, or at `String` is written out where it is called, as `or` is, and
 the comparison it writes is the one `==` already wrote: two whole numbers or two truth values as the
 JVM compares them, and two strings by the characters they hold.
-Each instance over `List<T>` is written out the same way, as the walk it is, which
-`docs/specs/codegen.md` states.
-The body in `library/prelude.lm` is what says in Lumen what that instruction or that walk does, and
-reading it is what holds it to its type.
+The body in `library/prelude.lm` is what says in Lumen what that instruction does, and reading it
+is what holds it to its type.
+Each instance over `List<T>` is different: its body in `library/prelude.lm` is the one lowered.
+`docs/specs/codegen.md` states the class that the method is written into.
 Nothing asks whether two references are one object, which `docs/specs/codegen.md` requires.
 
 ## What is written
@@ -336,12 +336,9 @@ nothing else, which is what has a module reach another module's instance without
 An argument that itself takes arguments is written out whole, so `Eq<Box<List<Int>>>` reaches
 `Eq$Box$is_equal$List$Int`, and the argument is what keeps two uses of one instance apart.
 
-`List` is the compiler's type, so no module declares it and no module's class is the one its
-instances belong to.
-The four the prelude writes over `List<T>` are written into the class of each module that uses one,
-as every other prelude instance is written out where it is called.
-`Eq$List$is_equal$Int` used in `demo` is a static method of the class `demo`, and the same method
-used in `other` is a static method of the class `other`.
+`List` is the compiler's type, so no module declares it, and the prelude declares its instances.
+The four that the prelude writes over `List<T>` are methods of the class of the prelude.
+`Eq$List$is_equal$Int` is one method of that class, whichever module uses it.
 
 A call of a trait method is an `invokestatic` of the method the instance wrote, or, over a type
 the JVM holds, the instruction that instance amounts to written out in place.

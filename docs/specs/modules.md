@@ -81,18 +81,27 @@ Such a value is held and read as the type it was declared as, fields and variant
 What it is never is written: writing `holder.User` needs `holder` in scope, which only an import
 puts it in, so a name this module cannot write stays a name it cannot write.
 
-A trait and its instances stay the declaring module's own, exactly as a generic function does.
-`demo.User` has no instance of `Eq` here however `demo` came by one, so `==` over two of them is
-refused as it is over any type with no instance.
-A trait is reached through no module either: `demo.Eq` is not written.
-Version 0.1 keeps both where they are declared, and `docs/specs/traits.md` states what an instance
-is; what a module offers is the names a reader can write, and an instance has no name to write.
+A trait stays the declaring module's own: `demo.Eq` is not written.
+What a module offers is the names a reader can write, and a trait is not among them.
 
-A constraint on an imported generic is therefore answered where the use is written, and by the
-instances that module reaches: its own, and the prelude's.
-A use settling the type parameter on `demo.User` is refused as `L0418` however `demo` came by an
-instance, because this module cannot know it has one; one settling it on a type this module
-declares an instance for is written, and the method reaches that instance by name.
+The instances of a type travel with the type, which `docs/design.md` section 8 settles.
+An instance belongs in the module that declares its trait or in the module that declares its type.
+One trait and one type have one instance in a program, so a type has the same instances everywhere.
+A module that reaches `demo.User` reaches every instance `demo` gives `User`, and the prelude's.
+An instance that `demo` derives travels in the same way as one that `demo` writes.
+`==` over two `demo.User`s is accepted wherever `demo` gives `User` an instance of `Eq`.
+The instance is a method of the class of `demo`, and `docs/specs/codegen.md` states the call.
+
+An instance has no name to write, so it adds no name to what a module offers.
+It comes with the type it is for, and a value of that type that reaches a module brings it along.
+An instance of a trait that `demo` keeps to itself stays in `demo`.
+Nothing outside `demo` can write the name of that trait, so nothing outside it can ask for one.
+An instance whose constraint names such a trait stays in `demo` too.
+No other module can answer that constraint, so outside `demo` the type has no such instance.
+
+A constraint on an imported generic is answered by the instance of the type that the use settled.
+That type can be declared in any module of the program, and the instance travels with it.
+A use that settles the parameter on `demo.User` is `L0418` only where no module has the instance.
 The trait is what has to be named twice over, once in the constraint and once in the instance, so
 a constraint over a trait the declaring module keeps to itself is refused as `L0424`.
 

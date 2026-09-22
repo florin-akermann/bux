@@ -1,0 +1,30 @@
+// expect-run
+// > a list of an extern type is compared by the prelude's instance
+// > a library generic reaches the instance at an extern type
+// An extern type is a Java class only the module that declares it names. The prelude and `list`
+// write their methods at it all the same, because a use asks for them with the class it names.
+import io
+
+import list
+
+fn main(arguments: List<String>) -> Int {
+    if [named("a.txt")] == [named("a.txt")] {
+        io.println("a list of an extern type is compared by the prelude's instance")
+    }
+    if list.has_value([named("a.txt")], named("a.txt")) {
+        io.println("a library generic reaches the instance at an extern type")
+    }
+    0
+}
+
+extern new named(path: String) -> File
+
+instance Eq<File> {
+    fn is_equal(one: File, other: File) -> Bool {
+        path_of(one) == path_of(other)
+    }
+}
+
+extern method path_of(file: File) -> String = "getPath"
+
+extern type File = "java.io.File"

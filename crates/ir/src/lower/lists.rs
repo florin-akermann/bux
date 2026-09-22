@@ -41,10 +41,18 @@ impl Builder<'_> {
         if reached.module.text != MODULE {
             return None;
         }
+        self.held_named(&reached.name.text, arguments)
+    }
+
+    /// What the call of `name` runs, where `name` is one of the two the compiler holds.
+    ///
+    /// The prelude's own source writes `at` without `list` in front, which
+    /// `docs/specs/library.md` states, so its instances over a list reach it by the name alone.
+    pub(crate) fn held_named(&mut self, name: &str, arguments: &[&Expr]) -> Option<Descriptor> {
         let [values, second] = arguments else {
             return None;
         };
-        match reached.name.text.as_str() {
+        match name {
             PUSH => Some(self.pushed(values, second)),
             AT => Some(self.read_at(values, second)),
             _ => None,

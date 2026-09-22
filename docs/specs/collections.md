@@ -125,6 +125,7 @@ A constraint on a library generic is answered by the instance the key's own type
 `docs/specs/codegen.md` states the specialised method calls by name.
 A key is therefore a `Bool`, an `Int`, or a `String`, and a type the program declares both
 instances for, by hand or by `derive Eq, Hash for Kept`.
+That type can be declared in another module, because the instances of a type travel with it.
 The prelude writes `Hash<List<T>>` beside `Eq<List<T>>`, which `docs/specs/traits.md` states, so a
 `List<T>` is a key wherever `T` is one.
 

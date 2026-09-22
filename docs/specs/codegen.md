@@ -24,6 +24,7 @@ demo.class                 the module: one static method per function
 demo/User.class            one class per type the module declares
 demo/Payment$Failed.class  one class per variant of an algebraic data type
 lumen/Option.class         the prelude types, which every module may reach
+lumen/prelude.class        the prelude's instances over a list, at each set of types asked
 ```
 
 The module class is named after the file, so a file whose name is not one a class may have is
@@ -249,6 +250,9 @@ module asking gains its own, so `list.Held` asked of `list` is `Held` and `Foo` 
 by `main` is `main.Foo`.
 A type of a third module, and a type of the prelude, are written the same way in both and cross
 unchanged.
+An extern type is a Java class that only the module that declares it names.
+So the ask carries the class of each extern type in the set, and the module being asked uses it.
+`tests/spec/interop/listed.lm` asks the prelude and `list` for methods at `main.File`.
 
 ## How a constrained generic reaches an instance
 
@@ -305,28 +309,37 @@ instance that declares none.
 So `list.has_value` at a `Box<Int>` that `main` declares is `has_value$main$Box$Int` on the `list`
 class, and `main` writes `Eq$Box$is_equal$Int` on its own class whether it calls it or not.
 
+An instance of a type of another module is written by the module that declares the type.
+`==` over two `demo.Box<Int>` in `main` asks `demo` for `Eq$Box$is_equal$Int`, as a generic asks.
+The name is read off the type as `demo` writes it, so each module arrives at the same name.
+A type of `main` in the arguments is `main$Kept` in that name, and a type of `demo` is `User`.
+
 ## How an instance over a list is written
 
 The prelude writes `Eq`, `Ord`, `Hash`, and `Show` over `List<T>`, which `docs/specs/library.md`
 states, and each of the four declares one type parameter.
 
-`List` is the compiler's type, so no module declares it and there is no declaring module's class to
-write the method into.
-Each of the four is written into the class of every module that uses one, as every other prelude
-instance is written out where it is called.
-`Eq$List$is_equal$Int` used in `demo` is a static method of the class `demo`, and the same method
-used in `other` is a static method of the class `other`.
+`List` is the compiler's type, so no module declares it, and the prelude declares the instances.
+The prelude is written as a class of its own, `lumen/prelude`, which holds the methods of the four.
+Each method is lowered from the `for` loop that `library/prelude.lm` writes, as any body is.
+Nothing in the compiler writes the walk a second time in another form.
+
+A use of one of the four is a use of a generic instance of another module.
+The module that writes the use asks the prelude for the method at the types that the use settled.
+So `Eq$List$is_equal$Int` is one method of `lumen/prelude`, whichever module uses it.
+The prelude is lowered after every module of the program, because every module can ask it.
 
 The set of methods stays finite because the element of a list is written with fewer arguments than
 the list is.
 `Eq$List$is_equal$List$Int` asks for `Eq$List$is_equal$Int`, which asks for the instruction
 `Eq<Int>` amounts to, and there the walk stops.
 
-The body is the `for` loop `library/prelude.lm` writes, written out as the walk it is: `Eq` stops
-at the first element that differs, `Ord` at the first that decides, `Hash` reads every element, and
-`Show` writes the separators between them.
-A list is one `java.util.List`, which this spec states above, so the walk reads its size and each
-of its slots and hands each element to the instance of the element's own type.
+A body of the prelude can call an instance of a module that was lowered before the prelude.
+`Eq$List$is_equal$demo$Box$Int` calls `Eq$Box$is_equal$Int` on `demo`, which `demo` must write.
+A build therefore lowers its modules again while a module asks another for a method it did not
+write.
+Each pass writes each module with every ask that the pass before it found, and the last pass finds
+nothing new.
 
 ## How a type is laid out
 

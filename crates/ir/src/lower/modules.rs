@@ -90,10 +90,7 @@ impl Builder<'_> {
             .collect();
         self.owes_each_instance(generic.constrained(), &settled);
         let asked = Asking {
-            settled: settled
-                .iter()
-                .map(|at| self.lowering.shapes.as_written_by(module, at))
-                .collect(),
+            settled,
             constrained: generic.constrained().to_vec(),
         };
         let named = self.lowering.asking(module, &reached.name.text, asked);

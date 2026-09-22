@@ -154,12 +154,14 @@ each body is a `for` loop over the list in `library/prelude.lm`.
 `docs/specs/traits.md` states what the four answer, and each one asks `T` for the instance of its
 own trait rather than reading an element any other way.
 
-The four are written in the prelude rather than in `library/list.lm`, because a module's surface
-carries no instances: an instance written in `list` would reach no module that imports `list`.
-The prelude is the one module every module reads, so an instance written there is the one instance
-every module sees, which is what one trait and one type having one instance asks for.
-The four move to `list` with the item that has the instances of a type travel with the type, which
-`docs/specs/modules.md` states.
+The four are written in the prelude, beside the traits they answer.
+An instance belongs in the module that declares its trait or its type, which `docs/design.md`
+section 8 states.
+`List` is the compiler's type and no module declares it, so the module that declares the trait is
+the one place for each of the four.
+The instances of a type travel with the type, so every module that holds a list reaches the four.
+Each of the four is lowered from its body in `library/prelude.lm`, which `docs/specs/codegen.md`
+states.
 
 Each of the four reads its list with `at`, so `push` and `at` are reachable from the prelude as
 well as from `list`, and from no other module.

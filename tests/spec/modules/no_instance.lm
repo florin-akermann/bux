@@ -1,0 +1,22 @@
+// expect-error: L0418
+// An instance travels with its type, so a type gets none that no module in the program declares.
+// `holder` gives `Held` no `Eq`, and neither this module nor the prelude can, so the constraint
+// is refused where the use is written.
+import holder
+
+fn main(arguments: List<String>) -> Int {
+    if has_value([holder.wrapped("a")], holder.wrapped("b")) {
+        return 0
+    }
+    0
+}
+
+// example: has_value([1, 2], 2)
+fn has_value<T: Eq<T>>(items: List<T>, value: T) -> Bool {
+    for item in items {
+        if is_equal(item, value) {
+            return true
+        }
+    }
+    false
+}

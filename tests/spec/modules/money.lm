@@ -1,0 +1,33 @@
+// A module declares a type and the instances of it, and those travel with the type.
+// example: cents(count: 3) == Money(3)
+fn cents(count: Int) -> Money {
+    Money(count)
+}
+
+derive Eq, Ord, Hash, Show for Money
+
+instance Add<Money> {
+    fn add(one: Money, other: Money) -> Money {
+        match one {
+            Money(left) => match other {
+                Money(right) => Money(left + right)
+            }
+        }
+    }
+}
+
+// A generic type gives its instance once, and the module that declares it writes it at each
+// set of types a use settles it at.
+instance<T: Eq<T>> Eq<Box<T>> {
+    fn is_equal(one: Box<T>, other: Box<T>) -> Bool {
+        match one {
+            Box(left) => match other {
+                Box(right) => left == right
+            }
+        }
+    }
+}
+
+type Money = Money(Int)
+
+type Box<T> = Box(T)

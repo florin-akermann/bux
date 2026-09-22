@@ -8,9 +8,11 @@ use std::collections::{HashMap, HashSet};
 
 use lumen_ast::{Called, Item, RecordField, TypeDeclaration, TypeDefinition, TypeRef, TypeRefKind};
 use lumen_ast::{Variant, VariantPayload};
+use lumen_resolver::library::PRELUDE;
 use lumen_resolver::{DefinitionKind, Namespace, ResolvedProgram, prelude};
 use lumen_types::{BuiltBy, OfferedConstructor, OfferedType, Type};
 
+use crate::asked::Specialisation;
 use crate::descriptor::{ClassName, Descriptor, MethodDescriptor};
 
 /// The type a value of, or nothing, is written as, which a `?` hands a `None` back from.
@@ -71,7 +73,7 @@ impl Shape {
 }
 
 /// The Java class a foreign type is held as, and how a method of that class is called.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct Reached {
     pub(crate) class: ClassName,
     pub(crate) called: Called,
@@ -107,14 +109,7 @@ pub(crate) struct Shapes {
 impl Shapes {
     /// The shapes `resolved` declares and `reached` offers, with the prelude beside them.
     pub(crate) fn of(resolved: &ResolvedProgram, module: &str, reached: &[OfferedType]) -> Self {
-        let mut shapes = Self {
-            module: ClassName::new(module),
-            declarations: Vec::new(),
-            built_by: HashMap::new(),
-            records: HashMap::new(),
-            own: HashSet::new(),
-            foreign: HashMap::new(),
-        };
+        let mut shapes = Self::empty(ClassName::new(module));
         for item in &resolved.program().items {
             if let Item::Type(declaration) = item {
                 shapes.declare(resolved, declaration);
@@ -125,6 +120,38 @@ impl Shapes {
         }
         shapes.declare_prelude();
         shapes
+    }
+
+    /// The shapes the prelude reaches, which are its own types and nothing else.
+    ///
+    /// Its types are the prelude types every module lays out, so none of them is its own in the
+    /// way a module's type is: no other module reaches one through the prelude's name.
+    pub(crate) fn of_the_prelude() -> Self {
+        let mut shapes = Self::empty(prelude_class(PRELUDE));
+        shapes.declare_prelude();
+        shapes
+    }
+
+    fn empty(module: ClassName) -> Self {
+        Self {
+            module,
+            declarations: Vec::new(),
+            built_by: HashMap::new(),
+            records: HashMap::new(),
+            own: HashSet::new(),
+            foreign: HashMap::new(),
+        }
+    }
+
+    /// The class the module called `module` writes its functions and instances into.
+    ///
+    /// Every module is a class named after itself. The prelude is in the package of the prelude
+    /// types, so no module a program names collides with it.
+    pub(crate) fn module_named(module: &str) -> ClassName {
+        if module == PRELUDE {
+            return prelude_class(PRELUDE);
+        }
+        ClassName::new(module)
     }
 
     /// The class the module's own functions are static methods of.
@@ -192,6 +219,35 @@ impl Shapes {
                 .iter()
                 .map(|argument| self.as_written_by(by, argument))
                 .collect(),
+        }
+    }
+
+    /// Each foreign type `of` names, as the module `by` writes it, and the class it is held as.
+    ///
+    /// The module `by` is asked for a method at `of` and may not know the type at all, because a
+    /// foreign type is a Java class only the module that declares it names.
+    pub(crate) fn foreign_written_by(&self, by: &str, of: &[Type]) -> Vec<(String, Reached)> {
+        let mut found = Vec::new();
+        for one in of {
+            let Type::Named { name, arguments } = one else {
+                continue;
+            };
+            if let Some(reached) = self.foreign.get(name) {
+                found.push((self.written_by(by, name), reached.clone()));
+            }
+            found.extend(self.foreign_written_by(by, arguments));
+        }
+        found
+    }
+
+    /// Knows each foreign type another module asked this one for a method at.
+    pub(crate) fn reach_asked<'s>(&mut self, asked: impl Iterator<Item = &'s Specialisation>) {
+        for one in asked {
+            for (name, reached) in one.foreign() {
+                self.foreign
+                    .entry(name.clone())
+                    .or_insert_with(|| reached.clone());
+            }
         }
     }
 
