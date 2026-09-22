@@ -573,7 +573,7 @@ fn boxing(of: &Descriptor) -> Option<Boxing> {
 }
 
 /// A method of the list a `for … in` walks.
-fn reaching(name: &str, parameters: Vec<Descriptor>, result: Descriptor) -> MethodRef {
+pub(crate) fn reaching(name: &str, parameters: Vec<Descriptor>, result: Descriptor) -> MethodRef {
     MethodRef {
         class: ClassName::new(LIST),
         name: name.to_owned(),

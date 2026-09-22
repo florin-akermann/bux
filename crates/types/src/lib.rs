@@ -10,6 +10,7 @@ mod bounds;
 mod derive;
 mod environment;
 mod error;
+mod held;
 mod holds;
 mod infer;
 mod scheme;

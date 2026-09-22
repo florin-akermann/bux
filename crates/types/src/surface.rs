@@ -45,7 +45,7 @@ impl Offered {
     /// A function that writes no type parameter is generic all the same when nothing settled
     /// its type: inference generalises over whatever it left free, and the class the declaring
     /// module writes is erased exactly as a written parameter erases it.
-    fn of(scheme: Scheme) -> Self {
+    pub(crate) fn of(scheme: Scheme) -> Self {
         if scheme.quantified().is_empty() {
             Self::Plain(scheme)
         } else {
@@ -271,6 +271,17 @@ impl Surface {
         Self { functions, types }
     }
 
+    /// The same surface, with the functions the compiler holds for `module` beside its own.
+    ///
+    /// `docs/specs/library.md` says which those are: what a list does that no Bux body says is
+    /// the compiler's, because `List` itself is. They are written where they are called rather
+    /// than reached on the module's class, so the module offers them and declares neither.
+    fn and_held(mut self, module: &str) -> Self {
+        self.functions
+            .extend(crate::held::offered_by_the_compiler(module));
+        self
+    }
+
     /// What the module offers under `name`, when it declares a function of that name.
     pub(crate) fn function(&self, name: &str) -> Option<&Offered> {
         self.functions.get(name)
@@ -303,8 +314,10 @@ impl Imported {
     /// The same, with `module` now offering `surface` to whatever imports it.
     #[must_use]
     pub fn offering(mut self, module: &str, surface: Surface) -> Self {
-        self.surfaces
-            .insert(module.to_owned(), surface.reached_as(module));
+        self.surfaces.insert(
+            module.to_owned(),
+            surface.reached_as(module).and_held(module),
+        );
         self
     }
 

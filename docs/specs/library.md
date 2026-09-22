@@ -105,6 +105,48 @@ The rule is about the types an author chose, which `docs/design.md` states, so i
 instance method through its trait: `trait Hash<T>` is held to it and `instance Hash<Bool>` is not.
 Everything else a module's body is held to, an instance body is held to.
 
+## A list grown and read at an index
+
+`list.push` and `list.at` are the compiler's, and no `extern` declaration names either of them.
+
+`List` is the compiler's, which the section above states, so what a list does is the compiler's
+too.
+Neither function has a body in `library/list.lm`, because neither can be said in Bux.
+A list is built whole by a literal, and no expression the grammar writes builds a list from a
+list, so `push` has no body to write.
+`at` has one a `for` loop writes, and that body counts to the index and costs what the list holds.
+
+An `extern` is one Java member under a Lumen signature, and neither of the two is one member.
+A signature for either writes a type parameter, and `docs/specs/interop.md` refuses one: a type
+parameter is carried by nothing a Java descriptor names.
+The member that reads a list at an index takes an `int` and throws past the end, and `at` gives
+`None` there.
+So the two are written out where they are called, the way an operator over `Int` is, and
+`docs/specs/codegen.md` states the instructions each one becomes.
+
+```text
+fn push<T>(values: List<T>, value: T) -> List<T>
+fn at<T>(values: List<T>, index: Int) -> Option<T>
+```
+
+`push` gives back the list with `value` after the last element.
+The list it was handed is unchanged, because a list is a value and nothing reaches into one.
+`at` gives `Some` of the element at `index`.
+It gives `None` where the index is below zero, and where it is the length or above it.
+Neither is partial, and neither panics.
+
+`at` costs the same whatever the list holds, because the member behind it reads one slot.
+
+`push` costs what the list holds, and that cost is the shape of a list rather than the lowering.
+The list a push is handed keeps every element it had, so the list it gives back holds them again.
+A list grown a thousand times by `push` therefore costs the square of what it ends up holding.
+A `push` that cost the same whatever the list holds asks for a buffer whose slots past the end of
+every list sharing it are free.
+That is a length beside a buffer rather than one `java.util.List`, which is what
+`docs/specs/codegen.md` holds a list as.
+Until a list is held as one of those, the cost is written down here rather than hidden, which is
+what `docs/specs/collections.md` does of a map.
+
 ## The library modules
 
 `prelude` is every name above, and nothing else.
@@ -112,9 +154,10 @@ Everything else a module's body is held to, an instance body is held to.
 `list`, `strings`, `map`, and `set` each hold what a `for` loop writes the same way twice, and
 `io`, `files`, and `process` hold what no `for` loop writes at all.
 `strings` holds one of each: `join` is the loop, and `length` is what no loop reads.
+`list` holds two more, `push` and `at`, which the section above states are the compiler's.
 
 ```text
-list:    length  has_value  index_of
+list:    length  has_value  index_of  push  at
 strings: join  length
 map:     empty  insert  get
 set:     empty  insert  has_value
@@ -150,8 +193,7 @@ at all only when a reader would otherwise write the same loop twice.
 `strings` has a `length` and so does `list`, and neither of the two is a prelude name: one name
 has one definition, and a prelude holding both would break that.
 
-A library function may be generic, and `list.length`, `list.has_value`, `list.index_of`, and
-every function of `map` and `set` are.
+A library function may be generic, and every function of `list`, `map`, and `set` is.
 A generic is written once per set of types it is used at, which `docs/specs/codegen.md` states,
 so the module declaring it writes the method and the module calling it writes the call.
 `list.has_value` and `list.index_of` each constrain the type parameter by `Eq`, and the body
@@ -161,13 +203,9 @@ the parameter on anything else.
 
 ## What is not here yet
 
-`push` and `split` each need a JVM member whose descriptor names something no `extern`
-declaration reaches.
-`push` needs one that gives a list back, and a `List` crosses as a parameter and never as a
-result; `split` needs one that gives an array of `String` back, and no Lumen type is an array.
-`docs/specs/interop.md` states what crosses, and each lands with whatever names such a member.
-`process.run` takes one `List<String>` rather than a program and its arguments apart for that
-reason, which `docs/specs/io.md` states.
+`split` needs a JVM method whose descriptor names an array of `String`, which no `extern`
+declaration can name.
+`docs/specs/interop.md` states what crosses, and it lands with whatever names such a member.
 
 A mapping and a filtering over a list need a parameter whose type is a function, which the
 grammar of `docs/specs/grammar.md` does not write.
@@ -198,6 +236,8 @@ These hold and are checked with property-based tests:
 2. A program that writes no import sees every prelude name and no library module's name.
 3. The prelude's declarations are the same whichever module asks for them.
 4. Every instance body the prelude writes has the type its trait gives it at the instance's type.
+5. `list.at` gives `Some` of the element at every index a list holds, and `None` at every other.
+6. `list.push` gives back what the list held, with the value after it, and leaves the list alone.
 
 The prelude is not among the modules of property 1 that compile on their own.
 Its own names are in scope in every module, so a compiler reading it as a module would refuse
