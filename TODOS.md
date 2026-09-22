@@ -6,7 +6,7 @@
 
 ## Open
 
-## 🟡 Item 055: An `extern` reaches a member of a Java interface
+## 🟢 Item 055: An `extern` reaches a member of a Java interface
 `extern method` is lowered to `invokevirtual`, which the JVM refuses to link on an interface.
 `extern type Path = "java.nio.file.Path"` with `extern method as_text(path: Path) -> String`
 compiles, and running it is `java.lang.IncompatibleClassChangeError` with no diagnostic before it.
