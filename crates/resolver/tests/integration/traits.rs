@@ -225,9 +225,6 @@ const HAS: [(&str, &str); 20] = [
     ("IntegerLiteral", "Int"),
 ];
 
-/// The one of them the compiler still supplies, which `docs/specs/traits.md` names and says why.
-const STILL_SUPPLIED: (&str, &str) = ("Hash", "String");
-
 #[test]
 fn the_prelude_has_every_instance_the_specs_write_out_and_no_other() {
     let mut has: Vec<(&str, &str)> = lumen_resolver::prelude::instances().collect();
@@ -239,7 +236,7 @@ fn the_prelude_has_every_instance_the_specs_write_out_and_no_other() {
 }
 
 #[test]
-fn the_library_writes_every_one_of_them_but_the_one_still_supplied() {
+fn the_library_writes_every_one_of_them_and_the_compiler_supplies_none() {
     let written = instances_written_in_the_library();
 
     for (of, for_type) in HAS {
@@ -247,9 +244,8 @@ fn the_library_writes_every_one_of_them_but_the_one_still_supplied() {
             .iter()
             .any(|(wrote, wrote_for)| wrote == of && wrote_for == for_type);
 
-        assert_eq!(
+        assert!(
             is_written,
-            (of, for_type) != STILL_SUPPLIED,
             "instance {of}<{for_type}> in library/prelude.lm"
         );
     }

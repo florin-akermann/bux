@@ -1161,9 +1161,25 @@ signature.
 
 Every parameter and every result is a Lumen type, and the JVM class it compiles to is the one the
 member's own descriptor names.
-There is no subtyping, no widening, and no implicit conversion: a member taking `java.lang.Object`
-is not reachable, and the answer is to name one that takes what the caller holds.
+There is no subtyping and no implicit conversion: a member taking `java.lang.Object` is not
+reachable, and the answer is to name one that takes what the caller holds.
 That is what keeps the boundary a signature rather than a second type system.
+
+One width is the exception, and the declaration is what states it.
+`Int` compiles to a `long`, and a great many Java members give back an `int` instead, `hashCode`
+and `length` among them.
+Which of the two a member gives is written in that member's own class file, and the compiler
+reads none, so the author says it by writing `int` after the kind:
+
+```text
+extern method int length(text: String) -> Int = "length"
+```
+
+The member is called for its `int` and the answer is widened to the `Int` the signature declares.
+Nothing else changes: `int` is no Lumen type, no program can write one, and section 2 is not
+suspended to let one out.
+It is a fact about the member, written where every other fact about the member is written, and
+the only thing refused is writing it where the result is not an `Int` to widen to.
 
 Three things cross, and nothing else does.
 A value of a Lumen type crosses as itself.

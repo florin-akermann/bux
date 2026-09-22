@@ -2,7 +2,7 @@
 //! are called.
 //!
 //! The prelude has `Eq`, `Ord`, `Hash`, and `Show` for `Bool`, `Int`, and `String`, which
-//! `docs/specs/traits.md` writes out, and `library/prelude.lm` writes all but `Hash<String>`.
+//! `docs/specs/traits.md` writes out, and `library/prelude.lm` writes every one of them.
 //! None of them is called: a use is what the instance amounts to, written out here as the
 //! instructions it always was, which is what `docs/specs/library.md` says the library is for.
 //! Two whole numbers or two truth values stand in the order the JVM puts them, and two strings

@@ -1,7 +1,10 @@
-// The readings of a `String` a `for` loop would otherwise write the same way twice.
+// The readings of a `String`: what a `for` loop would otherwise write the same way twice, and
+// what no `for` loop reads at all.
 //
 // `docs/specs/library.md` states the test a function here is held to: it is written in Lumen over
 // what the language already gives, and it lands only where a reader would write the loop twice.
+// `length` meets neither test, because no loop reaches the characters of a string. It is one
+// `extern` declaration away from a JVM method, which `docs/specs/interop.md` states.
 /// The parts run together, with `between` written between each pair of them.
 // example: join(["a", "b"], "-") == "a-b"
 fn join(parts: List<String>, between: String) -> String {
@@ -19,3 +22,9 @@ fn join(parts: List<String>, between: String) -> String {
     }
     joined
 }
+
+/// How many UTF-16 code units the text holds, widened from the `int` a JVM counts them as.
+///
+/// It is the length a JVM reports and not always the number of characters: a character the JVM
+/// holds as a pair of units, such as an emoji, counts as two.
+extern method int length(text: String) -> Int = "length"

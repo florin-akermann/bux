@@ -50,11 +50,6 @@ impl Environment {
             environment.arities.insert(Key::prelude(name), takes);
         }
         environment.bind(Key::prelude("todo"), todo());
-        for (of, for_type) in prelude::still_supplied() {
-            environment
-                .instances
-                .insert((of.to_owned(), for_type.to_owned()));
-        }
         environment.note_types(resolved);
         environment
             .declare_traits(resolved)

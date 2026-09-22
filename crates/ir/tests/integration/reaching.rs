@@ -34,6 +34,12 @@ const GUARDED: &str = concat!(
     "extern type Path = \"java.nio.file.Path\"\n",
 );
 
+/// A module whose declarations say the members they name give back an `int`.
+const WIDENED: &str = concat!(
+    "extern method int length(text: String) -> Int = \"length\"\n\n",
+    "extern method int counted(text: String) -> Result<Int, String> = \"hashCode\"\n",
+);
+
 /// A module whose one declaration gives back an `Option`, which is the null-reading shape.
 const OPTIONAL: &str = concat!(
     "extern method as_a_path(file: File) -> Option<Path> = \"toPath\"\n\n",
@@ -212,6 +218,61 @@ fn a_declaration_that_wraps_nothing_gives_back_what_the_member_gave_and_guards_n
 
     assert!(body.guards.is_empty());
     assert_eq!(built_in(&body.instructions), Vec::<String>::new());
+}
+
+#[test]
+fn a_width_reaches_the_member_for_an_int_and_widens_that_to_the_int_it_gives_back() {
+    let text = Descriptor::reference("java/lang/String");
+
+    assert_eq!(
+        body_of(&lowered(WIDENED), "length").instructions,
+        vec![
+            Instruction::Label(Label(0)),
+            Instruction::Load { slot: 0, of: text },
+            Instruction::InvokeVirtual(MethodRef {
+                class: ClassName::new("java/lang/String"),
+                name: "length".to_owned(),
+                descriptor: MethodDescriptor::new(Vec::new(), Some(Descriptor::Integer)),
+            }),
+            Instruction::Label(Label(1)),
+            Instruction::Widen,
+            Instruction::Return(Some(Descriptor::Long)),
+        ]
+    );
+}
+
+#[test]
+fn a_declaration_writing_no_width_reaches_its_member_for_a_long_and_widens_nothing() {
+    let written = lowered(BUILDING);
+    let body = body_of(&written, "read_whole");
+
+    assert!(
+        !body.instructions.contains(&Instruction::Widen),
+        "a member gives back what the signature declares, so nothing widens it"
+    );
+}
+
+#[test]
+fn a_guarded_width_is_widened_outside_the_guard_because_a_widening_throws_nothing() {
+    let written = lowered(WIDENED);
+    let body = body_of(&written, "counted");
+    let guard = guarded(body);
+    let inside = &body.instructions[at(body, guard.from)..at(body, guard.to)];
+
+    assert!(
+        !inside.contains(&Instruction::Widen),
+        "a guard covers the member the declaration names and nothing more"
+    );
+    assert!(body.instructions.contains(&Instruction::Widen));
+}
+
+#[test]
+fn a_widened_answer_is_held_in_a_slot_wide_enough_for_the_whole_number_it_became() {
+    assert_eq!(
+        body_of(&lowered(WIDENED), "counted").locals,
+        2,
+        "the slot the `Ok` is built around holds a widened whole number"
+    );
 }
 
 #[test]

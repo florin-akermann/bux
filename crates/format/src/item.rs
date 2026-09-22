@@ -44,6 +44,10 @@ pub(crate) fn declared_extern(printer: &mut Printer, written: &ExternDeclaration
     printer.word("extern ");
     printer.word(written.reaches.written());
     printer.word(" ");
+    if let Some(width) = written.gives.written() {
+        printer.word(width);
+        printer.word(" ");
+    }
     printer.word(&written.name.text);
     parameters(printer, &written.parameters);
     printer.word(" -> ");

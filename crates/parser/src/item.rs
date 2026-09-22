@@ -1,6 +1,7 @@
 //! The top-level declarations of a source file.
 
-use lumen_ast::{DeriveDeclaration, ExternDeclaration, Function, Import, InstanceDeclaration};
+use lumen_ast::{DeriveDeclaration, ExternDeclaration, Function, Gives};
+use lumen_ast::{Import, InstanceDeclaration};
 use lumen_ast::{Item, JavaName, Name, Parameter, Program, Reaches};
 use lumen_ast::{RecordField, Signature, TraitDeclaration, TypeDeclaration, TypeDefinition};
 use lumen_ast::{Span, TypeRef, Variant, VariantPayload};
@@ -72,6 +73,7 @@ fn declared_extern(cursor: &mut Cursor) -> Result<ExternDeclaration, ParseError>
     let start = cursor.offset();
     cursor.expect_keyword(Keyword::Extern)?;
     let kind = extern_kind(cursor)?;
+    let gives = given_back(cursor);
     let name = cursor.expect_name(Expected::FunctionName)?;
     cursor.expect_punct(Punct::LParen)?;
     let parameters = kind.taken(cursor)?;
@@ -81,10 +83,28 @@ fn declared_extern(cursor: &mut Cursor) -> Result<ExternDeclaration, ParseError>
     Ok(ExternDeclaration {
         name,
         reaches,
+        gives,
         parameters,
         result,
         span: cursor.span_since(start),
     })
+}
+
+/// `int` before the name, which says the member's own descriptor gives one rather than a `long`.
+///
+/// It is the width only where a name follows it, so `extern static int(text: String) -> Int` still
+/// declares a function named `int`. `docs/specs/grammar.md` states that telling the two apart is
+/// the one place the grammar reads a second token.
+fn given_back(cursor: &mut Cursor) -> Gives {
+    let width = cursor
+        .peek()
+        .filter(|token| token.kind == TokenKind::Identifier)
+        .is_some_and(|token| token.span.text(cursor.source()) == Gives::WIDTH);
+    if !width || cursor.peek_kind(1) != Some(TokenKind::Identifier) {
+        return Gives::WhatTheResultIs;
+    }
+    cursor.advance();
+    Gives::AnInt
 }
 
 /// The word after `extern`, which is read only there and is an ordinary name anywhere else.

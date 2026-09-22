@@ -1,0 +1,17 @@
+// expect-run
+// > 5
+// `Int` compiles to a `long`, and a great many Java members give back an `int` instead.
+// Which of the two a member gives is written in that member's own class file, and the compiler
+// reads none, so `int` after the kind is how the declaration says it.
+// The call reaches `length` for its `int`, and widens the answer to the `Int` declared here.
+fn main() -> () {
+    put_line(out(), shown(length("hello")))
+}
+
+extern method int length(text: String) -> Int = "length"
+
+extern method put_line(stream: PrintStream, text: String) -> () = "println"
+
+extern field out() -> PrintStream = "java.lang.System.out"
+
+extern type PrintStream = "java.io.PrintStream"

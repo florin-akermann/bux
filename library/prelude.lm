@@ -55,6 +55,12 @@ instance Hash<Int> {
     }
 }
 
+instance Hash<String> {
+    fn hashed(value: String) -> Int {
+        hashed_text(value)
+    }
+}
+
 instance Show<Bool> {
     fn shown(value: Bool) -> String {
         shown_truth(value)
@@ -206,3 +212,6 @@ extern static shown_truth(value: Bool) -> String = "java.lang.String.valueOf"
 
 /// `value` as the text a JVM writes a whole number as, which is its digits and a sign.
 extern static shown_number(value: Int) -> String = "java.lang.String.valueOf"
+
+/// The whole number a JVM reads `value` off the characters of, widened from the `int` it gives.
+extern method int hashed_text(value: String) -> Int = "hashCode"

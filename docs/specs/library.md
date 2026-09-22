@@ -111,10 +111,11 @@ Everything else a module's body is held to, an instance body is held to.
 
 `list`, `strings`, `map`, and `set` each hold what a `for` loop writes the same way twice, and
 `io` and `files` hold what no `for` loop writes at all.
+`strings` holds one of each: `join` is the loop, and `length` is what no loop reads.
 
 ```text
-list:    length  has_value
-strings: join
+list:    length  has_value  index_of
+strings: join  length
 map:     empty  insert  get
 set:     empty  insert  has_value
 io:      print  println
@@ -125,6 +126,11 @@ files:   read
 `docs/specs/io.md` says what each of the two reaches. Each declares those declarations beside its
 functions, and every top-level name is public, so both surfaces are wider than the three names
 above; `docs/specs/io.md` names the rest.
+`strings.length` is one such declaration itself.
+It reaches `String.length`, whose descriptor gives an `int` that the declaration widens to the
+`Int` it gives back.
+What it counts is what a JVM counts, which is UTF-16 code units: a character the JVM holds as a
+pair of units, such as an emoji, counts as two.
 
 `map` and `set` declare the types they are about as well as the functions, and each declares the
 steps of its own walks beside them, which `docs/specs/collections.md` lists.
@@ -140,23 +146,23 @@ That is the test a library function is held to.
 It lands in the library rather than in the compiler exactly when Lumen can write it, and it lands
 at all only when a reader would otherwise write the same loop twice.
 
-Were `strings` to gain a `length`, `list` would have one too, and neither could be a prelude name:
-one name has one definition, and a prelude holding both would break that.
+`strings` has a `length` and so does `list`, and neither of the two is a prelude name: one name
+has one definition, and a prelude holding both would break that.
 
-A library function may be generic, and `list.length`, `list.has_value`, and every function of
-`map` and `set` are.
+A library function may be generic, and `list.length`, `list.has_value`, `list.index_of`, and
+every function of `map` and `set` are.
 A generic is written once per set of types it is used at, which `docs/specs/codegen.md` states,
 so the module declaring it writes the method and the module calling it writes the call.
-`list.has_value` constrains its type parameter by `Eq`, and the body asking for that instance is
-the library's, so the instance answering is one the library itself reaches.
+`list.has_value` and `list.index_of` each constrain the type parameter by `Eq`, and the body
+asking for that instance is the library's, so the instance answering is one the library reaches.
 Those are the prelude's, which every module has alike, and `L0424` refuses a call that settles
 the parameter on anything else.
 
 ## What is not here yet
 
-`push`, `split`, and the length of a string each need a JVM method whose descriptor gives back an
-`int`, which is a type no Lumen type compiles to and so a type no `extern` declaration can name.
-`docs/specs/interop.md` states that, and they land with whatever names such a member.
+`push` and `split` each need a JVM method whose descriptor names a type no `extern` declaration
+can name: a `List` for the one and an array of `String` for the other.
+`docs/specs/interop.md` states what crosses, and they land with whatever names such a member.
 
 A mapping and a filtering over a list need a parameter whose type is a function, which the
 grammar of `docs/specs/grammar.md` does not write.

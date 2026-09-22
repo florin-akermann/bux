@@ -11,8 +11,10 @@ could name, and they are library modules written over these declarations once on
 This spec says what an `extern` declaration is, what crosses the boundary, and what is refused.
 
 The boundary is a signature and nothing more.
-Java's object model does not come with it: there is no subtyping, no widening, no overload to
-pick between, no class hierarchy, and no `equals`, `hashCode`, or `toString` reaching a value.
+Java's object model does not come with it: there is no subtyping, no overload to pick between,
+no class hierarchy, and no `equals`, `hashCode`, or `toString` reaching a value.
+One width crosses, `int` widened to the `Int` a signature declares, and the declaration is what
+says so.
 What a declaration cannot say is not reachable, and the answer to that is another declaration.
 
 ## What a declaration is
@@ -27,6 +29,7 @@ extern type PrintStream = "java.io.PrintStream"
 extern field out() -> PrintStream = "java.lang.System.out"
 extern static read_string(path: Path) -> Result<String, String> = "java.nio.file.Files.readString"
 extern method to_path(file: File) -> Path = "toPath"
+extern method int length(text: String) -> Int = "length"
 extern new opened(name: String) -> File
 ```
 
@@ -35,6 +38,8 @@ extern new opened(name: String) -> File
 `static` names a static method.
 `method` names an instance method of a class, whose receiver is the first parameter.
 `new` names a constructor, of the class its result is.
+`int` after the kind says the member's own descriptor gives an `int`, which the next section
+states.
 
 A declaration says which kind it is, so nothing about a call is worked out from the shape of a
 signature.
@@ -66,8 +71,9 @@ own descriptor names.
 Nothing else crosses.
 A `List`, a record, a variant, and a type parameter are each a Lumen type a Java member has no
 descriptor for, and an `extern` naming one is `L0425`.
-The JVM's `int`, `double`, and the rest of its primitives are types no Lumen type compiles to, so
-a member whose descriptor names one is not reachable and the answer is to name one that does not.
+The JVM's `double` and the rest of its primitives are types no Lumen type compiles to, so a
+member whose descriptor names one is not reachable and the answer is to name one that does not.
+`int` is the one exception, and the section after next states it.
 
 An extern type is a type like any other from where a program stands.
 It is held, handed on, given back, and matched by nothing, because it declares no variants and no
@@ -76,6 +82,41 @@ It has no identity a program can reach, as every Lumen type has none.
 It is compared, hashed, or shown only where an `instance` written over `extern` declarations says
 how, and a `derive` naming one is `L0427`: a derive reads what a type holds, and what this one
 holds is the JVM's.
+
+## The one width
+
+`Int` compiles to a `long`, and a Java member that gives back a number often gives an `int`
+instead: `String.length`, `String.hashCode`, and `List.indexOf` each do.
+Which of the two a member gives is written in that member's own class file, and the compiler reads
+none, so the declaration says it by writing `int` after the kind:
+
+```text
+extern method int length(text: String) -> Int = "length"
+extern method int hashed_text(value: String) -> Int = "hashCode"
+```
+
+`library/prelude.lm` writes the second of those, and `instance Hash<String>` is written over it.
+
+The member is reached for its `int` and the answer is widened to the `Int` the signature declares.
+Nothing else moves: the parameters are what they were, `int` is no Lumen type, no program can
+write one, and no type a signature writes compiles to one.
+It is a fact about the member, written where every other fact about the member is written.
+
+One thing is refused: a declaration writing the width whose result is not `Int`, because there is
+then nothing for an `int` to widen to.
+That one rule holds for every kind, and a `new` writing the width meets it the way any other does,
+since the class a constructor gives back is not `Int`.
+`L0429` is what says so.
+
+The width is a word and not a keyword.
+It is read as the width only where a name follows it, so `extern static int(text: String) -> Int`
+declares a function named `int` as it always did, and `int` is an ordinary name wherever a program
+writes one.
+
+`Option` and `Result` compose with it as they do with anything else.
+A result declared `Result<Int, String>` and written `int` guards the member, widens what it gave
+back, and wraps that; `Option<Int>` is no result at all with the width or without it, because a
+number is never `null`.
 
 ## The two mappings
 
@@ -141,6 +182,7 @@ reaching an interface waits for the declaration that says it is one.
 | not a Java name       | `L0426` | `java..File` is no Java name                               |
 | derive of an extern type | `L0427` | `File` is an extern type, and a derive reads what a type holds |
 | no class to reach     | `L0428` | a `method` reaches a class, and this signature names none  |
+| no `int` to widen     | `L0429` | `int` widens to an `Int`, and this signature gives back `File` |
 
 `L0425` helps with ``a boundary carries `Bool`, `Int`, `String`, and a type an `extern` names``.
 It points at the type as the signature writes it, and is raised for a result as well as for a
@@ -161,6 +203,10 @@ A `method` reads its class off its first parameter and a `new` off its result, s
 has to name one; a signature that names none leaves the declaration with no class to reach, and
 that is refused where it is written rather than met as a state the lowering has no answer for.
 
+`L0429` helps with ``an `int` widens to an `Int`; drop the word, or give an `Int` back``.
+It is raised where a `new` writes the width and where the result a member gives back, with a
+`Result` or an `Option` around it read through, is not `Int`.
+
 A Java class or member that is not there is not refused, because nothing is loaded to refuse it
 against: `docs/specs/library.md` states that the library is read with no classpath and no JDK.
 An `extern` naming a member the JVM does not have is a class file the JVM refuses to link, which
@@ -175,3 +221,4 @@ These hold and are checked with property-based tests:
 3. A call of an `extern` is lowered reaching only the class that declaration names.
 4. A body guarded by a `Result` leaves one on the stack down every path out of it.
 5. No `extern` declaration writes a body, so no two of them can disagree about one member.
+6. A declaration written `int` reaches the member for an `int` and leaves a `long` behind it.

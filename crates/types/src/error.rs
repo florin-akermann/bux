@@ -169,6 +169,8 @@ pub(crate) enum TypeErrorKind {
     DerivesAForeignType(String),
     /// An `extern` whose kind reaches a class is written with a signature naming none.
     ReachesNoClass(String),
+    /// An `extern` says its member gives an `int`, and what it gives back is no `Int`.
+    WidensNoInt(Type),
     /// A declared type holds a value of itself, around a ring that comes back to it.
     HoldsItself {
         /// The types the ring runs through, beginning and ending at the one refused.
@@ -199,6 +201,7 @@ impl TypeErrorKind {
             Self::NotAJavaName(_) => Code::NotAJavaName,
             Self::DerivesAForeignType(_) => Code::DerivesAForeignType,
             Self::ReachesNoClass(_) => Code::ReachesNoClass,
+            Self::WidensNoInt(_) => Code::WidensNoInt,
             Self::DivisorIsZero => Code::DivisorIsZero,
             Self::Discarded(_) => Code::Discarded,
             Self::Unnamed { .. } => Code::Unnamed,
@@ -283,7 +286,8 @@ impl TypeErrorKind {
             Self::DoesNotCross { .. }
             | Self::NotAJavaName(_)
             | Self::DerivesAForeignType(_)
-            | Self::ReachesNoClass(_) => self.what_an_extern_reaches(),
+            | Self::ReachesNoClass(_)
+            | Self::WidensNoInt(_) => self.what_an_extern_reaches(),
             Self::DivisorIsZero => "a zero written here is never anything else; drop the division",
             Self::Discarded(_) => "write `_ = ` in front of it to throw the value away on purpose",
             Self::Unnamed { .. }
@@ -327,6 +331,9 @@ impl TypeErrorKind {
                 "write an `instance` over `extern` declarations instead"
             }
             Self::ReachesNoClass(_) => "a class is `String`, or a type an `extern type` declares",
+            Self::WidensNoInt(_) => {
+                "an `int` widens to an `Int`; drop the word, or give an `Int` back"
+            }
             _ => panic!("a kind reaches here only from the arm of `stated` that names it"),
         }
     }
@@ -416,7 +423,8 @@ impl fmt::Display for TypeErrorKind {
             Self::DoesNotCross { .. }
             | Self::NotAJavaName(_)
             | Self::DerivesAForeignType(_)
-            | Self::ReachesNoClass(_) => f.write_str(&self.what_it_reached()),
+            | Self::ReachesNoClass(_)
+            | Self::WidensNoInt(_) => f.write_str(&self.what_it_reached()),
             Self::DivisorIsZero => write!(f, "this divisor is zero, so there is no answer"),
             Self::Discarded(left) => write!(f, "`{left}` is left here and nothing takes it"),
             Self::Unnamed { .. }
@@ -448,6 +456,9 @@ impl TypeErrorKind {
             }
             Self::ReachesNoClass(reaches) => {
                 format!("a `{reaches}` reaches a class, and this signature names none")
+            }
+            Self::WidensNoInt(written) => {
+                format!("`int` widens to an `Int`, and this signature gives back `{written}`")
             }
             _ => panic!("a kind reaches here only from the arm of `Display` that names it"),
         }

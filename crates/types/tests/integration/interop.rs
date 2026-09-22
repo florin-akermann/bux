@@ -172,3 +172,43 @@ fn an_extern_is_an_ordinary_function_of_the_module_that_declares_it() {
 
     assert_eq!(inferred_type(source, "as_a_path(file)", 1), "Path");
 }
+
+#[test]
+fn a_width_written_where_the_member_gives_back_no_int_has_nothing_to_widen_to() {
+    let error = refusal(&declaring(
+        "method int as_a_path(file: File) -> Path = \"toPath\"",
+    ));
+
+    assert_eq!(
+        error.message(),
+        "`int` widens to an `Int`, and this signature gives back `Path`"
+    );
+    assert_eq!(
+        error.help(),
+        "an `int` widens to an `Int`; drop the word, or give an `Int` back"
+    );
+}
+
+#[test]
+fn a_new_writing_the_width_meets_that_one_rule_the_way_every_other_kind_does() {
+    let error = refusal(&declaring("new int opened(path: String) -> File"));
+
+    assert_eq!(
+        error.message(),
+        "`int` widens to an `Int`, and this signature gives back `File`"
+    );
+}
+
+#[test]
+fn a_width_is_accepted_through_the_result_a_declaration_wraps_it_in() {
+    let source = "fn held(text: String) -> Result<Int, String> {\n    counted(text)\n}\n\n"
+        .to_owned()
+        + &declaring(
+            "static int counted(text: String) -> Result<Int, String> = \"java.lang.String.length\"",
+        );
+
+    assert_eq!(
+        inferred_type(&source, "counted(text)", 1),
+        "Result<Int, String>"
+    );
+}

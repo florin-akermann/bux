@@ -64,14 +64,20 @@ fn program(tc: &TestCase) -> String {
 
 /// Every kind of member an `extern` reaches, each written with its name and result left open.
 const KINDS: [&str; 4] = [
-    "field {name}() -> {result} = \"java.lang.System.out\"",
-    "static {name}(path: File) -> {result} = \"java.nio.file.Files.readString\"",
-    "method {name}(file: File) -> {result} = \"toPath\"",
-    "new {name}(path: String) -> {result}",
+    "field {width}{name}() -> {result} = \"java.lang.System.out\"",
+    "static {width}{name}(path: File) -> {result} = \"java.nio.file.Files.readString\"",
+    "method {width}{name}(file: File) -> {result} = \"toPath\"",
+    "new {width}{name}(path: String) -> {result}",
 ];
 
+/// What a declaration says its member's own descriptor gives back, which is written or is not.
+const WIDTHS: [&str; 2] = ["", "int "];
+
 /// The names a generated declaration is written under, none of which the prelude declares.
-const DECLARED: [&str; 3] = ["reached", "held_by", "opened"];
+///
+/// `int` is among them because it is the width where a name follows it and a name where `(` does,
+/// which is the one place the grammar of `docs/specs/grammar.md` reads a second token.
+const DECLARED: [&str; 4] = ["reached", "held_by", "opened", "int"];
 
 /// Every type a generated declaration gives back, which is what the boundary carries.
 const RESULTS: [&str; 7] = [
@@ -89,7 +95,10 @@ fn declaration(tc: &TestCase) -> String {
     let kind = tc.draw(gs::sampled_from(&KINDS));
     let name = tc.draw(gs::sampled_from(&DECLARED));
     let result = tc.draw(gs::sampled_from(&RESULTS));
-    let written = kind.replace("{name}", name).replace("{result}", result);
+    let written = kind
+        .replace("{width}", tc.draw(gs::sampled_from(&WIDTHS)))
+        .replace("{name}", name)
+        .replace("{result}", result);
     format!("extern type File = \"java.io.File\"\n\nextern {written}\n")
 }
 

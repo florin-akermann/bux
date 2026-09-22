@@ -1,0 +1,17 @@
+// expect-run
+// > 5
+// > 1
+// `strings.length` is one `extern` declaration away from a JVM method whose descriptor gives an
+// `int`, which the declaration widens to the `Int` it gives back.
+// `list.index_of` is a `for` loop over a `var` and reaches no member at all.
+// `docs/specs/library.md` states which of the two each function of the library is.
+import io
+
+import list
+
+import strings
+
+fn main() -> () {
+    io.println(shown(strings.length("hello")))
+    io.println(shown(or(list.index_of([1, 2], 2), 0)))
+}

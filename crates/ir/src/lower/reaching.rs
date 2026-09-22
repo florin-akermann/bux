@@ -8,7 +8,7 @@
 //! Every one of these is a method of its own, which is what makes a guard writable: a guarded
 //! span begins with an empty stack, and a call may be written wherever an expression is.
 
-use lumen_ast::{ExternDeclaration, JavaName, Reaches};
+use lumen_ast::{ExternDeclaration, Gives, JavaName, Reaches};
 use lumen_types::Type;
 
 use crate::code::{Body, FieldRef, Guard, Instruction, Label, MethodRef};
@@ -43,7 +43,11 @@ pub(crate) fn body(
     signature: &Signature,
 ) -> Body {
     let shapes = &lowering.shapes;
-    let answer = Answer::of(shapes, lowering.used_as(declaration.name.span));
+    let answer = Answer::of(
+        shapes,
+        lowering.used_as(declaration.name.span),
+        declaration.gives,
+    );
     let held = signature
         .parameters
         .iter()
@@ -58,6 +62,7 @@ pub(crate) fn body(
         answer.member.as_ref(),
     ));
     instructions.push(Instruction::Label(CLOSED));
+    instructions.extend(answer.widening());
     instructions.extend(given_back(shapes, &answer, held));
     if answer.guarded {
         instructions.push(Instruction::Label(CAUGHT));
@@ -65,7 +70,7 @@ pub(crate) fn body(
     }
     Body {
         instructions,
-        locals: answer.member.as_ref().map_or(1, Descriptor::width).max(1),
+        locals: answer.widened.as_ref().map_or(1, Descriptor::width).max(1),
         guards: guards(answer.guarded),
     }
 }
@@ -74,6 +79,9 @@ pub(crate) fn body(
 struct Answer {
     /// What the member's own descriptor gives back, which a `void` member makes nothing at all.
     member: Option<Descriptor>,
+    /// What stands on the stack once that answer is the type the signature declared, which is
+    /// the member's own except where an `int` is widened to the `Int` written beside it.
+    widened: Option<Descriptor>,
     /// Whether a `null` the member gives back is a `None` rather than a `Some` of it.
     optional: bool,
     /// Whether the call is guarded, and whatever it throws becomes an `Err`.
@@ -82,17 +90,32 @@ struct Answer {
 
 impl Answer {
     /// The mapping `result` asks for, read off the wrappers it is written with.
-    fn of(shapes: &Shapes, declared: &Type) -> Self {
+    fn of(shapes: &Shapes, declared: &Type, gives: Gives) -> Self {
         let Type::Function { result, .. } = declared else {
             unreachable!("an extern is bound to the function type its signature gives it")
         };
         let (guarded, held) = peeled(RESULT, result);
         let (optional, held) = peeled(OPTION, held);
+        let widened = shapes.carried(held);
         Self {
-            member: shapes.carried(held),
+            member: reached_for(widened.as_ref(), gives),
+            widened,
             optional,
             guarded,
         }
+    }
+
+    /// What turns the member's own answer into the one the signature declared, where it differs.
+    fn widening(&self) -> Option<Instruction> {
+        (self.member != self.widened).then_some(Instruction::Widen)
+    }
+}
+
+/// The descriptor the member is reached for, which `int` says is narrower than the result is.
+fn reached_for(widened: Option<&Descriptor>, gives: Gives) -> Option<Descriptor> {
+    match gives {
+        Gives::WhatTheResultIs => widened.cloned(),
+        Gives::AnInt => widened.map(|_| Descriptor::Integer),
     }
 }
 
@@ -184,8 +207,8 @@ fn loaded(taken: &[Descriptor], first: u16) -> Vec<Instruction> {
 /// Each way out gives back on its own rather than meeting the others, because two variants of
 /// one type are two classes and nothing here needs them to meet.
 fn given_back(shapes: &Shapes, answer: &Answer, held: u16) -> Vec<Instruction> {
-    let Some(of) = answer.member.clone().filter(|_| answer.optional) else {
-        return handed_on(shapes, answer, answer.member.clone(), held);
+    let Some(of) = answer.widened.clone().filter(|_| answer.optional) else {
+        return handed_on(shapes, answer, answer.widened.clone(), held);
     };
     let mut instructions = vec![
         Instruction::Store {

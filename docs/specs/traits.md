@@ -157,10 +157,10 @@ instance Hash<Bool>     instance Hash<Int>     instance Hash<String>
 instance Show<Bool>     instance Show<Int>     instance Show<String>
 ```
 
-Eleven of those twelve are Lumen source, a few lines each, and `library/prelude.lm` is where a
-reader goes to find what one of them says.
-`Hash<String>` is the twelfth, and the one the compiler still supplies: it reads a string by the
-characters it holds, and `String.hashCode` gives back a JVM `int`, which no Lumen type compiles to.
+All twelve are Lumen source, a few lines each, and `library/prelude.lm` is where a reader goes
+to find what one of them says.
+`Hash<String>` reads a string by the characters it holds, over a `String.hashCode` declared with
+the width `docs/specs/interop.md` states.
 
 None of the twelve has a body anything calls.
 What one amounts to is written out where it is called — the JVM instruction for it, or a call of
@@ -232,12 +232,11 @@ and it declares every trait and writes every instance of one for `Bool`, `Int`, 
 The four standard traits are written out above; `docs/specs/operators.md` writes out the six the
 arithmetic operators are, and `docs/specs/literals.md` writes out `IntegerLiteral`.
 
-`Hash<String>` is the one instance the compiler still supplies, because the member that would
-write it in Lumen gives back a JVM `int`.
-`todo` is the one function it supplies, because a hole has no body for the library to write.
+`todo` is the one function the compiler supplies, because a hole has no body for the library to
+write.
 `Bool`, `Int`, `String`, and `List` stay the compiler's as well, because what they are made of is
 the JVM rather than a declaration, which `docs/specs/library.md` states.
-No instance, trait, or function of the prelude other than those two is the compiler's.
+No instance, trait, or function of the prelude other than `todo` is the compiler's.
 
 A module writing `instance Eq<Int>` is refused with `L0308`, because there already is one, and a
 module declaring its own `Eq` is refused with `L0302`, exactly as one declaring its own `todo` is.

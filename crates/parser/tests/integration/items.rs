@@ -342,3 +342,33 @@ fn a_type_of_another_module_takes_its_arguments_after_the_whole_name() {
         ]
     );
 }
+
+#[test]
+fn an_extern_says_its_member_gives_an_int_by_writing_the_width_after_the_kind() {
+    assert_eq!(
+        shape("extern method int length(text: String) -> Int = \"length\""),
+        [
+            "extern method int length",
+            "  java length",
+            "  parameter text",
+            "    named-type String",
+            "  result",
+            "    named-type Int",
+        ]
+    );
+}
+
+#[test]
+fn int_is_the_width_only_where_a_name_follows_it_and_is_an_ordinary_name_otherwise() {
+    assert_eq!(
+        shape("extern static int(text: String) -> Int = \"java.lang.String.length\""),
+        [
+            "extern static int",
+            "  java java.lang.String.length",
+            "  parameter text",
+            "    named-type String",
+            "  result",
+            "    named-type Int",
+        ]
+    );
+}

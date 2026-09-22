@@ -22,3 +22,16 @@ fn has_value<T: Eq<T>>(values: List<T>, value: T) -> Bool {
     }
     false
 }
+
+/// Where the list first holds a value equal to this one, and `None` where it holds none.
+// example: or(index_of([1, 2], 2), 0) == 1
+fn index_of<T: Eq<T>>(values: List<T>, value: T) -> Option<Int> {
+    var index = 0
+    for held in values {
+        if held == value {
+            return Some(index)
+        }
+        index += 1
+    }
+    None
+}

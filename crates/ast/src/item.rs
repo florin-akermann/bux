@@ -66,11 +66,42 @@ pub enum Item {
 pub struct ExternDeclaration {
     pub name: Name,
     pub reaches: Reaches,
+    /// What the member's own descriptor gives back, which the result alone does not say.
+    pub gives: Gives,
     /// Empty for a `field`, and never empty for a `method`, whose receiver is the first of them.
     pub parameters: Vec<Parameter>,
     /// Always written: there is no body for inference to read a result off instead.
     pub result: TypeRef,
     pub span: Span,
+}
+
+/// Which width the member's own descriptor gives back, where two of them answer to one Lumen type.
+///
+/// `Int` compiles to a `long` and a great many Java members give back an `int` instead. Which of
+/// the two a member gives is written in that member's class file, and the compiler reads none, so
+/// the declaration says it. `docs/specs/interop.md` states the widening and what it refuses.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Gives {
+    /// The descriptor the result compiles to, which is what a declaration writing no width says.
+    WhatTheResultIs,
+    /// `extern method int length(text: String) -> Int`: an `int`, widened to the `Int` declared.
+    AnInt,
+}
+
+impl Gives {
+    /// The word a declaration writes before its name to say the member's descriptor gives an
+    /// `int`, which is an ordinary name everywhere else.
+    pub const WIDTH: &'static str = "int";
+
+    /// The word written before the name, which a declaration giving what its result is writes none
+    /// of.
+    #[must_use]
+    pub const fn written(self) -> Option<&'static str> {
+        match self {
+            Self::WhatTheResultIs => None,
+            Self::AnInt => Some(Self::WIDTH),
+        }
+    }
 }
 
 /// Which kind of member an `extern` reaches, and the Java name that says which one.

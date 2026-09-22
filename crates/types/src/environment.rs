@@ -448,6 +448,7 @@ impl Environment {
         let crossing = Crossing::of(&declaration.reaches);
         boundary::crosses(&result, crossing, &self.foreign, given_back)?;
         boundary::reaches_a_class(declaration, &parameters, &result, &self.foreign)?;
+        boundary::widens(declaration, &result)?;
         boundary::stated_by(declaration)?;
         let signature = Type::function(parameters, result);
         self.bind(

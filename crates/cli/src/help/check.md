@@ -52,10 +52,13 @@ Lumen signature: `extern type PrintStream = "java.io.PrintStream"` names the cla
 `static`, `method`, and `new` name the four kinds of member the JVM has. A parameter or a result
 is `Bool`, `Int`, `String`, or a type an `extern type` names, and nothing else crosses; a result
 may also be `()`, an `Option` whose `None` is the `null` the member gave back, or a `Result` whose
-`Err` holds what a throw said of itself. A signature naming anything else, a name that is no Java
-name, a `derive` of an extern type, and a `method` or a `new` whose signature names no class are
-each refused. `io` and `files` are written over these declarations, so a program reaches the
-console and the file system without writing one.
+`Err` holds what a throw said of itself. `Int` compiles to a `long`, and `int` written after the
+kind says the member's own descriptor gives an `int` instead, which the call widens to the `Int`
+the signature declares: `extern method int length(text: String) -> Int = "length"`. A signature
+naming anything else, a name that is no Java name, a `derive` of an extern type, a `method` or a
+`new` whose signature names no class, and a width written where the result is no `Int` are each
+refused. `io`, `files`, and `strings.length` are written over these declarations, so a program
+reaches the console, the file system, and the length of a string without writing one.
 
 `?` is settled here too. It hands the `Err` of a `Result` or the `None` of an `Option` back, and
 lands in a function that gives back the same kind, so it never converts one into the other.

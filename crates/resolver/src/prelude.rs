@@ -63,13 +63,6 @@ const HELD: [(&str, usize); 4] = [("Bool", 0), ("Int", 0), ("List", 1), ("String
 /// The functions the compiler supplies, which is `todo` because a hole has no body to be written.
 const SUPPLIED: [&str; 1] = ["todo"];
 
-/// The instances the compiler still supplies, which is the one Lumen cannot yet write.
-///
-/// `Hash<String>` reads a string by the characters it holds, and `String.hashCode` gives back a
-/// JVM `int`, which no Lumen type compiles to. `docs/specs/interop.md` states why that member is
-/// not reachable, so this one waits for a member that gives back a `long`.
-const STILL_SUPPLIED: [(&str, &str); 1] = [(HASH, "String")];
-
 /// A trait the prelude supplies: what it declares, and which types it already has instances for.
 pub struct Supplied {
     pub name: &'static str,
@@ -85,11 +78,6 @@ pub(crate) fn program() -> &'static Program {
 /// Those same types, each with how many arguments it is written with.
 pub fn held_types() -> impl Iterator<Item = (&'static str, usize)> {
     HELD.into_iter()
-}
-
-/// The instances the compiler still supplies, which are the ones Lumen cannot yet write.
-pub fn still_supplied() -> impl Iterator<Item = (&'static str, &'static str)> {
-    STILL_SUPPLIED.into_iter()
 }
 
 /// The functions in scope while the prelude itself is resolved, which is `todo` and nothing else.
@@ -216,22 +204,16 @@ pub fn trait_of(method: &str) -> Option<&'static str> {
         .map(|declaration| declaration.name.text.as_str())
 }
 
-/// Every instance the prelude has, as the two names that say which one it is.
-///
-/// The ones the library writes come first, in the order it writes them, and the ones the compiler
-/// still supplies follow.
+/// Every instance the prelude has, as the two names that say which one it is, in the order the
+/// library writes them.
 pub fn instances() -> impl Iterator<Item = (&'static str, &'static str)> {
-    carried()
-        .items
-        .iter()
-        .filter_map(|item| match item {
-            Item::Instance(declaration) => Some((
-                declaration.trait_name.text.as_str(),
-                declaration.for_type.text.as_str(),
-            )),
-            _ => None,
-        })
-        .chain(STILL_SUPPLIED)
+    carried().items.iter().filter_map(|item| match item {
+        Item::Instance(declaration) => Some((
+            declaration.trait_name.text.as_str(),
+            declaration.for_type.text.as_str(),
+        )),
+        _ => None,
+    })
 }
 
 /// Every trait the prelude declares, in the order it writes them.

@@ -116,9 +116,13 @@ fn item_node(tree: &mut Tree, depth: usize, item: &Item) {
 
 fn extern_node(tree: &mut Tree, depth: usize, declaration: &ExternDeclaration) {
     let reaches = declaration.reaches.written();
+    let width = declaration
+        .gives
+        .written()
+        .map_or(String::new(), |word| format!("{word} "));
     tree.node(
         depth,
-        &format!("extern {reaches} {}", declaration.name.text),
+        &format!("extern {reaches} {width}{}", declaration.name.text),
         declaration.span,
     );
     if let Some(named) = declaration.reaches.named() {

@@ -7,7 +7,7 @@
 
 use std::collections::HashMap;
 
-use lumen_ast::{ExternDeclaration, JavaName, Reaches, Span};
+use lumen_ast::{ExternDeclaration, Gives, JavaName, Reaches, Span};
 
 use crate::error::{TypeError, TypeErrorKind};
 use crate::types::{OPTION, RESULT, Type};
@@ -118,6 +118,28 @@ pub(crate) fn reaches_a_class(
     }
     let kind = TypeErrorKind::ReachesNoClass(declaration.reaches.written().to_owned());
     Err(TypeError::at(span, kind))
+}
+
+/// The width `declaration` writes, held to a result there is an `Int` to widen an `int` to.
+///
+/// One rule holds for every kind. A `new` meets it the way any other does, because the class a
+/// constructor gives back is not `Int`. `docs/specs/interop.md` states the widening.
+///
+/// # Errors
+///
+/// Returns what a declaration written `int` gives back, where that is not an `Int`.
+pub(crate) fn widens(declaration: &ExternDeclaration, result: &Type) -> Result<(), TypeError> {
+    let given = given_back(result);
+    if declaration.gives == Gives::WhatTheResultIs || is_an_int(given) {
+        return Ok(());
+    }
+    let kind = TypeErrorKind::WidensNoInt(given.clone());
+    Err(TypeError::at(declaration.result.span, kind))
+}
+
+/// Whether `held` is the `Int` a widened `int` becomes.
+fn is_an_int(held: &Type) -> bool {
+    matches!(held, Type::Named { name, arguments } if name == "Int" && arguments.is_empty())
 }
 
 /// Where the receiver of a `method` is written, which is the whole declaration where none is.

@@ -437,6 +437,19 @@ const REACHES: [(&str, &str); 4] = [
 /// Every way a declaration wraps what the member gives back, written around the type it wraps.
 const WRAPS: [&str; 3] = ["{held}", "Option<{held}>", "Result<{held}, String>"];
 
+/// Every way an `extern` reaches a member giving a number, with the width left to be filled in.
+const NUMBERS: [&str; 3] = [
+    "extern field {width}held() -> {result} = \"java.lang.Integer.MAX_VALUE\"",
+    "extern static {width}worded(text: String) -> {result} = \"java.lang.String.length\"",
+    "extern method {width}trimmed(text: String) -> {result} = \"length\"",
+];
+
+/// What a declaration says its member's own descriptor gives back, which is written or is not.
+const WIDTHS: [&str; 2] = ["", "int "];
+
+/// Every way a declaration wraps a number, which is never an `Option` because none is `null`.
+const AROUND: [&str; 2] = ["Int", "Result<Int, String>"];
+
 #[hegel::test]
 fn a_call_into_a_library_module_reaches_that_module_s_class_and_nothing_else(tc: TestCase) {
     let call = tc.draw(gs::sampled_from(&CALLS));
@@ -513,6 +526,44 @@ fn a_result_leaves_an_ok_down_the_path_taken_and_an_err_down_the_one_thrown(tc: 
     assert_eq!(built_by(thrown), vec!["lumen/Result$Err".to_owned()]);
 }
 
+#[hegel::test]
+fn a_declaration_written_int_reaches_its_member_for_one_and_leaves_a_long_behind_it(tc: TestCase) {
+    let declared = tc.draw(gs::sampled_from(&NUMBERS));
+    let width = tc.draw(gs::sampled_from(&WIDTHS));
+    let result = tc.draw(gs::sampled_from(&AROUND));
+    let written = declared.replace("{width}", width);
+    let widens = !width.is_empty();
+
+    let lowered = common::lowered(&declaring(&written, result));
+
+    let body = common::body_of(&lowered, declared_name(&written));
+    let reached = if widens {
+        Descriptor::Integer
+    } else {
+        Descriptor::Long
+    };
+    assert_eq!(
+        gives_back(body),
+        Some(reached),
+        "`{written}` reaches its member for what it says that member gives back"
+    );
+    assert_eq!(
+        body.instructions.contains(&Instruction::Widen),
+        widens,
+        "an `int` is widened to the `Int` declared, and what is already a `long` is not"
+    );
+}
+
+/// What the member `body` reaches gives back, which is the field it reads or the method it calls.
+fn gives_back(body: &lumen_ir::Body) -> Option<Descriptor> {
+    body.instructions
+        .iter()
+        .find_map(|instruction| match instruction {
+            Instruction::GetStatic(field) => Some(field.of.clone()),
+            other => common::called(other).and_then(|called| called.descriptor.result.clone()),
+        })
+}
+
 /// A module holding `declared` with `result` filled in, over the types that declaration names.
 fn declaring(declared: &str, result: &str) -> String {
     format!(
@@ -525,9 +576,9 @@ fn declaring(declared: &str, result: &str) -> String {
 fn declared_name(declared: &str) -> &str {
     declared
         .split_whitespace()
-        .nth(2)
-        .and_then(|written| written.split('(').next())
-        .expect("a declaration writes its name after the way it reaches a member")
+        .find_map(|written| written.split_once('('))
+        .map(|(name, _)| name)
+        .expect("a declaration writes its name in front of the parameters it takes")
 }
 
 /// Every class the method `name` of the module reaches, by a call or by a field.
