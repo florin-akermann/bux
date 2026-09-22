@@ -6,7 +6,7 @@
 
 ## Open
 
-## 🔴 Item 057: The example program writes its answer out
+## 🟡 Item 057: The example program writes its answer out
 `example/main.lm` binds three names it does not use, and a run shows only that it reaches the end.
 The file says why: version 0.1 has no way to write a number out, so there is nowhere for an answer
 to go.
