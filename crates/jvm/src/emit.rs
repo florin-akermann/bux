@@ -25,6 +25,7 @@ impl Assembling {
             Instruction::CompareIntegers(how) => self.compare_integers(*how, context),
             Instruction::Not => self.not(),
             Instruction::Widen => self.widen(),
+            Instruction::Narrow => self.narrow(),
             Instruction::Jump(label) => self.jump(*label, context),
             Instruction::JumpIfFalse(label) => self.jump_if_false(*label, context),
             Instruction::JumpIfNull(label) => self.jump_if_null(*label, context),
@@ -174,6 +175,16 @@ impl Assembling {
         self.byte(opcode::I2L);
         self.pop();
         self.push(Held::Long);
+    }
+
+    /// A whole number becomes the small whole number a JVM indexes by, which takes one slot.
+    ///
+    /// Nothing is lost where it is written: `docs/specs/codegen.md` writes it only behind a
+    /// guard that has already proved the number is one a small whole number holds.
+    fn narrow(&mut self) {
+        self.byte(opcode::L2I);
+        self.pop();
+        self.push(Held::Integer);
     }
 
     fn not(&mut self) {

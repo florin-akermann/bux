@@ -36,6 +36,9 @@ impl Builder<'_> {
         {
             return Some(self.builds(&shape, arguments));
         }
+        if let Some(held) = self.held_by_the_compiler(reached, arguments) {
+            return Some(held);
+        }
         self.in_another_module(reached, arguments)
     }
 

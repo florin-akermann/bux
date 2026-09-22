@@ -2,6 +2,10 @@
 //
 // `docs/specs/library.md` states the test a function here is held to: it is written in Lumen over
 // what the language already gives, and it lands only where a reader would write the loop twice.
+//
+// The module offers two names this file does not write: `push` and `at` are the compiler's,
+// because neither can be said in Bux. `docs/specs/library.md` states why, and a module that
+// imports `list` reaches all five alike.
 /// How many values the list holds.
 // example: length([1, 2, 3]) == 3
 fn length<T>(values: List<T>) -> Int {

@@ -6,16 +6,6 @@
 
 ## Open
 
-## 🔴 Item 058: A list grows and is read at an index
-A program builds a list only as a literal, so no phase of a compiler can produce one.
-`docs/specs/library.md` says `push` waits on a JVM member no `extern` can name.
-`List` is a type the compiler holds, so the spec chooses between codegen and `extern` for it.
-[058][a] - `docs/specs/library.md` states `list.push` and `list.at`, their types, and their costs.
-[058][b] - `push` costs amortized constant time and `at` constant time, as a textbook list does.
-[058][c] - `list.push(values, value)` gives the list with `value` after the last element.
-[058][d] - `list.at(values, index)` gives `Some` of the element there, and `None` past either end.
-[058][e] - An executable example under `tests/spec/library` builds a list in a `for` loop.
-
 ## 🔴 Item 059: A string is read one code unit at a time
 No function reads a character of a string, so a lexer cannot be written in Bux.
 `String.charAt` and `String.substring` each take an `int`, and `extern` widens a result only.
@@ -125,3 +115,13 @@ The writer has 172 sites of narrow integers, and a `bytes` module hides `% 256` 
 [075][a] - Stage 1, built by the Rust `bux`, builds stage 2 from the same source.
 [075][b] - A harness holds stage 2 equal to stage 1 byte for byte.
 [075][c] - The Rust crates are deleted, and `docs/implementation.md` section 6 says what remains.
+
+## 🔴 Item 076: A list grows in amortized constant time
+**Depends on:** Item 058 — the two functions land there, and this item changes what carries one.
+`docs/specs/library.md` writes down that `push` costs what the list holds.
+A list is one `java.util.List`, and a push copies the whole of it.
+A textbook list grows in amortized constant time, which asks for a buffer and a length beside it.
+[076][a] - `docs/specs/codegen.md` states what carries a list, and what a push does to it.
+[076][b] - `push` costs amortized constant time, and `at` still costs the same at every index.
+[076][c] - A push leaves the list it was handed holding what it held, which stays a property.
+[076][d] - `docs/specs/library.md` drops the paragraph that writes the copy cost down.
