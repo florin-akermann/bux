@@ -62,7 +62,7 @@ pub(crate) fn hold_what_they_need(
 /// `docs/specs/interop.md` states it: a derive reads what a type holds, and an extern type holds
 /// what the JVM does, which an `instance` written over `extern` declarations is the answer to.
 fn reads_what_it_holds(writes: &Writes<'_>) -> Result<(), TypeError> {
-    if !matches!(&writes.declared.definition, TypeDefinition::Foreign(_)) {
+    if !matches!(&writes.declared.definition, TypeDefinition::Foreign { .. }) {
         return Ok(());
     }
     let kind = TypeErrorKind::DerivesAForeignType(writes.for_type.text.clone());
@@ -137,7 +137,7 @@ fn declared_as<'a>(resolved: &'a ResolvedProgram, named: &str) -> &'a TypeDeclar
 fn holds(declared: &TypeDeclaration) -> Vec<Held<'_>> {
     match &declared.definition {
         // A Java class holds what the JVM holds, which no derived instance reads.
-        TypeDefinition::Foreign(_) => Vec::new(),
+        TypeDefinition::Foreign { .. } => Vec::new(),
         TypeDefinition::Record(fields) => fields.iter().map(field_of).collect(),
         TypeDefinition::Variants(variants) => variants.iter().flat_map(carried_by).collect(),
     }

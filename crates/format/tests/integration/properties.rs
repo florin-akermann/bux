@@ -73,6 +73,9 @@ const KINDS: [&str; 4] = [
 /// What a declaration says its member's own descriptor gives back, which is written or is not.
 const WIDTHS: [&str; 2] = ["", "int "];
 
+/// Which kind of class the type a generated declaration reaches is, written or not written.
+const CLASSES: [&str; 2] = ["", "interface "];
+
 /// The names a generated declaration is written under, none of which the prelude declares.
 ///
 /// `int` is among them because it is the width where a name follows it and a name where `(` does,
@@ -99,7 +102,8 @@ fn declaration(tc: &TestCase) -> String {
         .replace("{width}", tc.draw(gs::sampled_from(&WIDTHS)))
         .replace("{name}", name)
         .replace("{result}", result);
-    format!("extern type File = \"java.io.File\"\n\nextern {written}\n")
+    let class = tc.draw(gs::sampled_from(&CLASSES));
+    format!("extern type {class}File = \"java.io.File\"\n\nextern {written}\n")
 }
 
 #[hegel::test]

@@ -7,6 +7,8 @@
 
 use std::collections::{HashMap, HashSet};
 
+use lumen_ast::Called;
+
 use crate::scheme::{Quantified, Scheme};
 use crate::types::Type;
 
@@ -114,7 +116,9 @@ pub enum BuiltBy {
     /// An algebraic data type, in the order it declares its variants.
     Variants(Vec<OfferedConstructor>),
     /// A Java class, named as its `extern type` writes it, built by an `extern new` alone.
-    Foreign(String),
+    ///
+    /// `called` is how a method of it is reached, which the declaration and not the class says.
+    Foreign { class: String, called: Called },
 }
 
 /// One constructor a type is built with, and what a value it builds carries.
@@ -166,7 +170,7 @@ impl OfferedType {
             BuiltBy::Record(one) => std::slice::from_ref(one),
             BuiltBy::Variants(variants) => variants,
             // Nothing in Lumen builds a Java class; an `extern new` is what reaches one.
-            BuiltBy::Foreign(_) => &[],
+            BuiltBy::Foreign { .. } => &[],
         }
     }
 
@@ -278,7 +282,7 @@ impl BuiltBy {
         match self {
             Self::Record(one) => Self::Record(one.reached_as(module, own)),
             // A Java class is named the same wherever it is reached from; it is the JVM's.
-            Self::Foreign(class) => Self::Foreign(class),
+            Self::Foreign { class, called } => Self::Foreign { class, called },
             Self::Variants(variants) => Self::Variants(
                 variants
                     .into_iter()

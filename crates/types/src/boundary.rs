@@ -7,13 +7,13 @@
 
 use std::collections::HashMap;
 
-use lumen_ast::{ExternDeclaration, Gives, JavaName, Reaches, Span};
+use lumen_ast::{Called, ExternDeclaration, Gives, JavaName, Reaches, Span};
 
 use crate::error::{TypeError, TypeErrorKind};
 use crate::types::{OPTION, RESULT, Type};
 
-/// The Java class each extern type stands for, by the Lumen name an `extern type` gives it.
-pub(crate) type Foreign = HashMap<String, String>;
+/// How a method of each extern type is called, by the Lumen name an `extern type` gives it.
+pub(crate) type Foreign = HashMap<String, Called>;
 
 /// Where a type is written in an `extern` signature, which is what decides whether it may be.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -118,6 +118,36 @@ pub(crate) fn reaches_a_class(
     }
     let kind = TypeErrorKind::ReachesNoClass(declaration.reaches.written().to_owned());
     Err(TypeError::at(span, kind))
+}
+
+/// The class a `new` builds, held to being a class rather than an interface.
+///
+/// Every other kind reaches a member, and an interface has members. A constructor is the one
+/// thing an interface does not have, so a `new` giving one back is a class file that will not
+/// link, and `docs/specs/interop.md` refuses it where it is written instead.
+///
+/// # Errors
+///
+/// Returns the type a `new` gives back, where an `extern type` named it an interface.
+pub(crate) fn builds_a_class(
+    declaration: &ExternDeclaration,
+    result: &Type,
+    foreign: &Foreign,
+) -> Result<(), TypeError> {
+    let built = given_back(result);
+    if declaration.reaches != Reaches::New || !is_an_interface(built, foreign) {
+        return Ok(());
+    }
+    let kind = TypeErrorKind::BuildsAnInterface(built.clone());
+    Err(TypeError::at(declaration.result.span, kind))
+}
+
+/// Whether `held` is a type an `extern type` named an interface.
+fn is_an_interface(held: &Type, foreign: &Foreign) -> bool {
+    let Type::Named { name, .. } = held else {
+        return false;
+    };
+    foreign.get(name) == Some(&Called::AsAnInterface)
 }
 
 /// The width `declaration` writes, held to a result there is an `Int` to widen an `int` to.

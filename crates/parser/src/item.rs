@@ -1,6 +1,6 @@
 //! The top-level declarations of a source file.
 
-use lumen_ast::{DeriveDeclaration, ExternDeclaration, Function, Gives};
+use lumen_ast::{Called, DeriveDeclaration, ExternDeclaration, Function, Gives};
 use lumen_ast::{Import, InstanceDeclaration};
 use lumen_ast::{Item, JavaName, Name, Parameter, Program, Reaches};
 use lumen_ast::{RecordField, Signature, TraitDeclaration, TypeDeclaration, TypeDefinition};
@@ -53,15 +53,28 @@ fn foreign_type(cursor: &mut Cursor) -> Result<TypeDeclaration, ParseError> {
     let start = cursor.offset();
     cursor.expect_keyword(Keyword::Extern)?;
     cursor.expect_keyword(Keyword::Type)?;
+    let called = how_it_is_called(cursor);
     let name = cursor.expect_name(Expected::Name)?;
     cursor.expect_punct(Punct::Eq)?;
     let class = java_name(cursor)?;
     Ok(TypeDeclaration {
         name,
         parameters: Vec::new(),
-        definition: TypeDefinition::Foreign(class),
+        definition: TypeDefinition::Foreign { class, called },
         span: cursor.span_since(start),
     })
+}
+
+/// `interface` before the name, which says the class is one and not an ordinary class.
+///
+/// It is that word only where a name follows it, exactly as the width is, so
+/// `extern type interface = "…"` still names the type `interface`.
+fn how_it_is_called(cursor: &mut Cursor) -> Called {
+    if !word_before_a_name(cursor, Called::INTERFACE) {
+        return Called::AsAClass;
+    }
+    cursor.advance();
+    Called::AsAnInterface
 }
 
 /// `extern static read(path: Path) -> String = "java.nio.file.Files.readString"`, and the rest.
@@ -96,15 +109,23 @@ fn declared_extern(cursor: &mut Cursor) -> Result<ExternDeclaration, ParseError>
 /// declares a function named `int`. `docs/specs/grammar.md` states that telling the two apart is
 /// the one place the grammar reads a second token.
 fn given_back(cursor: &mut Cursor) -> Gives {
-    let width = cursor
-        .peek()
-        .filter(|token| token.kind == TokenKind::Identifier)
-        .is_some_and(|token| token.span.text(cursor.source()) == Gives::WIDTH);
-    if !width || cursor.peek_kind(1) != Some(TokenKind::Identifier) {
+    if !word_before_a_name(cursor, Gives::WIDTH) {
         return Gives::WhatTheResultIs;
     }
     cursor.advance();
     Gives::AnInt
+}
+
+/// Whether the cursor is at `word` with a name after it, which is where such a word is read.
+///
+/// `docs/specs/grammar.md` states that a word written before a declared name is that word only
+/// where a name follows it, which is the one place the grammar reads a second token.
+fn word_before_a_name(cursor: &Cursor, word: &str) -> bool {
+    cursor
+        .peek()
+        .filter(|token| token.kind == TokenKind::Identifier)
+        .is_some_and(|token| token.span.text(cursor.source()) == word)
+        && cursor.peek_kind(1) == Some(TokenKind::Identifier)
 }
 
 /// The word after `extern`, which is read only there and is an ordinary name anywhere else.

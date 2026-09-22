@@ -23,7 +23,7 @@ There is one form per kind of member the JVM has, and no sixth kind.
 
 ```text
 extern type File = "java.io.File"
-extern type Path = "java.nio.file.Path"
+extern type interface Path = "java.nio.file.Path"
 extern type PrintStream = "java.io.PrintStream"
 
 extern field out() -> PrintStream = "java.lang.System.out"
@@ -38,6 +38,7 @@ extern new opened(name: String) -> File
 `static` names a static method.
 `method` names an instance method of a class, whose receiver is the first parameter.
 `new` names a constructor, of the class its result is.
+`interface` after `type` says the class is an interface rather than an ordinary class.
 `int` after the kind says the member's own descriptor gives an `int`, which the next section
 states.
 
@@ -125,6 +126,43 @@ A result declared `Result<Int, String>` and written `int` guards the member, wid
 back, and wraps that; `Option<Int>` is no result at all with the width or without it, because a
 number is never `null`.
 
+## Which kind of class it is
+
+The JVM calls an instance method of a class one way and a method of an interface another.
+Which of the two a Java name is is written in that name's own class file, and the compiler reads
+none, so the declaration says it by writing `interface` after `type`:
+
+```text
+extern type interface Path = "java.nio.file.Path"
+
+extern method as_text(path: Path) -> String = "toString"
+```
+
+A `method` whose receiver is such a type is called the way the JVM calls an interface's method.
+That is the whole of what the word changes, and it changes nothing a program can see: the call
+is written the same, the signature is the same, and the value is held the same.
+
+A `field` reaches an interface as it reaches a class, because the JVM names a field one way for
+both, and an interface's field is a static one like any other a `field` reads.
+
+One thing is refused: a `new` whose result is such a type.
+A constructor is the one member an interface has none of, so the declaration reaches nothing to
+call, and `L0430` is what says so.
+
+One thing waits: a `static` of an interface.
+The JVM names a static method of an interface apart from a static method of a class, the way it
+names an instance method of each apart.
+An `extern static` names its class in the string rather than through an `extern type`, so there
+is nothing to write the word on, and a declaration naming one is a class file that will not link.
+That is the author's claim failing, and it waits for a requirement that has such a member to
+reach.
+
+The word is a word and not a keyword.
+It is read as the kind only where a name follows it, which is the rule the width is read by, and
+`interface` is an ordinary name wherever a program writes one.
+A type called `interface` is one `docs/specs/naming.md` refuses on its own, because it spells a
+type in `PascalCase`, so the word takes no name a program could have used.
+
 ## The two mappings
 
 `Option<T>` and `Result<T, String>` are what the two things Java gives back that Lumen has no
@@ -173,13 +211,11 @@ span begins with an empty stack, and a call may be written wherever an expressio
 Nothing of this is visible from Lumen.
 A program that writes `io.println` never learns what carries it, exactly as before.
 
-A `method` is called the way an instance method of a class is called, and an interface's method
-is called another way.
-Which of the two a Java name is is written in that name's own class file, and the compiler reads
-none, so an `extern type` naming an interface and a `method` taking one as its receiver compiles
-to a call the JVM refuses to link.
-That is the author's claim failing in the same way naming a member the JVM does not have is, and
-reaching an interface waits for the declaration that says it is one.
+A `method` is called the way an instance method of a class is called, and a `method` whose
+receiver is an `extern type` written `interface` is called the other way, with the constant pool
+entry an interface method reference is.
+The declaration is the only thing that says which of the two a class file names, and one that
+says the wrong one is the author's claim failing the way naming a member the JVM does not have is.
 
 ## The errors
 
@@ -190,6 +226,7 @@ reaching an interface waits for the declaration that says it is one.
 | derive of an extern type | `L0427` | `File` is an extern type, and a derive reads what a type holds |
 | no class to reach     | `L0428` | a `method` reaches a class, and this signature names none  |
 | no `int` to widen     | `L0429` | `int` widens to an `Int`, and this signature gives back `File` |
+| builds an interface   | `L0430` | a `new` builds a class, and `Path` is an interface          |
 
 `L0425` helps with ``a boundary carries `Bool`, `Int`, `String`, and a type an `extern` names``.
 It points at the type as the signature writes it, and is raised for a result as well as for a
@@ -214,6 +251,11 @@ that is refused where it is written rather than met as a state the lowering has 
 It is raised where a `new` writes the width and where the result a member gives back, with a
 `Result` or an `Option` around it read through, is not `Int`.
 
+`L0430` helps with ``a `new` builds a class; reach one through a member of a class instead``.
+It is raised where a `new` gives back a type an `extern type` wrote `interface`, with a `Result`
+or an `Option` around it read through, because a constructor is the one member an interface has
+none of.
+
 A Java class or member that is not there is not refused, because nothing is loaded to refuse it
 against: `docs/specs/library.md` states that the library is read with no classpath and no JDK.
 An `extern` naming a member the JVM does not have is a class file the JVM refuses to link, which
@@ -229,3 +271,4 @@ These hold and are checked with property-based tests:
 4. A body guarded by a `Result` leaves one on the stack down every path out of it.
 5. No `extern` declaration writes a body, so no two of them can disagree about one member.
 6. A declaration written `int` reaches the member for an `int` and leaves a `long` behind it.
+7. A `method` on a type written `interface` is lowered to the call the JVM makes on one.

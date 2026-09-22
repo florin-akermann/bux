@@ -554,6 +554,37 @@ fn a_declaration_written_int_reaches_its_member_for_one_and_leaves_a_long_behind
     );
 }
 
+/// Which kind of class the type a generated `method` is called on is, written or not written.
+const CLASSES: [&str; 2] = ["", "interface "];
+
+#[hegel::test]
+fn a_method_on_a_type_written_interface_is_called_the_way_the_jvm_calls_an_interface_s(
+    tc: TestCase,
+) {
+    let class = tc.draw(gs::sampled_from(&CLASSES));
+    let an_interface = !class.is_empty();
+    let declared = "extern method to_path(file: File) -> File = \"toPath\"";
+    let source = format!("{declared}\n\nextern type {class}File = \"java.io.File\"\n");
+
+    let lowered = common::lowered(&source);
+
+    let body = common::body_of(&lowered, "to_path");
+    let called = body
+        .instructions
+        .iter()
+        .find(|instruction| common::called(instruction).is_some())
+        .expect("a `method` calls the member it names");
+    assert_eq!(
+        matches!(called, Instruction::InvokeInterface(_)),
+        an_interface,
+        "`extern type {class}File` is called as {}",
+        if an_interface {
+            "an interface"
+        } else {
+            "a class"
+        }
+    );
+}
 /// What the member `body` reaches gives back, which is the field it reads or the method it calls.
 fn gives_back(body: &lumen_ir::Body) -> Option<Descriptor> {
     body.instructions

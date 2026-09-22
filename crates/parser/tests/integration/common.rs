@@ -230,8 +230,11 @@ fn type_declaration_node(tree: &mut Tree, depth: usize, declaration: &TypeDeclar
                 variant_node(tree, depth + 1, variant);
             }
         }
-        TypeDefinition::Foreign(class) => {
-            tree.node(depth + 1, &format!("java {}", class.text), class.span);
+        TypeDefinition::Foreign { class, called } => {
+            let word = called
+                .written()
+                .map_or(String::new(), |one| format!("{one} "));
+            tree.node(depth + 1, &format!("java {word}{}", class.text), class.span);
         }
     }
 }

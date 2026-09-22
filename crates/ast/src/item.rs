@@ -182,7 +182,39 @@ pub enum TypeDefinition {
     ///
     /// It declares no field and no variant, so nothing reads what it holds and nothing matches
     /// on it. `docs/specs/interop.md` states what a program may do with one.
-    Foreign(JavaName),
+    Foreign {
+        class: JavaName,
+        /// Which of the two kinds of class it is, which says how a method of it is called.
+        called: Called,
+    },
+}
+
+/// Which kind of class an `extern type` names, where the two are called in two different ways.
+///
+/// The JVM calls an instance method of a class one way and a method of an interface another.
+/// Which of the two a Java name is is written in that name's class file, and the compiler reads
+/// none, so the declaration says it. `docs/specs/interop.md` states what the word changes.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Called {
+    /// `extern type File = "java.io.File"`: a class, whose method is called as a class's.
+    AsAClass,
+    /// `extern type interface Path = "java.nio.file.Path"`: an interface, called as one.
+    AsAnInterface,
+}
+
+impl Called {
+    /// The word a declaration writes before its name to say the class is an interface, which is
+    /// an ordinary name everywhere else.
+    pub const INTERFACE: &'static str = "interface";
+
+    /// The word written before the name, which a declaration naming a class writes none of.
+    #[must_use]
+    pub const fn written(self) -> Option<&'static str> {
+        match self {
+            Self::AsAClass => None,
+            Self::AsAnInterface => Some(Self::INTERFACE),
+        }
+    }
 }
 
 /// One variant of an algebraic data type, with whatever it carries.

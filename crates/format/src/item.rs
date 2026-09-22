@@ -82,8 +82,12 @@ pub(crate) fn type_declaration(printer: &mut Printer, written: &TypeDeclaration)
     printer.comments_above(written.span);
     printer.open_line();
     match &written.definition {
-        TypeDefinition::Foreign(class) => {
+        TypeDefinition::Foreign { class, called } => {
             printer.word("extern type ");
+            if let Some(word) = called.written() {
+                printer.word(word);
+                printer.word(" ");
+            }
             printer.word(&written.name.text);
             printer.word(" = ");
             printer.word(&string(&class.text));

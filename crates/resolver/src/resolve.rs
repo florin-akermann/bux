@@ -188,7 +188,7 @@ impl Resolver {
     fn declare_type(&mut self, declaration: &TypeDeclaration) -> Resolved {
         self.introduce_type(&declaration.name, DefinitionKind::Type)?;
         match &declaration.definition {
-            TypeDefinition::Foreign(_) => Ok(()),
+            TypeDefinition::Foreign { .. } => Ok(()),
             TypeDefinition::Record(_) => {
                 self.introduce_value(&declaration.name, DefinitionKind::Constructor)
             }
@@ -237,7 +237,7 @@ impl Resolver {
         }
         match &declaration.definition {
             // A Java class names no Lumen type below its own, so there is nothing to resolve.
-            TypeDefinition::Foreign(_) => {}
+            TypeDefinition::Foreign { .. } => {}
             TypeDefinition::Record(fields) => self.record_fields(fields)?,
             TypeDefinition::Variants(variants) => {
                 for variant in variants {

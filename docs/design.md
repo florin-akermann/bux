@@ -1210,6 +1210,20 @@ suspended to let one out.
 It is a fact about the member, written where every other fact about the member is written, and
 the only thing refused is writing it where the result is not an `Int` to widen to.
 
+One kind of class is stated the same way, and for the same reason.
+The JVM calls a method of an interface its own way.
+Which of the two a Java name is is written in that name's own class file.
+The compiler reads none, so the author says it by writing `interface` after `type`:
+
+```text
+extern type interface Path = "java.nio.file.Path"
+```
+
+A `method` whose receiver is one is then called the way the JVM calls an interface's method.
+A `field` is written on an interface as it is on a class, because the JVM names a field the same.
+A `new` is refused, because a constructor is the member an interface has none of.
+A `static` of an interface waits, because an `extern static` names its class in the string alone.
+
 Three things cross, and nothing else does.
 A value of a Lumen type crosses as itself.
 A `null` given back becomes `None`, which is what an `Option` result declares.

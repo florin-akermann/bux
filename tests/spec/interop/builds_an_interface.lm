@@ -1,0 +1,12 @@
+// expect-error: L0430
+// A constructor is the one member an interface does not have, so a `new` giving one back
+// reaches nothing to call.
+// The compiler knows which it is, because the `extern type` says so, and refuses the
+// declaration where it is written rather than leaving the JVM to refuse the class file.
+fn main() -> () {
+    _ = opened("a")
+}
+
+extern new opened(name: String) -> Path
+
+extern type interface Path = "java.nio.file.Path"

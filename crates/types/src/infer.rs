@@ -205,7 +205,10 @@ impl Inference<'_> {
     /// One declared type as a module importing this one reads it, with what builds it.
     fn offered_type(&self, declaration: &TypeDeclaration) -> OfferedType {
         let built_by = match &declaration.definition {
-            TypeDefinition::Foreign(class) => BuiltBy::Foreign(class.text.clone()),
+            TypeDefinition::Foreign { class, called } => BuiltBy::Foreign {
+                class: class.text.clone(),
+                called: *called,
+            },
             TypeDefinition::Record(_) => BuiltBy::Record(self.built_with(&declaration.name)),
             TypeDefinition::Variants(variants) => BuiltBy::Variants(
                 variants

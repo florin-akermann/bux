@@ -54,11 +54,13 @@ is `Bool`, `Int`, `String`, or a type an `extern type` names, and nothing else c
 may also be `()`, an `Option` whose `None` is the `null` the member gave back, or a `Result` whose
 `Err` holds what a throw said of itself. `Int` compiles to a `long`, and `int` written after the
 kind says the member's own descriptor gives an `int` instead, which the call widens to the `Int`
-the signature declares: `extern method int length(text: String) -> Int = "length"`. A signature
-naming anything else, a name that is no Java name, a `derive` of an extern type, a `method` or a
-`new` whose signature names no class, and a width written where the result is no `Int` are each
-refused. `io`, `files`, and `strings.length` are written over these declarations, so a program
-reaches the console, the file system, and the length of a string without writing one.
+the signature declares: `extern method int length(text: String) -> Int = "length"`. The JVM calls
+a method of an interface its own way, and `interface` written after `type` says the class is one:
+`extern type interface Path = "java.nio.file.Path"`. A signature naming anything else, a name that
+is no Java name, a `derive` of an extern type, a `method` or a `new` whose signature names no
+class, a width written where the result is no `Int`, and a `new` whose result is an interface are
+each refused. `io`, `files`, and `strings.length` are written over these declarations, so a
+program reaches the console, the file system, and the length of a string without writing one.
 
 `?` is settled here too. It hands the `Err` of a `Result` or the `None` of an `Option` back, and
 lands in a function that gives back the same kind, so it never converts one into the other.

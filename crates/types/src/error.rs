@@ -9,6 +9,8 @@ use lumen_resolver::prelude;
 use crate::boundary::Crossing;
 use crate::types::Type;
 
+mod reaching_java;
+
 /// Why inference failed, and where.
 ///
 /// Inference stops at the first error, so there is exactly one of these per failed run. The
@@ -169,6 +171,8 @@ pub(crate) enum TypeErrorKind {
     DerivesAForeignType(String),
     /// An `extern` whose kind reaches a class is written with a signature naming none.
     ReachesNoClass(String),
+    /// An `extern new` builds what it gives back, and an `extern type` named that an interface.
+    BuildsAnInterface(Type),
     /// An `extern` says its member gives an `int`, and what it gives back is no `Int`.
     WidensNoInt(Type),
     /// A declared type holds a value of itself, around a ring that comes back to it.
@@ -201,6 +205,7 @@ impl TypeErrorKind {
             Self::NotAJavaName(_) => Code::NotAJavaName,
             Self::DerivesAForeignType(_) => Code::DerivesAForeignType,
             Self::ReachesNoClass(_) => Code::ReachesNoClass,
+            Self::BuildsAnInterface(_) => Code::BuildsAnInterface,
             Self::WidensNoInt(_) => Code::WidensNoInt,
             Self::DivisorIsZero => Code::DivisorIsZero,
             Self::Discarded(_) => Code::Discarded,
@@ -287,7 +292,8 @@ impl TypeErrorKind {
             | Self::NotAJavaName(_)
             | Self::DerivesAForeignType(_)
             | Self::ReachesNoClass(_)
-            | Self::WidensNoInt(_) => self.what_an_extern_reaches(),
+            | Self::BuildsAnInterface(_)
+            | Self::WidensNoInt(_) => reaching_java::the_rule(self),
             Self::DivisorIsZero => "a zero written here is never anything else; drop the division",
             Self::Discarded(_) => "write `_ = ` in front of it to throw the value away on purpose",
             Self::Unnamed { .. }
@@ -309,32 +315,6 @@ impl TypeErrorKind {
             Self::HoldsItself { .. } => {
                 "hold an `Option` of it, which is how a type holds another of its own kind"
             }
-        }
-    }
-
-    /// The rule for a refusal about an `extern` declaration and what it reaches.
-    ///
-    /// `docs/specs/interop.md` states these, and they read as one group: each says that the
-    /// boundary is a signature and the Java name beside it and nothing more.
-    ///
-    /// A kind reaches here only from the arm of [`Self::stated`] that names it, exactly as
-    /// [`Self::how_arguments_are_named`] says of its own.
-    const fn what_an_extern_reaches(&self) -> &'static str {
-        match self {
-            Self::DoesNotCross { .. } => {
-                "a boundary carries `Bool`, `Int`, `String`, and a type an `extern` names"
-            }
-            Self::NotAJavaName(_) => {
-                "a Java name is its segments, each a name, with a dot between two of them"
-            }
-            Self::DerivesAForeignType(_) => {
-                "write an `instance` over `extern` declarations instead"
-            }
-            Self::ReachesNoClass(_) => "a class is `String`, or a type an `extern type` declares",
-            Self::WidensNoInt(_) => {
-                "an `int` widens to an `Int`; drop the word, or give an `Int` back"
-            }
-            _ => panic!("a kind reaches here only from the arm of `stated` that names it"),
         }
     }
 
@@ -424,7 +404,8 @@ impl fmt::Display for TypeErrorKind {
             | Self::NotAJavaName(_)
             | Self::DerivesAForeignType(_)
             | Self::ReachesNoClass(_)
-            | Self::WidensNoInt(_) => f.write_str(&self.what_it_reached()),
+            | Self::BuildsAnInterface(_)
+            | Self::WidensNoInt(_) => f.write_str(&reaching_java::what_it_reached(self)),
             Self::DivisorIsZero => write!(f, "this divisor is zero, so there is no answer"),
             Self::Discarded(left) => write!(f, "`{left}` is left here and nothing takes it"),
             Self::Unnamed { .. }
@@ -435,32 +416,6 @@ impl fmt::Display for TypeErrorKind {
             | Self::NamedInFront(_)
             | Self::FlagParameter(_)
             | Self::NotAPredicate(_) => f.write_str(&self.how_it_is_written()),
-        }
-    }
-}
-
-impl TypeErrorKind {
-    /// What a refusal about an `extern` declaration says, which is what it could not reach.
-    ///
-    /// A kind reaches here only from the arm of [`fmt::Display`] that names it, exactly as
-    /// [`Self::what_an_extern_reaches`] says of the rule beside it.
-    fn what_it_reached(&self) -> String {
-        match self {
-            Self::DoesNotCross { written, crossing } => {
-                let place = crossing.what_a_member_does();
-                format!("`{written}` is no type a Java member {place}")
-            }
-            Self::NotAJavaName(written) => format!("`{written}` is no Java name"),
-            Self::DerivesAForeignType(named) => {
-                format!("`{named}` is an extern type, and a derive reads what a type holds")
-            }
-            Self::ReachesNoClass(reaches) => {
-                format!("a `{reaches}` reaches a class, and this signature names none")
-            }
-            Self::WidensNoInt(written) => {
-                format!("`int` widens to an `Int`, and this signature gives back `{written}`")
-            }
-            _ => panic!("a kind reaches here only from the arm of `Display` that names it"),
         }
     }
 }

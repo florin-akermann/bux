@@ -301,7 +301,7 @@ fn signature<'a>(names: &mut Vec<(&'a Name, Kind)>, declared: &'a Signature) {
 fn definition<'a>(names: &mut Vec<(&'a Name, Kind)>, definition: &'a TypeDefinition) {
     match definition {
         // A Java class declares nothing below its Lumen name; what it holds is the JVM's.
-        TypeDefinition::Foreign(_) => {}
+        TypeDefinition::Foreign { .. } => {}
         TypeDefinition::Record(fields) => fields_of(names, fields),
         TypeDefinition::Variants(variants) => {
             for variant in variants {

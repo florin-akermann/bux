@@ -24,4 +24,4 @@ extern new named(path: String) -> File
 extern type File = "java.io.File"
 
 /// Where a file the file system holds is, which is what a read takes.
-extern type Path = "java.nio.file.Path"
+extern type interface Path = "java.nio.file.Path"

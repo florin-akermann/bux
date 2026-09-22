@@ -2,7 +2,7 @@
 
 use std::collections::{HashMap, HashSet};
 
-use lumen_ast::TraitDeclaration;
+use lumen_ast::{Called, TraitDeclaration};
 use lumen_ast::{DeriveDeclaration, ExternDeclaration, Function, InstanceDeclaration};
 use lumen_ast::{Item, Name, Path, RecordField, Signature, TypeDeclaration, TypeDefinition};
 use lumen_ast::{TypeRef, TypeRefKind};
@@ -52,8 +52,8 @@ pub(crate) struct Environment {
     declares: HashMap<(String, String), Key>,
     /// The type each declaration declares, over its own parameters, by the name it declares it.
     declared: HashMap<String, Scheme>,
-    /// The Java class each extern type stands for, by the Lumen name an `extern type` gives it.
-    foreign: HashMap<String, String>,
+    /// How a method of each extern type is called, by the Lumen name an `extern type` gives it.
+    foreign: HashMap<String, Called>,
 }
 
 impl Environment {
@@ -90,8 +90,8 @@ impl Environment {
                 self.records
                     .insert(named.clone(), Key::reached(built.name()));
             }
-            BuiltBy::Foreign(class) => {
-                self.foreign.insert(named.clone(), class.clone());
+            BuiltBy::Foreign { called, .. } => {
+                self.foreign.insert(named.clone(), *called);
             }
             BuiltBy::Variants(_) => {}
         }
@@ -104,8 +104,8 @@ impl Environment {
 
     /// What each declared type is, before any declaration that writes one is read.
     ///
-    /// How many arguments it takes is what every written type is held to, and the Java class it
-    /// stands for is what an `extern` signature naming it crosses as. A file reads top down and
+    /// How many arguments it takes is what every written type is held to, and the kind of class
+    /// it names is what an `extern` signature naming it crosses as. A file reads top down and
     /// a definition sits below what uses it, so both are gathered ahead of the declarations.
     fn note_types(&mut self, resolved: &ResolvedProgram) {
         for item in &resolved.program().items {
@@ -116,9 +116,8 @@ impl Environment {
                 self.declared_at(&declaration.name),
                 declaration.parameters.len(),
             );
-            if let TypeDefinition::Foreign(class) = &declaration.definition {
-                self.foreign
-                    .insert(declaration.name.text.clone(), class.text.clone());
+            if let TypeDefinition::Foreign { called, .. } = &declaration.definition {
+                self.foreign.insert(declaration.name.text.clone(), *called);
             }
         }
     }
@@ -404,7 +403,7 @@ impl Environment {
             Scheme::over(over.clone(), declared.clone()),
         );
         match &declaration.definition {
-            TypeDefinition::Foreign(class) => boundary::class(class)?,
+            TypeDefinition::Foreign { class, .. } => boundary::class(class)?,
             TypeDefinition::Record(fields) => {
                 self.records.insert(
                     declaration.name.text.clone(),
@@ -448,6 +447,7 @@ impl Environment {
         let crossing = Crossing::of(&declaration.reaches);
         boundary::crosses(&result, crossing, &self.foreign, given_back)?;
         boundary::reaches_a_class(declaration, &parameters, &result, &self.foreign)?;
+        boundary::builds_a_class(declaration, &result, &self.foreign)?;
         boundary::widens(declaration, &result)?;
         boundary::stated_by(declaration)?;
         let signature = Type::function(parameters, result);

@@ -235,7 +235,9 @@ fn declared_types() -> impl Iterator<Item = &'static lumen_ast::TypeDeclaration>
 /// The names of the variants a type declaration writes, which a record declaration has none of.
 fn variants_of(definition: &'static lumen_ast::TypeDefinition) -> Vec<&'static str> {
     match definition {
-        lumen_ast::TypeDefinition::Foreign(_) | lumen_ast::TypeDefinition::Record(_) => Vec::new(),
+        lumen_ast::TypeDefinition::Foreign { .. } | lumen_ast::TypeDefinition::Record(_) => {
+            Vec::new()
+        }
         lumen_ast::TypeDefinition::Variants(variants) => variants
             .iter()
             .map(|variant| variant.name.text.as_str())

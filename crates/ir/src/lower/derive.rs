@@ -220,14 +220,14 @@ fn held<'a>(
 fn record_of(declared: &TypeDeclaration) -> Option<&[RecordField]> {
     match &declared.definition {
         TypeDefinition::Record(fields) => Some(fields),
-        TypeDefinition::Variants(_) | TypeDefinition::Foreign(_) => None,
+        TypeDefinition::Variants(_) | TypeDefinition::Foreign { .. } => None,
     }
 }
 
 /// The variants a type declares, where it declares variants rather than fields.
 fn variants_of(declared: &TypeDeclaration) -> Option<&[Variant]> {
     match &declared.definition {
-        TypeDefinition::Record(_) | TypeDefinition::Foreign(_) => None,
+        TypeDefinition::Record(_) | TypeDefinition::Foreign { .. } => None,
         TypeDefinition::Variants(variants) => Some(variants),
     }
 }

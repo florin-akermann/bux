@@ -8,7 +8,7 @@
 //! Every one of these is a method of its own, which is what makes a guard writable: a guarded
 //! span begins with an empty stack, and a call may be written wherever an expression is.
 
-use lumen_ast::{ExternDeclaration, Gives, JavaName, Reaches};
+use lumen_ast::{Called, ExternDeclaration, Gives, JavaName, Reaches};
 use lumen_types::Type;
 
 use crate::code::{Body, FieldRef, Guard, Instruction, Label, MethodRef};
@@ -43,11 +43,9 @@ pub(crate) fn body(
     signature: &Signature,
 ) -> Body {
     let shapes = &lowering.shapes;
-    let answer = Answer::of(
-        shapes,
-        lowering.used_as(declaration.name.span),
-        declaration.gives,
-    );
+    let declared = lowering.used_as(declaration.name.span);
+    let answer = Answer::of(shapes, declared, declaration.gives);
+    let called = shapes.called(received_by(declared));
     let held = signature
         .parameters
         .iter()
@@ -60,6 +58,7 @@ pub(crate) fn body(
         &declaration.reaches,
         &taken,
         answer.member.as_ref(),
+        called,
     ));
     instructions.push(Instruction::Label(CLOSED));
     instructions.extend(answer.widening());
@@ -143,11 +142,20 @@ fn guards(guarded: bool) -> Vec<Guard> {
     }]
 }
 
+/// The type the first parameter is, which is the receiver of a `method` and nothing elsewhere.
+fn received_by(declared: &Type) -> &Type {
+    let Type::Function { parameters, .. } = declared else {
+        unreachable!("an extern is bound to the function type its signature gives it")
+    };
+    parameters.first().unwrap_or(&Type::Unit)
+}
+
 /// The member itself: every parameter loaded from the slot it arrived in, and the access.
 fn reached(
     reaches: &Reaches,
     taken: &[Descriptor],
     gives: Option<&Descriptor>,
+    called: Called,
 ) -> Vec<Instruction> {
     match reaches {
         Reaches::Field(named) => vec![Instruction::GetStatic(FieldRef {
@@ -156,23 +164,23 @@ fn reached(
             of: gives.cloned().expect("a field gives back what it holds"),
         })],
         Reaches::Static(named) => {
-            let called = MethodRef {
+            let member = MethodRef {
                 class: class_of(named),
                 name: member_of(named),
                 descriptor: MethodDescriptor::new(taken.to_vec(), gives.cloned()),
             };
-            with(loaded(taken, 0), Instruction::InvokeStatic(called))
+            with(loaded(taken, 0), Instruction::InvokeStatic(member))
         }
         Reaches::Method(named) => {
             let [receiver, rest @ ..] = taken else {
                 unreachable!("an extern method takes the receiver its class is read off")
             };
-            let called = MethodRef {
+            let member = MethodRef {
                 class: class_named_by(receiver),
                 name: named.text.clone(),
                 descriptor: MethodDescriptor::new(rest.to_vec(), gives.cloned()),
             };
-            with(loaded(taken, 0), Instruction::InvokeVirtual(called))
+            with(loaded(taken, 0), calling(called, member))
         }
         Reaches::New => {
             let class = class_named_by(gives.expect("a constructor gives back what it built"));
@@ -185,6 +193,14 @@ fn reached(
             instructions.extend(loaded(taken, 0));
             with(instructions, Instruction::Construct(built))
         }
+    }
+}
+
+/// The call `method` is reached with, which the JVM writes one way for an interface's method.
+fn calling(called: Called, method: MethodRef) -> Instruction {
+    match called {
+        Called::AsAClass => Instruction::InvokeVirtual(method),
+        Called::AsAnInterface => Instruction::InvokeInterface(method),
     }
 }
 

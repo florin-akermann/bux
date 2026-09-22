@@ -1,0 +1,26 @@
+// expect-run
+// > spec/interop
+// The JVM calls an instance method of a class one way and a method of an interface another.
+// Which of the two a Java name is is written in that name's own class file, and the compiler
+// reads none, so `interface` after `type` is how the declaration says it.
+// `toPath` gives back a `java.nio.file.Path`, which is an interface, so `as_text` is called as
+// one; a call written the other way is a class file the JVM refuses to link.
+fn main() -> () {
+    put_line(out(), as_text(to_path(opened("spec/interop"))))
+}
+
+extern method as_text(path: Path) -> String = "toString"
+
+extern method to_path(file: File) -> Path = "toPath"
+
+extern new opened(name: String) -> File
+
+extern method put_line(stream: PrintStream, text: String) -> () = "println"
+
+extern field out() -> PrintStream = "java.lang.System.out"
+
+extern type interface Path = "java.nio.file.Path"
+
+extern type File = "java.io.File"
+
+extern type PrintStream = "java.io.PrintStream"

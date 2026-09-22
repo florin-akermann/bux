@@ -6,7 +6,7 @@
 
 use std::collections::{HashMap, HashSet};
 
-use lumen_ast::{Item, RecordField, TypeDeclaration, TypeDefinition, TypeRef, TypeRefKind};
+use lumen_ast::{Called, Item, RecordField, TypeDeclaration, TypeDefinition, TypeRef, TypeRefKind};
 use lumen_ast::{Variant, VariantPayload};
 use lumen_resolver::{DefinitionKind, Namespace, ResolvedProgram, prelude};
 use lumen_types::{BuiltBy, OfferedConstructor, OfferedType, Type};
@@ -70,6 +70,13 @@ impl Shape {
     }
 }
 
+/// The Java class a foreign type is held as, and how a method of that class is called.
+#[derive(Clone, Debug)]
+pub(crate) struct Reached {
+    pub(crate) class: ClassName,
+    pub(crate) called: Called,
+}
+
 /// One type declaration, as the classes it becomes.
 #[derive(Clone, Debug)]
 pub(crate) enum Declared {
@@ -93,8 +100,8 @@ pub(crate) struct Shapes {
     /// The types this module declares itself, which are the ones another module reaches by
     /// writing this module's name in front.
     own: HashSet<String>,
-    /// The Java class each foreign type is held as, which is the whole of what one is.
-    foreign: HashMap<String, ClassName>,
+    /// The Java class each foreign type is held as, and how a method of it is called.
+    foreign: HashMap<String, Reached>,
 }
 
 impl Shapes {
@@ -144,6 +151,19 @@ impl Shapes {
         self.records
             .values()
             .any(|constructor| constructor == named)
+    }
+
+    /// How a method of the type `of` is called, which is as a class's unless it names one.
+    ///
+    /// Every type but a foreign one is a class this compiler writes, so every one of them is
+    /// called as a class's. `docs/specs/interop.md` states the word that says otherwise.
+    pub(crate) fn called(&self, of: &Type) -> Called {
+        let Type::Named { name, .. } = of else {
+            return Called::AsAClass;
+        };
+        self.foreign
+            .get(name)
+            .map_or(Called::AsAClass, |reached| reached.called)
     }
 
     /// What a value of `of` is carried by, which is nothing at all when it is `()`.
@@ -203,9 +223,14 @@ impl Shapes {
     fn declare_reached(&mut self, offered: &OfferedType) {
         let base = self.declared(offered.name());
         match offered.built_by() {
-            BuiltBy::Foreign(class) => {
-                self.foreign
-                    .insert(offered.name().to_owned(), class_of(class));
+            BuiltBy::Foreign { class, called } => {
+                self.foreign.insert(
+                    offered.name().to_owned(),
+                    Reached {
+                        class: class_of(class),
+                        called: *called,
+                    },
+                );
             }
             BuiltBy::Record(one) => {
                 self.records
@@ -276,9 +301,14 @@ impl Shapes {
         base: ClassName,
     ) {
         match &declaration.definition {
-            TypeDefinition::Foreign(class) => {
-                self.foreign
-                    .insert(declaration.name.text.clone(), class_of(&class.text));
+            TypeDefinition::Foreign { class, called } => {
+                self.foreign.insert(
+                    declaration.name.text.clone(),
+                    Reached {
+                        class: class_of(&class.text),
+                        called: *called,
+                    },
+                );
             }
             TypeDefinition::Record(fields) => {
                 let carries = self.fields(resolved, fields);
@@ -372,8 +402,8 @@ impl Shapes {
 
     /// What a value of the type called `named` is carried by.
     fn named(&self, named: &str) -> Descriptor {
-        if let Some(class) = self.foreign.get(named) {
-            return Descriptor::Reference(class.clone());
+        if let Some(reached) = self.foreign.get(named) {
+            return Descriptor::Reference(reached.class.clone());
         }
         match named {
             "Int" => Descriptor::Long,
