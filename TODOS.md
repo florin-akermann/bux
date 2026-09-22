@@ -6,16 +6,6 @@
 
 ## Open
 
-## 🔴 Item 076: A list grows in amortized constant time
-**Depends on:** Item 058 — the two functions land there, and this item changes what carries one.
-`docs/specs/library.md` writes down that `push` costs what the list holds.
-A list is one `java.util.List`, and a push copies the whole of it.
-A textbook list grows in amortized constant time, which asks for a buffer and a length beside it.
-[076][a] - `docs/specs/codegen.md` states what carries a list, and what a push does to it.
-[076][b] - `push` costs amortized constant time, and `at` still costs the same at every index.
-[076][c] - A push leaves the list it was handed holding what it held, which stays a property.
-[076][d] - `docs/specs/library.md` drops the paragraph that writes the copy cost down.
-
 ## 🔴 Item 077: An instance is reached from the module that imports its type
 **Depends on:** Item 063 — a constrained generic now calls the instance by name, in any module.
 `docs/design.md` section 8 says a constraint at `Point` reaches the one `Eq<Point>` there is.
@@ -26,8 +16,18 @@ The Bux parser compares the token kinds the lexer module declares, so no phase c
 [077][b] - `==`, `<`, and `+` reach the instance of an imported type where they are written.
 [077][c] - `map.insert` at a key another module declares compiles, and `derive` sees the instance.
 [077][d] - `L0418` fires only where no module in the program declares the instance.
-[077][e] - The four `List` instances move from the prelude to `list`, lowered from their Bux bodies.
+[077][e] - The four `List` instances stay in the prelude and are lowered from their Bux bodies.
 [077][f] - `crates/ir/src/lower/elements.rs`, which generates those bodies in Rust, is deleted.
+
+## 🔴 Item 076: A list grows in amortized constant time
+**Depends on:** Item 058, Item 077 — the `List` instances are Bux bodies before a list changes.
+`docs/specs/library.md` writes down that `push` costs what the list holds.
+A list is one `java.util.List`, and a push copies the whole of it.
+A textbook list grows in amortized constant time, which asks for a buffer and a length beside it.
+[076][a] - `docs/specs/codegen.md` states what carries a list, and what a push does to it.
+[076][b] - `push` costs amortized constant time, and `at` still costs the same at every index.
+[076][c] - A push leaves the list it was handed holding what it held, which stays a property.
+[076][d] - `docs/specs/library.md` drops the paragraph that writes the copy cost down.
 
 ## 🔴 Item 066: The lexer is written in Bux
 **Depends on:** Item 059, Item 076 — a lexer builds a token list from the code units of a string.
