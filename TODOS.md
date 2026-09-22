@@ -31,17 +31,6 @@ Item 048 lands the declaration that makes such a reference writable, so this ite
 [052][b] - Section 15 cites the clause where it argues nothing is shared, so the two sections agree.
 [052][c] - Item 048's `docs/specs/interop.md` points at the clause rather than restating the rule.
 
-## 🟢 Item 053: An `extern` reaches a member whose descriptor gives an `int`
-`docs/specs/interop.md` carries `Int` as a `long`, and a JVM `int` is a type no Lumen type is.
-`String.hashCode`, `String.length`, and `List.indexOf` each give one, so none of them is reachable.
-`Hash<String>` therefore stays the compiler's own, which Item 048 left as the one supplied instance.
-The compiler reads no class file, so it cannot learn a descriptor; the declaration has to say.
-Whatever says it is a language change, so `docs/design.md` section 17 answers first.
-[053][a] - `docs/design.md` section 17 says how a declaration names a member that gives an `int`.
-[053][b] - `docs/specs/interop.md` states the widening and what it refuses, spec before code.
-[053][c] - `Hash<String>` moves to `library/prelude.lm`, and nothing is supplied any more.
-[053][d] - `strings.length` and `list.index_of` land, which `docs/specs/library.md` is waiting on.
-
 ## 🔴 Item 055: An `extern` reaches a member of a Java interface
 `extern method` is lowered to `invokevirtual`, which the JVM refuses to link on an interface.
 `extern type Path = "java.nio.file.Path"` with `extern method as_text(path: Path) -> String`
