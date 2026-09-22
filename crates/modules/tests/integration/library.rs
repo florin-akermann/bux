@@ -12,6 +12,12 @@ use crate::common::Beside;
 /// A module importing `strings`, which is the library module version 0.1 offers.
 const IMPORTING: &str = "import strings\n\nfn main() -> () {\n}\n";
 
+/// A module importing `process`, which is one of the library modules that import another.
+const IMPORTING_PROCESS: &str = "import process\n\nfn main() -> () {\n}\n";
+
+/// A module importing `files`, which is the other library module that imports another.
+const IMPORTING_FILES: &str = "import files\n\nfn main() -> () {\n}\n";
+
 /// A module importing the prelude, which is a name no import reaches.
 const IMPORTING_THE_PRELUDE: &str = "import prelude\n\nfn main() -> () {\n}\n";
 
@@ -42,7 +48,6 @@ fn a_library_module_is_handed_over_below_the_module_that_imports_it() {
     assert_eq!(order_of(&loaded), ["strings", "main"]);
 }
 
-/// `files` imports `list`, so loading `files` hands `list` over below it without being asked.
 #[test]
 fn every_library_module_a_file_imports_is_handed_over_below_it() {
     let beside = Beside::holding(&[(
@@ -88,24 +93,29 @@ fn a_root_module_named_as_the_library_is_no_ring_for_the_module_that_imports_it(
 }
 
 #[test]
-fn every_module_a_module_the_library_carries_imports_is_one_the_library_carries() {
+fn every_import_a_module_the_library_carries_writes_names_another_it_carries() {
     for (name, source) in library::carried() {
-        for imported in imports_of(source) {
+        for imported in source
+            .lines()
+            .filter_map(|line| line.strip_prefix("import "))
+        {
             assert!(
-                library::source_of(imported).is_some(),
-                "library/{name}.lm imports {imported}, which the library does not carry"
+                library::imported(imported).is_some(),
+                "library/{name}.lm imports `{imported}`, which no import reaches"
             );
         }
     }
 }
 
-/// The name each `import` of `source` writes, which is the whole of the line after the word.
-fn imports_of(source: &str) -> Vec<&str> {
-    source
-        .lines()
-        .filter_map(|line| line.strip_prefix("import "))
-        .map(str::trim)
-        .collect()
+/// `files` and `process` each import `list`, and they are the two that import anything at all.
+#[test]
+fn a_library_module_that_imports_another_is_handed_over_below_the_one_it_imports() {
+    for (importer, importing) in [("files", IMPORTING_FILES), ("process", IMPORTING_PROCESS)] {
+        let beside = Beside::holding(&[("main", importing)]);
+        let loaded = load(&beside.file_of("main")).expect("a library module needs no file");
+
+        assert_eq!(order_of(&loaded), ["list", importer, "main"]);
+    }
 }
 
 /// The names of every module loaded, in the order they are handed over.

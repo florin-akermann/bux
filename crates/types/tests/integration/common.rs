@@ -36,8 +36,9 @@ pub fn offering(offered: &Offered<'_>) -> Imported {
 /// What every library module puts out, which is what a module importing one of them reaches.
 ///
 /// They are read out of the source the compiler carries, so inference is given their surfaces
-/// exactly as it is given a loaded module's. Each is inferred reaching the ones before it, which
-/// is what `files` needs: it imports `list`, and `library::carried()` hands `list` over first.
+/// exactly as it is given a loaded module's. Each is read reaching the ones before it, which is
+/// the order the loader hands them over in, and is what `files` and `process` need: each imports
+/// `list`, and `library::carried()` hands `list` over first.
 pub fn reaching_the_library() -> Imported {
     library::carried()
         .filter(|(module, _)| *module != library::PRELUDE)

@@ -152,7 +152,7 @@ what `docs/specs/collections.md` does of a map.
 `prelude` is every name above, and nothing else.
 
 `list`, `strings`, `map`, and `set` each hold what a `for` loop writes the same way twice, and
-`io`, `files`, and `environment` hold what no `for` loop writes at all.
+`io`, `files`, `process`, and `environment` hold what no `for` loop writes at all.
 `strings` holds one of each: `join` is the loop, and `length` is what no loop reads.
 `list` holds two more, `push` and `at`, which the section above states are the compiler's.
 
@@ -163,16 +163,18 @@ map:         empty  insert  get
 set:         empty  insert  has_value
 io:          print  println
 files:       read  write  listed  made  removed
+process:     run
 environment: read
 ```
 
-A library module may import another, and `files` is the one that does: it imports `list`, because
-building the list `files.listed` gives back needs `list.push`.
+A library module may import another, and `files` and `process` are the two that do.
+Each imports `list`: `files` builds the list `files.listed` gives back with `list.push`, and
+`process` grows the list a JVM starts a program from the same way.
 Loading hands an imported library module over below the one that imports it, as it does for a
 module read out of a file, so nothing about the order a module is read in changes.
 
-`io`, `files`, and `environment` are written over `extern` declarations, which
-`docs/specs/interop.md` states and `docs/specs/io.md` says what each of the three reaches. Each
+`io`, `files`, `process`, and `environment` are written over `extern` declarations, which
+`docs/specs/interop.md` states and `docs/specs/io.md` says what each of the four reaches. Each
 declares those declarations beside its functions, and every top-level name is public, so every one
 of those surfaces is wider than the names above; `docs/specs/io.md` names the rest.
 `strings.length` is one such declaration itself.

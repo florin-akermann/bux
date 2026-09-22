@@ -24,13 +24,6 @@ A `bux` written in Bux cannot be a command line tool without the three.
 [060][c] - `io.eprintln` writes a line to standard error.
 [060][d] - Executable examples under `tests/spec/running` show each of the three.
 
-## 🔴 Item 062: A process is started and its output read
-`bux run` and `bux test` start `java`, and Bux has no way to start a process.
-`ProcessBuilder` takes a `List<String>` of the JVM's own, which no `extern` names yet.
-[062][a] - `docs/specs/io.md` states `process.run(command, arguments)` and what it gives back.
-[062][b] - The result carries the exit code, standard output, and standard error as text.
-[062][c] - An executable example under `tests/spec/io` runs `java -version` when a JDK is present.
-
 ## 🔴 Item 063: A library generic is used at a type the program declares
 `L0424` refuses `map.get` at a key the program declares, because the instance is not the library's.
 A compiler keys its tables by names, spans, and type variables, and every one is a declared type.
@@ -55,8 +48,18 @@ The table is a textbook hash table: constant time on average, plain, correct, an
 [065][b] - `map.get` and `set.has_value` are constant time over a full table.
 [065][c] - Every executable example under `tests/spec/library` still passes unchanged.
 
+## 🔴 Item 076: A list grows in amortized constant time
+**Depends on:** Item 058 — the two functions land there, and this item changes what carries one.
+`docs/specs/library.md` writes down that `push` costs what the list holds.
+A list is one `java.util.List`, and a push copies the whole of it.
+A textbook list grows in amortized constant time, which asks for a buffer and a length beside it.
+[076][a] - `docs/specs/codegen.md` states what carries a list, and what a push does to it.
+[076][b] - `push` costs amortized constant time, and `at` still costs the same at every index.
+[076][c] - A push leaves the list it was handed holding what it held, which stays a property.
+[076][d] - `docs/specs/library.md` drops the paragraph that writes the copy cost down.
+
 ## 🔴 Item 066: The lexer is written in Bux
-**Depends on:** Item 058, Item 059 — a lexer builds a token list from the code units of a string.
+**Depends on:** Item 059, Item 076 — a lexer builds a token list from the code units of a string.
 Self-hosting starts with the smallest phase, and the lexer is 286 lines of Rust.
 The Rust `bux` compiles the Bux lexer, and `tests/spec/lexer` holds both to one answer.
 [066][a] - `compiler/lexer.bx` lexes a module into the tokens `docs/specs/lexer.md` states.
@@ -115,13 +118,3 @@ The writer has 172 sites of narrow integers, and a `bytes` module hides `% 256` 
 [075][a] - Stage 1, built by the Rust `bux`, builds stage 2 from the same source.
 [075][b] - A harness holds stage 2 equal to stage 1 byte for byte.
 [075][c] - The Rust crates are deleted, and `docs/implementation.md` section 6 says what remains.
-
-## 🔴 Item 076: A list grows in amortized constant time
-**Depends on:** Item 058 — the two functions land there, and this item changes what carries one.
-`docs/specs/library.md` writes down that `push` costs what the list holds.
-A list is one `java.util.List`, and a push copies the whole of it.
-A textbook list grows in amortized constant time, which asks for a buffer and a length beside it.
-[076][a] - `docs/specs/codegen.md` states what carries a list, and what a push does to it.
-[076][b] - `push` costs amortized constant time, and `at` still costs the same at every index.
-[076][c] - A push leaves the list it was handed holding what it held, which stays a property.
-[076][d] - `docs/specs/library.md` drops the paragraph that writes the copy cost down.

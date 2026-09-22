@@ -10,7 +10,7 @@ use super::TypeErrorKind;
 pub(super) const fn the_rule(kind: &TypeErrorKind) -> &'static str {
     match kind {
         TypeErrorKind::DoesNotCross { .. } => {
-            "a boundary carries `Bool`, `Int`, `String`, and a type an `extern` names"
+            "a boundary carries `Bool`, `Int`, `String`, a `List`, and a type an `extern` names"
         }
         TypeErrorKind::NotAJavaName(_) => {
             "a Java name is its segments, each a name, with a dot between two of them"

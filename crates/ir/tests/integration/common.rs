@@ -118,7 +118,7 @@ fn surface(source: &str) -> Surface {
     surface_reaching(source, &Imported::default())
 }
 
-/// The same, of a module reaching what `imported` offers it.
+/// The same, of a module that reaches what `imported` offers it.
 fn surface_reaching(source: &str, imported: &Imported) -> Surface {
     let program = lumen_parser::parse(source).expect("the offered module parses");
     let resolved = lumen_resolver::resolve(program).expect("the offered module resolves");
@@ -129,8 +129,8 @@ fn surface_reaching(source: &str, imported: &Imported) -> Surface {
 
 /// What every library module offers, each inferred reaching the ones handed over before it.
 ///
-/// `files` imports `list`, so lowering `files` is given what `list` offers, exactly as the
-/// compiler gives it when a program imports either of them.
+/// `files` and `process` each import `list`, so lowering either is given what `list` offers,
+/// exactly as the compiler gives it when a program imports one of them.
 pub fn reaching_the_library() -> Imported {
     lumen_resolver::library::carried()
         .filter(|(module, _)| *module != lumen_resolver::library::PRELUDE)

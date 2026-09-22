@@ -11,7 +11,7 @@
 /// already in scope, which is what `docs/specs/modules.md` says of every module. A module one of
 /// these imports comes before it for the same reason, so reading them in this order reads each
 /// one with everything it names already in scope.
-const CARRIED: [(&str, &str); 8] = [
+const CARRIED: [(&str, &str); 9] = [
     (PRELUDE, include_str!("../../../library/prelude.lm")),
     ("list", include_str!("../../../library/list.lm")),
     ("strings", include_str!("../../../library/strings.lm")),
@@ -19,6 +19,7 @@ const CARRIED: [(&str, &str); 8] = [
     ("set", include_str!("../../../library/set.lm")),
     ("io", include_str!("../../../library/io.lm")),
     ("files", include_str!("../../../library/files.lm")),
+    ("process", include_str!("../../../library/process.lm")),
     (
         "environment",
         include_str!("../../../library/environment.lm"),
