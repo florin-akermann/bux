@@ -44,7 +44,7 @@ That is a directory listed, made, and deleted, a file written, and a variable re
 [061][e] - `environment.read(name)` gives `Some` of a variable and `None` where it is unset.
 [061][f] - Executable examples under `tests/spec/io` show each function.
 
-## 🔴 Item 062: A process is started and its output read
+## 🟡 Item 062: A process is started and its output read
 `bux run` and `bux test` start `java`, and Bux has no way to start a process.
 `ProcessBuilder` takes a `List<String>` of the JVM's own, which no `extern` names yet.
 [062][a] - `docs/specs/io.md` states `process.run(command, arguments)` and what it gives back.
