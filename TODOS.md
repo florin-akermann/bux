@@ -34,16 +34,6 @@ A `bux` written in Bux cannot be a command line tool without the three.
 [060][c] - `io.eprintln` writes a line to standard error.
 [060][d] - Executable examples under `tests/spec/running` show each of the three.
 
-## 🟢 Item 061: The file system is listed, made, and written
-`files` reads one file whole, and a compiler needs the rest of what `crates/cli` reaches.
-That is a directory listed, made, and deleted, a file written, and a variable read.
-[061][a] - `docs/specs/io.md` states each function, its type, and the `Result` each gives back.
-[061][b] - `files.write(path, text)` writes a file whole.
-[061][c] - `files.listed(path)` gives the names in a directory.
-[061][d] - `files.made(path)` makes a directory, and `files.removed(path)` deletes one.
-[061][e] - `environment.read(name)` gives `Some` of a variable and `None` where it is unset.
-[061][f] - Executable examples under `tests/spec/io` show each function.
-
 ## 🔴 Item 062: A process is started and its output read
 `bux run` and `bux test` start `java`, and Bux has no way to start a process.
 `ProcessBuilder` takes a `List<String>` of the JVM's own, which no `extern` names yet.
