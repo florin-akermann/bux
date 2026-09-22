@@ -10,7 +10,7 @@ import process
 import strings
 
 fn main() -> () {
-    match process.run(["java", "-version"]) {
+    match process.run("java", ["-version"]) {
         Ok(ran) => io.println(told(ran: ran))
         Err(why) => io.println(why)
     }

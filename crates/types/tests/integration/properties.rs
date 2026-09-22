@@ -387,7 +387,7 @@ const REACHED: [(&str, &str, &str, &str); 4] = [
     (
         "process",
         "run",
-        "[\"text\"]",
+        "\"text\", []",
         "Result<process.Finished, String>",
     ),
 ];

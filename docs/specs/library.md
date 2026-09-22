@@ -166,6 +166,9 @@ files:   read
 process: run
 ```
 
+`process` imports `list`, and it is the one module here that imports another at all.
+It grows the list a JVM starts a program from with `list.push`, which `docs/specs/io.md` states.
+
 `io`, `files`, and `process` are written over `extern` declarations, which
 `docs/specs/interop.md` states and `docs/specs/io.md` says what each of the three reaches. Each
 declares those declarations beside its functions, and every top-level name is public, so all

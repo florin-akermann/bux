@@ -36,18 +36,23 @@ pub fn offering(offered: &Offered<'_>) -> Imported {
 /// What the modules of `docs/specs/io.md` put out, which is what a module importing one reaches.
 ///
 /// They are library modules like `list` and `strings`, read out of the source the compiler
-/// carries, so inference is given their surfaces exactly as it is given a loaded module's.
+/// carries, so inference is given their surfaces exactly as it is given a loaded module's. Each
+/// one is read reaching the ones before it, which is the order the loader hands them over in.
 pub fn reaching_the_library() -> Imported {
     LIBRARY
         .iter()
         .fold(Imported::default(), |imported, module| {
             let source = library::source_of(module).expect("the library carries the module");
-            imported.offering(module, inferred(source).surface().clone())
+            let surface = inferred_reaching(source, &imported).surface().clone();
+            imported.offering(module, surface)
         })
 }
 
-/// The library modules these tests reach, which are the three `docs/specs/io.md` states.
-const LIBRARY: [&str; 3] = ["io", "files", "process"];
+/// The library modules these tests reach, each one below the modules it imports.
+///
+/// Three of them are the ones `docs/specs/io.md` states. `list` is the fourth because `process`
+/// imports it, and a module is read only once what it imports is there to read.
+const LIBRARY: [&str; 4] = ["io", "files", "list", "process"];
 
 /// The type of the occurrence of `written` numbered `occurrence`, counting from one.
 pub fn inferred_type(source: &str, written: &str, occurrence: usize) -> String {

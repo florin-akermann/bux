@@ -1,22 +1,36 @@
 // Starting a program and reading what it wrote, which is how one command line tool runs another.
 //
 // `docs/specs/io.md` states what a run gives back. It is written over `extern` declarations,
-// which `docs/specs/interop.md` states, and the command crosses as the `java.util.List` a Bux
-// list already is.
+// which `docs/specs/interop.md` states, and the list a JVM starts a program from crosses as the
+// `java.util.List` a Bux list already is.
+import list
+
 /// Runs `command`, waits for it to end, and gives back what it wrote and the code it ended with.
 ///
-/// `command` holds the program and every argument it is given, in that order, because that is
-/// what a JVM starts a program from. An `Err` is a command that never started at all.
+/// `command` names the program, and `arguments` holds what it is given, in the order it reads
+/// them. An `Err` is a command that never started at all.
 ///
 /// The program reads the standard input this one reads, so a program that asks for input reads
 /// it from whoever started this one rather than from a pipe nobody ever writes on.
-// example: ok_or(run([]), Finished { code: 9, output: "", errors: "" }).code == 9
-fn run(command: List<String>) -> Result<Finished, String> {
-    ran := started(reading_from(of_command(command), inherited()))?
+// example: ok_or(run("", []), Finished { code: 9, output: "", errors: "" }).code == 9
+fn run(command: String, arguments: List<String>) -> Result<Finished, String> {
+    started_from := whole_command(command, arguments)
+    ran := started(reading_from(of_command(started_from), inherited()))?
     output := whole(output_of(ran))
     errors := whole(errors_of(ran))
     code := ended(ran)?
     Ok(Finished { code: code, output: output, errors: errors })
+}
+
+/// The program and every argument after it, which is the one list a JVM starts a program from.
+// example: or(list.at(whole_command("java", ["-version"]), 0), "") == "java"
+// example: or(list.at(whole_command("java", ["-version"]), 1), "") == "-version"
+fn whole_command(command: String, arguments: List<String>) -> List<String> {
+    var parts = [command]
+    for argument in arguments {
+        parts = list.push(parts, argument)
+    }
+    parts
 }
 
 /// The whole of what was written on `stream`, which is nothing where nothing was written.
@@ -31,7 +45,7 @@ fn whole(stream: InputStream) -> String {
     text
 }
 
-/// A builder of the program `command` names, given every argument `command` holds after it.
+/// A builder of the program the first value of `command` names, given every value after it.
 extern new of_command(command: List<String>) -> ProcessBuilder
 
 /// The builder, with the program reading what `input` names rather than a pipe of its own.

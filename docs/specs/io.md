@@ -84,10 +84,10 @@ A Lumen value is never asked what it is, and the one thing asked here is not a L
 program reaches for.
 
 ```text
-process.run(command: List<String>) -> Result<Finished, String>
+process.run(command: String, arguments: List<String>) -> Result<Finished, String>
 ```
 
-`command` holds the program and every argument it is given, in that order.
+`command` names the program, and `arguments` holds what it is given, in the order it reads them.
 `run` starts that program, reads everything the program wrote, and waits for it to end.
 `Ok` holds a `Finished`, which is a record `process` declares:
 
@@ -108,25 +108,12 @@ leaves an empty one.
 A program that starts and then fails is an `Ok` whose `code` says so, because it ran.
 
 Nothing here is partial.
-A command that names no program, an empty command, and a read that fails are each a case the
-`Result` carries, and the caller opens it as it opens the one `files.read` gives back.
+A command that names no program and a read that fails are each a case the `Result` carries, and
+the caller opens it as it opens the one `files.read` gives back.
 
 The program reads the standard input the program that started it reads.
 A pipe of its own is what it would otherwise read, and nothing ever writes on that one, so a
 program that asks for a line would wait for a line no one is going to send.
-
-### Why the command is one list
-
-`java.lang.ProcessBuilder` is built from one `java.util.List` holding the program and its
-arguments.
-A Bux `List<String>` is that list already, which `docs/specs/codegen.md` states, so it crosses the
-boundary as itself; `docs/specs/interop.md` states the rule that lets it.
-
-The other shape is a `run` that takes the program and the arguments apart.
-It needs a value put in front of a list, and nothing in the library writes that yet, which
-`docs/specs/library.md` says of `list.push`.
-A signature the library cannot write is not the smaller change, so `run` takes the one list the
-JVM starts a program from, and takes it whole.
 
 ### What reading the output amounts to
 
@@ -146,15 +133,20 @@ Until then `run` is for a program that writes less than one such hold on its sta
 ### What `process` declares
 
 `docs/specs/api-surface.md` makes every top-level name public, and `process` is not exempt, so
-`process.Finished`, `process.whole`, `process.of_command`, `process.reading_from`,
-`process.inherited`, `process.started`, `process.output_of`, `process.errors_of`,
-`process.ended`, `process.over`, `process.delimited`, `process.token`, `process.closed`,
-`process.nothing_at_all`, `process.ProcessBuilder`, `process.Process`, `process.InputStream`,
-`process.Scanner`, and `process.Redirect` are each reachable by name.
+`process.Finished`, `process.whole_command`, `process.whole`, `process.of_command`,
+`process.reading_from`, `process.inherited`, `process.started`, `process.output_of`,
+`process.errors_of`, `process.ended`, `process.over`, `process.delimited`, `process.token`,
+`process.closed`, `process.nothing_at_all`, `process.ProcessBuilder`, `process.Process`,
+`process.InputStream`, `process.Scanner`, and `process.Redirect` are each reachable by name.
 That is what writing the module in Bux costs, as it is for `io` and `files`.
 A program that wants a program started writes `process.run`, and the rest is how that is built.
 
-`run` builds a `java.lang.ProcessBuilder`, points its standard input at the one this program
+`run` builds the one `java.util.List` a `java.lang.ProcessBuilder` is built from: it starts from
+a list holding `command` alone and pushes each value of `arguments` after it, with `list.push` in
+a `for` loop.
+A Bux `List<String>` is that JVM list already, which `docs/specs/codegen.md` states, so it
+crosses the boundary as itself; `docs/specs/interop.md` states the rule that lets it.
+`run` then builds a `java.lang.ProcessBuilder`, points its standard input at the one this program
 reads, starts it, and reads each stream with a `java.util.Scanner`.
 The scanner is given a delimiter no text holds, so the whole stream is one token, and the scanner
 is closed once that token is read.

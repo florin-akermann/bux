@@ -37,8 +37,8 @@ fn main() -> () {
 `io.print` writes its text and nothing else, `io.println` writes it and then a line break, and
 `files.read` gives back the whole file as a `Result` the program must open, so a file that is not
 there is a case the program states rather than a failure that ends it. `process.run` takes a
-program and its arguments as one list, starts it, reads what it wrote, and waits for it to end,
-and what it gives back holds the code the program ended with and both of the texts it wrote.
+program and the list of arguments it is given, starts it, reads what it wrote, and waits for it
+to end, and what it gives back holds the code it ended with and both of the texts it wrote.
 
 A program is compiled before the JDK is looked for, so a program that does not compile is told so
 on a machine that could not have run it anyway.
