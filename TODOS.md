@@ -6,13 +6,6 @@
 
 ## Open
 
-## 🟢 Item 063: A library generic is used at a type the program declares
-`L0424` refuses `map.get` at a key the program declares, because the instance is not the library's.
-A compiler keys its tables by names, spans, and type variables, and every one is a declared type.
-[063][a] - `docs/specs/codegen.md` states how a library generic reaches the program's instance.
-[063][b] - `map.insert` at a key the program derives `Eq` for compiles, and `map.get` reads it back.
-[063][c] - `L0424` is retired from `docs/specs/diagnostics.md`, or narrowed to what still holds.
-
 ## 🔴 Item 064: An instance is written over a generic type
 `Eq<List<T>>` cannot be written, and `derive` refuses a record that holds a `List`.
 An AST, a `Type`, and a constant pool each hold lists and each needs equality and hashing.
