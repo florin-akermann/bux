@@ -6,7 +6,7 @@
 
 ## Open
 
-## 🔴 Item 076: A list grows in amortized constant time
+## 🟡 Item 076: A list grows in amortized constant time
 **Depends on:** Item 058, Item 077 — the `List` instances are Bux bodies before a list changes.
 `docs/specs/library.md` writes down that `push` costs what the list holds.
 A list is one `java.util.List`, and a push copies the whole of it.
