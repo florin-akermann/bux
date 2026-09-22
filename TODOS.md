@@ -6,7 +6,7 @@
 
 ## Open
 
-## 🔴 Item 063: A library generic is used at a type the program declares
+## 🟡 Item 063: A library generic is used at a type the program declares
 `L0424` refuses `map.get` at a key the program declares, because the instance is not the library's.
 A compiler keys its tables by names, spans, and type variables, and every one is a declared type.
 [063][a] - `docs/specs/codegen.md` states how a library generic reaches the program's instance.
