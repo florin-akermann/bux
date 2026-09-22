@@ -40,6 +40,28 @@ instance Eq<String> {
     }
 }
 
+instance<T: Eq<T>> Eq<List<T>> {
+    fn is_equal(one: List<T>, other: List<T>) -> Bool {
+        var index = 0
+        for value in one {
+            var alike = match at(other, index) {
+                Some(held) => value == held
+                None => false
+            }
+            if alike {
+                index += 1
+            } else {
+                return false
+            }
+        }
+        var counted = 0
+        for held in other {
+            counted += 1
+        }
+        index == counted
+    }
+}
+
 instance Hash<Bool> {
     fn hashed(value: Bool) -> Int {
         match value {
@@ -61,6 +83,16 @@ instance Hash<String> {
     }
 }
 
+instance<T: Hash<T>> Hash<List<T>> {
+    fn hashed(value: List<T>) -> Int {
+        var code = 1
+        for held in value {
+            code = code * 31 + hashed(held)
+        }
+        code
+    }
+}
+
 instance Show<Bool> {
     fn shown(value: Bool) -> String {
         shown_truth(value)
@@ -79,6 +111,22 @@ instance Show<String> {
     }
 }
 
+instance<T: Show<T>> Show<List<T>> {
+    fn shown(value: List<T>) -> String {
+        var text = "["
+        var first = true
+        for held in value {
+            if first {
+                first = false
+            } else {
+                text += ", "
+            }
+            text += shown(held)
+        }
+        text + "]"
+    }
+}
+
 instance Ord<Bool> {
     fn is_less(one: Bool, other: Bool) -> Bool {
         one < other
@@ -94,6 +142,35 @@ instance Ord<Int> {
 instance Ord<String> {
     fn is_less(one: String, other: String) -> Bool {
         one < other
+    }
+}
+
+instance<T: Ord<T>> Ord<List<T>> {
+    fn is_less(one: List<T>, other: List<T>) -> Bool {
+        var index = 0
+        for value in one {
+            var against = at(other, index)
+            var below = match against {
+                Some(held) => value < held
+                None => false
+            }
+            if below {
+                return true
+            }
+            var above = match against {
+                Some(held) => held < value
+                None => true
+            }
+            if above {
+                return false
+            }
+            index += 1
+        }
+        var counted = 0
+        for held in other {
+            counted += 1
+        }
+        index < counted
     }
 }
 

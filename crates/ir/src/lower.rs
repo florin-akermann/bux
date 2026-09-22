@@ -8,6 +8,7 @@
 mod body;
 mod classes;
 mod derive;
+mod elements;
 mod escape;
 mod expr;
 mod functions;
@@ -29,10 +30,10 @@ use lumen_ast::{Item, Name};
 use lumen_ast::{Span, TypeDeclaration};
 use lumen_holes::Whole;
 use lumen_resolver::prelude;
-use lumen_types::{Type, TypedProgram};
+use lumen_types::{Type, TypeParameter, TypedProgram};
 
 use crate::Lowered;
-use crate::asked::{Asked, Specialisation};
+use crate::asked::{Asked, Asking, Specialisation};
 use crate::class::{Class, Method, Reached};
 use crate::code::{Body, Instruction, MethodRef};
 use crate::descriptor::{ClassName, Descriptor, MethodDescriptor};
@@ -80,7 +81,7 @@ pub(crate) struct Lowering<'a> {
     /// Every function the module writes, by the span of the name declaring it.
     declared: HashMap<Span, Declared<'a>>,
     /// The method each instance writes, by the trait method it answers and the type it is for.
-    answers: HashMap<(String, String), Span>,
+    answers: HashMap<(String, String), Answers>,
     /// The methods still owed, which lowering a body adds to as it meets a use of a generic.
     owed: RefCell<Vec<Owed>>,
     /// The methods this module has asked other modules for, which their own builds write.
@@ -109,10 +110,40 @@ enum Written<'a> {
     },
 }
 
-/// One method the module still owes: a function, and what one use of it settled its types at.
-struct Owed {
+/// The method one instance of this module writes: where it is written, and what it is over.
+struct Answers {
+    /// The names the instance writes as the arguments of its type, in the order it writes them.
+    arguments: Vec<String>,
     declared: Span,
-    at: Instantiation,
+}
+
+/// One method the module still owes, which is a function of its own or an instance over a list.
+enum Owed {
+    /// A function this module writes: what a JVM calls it, and what one use settled its types at.
+    ///
+    /// The name is worked out where the method is asked for, because the use that asks for it is
+    /// what reaches it: a method and the call of it are named once, in one place, or the two drift.
+    Written {
+        declared: Span,
+        named: String,
+        at: Instantiation,
+    },
+    /// An instance of a standard trait over `List`, at the one type that list holds.
+    OverAList(OverAList),
+}
+
+/// One method the prelude's instance over `List` writes, at the type the list holds.
+///
+/// `List` is the compiler's type, so no module declares it and no module's class is its own.
+/// The method is written into the class of the module that uses it, exactly as what the prelude's
+/// other instances amount to is written where they are used; `docs/specs/codegen.md` states it.
+pub(crate) struct OverAList {
+    /// The trait it answers, which is one of the four the prelude writes an instance of.
+    of: String,
+    /// The type the list holds, which every element is handed to the instance of.
+    element: Type,
+    named: String,
+    signature: Signature,
 }
 
 impl Lowering<'_> {
@@ -140,13 +171,13 @@ impl Lowering<'_> {
             .functions()
             .filter(|function| function.type_parameters.is_empty() || function.name.text == START);
         for function in reached {
-            self.owe(function.name.span, Instantiation::whole());
+            self.owe_plainly(function.name.span);
         }
         for (named, _) in derived_in(self.typed) {
-            self.owe(named.span, Instantiation::whole());
+            self.owe_plainly(named.span);
         }
         for declaration in self.typed.resolved().program().externs() {
-            self.owe(declaration.name.span, Instantiation::whole());
+            self.owe_plainly(declaration.name.span);
         }
     }
 
@@ -162,10 +193,10 @@ impl Lowering<'_> {
             let Some(function) = self.declares(one.function()) else {
                 continue;
             };
-            self.owe(
-                function.name.span,
-                Instantiation::asked_for(function, one.settled()),
-            );
+            let declared = function.name.span;
+            let at = Instantiation::asked_for(function, one.settled());
+            let named = at.names(&self.declared[&declared].named);
+            self.owe(declared, named, at);
         }
     }
 
@@ -230,8 +261,12 @@ impl Lowering<'_> {
     ///
     /// The name is the one the other module's build writes the method under, arrived at from the
     /// types alone, which is what has the two agree without either reading the other's tree.
-    pub(crate) fn asking(&self, module: &str, function: &str, settled: Vec<Type>) -> String {
-        let named = generic::names(function, &settled);
+    pub(crate) fn asking(&self, module: &str, function: &str, asked: Asking) -> String {
+        let Asking {
+            settled,
+            constrained,
+        } = asked;
+        let named = generic::names(function, &settled, &constrained);
         self.asks
             .borrow_mut()
             .note(Specialisation::of(module, function, settled));
@@ -247,14 +282,24 @@ impl Lowering<'_> {
         let mut written = HashSet::new();
         let mut methods = Vec::new();
         while let Some(owed) = self.next_owed() {
-            let declared = &self.declared[&owed.declared];
-            let named = owed.at.names(&declared.named);
-            let signature = self.signature(owed.declared, &owed.at);
+            let (named, signature) = self.reached_as(&owed);
             if written.insert((named.clone(), signature.descriptor())) {
                 methods.push(self.method(&owed, named, &signature));
             }
         }
         methods
+    }
+
+    /// What a JVM calls one method owed, and what that method takes and gives back.
+    fn reached_as(&self, owed: &Owed) -> (String, Signature) {
+        match owed {
+            Owed::Written {
+                declared,
+                named,
+                at,
+            } => (named.clone(), self.signature(*declared, at)),
+            Owed::OverAList(over) => (over.named.clone(), over.signature.clone()),
+        }
     }
 
     /// Every function the module writes, in the order it writes them.
@@ -274,30 +319,81 @@ impl Lowering<'_> {
     /// signature at that type. That is how a generic written here for a type the program declares
     /// reaches the program's own instance, which `docs/specs/codegen.md` states.
     pub(crate) fn answering(&self, method: &str, at: &Type) -> Option<Instance> {
-        let Type::Named { name, .. } = at else {
+        let Type::Named { name, arguments } = at else {
             return None;
         };
+        if name == prelude::LIST_TYPE {
+            return Some(self.over_a_list(method, at, arguments));
+        }
         let Some((module, declared)) = name.split_once('.') else {
-            return self.written_here(method, name);
+            return self.written_here(method, at, name);
         };
         let of = prelude::trait_of(method)
             .expect("a trait two modules both name is one the prelude declares");
         Some(Instance {
             class: ClassName::new(module),
             reaching: Reaching {
-                named: format!("{of}${declared}${method}"),
+                named: generic::names_wholly(&format!("{of}${declared}${method}"), arguments),
                 signature: self.written_as(&lumen_types::instance_signature(of, method, at)),
             },
         })
     }
 
+    /// The method the prelude's instance over `List` writes, at the type this list holds.
+    ///
+    /// It is named for the whole type rather than for its head alone: two lists holding
+    /// different types hand their elements to different instances, so each needs a method of its
+    /// own. `docs/specs/codegen.md` states the name, and `docs/specs/traits.md` the instance.
+    fn over_a_list(&self, method: &str, at: &Type, arguments: &[Type]) -> Instance {
+        let of = prelude::trait_of(method)
+            .expect("a trait an instance over a list answers is one the prelude declares");
+        let named = generic::names_wholly(&over_a_list_named(of, method), arguments);
+        let signature = self.written_as(&lumen_types::instance_signature(of, method, at));
+        let [element] = arguments else {
+            unreachable!("a list is written with the one type it holds")
+        };
+        self.owed.borrow_mut().push(Owed::OverAList(OverAList {
+            of: of.to_owned(),
+            element: element.clone(),
+            named: named.clone(),
+            signature: signature.clone(),
+        }));
+        Instance {
+            class: self.shapes.module().clone(),
+            reaching: Reaching { named, signature },
+        }
+    }
+
     /// The instance this module writes for a type of its own, where it writes one at all.
-    fn written_here(&self, method: &str, named: &str) -> Option<Instance> {
-        let declared = *self.answers.get(&(method.to_owned(), named.to_owned()))?;
+    fn written_here(&self, method: &str, at: &Type, named: &str) -> Option<Instance> {
+        let answers = self.answers.get(&(method.to_owned(), named.to_owned()))?;
         Some(Instance {
             class: self.shapes.module().clone(),
-            reaching: self.plainly(declared),
+            reaching: self.instance_method(answers, at),
         })
+    }
+
+    /// The method the instance writes, at the types this use of it settled its parameters on.
+    ///
+    /// An instance over a type written with arguments is generic in them, exactly as a function
+    /// declaring type parameters is, so it is written once per set of types it is used at.
+    /// `docs/specs/traits.md` states the instance, and `docs/specs/codegen.md` the name.
+    fn instance_method(&self, answers: &Answers, at: &Type) -> Reaching {
+        let declared = answers.declared;
+        let Written::Source(function) = self.declared[&declared].body else {
+            return self.plainly(declared);
+        };
+        if function.type_parameters.is_empty() {
+            return self.plainly(declared);
+        }
+        let Type::Named { arguments, .. } = at else {
+            unreachable!("an instance is for a type written by name, which this use settled")
+        };
+        let settled = Instantiation::asked_for(function, &settled_by(function, answers, arguments));
+        let named = generic::names_wholly(&self.declared[&declared].named, arguments);
+        let signature = self.signature(declared, &settled);
+        self.owe(declared, named.clone(), settled);
+        Reaching { named, signature }
     }
 
     /// The method a use of `name` reaches: what it is called, and what it takes and gives back.
@@ -315,7 +411,7 @@ impl Lowering<'_> {
         let settled = Instantiation::of(function, self.used_as(declared), &used);
         let named = settled.names(&self.declared[&declared].named);
         let signature = self.signature(declared, &settled);
-        self.owe(declared, settled);
+        self.owe(declared, named.clone(), settled);
         Reaching { named, signature }
     }
 
@@ -336,11 +432,19 @@ impl Lowering<'_> {
         }
     }
 
-    /// What one method does: the body a function writes, or the one a derive follows from.
+    /// What one method does: the body a function writes, or the one the compiler writes for it.
     fn written_body(&self, owed: &Owed, signature: &Signature) -> Body {
-        match &self.declared[&owed.declared].body {
+        match owed {
+            Owed::OverAList(over) => elements::body(self, over, signature),
+            Owed::Written { declared, at, .. } => self.body_written_for(*declared, at, signature),
+        }
+    }
+
+    /// The body one function writes, at the types one use of it settled.
+    fn body_written_for(&self, declared: Span, at: &Instantiation, signature: &Signature) -> Body {
+        match &self.declared[&declared].body {
             Written::Source(function) => {
-                let mut builder = Builder::entering(self, function, signature, owed.at.clone());
+                let mut builder = Builder::entering(self, function, signature, at.clone());
                 builder.body(&function.body);
                 builder.finish()
             }
@@ -349,8 +453,21 @@ impl Lowering<'_> {
         }
     }
 
-    fn owe(&self, declared: Span, at: Instantiation) {
-        self.owed.borrow_mut().push(Owed { declared, at });
+    /// Owes the method a function declaring no type parameter writes, under its own name.
+    fn owe_plainly(&self, declared: Span) {
+        self.owe(
+            declared,
+            self.declared[&declared].named.clone(),
+            Instantiation::whole(),
+        );
+    }
+
+    fn owe(&self, declared: Span, named: String, at: Instantiation) {
+        self.owed.borrow_mut().push(Owed::Written {
+            declared,
+            named,
+            at,
+        });
     }
 
     /// The next method owed, taken in the order it was asked for so the class is written once.
@@ -537,7 +654,7 @@ fn as_an_instance<'a>(instance: &InstanceDeclaration, method: &'a Function) -> D
 ///
 /// One trait and one type have one instance, which name resolution has already held the module
 /// to, so what a trait method at a type reaches is settled by looking here and nowhere else.
-fn instances_of(typed: &TypedProgram) -> HashMap<(String, String), Span> {
+fn instances_of(typed: &TypedProgram) -> HashMap<(String, String), Answers> {
     let mut answers = HashMap::new();
     for item in &typed.resolved().program().items {
         let Item::Instance(instance) = item else {
@@ -545,15 +662,58 @@ fn instances_of(typed: &TypedProgram) -> HashMap<(String, String), Span> {
         };
         for method in &instance.methods {
             let answering = (method.name.text.clone(), instance.for_type.text.clone());
-            answers.insert(answering, method.name.span);
+            answers.insert(
+                answering,
+                written_over(written_as(instance), method.name.span),
+            );
         }
     }
     for (named, derive) in derived_in(typed) {
         let method = prelude::method_of(&named.text).expect("a derivable trait declares one");
         let answering = (method.to_owned(), derive.for_type.text.clone());
-        answers.insert(answering, named.span);
+        answers.insert(answering, written_over(Vec::new(), named.span));
     }
     answers
+}
+
+/// One instance over `arguments`, whose method is written where `declared` says.
+fn written_over(arguments: Vec<String>, declared: Span) -> Answers {
+    Answers {
+        arguments,
+        declared,
+    }
+}
+
+/// What this use settled each type parameter the instance declares, in the order it declares them.
+fn settled_by(function: &Function, answers: &Answers, at: &[Type]) -> Vec<Type> {
+    function
+        .type_parameters
+        .iter()
+        .map(|declared| settling(&declared.name, answers, at))
+        .collect()
+}
+
+/// What one type parameter the instance declares settled on, which is the argument it is written
+/// as.
+///
+/// A parameter the instance declares and writes as no argument of its type settles on nothing and
+/// stands for itself, exactly as one a function's signature never writes does.
+fn settling(declared: &Name, answers: &Answers, at: &[Type]) -> Type {
+    answers
+        .arguments
+        .iter()
+        .position(|written| *written == declared.text)
+        .and_then(|position| at.get(position).cloned())
+        .unwrap_or_else(|| Type::Parameter(TypeParameter::written(declared)))
+}
+
+/// The names one instance writes as the arguments of the type it is for.
+fn written_as(instance: &InstanceDeclaration) -> Vec<String> {
+    instance
+        .arguments
+        .iter()
+        .map(|written| written.text.clone())
+        .collect()
 }
 
 /// Every instance a derive writes, as the trait it names and the derive that names it.
@@ -571,6 +731,7 @@ fn derived_in(typed: &TypedProgram) -> impl Iterator<Item = (&Name, &DeriveDecla
 }
 
 /// What a function takes and gives back, with a place for each parameter the source wrote.
+#[derive(Clone)]
 pub(crate) struct Signature {
     /// One per parameter written, which is carried by nothing when its type is `()`.
     pub(crate) parameters: Vec<Option<Descriptor>>,
@@ -583,6 +744,11 @@ impl Signature {
         let taken = self.parameters.iter().flatten().cloned().collect();
         MethodDescriptor::new(taken, self.result.clone())
     }
+}
+
+/// What a JVM calls the method the instance of `of` over a list writes, before its arguments.
+fn over_a_list_named(of: &str, method: &str) -> String {
+    format!("{of}${}${method}", prelude::LIST_TYPE)
 }
 
 /// Whether `lowered` is a program, which is a module a JVM can be started on.

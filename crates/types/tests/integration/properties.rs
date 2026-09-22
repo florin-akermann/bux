@@ -11,6 +11,9 @@ use crate::common::{
     expressions, inferred_type, inferred_type_reaching, refusal, refusal_reaching,
 };
 
+/// The name the module under test is compiled as, which nothing here depends on.
+const MODULE: &str = "demo";
+
 /// The pieces a generated module is built from, each inferring on its own and declaring its own
 /// names, so any set of them is a module that infers.
 const PIECES: [&str; 6] = [
@@ -36,7 +39,7 @@ fn an_inference_never_panics_and_is_deterministic(tc: TestCase) {
     let Ok(program) = parse(&source) else {
         return;
     };
-    let Ok(resolved) = resolve(program) else {
+    let Ok(resolved) = resolve(program, MODULE) else {
         return;
     };
     assert_eq!(
@@ -136,7 +139,8 @@ fn module(tc: &TestCase) -> String {
 
 fn resolved(source: &str) -> lumen_resolver::ResolvedProgram {
     let program = parse(source).unwrap_or_else(|error| panic!("{source:?} parses: {error:?}"));
-    resolve(program).unwrap_or_else(|error| panic!("{source:?} resolves: {}", error.message()))
+    resolve(program, MODULE)
+        .unwrap_or_else(|error| panic!("{source:?} resolves: {}", error.message()))
 }
 
 /// A value of each type a generic function can be used at, with the type it has.
@@ -226,7 +230,7 @@ fn accepts(source: &str) -> bool {
     let Ok(program) = parse(source) else {
         return false;
     };
-    let Ok(resolved) = resolve(program) else {
+    let Ok(resolved) = resolve(program, MODULE) else {
         return false;
     };
     check(resolved, &lumen_types::Imported::default()).is_ok()
@@ -566,6 +570,6 @@ fn a_chain_of_records_that_never_comes_back_round_is_accepted(tc: TestCase) {
 
     let source = along(many, "Int");
 
-    let resolved = resolve(parse(&source).expect("it parses")).expect("it resolves");
+    let resolved = resolve(parse(&source).expect("it parses"), MODULE).expect("it resolves");
     assert!(check(resolved, &lumen_types::Imported::default()).is_ok());
 }

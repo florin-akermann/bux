@@ -71,6 +71,13 @@ fn reads_what_it_holds(writes: &Writes<'_>) -> Result<(), TypeError> {
 }
 
 /// Refuses one value a deriving type holds whose own type has no instance of the trait.
+///
+/// `docs/specs/traits.md` gives an instance to a type written by name, and a type written with
+/// arguments reaches the instance written over them: a field of type `List<Int>` has `Eq`
+/// because `Eq<List<T>>` is written and `Int` answers what it asks of `T`. `()` has none at all.
+///
+/// A deriving type takes no arguments, so nothing it holds is written over a type parameter and
+/// there is no constraint to promise one.
 fn holds_an_instance(
     environment: &Environment,
     resolved: &ResolvedProgram,
@@ -78,7 +85,7 @@ fn holds_an_instance(
     held: Held<'_>,
 ) -> Result<(), TypeError> {
     let of = environment.written(resolved, held.written)?;
-    if has_instance(environment, &writes.of.text, &of) {
+    if environment.answers(&writes.of.text, &of, &[]) {
         return Ok(());
     }
     let kind = TypeErrorKind::HeldTypeHasNoInstance {
@@ -108,17 +115,6 @@ pub(crate) fn written_in(resolved: &ResolvedProgram) -> impl Iterator<Item = Wri
                 declared,
             })
         })
-}
-
-/// Whether a value of `held` is ever handed to `of`, which is whether it has one to reach.
-///
-/// `docs/specs/traits.md` gives an instance to a type written by name, so a type written with
-/// arguments has none however much its head does, and `()` has none at all.
-fn has_instance(environment: &Environment, of: &str, held: &Type) -> bool {
-    let Type::Named { name, arguments } = held else {
-        return false;
-    };
-    arguments.is_empty() && environment.has_instance(of, name)
 }
 
 /// The declaration of the type called `named`, which is the one the derive above it names.

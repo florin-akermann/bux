@@ -116,13 +116,7 @@ impl<'a> Writing<'a> {
     /// A type whose instance a module wrote or derived is an `invokestatic` of that instance's
     /// method; one of the types the JVM holds is what that instance amounts to, written out.
     fn through(&mut self, of: &str, holds: &Holds<'_>) {
-        let TypeRefKind::Named { path, .. } = &holds.written.kind else {
-            unreachable!("`()` has no instance of anything, so nothing holding one derives")
-        };
-        let at = Type::Named {
-            name: path.to_string(),
-            arguments: Vec::new(),
-        };
+        let at = written_as(holds.written);
         let method = prelude::method_of(of).expect("a derivable trait declares one method");
         let Some(instance) = self.lowering.answering(method, &at) else {
             for instruction in supplied(of, &holds.of) {
@@ -173,6 +167,20 @@ impl<'a> Writing<'a> {
 
     fn emit(&mut self, instruction: Instruction) {
         self.instructions.push(instruction);
+    }
+}
+
+/// The type one value was written as, with every argument it is written with.
+///
+/// The arguments are read as well as the name: a field written `List<Int>` reaches the instance
+/// written over `List<T>` at `Int`, which is not the one `List<Bool>` reaches.
+fn written_as(written: &TypeRef) -> Type {
+    let TypeRefKind::Named { path, arguments } = &written.kind else {
+        unreachable!("`()` has no instance of anything, so nothing holding one derives")
+    };
+    Type::Named {
+        name: path.to_string(),
+        arguments: arguments.iter().map(written_as).collect(),
     }
 }
 

@@ -1,6 +1,6 @@
 //! What a module declares, gathered before any body is inferred.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 use lumen_ast::{Called, TraitDeclaration};
 use lumen_ast::{DeriveDeclaration, ExternDeclaration, Function, InstanceDeclaration};
@@ -14,6 +14,7 @@ use crate::boundary::{self, Crossing};
 use crate::bounds::{self, Bounds};
 use crate::derive;
 use crate::error::{Count, TypeError, TypeErrorKind};
+use crate::held;
 use crate::scheme::{Quantified, Required, Scheme};
 use crate::surface::{BuiltBy, OfferedType};
 use crate::table::Table;
@@ -42,8 +43,13 @@ pub(crate) struct Environment {
     arities: HashMap<Key, usize>,
     /// The stand-in each trait method's scheme is written over, which is its trait's parameter.
     methods: HashMap<Key, Quantified>,
-    /// Every trait that has an instance for a type, by the two names that say so.
-    instances: HashSet<(String, String)>,
+    /// Every trait that has an instance for a type, by the two names that say so, and what the
+    /// instance asks of each argument the type is written with.
+    ///
+    /// An instance over a type written with arguments is constrained on them, which
+    /// `docs/specs/traits.md` states, so `Eq<List<T>>` at `T: Eq<T>` is filed with one ask of
+    /// `Eq`. An argument the instance leaves unconstrained asks nothing and is filed as `None`.
+    instances: HashMap<(String, String), Vec<Option<String>>>,
     /// What each type's instance of `IntegerLiteral` says it holds, by the name of that type.
     holds: HashMap<String, Bounds>,
     /// What each instance's method must be, which is its trait's method at the instance's type.
@@ -68,6 +74,7 @@ impl Environment {
         table: &mut Table,
     ) -> Result<Self, TypeError> {
         let mut environment = Self::of_prelude();
+        environment.held_by_the_compiler(resolved.module());
         for offered in reached {
             environment.offered_by_another_module(offered);
         }
@@ -76,6 +83,17 @@ impl Environment {
         environment.declare_items(resolved, table)?;
         derive::hold_what_they_need(&environment, resolved)?;
         Ok(environment)
+    }
+
+    /// The functions the compiler holds for this module, under the names it writes them by.
+    ///
+    /// `docs/specs/library.md` says `push` and `at` are `list`'s names although the compiler
+    /// holds them, so `list`'s own source writes them exactly as it writes `length`. A module
+    /// reaches a name it does not declare by its spelling, which is what files them here.
+    fn held_by_the_compiler(&mut self, module: &str) {
+        for (name, scheme) in held::held_for(module) {
+            self.bind(Key::prelude(name), scheme);
+        }
     }
 
     /// One type another module offers, under the name a module importing it writes it by.
@@ -154,10 +172,40 @@ impl Environment {
         self.holds.keys().cloned()
     }
 
-    /// Whether the trait called `of` has an instance for the type called `for_type`.
-    pub(crate) fn has_instance(&self, of: &str, for_type: &str) -> bool {
-        self.instances
-            .contains(&(of.to_owned(), for_type.to_owned()))
+    /// Whether the trait called `of` is answered at `at`, which is what a constraint resolves to.
+    ///
+    /// A named type reaches the one instance of that trait for it, and an instance over a type
+    /// written with arguments asks its own constraint of each of them. So `Eq` at `List<Int>` is
+    /// the one `Eq<List<T>>` there is, answered because `Eq` is answered at `Int`.
+    ///
+    /// A type parameter is answered by the constraints `promised` holds and by nothing else, which
+    /// is what has `Eq` answered at `List<T>` inside a body written over `T: Eq<T>`. Anything else
+    /// names no instance at all. `docs/specs/traits.md` states the three cases.
+    pub(crate) fn answers(&self, of: &str, at: &Type, promised: &[Required]) -> bool {
+        match at {
+            Type::Named { name, arguments } => self
+                .instances
+                .get(&(of.to_owned(), name.clone()))
+                .is_some_and(|asks| self.each_argument_answers(asks, arguments, promised)),
+            Type::Parameter(_) => promised
+                .iter()
+                .any(|promise| promise.trait_name == *of && promise.at == *at),
+            _ => false,
+        }
+    }
+
+    /// Whether every argument of a type answers what the instance asks of it, where it asks.
+    fn each_argument_answers(
+        &self,
+        asks: &[Option<String>],
+        arguments: &[Type],
+        promised: &[Required],
+    ) -> bool {
+        asks.iter().zip(arguments).all(|(asked, argument)| {
+            asked
+                .as_deref()
+                .is_none_or(|of| self.answers(of, argument, promised))
+        })
     }
 
     /// What the instance method defined at `key` must be, when `key` is one of them.
@@ -298,7 +346,7 @@ impl Environment {
         self.note_instance(resolved, declaration)?;
         let given = Type::Named {
             name: declaration.for_type.text.clone(),
-            arguments: Vec::new(),
+            arguments: standing_for(declaration),
         };
         for method in &declaration.methods {
             self.declare_function(resolved, method, table)?;
@@ -325,14 +373,14 @@ impl Environment {
         resolved: &ResolvedProgram,
         declaration: &InstanceDeclaration,
     ) -> Result<(), TypeError> {
-        self.takes_no_arguments(resolved, &declaration.for_type)?;
+        self.takes_its_own_arguments(resolved, declaration)?;
         let of = declaration.trait_name.text.clone();
         let for_type = declaration.for_type.text.clone();
         if of == prelude::INTEGER_LITERAL {
             self.holds
                 .insert(for_type.clone(), bounds::stated(declaration)?);
         }
-        self.instances.insert((of, for_type));
+        self.instances.insert((of, for_type), asked_of(declaration));
         Ok(())
     }
 
@@ -348,31 +396,58 @@ impl Environment {
     ) -> Result<(), TypeError> {
         self.takes_no_arguments(resolved, &declaration.for_type)?;
         for named in &declaration.traits {
-            self.instances
-                .insert((named.text.clone(), declaration.for_type.text.clone()));
+            self.instances.insert(
+                (named.text.clone(), declaration.for_type.text.clone()),
+                Vec::new(),
+            );
         }
         Ok(())
     }
 
-    /// An instance is for a whole type, so the type it names takes no arguments.
+    /// A derive is for a whole type, so the type it names takes no arguments.
     ///
-    /// `instance Eq<Option>` would be an instance of one name, and every `Option<T>` would then
-    /// reach it whatever `T` turned out to be. An instance per argument waits for the spec that
-    /// derives one, so a type that takes arguments is refused here, counted as anywhere else.
+    /// `derive Eq for Option` would be a derive of one name, and every `Option<T>` would then
+    /// reach it whatever `T` turned out to be. What a derive writes reads what the type holds,
+    /// and a type parameter holds nothing to read, so a type that takes arguments is refused
+    /// here, counted as anywhere else.
     ///
     /// # Errors
     ///
-    /// Returns the instance whose type takes arguments that the instance does not name.
+    /// Returns the derive whose type takes arguments that the derive does not name.
     fn takes_no_arguments(
         &self,
         resolved: &ResolvedProgram,
         for_type: &Name,
     ) -> Result<(), TypeError> {
+        self.counting(resolved, for_type, 0)
+    }
+
+    /// An instance is written with one argument for each its type takes, and each one is a type
+    /// parameter it declares, which name resolution has already held it to.
+    ///
+    /// # Errors
+    ///
+    /// Returns the instance that writes more or fewer arguments than its type takes.
+    fn takes_its_own_arguments(
+        &self,
+        resolved: &ResolvedProgram,
+        declaration: &InstanceDeclaration,
+    ) -> Result<(), TypeError> {
+        self.counting(resolved, &declaration.for_type, declaration.arguments.len())
+    }
+
+    /// Holds the type called `for_type` to being written with `given` arguments.
+    fn counting(
+        &self,
+        resolved: &ResolvedProgram,
+        for_type: &Name,
+        given: usize,
+    ) -> Result<(), TypeError> {
         let definition = resolved
             .definition(Namespace::Type, for_type)
             .expect("name resolution gave the instance's type a definition");
         let key = self.key_of(definition, for_type);
-        Self::counted(for_type, *self.arities.get(&key).unwrap_or(&0), 0)
+        Self::counted(for_type, *self.arities.get(&key).unwrap_or(&0), given)
     }
 
     /// The type the trait `of` gives the method `method` at `given`, when it declares one.
@@ -649,6 +724,43 @@ impl Environment {
             TypeErrorKind::WrongTypeArgumentCount(count),
         ))
     }
+}
+
+/// The type an instance is for, written over the arguments it writes it with.
+///
+/// `instance<T: Eq<T>> Eq<List<T>>` is for `List<T>`, and its methods are held to the trait's
+/// signature at that type: `is_equal` takes two `List<T>` and gives back a `Bool`.
+fn standing_for(declaration: &InstanceDeclaration) -> Vec<Type> {
+    declares_each(declaration)
+        .map(|parameter| Type::Parameter(TypeParameter::written(&parameter.name)))
+        .collect()
+}
+
+/// What the instance asks of each argument its type is written with, in the order it writes them.
+fn asked_of(declaration: &InstanceDeclaration) -> Vec<Option<String>> {
+    declares_each(declaration)
+        .map(|parameter| {
+            parameter
+                .constraint
+                .as_ref()
+                .map(|constraint| constraint.name.text.clone())
+        })
+        .collect()
+}
+
+/// The type parameter the instance declares for each argument it writes its type with.
+///
+/// Name resolution has already refused an argument that is no parameter of the instance, which
+/// `docs/specs/traits.md` states, so every argument names one of them.
+fn declares_each(
+    declaration: &InstanceDeclaration,
+) -> impl Iterator<Item = &lumen_ast::TypeParameter> {
+    declaration.arguments.iter().filter_map(|written| {
+        declaration
+            .type_parameters
+            .iter()
+            .find(|parameter| parameter.name.text == written.text)
+    })
 }
 
 /// A written type reached through a module, which is the module written and the whole name.

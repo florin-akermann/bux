@@ -40,7 +40,7 @@ pub fn held() -> Imported {
         "type User = {\n    name: String\n}\n\n",
         "type Payment =\n    | Sent(String)\n    | Pending\n"
     );
-    Imported::default().offering("held", surface(source))
+    Imported::default().offering("held", surface("held", source))
 }
 
 /// The library module an import of `named` reaches, as a test asks things of it.
@@ -74,7 +74,7 @@ impl LibraryModule {
 
     /// Every name a module importing it reaches, which is what it puts out.
     pub fn offers(self) -> Surface {
-        surface_reaching(self.source(), &reaching_the_library())
+        surface_reaching(self.named, self.source(), &reaching_the_library())
     }
 
     /// The class it is, which is the class every function of it is a method of.
@@ -102,7 +102,7 @@ pub const HOLDER: &str = concat!(
 
 /// What [`HOLDER`] offers, under the name `holder`, which is the name a test imports it by.
 pub fn holder() -> Imported {
-    Imported::default().offering("holder", surface(HOLDER))
+    Imported::default().offering("holder", surface("holder", HOLDER))
 }
 
 /// One module a behaviour is about, as the phases before lowering are given it.
@@ -119,7 +119,8 @@ pub struct Written<'w> {
 /// The classes `written` becomes, under the name it says and knowing what it was asked for.
 pub fn lowered_as(written: &Written<'_>) -> Lowered {
     let program = lumen_parser::parse(written.source).expect("the example parses");
-    let resolved = lumen_resolver::resolve(program).expect("every name of the example resolves");
+    let resolved = lumen_resolver::resolve(program, written.named)
+        .expect("every name of the example resolves");
     let typed = lumen_types::check(resolved, written.imported)
         .expect("every expression of the example has a type");
     let whole = Whole::of_module(&typed).expect("the example holds no hole");
@@ -127,14 +128,14 @@ pub fn lowered_as(written: &Written<'_>) -> Lowered {
 }
 
 /// Every name a module importing `source` reaches, which is what `source` puts out.
-fn surface(source: &str) -> Surface {
-    surface_reaching(source, &Imported::default())
+fn surface(named: &str, source: &str) -> Surface {
+    surface_reaching(named, source, &Imported::default())
 }
 
 /// The same, of a module that reaches what `imported` offers it.
-fn surface_reaching(source: &str, imported: &Imported) -> Surface {
+fn surface_reaching(named: &str, source: &str, imported: &Imported) -> Surface {
     let program = lumen_parser::parse(source).expect("the offered module parses");
-    let resolved = lumen_resolver::resolve(program).expect("the offered module resolves");
+    let resolved = lumen_resolver::resolve(program, named).expect("the offered module resolves");
     let typed = lumen_types::check(resolved, imported)
         .expect("the offered module has a type for every expression");
     typed.surface().clone()
@@ -148,7 +149,7 @@ pub fn reaching_the_library() -> Imported {
     lumen_resolver::library::carried()
         .filter(|(module, _)| *module != lumen_resolver::library::PRELUDE)
         .fold(Imported::default(), |imported, (module, source)| {
-            let surface = surface_reaching(source, &imported);
+            let surface = surface_reaching(module, source, &imported);
             imported.offering(module, surface)
         })
 }

@@ -56,10 +56,8 @@ instance Eq<Point> {
 
 An instance names a trait, the type it is for, and a body for each of the trait's methods.
 
-The type is written by name, without arguments: `Eq<Point>`, and not `Eq<List<Point>>`.
-A type that takes arguments is refused here, counted as a written type is counted anywhere else:
-`instance Eq<Option>` names one of the arguments `Option` takes and would answer for every one.
-An instance for a generic type waits for the spec that derives one.
+The type is written by name: `Eq<Point>` over a type that takes no arguments, and
+`Eq<List<T>>` over one that does.
 
 The name is a type, so a trait written there is refused with `L0311`, as one written where any
 other type belongs is.
@@ -90,6 +88,40 @@ A second instance of one trait for one type is refused where it is written.
 An instance is written by hand or by a derive, and the two are the same instance: what a derive
 writes is what an author would have, and a second one either way is the second instance refused.
 `docs/specs/derive.md` states which traits a type derives and what each derive writes.
+
+### An instance for a type written with type parameters
+
+```text
+instance<T: Eq<T>> Eq<List<T>> {
+    fn is_equal(one: List<T>, other: List<T>) -> Bool {
+        ...
+    }
+}
+```
+
+A type that takes arguments gets one instance, and that one instance answers at every argument.
+The instance declares its type parameters after the `instance` keyword, exactly as a function
+declares its own, and it writes them as the arguments of the type it is for.
+`instance<T: Eq<T>> Eq<List<T>>` is therefore the one `Eq<List<T>>` there is, and it answers for
+`List<Int>`, for `List<String>`, and for `List<List<Int>>` alike.
+
+Each type parameter takes a constraint where the body asks something of it, written exactly where a
+function's constraint is written.
+`is_equal` over two lists compares two elements with `==`, which resolves to `Eq<T>`, so the
+instance declares `T: Eq<T>`.
+A parameter the body asks nothing of takes none, so `instance<T> Show<Box<T>>` is written, and a
+body that then asks something of `T` is refused with `L0418`, as a generic function's body is.
+
+Every argument of the type is a type parameter the instance declares.
+`instance Eq<Box<Int>>` writes a type rather than a parameter, so it would answer for `Box<Int>`
+and leave `Box<Bool>` with none; name resolution refuses it with `L0318`.
+An instance that writes more or fewer arguments than its type takes is refused with `L0401`, as a
+type written with the wrong number of arguments is anywhere else.
+
+One trait and one type have one instance, and the type here is `List` rather than `List<Int>`, so
+`L0308` reads the name and nothing after it.
+The methods are the trait's at the instance's type, as they are for any other instance: `is_equal`
+takes two `List<T>` and gives back a `Bool`.
 
 ## The standard traits
 
@@ -148,21 +180,24 @@ A `String` is shown as the characters it holds and nothing more: `shown("ada")` 
 
 ### The instances the prelude has for them
 
-The prelude has all four for `Bool`, `Int`, and `String`:
+The prelude has all four for `Bool`, `Int`, and `String`, and all four for `List<T>`:
 
 ```text
 instance Eq<Bool>       instance Eq<Int>       instance Eq<String>
 instance Ord<Bool>      instance Ord<Int>      instance Ord<String>
 instance Hash<Bool>     instance Hash<Int>     instance Hash<String>
 instance Show<Bool>     instance Show<Int>     instance Show<String>
+
+instance<T: Eq<T>> Eq<List<T>>        instance<T: Ord<T>> Ord<List<T>>
+instance<T: Hash<T>> Hash<List<T>>    instance<T: Show<T>> Show<List<T>>
 ```
 
-All twelve are Lumen source, a few lines each, and `library/prelude.lm` is where a reader goes
-to find what one of them says.
+All sixteen are source the prelude carries, a few lines each, and `library/prelude.lm` is where a
+reader goes to find what one of them says.
 `Hash<String>` reads a string by the characters it holds, over a `String.hashCode` declared with
 the width `docs/specs/interop.md` states.
 
-None of the twelve has a body anything calls.
+None of the sixteen has a body anything calls.
 What one amounts to is written out where it is called — the JVM instruction for it, or a call of
 the Java member behind it — which `docs/specs/library.md` states and `docs/specs/codegen.md`
 writes out.
@@ -178,6 +213,16 @@ Which number two unequal values work out to is not part of this spec, and nothin
 that depends on it.
 `shown` at `Int` is the digits it is written with, at `Bool` is `true` or `false`, and at `String`
 is the string.
+
+Each of the four over `List<T>` walks the list and asks `T` for the instance of its own trait,
+which is what the constraint on `T` promises.
+Two lists are equal where they hold the same number of values and each value is equal to the one
+beside it.
+Two lists are ordered by their elements, one by one, and a list another begins comes first, which
+is the order two strings are already in.
+`hashed` at `List<T>` works one number out from the hash of every element, in order.
+`shown` at `List<T>` is the elements shown, separated by `, `, between `[` and `]`, so
+`shown([1, 2, 3])` is `[1, 2, 3]`.
 
 `Eq`, `Ord`, `Hash`, and `Show`, and `is_equal`, `is_less`, `hashed`, and `shown`, are ordinary
 prelude names rather than keywords, so a module declaring one of them is refused with `L0302`.
@@ -214,6 +259,18 @@ A use of a trait method is resolved by the type its trait's parameter settled on
 - a type parameter of the function being compiled reaches the constraint that parameter declares;
 - anything else is refused, because nothing names an instance.
 
+A named type is read by its name alone, so `List<Int>` reaches the one instance of `Eq<List<T>>`
+there is.
+That instance asks its own constraint of each argument the type is written with, so `Eq` at
+`List<Int>` is answered because `Eq` is answered at `Int`.
+`Eq` at `List<Crate>` is answered only once `Crate` has an instance of `Eq`, and it is refused
+naming `Crate` until then.
+
+A type parameter answers what its constraint answers wherever it stands, and an argument of a type
+written with arguments is one of those places.
+So `Eq` at `List<T>` is answered inside a body written over `T: Eq<T>`, for the reason `Eq` at
+`List<Int>` is answered.
+
 A generic is compiled once per set of types, so the second case is a case only while type checking.
 The body written for `has_value` at `Point` has `T` standing for `Point`, and the `is_equal` it
 calls is the one `instance Eq<Point>` declares.
@@ -228,12 +285,15 @@ the language keeps.
 ## What the library writes and what the compiler supplies
 
 `library/prelude.lm` is Lumen source the compiler carries, which `docs/specs/library.md` states,
-and it declares every trait and writes every instance of one for `Bool`, `Int`, and `String`.
+and it declares every trait and writes every instance of one for `Bool`, `Int`, `String`, and
+`List<T>`.
 The four standard traits are written out above; `docs/specs/operators.md` writes out the six the
 arithmetic operators are, and `docs/specs/literals.md` writes out `IntegerLiteral`.
 
 `todo` is the one function the compiler supplies, because a hole has no body for the library to
 write.
+The prelude's instances over `List<T>` read a list with `at`, which is `list`'s name and the
+compiler's function, and `docs/specs/library.md` states that the prelude reaches it too.
 `Bool`, `Int`, `String`, and `List` stay the compiler's as well, because what they are made of is
 the JVM rather than a declaration, which `docs/specs/library.md` states.
 No instance, trait, or function of the prelude other than `todo` is the compiler's.
@@ -242,12 +302,14 @@ A module writing `instance Eq<Int>` is refused with `L0308`, because there alrea
 module declaring its own `Eq` is refused with `L0302`, exactly as one declaring its own `todo` is.
 Which of the two wrote the one already there makes no difference to either refusal.
 
-No instance over those three types has a body anything calls.
+No instance over those four types has a body anything calls.
 `is_equal` at `Int`, at `Bool`, or at `String` is written out where it is called, as `or` is, and
 the comparison it writes is the one `==` already wrote: two whole numbers or two truth values as the
 JVM compares them, and two strings by the characters they hold.
-The body in `library/prelude.lm` is what says in Lumen what that instruction does, and reading it
-is what holds it to its type.
+Each instance over `List<T>` is written out the same way, as the walk it is, which
+`docs/specs/codegen.md` states.
+The body in `library/prelude.lm` is what says in Lumen what that instruction or that walk does, and
+reading it is what holds it to its type.
 Nothing asks whether two references are one object, which `docs/specs/codegen.md` requires.
 
 ## What is written
@@ -259,6 +321,22 @@ itself, joined by `$`: `Eq$Point$is_equal`.
 
 An instance's method is written whether anything calls it or not, as a function that declares no
 type parameter is, because it names no type parameter of its own.
+
+An instance that declares type parameters is generic in them, exactly as a function declaring them
+is, so its method is written once per set of types it is used at and not at all until one is.
+The name is the plain one, and then the arguments the type is written with, in that order and each
+behind a `$`: `Eq$Box$is_equal$Int` is `instance<T: Eq<T>> Eq<Box<T>>` at `Int`.
+It is the type's own order rather than the instance's, because the name is read off the type and
+nothing else, which is what has a module reach another module's instance without reading its tree.
+An argument that itself takes arguments is written out whole, so `Eq<Box<List<Int>>>` reaches
+`Eq$Box$is_equal$List$Int`, and the argument is what keeps two uses of one instance apart.
+
+`List` is the compiler's type, so no module declares it and no module's class is the one its
+instances belong to.
+The four the prelude writes over `List<T>` are written into the class of each module that uses one,
+as every other prelude instance is written out where it is called.
+`Eq$List$is_equal$Int` used in `demo` is a static method of the class `demo`, and the same method
+used in `other` is a static method of the class `other`.
 
 A call of a trait method is an `invokestatic` of the method the instance wrote, or, over a type
 the JVM holds, the instruction that instance amounts to written out in place.
@@ -288,13 +366,14 @@ A trait's name and the type an instance is for are written in `PascalCase`, and 
 | `L0309` | An instance leaves a method out, writes an undeclared one, or writes one twice. |
 | `L0310` | Something that is not a trait is written where a trait belongs. |
 | `L0311` | A trait is written where a type belongs. |
+| `L0318` | An instance writes an argument of its type that is no type parameter it declares. |
 | `L0400` | An instance's method has a signature the trait's method does not. |
-| `L0401` | An instance names a type that takes arguments, which an instance never names. |
+| `L0401` | An instance writes more or fewer arguments than the type it is for takes. |
 | `L0406` | An operator is written over a type that has no instance of the trait it is. |
 | `L0418` | A trait method is used at a type with no instance of its trait. |
 | `L0419` | A parameter of a method a trait declares states no type. |
 
-`L0308`, `L0309`, `L0310`, and `L0311` are raised by name resolution, which
+`L0308`, `L0309`, `L0310`, `L0311`, and `L0318` are raised by name resolution, which
 `crates/resolver/src/error.rs` words.
 `L0401`, `L0418`, and `L0419` are raised by type inference, which `crates/types/src/error.rs`
 words.
@@ -303,7 +382,8 @@ words.
 
 These hold and are checked with property-based tests:
 
-1. A trait, an instance, and a constraint each survive printing and parsing unchanged.
+1. A trait, an instance over a plain type, an instance over type parameters, and a constraint
+   each survive printing and parsing unchanged.
 2. Canonical form is idempotent over a file holding a trait and an instance.
 3. A trait method called at a type with an instance resolves to that instance and to no other.
 4. A generic constrained by a trait is written once per type it is used at, and each body calls
@@ -317,3 +397,6 @@ What each instance over those three types answers is a claim about a running pro
 held to by `tests/spec/traits/supplied.lm` rather than by a property: that `is_less` is a total
 order over `Bool`, `Int`, and `String` and is transitive, that equal values hash alike, and that
 `shown` renders each of the three as this spec states.
+What the four over `List<T>` answer is held to the same way, by
+`tests/spec/traits/over_a_list.lm`, and what a module's own instance over its own type answers by
+`tests/spec/traits/over_a_generic_type.lm`.

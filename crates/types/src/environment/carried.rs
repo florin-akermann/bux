@@ -8,7 +8,7 @@
 use std::sync::LazyLock;
 
 use lumen_ast::{Item, Name};
-use lumen_resolver::{Definition, ResolvedProgram, prelude};
+use lumen_resolver::{Definition, ResolvedProgram, library, prelude};
 
 use super::{Environment, Key};
 use crate::error::TypeError;
@@ -50,6 +50,7 @@ impl Environment {
             environment.arities.insert(Key::prelude(name), takes);
         }
         environment.bind(Key::prelude("todo"), todo());
+        environment.held_by_the_compiler(library::PRELUDE);
         environment.note_types(resolved);
         environment
             .declare_traits(resolved)

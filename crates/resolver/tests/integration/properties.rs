@@ -6,6 +6,9 @@ use lumen_ast::{Item, Name, Program};
 use lumen_parser::parse;
 use lumen_resolver::{Namespace, Origin, resolve};
 
+/// The name the module under test is compiled as, which nothing here depends on.
+const MODULE: &str = "demo";
+
 /// The pieces a generated module is built from, each resolving on its own and declaring its own
 /// names, so any set of them is a module that resolves.
 const PIECES: [&str; 6] = [
@@ -23,14 +26,15 @@ fn resolving_never_panics_and_is_deterministic(tc: TestCase) {
     let Ok(program) = parse(&source) else {
         return;
     };
-    assert_eq!(resolve(program.clone()), resolve(program));
+    assert_eq!(resolve(program.clone(), MODULE), resolve(program, MODULE));
 }
 
 #[hegel::test]
 fn a_module_built_of_pieces_that_each_resolve_resolves(tc: TestCase) {
     let source = module(&tc);
     let program = parse(&source).expect("a well-formed module parses");
-    resolve(program).unwrap_or_else(|error| panic!("{source:?} resolves: {}", error.message()));
+    resolve(program, MODULE)
+        .unwrap_or_else(|error| panic!("{source:?} resolves: {}", error.message()));
 }
 
 /// A module of distinct [`PIECES`]; a piece drawn twice would declare its names twice.
@@ -57,7 +61,7 @@ fn a_refusal_points_inside_the_source(tc: TestCase) {
     let refused = tc.draw(gs::sampled_from(&REFUSALS));
     let source = format!("{}\n\n{refused}\n", module(&tc));
     let program = parse(&source).expect("a well-formed module parses");
-    let error = resolve(program)
+    let error = resolve(program, MODULE)
         .err()
         .unwrap_or_else(|| panic!("{source:?} is refused"));
     let span = error.span();
@@ -70,7 +74,7 @@ fn a_refusal_points_inside_the_source(tc: TestCase) {
 fn every_name_a_module_declares_is_declared_at_that_name(tc: TestCase) {
     let source = module(&tc);
     let program = parse(&source).expect("a well-formed module parses");
-    let resolved = resolve(program).expect("a well-formed module resolves");
+    let resolved = resolve(program, MODULE).expect("a well-formed module resolves");
     for (namespace, name) in declared_names(resolved.program()) {
         let definition = resolved
             .definition(namespace, name)

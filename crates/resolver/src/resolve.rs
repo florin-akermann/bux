@@ -11,6 +11,7 @@ use lumen_ast::{TypeRefKind, Variant, VariantPayload};
 
 use crate::definition::{Definition, DefinitionKind, Namespace, Origin};
 use crate::error::{ResolveError, ResolveErrorKind};
+use crate::library::PRELUDE;
 use crate::order;
 use crate::prelude;
 use crate::scope::Scope;
@@ -26,7 +27,7 @@ mod traits;
 ///
 /// Returns the first name that names nothing, is declared twice, or hides something in scope,
 /// and then the first declaration written above something that uses it.
-pub fn resolve(program: Program) -> Result<ResolvedProgram, ResolveError> {
+pub fn resolve(program: Program, module: &str) -> Result<ResolvedProgram, ResolveError> {
     let mut resolver = Resolver::new();
     resolver.module(&program)?;
     let definitions = resolver.definitions;
@@ -34,6 +35,7 @@ pub fn resolve(program: Program) -> Result<ResolvedProgram, ResolveError> {
         return Err(error);
     }
     Ok(ResolvedProgram {
+        module: module.to_owned(),
         program,
         definitions,
     })
@@ -52,6 +54,7 @@ pub fn prelude_resolved() -> &'static ResolvedProgram {
             .module(&program)
             .expect("every name of the library the compiler carries resolves");
         ResolvedProgram {
+            module: PRELUDE.to_owned(),
             program,
             definitions: resolver.definitions,
         }
@@ -62,6 +65,8 @@ pub fn prelude_resolved() -> &'static ResolvedProgram {
 /// A program whose every name points at the definition it means.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ResolvedProgram {
+    /// The name this module is reached by, which says what the compiler holds for it.
+    module: String,
     program: Program,
     definitions: Definitions,
 }
@@ -71,6 +76,12 @@ impl ResolvedProgram {
     #[must_use]
     pub const fn program(&self) -> &Program {
         &self.program
+    }
+
+    /// The name of the module this is, which is the name a file or the library gives it.
+    #[must_use]
+    pub fn module(&self) -> &str {
+        &self.module
     }
 
     /// The module a `.` reaches inside, where the name written before the dot names one.
@@ -116,6 +127,10 @@ struct Resolver {
 type Definitions = HashMap<(Namespace, Span), Definition>;
 
 impl Resolver {
+    /// A resolver for a module of a program, whose scope is the prelude and nothing else.
+    ///
+    /// `docs/specs/library.md` says `push` and `at` are the compiler's rather than a source, and
+    /// a module reaches them by importing `list`, so no program module has either name in scope.
     fn new() -> Self {
         Self {
             types: Scope::of_prelude(
@@ -145,7 +160,10 @@ impl Resolver {
             types: Scope::of_prelude(Namespace::Type, &[(&prelude::held(), DefinitionKind::Type)]),
             values: Scope::of_prelude(
                 Namespace::Value,
-                &[(&prelude::supplied(), DefinitionKind::Function)],
+                &[
+                    (&prelude::supplied(), DefinitionKind::Function),
+                    (&prelude::held_for(PRELUDE), DefinitionKind::Function),
+                ],
             ),
             definitions: HashMap::new(),
             instances: HashSet::new(),

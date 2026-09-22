@@ -1,0 +1,63 @@
+// expect-run
+// > two boxes holding the same value are one value
+// > two boxes holding different values are two values
+// > a box of a box is one value too
+// > a library generic reaches the instance at each type it is used at
+// > 1 and a
+// > b and 2
+// > a box holding [1, 2]
+// An instance for a type written with type parameters is written once per type it is used at.
+import io
+
+import list
+
+fn main(arguments: List<String>) -> Int {
+    if Boxed(1) == Boxed(1) {
+        io.println("two boxes holding the same value are one value")
+    }
+    if Boxed("a") != Boxed("b") {
+        io.println("two boxes holding different values are two values")
+    }
+    if Boxed(Boxed(1)) == Boxed(Boxed(1)) {
+        io.println("a box of a box is one value too")
+    }
+    numbers := [Boxed(1), Boxed(2)]
+    words := [Boxed("a"), Boxed("b")]
+    if list.has_value(numbers, Boxed(2)) == list.has_value(words, Boxed("a")) {
+        io.println("a library generic reaches the instance at each type it is used at")
+    }
+    io.println(shown(Paired(1, "a")))
+    io.println(shown(Paired("b", 2)))
+    io.println(shown(Boxed([1, 2])))
+    0
+}
+
+instance<T: Eq<T>> Eq<Box<T>> {
+    fn is_equal(one: Box<T>, other: Box<T>) -> Bool {
+        match one {
+            Boxed(held) => match other {
+                Boxed(against) => held == against
+            }
+        }
+    }
+}
+
+// The instance writes its parameters in the order the type takes them, and `A` is the second.
+instance<A: Show<A>, B: Show<B>> Show<Pair<B, A>> {
+    fn shown(value: Pair<B, A>) -> String {
+        match value {
+            Paired(first, second) => shown(first) + " and " + shown(second)
+        }
+    }
+}
+
+// The parameter is unconstrained, because the body asks nothing of what the box holds.
+instance<T> Show<Box<T>> {
+    fn shown(value: Box<T>) -> String {
+        "a box holding [1, 2]"
+    }
+}
+
+type Box<T> = Boxed(T)
+
+type Pair<X, Y> = Paired(X, Y)

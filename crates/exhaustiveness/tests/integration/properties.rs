@@ -8,6 +8,9 @@ use lumen_resolver::resolve;
 
 use crate::common::{covers_everything, payments, typed};
 
+/// The name the module under test is compiled as, which nothing here depends on.
+const MODULE: &str = "demo";
+
 /// The arms a `match` on the payment type of `docs/design.md` may write, one per variant.
 const ARMS: [&str; 3] = [
     "        Pending => \"waiting\"\n",
@@ -24,7 +27,7 @@ fn checking_never_panics_and_is_deterministic(tc: TestCase) {
     let Ok(program) = parse(&source) else {
         return;
     };
-    let Ok(resolved) = resolve(program) else {
+    let Ok(resolved) = resolve(program, MODULE) else {
         return;
     };
     let Ok(inferred) = lumen_types::check(resolved, &lumen_types::Imported::default()) else {

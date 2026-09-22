@@ -6,7 +6,10 @@
 //! any other and a call of one is written like any other.
 
 use lumen_ast::{Expr, Name, Span};
+use lumen_resolver::prelude;
+use lumen_types::Type;
 
+use crate::asked::Asking;
 use crate::code::{Instruction, MethodRef};
 use crate::descriptor::{ClassName, Descriptor};
 use crate::lower::Signature;
@@ -80,17 +83,39 @@ impl Builder<'_> {
             return (reached.name.text.clone(), signature);
         };
         let module = &reached.module.text;
-        let asked_for = generic
+        let settled: Vec<Type> = generic
             .settled()
             .iter()
-            .map(|at| {
-                self.lowering
-                    .shapes
-                    .as_written_by(module, &self.at().substituted(at))
-            })
+            .map(|at| self.at().substituted(at))
             .collect();
-        let named = self.lowering.asking(module, &reached.name.text, asked_for);
+        self.owes_each_instance(generic.constrained(), &settled);
+        let asked = Asking {
+            settled: settled
+                .iter()
+                .map(|at| self.lowering.shapes.as_written_by(module, at))
+                .collect(),
+            constrained: generic.constrained().to_vec(),
+        };
+        let named = self.lowering.asking(module, &reached.name.text, asked);
         let written_as = self.at().substituted(generic.written_as());
         (named, self.lowering.written_as(&written_as))
+    }
+
+    /// Owes the instance method the other module's generic calls at each type this use settled.
+    ///
+    /// The method is written there and the instance is written here, so this is the module that
+    /// can write it: the other one is handed a type and names the call from it, and only this one
+    /// knows what the instance's own type parameters settled on. `docs/specs/codegen.md` states
+    /// the rule, and an instance over a type written by name alone is written whether anything
+    /// asks for it or not, so asking for it again costs nothing.
+    fn owes_each_instance(&self, constrained: &[Option<String>], settled: &[Type]) {
+        for (of, at) in constrained.iter().zip(settled) {
+            let Some(of) = of else {
+                continue;
+            };
+            let method =
+                prelude::method_of(of).expect("a trait two modules both name the prelude declares");
+            self.lowering.answering(method, at);
+        }
     }
 }

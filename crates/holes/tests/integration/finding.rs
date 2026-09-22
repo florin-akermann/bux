@@ -93,7 +93,7 @@ fn the_hole_is_the_only_thing_that_may_be_named_todo() {
 
     let program = lumen_parser::parse(source).expect("the module parses");
 
-    let refusal = lumen_resolver::resolve(program).expect_err("`todo` is already in scope");
+    let refusal = lumen_resolver::resolve(program, "demo").expect_err("`todo` is already in scope");
     assert_eq!(refusal.message(), "`todo` is already in scope here");
 }
 

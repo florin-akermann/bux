@@ -57,6 +57,8 @@ carries, in the order it carries them.
 Each field and each carried value is handed to the instance of its own type, which is the one rule
 the whole thing rests on: `Int` and `String` by what the prelude supplies, and a declared type by
 its own instance, derived or written.
+A field of type `List<T>` is handed to the prelude's instance over `List<T>`, which hands each
+element to the instance of `T`, so a record holding a `List<Int>` derives all four.
 Nothing asks whether two references are one object, which `docs/specs/codegen.md` requires.
 
 ### `Eq`
@@ -118,8 +120,11 @@ being derived.
 A type that does not is refused with `L0422`, which names the trait, the value, and the type it
 is: a derive is a promise about the whole value, and a value is only as comparable, as hashable,
 or as showable as what it holds.
-`()` has no instance of anything, and neither has a type written with arguments such as
-`List<Int>`, because `docs/specs/traits.md` gives an instance to a type written by name.
+A type written with arguments has the instance its own head has, read at the arguments it is
+written with, which `docs/specs/traits.md` states.
+So `List<Int>` has all four and `List<Crate>` has none until `Crate` does, and `L0422` fires where
+the element has none rather than wherever a list is held.
+`()` has no instance of anything, so a field of that type is refused whatever the trait is.
 
 Each trait is read on its own, so `derive Ord for User` asks every field for `Ord` and asks
 nothing for `Eq`; `derive Eq, Ord for User` writes both and is the usual way to ask.
@@ -139,13 +144,13 @@ records with `L0415` before any derive is read, because no such value could be b
 | `L0310` | A derive names something that is not a trait. |
 | `L0311` | A derive names something that is not a type. |
 | `L0312` | A derive names a trait no type derives, or a type this module does not declare. |
-| `L0401` | A derive names a type that takes arguments, which no instance names. |
+| `L0401` | A derive names a type that takes arguments, which a derive never names. |
 | `L0422` | A type derives a trait and something it holds has no instance of it. |
 
 ```text
 error[L0312]: `Add` is not a trait a type derives
 error[L0312]: `Int` is not a type this module declares
-error[L0422]: `User` derives `Hash`, and the `List<Int>` it holds as `tags` has none
+error[L0422]: `User` derives `Hash`, and the `List<Crate>` it holds as `tags` has none
 ```
 
 `L0406` says a type has no instance where an operator is written over it, and now says what to do
@@ -167,7 +172,9 @@ the claim that a derived `Eq` agrees with the state of two values is held to a r
 `tests/spec/traits/derived_ord.lm`, `tests/spec/traits/derived_hash.lm`, and
 `tests/spec/traits/derived_show.lm` do the same for the other three.
 `tests/spec/traits/derived_holds_no_instance.lm` and `tests/spec/traits/derive_not_derivable.lm`
-are the two refusals.
+are the two refusals; the first holds a `List<Crate>`, whose element has no instance.
+`tests/spec/traits/over_a_list.lm` runs a record that holds a `List<Int>` and derives `Eq`, which
+is where the claim that a derive reaches through a list is held to a running program.
 
 ## Properties
 

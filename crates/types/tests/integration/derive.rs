@@ -64,13 +64,20 @@ fn a_type_with_a_derive_is_compared_wherever_one_with_a_written_instance_would_b
 
 #[test]
 fn a_type_deriving_eq_that_holds_a_type_with_none_is_refused_naming_what_it_holds() {
-    let error = refusal(&comparing(&holding("List<Int>")));
+    let error = refusal(&comparing(&holding("List<Option<Int>>")));
 
     assert_eq!(
         error.message(),
-        "`Held` derives `Eq`, and the `List<Int>` it holds as `value` has none"
+        "`Held` derives `Eq`, and the `List<Option<Int>>` it holds as `value` has none"
     );
     assert_eq!(error.diagnostic().code(), Code::HeldTypeHasNoInstance);
+}
+
+#[test]
+fn a_type_deriving_eq_that_holds_a_list_whose_element_has_one_derives_it() {
+    let source = comparing(&holding("List<Int>"));
+
+    assert_eq!(inferred_type(&source, "one == other", 1), "Bool");
 }
 
 #[test]
@@ -98,11 +105,11 @@ fn a_type_deriving_eq_may_hold_a_type_that_derives_it_further_down_the_file() {
 
 #[test]
 fn a_variant_deriving_eq_names_the_variant_and_the_place_of_what_it_carries() {
-    let source = comparing("type Held =\n    | Empty\n    | Full(List<Int>)");
+    let source = comparing("type Held =\n    | Empty\n    | Full(List<Option<Int>>)");
 
     assert_eq!(
         refusal(&source).message(),
-        "`Held` derives `Eq`, and the `List<Int>` it holds as `Full.0` has none"
+        "`Held` derives `Eq`, and the `List<Option<Int>>` it holds as `Full.0` has none"
     );
 }
 
@@ -159,10 +166,13 @@ fn a_derive_naming_two_traits_writes_both_of_them() {
 }
 
 /// The types a generated field is written at, each of which has `Eq` and needs no declaration.
-const COMPARABLE: [&str; 3] = ["Int", "Bool", "String"];
+///
+/// A list is among them: the prelude writes `Eq<List<T>>` constrained on `T`, so a list of a type
+/// that has the trait has it too, which `docs/specs/traits.md` states.
+const COMPARABLE: [&str; 4] = ["Int", "Bool", "String", "List<Int>"];
 
 /// The types a generated field is written at that have no `Eq`, which a derive is refused for.
-const INCOMPARABLE: [&str; 3] = ["List<Int>", "()", "Option<Int>"];
+const INCOMPARABLE: [&str; 3] = ["List<Option<Int>>", "()", "Option<Int>"];
 
 /// A record of the written fields, named `value0`, `value1`, and so on.
 fn record(fields: &[&str]) -> String {

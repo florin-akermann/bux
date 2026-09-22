@@ -196,21 +196,49 @@ fn signature(printer: &mut Printer, written: &Signature) {
 }
 
 /// `instance Eq<Point> { … }`, with one blank line between two of the functions it writes.
+///
+/// An instance over a type written with arguments writes its type parameters after the keyword
+/// and the arguments after the type: `instance<T: Eq<T>> Eq<List<T>>`. Its methods are written
+/// over those parameters, so each one is printed without them and the instance states them once.
 fn instance(printer: &mut Printer, written: &InstanceDeclaration) {
     printer.comments_above(written.span);
     printer.open_line();
-    printer.word("instance ");
-    printer.word(&written.trait_name.text);
-    written_over(printer, &written.for_type.text);
+    instance_head(printer, written);
     open_block(printer);
     for (position, declared) in written.methods.iter().enumerate() {
         if position > 0 {
             printer.blank_line();
         }
-        function(printer, declared);
+        instance_method(printer, declared);
     }
     close_block(printer, written.span.end());
     printer.end_line();
+}
+
+/// The first line of an instance on its own, which is what an API page states.
+pub(crate) fn instance_stanza(printer: &mut Printer, written: &InstanceDeclaration) {
+    printer.open_line();
+    instance_head(printer, written);
+    printer.end_line();
+}
+
+/// `instance<T: Eq<T>> Eq<List<T>>`: the first line of an instance, and what a page states.
+fn instance_head(printer: &mut Printer, written: &InstanceDeclaration) {
+    printer.word("instance");
+    constrained_parameters(printer, &written.type_parameters);
+    printer.word(" ");
+    printer.word(&written.trait_name.text);
+    printer.word("<");
+    printer.word(&written.for_type.text);
+    named_arguments(printer, &written.arguments);
+    printer.word(">");
+}
+
+/// `<T>` after the type an instance is for, which is nothing at all for a whole type.
+fn named_arguments(printer: &mut Printer, arguments: &[Name]) {
+    listed(printer, arguments.len(), |printer, position| {
+        printer.word(&arguments[position].text);
+    });
 }
 
 /// `derive Eq, Ord for User`: one line, whatever it names, because nothing in it can be broken.
@@ -237,11 +265,21 @@ fn written_over(printer: &mut Printer, name: &str) {
 }
 
 fn function(printer: &mut Printer, written: &Function) {
+    declared_function(printer, written, &written.type_parameters);
+}
+
+/// One method of an instance, whose type parameters the instance declares and writes once.
+fn instance_method(printer: &mut Printer, written: &Function) {
+    declared_function(printer, written, &[]);
+}
+
+/// One function, written over the type parameters `over` names and over no others.
+fn declared_function(printer: &mut Printer, written: &Function, over: &[TypeParameter]) {
     printer.comments_above(written.span);
     printer.open_line();
     printer.word("fn ");
     printer.word(&written.name.text);
-    constrained_parameters(printer, &written.type_parameters);
+    constrained_parameters(printer, over);
     parameters(printer, &written.parameters);
     result_type(printer, written.result.as_ref());
     block(printer, &written.body, true);

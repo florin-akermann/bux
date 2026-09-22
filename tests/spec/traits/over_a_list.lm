@@ -1,0 +1,68 @@
+// expect-run
+// > two lists holding the same values are one value
+// > two lists differ where one value differs
+// > two lists differ where one holds more
+// > a list is below the list that holds it and more
+// > the first value that differs settles the order
+// > a list holding lists is one value too
+// > two equal lists hash alike
+// > [1, 2, 3]
+// > Basket { of: fruit, holding: [1, 2] }
+// > a library generic reaches the instance at each element type
+// > a generic written over a constrained element compares two whole lists
+// The prelude writes `Eq`, `Ord`, `Hash`, and `Show` for `List<T>`, and a derive reaches them.
+import io
+
+import list
+
+fn main(arguments: List<String>) -> Int {
+    if [1, 2] == [1, 2] {
+        io.println("two lists holding the same values are one value")
+    }
+    if [1, 2] != [1, 3] {
+        io.println("two lists differ where one value differs")
+    }
+    if [1, 2] != [1] {
+        io.println("two lists differ where one holds more")
+    }
+    if [1] < [1, 2] {
+        io.println("a list is below the list that holds it and more")
+    }
+    if [1, 2] < [1, 3] && [2] > [1, 9] {
+        io.println("the first value that differs settles the order")
+    }
+    if [[1], [2, 3]] == [[1], [2, 3]] {
+        io.println("a list holding lists is one value too")
+    }
+    if hashed([1, 2]) == hashed([1, 2]) && hashed([1, 2]) != hashed([2, 1]) {
+        io.println("two equal lists hash alike")
+    }
+    io.println(shown([1, 2, 3]))
+    basket := Basket { of: "fruit", holding: [1, 2] }
+    also := Basket { of: "fruit", holding: [1, 2] }
+    if basket == also {
+        io.println(shown(basket))
+    }
+    numbers := [[1], [2]]
+    flags := [[true], [false]]
+    if list.has_value(numbers, [2]) && list.has_value(flags, [false]) {
+        io.println("a library generic reaches the instance at each element type")
+    }
+    if is_alike(one: [1, 2], other: [1, 2]) && is_alike(one: ["a"], other: ["a"]) {
+        io.println("a generic written over a constrained element compares two whole lists")
+    }
+    0
+}
+
+// `Eq` is answered at `List<T>` inside a body written over `T: Eq<T>`, as it is at `List<Int>`.
+// example: is_alike(one: [1], other: [1])
+fn is_alike<T: Eq<T>>(one: List<T>, other: List<T>) -> Bool {
+    one == other
+}
+
+derive Eq, Show for Basket
+
+type Basket = {
+    of: String
+    holding: List<Int>
+}

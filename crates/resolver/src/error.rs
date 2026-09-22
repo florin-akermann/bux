@@ -103,6 +103,8 @@ pub(crate) enum ResolveErrorKind {
     NotDerivable(String),
     /// A type a derive names that this module does not declare.
     NotDeclaredHere(String),
+    /// An argument of the type an instance is for that is no type parameter the instance declares.
+    NotATypeParameter(String),
     /// A trait written where a type belongs.
     TraitAsType(String),
     /// A name that binds, written inside an or-pattern.
@@ -150,6 +152,7 @@ impl ResolveErrorKind {
             | Self::MethodTwice { .. } => Code::InstanceMethods,
             Self::NotATrait(_) => Code::NotATrait,
             Self::NotDerivable(_) | Self::NotDeclaredHere(_) => Code::NotDerivable,
+            Self::NotATypeParameter(_) => Code::NotATypeParameter,
             Self::TraitAsType(_) => Code::TraitAsType,
             Self::BindsInsideOr(_) => Code::BindsInsideOr,
         }
@@ -182,6 +185,9 @@ impl ResolveErrorKind {
             Self::NotDeclaredHere(_) => {
                 "a derive reads the declaration it names, so it names one this module writes"
             }
+            Self::NotATypeParameter(_) => {
+                "an instance answers for every argument of its type: write `instance<T> Eq<Box<T>>`"
+            }
             Self::TraitAsType(_) => "name the type, and constrain it with `<T: Eq<T>>` where it is",
             Self::BindsInsideOr(_) => "write one arm for each alternative where one of them binds",
         }
@@ -190,6 +196,16 @@ impl ResolveErrorKind {
 
 impl fmt::Display for ResolveErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self.about_an_instance() {
+            Some(written) => f.write_str(&written),
+            None => self.about_a_name(f),
+        }
+    }
+}
+
+impl ResolveErrorKind {
+    /// What this failure reads as, where it is one of the failures about a name.
+    fn about_a_name(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::NoValue(text) => write!(f, "there is nothing named `{text}`"),
             Self::NoType(text) => write!(f, "there is no type named `{text}`"),
@@ -219,27 +235,6 @@ impl fmt::Display for ResolveErrorKind {
             Self::NotAVariable(text) => {
                 write!(f, "`{text}` is not a `var`, so it is never assigned to")
             }
-            Self::InstanceTwice { of, for_type } => {
-                write!(f, "`{of}` already has an instance for `{for_type}`")
-            }
-            Self::MethodMissing { of, method } => {
-                write!(
-                    f,
-                    "`{of}` declares `{method}`, which this instance does not write"
-                )
-            }
-            Self::MethodUndeclared { of, method } => {
-                write!(
-                    f,
-                    "`{of}` declares no `{method}` for this instance to write"
-                )
-            }
-            Self::MethodTwice { of, method } => {
-                write!(
-                    f,
-                    "`{of}` declares `{method}` once, and this instance writes it twice"
-                )
-            }
             Self::NotATrait(text) => write!(f, "`{text}` is not a trait"),
             Self::NotDerivable(text) => {
                 write!(f, "`{text}` is not a trait a type derives")
@@ -254,6 +249,35 @@ impl fmt::Display for ResolveErrorKind {
                     "`{text}` binds inside an or-pattern, which binds nothing"
                 )
             }
+            Self::InstanceTwice { .. }
+            | Self::MethodMissing { .. }
+            | Self::MethodUndeclared { .. }
+            | Self::MethodTwice { .. }
+            | Self::NotATypeParameter(_) => {
+                unreachable!("a failure about an instance is worded on its own")
+            }
+        }
+    }
+
+    /// What this failure reads as, where it is one of the failures about an instance.
+    fn about_an_instance(&self) -> Option<String> {
+        match self {
+            Self::InstanceTwice { of, for_type } => {
+                Some(format!("`{of}` already has an instance for `{for_type}`"))
+            }
+            Self::MethodMissing { of, method } => Some(format!(
+                "`{of}` declares `{method}`, which this instance does not write"
+            )),
+            Self::MethodUndeclared { of, method } => Some(format!(
+                "`{of}` declares no `{method}` for this instance to write"
+            )),
+            Self::MethodTwice { of, method } => Some(format!(
+                "`{of}` declares `{method}` once, and this instance writes it twice"
+            )),
+            Self::NotATypeParameter(text) => Some(format!(
+                "`{text}` is not a type parameter this instance declares"
+            )),
+            _ => None,
         }
     }
 }

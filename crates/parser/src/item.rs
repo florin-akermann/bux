@@ -3,9 +3,9 @@
 use lumen_ast::{Called, DeriveDeclaration, ExternDeclaration, ExternParameter, Function};
 use lumen_ast::{Gives, Takes};
 use lumen_ast::{Import, InstanceDeclaration};
-use lumen_ast::{Item, JavaName, Name, Parameter, Program, Reaches};
+use lumen_ast::{Item, JavaName, Parameter, Program, Reaches};
 use lumen_ast::{RecordField, Signature, TraitDeclaration, TypeDeclaration, TypeDefinition};
-use lumen_ast::{Span, TypeRef, Variant, VariantPayload};
+use lumen_ast::{TypeRef, Variant, VariantPayload};
 use lumen_lexer::{Keyword, Punct, TokenKind};
 
 use crate::cursor::Cursor;
@@ -319,12 +319,18 @@ fn record_field(cursor: &mut Cursor) -> Result<RecordField, ParseError> {
 
 /// `trait Eq<T> { … }`: a name, the one type it is written over, and what a type can then do.
 fn trait_declaration(cursor: &mut Cursor) -> Result<TraitDeclaration, ParseError> {
-    let read = over_one_type(cursor, Keyword::Trait, Named::TRAIT, signature)?;
+    let start = cursor.offset();
+    cursor.expect_keyword(Keyword::Trait)?;
+    let name = cursor.expect_name(Expected::Name)?;
+    cursor.expect_punct(Punct::Lt)?;
+    let parameter = cursor.expect_name(Expected::Name)?;
+    cursor.expect_punct(Punct::Gt)?;
+    let methods = body_of(cursor, signature)?;
     Ok(TraitDeclaration {
-        name: read.name,
-        parameter: read.argument,
-        methods: read.body,
-        span: read.span,
+        name,
+        parameter,
+        methods,
+        span: cursor.span_since(start),
     })
 }
 
@@ -343,14 +349,42 @@ fn signature(cursor: &mut Cursor) -> Result<Signature, ParseError> {
 }
 
 /// `instance Eq<Point> { … }`: a trait, the type it is for, and a body for each of its methods.
+///
+/// `instance<T: Eq<T>> Eq<List<T>> { … }` is the same shape over a type written with arguments,
+/// which `docs/specs/traits.md` states. Each method carries the instance's type parameters,
+/// because the method is generic in them exactly as a constrained function is.
 fn instance(cursor: &mut Cursor) -> Result<InstanceDeclaration, ParseError> {
-    let read = over_one_type(cursor, Keyword::Instance, Named::INSTANCE, function)?;
+    let start = cursor.offset();
+    cursor.expect_keyword(Keyword::Instance)?;
+    let over = constrained_parameters(cursor)?;
+    let trait_name = cursor.expect_name(Expected::Trait)?;
+    cursor.expect_punct(Punct::Lt)?;
+    let for_type = cursor.expect_name(Expected::Type)?;
+    let arguments = type_parameters(cursor)?;
+    cursor.expect_punct(Punct::Gt)?;
+    let methods = body_of(cursor, function)?;
     Ok(InstanceDeclaration {
-        trait_name: read.name,
-        for_type: read.argument,
-        methods: read.body,
-        span: read.span,
+        trait_name,
+        methods: methods
+            .into_iter()
+            .map(|method| generic_in(method, &over))
+            .collect(),
+        type_parameters: over,
+        for_type,
+        arguments,
+        span: cursor.span_since(start),
     })
+}
+
+/// One method of an instance, written over the type parameters the instance declares.
+///
+/// An instance declares them once and every method is written over all of them, so each method
+/// is a generic function in them and everything below reads it as one.
+fn generic_in(method: Function, declared: &[lumen_ast::TypeParameter]) -> Function {
+    Function {
+        type_parameters: declared.to_vec(),
+        ..method
+    }
 }
 
 /// `derive Eq, Ord for User`: the traits the compiler writes, and the type it writes them for.
@@ -382,56 +416,6 @@ fn function(cursor: &mut Cursor) -> Result<Function, ParseError> {
         type_parameters,
         parameters,
         result,
-        body,
-        span: cursor.span_since(start),
-    })
-}
-
-/// A trait and an instance are one shape: a keyword, `Name<Name>`, and a body of declarations.
-struct OverOneType<T> {
-    name: Name,
-    argument: Name,
-    body: Vec<T>,
-    span: Span,
-}
-
-/// What the reader was meant to write on either side of the angles, for each of the two.
-#[derive(Clone, Copy)]
-struct Named {
-    outside: Expected,
-    inside: Expected,
-}
-
-impl Named {
-    /// A trait names itself, and names the one type parameter its methods are written over.
-    const TRAIT: Self = Self {
-        outside: Expected::Name,
-        inside: Expected::Name,
-    };
-    /// An instance names the trait it is for, and the type that is giving it one.
-    const INSTANCE: Self = Self {
-        outside: Expected::Trait,
-        inside: Expected::Type,
-    };
-}
-
-/// `trait Eq<T> { … }` or `instance Eq<Point> { … }`, read as the shape the two share.
-fn over_one_type<T>(
-    cursor: &mut Cursor,
-    opener: Keyword,
-    named: Named,
-    declaration: impl FnMut(&mut Cursor) -> Result<T, ParseError>,
-) -> Result<OverOneType<T>, ParseError> {
-    let start = cursor.offset();
-    cursor.expect_keyword(opener)?;
-    let name = cursor.expect_name(named.outside)?;
-    cursor.expect_punct(Punct::Lt)?;
-    let argument = cursor.expect_name(named.inside)?;
-    cursor.expect_punct(Punct::Gt)?;
-    let body = body_of(cursor, declaration)?;
-    Ok(OverOneType {
-        name,
-        argument,
         body,
         span: cursor.span_since(start),
     })

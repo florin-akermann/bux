@@ -23,7 +23,16 @@ const NOTHING_AT_ALL: &str = "Unit";
 /// as it did before generics: a type is carried by itself, and the method is named as written.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub(crate) struct Instantiation {
-    settled: Vec<(Origin, Type)>,
+    settled: Vec<Settled>,
+}
+
+/// What one use settled one type parameter on, and what that type is called in a method name.
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct Settled {
+    origin: Origin,
+    at: Type,
+    /// Whether the declaration constrains the parameter, which is what reaches an instance of it.
+    constrained: bool,
 }
 
 impl Instantiation {
@@ -68,10 +77,10 @@ impl Instantiation {
         let settled = function
             .type_parameters
             .iter()
-            .map(|written| {
-                let origin = Origin::Declared(written.name.span);
-                let settled = at(&written.name).unwrap_or_else(|| itself(&written.name));
-                (origin, settled)
+            .map(|written| Settled {
+                origin: Origin::Declared(written.name.span),
+                at: at(&written.name).unwrap_or_else(|| itself(&written.name)),
+                constrained: written.constraint.is_some(),
             })
             .collect();
         Self { settled }
@@ -101,15 +110,19 @@ impl Instantiation {
 
     /// What the method written for this use is called: the function, then each type it settled.
     pub(crate) fn names(&self, function: &str) -> String {
-        let at: Vec<Type> = self.settled.iter().map(|(_, at)| at.clone()).collect();
-        names(function, &at)
+        self.settled
+            .iter()
+            .fold(function.to_owned(), |mut named, settled| {
+                let _ = write!(named, "${}", named_at(&settled.at, settled.constrained));
+                named
+            })
     }
 
     fn at(&self, parameter: Origin) -> Option<Type> {
         self.settled
             .iter()
-            .find(|(origin, _)| *origin == parameter)
-            .map(|(_, at)| at.clone())
+            .find(|settled| settled.origin == parameter)
+            .map(|settled| settled.at.clone())
     }
 }
 
@@ -160,11 +173,51 @@ fn settle(declared: &Type, used: &Type, into: &mut HashMap<Origin, Type>) {
 /// `$` is legal in a method name and Lumen writes no operator with it, so a name reached this way
 /// is one no source collides with. A module asking another for a method names it the same way,
 /// which is what has the two agree without either reading the other's tree.
-pub(crate) fn names(function: &str, at: &[Type]) -> String {
-    at.iter().fold(function.to_owned(), |mut named, at| {
-        let _ = write!(named, "${}", head_of(at));
+pub(crate) fn names(function: &str, at: &[Type], constrained: &[Option<String>]) -> String {
+    at.iter()
+        .zip(constrained)
+        .fold(function.to_owned(), |mut named, (at, of)| {
+            let _ = write!(named, "${}", named_at(at, of.is_some()));
+            named
+        })
+}
+
+/// What one type a use settled a type parameter on is called inside a method name.
+///
+/// A constrained parameter reaches the instance of the whole type it settled on, and two types
+/// with one head have two instances, so the whole of it is what tells the two methods apart. An
+/// unconstrained one reaches no instance, so its head is all a name needs, and that is what has a
+/// generic calling itself at a type one deeper ask for a method already written.
+fn named_at(at: &Type, constrained: bool) -> String {
+    if constrained {
+        return wholly(at);
+    }
+    head_of(at)
+}
+
+/// What the method an instance over a type written with type parameters writes is called.
+///
+/// Every argument is written out, nested ones included, because such an instance hands each
+/// value it holds to the instance of that value's own type: `List<Int>` and `List<Bool>` are two
+/// methods, which naming by the head alone would give one name and one body.
+pub(crate) fn names_wholly(named: &str, at: &[Type]) -> String {
+    at.iter().fold(named.to_owned(), |mut named, at| {
+        let _ = write!(named, "${}", wholly(at));
         named
     })
+}
+
+/// One type written out whole: its own name, and then every argument it is written with.
+fn wholly(at: &Type) -> String {
+    let Type::Named { name, arguments } = at else {
+        return head_of(at);
+    };
+    arguments
+        .iter()
+        .fold(name.replace('.', "$"), |mut written, argument| {
+            let _ = write!(written, "${}", wholly(argument));
+            written
+        })
 }
 
 /// The name a type gives the method written for a use that settled on it.

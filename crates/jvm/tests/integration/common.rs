@@ -14,7 +14,8 @@ use crate::reader::{self, ClassFile};
 /// The class files `source` becomes, as a module named `demo`.
 pub fn compiled(source: &str) -> Vec<Written> {
     let program = lumen_parser::parse(source).expect("the example parses");
-    let resolved = lumen_resolver::resolve(program).expect("every name of the example resolves");
+    let resolved =
+        lumen_resolver::resolve(program, "demo").expect("every name of the example resolves");
     let typed = lumen_types::check(resolved, &lumen_types::Imported::default())
         .expect("every expression of the example has a type");
     let whole = lumen_holes::Whole::of_module(&typed).expect("the module holds no hole");

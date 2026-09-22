@@ -63,13 +63,19 @@ impl Offered {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct GenericUse {
     settled: Vec<Type>,
+    constrained: Vec<Option<String>>,
     written_as: Type,
 }
 
 impl GenericUse {
-    pub(crate) const fn reaching(settled: Vec<Type>, written_as: Type) -> Self {
+    pub(crate) const fn reaching(
+        settled: Vec<Type>,
+        constrained: Vec<Option<String>>,
+        written_as: Type,
+    ) -> Self {
         Self {
             settled,
+            constrained,
             written_as,
         }
     }
@@ -78,6 +84,7 @@ impl GenericUse {
     pub(crate) fn solved(&self, solve: &impl Fn(&Type) -> Type) -> Self {
         Self {
             settled: self.settled.iter().map(solve).collect(),
+            constrained: self.constrained.clone(),
             written_as: solve(&self.written_as),
         }
     }
@@ -86,6 +93,16 @@ impl GenericUse {
     #[must_use]
     pub fn settled(&self) -> &[Type] {
         &self.settled
+    }
+
+    /// The trait constraining each of those type parameters, in the same order.
+    ///
+    /// A constrained one reaches the instance of whatever it settled on, which is what has the
+    /// method written for it named after the whole of that type, and what has the module writing
+    /// the use write that instance's method; `docs/specs/codegen.md` states both.
+    #[must_use]
+    pub fn constrained(&self) -> &[Option<String>] {
+        &self.constrained
     }
 
     /// The type the method written for this use has, which is what a call of it is written with.

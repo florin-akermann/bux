@@ -76,6 +76,7 @@ impl Scheme {
             found: replaced(&self.body, &given),
             required,
             settling: self.written_stand_ins(&given),
+            constrained: self.constrained_stand_ins(),
             written_as: replaced(&self.body, &erasing(&given)),
         }
     }
@@ -90,6 +91,30 @@ impl Scheme {
             .filter(|one| matches!(one, Quantified::Parameter(_)))
             .filter_map(|one| given.get(one).cloned())
             .collect()
+    }
+
+    /// The trait constraining each stand-in the declaration wrote, in the order it wrote them.
+    ///
+    /// A constrained one reaches the instance of whatever it settled on, so `docs/specs/codegen.md`
+    /// names the method written for it after the whole of that type rather than after its head,
+    /// and has the module that settled the type write the instance method that method calls.
+    fn constrained_stand_ins(&self) -> Vec<Option<String>> {
+        self.quantified
+            .iter()
+            .filter_map(|one| match one {
+                Quantified::Parameter(parameter) => Some(self.required_of(parameter)),
+                Quantified::Var(_) => None,
+            })
+            .collect()
+    }
+
+    /// The trait one of this scheme's constraints is written over `parameter` by, where one is.
+    fn required_of(&self, parameter: &TypeParameter) -> Option<String> {
+        let written = Type::Parameter(parameter.clone());
+        self.required
+            .iter()
+            .find(|required| required.at == written)
+            .map(|required| required.trait_name.clone())
     }
 
     /// This scheme with `one` of its stand-ins settled on `given`, which is what an instance is.
@@ -139,6 +164,8 @@ pub(crate) struct AtOneUse {
     pub(crate) required: Vec<Required>,
     /// What each stand-in the declaration wrote settled on, in the order it wrote them.
     pub(crate) settling: Vec<Type>,
+    /// The trait constraining each of those stand-ins, in the same order.
+    pub(crate) constrained: Vec<Option<String>>,
     /// The type the method written for this use has, which is not the type the use has.
     ///
     /// `docs/specs/codegen.md` writes a generic at the types its written type parameters settled

@@ -7,10 +7,13 @@ use lumen_ast::{Name, Span};
 use lumen_parser::parse;
 use lumen_resolver::{Definition, Namespace, ResolveError, ResolvedProgram, resolve};
 
+/// The name the module under test is compiled as, which nothing here depends on.
+const MODULE: &str = "demo";
+
 /// The failure `source` is refused with.
 pub fn refusal(source: &str) -> ResolveError {
     let program = parse(source).unwrap_or_else(|error| panic!("{source:?} parses: {error:?}"));
-    resolve(program)
+    resolve(program, MODULE)
         .err()
         .unwrap_or_else(|| panic!("{source:?} is refused"))
 }
@@ -37,5 +40,6 @@ pub fn meaning(
 /// The resolved program of `source`, which must resolve.
 pub fn resolved(source: &str) -> ResolvedProgram {
     let program = parse(source).unwrap_or_else(|error| panic!("{source:?} parses: {error:?}"));
-    resolve(program).unwrap_or_else(|error| panic!("{source:?} resolves: {}", error.message()))
+    resolve(program, MODULE)
+        .unwrap_or_else(|error| panic!("{source:?} resolves: {}", error.message()))
 }

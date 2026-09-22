@@ -197,7 +197,8 @@ fn a_whole_number_where_an_int_is_expected_is_an_int(tc: TestCase) {
 /// Whether `source` is accepted, which for these modules is whether the literal fits.
 fn inferred_type_or_refusal(source: &str, written: &str) -> bool {
     let parsed = lumen_parser::parse(source).expect("the module parses");
-    let resolved = lumen_resolver::resolve(parsed).expect("every name of the module resolves");
+    let resolved =
+        lumen_resolver::resolve(parsed, "demo").expect("every name of the module resolves");
     match lumen_types::check(resolved, &lumen_types::Imported::default()) {
         Ok(_) => true,
         Err(refused) => {

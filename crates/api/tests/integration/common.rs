@@ -7,10 +7,13 @@ use lumen_ast::Program;
 use lumen_parser::parse;
 use lumen_resolver::resolve;
 
+/// The name the module under test is compiled as, which nothing here depends on.
+const MODULE: &str = "demo";
+
 /// The page `source` has, which `docs/specs/api-surface.md` states.
 pub fn page(source: &str) -> String {
-    let resolved =
-        resolve(tree(source)).unwrap_or_else(|error| panic!("{source:?} resolves: {error:?}"));
+    let resolved = resolve(tree(source), MODULE)
+        .unwrap_or_else(|error| panic!("{source:?} resolves: {error:?}"));
     let typed = lumen_types::check(resolved, &lumen_types::Imported::default())
         .unwrap_or_else(|error| panic!("{source:?} is typed: {error:?}"));
     lumen_api::surface(&typed)

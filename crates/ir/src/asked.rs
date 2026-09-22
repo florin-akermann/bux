@@ -40,6 +40,15 @@ impl Asked {
     }
 }
 
+/// One use of another module's generic, as the module writing the use reads it.
+///
+/// The set it settled is what the other module writes the method for, and the constraints that
+/// module declared are what say how the method is named; `docs/specs/codegen.md` states both.
+pub(crate) struct Asking {
+    pub(crate) settled: Vec<Type>,
+    pub(crate) constrained: Vec<Option<String>>,
+}
+
 /// One method a module owes another: a generic it declares, at one set of types.
 ///
 /// The types are written as the module being asked writes them, which `docs/specs/codegen.md`

@@ -58,10 +58,50 @@ pub const DERIVABLE: [&str; 4] = [EQ, ORD, HASH, SHOW];
 /// and a declaration for every other, and a program cannot tell which it has. No Lumen
 /// declaration could write them, which is why they are the one part of the prelude left as a
 /// table rather than read out of `library/prelude.lm`.
-const HELD: [(&str, usize); 4] = [("Bool", 0), ("Int", 0), ("List", 1), ("String", 0)];
+const HELD: [(&str, usize); 4] = [("Bool", 0), ("Int", 0), (LIST_TYPE, 1), ("String", 0)];
+
+/// The type a list is, which the prelude writes the instances of and no module declares.
+pub const LIST_TYPE: &str = "List";
 
 /// The functions the compiler supplies, which is `todo` because a hole has no body to be written.
 const SUPPLIED: [&str; 1] = ["todo"];
+
+/// The one library module the compiler holds a function of, which `docs/specs/library.md` names.
+pub const LIST: &str = "list";
+
+/// The one that grows a list, which no expression the grammar writes builds.
+pub const PUSH: &str = "push";
+
+/// The one that reads a list at an index, which the JVM reads in the time it reads one slot in.
+pub const AT: &str = "at";
+
+/// The two functions the compiler holds, which `docs/specs/library.md` says no source writes.
+const HELD_FUNCTIONS: [&str; 2] = [PUSH, AT];
+
+/// The ones the module called `module` offers to whatever imports it.
+///
+/// They are `list`'s names although the compiler holds them, so `list` offers them as it offers
+/// `length`, and a module reaches them by importing `list` and writing `list.push`.
+#[must_use]
+pub fn offered_by(module: &str) -> Vec<&'static str> {
+    if module == LIST {
+        return HELD_FUNCTIONS.to_vec();
+    }
+    Vec::new()
+}
+
+/// The ones the source of the module called `module` writes without naming a module first.
+///
+/// The prelude writes the instances of `List` and reads a list with `at`, and it imports nothing,
+/// so it is the one module whose own source writes them. A program module called `list` is a
+/// program module like any other and gets neither name.
+#[must_use]
+pub fn held_for(module: &str) -> Vec<&'static str> {
+    if module == crate::library::PRELUDE {
+        return HELD_FUNCTIONS.to_vec();
+    }
+    Vec::new()
+}
 
 /// A trait the prelude supplies: what it declares, and which types it already has instances for.
 pub struct Supplied {

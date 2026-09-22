@@ -105,13 +105,13 @@ pub fn extern_declaration(declared: &ExternDeclaration) -> String {
 /// `instance Eq<Point>`, which is what an instance puts on an API page.
 ///
 /// What the instance writes is what its trait already declares, so the page states that the type
-/// has the trait and leaves the bodies where every other body is left.
+/// has the trait and leaves the bodies where every other body is left. An instance over a type
+/// written with arguments states them, because what it is for is `List<T>` rather than `List`.
 #[must_use]
 pub fn instance_head(declared: &InstanceDeclaration) -> String {
-    format!(
-        "instance {}<{}>\n",
-        declared.trait_name.text, declared.for_type.text
-    )
+    let mut printer = Printer::without_comments();
+    item::instance_stanza(&mut printer, declared);
+    printer.finish()
 }
 
 /// `instance Eq<User>`, one line per trait, which is what a derive puts on an API page.

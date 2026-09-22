@@ -106,6 +106,8 @@ catalogue! {
     NoSuchPackage => "L0316",
     /// Two packages a module can reach both hold a module of the name an import writes.
     ModuleIsTwoFiles => "L0317",
+    /// An instance writes an argument of its type that is not a type parameter it declares.
+    NotATypeParameter => "L0318",
     /// A type met a type it does not match.
     TypeMismatch => "L0400",
     /// A call passes more or fewer arguments than the function takes.

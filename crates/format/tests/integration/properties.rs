@@ -8,7 +8,7 @@ use lumen_format::{CheckError, check, format};
 use crate::common::tree;
 
 /// The item shapes a generated program is built from, each already in canonical form.
-const ITEMS: [&str; 13] = [
+const ITEMS: [&str; 14] = [
     "import io",
     "type UserId = UserId(Int)",
     "type User = {\n    id: UserId\n}",
@@ -20,6 +20,10 @@ const ITEMS: [&str; 13] = [
     "fn answered(payment: Payment) -> Int {\n    match payment {\n        Pending | Failed(_) => 1\n        _ => 2\n    }\n}",
     "trait Area<T> {\n    fn covered(shape: T) -> Int\n}",
     "instance Area<User> {\n    fn covered(shape: User) -> Int {\n        1\n    }\n}",
+    concat!(
+        "instance<T: Area<T>> Area<List<T>> {\n    fn covered(shape: List<T>) -> Int {\n",
+        "        1\n    }\n}"
+    ),
     "derive Eq for User",
     "derive Eq, Ord for Payment",
 ];

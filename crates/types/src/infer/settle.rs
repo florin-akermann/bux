@@ -121,15 +121,12 @@ impl Inference<'_> {
     /// A named type is answered by the one instance there is for it; a type parameter of the
     /// function being inferred is answered by the constraint that parameter declares; nothing
     /// else names an instance at all.
+    ///
+    /// An instance over a type written with arguments asks its own constraint of each of them,
+    /// so `Eq` at `List<Int>` is answered by `Eq<List<T>>` because `Eq` is answered at `Int`, and
+    /// `Eq` at `List<T>` is answered inside a body written over `T: Eq<T>` for the same reason.
     fn answers(&self, of: &str, at: &Type) -> bool {
-        match at {
-            Type::Named { name, .. } => self.environment.has_instance(of, name),
-            Type::Parameter(_) => self
-                .promised
-                .iter()
-                .any(|promise| promise.trait_name == *of && promise.at == *at),
-            _ => false,
-        }
+        self.environment.answers(of, at, &self.promised)
     }
 
     /// The statements of one function that nothing takes the value of.
@@ -220,7 +217,11 @@ impl Inference<'_> {
             });
         }
         if let Offered::Generic(_) = offered {
-            let reaching = GenericUse::reaching(use_of_it.settling, use_of_it.written_as);
+            let reaching = GenericUse::reaching(
+                use_of_it.settling,
+                use_of_it.constrained,
+                use_of_it.written_as,
+            );
             self.generics_reached.insert(field.span, reaching);
         }
         Some(use_of_it.found)

@@ -35,9 +35,10 @@ impl Checked {
     /// Checks each of `loaded` in turn, each against the surfaces of the ones before it.
     fn accept_each(&mut self, loaded: Vec<lumen_modules::Module>) -> Result<(), NotCompiled> {
         for loaded in loaded {
-            let typed = accepted(loaded.source(), &self.imported).map_err(|diagnostic| {
-                NotCompiled::refused(vec![diagnostic], loaded.path(), loaded.source())
-            })?;
+            let typed =
+                accepted(loaded.source(), loaded.name(), &self.imported).map_err(|diagnostic| {
+                    NotCompiled::refused(vec![diagnostic], loaded.path(), loaded.source())
+                })?;
             self.offer(loaded, typed);
         }
         Ok(())
@@ -100,16 +101,20 @@ pub(crate) fn written(written: &str, path: &Path) -> Result<Checked, NotCompiled
         .expect("loading ends with the module it was given");
     let mut checked = Checked::default();
     checked.accept_each(loaded)?;
-    let typed = typed(root.source(), &checked.imported)
+    let typed = typed(root.source(), root.name(), &checked.imported)
         .map_err(|diagnostic| NotCompiled::refused(vec![diagnostic], root.path(), root.source()))?;
     checked.offer(root, typed);
     Ok(checked)
 }
 
 /// Every phase the front end has, run in order over one module, stopping at the first refusal.
-pub(crate) fn accepted(source: &str, imported: &Imported) -> Result<TypedProgram, Diagnostic> {
+pub(crate) fn accepted(
+    source: &str,
+    module: &str,
+    imported: &Imported,
+) -> Result<TypedProgram, Diagnostic> {
     lumen_format::check(source).map_err(|error| error.diagnostic())?;
-    typed(source, imported)
+    typed(source, module, imported)
 }
 
 /// Every phase after canonical form, which is all of them a module the compiler wrote needs.
@@ -118,9 +123,13 @@ pub(crate) fn accepted(source: &str, imported: &Imported) -> Result<TypedProgram
 /// the text of a comment alone. An example is a comment, so holding a module written around one
 /// to canonical form would hold the author to a form nothing spells out and `lumen fmt` cannot
 /// repair.
-pub(crate) fn typed(source: &str, imported: &Imported) -> Result<TypedProgram, Diagnostic> {
+pub(crate) fn typed(
+    source: &str,
+    module: &str,
+    imported: &Imported,
+) -> Result<TypedProgram, Diagnostic> {
     let program = lumen_parser::parse(source).map_err(|error| error.diagnostic())?;
-    let resolved = lumen_resolver::resolve(program).map_err(|error| error.diagnostic())?;
+    let resolved = lumen_resolver::resolve(program, module).map_err(|error| error.diagnostic())?;
     let inferred = check_types(resolved, imported).map_err(|error| error.diagnostic())?;
     exhaustive(&inferred).map_err(|error| error.diagnostic())?;
     Ok(inferred)

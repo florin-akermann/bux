@@ -62,12 +62,17 @@ impl Resolver {
     }
 
     /// An instance: the trait it is for, the type it is for, and a body per declared method.
+    ///
+    /// The type it is for may be written with arguments, and each of them names a type parameter
+    /// the instance declares, which `docs/specs/traits.md` states. Each method is written over
+    /// those parameters, so resolving a method introduces them exactly as a generic function does.
     pub(super) fn instance(&mut self, declaration: &InstanceDeclaration) -> Resolved {
         let declared = self.trait_named(&declaration.trait_name)?;
         self.named_type(&declaration.for_type)?;
         self.claimed(&declaration.trait_name, &declaration.for_type)?;
         writes_declared_names_once(declaration, &declared)?;
         writes_every_one(declaration, &declared)?;
+        written_over_its_parameters(declaration)?;
         for method in &declaration.methods {
             self.function(method)?;
         }
@@ -150,6 +155,24 @@ impl Resolver {
             .cloned()
             .unwrap_or_default()
     }
+}
+
+/// Refuses the first argument of an instance's type that is no type parameter it declares.
+///
+/// An instance is for one type, and a type written with arguments gets the one instance that
+/// answers at every argument, so the arguments it is written with are the parameters it declares.
+fn written_over_its_parameters(declaration: &InstanceDeclaration) -> Resolved {
+    let declares = |written: &&Name| {
+        declaration
+            .type_parameters
+            .iter()
+            .any(|parameter| parameter.name.text == written.text)
+    };
+    let Some(other) = declaration.arguments.iter().find(|one| !declares(one)) else {
+        return Ok(());
+    };
+    let kind = ResolveErrorKind::NotATypeParameter(other.text.clone());
+    Err(ResolveError::at(other, kind))
 }
 
 /// Refuses a trait that is not one a type derives, naming the trait the module wrote.

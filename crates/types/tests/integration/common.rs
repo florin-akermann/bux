@@ -9,6 +9,9 @@ use lumen_parser::parse;
 use lumen_resolver::{ResolvedProgram, library, resolve};
 use lumen_types::{Imported, TypeError, TypedProgram, check};
 
+/// The name the module under test is compiled as, which nothing here depends on.
+const MODULE: &str = "demo";
+
 /// The failure `source` is refused with, importing nothing.
 pub fn refusal(source: &str) -> TypeError {
     refusal_reaching(source, &Imported::default())
@@ -95,7 +98,8 @@ pub fn expressions(program: &Program) -> Vec<&Expr> {
 
 fn resolved(source: &str) -> ResolvedProgram {
     let program = parse(source).unwrap_or_else(|error| panic!("{source:?} parses: {error:?}"));
-    resolve(program).unwrap_or_else(|error| panic!("{source:?} resolves: {}", error.message()))
+    resolve(program, MODULE)
+        .unwrap_or_else(|error| panic!("{source:?} resolves: {}", error.message()))
 }
 fn from_block<'a>(block: &'a Block, into: &mut Vec<&'a Expr>) {
     for statement in &block.statements {

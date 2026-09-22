@@ -1,5 +1,6 @@
 //! The refusals and the scopes of `docs/specs/traits.md`: a trait, an instance, and a constraint.
 
+use lumen_diagnostics::Code;
 use lumen_resolver::{DefinitionKind, Namespace, Origin};
 
 use crate::common::{meaning, refusal};
@@ -95,6 +96,36 @@ fn a_type_written_where_a_trait_belongs_is_refused() {
     ));
 
     assert_eq!(error.message(), "`Square` is not a trait");
+}
+
+#[test]
+fn an_instance_over_a_type_written_with_arguments_writes_the_parameters_it_declares() {
+    let source = concat!(
+        "fn is_wide(shapes: List<Square>) -> Bool {\n    covered(shapes) > 4\n}\n\n",
+        "instance<T: Area<T>> Area<List<T>> {\n    fn covered(shape: List<T>) -> Int {\n",
+        "        5\n    }\n}\n\n",
+        "trait Area<T> {\n    fn covered(shape: T) -> Int\n}\n\n",
+        "type Square = {\n    side: Int\n}\n"
+    );
+
+    let found = meaning(source, Namespace::Type, "T", 2).expect("`T` has a definition");
+
+    assert_eq!(found.kind, DefinitionKind::TypeParameter);
+}
+
+#[test]
+fn an_instance_writing_an_argument_it_never_declared_is_refused() {
+    let error = refusal(concat!(
+        "instance Area<List<Int>> {\n    fn covered(shape: List<Int>) -> Int {\n",
+        "        5\n    }\n}\n\n",
+        "trait Area<T> {\n    fn covered(shape: T) -> Int\n}\n"
+    ));
+
+    assert_eq!(
+        error.message(),
+        "`Int` is not a type parameter this instance declares"
+    );
+    assert_eq!(error.diagnostic().code(), Code::NotATypeParameter);
 }
 
 #[test]
@@ -202,18 +233,22 @@ fn around_against(declared: &str) -> String {
 /// This is read off those three specs rather than off `library/prelude.lm`, which is the whole
 /// point: an instance dropped from the library has to fail here rather than take the expectation
 /// with it.
-const HAS: [(&str, &str); 20] = [
+const HAS: [(&str, &str); 24] = [
     ("Eq", "Bool"),
     ("Eq", "Int"),
+    ("Eq", "List"),
     ("Eq", "String"),
     ("Ord", "Bool"),
     ("Ord", "Int"),
+    ("Ord", "List"),
     ("Ord", "String"),
     ("Hash", "Bool"),
     ("Hash", "Int"),
+    ("Hash", "List"),
     ("Hash", "String"),
     ("Show", "Bool"),
     ("Show", "Int"),
+    ("Show", "List"),
     ("Show", "String"),
     ("Add", "Int"),
     ("Add", "String"),

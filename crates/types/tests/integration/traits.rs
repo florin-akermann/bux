@@ -151,7 +151,7 @@ fn a_method_of_a_trait_that_gives_back_a_bool_asks_the_question_it_answers() {
 }
 
 #[test]
-fn an_instance_is_for_a_whole_type_and_never_for_one_that_takes_arguments() {
+fn an_instance_writes_one_argument_for_every_argument_its_type_takes() {
     let error = refusal(
         "instance Eq<Option> {\n    fn is_equal(one, other) -> Bool {\n        true\n    }\n}\n",
     );

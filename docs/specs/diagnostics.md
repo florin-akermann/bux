@@ -112,6 +112,7 @@ Name resolution raises these, in `crates/resolver/src/error.rs`:
 - `L0312` — a derive names a trait no type derives, or a type this module does not declare.
 - `L0313` — a type or a pattern is reached through a name that is no module.
 - `L0314` — a name that binds is written inside an or-pattern, which binds nothing.
+- `L0318` — an instance writes an argument of its type that is no type parameter it declares.
 
 Loading raises these, in `crates/modules/src/error.rs`, before any module is resolved:
 

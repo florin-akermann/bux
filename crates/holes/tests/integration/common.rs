@@ -8,6 +8,9 @@ use lumen_parser::parse;
 use lumen_resolver::resolve;
 use lumen_types::TypedProgram;
 
+/// The name the module under test is compiled as, which nothing here depends on.
+const MODULE: &str = "demo";
+
 /// What each hole of `source` is written as, which is the text its span covers.
 pub fn written(source: &str) -> Vec<&str> {
     holes(source)
@@ -25,7 +28,7 @@ pub fn holes(source: &str) -> Vec<Hole> {
 pub fn typed(source: &str) -> TypedProgram {
     let program = parse(source).unwrap_or_else(|error| panic!("{source:?} parses: {error:?}"));
     let resolved =
-        resolve(program).unwrap_or_else(|error| panic!("{source:?} resolves: {error:?}"));
+        resolve(program, MODULE).unwrap_or_else(|error| panic!("{source:?} resolves: {error:?}"));
     lumen_types::check(resolved, &lumen_types::Imported::default())
         .unwrap_or_else(|error| panic!("{source:?} is typed: {error:?}"))
 }

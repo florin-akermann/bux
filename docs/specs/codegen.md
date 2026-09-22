@@ -108,6 +108,11 @@ An instance's method is a method of the module class too, named for its trait, t
 for, and itself, joined by `$`: `Eq$Point$is_equal`.
 It is written whether anything calls it or not, as a function that declares no type parameter is,
 and a call of its trait's method at that type is an `invokestatic` of it.
+An instance that declares type parameters is written once per set of types it is used at, and its
+name carries the arguments its type is written with after the plain one, in that order and written
+out whole: `Eq$Box$is_equal$List$Int`.
+The type's order is what is written rather than the instance's, so an instance that declares `A`
+and `B` and is for `Pair<B, A>` is named for what `B` settled on and then for what `A` did.
 An instance over a type the JVM holds has no method, and what it amounts to is written out where
 the call stands; `docs/specs/traits.md` states both cases.
 
@@ -193,10 +198,19 @@ Leaving a type's arguments out is what makes the set of methods finite.
 A type argument never reaches a descriptor, so nothing is lost by it, and a generic that calls
 itself at a type one deeper than the one it was written for asks for a method already written.
 
+A constrained type parameter is the one exception, and it is named by the whole type it settled on.
+Such a parameter reaches the instance of that type, and `List<Int>` and `List<Bool>` have two
+instances, so naming both `List` would give two bodies one name and one of the two would be lost.
+The set stays finite because a constraint at a type parameter reaches that parameter's own
+constraint and nothing deeper, which `docs/specs/traits.md` states, so no use settles a constrained
+parameter on a type the source does not write.
+
 A written method is named for the function and the types its parameters settled on, joined by
 `$`: `identity$Int`, `identity$Option`, `pair$Int$String`.
-A type is named by its own name, whatever it is written with, because a type argument never
-reaches a descriptor.
+An unconstrained parameter's type is named by its own name, whatever it is written with, because a
+type argument never reaches a descriptor.
+A constrained one's is named by its own name and then every argument it is written with, one after
+the other: `has_value$List$Int` and `has_value$List$Bool` are two methods.
 A type of another module is written `demo.User` and named `demo$User`, because a JVM method name
 holds no dot.
 `()` is written `$Unit` and a use that settles nothing is written `$Any`.
@@ -279,6 +293,37 @@ That module holds no tree but its own: it has the generic's type and none of its
 nothing to write the method from.
 Writing the body where the body is, and naming the instance from the type, is what leaves no tree
 to cross.
+
+An instance that declares type parameters is written once per set of types, as a generic is, so the
+module writing the use is the module that writes it.
+It settled the type, so it is the one that knows what the instance's own parameters settled on; the
+module writing the generic is handed a type and names the call from it, exactly as it does for an
+instance that declares none.
+So `list.has_value` at a `Box<Int>` that `main` declares is `has_value$main$Box$Int` on the `list`
+class, and `main` writes `Eq$Box$is_equal$Int` on its own class whether it calls it or not.
+
+## How an instance over a list is written
+
+The prelude writes `Eq`, `Ord`, `Hash`, and `Show` over `List<T>`, which `docs/specs/library.md`
+states, and each of the four declares one type parameter.
+
+`List` is the compiler's type, so no module declares it and there is no declaring module's class to
+write the method into.
+Each of the four is written into the class of every module that uses one, as every other prelude
+instance is written out where it is called.
+`Eq$List$is_equal$Int` used in `demo` is a static method of the class `demo`, and the same method
+used in `other` is a static method of the class `other`.
+
+The set of methods stays finite because the element of a list is written with fewer arguments than
+the list is.
+`Eq$List$is_equal$List$Int` asks for `Eq$List$is_equal$Int`, which asks for the instruction
+`Eq<Int>` amounts to, and there the walk stops.
+
+The body is the `for` loop `library/prelude.lm` writes, written out as the walk it is: `Eq` stops
+at the first element that differs, `Ord` at the first that decides, `Hash` reads every element, and
+`Show` writes the separators between them.
+A list is one `java.util.List`, which this spec states above, so the walk reads its size and each
+of its slots and hands each element to the instance of the element's own type.
 
 ## How a type is laid out
 
@@ -424,3 +469,7 @@ These hold and are checked with property-based tests:
 15. As many values stand for nothing as there are `()`s written where a reference is wanted.
 16. A call of `list.push` or of `list.at` asks the `list` class for no method.
 17. A method written for a set of types calls the instance each type in that set has.
+
+That a constrained type parameter settled on two types with one head is written as two methods is
+a claim about a running program, so it is held to by `tests/spec/traits/over_a_list.lm` and
+`tests/spec/traits/over_a_generic_type.lm` rather than by a property.

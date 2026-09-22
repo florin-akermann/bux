@@ -266,12 +266,12 @@ fn an_instance_that_writes_no_method_is_a_parse_error() {
 }
 
 #[test]
-fn an_instance_is_for_a_type_written_by_name_and_without_arguments() {
+fn an_instance_writes_the_arguments_of_its_type_as_names() {
     assert_eq!(
         message(
-            "instance Eq<List<Point>> {\n    fn is_equal(one, other) -> Bool {\n        true\n    }\n}"
+            "instance Eq<List<List<T>>> {\n    fn is_equal(one, other) -> Bool {\n        true\n    }\n}"
         ),
-        "expected `>`, found `<`"
+        "expected `,`, found `<`"
     );
 }
 

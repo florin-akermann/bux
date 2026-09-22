@@ -120,7 +120,7 @@ fn read(items: &[Item], of: &InstanceDeclaration, method: &Function) -> Method {
     let declaration = declares(items, of);
     let standing = StandingIn {
         parameter: &declaration.parameter.text,
-        instance: &of.for_type.text,
+        instance: written_over(of),
     };
     Method {
         written: method.name.span,
@@ -131,6 +131,15 @@ fn read(items: &[Item], of: &InstanceDeclaration, method: &Function) -> Method {
             of.trait_name.text, of.for_type.text, method.name.text
         ),
     }
+}
+
+/// The type the instance is for, as it writes it: its name, and the arguments it is written with.
+fn written_over(of: &InstanceDeclaration) -> String {
+    if of.arguments.is_empty() {
+        return of.for_type.text.clone();
+    }
+    let written: Vec<&str> = of.arguments.iter().map(|one| one.text.as_str()).collect();
+    format!("{}<{}>", of.for_type.text, written.join(", "))
 }
 
 /// Where the value `method` gives back is written, which is its body's last statement.
@@ -152,7 +161,8 @@ fn leaves(method: &Function) -> Span {
 /// The trait's own parameter, and the type the instance settled it on.
 struct StandingIn<'p> {
     parameter: &'p str,
-    instance: &'p str,
+    /// The type as the instance writes it, which is `List<T>` where it writes arguments.
+    instance: String,
 }
 
 /// The trait `of` answers for, which the prelude declares below it.
@@ -197,7 +207,7 @@ fn standing_for(written: &TypeRef, standing: &StandingIn<'_>) -> String {
         return "()".to_owned(); // `TypeRefKind::Unit`, the only other shape a written type takes.
     };
     let name = if path.name.text == standing.parameter {
-        standing.instance
+        &standing.instance
     } else {
         &path.name.text
     };

@@ -8,6 +8,9 @@ use lumen_parser::parse;
 use lumen_resolver::resolve;
 use lumen_types::{Imported, TypedProgram};
 
+/// The name the module under test is compiled as, which nothing here depends on.
+const MODULE: &str = "demo";
+
 /// The failure `source` is refused with.
 pub fn refusal(source: &str) -> MatchError {
     reaching(source).refusal()
@@ -65,8 +68,8 @@ impl Reaching {
     pub fn typed(&self) -> TypedProgram {
         let source = &self.source;
         let program = parse(source).unwrap_or_else(|error| panic!("{source:?} parses: {error:?}"));
-        let resolved =
-            resolve(program).unwrap_or_else(|error| panic!("{source:?} resolves: {error:?}"));
+        let resolved = resolve(program, MODULE)
+            .unwrap_or_else(|error| panic!("{source:?} resolves: {error:?}"));
         lumen_types::check(resolved, &self.imported)
             .unwrap_or_else(|error| panic!("{source:?} infers: {}", error.message()))
     }

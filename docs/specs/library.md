@@ -147,6 +147,25 @@ That is a length beside a buffer rather than one `java.util.List`, which is what
 Until a list is held as one of those, the cost is written down here rather than hidden, which is
 what `docs/specs/collections.md` does of a map.
 
+## The instances a list has
+
+The prelude writes `Eq`, `Ord`, `Hash`, and `Show` for `List<T>`, each constrained on `T`, and
+each body is a `for` loop over the list in `library/prelude.lm`.
+`docs/specs/traits.md` states what the four answer, and each one asks `T` for the instance of its
+own trait rather than reading an element any other way.
+
+The four are written in the prelude rather than in `library/list.lm`, because a module's surface
+carries no instances: an instance written in `list` would reach no module that imports `list`.
+The prelude is the one module every module reads, so an instance written there is the one instance
+every module sees, which is what one trait and one type having one instance asks for.
+The four move to `list` with the item that has the instances of a type travel with the type, which
+`docs/specs/modules.md` states.
+
+Each of the four reads its list with `at`, so `push` and `at` are reachable from the prelude as
+well as from `list`, and from no other module.
+Nothing else changes about either: both stay the compiler's, and both are written out where they
+are called.
+
 ## The library modules
 
 `prelude` is every name above, and nothing else.

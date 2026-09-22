@@ -333,13 +333,21 @@ pub struct Signature {
 
 /// `instance Eq<Point> { fn equals(a: Point, b: Point) -> Bool { … } }`.
 ///
-/// The type an instance is for is written by name and without arguments, which
-/// `docs/specs/traits.md` states, so `Eq<List<Point>>` is a parse error rather than a refusal.
+/// The type an instance is for is written by name, and its arguments are the type parameters the
+/// instance declares: `instance<T: Eq<T>> Eq<List<T>>`, which `docs/specs/traits.md` states.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct InstanceDeclaration {
     pub trait_name: Name,
+    /// `<T: Eq<T>>` after the keyword, which is empty for an instance of a whole type.
+    pub type_parameters: Vec<TypeParameter>,
     pub for_type: Name,
+    /// The arguments the type is written with, each naming one of the parameters above.
+    pub arguments: Vec<Name>,
     /// Never empty: an instance writing no method is a parse error.
+    ///
+    /// Each one carries the instance's own type parameters, because the method is generic in
+    /// them: `is_equal` of `instance<T: Eq<T>> Eq<List<T>>` is written once per `T` it is used
+    /// at, exactly as a generic function is.
     pub methods: Vec<Function>,
     pub span: Span,
 }
