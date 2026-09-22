@@ -12,10 +12,10 @@ use crate::common::Beside;
 /// A module importing `strings`, which is the library module version 0.1 offers.
 const IMPORTING: &str = "import strings\n\nfn main() -> () {\n}\n";
 
-/// A module importing `process`, which is one of the library modules that import another.
+/// A module importing `process`, which is one of the two library modules that import another.
 const IMPORTING_PROCESS: &str = "import process\n\nfn main() -> () {\n}\n";
 
-/// A module importing `files`, which is the other library module that imports another.
+/// A module importing `files`, which is the other of the two.
 const IMPORTING_FILES: &str = "import files\n\nfn main() -> () {\n}\n";
 
 /// A module importing the prelude, which is a name no import reaches.

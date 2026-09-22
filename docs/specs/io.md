@@ -115,10 +115,11 @@ it cannot do.
 
 `files.listed` is `java.nio.file.Files.list`, whose `java.util.stream.Stream` an `extern type`
 names as it names any other class.
-A `List<String>` crosses no `extern` boundary, so the names are not handed over as one.
+A `List` crosses a boundary as a parameter and never as a result, which `docs/specs/interop.md`
+states, so the names are not handed over as one.
 `files` reads them one at a time and pushes each onto a list of its own with `list.push`, which
 `docs/specs/library.md` states, so the list a caller reads is one the library built.
-`files` imports `list` for that one name, and it is the one library module that imports another.
+`files` imports `list` for that one name, as `process` does for the same one.
 Loading hands `list` over below `files`, as it does for any module an import names.
 A failure anywhere in that walk is an `Err`, and a caller is never handed part of a listing.
 
