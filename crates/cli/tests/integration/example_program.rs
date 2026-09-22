@@ -43,8 +43,11 @@ fn the_example_program_is_in_canonical_form() {
     );
 }
 
+/// What a run of the example program writes, which `docs/specs/example-program.md` states.
+const WRITTEN: &str = "held: 7\neach: 3\nmost: 6\n";
+
 #[test]
-fn the_example_program_runs_to_the_end_and_says_nothing() {
+fn the_example_program_writes_every_answer_it_works_out() {
     let Some(_) = jdk() else {
         eprintln!("skipped: JAVA_HOME names no JDK, and running the example program needs one");
         return;
@@ -58,8 +61,22 @@ fn the_example_program_runs_to_the_end_and_says_nothing() {
         "example/main.lm does not run to the end:\n{}",
         run.stderr
     );
+    assert_eq!(run.stdout, WRITTEN, "example/main.lm writes another answer");
+}
+
+#[test]
+fn the_examples_of_the_example_program_hold() {
+    let Some(_) = jdk() else {
+        eprintln!("skipped: JAVA_HOME names no JDK, and running the examples needs one");
+        return;
+    };
+    let copy = Example::new(&source());
+
+    let run = lumen(&["test", copy.path.to_str().expect("a UTF-8 path")]);
+
     assert_eq!(
-        run.stdout, "",
-        "version 0.1 has no way to write a line out; Item 031 is what gives it one"
+        run.code, 0,
+        "an example of example/main.lm does not hold:\n{}",
+        run.stderr
     );
 }

@@ -33,6 +33,8 @@ The program shows the four things everyday Lumen is made of:
 - a `for … in` loop over a written list, which is what everyday Lumen is mostly made of
 
 It also uses `or`, so a reader meets `Option` in the one place version 0.1 hands them one.
+It imports `io` and writes each answer, so a reader meets the one way a program shows anybody
+anything.
 
 Every function but `main` states an example, which `docs/specs/doc-examples.md` requires of one.
 A reader therefore meets a signature and what it works out on the same screen, and `lumen test`
@@ -46,23 +48,27 @@ holds the file to both.
 lumen run example/main.lm
 ```
 
-The program ends normally and exits `0`.
+The program writes three lines and exits `0`:
 
-That is the whole of what it shows, and it is deliberate.
-No Lumen program can fail at runtime, which `docs/specs/arithmetic.md` explains.
-The answer this program works out is an `Int`, and version 0.1 has no way to write a number out.
-`io.println` writes a line, which `docs/specs/io.md` states, but there is no text to hand it.
-So a run that reaches the end is what this program shows, and the answer itself waits on that.
+```text
+held: 7
+each: 3
+most: 6
+```
 
-## What it cannot show yet
+Every answer `main` works out is written, and nothing else is.
+`io.println` writes each line, which `docs/specs/io.md` states, and `shown` gives a number its
+text, which the prelude's `Show<Int>` instance is.
+A reader therefore sees what the program worked out, not only that it reached the end.
 
-`main` binds names it does not use: there is nowhere for an answer to go, because version 0.1 has
-no way to write a number out.
+No Lumen program can fail at runtime, which `docs/specs/arithmetic.md` explains, so a run that
+writes those three lines is the only run there is.
 
 ## What is tested
 
-One test runs `example/main.lm` through the CLI and asserts it exits `0`.
-Another runs its examples through `lumen test` and asserts the same.
+One test runs `example/main.lm` through the CLI and asserts it writes those three lines and
+exits `0`.
+Another runs its examples through `lumen test` and asserts the same exit.
 
 It is skipped with a named reason when `JAVA_HOME` names no JDK, as every run in the suite is.
 The run happens on a copy outside the repository, so a test never writes into `example/`.

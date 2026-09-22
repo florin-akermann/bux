@@ -46,8 +46,14 @@ git config core.hooksPath .githooks
 cargo run --bin lumen -- run example/main.lm
 ```
 
-It ends normally and exits `0`, which is the whole of what it shows.
-The answer it works out is an `Int`, and version 0.1 has no way to write a number out.
+It writes each answer it works out and exits `0`:
+
+```text
+held: 7
+each: 3
+most: 6
+```
+
 `docs/specs/example-program.md` says what the directory holds and why that is enough.
 
 Its public surface is one page, which is what a reader consults to learn a signature:

@@ -1,13 +1,18 @@
 // The first Lumen program, and the one the README points at.
 // It is everyday Lumen: a record, an algebraic data type, a `match`, and a loop over a list.
-// Nothing is written out, because version 0.1 has no way to write a number out.
-// Running to the end is what it shows, and `docs/specs/example-program.md` says why.
+// It writes every answer it works out, because a program that shows nobody anything is not one.
+// `io.println` writes a line and `shown` gives a number its text; `docs/specs/io.md` says how.
 // A file reads top down, so what a name is comes below the first line that uses it.
+import io
+
 fn main() -> () {
     ordered := Placed(Basket { apples: 3, pears: 4 })
-    each := shared(total: picked(ordered) + picked(Unplaced), people: 2)
+    held := picked(ordered) + picked(Unplaced)
+    each := shared(total: held, people: 2)
     most := fullest([Basket { apples: 1, pears: 1 }, Basket { apples: each, pears: each }])
-    ()
+    io.println("held: " + shown(held))
+    io.println("each: " + shown(each))
+    io.println("most: " + shown(most))
 }
 
 /// What each of `people` gets, which is nothing when there is nobody to give it to.
