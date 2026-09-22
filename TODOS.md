@@ -6,15 +6,6 @@
 
 ## Open
 
-## 🟢 Item 065: A hashed map and set
-**Depends on:** Item 063, Item 064 — a table bucketed by `Hash<K>` needs the program's own keys.
-`Map` is a linked list, and a compiler with thousands of names is quadratic over it.
-`docs/specs/collections.md` says the table waits on an array, which `extern` may name by then.
-The table is a textbook hash table: constant time on average, plain, correct, and not tuned.
-[065][a] - `docs/specs/collections.md` states the table, the `Hash<K>` constraint, and each cost.
-[065][b] - `map.get` and `set.has_value` are constant time over a full table.
-[065][c] - Every executable example under `tests/spec/library` still passes unchanged.
-
 ## 🔴 Item 076: A list grows in amortized constant time
 **Depends on:** Item 058 — the two functions land there, and this item changes what carries one.
 `docs/specs/library.md` writes down that `push` costs what the list holds.
