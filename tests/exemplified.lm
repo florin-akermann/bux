@@ -125,9 +125,11 @@ fn run(opened: Opened, ran: header.Ran, library: ir.Library, limit: Int) -> held
 }
 
 /// The example run from `copied`, which is taken away again once it has run.
+///
+/// The copy keeps the name of the example, so an example named as a library module runs so named.
 // example: list.length(run_in(Copied { opened: Opened { path: "no-such-directory/a.lm", source: "" }, copy: "no-such-directory", limit: 1 }, header.Ran { arguments: [], output: "", errors: "", status: 0 }, ir.little_library()).failures) == 1
 fn run_in(copied: Copied, ran: header.Ran, library: ir.Library) -> held.Held {
-    example := modules.joined(copied.copy, "example.lm")
+    example := modules.joined(copied.copy, modules.stem_of(copied.opened.path) + ".lm")
     _ = files.write(example, copied.opened.source)
     for beside in walk.files_in(modules.directory_of(copied.opened.path), ".lm") {
         if beside != copied.opened.path {

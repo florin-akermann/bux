@@ -20,22 +20,20 @@ one source must produce the same bytes.
 A module is one source file, so `demo.lm` yields these:
 
 ```text
-demo.class                 the module: one static method per function
-demo/User.class            one class per type the module declares
-demo/Payment$Failed.class  one class per variant of an algebraic data type
-lumen/Option.class         the prelude types, which every module may reach
-lumen/List.class           what carries a list: a buffer and a length
-lumen/prelude.class        the prelude's instances over a list, at each set of types asked
+demo.class                   the module: one static method per function
+demo/User.class              one class per type the module declares
+demo/Payment$Failed.class    one class per variant of an algebraic data type
+lumen/Option.class           the prelude types, which every module may reach
+lumen/List.class             what carries a list: a buffer and a length
+lumen/library/prelude.class  the prelude's instances over a list, at each set of types asked
 ```
 
 The module class is named after the file, so a file whose name is not one a class may have is
 refused before anything is written: `.`, `;`, `[` and `/` each mean something else to a JVM.
 
 A type declared in the module is a class in a package named after the module.
-A variant of an algebraic data type is a class of that package too, named after its type and
-then after itself, the way a nested class of Java is.
-A type and one of its variants may share a name, so the type's name is part of every variant's
-name and not only of the one that would otherwise clash with its own type.
+A variant of an algebraic data type is a class of that package, named for its type, then itself.
+A type and a variant may share a name, so the name of each variant starts with the type's name.
 
 The prelude types are written on every build, in the package `lumen`.
 They are `Option`, `Result`, `Next`, `Sent`, and `Waiting`, and each of their variants.
@@ -43,12 +41,14 @@ They are `Option`, `Result`, `Next`, `Sent`, and `Waiting`, and each of their va
 Writing them with the module keeps a build self-contained: there is no runtime jar to install and
 no version of one to agree with.
 
-A program of several modules is several such sets, one per module the file imports, written
-beside the same source file.
-Each module is its own class in its own package, so `greeting.lm` yields `greeting.class` and
-`greeting/…` whatever `demo.lm` yields.
-A module beside the file that nothing imports is not read and not written;
-`docs/specs/modules.md` states which modules a build reaches.
+A program of several modules is one such set for each module, written beside the source file.
+Each module is its own class in its own package, so `greeting.lm` yields `greeting.class` too.
+A module that nothing imports is not read and not written, as `docs/specs/modules.md` states.
+
+A module of the library is a class of the package `lumen/library`, as `lumen/library/strings`.
+A module of the program is a class of no package, so a program file `strings.lm` is `strings`.
+So a program may name a module as the library names one, and the two classes never clash.
+The package also keeps each module name apart from each type name of `lumen` on any file system.
 
 ## What a value is
 
@@ -178,7 +178,7 @@ The array is full, so the first push onto a written list copies it, as the next 
 ## How a list is grown and read at an index
 
 `list.length`, `list.push`, and `list.at` are the compiler's, which `docs/specs/library.md` states.
-So no one of the three is a method that the `list` class declares.
+So no one of the three is a method that the class `lumen/library/list` declares.
 A call of `length` or of `at` is written out where it stands, the way an operator over `Int` is.
 A call of `push` is a call of `lumen.List.push`, because a push branches and copies.
 
@@ -313,8 +313,8 @@ The method is written into the class of the module that declares the generic, wh
 method of that generic is written.
 The instance it calls is a static method of the class of the module that declares the type, which
 is where every instance is written.
-So `list.has_value` at a `Kept` that `main` declares is `has_value$main$Kept` on the `list` class,
-and the body of it calls `Eq$Kept$is_equal` on the `main` class.
+So `list.has_value` at a `Kept` that `main` declares is `has_value$main$Kept` on the class
+`lumen/library/list`, and the body of it calls `Eq$Kept$is_equal` on the `main` class.
 
 The name of that call is read off the type and nothing else.
 A type of the module writing the method is named plainly, and its instance is a method of that
@@ -371,13 +371,13 @@ The prelude writes `Eq`, `Ord`, `Hash`, and `Show` over `List<T>`, which `docs/s
 states, and each of the four declares one type parameter.
 
 `List` is the compiler's type, so no module declares it, and the prelude declares the instances.
-The prelude is written as a class of its own, `lumen/prelude`, which holds the methods of the four.
+The prelude is written as a class of its own, `lumen/library/prelude`, which holds those methods.
 Each method is lowered from the `for` loop that `library/prelude.lm` writes, as any body is.
 Nothing in the compiler writes the walk a second time in another form.
 
 A use of one of the four is a use of a generic instance of another module.
 The module that writes the use asks the prelude for the method at the types that the use settled.
-So `Eq$List$is_equal$Int` is one method of `lumen/prelude`, whichever module uses it.
+So `Eq$List$is_equal$Int` is one method of `lumen/library/prelude`, whichever module uses it.
 The prelude is lowered after every module of the program, because every module can ask it.
 
 The set of methods stays finite because the element of a list is written with fewer arguments than
@@ -582,7 +582,7 @@ These hold and are checked by drawn properties in the runner:
 13. Every descriptor a class asks to load first names another class the same build writes.
 14. A written list of `n` elements gathers them into an array of `n` and builds one list.
 15. As many values stand for nothing as there are `()`s written where a reference is wanted.
-16. A call of `list.length`, `list.push`, or `list.at` asks the `list` class for no method.
+16. A call of `list.length`, `list.push`, or `list.at` asks `lumen/library/list` for no method.
     A push is a call of `lumen.List.push`, and `at` calls nothing but a constructor of `Option`.
     `length` calls nothing.
 17. A method written for a set of types calls the instance each type in that set has.

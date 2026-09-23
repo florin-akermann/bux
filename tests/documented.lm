@@ -101,9 +101,6 @@ fn why_skipped(path: String) -> String {
     if path == "library/prelude.lm" {
         return "the run of its examples declares `or` beside the prelude's own, which `lumen test` refuses as L0302"
     }
-    if path == "tests/spec/packages/carried/strings.lm" {
-        return "the run of its examples holds two modules named `strings`, this one and the library's, which `lumen test` refuses as L0702"
-    }
     ""
 }
 

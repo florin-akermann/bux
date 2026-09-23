@@ -631,7 +631,9 @@ status 0
 > A program of several modules is several classes. Every module the file imports is compiled and
 > written too, so `import greeting` puts `greeting.class` beside `demo.class`, and a call of
 > `greeting.hello` is a call of a static method of that class. A module beside the file that
-> nothing imports is not read and not written.
+> nothing imports is not read and not written. A module of the library is written in the package
+> `lumen/library`, so `import strings` puts `lumen/library/strings.class` there, and a file of the
+> program may have the name of a library module.
 >
 > The types the prelude supplies are written on every build, in the package `lumen`. There is no
 > runtime to install and no version of one to agree with: a build is self-contained.
