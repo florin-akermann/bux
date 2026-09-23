@@ -56,30 +56,33 @@ A bare `=` then only changes a `var`, so each operator has one job, as in Swift.
 [082][f] - Every source under `compiler/`, `library/`, `example/`, and `tests/` binds with `let`.
 [082][g] - A search for `:=` in sources, docs, and help text finds only the refusal test.
 
-## 🔴 Item 083: Only a library module writes `extern`, so no program loads a Java class by name
-Today any module can write `extern static` on `java.lang.Class.forName` and load a class by name.
-The same form reaches `javax.naming.InitialContext.doLookup`, which is the Log4Shell call.
-`docs/design.md` section 17 says a program reaches Java through the library, but nothing checks it.
-[083][a] - `docs/design.md` section 17 and `docs/specs/interop.md` state the rule and its code.
-[083][b] - The Rust phases refuse an `extern` outside `library/`, with a code and an explanation.
-[083][c] - The Bux phases under `compiler/` refuse it alike, at the same span.
-[083][d] - The two `compiler/` modules that write `extern` reach Java through a library module.
-[083][e] - The fixtures in `tests/spec/interop/` and `tests/spec/parser/` keep the boundary tested.
-[083][f] - A spec example shows a program that writes `extern` and is refused.
+## 🔴 Item 083: A manifest names each Java archive by path and hash, and a run reaches no other
+A package that reaches the Java ecosystem needs a way to say which archives it uses.
+Nothing is fetched, so an archive is a file already on disk, and its hash pins its content.
+[083][a] - `docs/specs/packages.md` states the manifest line, such as `jar lib/x.jar sha256:…`.
+[083][b] - The build refuses an archive that is missing or whose hash is not the one stated.
+[083][c] - The build refuses an archive whose `Class-Path` attribute names other archives.
+[083][d] - `lumen run` puts only the build directory and the stated archives on the class path.
+[083][e] - `docs/implementation.md` says the archive line is for the JVM target only.
 
-## 🔴 Item 084: Every Java class the library names is on one fixed allow list
-**Depends on:** Item 083 — the library is then the only place an `extern` can name a class.
-An allow list makes a new `extern` on `ClassLoader`, reflection, or `javax.naming` fail a test.
-A deny list is not enough, because it cannot name a class that nobody thought of.
-[084][a] - `docs/specs/library.md` states the rule and names the list.
-[084][b] - A test reads every `extern` in `library/` and fails on a class not on the list.
-[084][c] - The list holds only the `java.base` classes that the library names today.
+## 🔴 Item 084: An `extern` names only a class that the build can account for
+**Depends on:** Item 083 — a class from a stated archive is one of the two accepted sources.
+Today an `extern` can name `java.lang.Class.forName` and load a class whose name comes at run time.
+The same form reaches `javax.naming.InitialContext.doLookup`, which is the Log4Shell call.
+An accepted class is in a stated archive, or in a `java.base` package on a fixed allow list.
+The allow list leaves out reflection, class loaders, method handles, and deserialization.
+[084][a] - `docs/design.md` section 17 states the rule with no Java word: a program names a target.
+[084][b] - `docs/specs/interop.md` states the JVM form, the allow list, and the new code.
+[084][c] - The Rust phases read the entry names of each stated archive and refuse other classes.
+[084][d] - The Bux phases under `compiler/` refuse them alike, at the same span.
+[084][e] - A spec example shows an `extern` on `java.lang.Class.forName` that is refused.
 
 ## 🔴 Item 085: `lumen run` starts a JVM that has only `java.base` and no injected options
 The JVM starts with all its modules, so `java.naming`, `java.rmi`, and `java.scripting` load.
 `JAVA_TOOL_OPTIONS`, `JDK_JAVA_OPTIONS`, and `_JAVA_OPTIONS` can add a `-javaagent` to a run.
+A stated archive can still load a class at run time, and these flags narrow what it can reach.
 [085][a] - `docs/specs/run.md` states the flags, the removed variables, and the reason for each.
 [085][b] - The runner passes `--limit-modules java.base` and `-Djdk.serialFilter=!*`.
 [085][c] - The runner removes the three variables from the environment of the JVM.
-[085][d] - A run-time example shows that `Class.forName` finds no `javax.naming` class.
-[085][e] - `lumen help run` says which modules a program has.
+[085][d] - A test in `crates/cli/tests/integration/` shows that no `javax.naming` class loads.
+[085][e] - `lumen help run` says a program reaches only its library and its stated archives.
