@@ -25,9 +25,10 @@ An example of the second half: `17 / 0` is `None`, because a panic is simpler an
 - Plain loops are the default idiom; higher-order functions are library, not a second paradigm.
 - **Concurrency is Erlang's**: all messages, one mailbox per process, one enforced `process` shape.
 - **Self-hosting comes first.** Version 0.3 is what the Bux compiler needs, in the order needed.
-- The Bux compiler runs on the JVM; a native binary, concurrency, HTTP, and JSON are version 0.4.
-- **Dogfood as early as possible.** The compiler, its tests, and its tools are written in Bux.
-- Dogfooding is the sanity check that Bux works, and it finds the features that Bux lacks.
+- Version 0.4 starts with concurrency, which makes the compiler fast; a native binary comes later.
+- **Dogfood early and often.** The compiler, its tests, and its tools are written in Bux.
+- Dogfooding finds the features Bux lacks and its bottlenecks, and both cost less when found early.
+- A new feature has its first user in the compiler or its tools; a slow one is a `TODOS.md` item.
 - A missing feature it finds is judged by `docs/principles.md`: a real need, or a bigger surface?
 - **JDK 28 or later is targeted**, early access until it ships; no older class-file version.
 

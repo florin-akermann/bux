@@ -411,6 +411,9 @@ Then the bootstrap of section 6, and the deletion of the Rust crates.
 
 ## 12. Version 0.4+
 
+Concurrency comes first, and its first user is the compiler with its checks, which it makes fast.
+That is `TODOS.md` Item 091, and the compiler dogfoods each part before any other program.
+
 Add, once the compiler is Bux:
 
 * concurrency: `process` with its enforced shape, `spawn`, a handle, a send deadline, cancellation
