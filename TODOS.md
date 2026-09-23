@@ -6,12 +6,6 @@
 
 ## Open
 
-## 🟢 Item 067: The parser and the AST are written in Bux
-**Depends on:** Item 066, Item 077 — the parser reads the tokens the Bux lexer gives, by kind.
-[067][a] - `compiler/ast.lm` declares the tree `docs/specs/grammar.md` describes.
-[067][b] - `compiler/parser.lm` parses tokens into it, with every `docs/specs/parser` error.
-[067][c] - The harness compares the printed tree with the Rust parser's on every parser fixture.
-
 ## 🔴 Item 068: The formatter is written in Bux
 **Depends on:** Item 067 — the printer reads the source and the tree.
 [068][a] - `compiler/format.bx` writes canonical form as `docs/specs/formatting.md` states.
