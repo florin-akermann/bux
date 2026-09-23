@@ -1,0 +1,995 @@
+// Exhaustiveness: every `match` of a module answers for every value it may meet, in order.
+//
+// `docs/specs/exhaustiveness.md` states the rules, and `crates/exhaustiveness` checks them in Rust.
+// The check reads the typed module and adds nothing to it: it has nothing to say, or it refuses.
+// Coverage is the usefulness algorithm over a matrix of one row for each arm, one column at a time.
+// The order of the arms is the order the type declares its constructors, read outermost first.
+import ast
+
+import infer
+
+import lexer
+
+import list
+
+import map
+
+import modules
+
+import resolver
+
+import strings
+
+import surface
+
+import types
+
+/// What the check says of the program at `path`, in the form the harness compares.
+///
+/// A program whose every `match` is accepted is `exhaustive`. A refusal is `refused` and the
+/// module, then the code, the span, and the message, then the help. A program that does not load,
+/// resolve, or type is `skipped`, because that is a phase before this one.
+// example: printed("no-such-directory/main.lm", types.little_prelude()) == "skipped\n"
+fn printed(path: String, prelude: types.Prelude) -> String {
+    match modules.load(path) {
+        Ok(loaded) => answer_printed(modules_checked(loaded, prelude))
+        Err(_) => "skipped\n"
+    }
+}
+
+/// `exhaustive`, or the answer of the first module that is not.
+// example: answer_printed(Ok([])) == "exhaustive\n"
+fn answer_printed(answer: Result<List<infer.Inference>, String>) -> String {
+    match answer {
+        Ok(_) => "exhaustive\n"
+        Err(refused) => refused
+    }
+}
+
+/// Each module typed and checked in the order it was loaded, or the answer where one is not.
+// example: list.length(ok_or(modules_checked([], types.little_prelude()), [types.checked_of("")])) == 0
+fn modules_checked(loaded: List<modules.Module>, prelude: types.Prelude) -> Result<List<infer.Inference>, String> {
+    var imported = surface.nothing_imported()
+    var checked = []
+    for module in loaded {
+        inferred := typed(module, imported, prelude)?
+        _ = refused_in(module.name, check(inferred))?
+        checked = list.push(checked, inferred)
+        imported = surface.offering(imported, module.name, types.surface_of(inferred))
+    }
+    Ok(checked)
+}
+
+/// One module, resolved and typed, and `skipped` where it is not.
+// example: answer_printed(typed_list(typed(modules.Module { name: "main", path: "main.lm", source: "", program: ast.Program { items: [] } }, surface.nothing_imported(), types.little_prelude()))) == "exhaustive\n"
+fn typed(module: modules.Module, imported: surface.Imported, prelude: types.Prelude) -> Result<infer.Inference, String> {
+    match resolver.resolve(module.program, module.name, prelude.names) {
+        Ok(resolved) => typed_or_skipped(types.check(resolved, imported, prelude))
+        Err(_) => Err("skipped\n")
+    }
+}
+
+/// `answer` as a list of one module, which is what the examples of `typed` print.
+// example: answer_printed(typed_list(Err("skipped\n"))) == "skipped\n"
+fn typed_list(answer: Result<infer.Inference, String>) -> Result<List<infer.Inference>, String> {
+    match answer {
+        Ok(inferred) => Ok([inferred])
+        Err(refused) => Err(refused)
+    }
+}
+
+/// The typed module, and `skipped` where inference refuses it.
+// example: answer_printed(typed_list(typed_or_skipped(Ok(types.checked_of(""))))) == "exhaustive\n"
+fn typed_or_skipped<E>(answer: Result<infer.Inference, E>) -> Result<infer.Inference, String> {
+    match answer {
+        Ok(inferred) => Ok(inferred)
+        Err(_) => Err("skipped\n")
+    }
+}
+
+/// `answer`, with a refusal printed as the answer of the module called `module`.
+// example: said_in(refused_in("main", Ok(()))) == ""
+// example: said_in(refused_in("main", Err(OutOfOrder { arm: "A", before: "B", span: lexer.Span { start: 1, length: 2 } }))) == "refused main\nL0501 1..3 this `match` writes `A` after `B`\nhelp: arms come in the order the type declares its variants: `A` before `B`\n"
+fn refused_in(module: String, answer: Result<(), MatchError>) -> Result<(), String> {
+    match answer {
+        Ok(_) => Ok(())
+        Err(refused) => Err("refused " + module + "\n" + refusal_printed(refused))
+    }
+}
+
+/// The code, the span, and the message `source` is refused with against the small prelude, or `""`.
+// example: refusal_of("fn f(held: Bool) -> Int {\n    match held {\n        true => 1\n    }\n}\n") == "L0500 30..66 this `match` does not cover `false`"
+fn refusal_of(source: String) -> String {
+    match check(types.checked_of(source)) {
+        Ok(_) => ""
+        Err(refused) => code_of(refused) + " " + shown(span_of(refused)) + " " + message_of(refused)
+    }
+}
+
+/// What a check says: nothing where it accepts, and the refusal printed where it does not.
+// example: said(Err(NotCovered { missing: ["None"], span: lexer.Span { start: 0, length: 1 } })) == "L0500 0..1 this `match` does not cover `None`\nhelp: every value has an arm, or a name that binds whatever the arms before it did not\n"
+fn said(answer: Result<(), MatchError>) -> String {
+    match answer {
+        Ok(_) => ""
+        Err(refused) => refusal_printed(refused)
+    }
+}
+
+/// The same, once the refusal is printed as the answer of a module.
+// example: said_in(Err("skipped\n")) == "skipped\n"
+fn said_in(answer: Result<(), String>) -> String {
+    match answer {
+        Ok(_) => ""
+        Err(refused) => refused
+    }
+}
+
+/// The arm found out of place, printed, and nothing where none is.
+// example: found_printed(None) == ""
+fn found_printed(found: Option<MatchError>) -> String {
+    match found {
+        Some(refused) => refusal_printed(refused)
+        None => ""
+    }
+}
+
+/// A module that matches a `Status` of three variants with `arms`, each written on its own line.
+// example: refusal_of(status_module("        Pending => 1\n        Running(_) => 2\n        Failed(_, _) => 3\n")) == ""
+fn status_module(arms: String) -> String {
+    "fn f(held: Status) -> Int {\n    match held {\n" + arms + "    }\n}\n\ntype Status =\n    | Pending\n    | Running(Int)\n    | Failed(Int, Int)\n"
+}
+
+/// What the examples read patterns against: no name resolved, and the prelude's constructors.
+// example: carried_by(no_reading().space, "Some") == 1
+fn no_reading() -> Reading {
+    Reading { found: map.empty(), space: no_space() }
+}
+
+/// The constructors of `Bool`, `Option`, and `Result`, and nothing else.
+// example: or(declared_at(no_space(), "true"), -1) == 1
+fn no_space() -> Space {
+    space_of(ast.Program { items: [] }, [])
+}
+
+/// Every `match` of `inferred` checked where it is written, or the first one refused.
+// example: refusal_of("fn f(held: Int) -> Int {\n    held\n}\n") == ""
+fn check(inferred: infer.Inference) -> Result<(), MatchError> {
+    program := inferred.resolved.program
+    reading := Reading { found: inferred.resolved.found, space: space_of(program, surface.every_type(inferred.imported)) }
+    for function in infer.functions_of(program) {
+        _ = block_checked(reading, function.body)?
+    }
+    Ok(())
+}
+
+/// Each statement of a block, in the order it is written.
+// example: refusal_of("fn f(held: Option<Int>) -> Int {\n    other := match held {\n        None => 1\n    }\n    other\n}\n") == "L0500 46..82 this `match` does not cover `Some(_)`"
+fn block_checked(reading: Reading, walked: ast.Block) -> Result<(), MatchError> {
+    for statement in walked.statements {
+        _ = statement_checked(reading, statement)?
+    }
+    Ok(())
+}
+
+/// The expressions of one statement.
+// example: refusal_of("fn f(held: Option<Int>) -> Int {\n    return match held {\n        None => 1\n    }\n}\n") == "L0500 44..80 this `match` does not cover `Some(_)`"
+fn statement_checked(reading: Reading, statement: ast.Statement) -> Result<(), MatchError> {
+    match statement.kind {
+        ast.Binding { mutability, name, value } => expression_checked(reading, value)
+        ast.Assign { target, operator, value } => expression_checked(reading, value)
+        ast.Return(given) => given_checked(reading, given)
+        ast.For(looped) => loop_checked(reading, looped)
+        ast.Discard(value) => expression_checked(reading, value)
+        ast.Evaluated(value) => expression_checked(reading, value)
+        _ => Ok(())
+    }
+}
+
+/// The value a `return` gives back, when it gives one.
+// example: said(given_checked(no_reading(), None)) == ""
+fn given_checked(reading: Reading, given: Option<ast.Expr>) -> Result<(), MatchError> {
+    match given {
+        Some(value) => expression_checked(reading, value)
+        None => Ok(())
+    }
+}
+
+/// A `for`: what it loops over or while, then its body.
+// example: refusal_of("fn f(held: Option<Int>) -> Int {\n    for {\n        _ = match held {\n            None => 1\n        }\n    }\n    1\n}\n") == "L0500 55..99 this `match` does not cover `Some(_)`"
+fn loop_checked(reading: Reading, looped: ast.ForLoop) -> Result<(), MatchError> {
+    _ = header_checked(reading, looped.header)?
+    block_checked(reading, looped.body)
+}
+
+/// The condition of a `for`, or what it loops over.
+// example: said(header_checked(no_reading(), ast.Forever)) == ""
+fn header_checked(reading: Reading, header: ast.ForHeader) -> Result<(), MatchError> {
+    match header {
+        ast.Forever => Ok(())
+        ast.While(condition) => expression_checked(reading, condition)
+        ast.Over { binding, iterable } => expression_checked(reading, iterable)
+    }
+}
+
+/// Every `match` inside one expression, in the order the walk reaches it.
+// example: refusal_of("fn f(held: Option<Int>) -> Int {\n    1 + match held {\n        None => 1\n    }\n}\n") == "L0500 41..77 this `match` does not cover `Some(_)`"
+fn expression_checked(reading: Reading, walked: ast.Expr) -> Result<(), MatchError> {
+    match walked.kind {
+        ast.Unary { operator, operand } => expression_checked(reading, operand)
+        ast.Binary { operator, left, right } => each_checked(reading, [left, right])
+        ast.Call { callee, arguments } => call_checked(reading, callee, arguments)
+        ast.Field { receiver, name } => expression_checked(reading, receiver)
+        ast.Try(inner) => expression_checked(reading, inner)
+        ast.Written(values) => each_checked(reading, values)
+        ast.Record { base, fields } => fields_checked(reading, fields)
+        ast.If(chain) => if_checked(reading, chain)
+        ast.Match(matched) => match_checked(reading, matched, walked.span)
+        _ => Ok(())
+    }
+}
+
+/// A call: what is called, then each argument.
+// example: refusal_of("fn f(held: Option<Int>) -> Int {\n    f(match held {\n        None => None\n    })\n}\n") == "L0500 39..78 this `match` does not cover `Some(_)`"
+fn call_checked(reading: Reading, callee: ast.Expr, arguments: ast.Arguments) -> Result<(), MatchError> {
+    _ = expression_checked(reading, callee)?
+    each_checked(reading, infer.values_of(arguments))
+}
+
+/// Each of `values`, in the order they are written.
+// example: said(each_checked(no_reading(), [])) == ""
+fn each_checked(reading: Reading, values: List<ast.Expr>) -> Result<(), MatchError> {
+    for value in values {
+        _ = expression_checked(reading, value)?
+    }
+    Ok(())
+}
+
+/// The value of each field a record literal writes.
+// example: said(fields_checked(no_reading(), [])) == ""
+fn fields_checked(reading: Reading, fields: List<ast.FieldValue>) -> Result<(), MatchError> {
+    for field in fields {
+        _ = expression_checked(reading, field.value)?
+    }
+    Ok(())
+}
+
+/// An `if` chain: each condition and the block it guards, then the `else` block.
+// example: refusal_of("fn f(held: Option<Int>) -> Int {\n    if true {\n        1\n    } else {\n        match held {\n            None => 1\n        }\n    }\n}\n") == "L0500 78..122 this `match` does not cover `Some(_)`"
+fn if_checked(reading: Reading, chain: ast.IfExpr) -> Result<(), MatchError> {
+    for branch in chain.branches {
+        _ = expression_checked(reading, branch.condition)?
+        _ = block_checked(reading, branch.block)?
+    }
+    match chain.otherwise {
+        Some(otherwise) => block_checked(reading, otherwise)
+        None => Ok(())
+    }
+}
+
+/// A `match`: its scrutinee, then what it covers, then its order, then the body of each arm.
+///
+/// Coverage is decided first, because adding the missing arm is what settles where arms go.
+// example: refusal_of(status_module("        Failed(_, _) => 1\n        Pending => 2\n        Running(_) => 3\n")) == "L0501 79..86 this `match` writes `Pending` after `Failed`"
+fn match_checked(reading: Reading, matched: ast.MatchExpr, span: lexer.Span) -> Result<(), MatchError> {
+    _ = expression_checked(reading, matched.scrutinee)?
+    _ = covered(reading, matched, span)?
+    _ = arms_in_order(reading, matched)?
+    for arm in matched.arms {
+        _ = expression_checked(reading, arm.body)?
+    }
+    Ok(())
+}
+
+/// Nothing where the arms of `matched` cover its type, and every value they leave otherwise.
+// example: refusal_of(status_module("        Pending => 1\n")) == "L0500 32..71 this `match` does not cover `Running(_)`, `Failed(_, _)`"
+fn covered(reading: Reading, matched: ast.MatchExpr, span: lexer.Span) -> Result<(), MatchError> {
+    var rows = []
+    for arm in matched.arms {
+        for one in every(reading, arm.pattern) {
+            rows = list.push(rows, [one])
+        }
+    }
+    var named = []
+    for row in uncovered(reading.space, rows, 1) {
+        named = list.push(named, pat_text(or(list.at(row, 0), Wildcard)))
+    }
+    if list.length(named) == 0 {
+        return Ok(())
+    }
+    Err(NotCovered { missing: named, span: span })
+}
+
+/// Nothing where the arms of `matched` are in declared order, and the first out of place otherwise.
+// example: refusal_of(status_module("        Pending | Running(_) => 1\n        Failed(_, _) => 2\n")) == ""
+fn arms_in_order(reading: Reading, matched: ast.MatchExpr) -> Result<(), MatchError> {
+    match out_of_order(reading, matched) {
+        Some(refused) => Err(refused)
+        None => Ok(())
+    }
+}
+
+/// The first arm of `matched` written above one the declarations put it below, when one is.
+///
+/// An or-pattern's own alternatives are read first, because an arm placed by one of them is
+/// placed by a `|` the author is about to be told to rewrite anyway.
+// example: refusal_of(status_module("        Running(_) | Pending => 1\n        Failed(_, _) => 2\n")) == "L0501 66..73 this `match` writes `Pending` after `Running`"
+fn out_of_order(reading: Reading, matched: ast.MatchExpr) -> Option<MatchError> {
+    var written = []
+    for arm in matched.arms {
+        written = list.push(written, arm.pattern)
+    }
+    found := first_among(reading, written)
+    if is_found(found) {
+        return found
+    }
+    first_out_of_place(reading, written)
+}
+
+/// The first or-pattern inside any of `patterns` whose alternatives are out of order.
+// example: !is_found(first_among(no_reading(), []))
+fn first_among(reading: Reading, patterns: List<ast.Pattern>) -> Option<MatchError> {
+    for pattern in patterns {
+        found := alternatives_of(reading, pattern)
+        if is_found(found) {
+            return found
+        }
+    }
+    None
+}
+
+/// The alternatives of every or-pattern inside `pattern`, held to the order arms are held to.
+// example: refusal_of(status_module("        Running(1 | 2) => 1\n        _ => 2\n")) == ""
+fn alternatives_of(reading: Reading, pattern: ast.Pattern) -> Option<MatchError> {
+    match pattern.kind {
+        ast.TuplePattern { path, elements } => first_among(reading, elements)
+        ast.OrPattern(alternatives) => alternatives_placed(reading, alternatives)
+        _ => None
+    }
+}
+
+/// The first of `alternatives` out of place, or the first out of place inside one of them.
+// example: !is_found(alternatives_placed(no_reading(), []))
+fn alternatives_placed(reading: Reading, alternatives: List<ast.Pattern>) -> Option<MatchError> {
+    found := first_out_of_place(reading, alternatives)
+    if is_found(found) {
+        return found
+    }
+    first_among(reading, alternatives)
+}
+
+/// The first of `written` placed above one the declarations put it below, when one is.
+// example: refusal_of(status_module("        Failed(_, _) => 1\n        Pending | Running(_) => 2\n")) == "L0501 79..99 this `match` writes `Pending` after `Failed`"
+fn first_out_of_place(reading: Reading, written: List<ast.Pattern>) -> Option<MatchError> {
+    var placed_above = []
+    for pattern in written {
+        steps := steps_of(reading, pattern)
+        for above in placed_above {
+            found := out_of_place(written: steps, above: above, span: pattern.span)
+            if is_found(found) {
+                return found
+            }
+        }
+        placed_above = list.push(placed_above, steps)
+    }
+    None
+}
+
+/// Where every constructor `pattern` writes is declared, outermost first.
+///
+/// Placing stops at the first thing no declaration writes down: a name that binds, `_`, a
+/// literal, and everything written after one of them.
+// example: steps_of(no_reading(), ast.Pattern { kind: ast.Wildcard, span: lexer.Span { start: 0, length: 1 } }) == []
+fn steps_of(reading: Reading, pattern: ast.Pattern) -> List<Step> {
+    placed(reading, Placing { steps: [], whole: true }, pattern).steps
+}
+
+/// `so_far` with each constructor of `pattern` placed, and whether it placed all of them.
+// example: placed(no_reading(), Placing { steps: [], whole: true }, ast.Pattern { kind: ast.OrPattern([]), span: lexer.Span { start: 0, length: 1 } }).whole == false
+fn placed(reading: Reading, so_far: Placing, pattern: ast.Pattern) -> Placing {
+    match pattern.kind {
+        ast.NamePattern(path) => named_placed(reading, so_far, path)
+        ast.TuplePattern { path, elements } => each_placed(reading, placed_at(reading, so_far, path), elements)
+        ast.RecordPattern { path, fields } => placed_at(reading, so_far, path)
+        ast.OrPattern(alternatives) => first_placed(reading, so_far, list.at(alternatives, 0))
+        _ => so_far { whole: false }
+    }
+}
+
+/// An or-pattern is placed by its first alternative.
+// example: first_placed(no_reading(), Placing { steps: [], whole: true }, None).whole == false
+fn first_placed(reading: Reading, so_far: Placing, first: Option<ast.Pattern>) -> Placing {
+    match first {
+        Some(alternative) => placed(reading, so_far, alternative)
+        None => so_far { whole: false }
+    }
+}
+
+/// A bare name is placed where it names a constructor, and stops the placing where it binds.
+// example: named_placed(no_reading(), Placing { steps: [], whole: true }, ast.Path { module: None, name: ast.Name { text: "held", span: lexer.Span { start: 0, length: 4 } } }).whole == false
+fn named_placed(reading: Reading, so_far: Placing, path: ast.Path) -> Placing {
+    if is_binding(reading, path) {
+        return so_far { whole: false }
+    }
+    placed_at(reading, so_far, path)
+}
+
+/// `so_far` with the constructor `path` names, where a declaration places it.
+// example: placed_at(no_reading(), Placing { steps: [], whole: true }, ast.Path { module: None, name: ast.Name { text: "None", span: lexer.Span { start: 0, length: 4 } } }).steps == [Step { at: 1, name: "None" }]
+fn placed_at(reading: Reading, so_far: Placing, path: ast.Path) -> Placing {
+    name := ast.path_text(path)
+    match declared_at(reading.space, name) {
+        Some(at) => Placing { steps: list.push(so_far.steps, Step { at: at, name: name }), whole: true }
+        None => so_far { whole: false }
+    }
+}
+
+/// Each element of a tuple pattern placed in turn, stopping at the first that is not placed whole.
+// example: each_placed(no_reading(), Placing { steps: [], whole: false }, []).whole == false
+fn each_placed(reading: Reading, so_far: Placing, elements: List<ast.Pattern>) -> Placing {
+    var placing = so_far
+    for element in elements {
+        if !placing.whole {
+            return placing
+        }
+        placing = placed(reading, placing, element)
+    }
+    placing
+}
+
+/// Why `written` belongs above `above`, which is written above it, when it does.
+///
+/// The two are read together for as long as both are placed, which is what makes an arm that
+/// reaches inside a variant answer to the variant first and to what it reaches for second.
+// example: found_printed(out_of_place(written: [Step { at: 0, name: "A" }], above: [Step { at: 1, name: "B" }], span: lexer.Span { start: 0, length: 1 })) == "L0501 0..1 this `match` writes `A` after `B`\nhelp: arms come in the order the type declares its variants: `A` before `B`\n"
+// example: !is_found(out_of_place(written: [Step { at: 1, name: "B" }], above: [Step { at: 0, name: "A" }], span: lexer.Span { start: 0, length: 1 }))
+fn out_of_place(written: List<Step>, above: List<Step>, span: lexer.Span) -> Option<MatchError> {
+    var index = 0
+    for index < list.length(written) && index < list.length(above) {
+        here := or(list.at(written, index), Step { at: 0, name: "" })
+        there := or(list.at(above, index), here)
+        if here.at > there.at {
+            return None
+        }
+        if here.at < there.at {
+            return Some(OutOfOrder { arm: here.name, before: there.name, span: span })
+        }
+        index += 1
+    }
+    None
+}
+
+/// Whether an arm was found out of place.
+// example: is_found(Some(OutOfOrder { arm: "A", before: "B", span: lexer.Span { start: 0, length: 1 } }))
+fn is_found(found: Option<MatchError>) -> Bool {
+    match found {
+        Some(_) => true
+        None => false
+    }
+}
+
+/// Everything `pattern` matches, which an or-pattern matches more than one of.
+///
+/// An alternative is a whole pattern and may be written inside a constructor, so what an arm
+/// matches is every way of choosing one alternative at each place one is written.
+// example: refusal_of(status_module("        Pending | Running(_) | Failed(_, _) => 1\n")) == ""
+// example: refusal_of(status_module("        Running(1 | 2) => 1\n        _ => 2\n")) == ""
+fn every(reading: Reading, pattern: ast.Pattern) -> List<Pat> {
+    match pattern.kind {
+        ast.NamePattern(path) => named_pattern(reading, path)
+        ast.TuplePattern { path, elements } => constructed(reading, ast.path_text(path), elements)
+        ast.RecordPattern { path, fields } => constructed(reading, ast.path_text(path), [])
+        ast.IntegerPattern(_) => [Literal]
+        ast.TextPattern(_) => [Literal]
+        ast.TruthPattern(held) => [Constructed { name: shown(held), arguments: [] }]
+        ast.Wildcard => [Wildcard]
+        ast.OrPattern(alternatives) => every_alternative(reading, alternatives)
+    }
+}
+
+/// What a bare name matches: every value where it binds, and its constructor where it names one.
+// example: refusal_of(status_module("        other => 1\n")) == ""
+fn named_pattern(reading: Reading, path: ast.Path) -> List<Pat> {
+    if is_binding(reading, path) {
+        return [Wildcard]
+    }
+    constructed(reading, ast.path_text(path), [])
+}
+
+/// What each alternative matches, in the order they are written.
+// example: list.length(every_alternative(no_reading(), [])) == 0
+fn every_alternative(reading: Reading, alternatives: List<ast.Pattern>) -> List<Pat> {
+    var matched = []
+    for alternative in alternatives {
+        for one in every(reading, alternative) {
+            matched = list.push(matched, one)
+        }
+    }
+    matched
+}
+
+/// A constructor pattern carries what its declaration says, whatever the pattern wrote.
+///
+/// A record pattern names only the fields it binds, and each one binds, so the fields a
+/// declaration lists and the patterns written under it need not line up.
+// example: list.length(constructed(no_reading(), "None", [])) == 1
+fn constructed(reading: Reading, name: String, written: List<ast.Pattern>) -> List<Pat> {
+    count := carried_by(reading.space, name)
+    var choices = [[]]
+    var position = 0
+    for position < count {
+        choices = each_followed_by(choices, every_at(reading, list.at(written, position)))
+        position += 1
+    }
+    var built = []
+    for arguments in choices {
+        built = list.push(built, Constructed { name: name, arguments: arguments })
+    }
+    built
+}
+
+/// What the pattern written at a position matches, and every value where none is written there.
+// example: every_at(no_reading(), None) == [Wildcard]
+fn every_at(reading: Reading, written: Option<ast.Pattern>) -> List<Pat> {
+    match written {
+        Some(pattern) => every(reading, pattern)
+        None => [Wildcard]
+    }
+}
+
+/// Every way of writing one of `so_far` and then one of `each`, which is what an alternative is.
+// example: list.length(each_followed_by([[], [Wildcard]], [Literal, Wildcard])) == 4
+fn each_followed_by(so_far: List<List<Pat>>, each: List<Pat>) -> List<List<Pat>> {
+    var grown = []
+    for chosen in so_far {
+        for one in each {
+            grown = list.push(grown, list.push(chosen, one))
+        }
+    }
+    grown
+}
+
+/// Whether the name binds rather than naming a constructor, which resolution has decided.
+///
+/// One reached through a module never binds: a binding is a name of this module, and a name
+/// after a dot is a name of another, which `docs/specs/modules.md` states.
+// example: is_binding(no_reading(), ast.Path { module: None, name: ast.Name { text: "held", span: lexer.Span { start: 0, length: 4 } } })
+fn is_binding(reading: Reading, path: ast.Path) -> Bool {
+    match path.module {
+        Some(_) => false
+        None => !is_constructor(map.get(reading.found, resolver.key_of(resolver.ValueNamespace, path.name.span.start)))
+    }
+}
+
+/// Whether a name resolved to a constructor.
+// example: !is_constructor(None)
+fn is_constructor(found: Option<resolver.Resolution>) -> Bool {
+    match found {
+        Some(resolution) => resolution.definition.kind == resolver.Constructor
+        None => false
+    }
+}
+
+/// Every value of `width` columns that no row of `rows` covers.
+///
+/// Each answer is itself a row: the patterns an arm would have to write to cover what is left.
+/// The leading column is opened up under each constructor of its type, and a column of a type
+/// with more values than a declaration writes down is covered only by a name that binds.
+// example: uncovered(no_space(), [], 1) == [[Wildcard]]
+// example: uncovered(no_space(), [[Wildcard]], 1) == []
+// example: uncovered(no_space(), [[Constructed { name: "Some", arguments: [Wildcard] }]], 1) == [[Constructed { name: "None", arguments: [] }]]
+fn uncovered(space: Space, rows: List<List<Pat>>, width: Int) -> List<List<Pat>> {
+    if width == 0 {
+        return nothing_left(rows)
+    }
+    match leading_siblings(space, rows) {
+        Some(siblings) => each_constructor(space, rows, width - 1, siblings)
+        None => anything_uncovered(space, rows, width - 1)
+    }
+}
+
+/// What rows of no columns leave: one empty row where there is none, and nothing otherwise.
+// example: nothing_left([]) == [[]]
+// example: nothing_left([[]]) == []
+fn nothing_left(rows: List<List<Pat>>) -> List<List<Pat>> {
+    if list.length(rows) == 0 {
+        return [[]]
+    }
+    []
+}
+
+/// The constructors of the leading column's type, when a declaration writes them down.
+// example: list.length(or(leading_siblings(no_space(), [[Literal]]), [])) == 0
+fn leading_siblings(space: Space, rows: List<List<Pat>>) -> Option<List<Signature>> {
+    match first_constructor(rows) {
+        Some(name) => siblings_of(space, name)
+        None => None
+    }
+}
+
+/// The constructor the first row that leads with one leads with.
+// example: or(first_constructor([[Wildcard], [Constructed { name: "None", arguments: [] }]]), "") == "None"
+fn first_constructor(rows: List<List<Pat>>) -> Option<String> {
+    for row in rows {
+        name := leading_name(or(list.at(row, 0), Wildcard))
+        if name != "" {
+            return Some(name)
+        }
+    }
+    None
+}
+
+/// The name of the constructor a pattern writes, and `""` where it writes none.
+// example: leading_name(Literal) == ""
+fn leading_name(leading: Pat) -> String {
+    match leading {
+        Constructed { name, arguments } => name
+        _ => ""
+    }
+}
+
+/// What is left when the leading column has more values than a declaration writes down.
+///
+/// Only a name that binds covers such a column, so only the rows that write one say anything
+/// about the columns after it, and what is left of the leading column is named `_`.
+// example: anything_uncovered(no_space(), [[Literal]], 0) == [[Wildcard]]
+fn anything_uncovered(space: Space, rows: List<List<Pat>>, narrower: Int) -> List<List<Pat>> {
+    var binding = []
+    for row in rows {
+        if or(list.at(row, 0), Literal) == Wildcard {
+            binding = list.push(binding, rest_of(row, 1))
+        }
+    }
+    var left = []
+    for row in uncovered(space, binding, narrower) {
+        left = list.push(left, led_with(leading: [Wildcard], rest: row))
+    }
+    left
+}
+
+/// What is left under each constructor of the leading column.
+///
+/// A constructor no row writes has nothing narrowing it, so what is left under it is everything
+/// it builds; one that some row writes is narrowed by what those rows write under it.
+// example: each_constructor(no_space(), [], 0, [Signature { name: "None", carries: 0 }]) == [[Constructed { name: "None", arguments: [] }]]
+fn each_constructor(space: Space, rows: List<List<Pat>>, narrower: Int, siblings: List<Signature>) -> List<List<Pat>> {
+    var left = []
+    for one in siblings {
+        for row in uncovered(space, specialised(rows, one), one.carries + narrower) {
+            leading := Constructed { name: one.name, arguments: taken(row, one.carries) }
+            left = list.push(left, led_with(leading: [leading], rest: rest_of(row, one.carries)))
+        }
+    }
+    left
+}
+
+/// The rows that say something about a value `one` built, with what it carries opened up.
+// example: specialised([[Wildcard], [Literal]], Signature { name: "Some", carries: 1 }) == [[Wildcard]]
+fn specialised(rows: List<List<Pat>>, one: Signature) -> List<List<Pat>> {
+    var under = []
+    for row in rows {
+        leading := or(list.at(row, 0), Literal)
+        if is_about(leading, one) {
+            under = list.push(under, led_with(leading: opened(leading, one), rest: rest_of(row, 1)))
+        }
+    }
+    under
+}
+
+/// Whether a leading pattern says something about the values `one` builds.
+// example: is_about(Wildcard, Signature { name: "None", carries: 0 })
+// example: !is_about(Constructed { name: "Some", arguments: [Wildcard] }, Signature { name: "None", carries: 0 })
+fn is_about(leading: Pat, one: Signature) -> Bool {
+    match leading {
+        Wildcard => true
+        Constructed { name, arguments } => name == one.name
+        Literal => false
+    }
+}
+
+/// What a leading pattern writes under `one`, which is every value where it binds.
+// example: opened(Wildcard, Signature { name: "Ok", carries: 1 }) == [Wildcard]
+fn opened(leading: Pat, one: Signature) -> List<Pat> {
+    match leading {
+        Constructed { name, arguments } => arguments
+        _ => wildcards(one.carries)
+    }
+}
+
+/// `count` wildcards.
+// example: wildcards(2) == [Wildcard, Wildcard]
+fn wildcards(count: Int) -> List<Pat> {
+    var written = []
+    for list.length(written) < count {
+        written = list.push(written, Wildcard)
+    }
+    written
+}
+
+/// `leading` in front of `rest`, which is how a row grows back as the answer is put together.
+// example: led_with(leading: [Literal], rest: [Wildcard]) == [Literal, Wildcard]
+fn led_with(leading: List<Pat>, rest: List<Pat>) -> List<Pat> {
+    var row = leading
+    for one in rest {
+        row = list.push(row, one)
+    }
+    row
+}
+
+/// The first `count` patterns of `row`.
+// example: taken([Literal, Wildcard], 1) == [Literal]
+fn taken(row: List<Pat>, count: Int) -> List<Pat> {
+    var kept = []
+    for one in row {
+        if list.length(kept) < count {
+            kept = list.push(kept, one)
+        }
+    }
+    kept
+}
+
+/// The patterns of `row` after the first `count`.
+// example: rest_of([Literal, Wildcard], 1) == [Wildcard]
+fn rest_of(row: List<Pat>, count: Int) -> List<Pat> {
+    var kept = []
+    var index = 0
+    for one in row {
+        if index >= count {
+            kept = list.push(kept, one)
+        }
+        index += 1
+    }
+    kept
+}
+
+/// Every constructor `program` can write, grouped by the type that declares it.
+///
+/// `Bool`, `Option`, and `Result` come first, then the types of `program`, then those it reaches.
+/// A constructor is found by its name alone, because resolution makes that name unambiguous.
+// example: carried_by(space_of(ast.Program { items: [] }, []), "Err") == 1
+fn space_of(program: ast.Program, reached: List<surface.OfferedType>) -> Space {
+    var space = declare(Space { declared: [], of_constructor: map.empty() }, [Signature { name: "false", carries: 0 }, Signature { name: "true", carries: 0 }])
+    space = declare(space, [Signature { name: "Some", carries: 1 }, Signature { name: "None", carries: 0 }])
+    space = declare(space, [Signature { name: "Ok", carries: 1 }, Signature { name: "Err", carries: 1 }])
+    for item in program.items {
+        space = declare(space, constructors_of(item))
+    }
+    for offered in reached {
+        space = declare(space, offers(offered))
+    }
+    space
+}
+
+/// The same, with `signatures` as the constructors of one more type.
+// example: or(declared_at(declare(Space { declared: [], of_constructor: map.empty() }, [Signature { name: "A", carries: 0 }]), "A"), -1) == 0
+fn declare(space: Space, signatures: List<Signature>) -> Space {
+    at := list.length(space.declared)
+    var of_constructor = space.of_constructor
+    for one in signatures {
+        of_constructor = map.insert(of_constructor, one.name, at)
+    }
+    Space { declared: list.push(space.declared, signatures), of_constructor: of_constructor }
+}
+
+/// What an item declares: one constructor for a record, and one for each variant.
+// example: list.length(constructors_of(ast.Import(ast.ImportDeclaration { module: ast.Name { text: "io", span: lexer.Span { start: 7, length: 2 } }, span: lexer.Span { start: 0, length: 9 } }))) == 0
+fn constructors_of(item: ast.Item) -> List<Signature> {
+    match item {
+        ast.Type(declaration) => defined(declaration.name.text, declaration.definition)
+        _ => []
+    }
+}
+
+/// The constructors of a type called `name`, which a Java class has none of.
+// example: defined("Box", ast.RecordType([])) == [Signature { name: "Box", carries: 0 }]
+fn defined(name: String, definition: ast.TypeDefinition) -> List<Signature> {
+    match definition {
+        ast.RecordType(fields) => [Signature { name: name, carries: list.length(fields) }]
+        ast.Variants(variants) => variant_signatures(variants)
+        ast.Foreign { class, called } => []
+    }
+}
+
+/// One constructor for each variant, in the order they are declared.
+// example: list.length(variant_signatures([])) == 0
+fn variant_signatures(variants: List<ast.Variant>) -> List<Signature> {
+    var signatures = []
+    for variant in variants {
+        signatures = list.push(signatures, Signature { name: variant.name.text, carries: carried(variant.payload) })
+    }
+    signatures
+}
+
+/// How many values a variant carries.
+// example: carried(ast.NoPayload) == 0
+fn carried(payload: ast.VariantPayload) -> Int {
+    match payload {
+        ast.NoPayload => 0
+        ast.TuplePayload(types_written) => list.length(types_written)
+        ast.RecordPayload(fields) => list.length(fields)
+    }
+}
+
+/// What a type of another module offers, which a `match` covers exactly as it covers its own.
+// example: offers(surface.record_of_user()) == [Signature { name: "User", carries: 1 }]
+fn offers(offered: surface.OfferedType) -> List<Signature> {
+    var signatures = []
+    for built in surface.constructors(offered) {
+        signatures = list.push(signatures, Signature { name: built.name, carries: list.length(built.carries) })
+    }
+    signatures
+}
+
+/// How many values `constructor` carries, which is none when nothing declares it.
+// example: carried_by(space_of(ast.Program { items: [] }, []), "Missing") == 0
+fn carried_by(space: Space, constructor: String) -> Int {
+    for one in or(siblings_of(space, constructor), []) {
+        if one.name == constructor {
+            return one.carries
+        }
+    }
+    0
+}
+
+/// Where `constructor` sits among the constructors its type declares.
+// example: or(declared_at(space_of(ast.Program { items: [] }, []), "None"), -1) == 1
+fn declared_at(space: Space, constructor: String) -> Option<Int> {
+    match siblings_of(space, constructor) {
+        Some(siblings) => list.index_of(names_of(siblings), constructor)
+        None => None
+    }
+}
+
+/// The name of each of `signatures`.
+// example: names_of([Signature { name: "A", carries: 0 }]) == ["A"]
+fn names_of(signatures: List<Signature>) -> List<String> {
+    var names = []
+    for one in signatures {
+        names = list.push(names, one.name)
+    }
+    names
+}
+
+/// The constructors of the type `constructor` belongs to, when a type declares them.
+///
+/// A literal has none: `Int` and `String` have more values than a declaration writes down.
+// example: list.length(or(siblings_of(space_of(ast.Program { items: [] }, []), "1"), [])) == 0
+fn siblings_of(space: Space, constructor: String) -> Option<List<Signature>> {
+    match map.get(space.of_constructor, constructor) {
+        Some(at) => list.at(space.declared, at)
+        None => None
+    }
+}
+
+/// A pattern as an arm would write it, which is how an uncovered value is named.
+// example: pat_text(Constructed { name: "Failed", arguments: [Wildcard, Literal] }) == "Failed(_, _)"
+// example: pat_text(Constructed { name: "None", arguments: [] }) == "None"
+fn pat_text(pat: Pat) -> String {
+    match pat {
+        Constructed { name, arguments } => constructed_text(name, arguments)
+        _ => "_"
+    }
+}
+
+/// A constructor and what it carries, which a constructor that carries nothing writes no brackets for.
+// example: constructed_text("Some", [Wildcard]) == "Some(_)"
+fn constructed_text(name: String, arguments: List<Pat>) -> String {
+    if list.length(arguments) == 0 {
+        return name
+    }
+    var written = []
+    for argument in arguments {
+        written = list.push(written, pat_text(argument))
+    }
+    name + "(" + strings.join(written, ", ") + ")"
+}
+
+/// `refused`, as the code, the span, and the message, then the help.
+// example: refusal_printed(NotCovered { missing: ["None"], span: lexer.Span { start: 1, length: 2 } }) == "L0500 1..3 this `match` does not cover `None`\nhelp: every value has an arm, or a name that binds whatever the arms before it did not\n"
+fn refusal_printed(refused: MatchError) -> String {
+    code_of(refused) + " " + shown(span_of(refused)) + " " + message_of(refused) + "\nhelp: " + help_of(refused) + "\n"
+}
+
+/// The code a refusal is refused with, which `docs/specs/exhaustiveness.md` lists.
+// example: code_of(NotCovered { missing: [], span: lexer.Span { start: 0, length: 1 } }) == "L0500"
+fn code_of(refused: MatchError) -> String {
+    match refused {
+        NotCovered { missing, span } => "L0500"
+        OutOfOrder { arm, before, span } => "L0501"
+    }
+}
+
+/// The source a refusal points at: the whole `match`, or the arm that is out of place.
+// example: shown(span_of(NotCovered { missing: [], span: lexer.Span { start: 3, length: 1 } })) == "3..4"
+fn span_of(refused: MatchError) -> lexer.Span {
+    match refused {
+        NotCovered { missing, span } => span
+        OutOfOrder { arm, before, span } => span
+    }
+}
+
+/// The `error:` line, without its prefix.
+// example: message_of(NotCovered { missing: ["A", "B(_)"], span: lexer.Span { start: 0, length: 1 } }) == "this `match` does not cover `A`, `B(_)`"
+fn message_of(refused: MatchError) -> String {
+    match refused {
+        NotCovered { missing, span } => "this `match` does not cover " + quoted_each(missing)
+        OutOfOrder { arm, before, span } => "this `match` writes `" + arm + "` after `" + before + "`"
+    }
+}
+
+/// Each of `named` in backticks, with a comma between two.
+// example: quoted_each(["A", "B"]) == "`A`, `B`"
+fn quoted_each(named: List<String>) -> String {
+    var quoted = []
+    for one in named {
+        quoted = list.push(quoted, "`" + one + "`")
+    }
+    strings.join(quoted, ", ")
+}
+
+/// The `help:` line, which says what to write instead.
+// example: help_of(OutOfOrder { arm: "A", before: "B", span: lexer.Span { start: 0, length: 1 } }) == "arms come in the order the type declares its variants: `A` before `B`"
+fn help_of(refused: MatchError) -> String {
+    match refused {
+        NotCovered { missing, span } => "every value has an arm, or a name that binds whatever the arms before it did not"
+        OutOfOrder { arm, before, span } => "arms come in the order the type declares its variants: `" + arm + "` before `" + before + "`"
+    }
+}
+
+/// What patterns are read against: what each name means, and every constructor there is.
+type Reading = {
+    found: map.Map<Int, resolver.Resolution>
+    space: Space
+}
+
+/// Every constructor a module can write, grouped by the type that declares it.
+type Space = {
+    declared: List<List<Signature>>
+    of_constructor: map.Map<String, Int>
+}
+
+derive Eq for Signature
+
+/// One constructor, and how many values it carries.
+///
+/// What it carries is counted rather than typed, because inference has settled that already.
+type Signature = {
+    name: String
+    carries: Int
+}
+
+derive Eq for Pat
+
+/// What one pattern matches, with everything inference has already settled left out.
+type Pat =
+    | Wildcard
+    | Constructed {
+        name: String
+        arguments: List<Pat>
+    }
+    | Literal
+
+/// The constructors of a pattern placed so far, and whether every one it writes was placed.
+type Placing = {
+    steps: List<Step>
+    whole: Bool
+}
+
+derive Eq for Step
+
+/// One constructor an arm writes: where its type declares it, and what it is called.
+type Step = {
+    at: Int
+    name: String
+}
+
+/// A `match` the check refuses: what it leaves out, or the arm it writes out of place.
+type MatchError =
+    | NotCovered {
+        missing: List<String>
+        span: lexer.Span
+    }
+    | OutOfOrder {
+        arm: String
+        before: String
+        span: lexer.Span
+    }
