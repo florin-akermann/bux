@@ -6,9 +6,7 @@
 
 use std::fs;
 
-use crate::common::{
-    Case, Home, LAUNCHED, Stage, fixture_cases, jdk, shard_by_shard, side_by_side, the_same_answers,
-};
+use crate::common::{Case, Home, LAUNCHED, Stage, fixture_cases, jdk, the_same_from_the_launcher};
 
 #[test]
 fn the_bux_command_line_builds_under_the_rust_compiler() {
@@ -21,9 +19,13 @@ fn the_bux_command_line_builds_under_the_rust_compiler() {
 /// as it runs under `lumen`.
 #[test]
 fn every_program_under_tests_spec_runs_under_the_launcher_as_under_lumen() {
-    let cases = fixture_cases(&["run"], &["tests/spec"]);
+    let Some(_) = jdk() else {
+        eprintln!("skipped: JAVA_HOME names no JDK, and running a program needs one");
+        return;
+    };
+    let stage = Stage::built(LAUNCHED);
 
-    the_same_from_the_launcher(&cases, "running a program needs one");
+    the_same_from_the_launcher(&stage, &fixture_cases(&["run"], &["tests/spec"]));
 }
 
 /// `docs/specs/run.md`: the launcher refuses to start a compiler that is not built.
@@ -70,26 +72,6 @@ fn the_launcher_refuses_a_java_home_that_holds_no_jdk() {
         said.errors,
         "error: /no/such/jdk/bin/java: JAVA_HOME names no JDK\n"
     );
-}
-
-/// The same answers from `lumen` and from the launcher on every case.
-fn the_same_from_the_launcher(cases: &[Case], needs: &str) {
-    let Some(_) = jdk() else {
-        eprintln!("skipped: JAVA_HOME names no JDK, and {needs}");
-        return;
-    };
-    let stage = Stage::built(LAUNCHED);
-
-    let (rust, bux) = side_by_side(
-        || {
-            shard_by_shard(cases, |case, shard| {
-                stage.said_by_rust(case, shard, Home::Inherited)
-            })
-        },
-        || shard_by_shard(cases, |case, shard| stage.said_by_the_launcher(case, shard)),
-    );
-
-    the_same_answers(cases, &rust, &bux);
 }
 
 /// A stage whose launcher finds a class to start, which is all it looks for before the JDK.

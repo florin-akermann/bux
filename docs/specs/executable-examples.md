@@ -152,3 +152,5 @@ Every example is also run under `bin/bux`, the command line written in Bux.
 The harness `crates/cli/tests/integration/bux_command.rs` runs `bin/bux run` on each example.
 Each run must write what `lumen run` writes on each stream, and end with the same status.
 So an example that holds under `lumen` also holds under the launcher.
+`crates/cli/tests/integration/bux_bootstrap.rs` does the same under the launcher of stage 2.
+Stage 2 is the compiler that the Bux compiler writes for itself, which `docs/specs/run.md` states.

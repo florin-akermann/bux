@@ -200,6 +200,8 @@ A harness in `crates/cli` holds each phase to the answer of the Rust phase it re
 The bootstrap has three stages.
 Stage 0 is the Rust `bux`, which compiles the Bux-written compiler to stage 1.
 Stage 1 compiles the same source to stage 2.
+A build writes beside the source, so each stage is built from a copy of `compiler/` of its own.
+`crates/cli/tests/integration/bux_bootstrap.rs` holds stage 2 equal to stage 1 byte for byte.
 The Rust crates are deleted when stage 2 equals stage 1 byte for byte and both pass `tests/spec`.
 Until then, the Rust compiler is the one that ships, and the crate structure below is its shape.
 

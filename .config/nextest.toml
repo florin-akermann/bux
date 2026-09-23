@@ -28,12 +28,14 @@ slow-timeout = { period = "60s", terminate-after = 1 }
 # One at a time, that drawn test still failed its health check once in two runs, measured.
 # So the group holds that drawn test too, and it never runs beside the harness.
 # Then the whole suite passes, and each test of the harness ends in under 20 s.
+# The bootstrap harness runs the launcher the same way on each program, so the group holds it too.
+# It also builds two stages first, so its run of `tests/spec` ends in about 25 s, measured.
 [test-groups]
 bux-command = { max-threads = 1 }
 
 [[profile.default.overrides]]
 filter = """
-    test(/^bux_(command|launcher)::/)
+    test(/^bux_(bootstrap|command|launcher)::/)
     or test(=bux_classes::the_bux_writer_writes_the_rust_bytes_on_drawn_programs)
 """
 test-group = "bux-command"

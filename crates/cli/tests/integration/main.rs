@@ -3,6 +3,7 @@
 //! Every test file is a module declared here; shared helpers go in a `common` module.
 
 mod building;
+mod bux_bootstrap;
 mod bux_checks;
 mod bux_classes;
 mod bux_command;

@@ -137,6 +137,31 @@ The harness compares every stream and the status of each, and the files that eac
 It holds the launcher to `lumen` on every program under `tests/spec`.
 With no JDK, the harness skips each test that starts a JVM and says why.
 
+## The bootstrap
+
+The Bux compiler builds itself, in two stages that `docs/implementation.md` section 6 names.
+Stage 1 is the compiler that `lumen build compiler/main.lm` writes.
+Stage 2 is the compiler that stage 1 writes when `bin/bux build compiler/main.lm` starts it.
+Both stages are built from the same `compiler/` source.
+
+`bux build` writes the class files beside the source, as `lumen build` does.
+So each stage is built from a copy of its own of `compiler/`, made outside the repository.
+The two stages then never write over each other, and the working tree stays clean.
+Each copy also holds `library/`, the help text, the explanations, and `bin/bux`.
+So each stage has a launcher of its own, and each launcher starts its own stage.
+
+Stage 2 is stage 1 byte for byte.
+Stage 2 has the same class files as stage 1, at the same paths, with the same bytes.
+A difference is a defect in the compiler under `compiler/`, and the fix goes there.
+Both stages pass `tests/spec`: each program there runs under each launcher as under `lumen`.
+
+The harness `crates/cli/tests/integration/bux_bootstrap.rs` builds the two stages.
+It compares the list of class-file paths and lengths first, and then the bytes of each file.
+A difference in the bytes names the file and the first offset that differs.
+It holds stage 2 to `lumen` on every program under `tests/spec`.
+`bux_launcher.rs` does the same for stage 1.
+With no JDK, the harness skips each test and says why, because stage 1 runs on a JVM.
+
 ## Properties
 
 These hold, and each is checked:
@@ -146,3 +171,4 @@ These hold, and each is checked:
 2. Running a module leaves exactly the class files building it leaves.
 3. A run ends with the low eight bits of the `Int` `main` gave back.
 4. Every word after the file reaches the program unchanged, `--help` among them.
+5. Stage 2 of the bootstrap is stage 1 byte for byte, and both stages pass `tests/spec`.

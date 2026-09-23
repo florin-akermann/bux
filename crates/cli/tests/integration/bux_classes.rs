@@ -20,7 +20,9 @@ use lumen_modules::load;
 use lumen_resolver::library::PRELUDE;
 use lumen_types::{Imported, TypedProgram};
 
-use crate::common::{Example, Sibling, Within, as_argument, jdk, lumen, repository};
+use crate::common::{
+    Example, Sibling, Within, as_argument, first_difference, jdk, lumen, repository,
+};
 
 /// The modules of the Bux compiler the writer reads, beside the program as siblings.
 const MODULES: [&str; 18] = [
@@ -88,8 +90,7 @@ impl Written {
 
     /// Where the bytes of the Bux run first differ from these, which is `None` where they agree.
     fn first_difference(&self, bux: &Self) -> Option<usize> {
-        let differs = self.bytes.iter().zip(&bux.bytes).position(|(a, b)| a != b);
-        differs.or_else(|| (self.bytes.len() != bux.bytes.len()).then_some(0))
+        first_difference(&self.bytes, &bux.bytes)
     }
 }
 
