@@ -1,7 +1,9 @@
-// The launcher `bin/bux`, held to what it says when it starts the compiler and when it cannot.
+// The launcher `bin/bux`, held to what it says when it starts the compiler and when it cannot, and
+// the limit every started program has.
 //
 // `docs/specs/run.md` states the launcher. Each check starts it through `sh` in a directory of its
 // own, so what it writes lands there, and `env` sets or clears `JAVA_HOME` for that start alone.
+// `docs/implementation.md` section 7 states the limit.
 import command
 
 import files
@@ -15,63 +17,120 @@ import strings
 import walk
 
 /// Every check of the launcher at `root`, one case each: the compiler starts where it can, and the
-/// launcher names what is missing where it cannot.
-// example: every_start_held("no-such-directory").cases == 4
-fn every_start_held(root: String) -> held.Held {
+/// launcher names what is missing where it cannot. Each start has `limit` seconds to end in, and
+/// the last check holds that a program that never ends is stopped at its limit.
+// example: every_start_held(root: "no-such-directory", limit: 1).cases == 5
+fn every_start_held(root: String, limit: Int) -> held.Held {
     launcher := modules.joined(modules.joined(root, "bin"), "bux")
-    var found = start_held(["sh", launcher, "--version"], Expected { status: 0, output: "lumen 0.1.0\n", errors: "" })
-    found = held.added(found, start_held(["env", "-u", "JAVA_HOME", "sh", launcher, "--version"], Expected { status: 2, output: "", errors: "error: JAVA_HOME is not set, and the bux compiler runs on the JDK it names\n" }))
-    found = held.added(found, start_held(["env", "JAVA_HOME=/no/such/jdk", "sh", launcher, "--version"], Expected { status: 2, output: "", errors: "error: /no/such/jdk/bin/java: JAVA_HOME names no JDK\n" }))
-    held.added(found, unbuilt_held(launcher))
+    var found = start_held(["sh", launcher, "--version"], limit, Expected { status: 0, output: "lumen 0.1.0\n", errors: "" })
+    found = held.added(found, start_held(["env", "-u", "JAVA_HOME", "sh", launcher, "--version"], limit, Expected { status: 2, output: "", errors: "error: JAVA_HOME is not set, and the bux compiler runs on the JDK it names\n" }))
+    found = held.added(found, start_held(["env", "JAVA_HOME=/no/such/jdk", "sh", launcher, "--version"], limit, Expected { status: 2, output: "", errors: "error: /no/such/jdk/bin/java: JAVA_HOME names no JDK\n" }))
+    found = held.added(found, unbuilt_held(launcher, limit))
+    held.added(found, stopped_held())
+}
+
+/// A program that never ends, started with a limit of one second, is stopped at that limit.
+// example: forever_text() == "while :; do :; done\n"
+fn stopped_held() -> held.Held {
+    match command.somewhere_of_its_own() {
+        Ok(directory) => stopped_in(directory)
+        Err(said) => held.with_failure(held.nothing_failed(1), "a program that never ends: " + said.errors)
+    }
+}
+
+/// The program that never ends written into `directory` and started there, which is taken away
+/// again once the program is stopped.
+// example: stopped_in("no-such-directory").cases == 1
+fn stopped_in(directory: String) -> held.Held {
+    _ = files.write(modules.joined(directory, "forever.sh"), forever_text())
+    from := command.nanoseconds()
+    ended := walk.ended(["sh", "forever.sh"], directory, 1)
+    seconds := or((command.nanoseconds() - from) / 1000000000, 0)
+    command.removed_whole(directory)
+    stopped_compared(ended, seconds)
+}
+
+/// One case that held where the program was stopped at its limit of one second, and reported so
+/// within two seconds: the limit, and one more to stop the program.
+// example: stopped_compared(Err(walk.PastLimit(1, "")), 1).failures == []
+// example: stopped_compared(Err(walk.PastLimit(1, "")), 3).failures == ["a program that never ends: seconds until it was reported: expected \"2 or fewer\", found \"3\""]
+// example: stopped_compared(Err(walk.NotStarted), 0).failures == ["a program that never ends: expected \"the program did not end within 1 s, and was stopped\", found \"the program could not be started\""]
+fn stopped_compared(ended: Result<walk.Ended, walk.Unended>, seconds: Int) -> held.Held {
+    var found = held.nothing_failed(1)
+    said := ended_said(ended)
+    expected := walk.unended_said(walk.PastLimit(1, ""), "the program")
+    if said != expected {
+        found = held.with_failure(found, held.failure("a program that never ends", expected, said))
+    }
+    if seconds > 2 {
+        found = held.with_failure(found, held.failure("a program that never ends: seconds until it was reported", "2 or fewer", shown(seconds)))
+    }
+    found
+}
+
+/// A program for `sh` that never ends, and writes nothing.
+// example: strings.length(forever_text()) == 20
+fn forever_text() -> String {
+    "while :; do :; done\n"
+}
+
+/// What a check says of how a started program ended: its status, or why it gave none.
+// example: ended_said(Ok(walk.Ended { output: "", errors: "", status: 3 })) == "status 3"
+fn ended_said(ended: Result<walk.Ended, walk.Unended>) -> String {
+    match ended {
+        Ok(done) => "status " + shown(done.status)
+        Err(unended) => walk.unended_said(unended, "the program")
+    }
 }
 
 /// The launcher copied alone into a directory of its own, where no compiler is built beside it.
-// example: unbuilt_held("no-such-directory/bux").cases == 1
-fn unbuilt_held(launcher: String) -> held.Held {
+// example: unbuilt_held("no-such-directory/bux", 1).cases == 1
+fn unbuilt_held(launcher: String, limit: Int) -> held.Held {
     match command.somewhere_of_its_own() {
-        Ok(directory) => unbuilt_in(launcher: launcher, directory: directory)
+        Ok(directory) => unbuilt_in(launcher: launcher, directory: directory, limit: limit)
         Err(said) => held.with_failure(held.nothing_failed(1), launcher + ": " + said.errors)
     }
 }
 
 /// The launcher copied into `directory`, started there, and `directory` taken away again.
-// example: unbuilt_in(launcher: "no-such-directory/bux", directory: "no-such-directory").cases == 1
-fn unbuilt_in(launcher: String, directory: String) -> held.Held {
+// example: unbuilt_in(launcher: "no-such-directory/bux", directory: "no-such-directory", limit: 1).cases == 1
+fn unbuilt_in(launcher: String, directory: String, limit: Int) -> held.Held {
     bin := modules.joined(directory, "bin")
     copy := modules.joined(bin, "bux")
     _ = files.made(bin)
     _ = files.write(copy, ok_or(files.read(launcher), ""))
     expected := Expected { status: 2, output: "", errors: "the compiler is not built; bin/bootstrap builds it\n" }
     line := ["sh", copy, "--version"]
-    found := ended_held(line, walk.ended(line, directory), expected)
+    found := ended_held(line, walk.ended(line, directory, limit), expected)
     command.removed_whole(directory)
     found
 }
 
 /// The launcher started with `line` in a directory of its own, held to `expected`.
-// example: start_held(["no-such-program-at-all"], Expected { status: 0, output: "", errors: "" }).cases == 1
-fn start_held(line: List<String>, expected: Expected) -> held.Held {
+// example: start_held(["no-such-program-at-all"], 1, Expected { status: 0, output: "", errors: "" }).cases == 1
+fn start_held(line: List<String>, limit: Int, expected: Expected) -> held.Held {
     match command.somewhere_of_its_own() {
-        Ok(directory) => started_in(line, directory, expected)
+        Ok(directory) => started_in(line, directory, limit, expected)
         Err(said) => held.with_failure(held.nothing_failed(1), strings.join(line, " ") + ": " + said.errors)
     }
 }
 
 /// The launcher started with `line` in `directory`, which is taken away again once it has ended.
-// example: started_in(["no-such-program-at-all"], "no-such-directory", Expected { status: 0, output: "", errors: "" }).cases == 1
-fn started_in(line: List<String>, directory: String, expected: Expected) -> held.Held {
-    ended := walk.ended(line, directory)
+// example: started_in(["no-such-program-at-all"], "no-such-directory", 1, Expected { status: 0, output: "", errors: "" }).cases == 1
+fn started_in(line: List<String>, directory: String, limit: Int, expected: Expected) -> held.Held {
+    ended := walk.ended(line, directory, limit)
     command.removed_whole(directory)
     ended_held(line, ended, expected)
 }
 
-/// What the start of `line` ended with, held to `expected`, or why it never started.
-// example: ended_held(["x"], None, Expected { status: 0, output: "", errors: "" }).failures == ["x: the launcher could not be started"]
-fn ended_held(line: List<String>, ended: Option<walk.Ended>, expected: Expected) -> held.Held {
+/// What the start of `line` ended with, held to `expected`, or why it gave no status back.
+// example: ended_held(["x"], Err(walk.NotStarted), Expected { status: 0, output: "", errors: "" }).failures == ["x: the launcher could not be started"]
+// example: ended_held(["x"], Err(walk.PastLimit(9, "")), Expected { status: 0, output: "", errors: "" }).failures == ["x: the launcher did not end within 9 s, and was stopped"]
+fn ended_held(line: List<String>, ended: Result<walk.Ended, walk.Unended>, expected: Expected) -> held.Held {
     name := strings.join(line, " ")
     match ended {
-        Some(done) => compared(name, done, expected)
-        None => held.with_failure(held.nothing_failed(1), name + ": the launcher could not be started")
+        Ok(done) => compared(name, done, expected)
+        Err(unended) => held.with_failure(held.nothing_failed(1), name + ": " + walk.unended_said(unended, "the launcher"))
     }
 }
 

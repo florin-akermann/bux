@@ -2,8 +2,9 @@
 // drawn property, and the command line, held in one JVM.
 //
 // `docs/implementation.md` section 7 states the runner, and `bin/runner` starts it from the root
-// of the repository. It writes a line for each check it skipped and for each failure, then a line
-// that counts what it held, and it ends with status 0 only where nothing failed. With the word
+// of the repository. It writes a line as each part ends, then a line for each check it skipped and
+// for each failure, then a line that counts what it held. It ends with status 0 only where nothing
+// failed. With the word
 // `golden`, it writes the golden files under `tests/commands` again and holds nothing.
 import boundaries
 
@@ -74,24 +75,61 @@ import written
 fn main(arguments: List<String>) -> Int {
     library := ir.library_read(or(modules.carried("prelude"), ""))
     if or(list.at(arguments, 0), "") == "golden" {
-        commanded.every_golden_written(library)
+        commanded.every_golden_written(library, start_limit())
         return 0
     }
-    examples := exemplified.every_example_held(library, "tests/spec")
-    beside := siblings.every_sibling_held(library, "tests/spec")
-    lines := documented.every_line_held(documented.modules_of("tests/spec", ["library", "compiler", "tests"]), library)
-    properties := every_property_held(library)
-    root := ok_or(modules.canonical_path(modules.file_at(".")), ".")
-    commands := held.added(commanded.every_line_held(library), launched.every_start_held(root))
-    all := held.added(held.added(held.added(examples, beside), held.added(lines, every_of(properties))), commands)
-    for skipped in all.skipped {
+    counted := every_part_held(library)
+    for skipped in counted.all.skipped {
         io.println("skipped: " + skipped)
     }
-    for failure in all.failures {
+    for failure in counted.all.failures {
         io.println(failure)
     }
-    io.println(summary(Counted { examples: examples, siblings: beside, lines: lines, properties: properties, commands: commands, all: all }))
-    status_of(all)
+    io.println(summary(counted))
+    status_of(counted.all)
+}
+
+/// Every part of the runner, each held in turn, with a line written as each part ends.
+// example: progress_line(part: "siblings", cases: 58, nanoseconds: 1600000000) == "siblings: 58 held in 2 s"
+fn every_part_held(library: ir.Library) -> Counted {
+    limit := start_limit()
+    var mark = command.nanoseconds()
+    examples := exemplified.every_example_held(library, "tests/spec", limit)
+    mark = told(part: "examples", cases: examples.cases, mark: mark)
+    beside := siblings.every_sibling_held(library, "tests/spec")
+    mark = told(part: "siblings", cases: beside.cases, mark: mark)
+    lines := documented.every_line_held(documented.modules_of("tests/spec", ["library", "compiler", "tests"]), library, command.no_memo(), limit)
+    mark = told(part: "example lines", cases: lines.cases, mark: mark)
+    properties := every_property_held(library)
+    mark = told(part: "properties", cases: list.length(properties), mark: mark)
+    root := ok_or(modules.canonical_path(modules.file_at(".")), ".")
+    commands := held.added(commanded.every_line_held(library, limit), launched.every_start_held(root, limit))
+    _ = told(part: "command lines", cases: commands.cases, mark: mark)
+    all := held.added(held.added(held.added(examples, beside), held.added(lines, every_of(properties))), commands)
+    Counted { examples: examples, siblings: beside, lines: lines, properties: properties, commands: commands, all: all }
+}
+
+/// The seconds every program the runner starts has to end in, after which it is stopped.
+///
+/// `docs/implementation.md` section 7 states why it is this number.
+// example: start_limit() == 60
+fn start_limit() -> Int {
+    60
+}
+
+/// Writes the line of a part that began at `mark` and has ended now, and gives back now.
+// example: progress_line(part: "a", cases: 0, nanoseconds: 0) == "a: 0 held in 0 s"
+fn told(part: String, cases: Int, mark: Int) -> Int {
+    now := command.nanoseconds()
+    io.println(progress_line(part: part, cases: cases, nanoseconds: now - mark))
+    now
+}
+
+/// The line written as a part ends: its name, how many cases it held, and its whole seconds.
+// example: progress_line(part: "examples", cases: 332, nanoseconds: 41400000000) == "examples: 332 held in 41 s"
+fn progress_line(part: String, cases: Int, nanoseconds: Int) -> String {
+    seconds := or((nanoseconds + 500000000) / 1000000000, 0)
+    part + ": " + shown(cases) + " held in " + shown(seconds) + " s"
 }
 
 /// Every drawn property, each tried on the same number of drawn cases, in a fixed order.

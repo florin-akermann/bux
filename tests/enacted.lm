@@ -24,11 +24,11 @@ import walk
 
 /// Every check of this module, each done in a scene of its own.
 // example: list.length(facts_held("a", [Fact { what: "b", expected: "c", found: "c" }]).failures) == 0
-fn every_scene_held(library: ir.Library) -> held.Held {
+fn every_scene_held(library: ir.Library, limit: Int) -> held.Held {
     var found = every_build_held(library)
     found = held.added(found, every_check_held(library))
     found = held.added(found, every_format_held(library))
-    found = held.added(found, every_package_held(library))
+    found = held.added(found, every_package_held(library, limit))
     found = held.added(found, every_import_held(library))
     found = held.added(found, every_refused_run_held(library))
     held.added(found, every_header_held())
@@ -258,12 +258,12 @@ fn form_before_names(library: ir.Library) -> held.Held {
 
 /// The checks of `check` and `build` handed a package, which is a directory with a manifest.
 // example: strings.length(declaring_text()) > 0
-fn every_package_held(library: ir.Library) -> held.Held {
+fn every_package_held(library: ir.Library, limit: Int) -> held.Held {
     var found = package_checked(library)
     found = held.added(found, package_refused(library))
     found = held.added(found, package_built(library))
     found = held.added(found, refused_package_built(library))
-    held.added(found, unlisted_package(library))
+    held.added(found, unlisted_package(library, limit))
 }
 
 /// `check` takes a package and accepts every module it holds.
@@ -312,13 +312,13 @@ fn refused_package_built(library: ir.Library) -> held.Held {
 /// A package whose directory cannot be listed is refused, and never passes as a package that holds
 /// no module. The mode `311` lets the manifest be found but the directory not be listed.
 // example: unstaged(text: "/s/a.lm", stage: "/s") == "a.lm"
-fn unlisted_package(library: ir.Library) -> held.Held {
+fn unlisted_package(library: ir.Library, limit: Int) -> held.Held {
     scene := scene_of([Written { at: "unlisted/bux.package", text: "" }, Written { at: "unlisted/a.lm", text: "fn main(arguments: List<String>) -> Int {\n    0\n}\n" }])
     package := modules.joined(scene, "unlisted")
-    _ = walk.ended(["chmod", "311", package], scene)
+    _ = walk.ended(["chmod", "311", package], scene, limit)
     checked := said_to(["check", package], library)
     built := said_to(["build", package], library)
-    _ = walk.ended(["chmod", "755", package], scene)
+    _ = walk.ended(["chmod", "755", package], scene, limit)
     refusal := "error: unlisted: Permission denied (os error 13)\n"
     facts := [status_fact(checked, 2), Fact { what: "check: errors", expected: refusal, found: unstaged(text: checked.errors, stage: scene) }, status_fact(built, 2), Fact { what: "build: errors", expected: refusal, found: unstaged(text: built.errors, stage: scene) }]
     found := facts_held("a package that cannot be listed is refused", facts)
