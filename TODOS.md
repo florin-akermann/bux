@@ -65,15 +65,6 @@ The allow list leaves out reflection, class loaders, method handles, and deseria
 [084][c] - The Bux phases read the entry names of each stated archive and refuse other classes.
 [084][d] - A spec example shows an `extern` on `java.lang.Class.forName` that is refused.
 
-## 🔴 Item 088: The class-file writer's copied defects are fixed in Bux
-Item 073 copied seven defects of the Rust writer so that the bytes match; the spec names six.
-[088][a] - A class name two modules write is refused, and no hierarchy entry is written twice.
-[088][b] - A frame merge with locals or a stack of two lengths is a defect the writer reports.
-[088][c] - A call and a constructor pop two stack slots for a `long`.
-[088][d] - A branch to a label that never lands, or past the i16 range, is refused, not patched.
-[088][e] - A Utf8 pool entry over 65535 bytes is refused, not capped.
-[088][f] - The operand swap in the lowering adapts a unit operand, and the spec says so.
-
 ## 🔴 Item 089: A `test` block states a test, and `bux test` runs every test and example in a package
 **Depends on:** Item 081 — `bux test` runs `.bx` files.
 Today `lumen test` takes one file and runs only the `// example:` lines of that module.
