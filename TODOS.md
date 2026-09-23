@@ -6,9 +6,9 @@
 
 ## Open
 
-## 🔴 Item 068: The formatter is written in Bux
+## 🟡 Item 068: The formatter is written in Bux
 **Depends on:** Item 067 — the printer reads the source and the tree.
-[068][a] - `compiler/format.bx` writes canonical form as `docs/specs/formatting.md` states.
+[068][a] - `compiler/format.lm` writes canonical form as `docs/specs/formatting.md` states.
 [068][b] - The harness holds it to `format(source) == source` on every `.lm` file in the repository.
 
 ## 🔴 Item 069: Modules, packages, and the library source are read in Bux
