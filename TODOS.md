@@ -6,7 +6,7 @@
 
 ## Open
 
-## 🔴 Item 078: A positional call to a function declared above its caller compiles
+## 🟡 Item 078: A positional call to a function declared above its caller compiles
 **Depends on:** nothing — the defect is in the Rust type checker as it is.
 A positional call in mutual recursion panics at `crates/types/src/infer/arguments.rs` (`takes`).
 The `unreachable!` says a function has its type before anything below it calls it, which is false.
