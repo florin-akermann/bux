@@ -6,14 +6,8 @@
 
 ## Open
 
-## 🟡 Item 074: The `bux` command line is written in Bux
-**Depends on:** Item 060, Item 062, Item 068, Item 072, Item 073 — every command is a phase.
-[074][a] - `compiler/main.bx` parses the arguments and runs every command `bux --help` lists.
-[074][b] - A `bux` launcher script starts the JVM with `--enable-preview` on the compiled compiler.
-[074][c] - Every executable example under `tests/spec` passes under the launcher.
-
 ## 🔴 Item 075: The compiler compiles itself
-**Depends on:** Item 074 — the fixpoint needs the whole compiler.
+**Depends on:** nothing — Item 074 landed, and the fixpoint has the whole compiler.
 [075][a] - Stage 1, built by the Rust `bux`, builds stage 2 from the same source.
 [075][b] - A harness holds stage 2 equal to stage 1 byte for byte.
 [075][c] - The Rust crates are deleted, and `docs/implementation.md` section 6 says what remains.
