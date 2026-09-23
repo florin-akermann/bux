@@ -6,11 +6,6 @@
 
 ## Open
 
-## 🟡 Item 072: Exhaustiveness and holes are checked in Bux
-**Depends on:** nothing — Item 071 landed; both read the typed tree.
-[072][a] - `compiler/exhaustiveness.bx` reports every gap `docs/specs/exhaustiveness.md` names.
-[072][b] - `compiler/holes.bx` lists every `todo` as `docs/specs/holes.md` states.
-
 ## 🔴 Item 073: Lowering and the class-file writer are written in Bux
 **Depends on:** Item 061, Item 071 — the writer puts bytes on disk, and lowering reads types.
 The writer has 172 sites of narrow integers, and a `bytes` module hides `% 256` behind names.
