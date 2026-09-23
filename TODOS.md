@@ -173,7 +173,7 @@ A class file among the sources hides the source tree, and each script must find 
 The new rule: every class lands in `target/`, on the same level as the sources and `tests/`.
 In `target/`, a class keeps the path its module gives it: `compiler/ir.lm` writes `target/ir/`.
 A clean build is one step: delete `target/`, and no other directory holds compiler output.
-[096][a] - `docs/specs/codegen.md`, `docs/specs/run.md`, and `docs/implementation.md` state the rule.
+[096][a] - `docs/specs/codegen.md`, `docs/specs/run.md`, and `docs/implementation.md` state it.
 [096][b] - `compiler/command.lm` writes each class under `target/`, and never beside the source.
 [096][c] - `bux run` and `bux test` put `target/` on the class path, and every example still runs.
 [096][d] - `bin/bootstrap`, `bin/bux`, and `bin/runner` read and delete classes only in `target/`.
