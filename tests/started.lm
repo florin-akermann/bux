@@ -36,7 +36,8 @@ fn every_run_held(library: ir.Library, limit: Int) -> held.Held {
     found = held.added(found, every_test_held(library))
     found = held.added(found, example_program_run(library, limit))
     found = held.added(found, example_program_tested(library))
-    held.added(found, every_missing_jdk_held(limit))
+    found = held.added(found, every_missing_jdk_held(limit))
+    held.added(found, every_injection_removed(limit))
 }
 
 /// Every class `build` writes is one a JVM loads and verifies.
@@ -230,6 +231,60 @@ fn test_without_a_jdk(limit: Int) -> held.Held {
     command.removed_whole(scene)
     facts := [enacted.status_fact(said, 2), enacted.within_fact("errors", said.errors, "JAVA_HOME is not set")]
     enacted.facts_held("test says which variable names the JDK where nothing does", facts)
+}
+
+/// The checks that a program starts with no variable that adds options to its JVM.
+// example: picked_up_line() == "Picked up JAVA_TOOL_OPTIONS: -Xmx64m\n"
+fn every_injection_removed(limit: Int) -> held.Held {
+    held.added(run_without_injected_options(limit), test_without_injected_options(limit))
+}
+
+/// `run` starts the program without `JAVA_TOOL_OPTIONS`, which the command line still reads.
+///
+/// The JVM of the command line writes the one line that says it read the variable, and the JVM of
+/// the program writes no second line.
+// example: enacted.first_line_of(options_seen_text()) == "import environment"
+fn run_without_injected_options(limit: Int) -> held.Held {
+    scene := enacted.scene_of([enacted.Written { at: "example.lm", text: options_seen_text() }])
+    said := with_injected_options(["run", modules.joined(scene, "example.lm")], scene, limit)
+    command.removed_whole(scene)
+    facts := [enacted.status_fact(said, 0), enacted.Fact { what: "output", expected: "no options\n", found: said.output }, enacted.Fact { what: "errors", expected: picked_up_line(), found: said.errors }]
+    enacted.facts_held("run starts a program without JAVA_TOOL_OPTIONS", facts)
+}
+
+/// `test` runs the examples of a module without `JAVA_TOOL_OPTIONS`.
+// example: enacted.first_line_of(options_example_text()) == "import environment"
+fn test_without_injected_options(limit: Int) -> held.Held {
+    scene := enacted.scene_of([enacted.Written { at: "example.lm", text: options_example_text() }])
+    said := with_injected_options(["test", modules.joined(scene, "example.lm")], scene, limit)
+    command.removed_whole(scene)
+    facts := [enacted.status_fact(said, 0), enacted.Fact { what: "errors", expected: picked_up_line(), found: said.errors }]
+    enacted.facts_held("test runs the examples without JAVA_TOOL_OPTIONS", facts)
+}
+
+/// What the command line says to `words` in a JVM of its own, started in `directory` with
+/// `JAVA_TOOL_OPTIONS` set.
+// example: list.length(command_line(["a", "b"])) == 7
+fn with_injected_options(words: List<String>, directory: String, limit: Int) -> command.Said {
+    command_line_said(command.all_of(["/usr/bin/env", "JAVA_TOOL_OPTIONS=-Xmx64m"], command_line(words)), directory, limit)
+}
+
+/// The line a JVM writes on standard error when it reads `JAVA_TOOL_OPTIONS=-Xmx64m`.
+// example: strings.length(picked_up_line()) == 37
+fn picked_up_line() -> String {
+    "Picked up JAVA_TOOL_OPTIONS: -Xmx64m\n"
+}
+
+/// A program that says whether it sees `JAVA_TOOL_OPTIONS`.
+// example: strings.length(options_seen_text()) > 0
+fn options_seen_text() -> String {
+    "import environment\n\nimport io\n\nfn main(arguments: List<String>) -> Int {\n    match environment.read(\"JAVA_TOOL_OPTIONS\") {\n        Some(options) => io.println(\"options: \" + options)\n        None => io.println(\"no options\")\n    }\n    0\n}\n"
+}
+
+/// A module whose example holds only where `JAVA_TOOL_OPTIONS` is not set.
+// example: strings.length(options_example_text()) > 0
+fn options_example_text() -> String {
+    "import environment\n\n// example: is_bare()\nfn is_bare() -> Bool {\n    match environment.read(\"JAVA_TOOL_OPTIONS\") {\n        Some(_) => false\n        None => true\n    }\n}\n"
 }
 
 /// What the command line says to `words` in a JVM of its own, started in `directory` with

@@ -50,9 +50,15 @@ status 0
 > A module that declares `main` at that shape is a program; every other module is a library, and
 > running one is refused rather than guessed at. The whole signature is read: the one parameter is
 > `List<String>`, and the result is `Int`. The entry point a JVM starts at is written with the
-> module, so running the module class with `java --enable-preview` directly does exactly what
-> `lumen run` does. The flag is there because every class Lumen writes is a value class, which JDK
-> 28 holds in preview.
+> module. The JVM gets `--enable-preview` because every class Lumen writes is a value class, which
+> JDK 28 holds in preview.
+>
+> A program reaches its library and the `java.base` module of the JDK, and nothing more of the JDK.
+> The JVM gets `--limit-modules java.base`, so no class of `java.naming`, `java.rmi`, or
+> `java.scripting` loads. It also gets `-Djdk.serialFilter=!*`, so it makes no object from
+> serialized bytes. `JAVA_TOOL_OPTIONS`, `JDK_JAVA_OPTIONS`, and `_JAVA_OPTIONS` are removed from
+> the environment of the program, because each can add an option such as `-javaagent` to its JVM.
+> `lumen test` starts the JVM of its examples in the same way.
 >
 > Every word written after the file goes to the program, in that order and unchanged, and nothing
 > else does:

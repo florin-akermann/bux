@@ -124,8 +124,8 @@ fn said_by(answer: Answer) -> Said {
 /// The status of the program `line` starts, with the streams of this process.
 // example: program_ended(["no-such-program-at-all"]).status == 2
 fn program_ended(line: List<String>) -> Said {
-    match launched(inheriting(builder_of(line))) {
-        Ok(ran) => Said { output: "", errors: "", status: ok_or(waited(ran), 2) }
+    match process.started(inheriting(cleared(process.of_command(line)))) {
+        Ok(ran) => Said { output: "", errors: "", status: ok_or(process.ended(ran), 2) }
         Err(why) => unusable(or(list.at(line, 0), "") + ": " + why)
     }
 }
@@ -279,7 +279,7 @@ fn built_started(done: Built, asked: Started) -> Answer {
         return Spoken(unusable(asked.file + ": a module is run through `fn main(arguments: List<String>) -> Int`, which this one does not declare"))
     }
     match java_found() {
-        Ok(java) => Starts(all_of(values: [java, "--enable-preview", "-cp", done.beside, done.module], more: asked.arguments))
+        Ok(java) => Starts(program_line(java: java, beside: done.beside, module: done.module, arguments: asked.arguments))
         Err(said) => Spoken(said)
     }
 }
@@ -527,9 +527,51 @@ fn put_back(refused: Refusal, run: Run, root: Typed) -> Said {
 // example: ran_in(Beside { java: "no-such-java", module: "a", beside: "no-such-directory/a" }, [], Run { source: "", stretches: [], examples: [], module: lexer.Span { start: 0, length: 0 } }, Typed { module: modules.Module { name: "main", path: "main.lm", source: "", program: ast.Program { items: [] } }, inferred: types.checked_of("") }).status == 2
 fn ran_in(beside: Beside, classes: List<jvm.ClassFile>, run: Run, root: Typed) -> Said {
     match classes_written(classes, beside.beside) {
-        Ok(_) => run_ended(process.run(beside.java, ["--enable-preview", "-cp", beside.beside, beside.module]), beside.java, run, root)
+        Ok(_) => run_ended(program_finished(program_line(java: beside.java, beside: beside.beside, module: beside.module, arguments: [])), beside.java, run, root)
         Err(said) => said
     }
+}
+
+/// What the program `line` starts wrote, and the status it ended with, or why it never started.
+///
+/// The program reads the standard input of this process, as a program that `process.run` starts
+/// does, and it starts with the environment that `cleared` leaves.
+// example: ok_or(program_finished(["no-such-program-at-all"]), process.Finished { code: 9, output: "", errors: "" }).code == 9
+fn program_finished(line: List<String>) -> Result<process.Finished, String> {
+    ran := process.started(process.reading_from(cleared(process.of_command(line)), process.inherited()))?
+    output := process.whole(process.output_of(ran))
+    errors := process.whole(process.errors_of(ran))
+    code := process.ended(ran)?
+    Ok(process.Finished { code: code, output: output, errors: errors })
+}
+
+/// The line that starts a JVM on the class `module` in `beside`, which `arguments` then follow.
+///
+/// `docs/specs/run.md` states each flag: the preview that a value class needs, no module outside
+/// `java.base`, and no class that a stream of serialized bytes names.
+// example: list.length(program_line(java: "java", beside: "a", module: "b", arguments: ["c"])) == 9
+// example: or(list.at(program_line(java: "java", beside: "a", module: "b", arguments: []), 4), "") == "-Djdk.serialFilter=!*"
+fn program_line(java: String, beside: String, module: String, arguments: List<String>) -> List<String> {
+    all_of(values: [java, "--enable-preview", "--limit-modules", "java.base", "-Djdk.serialFilter=!*", "-cp", beside, module], more: arguments)
+}
+
+/// The builder, with each variable removed that a JVM reads options from.
+///
+/// Each of the three can add a `-javaagent` to the program, and `docs/specs/run.md` states why.
+/// No other variable of the environment changes.
+// example: or(list.at(injecting(), 0), "") == "JAVA_TOOL_OPTIONS"
+fn cleared(builder: process.ProcessBuilder) -> process.ProcessBuilder {
+    variables := variables_of(builder)
+    for name in injecting() {
+        _ = removed(variables, as_object(held_as_constant(name)))
+    }
+    builder
+}
+
+/// The variables of the environment that a JVM reads options from.
+// example: list.length(injecting()) == 3
+fn injecting() -> List<String> {
+    ["JAVA_TOOL_OPTIONS", "JDK_JAVA_OPTIONS", "_JAVA_OPTIONS"]
 }
 
 /// Writes each class beside the source file, in the directory its name gives it.
@@ -3094,23 +3136,29 @@ extern method parent_path(place: Entry) -> Option<String> = "getParent"
 /// A clock that only goes forward, in nanoseconds, which names a directory no run has used.
 extern static nanoseconds() -> Int = "java.lang.System.nanoTime"
 
-/// A builder of the program `line` names, given every word after the first.
-extern new builder_of(line: List<String>) -> Starter
-
 /// The builder, with the program reading and writing the streams of this process.
-extern method inheriting(builder: Starter) -> Starter = "inheritIO"
+extern method inheriting(builder: process.ProcessBuilder) -> process.ProcessBuilder = "inheritIO"
 
-/// The program started, or why it was not.
-extern method launched(builder: Starter) -> Result<Launched, String> = "start"
+/// The environment that the builder starts a program with, which a change to it changes.
+extern method variables_of(builder: process.ProcessBuilder) -> Variables = "environment"
 
-/// The status the program ended with, once it has ended.
-extern method int waited(ran: Launched) -> Result<Int, String> = "waitFor"
+/// Removes the variable `name`, and gives back its value where it held one.
+extern method removed(variables: Variables, name: VariableName) -> Option<VariableName> = "remove"
+
+/// The text as a constant, which is how a `String` becomes a value that `removed` takes.
+extern method held_as_constant(text: String) -> Constant = "describeConstable"
+
+/// The text that the constant holds, as the `java.lang.Object` that `Map.remove` takes.
+extern method as_object(constant: Constant) -> VariableName = "orElseThrow"
 
 /// A file or a directory, named by its path.
 extern type Entry = "java.io.File"
 
-/// A program not started yet.
-extern type Starter = "java.lang.ProcessBuilder"
+/// The environment of a program not started yet, from the name of a variable to its value.
+extern type interface Variables = "java.util.Map"
 
-/// A program started.
-extern type Launched = "java.lang.Process"
+/// A constant that a `String` describes itself as, which holds that `String`.
+extern type Constant = "java.util.Optional"
+
+/// A value as a JVM object, which is what `java.util.Map` takes as the name of a variable.
+extern type VariableName = "java.lang.Object"
