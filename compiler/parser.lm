@@ -1862,6 +1862,22 @@ fn expected_help(expected: Expected) -> String {
     }
 }
 
+/// The code a refusal of this kind is refused with, which `docs/specs/diagnostics.md` lists.
+// example: code_of(ChainedComparison) == "L0105"
+fn code_of(kind: ErrorKind) -> String {
+    match kind {
+        Unexpected { expected, found } => "L0100"
+        UnterminatedString => "L0101"
+        UnknownCharacter => "L0102"
+        IntegerTooLarge => "L0103"
+        UnknownEscape(escaped) => "L0104"
+        ChainedComparison => "L0105"
+        NestingTooDeep => "L0106"
+        AssignedToValue => "L0107"
+        PartlyNamedCall => "L0108"
+    }
+}
+
 /// The `error:` line, without its prefix.
 // example: message(UnknownEscape("q")) == "`\\q` is not an escape"
 fn message(kind: ErrorKind) -> String {

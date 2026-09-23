@@ -105,6 +105,40 @@ A use that settles the parameter on `demo.User` is `L0418` only where no module 
 The trait is what has to be named twice over, once in the constraint and once in the instance, so
 a constraint over a trait the declaring module keeps to itself is refused as `L0424`.
 
+## The loader written in Bux
+
+`compiler/modules.lm` is this loader written in Bux, and the Rust loader is the answer it must give.
+`modules.load(path)` reads the module at `path` and every module it reaches, as this section and
+`docs/specs/packages.md` state.
+It gives the modules in the order the Rust loader gives them, dependencies before dependents.
+Each module keeps its name, the path it was read from, its source, and the tree of
+`compiler/parser.lm`.
+
+It stops at the first refusal, and that refusal is the Rust loader's: the same file, code, span,
+message, and help.
+A span counts UTF-8 bytes, as a span of `compiler/lexer.lm` does.
+A library module is a resource on the class path, which `docs/specs/library.md` states.
+Whether two routes reach one file is the JVM's canonical path of each, where Rust asks the file
+system for the same answer.
+
+A file the Rust loader cannot read is a file the Bux loader cannot read, with the path it named.
+The reason differs, because each is the words of its own platform, so the harness compares the
+path alone.
+Both loaders ask whether a file is there before they look beside a module or in a package.
+The Bux loader asks through `java.io.File.isFile`, so a directory of that name is no module.
+
+`modules.printed(path)` gives the answer in the form the harness compares.
+A load is `loaded`, and then one line for each module: its name and its path.
+A refusal is `refused` and the path of the file it is about, then the code, span, and message,
+then `help:` and the help.
+A file that cannot be read is `unreadable` and its path.
+
+The harness `crates/cli/tests/integration/bux_modules.rs` builds the Bux loader with `lumen`.
+It loads each case with both loaders, and it compares the two answers line for line.
+The cases are the ones of the Rust loader's tests, and trees of modules and manifests drawn at
+random.
+A build needs no JDK, and a run needs one; with no JDK, the harness skips each run and says why.
+
 ## Scopes
 
 Names live in two scopes that never mix: a type scope and a value scope.

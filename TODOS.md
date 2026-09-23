@@ -10,7 +10,7 @@
 **Depends on:** Item 061, Item 067 — a loader reads files beside the module and the manifest.
 The Rust compiler carries `library/*.lm` with `include_str!`, and Bux has no such thing.
 [069][a] - `docs/specs/library.md` states how the Bux compiler carries the library source.
-[069][b] - `compiler/modules.bx` loads a module, its imports, and its package as the specs state.
+[069][b] - `compiler/modules.lm` loads a module, its imports, and its package as the specs state.
 [069][c] - The harness compares the load order and every error with the Rust loader's.
 
 ## 🔴 Item 070: Name resolution is written in Bux

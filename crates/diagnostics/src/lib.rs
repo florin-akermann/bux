@@ -62,6 +62,12 @@ impl Diagnostic {
         self.span
     }
 
+    /// The `help:` line, without its prefix, where there is a fix worth naming.
+    #[must_use]
+    pub fn help(&self) -> Option<&str> {
+        self.help.as_deref()
+    }
+
     /// The same diagnostic, said about `span` instead.
     ///
     /// A command that compiles source it wrote itself is refused about what it wrote, and this
