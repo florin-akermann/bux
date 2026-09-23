@@ -321,6 +321,11 @@ Before Item 094 the siblings took 0 s, and after it they took 0 s.
 Before Item 094 the example lines took 78 s, and after it they took 34 s.
 Before Item 094 the properties took 5 s, and after it they took 5 s.
 Before Item 094 the command lines took 8 s, and after it they took 8 s.
+On 2026-09-24 `bin/runner` took 64 s before Item 091 and 31 s after it.
+On 2026-09-24 `bin/bootstrap` took 5.6 s before Item 091 and 5.8 s after it.
+Item 091 did not put the compiler on processes, because a measurement showed no gain.
+A build of the compiler wrote its 1400 classes in 0.31 s on one thread and on 1400 processes.
+The processes spent four times the processor time, most likely in code the JIT had not compiled.
 
 ### Drawn properties
 
