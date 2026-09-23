@@ -1,23 +1,28 @@
 Compile a source file to the class files a JVM loads.
 
-`lumen build` runs the whole compiler over a file and writes the result beside it. Everything
-`lumen check` reports is reported here too, in the same layout, and nothing is written when the
-compiler refuses the program.
+`lumen build` runs the whole compiler over a file and writes the result under `target/`, in the
+directory of that file. Everything `lumen check` reports is reported here too, in the same layout,
+and nothing is written when the compiler refuses the program.
 
-A module is one source file, so `demo.lm` becomes `demo.class`, holding one `public static`
+Every class of a build lands in that one `target/` directory, and no class lands beside a source.
+A file of a package sits in the package's directory, so the package's `target/` holds its classes.
+A clean build is `rm -rf target/`, because no other directory holds what a build writes.
+
+A module is one source file, so `demo.lm` becomes `target/demo.class`, holding one `public static`
 method per function the module declares. Each type the module declares becomes a class of its
-own in a package named after the module, so `type User` becomes `demo/User.class`. A variant of
-an algebraic data type becomes a class beside its type, named after both.
+own in a package named after the module, so `type User` becomes `target/demo/User.class`. A
+variant of an algebraic data type becomes a class beside its type, named after both.
 
 A program of several modules is several classes. Every module the file imports is compiled and
-written too, so `import greeting` puts `greeting.class` beside `demo.class`, and a call of
-`greeting.hello` is a call of a static method of that class. A module beside the file that
+written too, so `import greeting` puts `target/greeting.class` beside `target/demo.class`, and a
+call of `greeting.hello` is a call of a static method of that class. A module beside the file that
 nothing imports is not read and not written. A module of the library is written in the package
-`lumen/library`, so `import strings` puts `lumen/library/strings.class` there, and a file of the
-program may have the name of a library module.
+`lumen/library`, so `import strings` puts `target/lumen/library/strings.class` there, and a file of
+the program may have the name of a library module.
 
-The types the prelude supplies are written on every build, in the package `lumen`. There is no
-runtime to install and no version of one to agree with: a build is self-contained.
+The types the prelude supplies are written on every build, in the package `lumen` under
+`target/`. There is no runtime to install and no version of one to agree with: a build is
+self-contained.
 
 The output is reproducible. Two builds of one unchanged file write identical bytes, so nothing in
 them depends on a timestamp, on where the build ran, or on the order a hash map iterated.

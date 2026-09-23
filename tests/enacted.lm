@@ -34,7 +34,7 @@ fn every_scene_held(library: ir.Library, limit: Int) -> held.Held {
     held.added(found, every_header_held())
 }
 
-/// The checks of `build`: what it writes beside a module, and what it refuses to write.
+/// The checks of `build`: what it writes under `target/`, and what it refuses to write.
 // example: strings.length(module_text()) > 0
 fn every_build_held(library: ir.Library) -> held.Held {
     var found = classes_written(library)
@@ -42,15 +42,39 @@ fn every_build_held(library: ir.Library) -> held.Held {
     found = held.added(found, bytes_written_again(library))
     found = held.added(found, refused_build(library))
     found = held.added(found, dotted_build(library))
+    found = held.added(found, nothing_beside(library))
     held.added(found, holes_refused(library))
 }
 
-/// `build` writes one class beside the source for the module and for each type it declares.
+/// `build` leaves no class beside a source: every class of the program is under `target/`.
+// example: classes_outside(["a.lm", "target/a.class", "a.class"], "target/") == ["a.class"]
+fn nothing_beside(library: ir.Library) -> held.Held {
+    scene := scene_of(program_files())
+    said := said_to(["build", modules.joined(scene, "example.lm")], library)
+    beside := Fact { what: "classes outside target/", expected: "[]", found: shown(classes_outside(relative_files(scene), "target/")) }
+    found := facts_held("build leaves no class beside a source", [status_fact(said, 0), presence_fact(scene: scene, at: "target/greeting.class"), beside])
+    command.removed_whole(scene)
+    found
+}
+
+/// The class files among `paths` that do not sit under `target`.
+// example: classes_outside(["target/a.class"], "target/") == []
+fn classes_outside(paths: List<String>, target: String) -> List<String> {
+    var found = []
+    for path in paths {
+        if walk.is_ending_in(path, ".class") && !command.has_prefix(path, target) {
+            found = list.push(found, path)
+        }
+    }
+    found
+}
+
+/// `build` writes one class under `target/` for the module and for each type it declares.
 // example: presence(scene: "no-such-directory", at: "a.class") == "not written"
 fn classes_written(library: ir.Library) -> held.Held {
     scene := scene_of([Written { at: "example.lm", text: module_text() }])
     said := said_to(["build", modules.joined(scene, "example.lm")], library)
-    written := ["example.class", "example/User.class", "example/Payment.class", "example/Payment$Pending.class", "example/Payment$Failed.class", "lumen/Option.class", "lumen/Result$Ok.class"]
+    written := ["target/example.class", "target/example/User.class", "target/example/Payment.class", "target/example/Payment$Pending.class", "target/example/Payment$Failed.class", "target/lumen/Option.class", "target/lumen/Result$Ok.class"]
     found := facts_held("build writes a class for the module and each type", command.all_of([status_fact(said, 0)], presences(scene: scene, written: written)))
     command.removed_whole(scene)
     found
@@ -62,7 +86,7 @@ fn classes_written(library: ir.Library) -> held.Held {
 fn class_file_opened(library: ir.Library) -> held.Held {
     scene := scene_of([Written { at: "example.lm", text: module_text() }])
     said := said_to(["build", modules.joined(scene, "example.lm")], library)
-    bytes := ok_or(read_as_bytes(modules.joined(scene, "example.class")), "")
+    bytes := ok_or(read_as_bytes(modules.joined(scene, "target/example.class")), "")
     found := facts_held("every class build writes opens with the class file magic", [status_fact(said, 0), Fact { what: "first eight bytes", expected: "[202, 254, 186, 190, 255, 255, 0, 72]", found: shown(codes_of(bytes, 8)) }])
     command.removed_whole(scene)
     found
@@ -74,10 +98,10 @@ fn bytes_written_again(library: ir.Library) -> held.Held {
     scene := scene_of([Written { at: "example.lm", text: module_text() }])
     path := modules.joined(scene, "example.lm")
     _ = said_to(["build", path], library)
-    first := ok_or(read_as_bytes(modules.joined(scene, "example.class")), "first build wrote nothing")
+    first := ok_or(read_as_bytes(modules.joined(scene, "target/example.class")), "first build wrote nothing")
     _ = said_to(["build", path], library)
-    again := ok_or(read_as_bytes(modules.joined(scene, "example.class")), "second build wrote nothing")
-    found := facts_held("build writes the same bytes every time it is run", [Fact { what: "example.class", expected: first, found: again }])
+    again := ok_or(read_as_bytes(modules.joined(scene, "target/example.class")), "second build wrote nothing")
+    found := facts_held("build writes the same bytes every time it is run", [Fact { what: "target/example.class", expected: first, found: again }])
     command.removed_whole(scene)
     found
 }
@@ -87,7 +111,7 @@ fn bytes_written_again(library: ir.Library) -> held.Held {
 fn refused_build(library: ir.Library) -> held.Held {
     scene := scene_of([Written { at: "example.lm", text: "fn told(payment: Int) -> String {\n    payment\n}\n" }])
     said := said_to(["build", modules.joined(scene, "example.lm")], library)
-    facts := [status_fact(said, 1), within_fact(what: "errors", text: said.errors, part: "error[L0400]"), absence(scene: scene, at: "example.class")]
+    facts := [status_fact(said, 1), within_fact(what: "errors", text: said.errors, part: "error[L0400]"), absence(scene: scene, at: "target/example.class")]
     found := facts_held("build writes nothing when the compiler refuses the program", facts)
     command.removed_whole(scene)
     found
@@ -98,7 +122,7 @@ fn refused_build(library: ir.Library) -> held.Held {
 fn dotted_build(library: ir.Library) -> held.Held {
     scene := scene_of([Written { at: "my.app.lm", text: module_text() }])
     said := said_to(["build", modules.joined(scene, "my.app.lm")], library)
-    facts := [status_fact(said, 2), within_fact(what: "errors", text: said.errors, part: "my.app.lm"), absence(scene: scene, at: "my.app.class")]
+    facts := [status_fact(said, 2), within_fact(what: "errors", text: said.errors, part: "my.app.lm"), absence(scene: scene, at: "target/my.app.class")]
     found := facts_held("build refuses a file whose name is not one a class may have", facts)
     command.removed_whole(scene)
     found
@@ -112,7 +136,7 @@ fn holes_refused(library: ir.Library) -> held.Held {
     said := said_to(["build", modules.joined(scene, "example.lm")], library)
     opening := "error[L0600]: this hole is not compiled\n"
     counted := Fact { what: "holes named", expected: "2", found: shown(occurrences(text: said.errors, part: "error[L0600]")) }
-    facts := [status_fact(said, 1), opening_fact(what: "errors", text: said.errors, part: opening), counted, within_fact(what: "errors", text: said.errors, part: "holds none\n\nerror[L0600]"), absence(scene: scene, at: "example.class")]
+    facts := [status_fact(said, 1), opening_fact(what: "errors", text: said.errors, part: opening), counted, within_fact(what: "errors", text: said.errors, part: "holds none\n\nerror[L0600]"), absence(scene: scene, at: "target/example.class")]
     found := facts_held("build refuses a module that holds a hole", facts)
     command.removed_whole(scene)
     found
@@ -292,7 +316,7 @@ fn package_refused(library: ir.Library) -> held.Held {
 fn package_built(library: ir.Library) -> held.Held {
     scene := scene_of(package_files(example: declaring_text(), helper: declaring_text()))
     said := said_to(["build", scene], library)
-    facts := command.all_of([status_fact(said, 0)], presences(scene: scene, written: ["example.class", "helper.class"]))
+    facts := command.all_of([status_fact(said, 0)], presences(scene: scene, written: ["target/example.class", "target/helper.class"]))
     found := facts_held("build takes a package and writes a class for every module", facts)
     command.removed_whole(scene)
     found
@@ -303,7 +327,7 @@ fn package_built(library: ir.Library) -> held.Held {
 fn refused_package_built(library: ir.Library) -> held.Held {
     scene := scene_of(package_files(example: unparsed_text(), helper: declaring_text()))
     said := said_to(["build", scene], library)
-    facts := [status_fact(said, 1), absence(scene: scene, at: "example.class"), absence(scene: scene, at: "helper.class")]
+    facts := [status_fact(said, 1), absence(scene: scene, at: "target/example.class"), absence(scene: scene, at: "target/helper.class")]
     found := facts_held("build writes nothing of a package whose first module is refused", facts)
     command.removed_whole(scene)
     found
@@ -351,7 +375,7 @@ fn imported_refusal_named(library: ir.Library) -> held.Held {
 fn reached_built(library: ir.Library) -> held.Held {
     scene := scene_of(list.push(program_files(), Written { at: "unreached.lm", text: "fn held() -> Int {\n    1\n}\n" }))
     said := said_to(["build", modules.joined(scene, "example.lm")], library)
-    facts := command.all_of([status_fact(said, 0), absence(scene: scene, at: "unreached.class")], presences(scene: scene, written: ["example.class", "greeting.class"]))
+    facts := command.all_of([status_fact(said, 0), absence(scene: scene, at: "target/unreached.class")], presences(scene: scene, written: ["target/example.class", "target/greeting.class"]))
     found := facts_held("build writes a class for every module the program reaches", facts)
     command.removed_whole(scene)
     found
@@ -364,7 +388,7 @@ fn surface_of_the_named(library: ir.Library) -> held.Held {
     scene := scene_of(program_files())
     said := said_to(["api", modules.joined(scene, "example.lm")], library)
     lacking := Fact { what: "output holds fn greeting", expected: "false", found: shown(is_within(text: said.output, part: "fn greeting")) }
-    facts := [status_fact(said, 0), within_fact(what: "output", text: said.output, part: "fn main"), lacking, absence(scene: scene, at: "example.class")]
+    facts := [status_fact(said, 0), within_fact(what: "output", text: said.output, part: "fn main"), lacking, absence(scene: scene, at: "target/example.class")]
     found := facts_held("api prints the surface of the module named and writes nothing", facts)
     command.removed_whole(scene)
     found
@@ -414,7 +438,7 @@ fn no_program(source: String, library: ir.Library) -> held.Held {
 fn refused_program_run(library: ir.Library) -> held.Held {
     scene := scene_of([Written { at: "example.lm", text: refused_program_text() }])
     said := said_to(["run", modules.joined(scene, "example.lm")], library)
-    facts := [status_fact(said, 1), opening_fact(what: "errors", text: said.errors, part: "error[L03"), absence(scene: scene, at: "example.class")]
+    facts := [status_fact(said, 1), opening_fact(what: "errors", text: said.errors, part: "error[L03"), absence(scene: scene, at: "target/example.class")]
     found := facts_held("run refuses a program the compiler will not have", facts)
     command.removed_whole(scene)
     found
@@ -686,9 +710,15 @@ fn every_part(text: String, parts: List<String>) -> List<Fact> {
 fn presences(scene: String, written: List<String>) -> List<Fact> {
     var facts = []
     for at in written {
-        facts = list.push(facts, Fact { what: at, expected: "written", found: presence(scene: scene, at: at) })
+        facts = list.push(facts, presence_fact(scene: scene, at: at))
     }
     facts
+}
+
+/// The fact that a file is written at `at` under `scene`.
+// example: presence_fact(scene: "no-such-directory", at: "a").found == "not written"
+fn presence_fact(scene: String, at: String) -> Fact {
+    Fact { what: at, expected: "written", found: presence(scene: scene, at: at) }
 }
 
 /// The fact that nothing is written at `at` under `scene`.

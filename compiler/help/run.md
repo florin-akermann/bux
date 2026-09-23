@@ -1,9 +1,9 @@
 Compile a source file and run the program it holds.
 
 `lumen run` does what `lumen build` does and then hands the result to a JVM. The class files are
-written beside the source exactly as a build writes them, so a run leaves the same files behind
-and nothing more. That includes the class of every module the program imports, because the
-program reaches them while it runs.
+written under `target/` exactly as a build writes them, so a run leaves the same files behind and
+nothing more. That includes the class of every module the program imports, because the program
+reaches them while it runs. That one `target/` directory is the whole class path of the program.
 
 A program starts at `main`, which takes the words it was run with and gives back the status the
 run ends with:

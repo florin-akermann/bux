@@ -1,10 +1,11 @@
 #!/bin/sh
 # The runner in tests/runner.lm, built by the Bux compiler and started from the repository root.
 #
-# `bin/bux build` writes the classes of the runner, and of every compiler module it imports, beside
-# it in tests/. The runner then runs on a JVM whose class path also holds compiler/ and the root,
-# because the compiler it calls reads the library, the help topics, and the explanations there.
-# `bin/bux run` would start it with tests/ alone on the class path, where none of the three is.
+# `bin/bux build` writes the classes of the runner, and of every compiler module it imports, in
+# tests/target/. The runner then runs on a JVM whose class path also holds compiler/ and the root,
+# only for resources: the compiler it calls reads the library, the help topics, and the
+# explanations there. `bin/bux run` would start it with tests/target/ alone, where none of the
+# three is.
 set -e
 self=$0
 while [ -L "$self" ]; do
@@ -18,4 +19,4 @@ root=$(cd "$(dirname "$self")/.." && pwd)
 cd "$root"
 bin/bux build tests/runner.lm
 exec "$JAVA_HOME/bin/java" --enable-preview -Dstdout.encoding=UTF-8 -Dstderr.encoding=UTF-8 \
-    -cp "$root/tests:$root/compiler:$root" runner "$@"
+    -cp "$root/tests/target:$root/compiler:$root" runner "$@"

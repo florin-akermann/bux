@@ -55,7 +55,7 @@ A name the class path holds no resource for is no library module, and the import
 There is no list of library names in Bux, so one more file in `library/` is one more module.
 A refusal about a library module names the resource, `library/list.lm`.
 
-`bin/bux` and `bin/runner` put the repository on the class path, beside the classes.
+`bin/bux` and `bin/runner` put the repository on the class path, after the `target/` of classes.
 That is the directory that holds `library/`, so the resource names above reach the one copy.
 
 ## How it is found

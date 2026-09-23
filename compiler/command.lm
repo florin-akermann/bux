@@ -188,7 +188,7 @@ fn checked_said(checking: Checking, library: ir.Library) -> Said {
     }
 }
 
-/// Writes the class files of `path` beside it, one for each class the module becomes.
+/// Writes the class files of `path` under `target/` in its directory, one for each class.
 // example: built_said("no-such-directory/a.lm", ir.little_library()).status == 2
 fn built_said(path: String, library: ir.Library) -> Said {
     if is_folder(place_at(path)) {
@@ -273,18 +273,18 @@ fn started(asked: Started, library: ir.Library) -> Answer {
 }
 
 /// The program `done` holds, started with the words `asked` gives it, where it is one.
-// example: said_by(built_started(Built { module: "a", beside: "", starts: false }, Started { file: "a.lm", arguments: [] })).errors == "error: a.lm: a module is run through `fn main(arguments: List<String>) -> Int`, which this one does not declare\n"
+// example: said_by(built_started(Built { module: "a", target: "", starts: false }, Started { file: "a.lm", arguments: [] })).errors == "error: a.lm: a module is run through `fn main(arguments: List<String>) -> Int`, which this one does not declare\n"
 fn built_started(done: Built, asked: Started) -> Answer {
     if !done.starts {
         return Spoken(unusable(asked.file + ": a module is run through `fn main(arguments: List<String>) -> Int`, which this one does not declare"))
     }
     match java_found() {
-        Ok(java) => Starts(program_line(java: java, beside: done.beside, module: done.module, arguments: asked.arguments))
+        Ok(java) => Starts(program_line(java: java, classes: done.target, module: done.module, arguments: asked.arguments))
         Err(said) => Spoken(said)
     }
 }
 
-/// Compiles `path` and every module it reaches, writing the class files of each beside it.
+/// Compiles `path` and every module it reaches, writing every class into the one `target_of(path)`.
 ///
 /// A module is a class of its own, so a program of several modules is several classes, and a JVM
 /// is started on the one the command named. `docs/specs/modules.md` states the order.
@@ -294,9 +294,19 @@ fn built(path: String, library: ir.Library) -> Result<Built, Said> {
     module := named_module(program.root.module.path)?
     lowered := page_said(lowered_of(program, library))?
     classes := page_said(written_of(lowered, program))?
-    beside := modules.directory_of(path)
-    _ = classes_written(classes, beside)?
-    Ok(Built { module: module, beside: beside, starts: is_a_program(lowered) })
+    target := target_of(path)
+    _ = classes_written(classes, target)?
+    Ok(Built { module: module, target: target, starts: is_a_program(lowered) })
+}
+
+/// The one directory a build of `path` writes every class into: `target/` beside the module.
+///
+/// A module of a package sits in the package's directory, so this is the package's `target/`.
+/// No class lands beside a source, and deleting this directory is a clean build.
+// example: target_of("compiler/main.lm") == "compiler/target"
+// example: target_of("main.lm") == "target"
+fn target_of(path: String) -> String {
+    modules.joined(modules.directory_of(path), "target")
 }
 
 /// Whether a build was refused, which is what the examples of a build that fails read.
@@ -529,7 +539,7 @@ fn put_back(refused: Refusal, run: Run, root: Typed) -> Said {
 // example: ran_in(Beside { java: "no-such-java", module: "a", beside: "no-such-directory/a" }, [], Run { source: "", stretches: [], examples: [], module: lexer.Span { start: 0, length: 0 } }, Typed { module: modules.Module { name: "main", path: "main.lm", source: "", program: ast.Program { items: [] } }, inferred: types.checked_of("") }).status == 2
 fn ran_in(beside: Beside, classes: List<jvm.ClassFile>, run: Run, root: Typed) -> Said {
     match classes_written(classes, beside.beside) {
-        Ok(_) => run_ended(program_finished(program_line(java: beside.java, beside: beside.beside, module: beside.module, arguments: [])), beside.java, run, root)
+        Ok(_) => run_ended(program_finished(program_line(java: beside.java, classes: beside.beside, module: beside.module, arguments: [])), beside.java, run, root)
         Err(said) => said
     }
 }
@@ -547,14 +557,14 @@ fn program_finished(line: List<String>) -> Result<programs.Finished, String> {
     Ok(programs.Finished { code: code, output: output, errors: errors })
 }
 
-/// The line that starts a JVM on the class `module` in `beside`, which `arguments` then follow.
+/// The line that starts a JVM on the class `module` in `classes`, which `arguments` then follow.
 ///
 /// `docs/specs/run.md` states each flag: the preview that a value class needs, no module outside
 /// `java.base`, and no class that a stream of serialized bytes names.
-// example: list.length(program_line(java: "java", beside: "a", module: "b", arguments: ["c"])) == 9
-// example: or(list.at(program_line(java: "java", beside: "a", module: "b", arguments: []), 4), "") == "-Djdk.serialFilter=!*"
-fn program_line(java: String, beside: String, module: String, arguments: List<String>) -> List<String> {
-    all_of(values: [java, "--enable-preview", "--limit-modules", "java.base", "-Djdk.serialFilter=!*", "-cp", beside, module], more: arguments)
+// example: list.length(program_line(java: "java", classes: "a", module: "b", arguments: ["c"])) == 9
+// example: or(list.at(program_line(java: "java", classes: "a", module: "b", arguments: []), 4), "") == "-Djdk.serialFilter=!*"
+fn program_line(java: String, classes: String, module: String, arguments: List<String>) -> List<String> {
+    all_of(values: [java, "--enable-preview", "--limit-modules", "java.base", "-Djdk.serialFilter=!*", "-cp", classes, module], more: arguments)
 }
 
 /// The builder, with each variable removed that a JVM reads options from.
@@ -576,11 +586,11 @@ fn injecting() -> List<String> {
     ["JAVA_TOOL_OPTIONS", "JDK_JAVA_OPTIONS", "_JAVA_OPTIONS"]
 }
 
-/// Writes each class beside the source file, in the directory its name gives it.
+/// Writes each class into the directory `into`, at the path its name gives it there.
 // example: !is_refused(classes_written([], "no-such-directory"))
-fn classes_written(classes: List<jvm.ClassFile>, beside: String) -> Result<(), Said> {
+fn classes_written(classes: List<jvm.ClassFile>, into: String) -> Result<(), Said> {
     for class in classes {
-        written := modules.joined(beside, class.path)
+        written := modules.joined(into, class.path)
         package := modules.directory_of(written)
         if !is_folder(place_at(package)) && !has_made_all(place_at(package)) {
             return Err(unusable(package + ": " + making_refusal(package)))
@@ -2965,7 +2975,7 @@ type Started = {
 /// A module built: the class a JVM starts, where its classes are, and whether it is a program.
 type Built = {
     module: String
-    beside: String
+    target: String
     starts: Bool
 }
 

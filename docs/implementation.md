@@ -190,8 +190,10 @@ GraalVM native-image waits until GraalVM tracks JDK 28 and Valhalla, and section
 
 The compiler lives in `compiler/`, one module for each phase, and the lexer is the first.
 `compiler/main.lm` is its command line, and `compiler/command.lm` holds every command.
-A build writes the classes beside the sources, in `compiler/`.
-The launcher `bin/bux` starts them with `compiler/` and the directory above it on the class path.
+A build writes every class under `target/`, in the directory of the module it builds.
+So a build of the compiler writes `compiler/target/`, and no class lands beside a source.
+The launcher `bin/bux` starts them with `compiler/target/` on the class path.
+`compiler/` and the directory above it are on the class path too, only for resources.
 `compiler/help/` and `compiler/explanations/` hold the help text and the long form of each code.
 The directory above holds `library/`, and the compiler reads all three as resources.
 A module there has a `.lm` name for now, because the module loader reads no other extension.
@@ -211,14 +213,14 @@ docs/       the specification, this document, and the behaviour specs
 
 The bootstrap has a seed and two stages, and `bin/bootstrap` runs them.
 The seed `bin/seed.jar` holds the classes of a compiler that an earlier compiler built.
-The seed builds stage 1, the classes beside the sources in `compiler/`.
+The seed builds stage 1, the classes in `compiler/target/`.
 Stage 1 builds stage 2 from a copy of `compiler/` outside the repository.
 Stage 2 must be stage 1 byte for byte, and `docs/specs/run.md` states the script.
 No class file other than the seed is kept in the repository, so a checkout bootstraps first.
 
 The first seed is the compiler that the Rust compiler built, before Item 087 deleted the Rust.
 A change to the compiler changes stage 1, and stage 2 still equals it, because stage 1 built it.
-So the seed is replaced for one of two reasons, and for no other.
+So the seed is replaced for one of three reasons, and for no other.
 The first reason is that the compiler needs a feature that the seed cannot compile.
 The item that needs it builds stage 1 with the old seed, and it packs stage 1 as the new seed.
 The second reason is that the lowering or the writer changed the bytes of the compiler's classes.
@@ -228,7 +230,12 @@ It packs stage 2 as the new seed, with the `jar` tool of the JDK.
 Item 093 did this when `list.length` became a read of the length field.
 The old seed calls the `length` that the old `library/list.lm` declared.
 So the old seed built stage 1 beside the old `library/list.lm`, not beside the new one.
-In both cases, `bin/bootstrap` must then hold stage 2 equal to stage 1 with the new seed.
+The third reason is that a build writes its classes to another place.
+The old seed writes stage 1 where the new `bin/bootstrap` does not read it.
+The item builds stage 1 with the old seed, stage 2 with stage 1, and stage 3 with stage 2.
+Stage 3 must equal stage 2, and the item packs stage 2 as the new seed.
+Item 096 did this when a build moved every class from beside its source to `target/`.
+In each case, `bin/bootstrap` must then hold stage 2 equal to stage 1 with the new seed.
 The item says so, and it replaces the seed in its own commit.
 
 The compiler should itself use strong typed representations for compiler phases.
