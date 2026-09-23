@@ -1,15 +1,18 @@
 [profile.default]
 test-threads = "num-cpus"
 
-# These tests start a JVM for each example they walk or each case they draw, so what they cost is
-# what a JVM costs to start rather than what they check, and the cost grows with the repository.
-# Their wall is the one that still catches a run that hangs.
+# Each of these tests starts a JVM for every example it walks or every case it draws, so what it
+# costs is what a JVM start costs rather than what it checks.
+# The `bux_*` modules hold a compiler phase written in Bux against the Rust phase it replaces, and
+# every further phase of version 0.3 adds one more such module.
+# So this entry names the prefix rather than each test, and a phase that lands later is covered on
+# the day it lands.
+# A wall of 60 s is long enough for a machine under load, and short enough to catch a run that
+# hangs.
 [[profile.default.overrides]]
 filter = """
-    test(=examples::every_example_is_accepted_refused_or_run_exactly_as_it_says)
-    or test(=bux_parser::the_bux_parser_gives_the_rust_parsers_answer_on_drawn_text)
-    or test(=bux_format::the_bux_formatter_gives_the_rust_formatters_text_on_drawn_files)
-    or test(=bux_format::the_bux_formatter_leaves_every_lm_file_of_the_repository_as_it_is)
+    test(/^bux_/)
+    or test(=examples::every_example_is_accepted_refused_or_run_exactly_as_it_says)
     or test(=collections::a_map_gives_back_the_value_last_put_in_at_each_key)
     or test(=collections::a_set_holds_every_value_put_into_it_and_no_other)
     or test(=collections::hundreds_of_keys_read_back_out_of_a_map_and_a_set_however_many_hash_alike)
@@ -18,8 +21,8 @@ filter = """
 """
 slow-timeout = { period = "60s", terminate-after = 1 }
 
-# Every other test has a wall of 10 s. A test that needs longer gets its own override, above this
-# catch-all, naming the test and the reason.
+# Every other test has a wall of 10 s. A test that needs longer gets its own entry above this
+# catch-all: a name, or a prefix where a family of tests grows with the language, and the reason.
 [[profile.default.overrides]]
 filter = "all()"
 slow-timeout = { period = "10s", terminate-after = 1 }
