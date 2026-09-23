@@ -1,0 +1,336 @@
+// A diagnostic, rendered for a reader and written as data, over drawn sources, spans, and texts.
+//
+// `docs/specs/diagnostics.md` states the properties. A rendering answers about any span at all,
+// not only the ones a lexer gives, so a drawn span may run past the source or end inside a
+// character. A drawn message holds every character JSON cannot write as it is.
+import command
+import drawn
+import files
+import held
+import ir
+import lexer
+import list
+import strings
+import walk
+
+/// Every property of the rendering and the data form over `cases` drawn cases each, in order.
+///
+/// A diagnostic is rendered without the prelude, so no property needs the one it is handed.
+// example: list.length(every_property(1, ir.little_library())) == 4
+fn every_property(cases: Int, library: ir.Library) -> List<held.Held> {
+    var found = []
+    for property in [NamesAPlace, OpensAndEnds, DataIsOneLine, DataReadsBack] {
+        found = list.push(found, held_over(property, cases))
+    }
+    found
+}
+
+/// `property` tried on `cases` cases, each drawn from a seed of its own.
+// example: held.is_held(held_over(NamesAPlace, 2))
+fn held_over(property: Property, cases: Int) -> held.Held {
+    var found = held.nothing_failed(cases)
+    var index = 0
+    for index < cases {
+        seed := drawn.seed_of(index)
+        tried := tried_by(property, drawn.seeded(seed))
+        if tried.why != "" {
+            found = held.with_failure(found, held.drawn_failure(name_of(property), seed, tried.case, tried.why))
+        }
+        index += 1
+    }
+    found
+}
+
+/// One case of `property`, drawn from `draw`.
+// example: tried_by(OpensAndEnds, drawn.seeded(1)).why == ""
+fn tried_by(property: Property, draw: drawn.Draw) -> Tried {
+    match property {
+        NamesAPlace => a_rendering_names_a_line_and_a_column_inside_the_source(draw)
+        OpensAndEnds => a_rendering_opens_with_the_code_and_ends_with_a_newline(draw)
+        DataIsOneLine => a_data_form_is_one_line_whatever_text_the_diagnostic_holds(draw)
+        DataReadsBack => text_a_data_form_writes_reads_back_as_the_text_it_was_given(draw)
+    }
+}
+
+/// The name a failure of `property` is reported with.
+// example: name_of(OpensAndEnds) == "a_rendering_opens_with_the_code_and_ends_with_a_newline"
+fn name_of(property: Property) -> String {
+    match property {
+        NamesAPlace => "a_rendering_names_a_line_and_a_column_inside_the_source"
+        OpensAndEnds => "a_rendering_opens_with_the_code_and_ends_with_a_newline"
+        DataIsOneLine => "a_data_form_is_one_line_whatever_text_the_diagnostic_holds"
+        DataReadsBack => "text_a_data_form_writes_reads_back_as_the_text_it_was_given"
+    }
+}
+
+/// The second line of a rendering names a line the source has, and a column on it or just past it.
+// example: a_rendering_names_a_line_and_a_column_inside_the_source(drawn.seeded(4)).why == ""
+fn a_rendering_names_a_line_and_a_column_inside_the_source(draw: drawn.Draw) -> Tried {
+    pointed := pointed_of(draw)
+    place := or(list.at(walk.lines_of(rendered_of(pointed)), 1), "")
+    colon := last_colon(place)
+    before := or(strings.cut(place, 0, colon), "")
+    column := or(command.ordinal_read(or(strings.cut(place, colon + 1, strings.length(place)), "")), 0)
+    line := or(command.ordinal_read(or(strings.cut(before, last_colon(before) + 1, strings.length(before)), "")), 0)
+    named := list.at(walk.lines_of(pointed.source), line - 1)
+    var why = ""
+    if line < 1 || column < 1 || column > characters_in(or(named, "")) + 1 || is_none(named) {
+        why = place + " is not a place in the source"
+    }
+    Tried { case: shown_pointed(pointed), why: why }
+}
+
+/// A rendering opens with the code in brackets and ends with a line break.
+// example: a_rendering_opens_with_the_code_and_ends_with_a_newline(drawn.seeded(4)).why == ""
+fn a_rendering_opens_with_the_code_and_ends_with_a_newline(draw: drawn.Draw) -> Tried {
+    pointed := pointed_of(draw)
+    rendered := rendered_of(pointed)
+    opening := "error[" + pointed.code + "]: "
+    var why = ""
+    if !is_opening(text: rendered, opening: opening) || !walk.is_ending_in(rendered, "\n") {
+        why = "the rendering is " + held.quoted(rendered)
+    }
+    Tried { case: shown_pointed(pointed), why: why }
+}
+
+/// A drawn source, a drawn code, and a drawn span anywhere in the source or up to 2 bytes past it.
+// example: pointed_of(drawn.seeded(1)).source != ""
+fn pointed_of(draw: drawn.Draw) -> Pointed {
+    source := source_of(draw)
+    bound := command.byte_count(source) + 3
+    span := lexer.Span { start: drawn.number(stepped(draw, 20), bound), length: drawn.number(stepped(draw, 21), bound) }
+    Pointed { source: source, code: code_of(stepped(draw, 22)), span: span }
+}
+
+/// A source of zero or more lines, each ended by a line break, blank and non-ASCII ones among them.
+///
+/// A source of no lines is one line break.
+// example: walk.is_ending_in(source_of(drawn.seeded(1)), "\n")
+fn source_of(draw: drawn.Draw) -> String {
+    lines := ["fn f() {\n", "    a < b\n", "\n", "    // é\n", "}\n", "\ttab\n"]
+    source := drawn.text_of(drawn.next(draw), lines, drawn.number(draw, 8))
+    if source == "" {
+        return "\n"
+    }
+    source
+}
+
+/// `pointed` rendered against the file `demo.bx`, with a message of plain text.
+// example: walk.is_ending_in(rendered_of(pointed_of(drawn.seeded(1))), "\n")
+fn rendered_of(pointed: Pointed) -> String {
+    diagnostic := command.Diagnostic { code: pointed.code, message: "something is wrong", span: pointed.span, help: None, fix: None }
+    command.rendered(diagnostic, command.Page { source: pointed.source, path: "demo.bx" })
+}
+
+/// Where the last `:` of `text` is, and -1 where it has none.
+// example: last_colon("a:1:2") == 3
+fn last_colon(text: String) -> Int {
+    var at = strings.length(text) - 1
+    for at >= 0 && or(strings.at(text, at), 0) != 58 {
+        at = at - 1
+    }
+    at
+}
+
+/// How many characters `text` holds, where a pair of code units is one.
+// example: characters_in("aé") == 2
+fn characters_in(text: String) -> Int {
+    command.characters_of(text, command.Stretched { from: 0, to: strings.length(text) })
+}
+
+/// Whether there is no line where one was asked for.
+// example: is_none(None)
+fn is_none(found: Option<String>) -> Bool {
+    match found {
+        Some(_) => false
+        None => true
+    }
+}
+
+/// Whether `text` opens with `opening`.
+// example: is_opening(text: "ab", opening: "a")
+fn is_opening(text: String, opening: String) -> Bool {
+    or(strings.cut(text, 0, strings.length(opening)), "") == opening
+}
+
+/// A drawn case of a rendering, as its code, its span, and its source.
+// example: shown_pointed(Pointed { source: "\n", code: "L0100", span: lexer.Span { start: 0, length: 1 } }) == "L0100 0..1 of \n"
+fn shown_pointed(pointed: Pointed) -> String {
+    pointed.code + " " + shown(pointed.span) + " of " + pointed.source
+}
+
+/// The data form of a diagnostic whose message and help hold drawn text is one line, closed.
+// example: a_data_form_is_one_line_whatever_text_the_diagnostic_holds(drawn.seeded(4)).why == ""
+fn a_data_form_is_one_line_whatever_text_the_diagnostic_holds(draw: drawn.Draw) -> Tried {
+    message := message_of(draw)
+    diagnostic := command.Diagnostic { code: code_of(stepped(draw, 22)), message: message, span: lexer.Span { start: 0, length: 1 }, help: Some(message), fix: None }
+    written := command.json_of(diagnostic, "demo.bx")
+    var why = ""
+    if list.length(walk.lines_of(written)) != 1 || !walk.is_ending_in(written, "}\n") {
+        why = "the data form is " + held.quoted(written)
+    }
+    Tried { case: message, why: why }
+}
+
+/// The message of a data form, read back with every escape turned back, is the message given.
+///
+/// The reader is the one a tool would have, so the property is a round trip and not a second
+/// copy of the escaping it is about.
+// example: text_a_data_form_writes_reads_back_as_the_text_it_was_given(drawn.seeded(4)).why == ""
+fn text_a_data_form_writes_reads_back_as_the_text_it_was_given(draw: drawn.Draw) -> Tried {
+    message := message_of(draw)
+    diagnostic := command.Diagnostic { code: code_of(stepped(draw, 22)), message: message, span: lexer.Span { start: 0, length: 1 }, help: None, fix: None }
+    written := command.json_of(diagnostic, "demo.bx")
+    read := read_back(written: written, named: "message")
+    var why = ""
+    if or(read, message + "?") != message {
+        why = "the data form " + held.quoted(written) + " reads back as " + held.quoted(or(read, "no message"))
+    }
+    Tried { case: message, why: why }
+}
+
+/// Drawn text with awkward pieces woven through it, which is what a message quoting a source holds.
+///
+/// Each awkward piece comes after a drawn character, so an escape between two plain characters
+/// and one at the very start are both drawn. One awkward piece is always drawn.
+// example: strings.length(message_of(drawn.seeded(1))) > 0
+fn message_of(draw: drawn.Draw) -> String {
+    awkward := ["\"", "\\", "\n", "\r", "\t", or(files.one_char(1), ""), "é", "a < b"]
+    var woven = ""
+    var at = drawn.next(draw)
+    for strings.length(woven) < drawn.number(draw, 12) {
+        woven += character_of(at) + drawn.picked(drawn.next(at), awkward, "")
+        at = stepped(at, 3)
+    }
+    woven + drawn.picked(at, awkward, "") + character_of(drawn.next(at))
+}
+
+/// One drawn character: printable ASCII, a control, one of two bytes in UTF-8, or one of a pair.
+// example: strings.length(character_of(drawn.seeded(1))) > 0
+fn character_of(draw: drawn.Draw) -> String {
+    ranges := [[32, 95], [0, 32], [128, 1920], [128512, 80]]
+    range := drawn.picked(draw, ranges, [32, 95])
+    unit := or(list.at(range, 0), 32) + drawn.number(drawn.next(draw), or(list.at(range, 1), 95))
+    or(files.one_char(unit), "?")
+}
+
+/// The text of the field `named` of a data form, with every escape turned back, where it closes.
+// example: or(read_back(written: "{\"a\":\"x\\ty\"}", named: "a"), "") == "x\ty"
+// example: is_none(read_back(written: "{\"a\":\"x", named: "a"))
+fn read_back(written: String, named: String) -> Option<String> {
+    opening := "\"" + named + "\":\""
+    var at = text_index(text: written, piece: opening) + strings.length(opening)
+    var read = ""
+    for at < strings.length(written) {
+        unit := or(strings.at(written, at), 0)
+        if unit == 34 {
+            return Some(read)
+        }
+        taken := taken_at(written, at)
+        read += taken.text
+        at += taken.width
+    }
+    None
+}
+
+/// What the code unit at `at` of a data form stands for, and how many units it takes up.
+// example: taken_at("\\u0001", 0).width == 6
+// example: taken_at("a", 0).text == "a"
+fn taken_at(written: String, at: Int) -> Taken {
+    letter := or(strings.cut(written, at, at + 1), "")
+    if letter != "\\" {
+        return Taken { text: letter, width: 1 }
+    }
+    escaped := or(strings.cut(written, at + 1, at + 2), "")
+    match escaped {
+        "n" => Taken { text: "\n", width: 2 }
+        "r" => Taken { text: "\r", width: 2 }
+        "t" => Taken { text: "\t", width: 2 }
+        "u" => Taken { text: or(files.one_char(hex_value(or(strings.cut(written, at + 2, at + 6), ""))), ""), width: 6 }
+        _ => Taken { text: escaped, width: 2 }
+    }
+}
+
+/// The number `digits` writes in base sixteen.
+// example: hex_value("001f") == 31
+// example: hex_value("00A0") == 160
+fn hex_value(digits: String) -> Int {
+    var value = 0
+    var at = 0
+    for at < strings.length(digits) {
+        unit := or(strings.at(digits, at), 0)
+        value = value * 16 + digit_value(unit)
+        at += 1
+    }
+    value
+}
+
+/// What one hexadecimal digit is worth.
+// example: digit_value(98) == 11
+fn digit_value(unit: Int) -> Int {
+    if unit >= 97 {
+        return unit - 87
+    }
+    if unit >= 65 {
+        return unit - 55
+    }
+    unit - 48
+}
+
+/// Where `piece` first starts in `text`, and -1 where it is not in it.
+// example: text_index(text: "abcab", piece: "ca") == 2
+// example: text_index(text: "ab", piece: "x") == -1
+fn text_index(text: String, piece: String) -> Int {
+    var at = 0
+    for at + strings.length(piece) <= strings.length(text) {
+        if or(strings.cut(text, at, at + strings.length(piece)), "") == piece {
+            return at
+        }
+        at += 1
+    }
+    -1
+}
+
+/// One of the codes a diagnostic has.
+// example: strings.length(code_of(drawn.seeded(1))) == 5
+fn code_of(draw: drawn.Draw) -> String {
+    drawn.picked(draw, ["L0100", "L0101", "L0300", "L0302", "L0400", "L0500", "L0600", "L0601"], "L0100")
+}
+
+/// The draw `times` steps after `draw`.
+// example: stepped(drawn.seeded(1), 1).state == drawn.next(drawn.seeded(1)).state
+fn stepped(draw: drawn.Draw, times: Int) -> drawn.Draw {
+    var at = draw
+    var step = 0
+    for step < times {
+        at = drawn.next(at)
+        step += 1
+    }
+    at
+}
+
+/// One case of a property: the drawn input as text, and why it failed, which is `""` where it held.
+type Tried = {
+    case: String
+    why: String
+}
+
+/// A drawn source, and a diagnostic that points into it with a code and a span.
+type Pointed = {
+    source: String
+    code: String
+    span: lexer.Span
+}
+
+/// What one escape of a data form stands for, and how many code units it is written with.
+type Taken = {
+    text: String
+    width: Int
+}
+
+/// Each property of the rendering and the data form.
+type Property =
+    | NamesAPlace
+    | OpensAndEnds
+    | DataIsOneLine
+    | DataReadsBack

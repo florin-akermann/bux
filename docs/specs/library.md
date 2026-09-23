@@ -1,10 +1,10 @@
 # The library
 
-The prelude and the standard library are Lumen source the compiler carries, not tables it holds.
+The prelude and the standard library are Bux source the compiler carries, not tables it holds.
 
 ## Intent
 
-The prelude can be Lumen source once a module can be loaded.
+The prelude can be Bux source once a module can be loaded.
 A module has loaded since the loader landed.
 `docs/implementation.md` section 10 asks for the `Int` and `String` instances of the operator
 traits to move into the library.
@@ -13,13 +13,13 @@ This spec says where that source lives, how the compiler reaches it, and what is
 Dogfooding is the point.
 Every table the compiler holds about the prelude is a second way to declare a type, a trait, and
 an instance, and a second way drifts from the first.
-`Option` written in Lumen is read, formatted, checked, and refused by the same code every other
+`Option` written in Bux is read, formatted, checked, and refused by the same code every other
 module is, so there is one declaration of it and nothing to keep in step.
 
 ## Where the source is
 
-The library is `library/*.lm` in this repository, one file per module, written as any module is.
-It is ordinary Lumen source: canonical form, one name one definition, examples where a function
+The library is `library/*.bx` in this repository, one file per module, written as any module is.
+It is ordinary Bux source: canonical form, one name one definition, examples where a function
 states one.
 
 The compiler carries it rather than looking for it.
@@ -34,11 +34,11 @@ That is also what makes every build and every test work with no network and no f
 The Bux compiler carries the files, in the one copy `library/` holds, as class-path resources.
 A resource is a file the JVM reads through its class loader, and the compiler's classes are read
 the same way.
-`library/<name>.lm` sits on the class path of the compiled compiler: in a directory now, and in
+`library/<name>.bx` sits on the class path of the compiled compiler: in a directory now, and in
 the jar once the compiler ships as one.
 Nothing is generated from the files, and nothing is copied into Bux source.
 
-`compiler/modules.lm` reads a library module through one call to the class loader.
+`compiler/modules.bx` reads a library module through one call to the class loader.
 That call is `java.lang.ClassLoader.getSystemResourceAsStream`, reached by an `extern static`
 whose result is an `Option`, which `docs/specs/interop.md` states.
 It gives `None` where the class path holds no such resource, and the stream of the file otherwise.
@@ -46,14 +46,14 @@ Four more `extern` declarations read that stream whole as UTF-8 through a `java.
 
 The compiler does not look for the library on disk.
 It asks for the resource by name, and the class path it was started with answers or does not.
-A file called `library/list.lm` in the directory a command runs in is therefore not the library,
+A file called `library/list.bx` in the directory a command runs in is therefore not the library,
 unless that directory is on the class path of the compiler itself.
 
 The name of the resource is the name of the module: an import of `list` asks for
-`library/list.lm`.
+`library/list.bx`.
 A name the class path holds no resource for is no library module, and the import looks for a file.
 There is no list of library names in Bux, so one more file in `library/` is one more module.
-A refusal about a library module names the resource, `library/list.lm`.
+A refusal about a library module names the resource, `library/list.bx`.
 
 `bin/bux` and `bin/runner` put the repository on the class path, after the `target/` of classes.
 That is the directory that holds `library/`, so the resource names above reach the one copy.
@@ -77,7 +77,7 @@ and an import of it is the library's.
 
 A type the JVM holds directly stays the compiler's: `Bool`, `Int`, `String`, and `List`.
 Nothing a program writes could declare them, because what they are made of is the JVM rather than
-any Lumen declaration.
+any Bux declaration.
 They are named types like any other from where a program stands, which is what
 `docs/design.md` section 2 asks: what `Int` can do, a declared type can do.
 
@@ -93,13 +93,13 @@ instances:    each of those traits for the types of it the library writes
 ```
 
 `todo` stays the compiler's, because a hole has no body for the library to write:
-`docs/specs/holes.md` has `lumen build` refuse every one of them before a class file is written.
+`docs/specs/holes.md` has `bux build` refuse every one of them before a class file is written.
 `Process`, `send`, and `ended` stay the compiler's too, which `docs/specs/concurrency.md` states.
 A handle reaches a thread, a queue, and a future, and no Bux declaration can name any of them.
 
 ## An operator over a type the compiler holds
 
-`instance Add<Int>` is written in the library, and its body is written in Lumen:
+`instance Add<Int>` is written in the library, and its body is written in Bux:
 
 ```text
 instance Add<Int> {
@@ -120,7 +120,7 @@ The same holds for `Eq`, `Ord`, `Hash`, and `Show` over those three types, and f
 
 Nothing calls one of those bodies, because every use is the instruction, and the compiler reads
 each of them all the same.
-The library is what says in Lumen what an instruction does, and a claim nothing reads drifts from
+The library is what says in Bux what an instruction does, and a claim nothing reads drifts from
 what it claims about.
 So the prelude is inferred where it is read, which is before the first module of a build is, and
 every body in it is held to the type its declaration gives it.
@@ -145,14 +145,14 @@ No `extern` declaration names one of them.
 
 `List` is the compiler's, which the section above states, so what a list does is the compiler's
 too.
-None of the three has a body in `library/list.lm`, because none can be said in Bux at its cost.
+None of the three has a body in `library/list.bx`, because none can be said in Bux at its cost.
 A list is built whole by a literal, and no expression the grammar writes builds a list from a
 list, so `push` has no body to write.
 `length` and `at` each have one that a `for` loop writes.
 That body counts every value, or counts to the index, and so costs what the list holds.
 A list holds its length already, so a count is a cost that no program needs to pay.
 
-An `extern` is one Java member under a Lumen signature, and none of the three is one member.
+An `extern` is one Java member under a Bux signature, and none of the three is one member.
 A signature for one of them writes a type parameter, and `docs/specs/interop.md` refuses one: a
 type parameter is carried by nothing a Java descriptor names.
 The length of a list is a field, not a member that a call reaches.
@@ -183,7 +183,7 @@ No one of the three is partial, and no one of them panics.
 ## The instances a list has
 
 The prelude writes `Eq`, `Ord`, `Hash`, and `Show` for `List<T>`, each constrained on `T`, and
-each body is a `for` loop over the list in `library/prelude.lm`.
+each body is a `for` loop over the list in `library/prelude.bx`.
 `docs/specs/traits.md` states what the four answer, and each one asks `T` for the instance of its
 own trait rather than reading an element any other way.
 
@@ -193,7 +193,7 @@ section 8 states.
 `List` is the compiler's type and no module declares it, so the module that declares the trait is
 the one place for each of the four.
 The instances of a type travel with the type, so every module that holds a list reaches the four.
-Each of the four is lowered from its body in `library/prelude.lm`, which `docs/specs/codegen.md`
+Each of the four is lowered from its body in `library/prelude.bx`, which `docs/specs/codegen.md`
 states.
 
 Each of the four reads its list with `at`, so `push` and `at` are reachable from the prelude as
@@ -272,7 +272,7 @@ It is written in Bux, over what the language already gives: a `for` loop, `+`, a
 Every function of `map` and `set` is written over the same, with `match` and a declared type
 beside them, and no function in the library calls itself.
 That is the test a library function is held to.
-It lands in the library rather than in the compiler exactly when Lumen can write it, and it lands
+It lands in the library rather than in the compiler exactly when Bux can write it, and it lands
 at all only when a reader would otherwise write the same loop twice.
 
 `strings` has a `length` and so does `list`, and neither of the two is a prelude name: one name

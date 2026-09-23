@@ -12,7 +12,7 @@ runs, or never.
 
 mycs lints a swappable pair of arguments after the fact.
 A structural mistake a type system can make unwriteable belongs in the language rather than in a
-linter, so Lumen refuses the call instead.
+linter, so Bux refuses the call instead.
 
 ## The rule
 
@@ -102,7 +102,7 @@ A call of a function above it reads the same signature as a call of a function b
 That holds for a signature the author left unwritten too.
 `fn is_even(steps, label)` counts the types that inference settled for its parameters.
 Nothing about the rule rests on the order in which the compiler walks the bodies of a module.
-`tests/spec/arguments/mutual_recursion.lm` is the example.
+`tests/spec/arguments/mutual_recursion.bx` is the example.
 
 ## What has no names to write
 
@@ -137,7 +137,7 @@ Each is written with its values in order.
 
 ```text
 error[L0409]: `rename` gives two parameters the type `String`, so this call names its arguments
-  --> demo.lm:2:5
+  --> demo.bx:2:5
 
   2 |     rename(old, new)
     |     ^^^^^^^^^^^^^^^^
@@ -149,7 +149,7 @@ help: a call names its arguments when the declaration gives two parameters one t
 
 ```text
 error[L0410]: this argument is named `to`, and the parameter here is `from`
-  --> demo.lm:2:12
+  --> demo.bx:2:12
 
   2 |     rename(to: new, from: old)
     |            ^^^^^^^
@@ -161,7 +161,7 @@ help: arguments are named in the order the declaration lists its parameters
 
 ```text
 error[L0411]: `Span` is a constructor, so it carries its values in order and names none
-  --> demo.lm:2:5
+  --> demo.bx:2:5
 
   2 |     Span(len: 10, start: 0)
     |     ^^^^^^^^^^^^^^^^^^^^^^^
@@ -173,7 +173,7 @@ help: a variant whose values want names declares them as fields and is built as 
 
 ```text
 error[L0433]: a dot after a value reads a field, so this call of `or` is written plainly
-  --> demo.lm:2:5
+  --> demo.bx:2:5
 
   2 |     maybe.or(0)
     |     ^^^^^^^^^^^
@@ -181,7 +181,7 @@ error[L0433]: a dot after a value reads a field, so this call of `or` is written
 help: write `or(maybe, 0)`
 ```
 
-All four are raised in `compiler/infer.lm`.
+All four are raised in `compiler/infer.bx`.
 `L0433` is raised as inference reaches the call, before anything else about it is counted or met.
 `L0410` and `L0411` are raised as inference reaches the call.
 `L0409` is raised once inference has walked every function of the module.
@@ -200,7 +200,7 @@ parser refuses it, because the two forms are two shapes of the grammar rather th
 
 ```text
 error[L0108]: this call names some of its arguments and not others
-  --> demo.lm:2:23
+  --> demo.bx:2:23
 
   2 |     rename(from: old, new)
     |                       ^^^
@@ -306,7 +306,7 @@ writes.
 
 ```text
 error[L0412]: this parameter is a `Bool`, so a call of `open` passes `true` and says no more
-  --> demo.lm:1:23
+  --> demo.bx:1:23
 
   1 | fn open(path: String, read_only: Bool) -> File {
     |                       ^^^^^^^^^^^^^^^

@@ -2,7 +2,7 @@
 
 ## Intent
 
-No Lumen program throws, catches, or observes an exception, and no operation is partial.
+No Bux program throws, catches, or observes an exception, and no operation is partial.
 An operation that has no answer for some of its input says so in its type rather than at runtime.
 Division has no answer when the divisor is zero, so division says so in its type.
 
@@ -91,7 +91,7 @@ or(maybe: Option<T>, fallback: T) -> T
 
 `or(total / count, 0)` is the whole of the common case, and it is an ordinary call.
 Both of its arguments are worked out before either branch is taken, because that is what a call
-does, and what `or` does must not change when the prelude becomes Lumen source.
+does, and what `or` does must not change when the prelude becomes Bux source.
 
 The prelude never gains `unwrap` or `expect`.
 There is no way to turn a `None` into a crash, which is the point of the rule.
@@ -144,7 +144,7 @@ These hold over any module that divides, and are checked by drawn properties in 
 3. `or` is written out where it is used, calling nothing of its own and reading both branches.
 4. Every `?` on an `Option` gives the `None` it was handed back unchanged, wherever it is written.
 
-`tests/spec/arithmetic/division.lm` runs the arithmetic this spec states on a JDK, and is
+`tests/spec/arithmetic/division.bx` runs the arithmetic this spec states on a JDK, and is
 skipped when none is present.
 It divides through `?` as well as through `or` and `match`, so the propagation runs there too.
 It writes out what each division worked out, and its header states the lines it must write.

@@ -2,7 +2,7 @@
 
 A value a program works out and then throws away was thrown away on purpose or by mistake, and in
 most languages the two are spelled the same.
-Lumen spells them differently: a value is discarded where the source writes `_ =`, and nowhere else.
+Bux spells them differently: a value is discarded where the source writes `_ =`, and nowhere else.
 
 ## Intent
 
@@ -60,11 +60,11 @@ Nothing reads `_` back, because `_ =` binds nothing.
 
 ## The error
 
-A discarded value is `L0408`, raised by inference and worded by `compiler/refusal.lm`:
+A discarded value is `L0408`, raised by inference and worded by `compiler/refusal.bx`:
 
 ```text
 error[L0408]: `Result<(), Error>` is left here and nothing takes it
-  --> demo.lm:2:5
+  --> demo.bx:2:5
 
   2 |     save(user)
     |     ^^^^^^^^^^

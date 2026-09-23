@@ -1,0 +1,185 @@
+// The one shape a process has: `start`, then `receive`, and nothing else.
+//
+// `docs/specs/concurrency.md` states the shape, and `tests/spawned.bx` holds it on drawn processes.
+// The check reads the tree alone, so it runs before any type is declared or inferred. Each break of
+// the shape has a code of its own, and the first break the module writes is the one refused.
+import ast
+import lexer
+import list
+import parser
+import refusal
+
+/// The code and span of the first break of the shape `source` writes, or `""`.
+// example: shape_code("process Counter {\n    fn start() -> Int {\n        0\n    }\n\n    fn receive(total: Int, message: Int) -> Next<Int> {\n        match message {\n            _ => Done\n        }\n    }\n}\n") == ""
+fn shape_code(source: String) -> String {
+    refusal.code_given(every_process_shaped(ok_or(parser.parse(source), ast.Program { items: [] })))
+}
+
+/// Refuses the first process of `program` that breaks the shape.
+// example: shape_code("process Counter {\n    fn begin() -> Int {\n        0\n    }\n}\n") == "L0802 25..30"
+fn every_process_shaped(program: ast.Program) -> Result<(), refusal.TypeError> {
+    for item in program.items {
+        _ = item_shaped(item)?
+    }
+    Ok(())
+}
+
+/// Refuses `item` where it is a process that breaks the shape.
+// example: refusal.code_given(item_shaped(ast.Import(ast.ImportDeclaration { module: ast.Name { text: "io", span: lexer.Span { start: 7, length: 2 } }, span: lexer.Span { start: 0, length: 9 } }))) == ""
+fn item_shaped(item: ast.Item) -> Result<(), refusal.TypeError> {
+    match item {
+        ast.Process(declaration) => shaped(declaration)
+        _ => Ok(())
+    }
+}
+
+/// Refuses the first break of the shape `declaration` writes: the functions, then each signature,
+/// then the body of `receive`.
+// example: shape_code("process Counter {\n    fn start<T>() -> Int {\n        0\n    }\n\n    fn receive(total: Int, message: Int) -> Next<Int> {\n        match message {\n            _ => Done\n        }\n    }\n}\n") == "L0805 25..30"
+fn shaped(declaration: ast.ProcessDeclaration) -> Result<(), refusal.TypeError> {
+    _ = in_their_places(declaration)?
+    for function in declaration.functions {
+        _ = signature_written(function)?
+    }
+    received(declaration)
+}
+
+/// Refuses a process whose first function is not `start`, whose second is not `receive`, or that
+/// declares a third.
+// example: shape_code("process Counter {\n    fn start() -> Int {\n        0\n    }\n}\n") == "L0803 8..15"
+// example: shape_code("process Counter {\n    fn start() -> Int {\n        0\n    }\n\n    fn receive(total: Int, message: Int) -> Next<Int> {\n        match message {\n            _ => Done\n        }\n    }\n\n    fn more() -> Int {\n        0\n    }\n}\n") == "L0804 185..189"
+fn in_their_places(declaration: ast.ProcessDeclaration) -> Result<(), refusal.TypeError> {
+    name := declaration.name.text
+    starting := named_at(declaration, 0, "start")
+    if !starting.is_named {
+        return Err(refusal.TypeError { kind: refusal.StartsWithoutStart(name), span: starting.name.span })
+    }
+    receiving := named_at(declaration, 1, "receive")
+    if !receiving.is_named {
+        return Err(refusal.TypeError { kind: refusal.ReceivesNothing(name), span: receiving.name.span })
+    }
+    if list.length(declaration.functions) > 2 {
+        return Err(refusal.TypeError { kind: refusal.DeclaresMore(name), span: named_at(declaration, 2, "").name.span })
+    }
+    Ok(())
+}
+
+/// The function at `index` of `declaration`, and whether it is called `wanted`.
+///
+/// Where the process declares no function at `index`, the name is the process's own.
+// example: named_at(ast.ProcessDeclaration { name: ast.Name { text: "P", span: lexer.Span { start: 8, length: 1 } }, functions: [], span: lexer.Span { start: 0, length: 12 } }, 0, "start").name.text == "P"
+fn named_at(declaration: ast.ProcessDeclaration, index: Int, wanted: String) -> Found {
+    match list.at(declaration.functions, index) {
+        Some(function) => Found { name: function.name, is_named: function.name.text == wanted }
+        None => Found { name: declaration.name, is_named: false }
+    }
+}
+
+/// Refuses a function of a process that declares a type parameter or leaves a type unwritten.
+// example: shape_code("process Counter {\n    fn start<T>() -> Int {\n        0\n    }\n\n    fn receive(total: Int, message: Int) -> Next<Int> {\n        match message {\n            _ => Done\n        }\n    }\n}\n") == "L0805 25..30"
+// example: shape_code("process Counter {\n    fn start(initial) -> Int {\n        0\n    }\n\n    fn receive(total: Int, message: Int) -> Next<Int> {\n        match message {\n            _ => Done\n        }\n    }\n}\n") == "L0806 31..38"
+fn signature_written(function: ast.FunctionDeclaration) -> Result<(), refusal.TypeError> {
+    if list.length(function.type_parameters) > 0 {
+        return Err(refusal.TypeError { kind: refusal.GenericProcess(function.name.text), span: function.name.span })
+    }
+    for parameter in function.parameters {
+        if !is_written(parameter.type_ref) {
+            return Err(refusal.TypeError { kind: refusal.UnwrittenProcessType(function.name.text), span: parameter.span })
+        }
+    }
+    if !is_written(function.result) {
+        return Err(refusal.TypeError { kind: refusal.UnwrittenProcessType(function.name.text), span: function.name.span })
+    }
+    Ok(())
+}
+
+/// Whether a type is written.
+// example: !is_written(None)
+fn is_written(written: Option<ast.TypeRef>) -> Bool {
+    match written {
+        Some(_) => true
+        None => false
+    }
+}
+
+/// Refuses a `receive` that takes other than a state and a message, or whose body is more than one
+/// `match` on the message, each arm one call or one name.
+// example: shape_code("process Counter {\n    fn start() -> Int {\n        0\n    }\n\n    fn receive(total: Int) -> Next<Int> {\n        Done\n    }\n}\n") == "L0807 66..73"
+fn received(declaration: ast.ProcessDeclaration) -> Result<(), refusal.TypeError> {
+    receive := or(list.at(declaration.functions, 1), empty_function(declaration.name))
+    if list.length(receive.parameters) != 2 {
+        return Err(refusal.TypeError { kind: refusal.ReceivesTwoValues(declaration.name.text), span: receive.name.span })
+    }
+    message := or(list.at(receive.parameters, 1), empty_parameter(receive.name)).name.text
+    matched := one_match_on(receive.body, message)?
+    for arm in matched.arms {
+        if !is_one_call_or_one_name(arm.body) {
+            return Err(refusal.TypeError { kind: refusal.ArmDoesTheWork(message), span: arm.body.span })
+        }
+    }
+    Ok(())
+}
+
+/// The one `match` on `message` that `body` is, or the refusal of a body that is anything else.
+// example: shape_code("process Counter {\n    fn start() -> Int {\n        0\n    }\n\n    fn receive(total: Int, message: Int) -> Next<Int> {\n        Done\n    }\n}\n") == "L0808 113..133"
+fn one_match_on(body: ast.Block, message: String) -> Result<ast.MatchExpr, refusal.TypeError> {
+    refused := refusal.TypeError { kind: refusal.ReceivesWithoutAMatch(message), span: body.span }
+    if list.length(body.statements) != 1 {
+        return Err(refused)
+    }
+    statement := or(list.at(body.statements, 0), ast.Statement { kind: ast.Break, span: body.span })
+    match statement.kind {
+        ast.Evaluated(written) => match_on(written, message, refused)
+        _ => Err(refused)
+    }
+}
+
+/// The `match` `written` is, where it matches the name `message` and nothing else.
+// example: shape_code("process Counter {\n    fn start() -> Int {\n        0\n    }\n\n    fn receive(total: Int, message: Int) -> Next<Int> {\n        match total {\n            _ => Done\n        }\n    }\n}\n") == "L0808 113..174"
+fn match_on(written: ast.Expr, message: String, refused: refusal.TypeError) -> Result<ast.MatchExpr, refusal.TypeError> {
+    match written.kind {
+        ast.Match(matched) => if is_name_of(matched.scrutinee, message) {
+            Ok(matched)
+        } else {
+            Err(refused)
+        }
+        _ => Err(refused)
+    }
+}
+
+/// Whether `written` is the bare name `named`.
+// example: !is_name_of(ast.Expr { kind: ast.Unit, span: lexer.Span { start: 0, length: 2 } }, "message")
+fn is_name_of(written: ast.Expr, named: String) -> Bool {
+    match written.kind {
+        ast.NameExpr(name) => name.text == named
+        _ => false
+    }
+}
+
+/// Whether an arm's body is one call or one name, which is all an arm of `receive` holds.
+// example: shape_code("process Counter {\n    fn start() -> Int {\n        0\n    }\n\n    fn receive(total: Int, message: Int) -> Next<Int> {\n        match message {\n            _ => if true {\n                Done\n            } else {\n                Done\n            }\n        }\n    }\n}\n") == "L0809 156..242"
+fn is_one_call_or_one_name(body: ast.Expr) -> Bool {
+    match body.kind {
+        ast.NameExpr(_) => true
+        ast.Call { callee, arguments } => true
+        _ => false
+    }
+}
+
+/// A function of no parameters and an empty body, named as the process is.
+// example: empty_function(ast.Name { text: "P", span: lexer.Span { start: 8, length: 1 } }).name.text == "P"
+fn empty_function(name: ast.Name) -> ast.FunctionDeclaration {
+    ast.FunctionDeclaration { name: name, type_parameters: [], parameters: [], result: None, body: ast.Block { statements: [], span: name.span }, span: name.span }
+}
+
+/// A parameter of no type, named as the function is.
+// example: empty_parameter(ast.Name { text: "receive", span: lexer.Span { start: 8, length: 7 } }).name.text == "receive"
+fn empty_parameter(name: ast.Name) -> ast.Parameter {
+    ast.Parameter { name: name, type_ref: None, span: name.span }
+}
+
+/// The function at one place of a process, and whether it has the name that place wants.
+type Found = {
+    name: ast.Name
+    is_named: Bool
+}

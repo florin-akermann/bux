@@ -20,7 +20,7 @@ offline-first does not have.
 ## What a package is
 
 A package is a directory holding a manifest called `bux.package`.
-Its modules are the `.lm` files in that directory, each named by its file as every module is.
+Its modules are the `.bx` files in that directory, each named by its file as every module is.
 A package has no subdirectories of modules: one directory holds one package's modules.
 
 A file in no package is a module still, and reaches what sits beside it exactly as before.
@@ -65,8 +65,8 @@ not, and there is one way to write a manifest.
 `import demo` is answered by the first of these that holds `demo`:
 
 1. What the library carries, which `docs/specs/library.md` lists.
-2. `demo.lm` beside the file that wrote the import.
-3. `demo.lm` in a package the manifest beside that file depends on.
+2. `demo.bx` beside the file that wrote the import.
+3. `demo.bx` in a package the manifest beside that file depends on.
 
 Nothing else is looked in, and an import that reaches none of them is `L0306`.
 
@@ -103,14 +103,14 @@ compiled after everything it imports wherever that came from.
 
 ## What a command takes
 
-`lumen check` and `lumen build` take a package as well as a file.
+`bux check` and `bux build` take a package as well as a file.
 A directory is a package, and either command run over one runs over every module the package
 holds, in the order their names sort, stopping at the first refusal.
 Each of them is compiled as the module a command named, so a module several of them import is
 compiled once for each, and a package is as many compilations as it has modules.
 That is what a package costs until a measurement says the sharing is worth building.
 
-`lumen fmt`, `lumen run`, `lumen test`, and `lumen api` each take a file.
+`bux fmt`, `bux run`, `bux test`, and `bux api` each take a file.
 A package has no canonical text of its own, no `main` to run, no examples, and no surface beyond
 its modules'; each of those is a module's and is asked of the module.
 
@@ -125,7 +125,7 @@ exit code 2, as it does for a directory it cannot list.
 | word is not one word  | `L0315` | `package` states one word, and this line does not      |
 | depended on twice     | `L0315` | `../geometry` is depended on twice                     |
 | no package there      | `L0316` | there is no package in `../geometry`                   |
-| module is two files   | `L0317` | `demo` is both `../shapes/demo.lm` and `demo.lm`       |
+| module is two files   | `L0317` | `demo` is both `../shapes/demo.bx` and `demo.bx`       |
 
 A line that is not the line belonging there helps with ``a manifest is `package`, then `version`,
 then a `depends` for each dependency``.

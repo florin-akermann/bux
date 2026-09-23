@@ -1,7 +1,0 @@
-// A module that declares a type, which `imported_gap.lm` and `imported_order.lm` match on.
-type Payment =
-    | Pending
-    | Authorized {
-        authorization_id: String
-    }
-    | Failed(String)

@@ -7,20 +7,20 @@ and what running one amounts to.
 
 ## Intent
 
-An example is a whole Lumen file that a reader can open and learn the language from.
+An example is a whole Bux file that a reader can open and learn the language from.
 It is not a fixture cut down to one phase, so nothing in `tests/spec/` is a fragment.
 Either the compiler accepts the file, or the file says which diagnostic the compiler refuses it
 with.
 
 ## File layout
 
-An example is a `.lm` file under `tests/spec/<area>/`, where the area names a part of the language.
+An example is a `.bx` file under `tests/spec/<area>/`, where the area names a part of the language.
 The areas that exist are the ones some example needs; none is created ahead of its first example.
 
 A phase that wants to record more about an example puts it in a sibling file of the same stem.
-`program.lm` and `program.tokens` are the same example seen by the lexer, and `program.ast` is
+`program.bx` and `program.tokens` are the same example seen by the lexer, and `program.ast` is
 that example seen by the parser.
-Only the `.lm` file is the example; a sibling is one phase's view of it.
+Only the `.bx` file is the example; a sibling is one phase's view of it.
 
 ## The expectation
 
@@ -106,7 +106,7 @@ An example may carry ordinary comments below its expectation.
 
 ## Compiling an example
 
-An example compiles when `lumen check` accepts it.
+An example compiles when `bux check` accepts it.
 Today that means it parses, is in canonical form already, and has a definition for every name.
 Every phase the compiler grows joins that check, so an example that compiles today keeps having to
 compile.
@@ -118,7 +118,7 @@ An example headed `// expect-error: L0200` departs from canonical form, and that
 
 ## Running an example
 
-An example headed `// expect-run` is run with `lumen run`, and with the words the header states.
+An example headed `// expect-run` is run with `bux run`, and with the words the header states.
 It must end with the status the header states, which is `0` where the header states none.
 `docs/specs/run.md` says what running amounts to and where the JDK comes from.
 
@@ -142,8 +142,8 @@ Every other example is held to its expectation either way, because nothing else 
 
 ## The harness
 
-`tests/exemplified.lm` walks `tests/spec/` and holds every example to its expectation.
+`tests/exemplified.bx` walks `tests/spec/` and holds every example to its expectation.
 It walks in a stable order so two runs report the same first failure.
 A failure names the example's path, so the file to open is never in doubt.
 An empty `tests/spec/` is itself a failure: the specification is never allowed to be nothing.
-It runs an example headed `// expect-run` from the line that `lumen run` starts it with.
+It runs an example headed `// expect-run` from the line that `bux run` starts it with.

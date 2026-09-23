@@ -22,7 +22,7 @@ function is `snake_case`, a type is `PascalCase`, and neither is rewritten.
 Sequence is part of canonical form, and the printer is not what enforces it.
 `docs/design.md` section 13 puts imports first and sorted, a declaration above what uses it, and a
 match arm in the order the type declares its variants.
-Order is checked and never rewritten: `lumen fmt` repairs whitespace, which is nobody's decision,
+Order is checked and never rewritten: `bux fmt` repairs whitespace, which is nobody's decision,
 while where a declaration belongs is the author's.
 
 The formatter reads the source, not only the tree, because comments are not part of the tree.
@@ -117,10 +117,10 @@ It is written below the joined line instead, above whatever the source wrote nex
 That rule is total: every comment in the source appears exactly once in the output, in source
 order, and no comment is ever dropped or duplicated.
 
-## `lumen fmt` and `lumen check`
+## `bux fmt` and `bux check`
 
-`lumen fmt <file>` rewrites the file in canonical form, and writes nothing when it already is.
-`lumen check <file>` reports the first line that is not in canonical form and exits non-zero.
+`bux fmt <file>` rewrites the file in canonical form, and writes nothing when it already is.
+`bux check <file>` reports the first line that is not in canonical form and exits non-zero.
 
 A file that does not parse is reported as the parse error, by both commands, and neither writes.
 Exit codes are `0` for a file in canonical form, `1` for one that is not, and `2` for one that
@@ -138,13 +138,13 @@ Its `help:` says to run `bux fmt`, which takes the line out.
 
 ## Executable examples
 
-`tests/spec/format/<name>.lm` files are already in canonical form, and formatting one changes
+`tests/spec/format/<name>.bx` files are already in canonical form, and formatting one changes
 nothing.
-A sibling `<name>.unformatted` file, where there is one, formats to the `.lm` file beside it.
-`tests/siblings.lm` walks that directory and names the failing file.
+A sibling `<name>.unformatted` file, where there is one, formats to the `.bx` file beside it.
+`tests/siblings.bx` walks that directory and names the failing file.
 
-Every `.lm` file under `tests/spec/` is in canonical form unless it says which diagnostic refuses
-it, which `docs/specs/executable-examples.md` describes and `tests/exemplified.lm` holds
+Every `.bx` file under `tests/spec/` is in canonical form unless it says which diagnostic refuses
+it, which `docs/specs/executable-examples.md` describes and `tests/exemplified.bx` holds
 every example to.
 The language's own examples are then the largest evidence that the printer is right.
 
@@ -155,24 +155,24 @@ A rule is checked by the phase that holds the information it needs, and no earli
 How a name is spelled is a rule of the same kind, and `docs/specs/naming.md` says where each of
 those is checked.
 
-Import order is syntax, so `compiler/format.lm` checks it with canonical form and raises `L0201`.
+Import order is syntax, so `compiler/format.bx` checks it with canonical form and raises `L0201`.
 Whether a declaration is written above what uses it needs to know which name means which
-declaration, so `compiler/resolver.lm` checks it and raises `L0303`.
+declaration, so `compiler/resolver.bx` checks it and raises `L0303`.
 `docs/specs/modules.md` states that rule.
-Arm order needs the variant list, so `compiler/exhaustiveness.lm` checks it and raises `L0501`.
+Arm order needs the variant list, so `compiler/exhaustiveness.bx` checks it and raises `L0501`.
 `docs/specs/exhaustiveness.md` states that rule.
 
 ## The formatter written in Bux
 
-`compiler/format.lm` is this formatter, written in Bux.
-It prints the tree of `compiler/parser.lm`, and it reads the comments from `compiler/lexer.lm`.
+`compiler/format.bx` is this formatter, written in Bux.
+It prints the tree of `compiler/parser.bx`, and it reads the comments from `compiler/lexer.bx`.
 `format.format(source)` gives the canonical text, or the parse error where the source is no program.
-`format.check(source)` holds a source to canonical form, as `lumen check` does.
+`format.check(source)` holds a source to canonical form, as `bux check` does.
 It gives the first refusal it finds: the parse error, then `L0200`, `L0201`, `L0202`, `L0203`.
 
-`tests/layout.lm` holds the formatter to the properties below, on drawn programs and drawn files.
-`tests/exemplified.lm` holds every example under `tests/spec` to canonical form.
-`tests/commanded.lm` holds `lumen check` and `lumen fmt` to golden answers on every example.
+`tests/layout.bx` holds the formatter to the properties below, on drawn programs and drawn files.
+`tests/exemplified.bx` holds every example under `tests/spec` to canonical form.
+`tests/commanded.bx` holds `bux check` and `bux fmt` to golden answers on every example.
 
 ## Properties
 

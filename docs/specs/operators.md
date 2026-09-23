@@ -72,7 +72,7 @@ comparisons the trait to resolve to; `docs/specs/derive.md` states what a type d
 
 ## What the library writes
 
-`library/prelude.lm` is Lumen source the compiler carries, which `docs/specs/library.md` states,
+`library/prelude.bx` is Bux source the compiler carries, which `docs/specs/library.md` states,
 and it declares the seven traits and writes every one of these instances:
 
 ```text
@@ -97,7 +97,7 @@ A module writing `instance Add<Int>` is refused with `L0308`, because there alre
 None of these instances has a body anything calls.
 What one amounts to is written out where the operator is written, as `Eq`'s instances are: two
 whole numbers added as the JVM adds them, and two strings joined as `+` already joined them.
-The body in `library/prelude.lm` is what says in Lumen what that instruction does.
+The body in `library/prelude.bx` is what says in Bux what that instruction does.
 
 ## A declared type owning an operator
 

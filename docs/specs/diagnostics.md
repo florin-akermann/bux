@@ -21,7 +21,7 @@ A rendered diagnostic is the message, the location, the source it points at, and
 
 ```text
 error[L0105]: comparisons do not chain
-  --> demo.lm:2:5
+  --> demo.bx:2:5
 
   2 |     a < b < c
     |     ^^^^^^^^^
@@ -67,7 +67,7 @@ that stated it.
 The number is not given to anything else afterwards, so a gap in the run is a code that was
 retired and nothing more.
 
-The grammar raises these, in `compiler/parser.lm`:
+The grammar raises these, in `compiler/parser.bx`:
 
 - `L0100` — the grammar expected one thing and the source wrote another.
 - `L0101` — a string has no closing quote.
@@ -79,7 +79,7 @@ The grammar raises these, in `compiler/parser.lm`:
 - `L0107` — something other than a name is written on the left of `=` or `+=`.
 - `L0108` — a call names some of its arguments and not others.
 
-Canonical form raises these, in `compiler/format.lm`:
+Canonical form raises these, in `compiler/format.bx`:
 
 - `L0200` — the file is not in canonical form.
 - `L0201` — an import is written after a declaration, or two imports are out of sort.
@@ -87,8 +87,8 @@ Canonical form raises these, in `compiler/format.lm`:
 - `L0203` — a declared name is an initial rather than a word a reader can look for.
 
 One code covers all three ways a file departs from whitespace form, because they are one problem
-and `lumen fmt` is the one answer to it.
-Order is its own code because `lumen fmt` is not the answer to it: where a declaration belongs is
+and `bux fmt` is the one answer to it.
+Order is its own code because `bux fmt` is not the answer to it: where a declaration belongs is
 the author's decision, so the compiler says where rather than moving it.
 
 Naming has two codes for the same reason, and one each because the two have different answers: a
@@ -97,7 +97,7 @@ knows.
 `L0413` is with inference rather than here because the result it reads is the one inference
 settled, which `docs/specs/naming.md` states.
 
-Name resolution raises these, in `compiler/resolver.lm`:
+Name resolution raises these, in `compiler/resolver.bx`:
 
 - `L0300` — nothing in scope has this name.
 - `L0301` — a module declares the same name twice.
@@ -114,7 +114,7 @@ Name resolution raises these, in `compiler/resolver.lm`:
 - `L0314` — a name that binds is written inside an or-pattern, which binds nothing.
 - `L0318` — an instance writes an argument of its type that is no type parameter it declares.
 
-Loading raises these, in `compiler/modules.lm`, before any module is resolved:
+Loading raises these, in `compiler/modules.bx`, before any module is resolved:
 
 - `L0306` — an import names a module neither a file beside it nor a package it reaches holds.
 - `L0307` — a ring of imports, which leaves the modules in it no order to be compiled in.
@@ -122,7 +122,7 @@ Loading raises these, in `compiler/modules.lm`, before any module is resolved:
 - `L0316` — a directory named as a package holds no manifest, so there is no package there.
 - `L0317` — two files claim the module name an import writes, so one build would hold both.
 
-Type inference raises these, and `compiler/refusal.lm` words them:
+Type inference raises these, and `compiler/refusal.bx` words them:
 
 - `L0400` — a type met a type it does not match.
 - `L0401` — a call passes more or fewer arguments than the function takes.
@@ -156,21 +156,21 @@ Type inference raises these, and `compiler/refusal.lm` words them:
 - `L0432` — a program writes `Option<()>`, or inference gives an expression a type that holds it.
 - `L0433` — a call is written with a value in front of the name, where a dot reads a field.
 
-Exhaustiveness raises these, in `compiler/exhaustiveness.lm`:
+Exhaustiveness raises these, in `compiler/exhaustiveness.bx`:
 
 - `L0500` — a `match` leaves a value of the type it matches unanswered.
 - `L0501` — a `match` lists its arms in an order the type does not declare its variants in.
 
-`lumen build` raises this one, in `compiler/command.lm`, for each hole `compiler/holes.lm` finds:
+`bux build` raises this one, in `compiler/command.bx`, for each hole `compiler/holes.bx` finds:
 
 - `L0600` — a hole is still in the program, and a hole has nothing to compile.
 
-`lumen build`, `lumen run`, and `lumen test` raise these, in `compiler/command.lm`:
+`bux build`, `bux run`, and `bux test` raise these, in `compiler/command.bx`:
 
 - `L0601` — a function a module declares at the top level states no example.
 - `L0602` — an example is written where nothing carries one.
 
-`lumen test` raises these alone, in `compiler/command.lm`:
+`bux test` raises these alone, in `compiler/command.bx`:
 
 - `L0603` — an example a module states did not hold when it was run.
 - `L0604` — a module declares the name a run of its examples reaches for.
@@ -178,7 +178,11 @@ Exhaustiveness raises these, in `compiler/exhaustiveness.lm`:
 All three are reported together rather than one at a time, unlike every code above them.
 A reader answering them is answering a list, and a list of one would not be that list.
 
-`lumen build`, `lumen run`, and `lumen test` raise these, in `compiler/jvm.lm`, for the first
+Every command that takes a file raises this one, in `compiler/command.bx`, before it compiles:
+
+- `L0605` — the file named on the command line is no Bux source: its name does not end in `.bx`.
+
+`bux build`, `bux run`, and `bux test` raise these, in `compiler/jvm.bx`, for the first
 class that the writer cannot write:
 
 - `L0700` — a function is too large to compile as one function.
@@ -186,9 +190,9 @@ class that the writer cannot write:
 - `L0702` — two parts of one program, a module or the library, have one name.
 - `L0703` — the compiler did not write a function, which is a defect of the compiler.
 
-Name resolution raises the first two of these, in `compiler/resolver.lm`.
-The shape check raises the next eight, in `compiler/processes.lm`, before inference.
-The declarations raise the last one, in `compiler/declared.lm`.
+Name resolution raises the first two of these, in `compiler/resolver.bx`.
+The shape check raises the next eight, in `compiler/processes.bx`, before inference.
+The declarations raise the last one, in `compiler/declared.bx`.
 `docs/specs/concurrency.md` states the shape that each one holds.
 
 - `L0800` — `spawn` names no process this module declares, or names one without a call.
@@ -205,22 +209,22 @@ The declarations raise the last one, in `compiler/declared.lm`.
 
 ## As data
 
-`lumen check --json <file>` writes the refusal as data rather than as a page to read.
+`bux check --json <file>` writes the refusal as data rather than as a page to read.
 
 A tool that wants to apply the compiler's own edit should not have to read the rendered form back.
 The rendered form is written for a person, and rewording it is free; the data form is written for
 a program, and every field of it is named.
 
 One diagnostic is one JSON object on one line, and the line ends with a newline.
-`lumen check` stops at the first refusal, so there is at most one line.
+`bux check` stops at the first refusal, so there is at most one line.
 A file the compiler accepts is nothing at all: no output, and the exit code says it went well.
 
 ```text
-{"file":"demo.lm","code":"L0200","message":"this line is not in canonical form","span":{"start":9,"len":10},"help":"canonical form writes `    a < b`","fix":{"start":0,"len":22,"text":"fn f() {\n    a < b\n}\n"}}
+{"file":"demo.bx","code":"L0200","message":"this line is not in canonical form","span":{"start":9,"len":10},"help":"canonical form writes `    a < b`","fix":{"start":0,"len":22,"text":"fn f() {\n    a < b\n}\n"}}
 ```
 
 `file` is the path as it was given on the command line.
-`code` is the code, written the way `lumen explain` takes it.
+`code` is the code, written the way `bux explain` takes it.
 `message` is the same one line the rendered form opens with.
 `span` is where in the file the diagnostic points, as byte offsets: `start` and `len`.
 A byte offset is what an editor and a language server both work in, and a line and a column are
@@ -244,23 +248,23 @@ An edit need not cover the bytes `span` covers: `span` is where the reader is po
 is what answers the refusal, which is not always the same place.
 
 Canonical form is the one thing the compiler carries an edit for, because it is the one refusal
-whose answer the compiler already knows: `lumen fmt` writes exactly that text.
+whose answer the compiler already knows: `bux fmt` writes exactly that text.
 Where a declaration belongs, what a name should have been, and which variant a `match` is missing
 are all the author's to decide, so those carry a `help` and no `fix`.
 
-That edit is the whole file, and it is what `lumen fmt` would write.
+That edit is the whole file, and it is what `bux fmt` would write.
 One line at a time would not do: a file with a line too many has every line after it disagreeing,
 and rewriting one of them where it stands leaves text that is no longer a program.
-One edit that replaces the file always lands, and applying it is `lumen fmt` by another route.
+One edit that replaces the file always lands, and applying it is `bux fmt` by another route.
 
 Applying the edit answers the refusal it came with, not every refusal the file holds.
 A file whose imports are also out of order is told about canonical form first, because the text is
 held to canonical form before the order is looked at; applying the edit and checking again then
 reports `L0201`, which is the author's to answer and carries no edit of its own.
 
-## `lumen explain`
+## `bux explain`
 
-`lumen explain <code>` prints the long form of one code and exits `0`.
+`bux explain <code>` prints the long form of one code and exits `0`.
 The long form says what the diagnostic means, why the language refuses it, and what to write
 instead, at more length than a `help:` line has room for.
 It lives beside the catalogue, one file per code, so a code and its explanation never drift.
@@ -275,23 +279,23 @@ A file that cannot be read and a code that does not exist are both `2`: neither 
 program.
 Diagnostics go to standard error, and only what was asked for goes to standard output.
 
-`lumen run` is the one command that can end with a status of somebody else's choosing.
+`bux run` is the one command that can end with a status of somebody else's choosing.
 Once the program it was given runs, the run ends with the status that program ended with, which
 `docs/specs/run.md` states.
 Both `1` and `2` are given before a program runs, so neither is ever a status a program chose.
 
 ## The diagnostics written in Bux
 
-`compiler/command.lm` renders a diagnostic in Bux.
+`compiler/command.bx` renders a diagnostic in Bux.
 It writes the layout above: the `error[` line, the location, the source line, and the carets.
 It counts the column in characters and keeps a tab before the span as a tab.
 A span that runs on to a later line gets the note that names the line it ends on.
 The data form is the same one line of JSON, with the same escapes, and `fix` where there is one.
-The one edit is the edit above: the whole file, replaced by the text `lumen fmt` writes.
+The one edit is the edit above: the whole file, replaced by the text `bux fmt` writes.
 `explain` reads the long form of a code as a class-path resource.
 
-`tests/rendering.lm` holds the renderer to the properties below, on drawn sources and spans.
-`tests/commanded.lm` holds `check`, `check --json`, and `explain` to golden answers.
+`tests/rendering.bx` holds the renderer to the properties below, on drawn sources and spans.
+`tests/commanded.bx` holds `check`, `check --json`, and `explain` to golden answers.
 
 ## Properties
 
@@ -303,4 +307,4 @@ These hold and are checked by drawn properties in the runner:
 4. Text a data form writes reads back as the text it was given.
 5. Applying the fix of a file that departs from canonical form makes it its own canonical text.
 
-`tests/commanded.lm` holds `explain` of each code that has a long form to the text of that file.
+`tests/commanded.bx` holds `explain` of each code that has a long form to the text of that file.

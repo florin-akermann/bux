@@ -3,7 +3,7 @@ Packages
 --------
 
 A package is a directory of modules with a manifest called `bux.package` beside them. Handed a
-directory rather than a file, `lumen check` and `lumen build` run over every module the package
+directory rather than a file, `bux check` and `bux build` run over every module the package
 holds, in the order their names sort, and stop at the first refusal. A directory holding no
 manifest is no package, and a command handed one says so and stops with exit code 2.
 
@@ -29,5 +29,5 @@ there is one way to write a manifest.
 The name and the version are stated and nothing reads either yet. A manifest that leaves one out
 is refused all the same, because a package says what it is before anything asks.
 
-`lumen fmt`, `lumen run`, `lumen test`, and `lumen api` each take a file. A package has no
+`bux fmt`, `bux run`, `bux test`, and `bux api` each take a file. A package has no
 canonical text of its own, no `main` to run, no examples, and no surface beyond its modules'.

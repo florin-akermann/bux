@@ -15,9 +15,7 @@ It exists to find out how much a language gets from very little.
 
 ## The name
 
-The language is Bux.
-Lumen is the old name, and the rename moves through the tree one task at a time.
-The command still calls itself `lumen`, and a source file still ends in `.lm`.
+The language is Bux, the command is `bux`, and a source file ends in `.bx`.
 `bin/bux` starts it, and every command below is written as it runs today.
 
 ## Philosophy
@@ -147,10 +145,10 @@ The two builds must be the same, byte for byte.
 
 ## The example program
 
-`example/main.lm` is everyday Bux in one screen: a record, an ADT, a `match`, and a list walked.
+`example/main.bx` is everyday Bux in one screen: a record, an ADT, a `match`, and a list walked.
 
 ```sh
-bin/bux run example/main.lm
+bin/bux run example/main.bx
 ```
 
 It writes each answer it works out and exits `0`:
@@ -166,7 +164,7 @@ most: 6
 Its public surface is one page, which is what a reader consults to learn a signature:
 
 ```sh
-bin/bux api example/main.lm
+bin/bux api example/main.bx
 ```
 
 `bin/bux --help` lists every command: `fmt`, `check`, `build`, `run`, `test`, `api`, and `explain`.

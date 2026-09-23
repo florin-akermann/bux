@@ -1,0 +1,31 @@
+// The readings of a `List` a `for` loop would otherwise write the same way twice.
+//
+// `docs/specs/library.md` states the test a function here is held to: it is written in Bux over
+// what the language already gives, and it lands only where a reader would write the loop twice.
+//
+// The module offers three names this file does not write: `length`, `push`, and `at` are the
+// compiler's, because none of them can be said in Bux at the cost it has.
+// `docs/specs/library.md` states why, and a module that imports `list` reaches all five alike.
+/// Whether the list holds a value equal to this one.
+// example: has_value([1, 2], 2)
+fn has_value<T: Eq<T>>(values: List<T>, value: T) -> Bool {
+    for held in values {
+        if held == value {
+            return true
+        }
+    }
+    false
+}
+
+/// Where the list first holds a value equal to this one, and `None` where it holds none.
+// example: or(index_of([1, 2], 2), 0) == 1
+fn index_of<T: Eq<T>>(values: List<T>, value: T) -> Option<Int> {
+    var index = 0
+    for held in values {
+        if held == value {
+            return Some(index)
+        }
+        index += 1
+    }
+    None
+}

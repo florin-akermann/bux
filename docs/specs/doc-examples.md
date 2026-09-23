@@ -7,7 +7,7 @@ An example says that, and says it so that the compiler can hold the function to 
 
 `docs/design.md` section 11 requires one of every function a module declares.
 Prose about a function is a claim nobody checks, and it drifts the moment the body changes.
-An example is the same claim written as Lumen, so `lumen test` runs it and a wrong one is reported.
+An example is the same claim written as Bux, so `bux test` runs it and a wrong one is reported.
 
 ## What an example is
 
@@ -23,7 +23,7 @@ fn shared(total: Int, people: Int) -> Option<Int> {
 }
 ```
 
-The line is the comment marker, the word `example`, a colon, and one Lumen expression.
+The line is the comment marker, the word `example`, a colon, and one Bux expression.
 The expression has the type `Bool`, and it is `true` when it runs.
 
 It is written in the module that declares the function, so it reaches every name that module has.
@@ -74,14 +74,14 @@ reader of the declaration has, and it did not say.
 
 ## What refuses, and when
 
-`lumen check` accepts a module whose functions state no example.
-`lumen build`, `lumen run`, and `lumen test` refuse it.
+`bux check` accepts a module whose functions state no example.
+`bux build`, `bux run`, and `bux test` refuse it.
 
 That is the line `docs/specs/holes.md` draws for a hole, drawn here for the same reason.
 An example calls the function it documents, so the function is written first, and a check that
 refused a function without one would refuse the state every function passes through.
-`lumen check` is what a reader runs while writing.
-`lumen build` is what produces something that runs, and an undocumented function is unfinished
+`bux check` is what a reader runs while writing.
+`bux build` is what produces something that runs, and an undocumented function is unfinished
 work the way a hole is.
 
 Every undocumented function is named, and not only the first, because a build is how a reader
@@ -89,7 +89,7 @@ learns what is left.
 
 ```text
 error[L0601]: `shared` states no example
-  --> demo.lm:1:4
+  --> demo.bx:1:4
 
   1 | fn shared(total: Int, people: Int) -> Option<Int> {
     |    ^^^^^^
@@ -103,7 +103,7 @@ An example line is refused wherever it is not in the comment above a function th
 
 ```text
 error[L0602]: this example documents nothing
-  --> demo.lm:7:5
+  --> demo.bx:7:5
 
   7 |     // example: or(shared(total: 17, people: 5), 0) == 3
     |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -118,16 +118,16 @@ reading it as a claim that holds would be reading a claim nobody made.
 
 ## Running them
 
-`lumen test <file>` runs every example the module states.
+`bux test <file>` runs every example the module states.
 
-It runs the front end first and refuses what `lumen check` refuses, with the same diagnostic.
+It runs the front end first and refuses what `bux check` refuses, with the same diagnostic.
 It then holds the module to this page, and refuses `L0601` and `L0602` as a build does.
 
 An example that does not hold is reported where it is written:
 
 ```text
 error[L0603]: the example of `shared` does not hold
-  --> demo.lm:3:1
+  --> demo.bx:3:1
 
   3 | // example: or(shared(total: 17, people: 5), 0) == 4
     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -164,18 +164,18 @@ program talking.
 a run reading bare names back would read an example's own output as a report about itself.
 What the run reads back off standard output is the marked lines, which are exactly the examples
 that did not hold.
-The module's own `main` is not run: the examples are what `lumen test` runs, and a module is put
-through `lumen run` to run its program.
+The module's own `main` is not run: the examples are what `bux test` runs, and a module is put
+through `bux run` to run its program.
 
 The written module is compiled and run the way any other is, and its class files are written
-into a directory made for that run alone, so nothing `lumen build` wrote is touched and nothing
+into a directory made for that run alone, so nothing `bux build` wrote is touched and nothing
 a run left behind is ever picked up.
 The directory is taken away again whether the examples held or not.
 
 It faces every rule except canonical form.
 Canonical form is a rule about what an author writes, and `docs/specs/formatting.md` leaves the
 text of a comment alone, so holding a module written around a comment to it would hold the author
-to a form nothing spells out and `lumen fmt` cannot repair.
+to a form nothing spells out and `bux fmt` cannot repair.
 The file the author wrote faced that rule already, on its way in.
 
 A refusal of the written module is a refusal of the example it was written around.
@@ -191,7 +191,7 @@ hold and `docs/specs/io.md` gives `io.println` as the one way to write one.
 
 A module declares each name once, so a module that declares `io` of its own leaves the run no
 room, and `L0604` says so before anything is compiled.
-`lumen check`, `lumen build`, and `lumen run` take such a module as they always did: it is the
+`bux check`, `bux build`, and `bux run` take such a module as they always did: it is the
 run, and only the run, that has no room.
 
 The `main` the run writes takes the words a program is run with, under the name `arguments`.
@@ -207,21 +207,21 @@ and `L0604` says so the same way.
 | example does not hold   | `L0603` | the example of `x` does not hold    |
 | the run reaches the name| `L0604` | a run of the examples reaches `io`, and this module declares it |
 
-`L0601` and `L0602` are raised by `lumen build`, `lumen run`, and `lumen test`, and never by
-`lumen check` or `lumen fmt`.
-`L0603` is raised by `lumen test` alone, because it is the only command that runs an example.
+`L0601` and `L0602` are raised by `bux build`, `bux run`, and `bux test`, and never by
+`bux check` or `bux fmt`.
+`L0603` is raised by `bux test` alone, because it is the only command that runs an example.
 
 ## The examples written in Bux
 
-`compiler/command.lm` finds the examples of a module in Bux.
+`compiler/command.bx` finds the examples of a module in Bux.
 A `build`, a `run`, and a `test` refuse `L0601` and `L0602` with it, before the module is lowered.
 `test` writes the run as this page says.
 It puts a refusal of the run back into the file the author wrote.
 It reads the marked lines back, and it gives `L0603` for each example that did not hold.
 
-`tests/documented.lm` runs every `// example:` line of every module, as `lumen test` runs it.
-It writes each run as `lumen test` writes it, and it starts all the runs in one JVM.
-`tests/commanded.lm` holds `test` to golden answers on each example of `tests/spec` and `library/`.
+`tests/documented.bx` runs every `// example:` line of every module, as `bux test` runs it.
+It writes each run as `bux test` writes it, and it starts all the runs in one JVM.
+`tests/commanded.bx` holds `test` to golden answers on each example of `tests/spec` and `library/`.
 
 ## Properties
 

@@ -1,0 +1,532 @@
+// The invariants of a declaration that reaches a JVM member, checked on drawn modules.
+//
+// `docs/specs/interop.md` states what an `extern` may say and what each spelling reaches,
+// and `docs/specs/io.md` names every class the library modules reach.
+import compiled
+import drawn
+import held
+import ir
+import list
+import strings
+
+/// Every property of a declaration that reaches the JVM, each over `cases` drawn modules, in order.
+// example: list.length(every_property(0, ir.little_library())) == 7
+fn every_property(cases: Int, library: ir.Library) -> List<held.Held> {
+    [a_call_into_a_library_module_reaches_that_module_s_class_and_nothing_else(cases, library), every_class_a_library_module_reaches_is_one_the_spec_names(cases, library), a_declaration_guards_a_span_exactly_where_it_gives_back_a_result(cases, library), a_result_leaves_an_ok_down_the_path_taken_and_an_err_down_the_one_thrown(cases, library), a_declaration_written_with_a_width_reaches_its_member_for_one_and_leaves_a_long(cases, library), a_narrowed_argument_outside_the_int_range_answers_none_and_reaches_no_member(cases, library), a_method_on_a_type_written_interface_is_called_the_way_the_jvm_calls_an_interface_s(cases, library)]
+}
+
+/// A call into a library module reaches the class of that module, and no other class.
+// example: held.is_held(a_call_into_a_library_module_reaches_that_module_s_class_and_nothing_else(0, ir.little_library()))
+fn a_call_into_a_library_module_reaches_that_module_s_class_and_nothing_else(cases: Int, library: ir.Library) -> held.Held {
+    checked(property: IntoTheLibrary, cases: cases, library: library)
+}
+
+/// Each JVM class a library module reaches is one that `docs/specs/io.md` names.
+// example: held.is_held(every_class_a_library_module_reaches_is_one_the_spec_names(0, ir.little_library()))
+fn every_class_a_library_module_reaches_is_one_the_spec_names(cases: Int, library: ir.Library) -> held.Held {
+    checked(property: SpecNamed, cases: cases, library: library)
+}
+
+/// A declaration guards one span, which catches any `Throwable`, where it gives back a `Result`.
+// example: held.is_held(a_declaration_guards_a_span_exactly_where_it_gives_back_a_result(0, ir.little_library()))
+fn a_declaration_guards_a_span_exactly_where_it_gives_back_a_result(cases: Int, library: ir.Library) -> held.Held {
+    checked(property: Guarded, cases: cases, library: library)
+}
+
+/// A `Result` builds an `Ok` before the handler of its guard, and an `Err` after it.
+// example: held.is_held(a_result_leaves_an_ok_down_the_path_taken_and_an_err_down_the_one_thrown(0, ir.little_library()))
+fn a_result_leaves_an_ok_down_the_path_taken_and_an_err_down_the_one_thrown(cases: Int, library: ir.Library) -> held.Held {
+    checked(property: BothPaths, cases: cases, library: library)
+}
+
+/// A width names what the member gives back, and only a width is widened to the `Int` declared.
+// example: held.is_held(a_declaration_written_with_a_width_reaches_its_member_for_one_and_leaves_a_long(0, ir.little_library()))
+fn a_declaration_written_with_a_width_reaches_its_member_for_one_and_leaves_a_long(cases: Int, library: ir.Library) -> held.Held {
+    checked(property: Widened, cases: cases, library: library)
+}
+
+/// Only a narrowed argument is narrowed, and outside the `int` range it answers without the member.
+// example: held.is_held(a_narrowed_argument_outside_the_int_range_answers_none_and_reaches_no_member(0, ir.little_library()))
+fn a_narrowed_argument_outside_the_int_range_answers_none_and_reaches_no_member(cases: Int, library: ir.Library) -> held.Held {
+    checked(property: Narrowed, cases: cases, library: library)
+}
+
+/// A `method` on a type written `interface` is called as an interface method, and else it is not.
+// example: held.is_held(a_method_on_a_type_written_interface_is_called_the_way_the_jvm_calls_an_interface_s(0, ir.little_library()))
+fn a_method_on_a_type_written_interface_is_called_the_way_the_jvm_calls_an_interface_s(cases: Int, library: ir.Library) -> held.Held {
+    checked(property: Interface, cases: cases, library: library)
+}
+
+/// `property` checked over `cases` drawn modules, each drawn from a seed of its own.
+// example: checked(property: Guarded, cases: 0, library: ir.little_library()).cases == 0
+fn checked(property: Property, cases: Int, library: ir.Library) -> held.Held {
+    var found = held.nothing_failed(cases)
+    var case = 0
+    for case < cases {
+        seed := drawn.seed_of(case)
+        one := drawing(property: property, draw: drawn.seeded(seed), library: library)
+        found = compiled.noted(found, one.why, held.drawn_failure(name_of(property), seed, one.source, one.why))
+        case += 1
+    }
+    found
+}
+
+/// The module `property` draws with `draw`, and what went wrong with it, which is empty if nothing.
+// example: drawing(property: Guarded, draw: drawn.seeded(1), library: ir.little_library()).source != ""
+fn drawing(property: Property, draw: drawn.Draw, library: ir.Library) -> Drawing {
+    match property {
+        IntoTheLibrary => into_the_library(draw, library)
+        SpecNamed => spec_named(draw, library)
+        Guarded => guarded(draw, library)
+        BothPaths => both_paths(draw, library)
+        Widened => widened(draw, library)
+        Narrowed => narrowed(draw, library)
+        Interface => interface(draw, library)
+    }
+}
+
+/// The name a failure of `property` is reported with.
+// example: name_of(Guarded) == "a_declaration_guards_a_span_exactly_where_it_gives_back_a_result"
+fn name_of(property: Property) -> String {
+    match property {
+        IntoTheLibrary => "a_call_into_a_library_module_reaches_that_module_s_class_and_nothing_else"
+        SpecNamed => "every_class_a_library_module_reaches_is_one_the_spec_names"
+        Guarded => "a_declaration_guards_a_span_exactly_where_it_gives_back_a_result"
+        BothPaths => "a_result_leaves_an_ok_down_the_path_taken_and_an_err_down_the_one_thrown"
+        Widened => "a_declaration_written_with_a_width_reaches_its_member_for_one_and_leaves_a_long"
+        Narrowed => "a_narrowed_argument_outside_the_int_range_answers_none_and_reaches_no_member"
+        Interface => "a_method_on_a_type_written_interface_is_called_the_way_the_jvm_calls_an_interface_s"
+    }
+}
+
+/// A drawn call of a library module, which reaches only the classes of the library modules.
+// example: into_the_library(drawn.seeded(1), ir.little_library()).source != ""
+fn into_the_library(draw: drawn.Draw, library: ir.Library) -> Drawing {
+    call := drawn.picked(draw, ["io.print(text)", "io.println(text)", "_ = files.read(text)", "_ = files.write(text, text)", "_ = files.listed(text)", "_ = files.made(text)", "_ = files.removed(text)", "_ = environment.read(text)"], "")
+    source := "import environment\nimport files\nimport io\n\nfn go(text: String) -> () {\n    " + call + "\n}\n"
+    lowered := compiled.lowered_alone(source, library)
+    var why = refused(lowered)
+    for reached in compiled.reached_in(compiled.instructions_of(lowered, "go")) {
+        if !list.has_value(["bux/library/environment", "bux/library/files", "bux/library/io"], reached) {
+            why = "it reaches " + reached + ", which is no library module"
+        }
+    }
+    Drawing { source: source, why: why }
+}
+
+/// `the compiler refused it` where nothing was lowered, and nothing where something was.
+// example: refused([]) == "the compiler refused it"
+fn refused(lowered: List<ir.Lowered>) -> String {
+    if list.length(lowered) == 0 {
+        return "the compiler refused it"
+    }
+    ""
+}
+
+/// A drawn library module, which reaches no JVM class that `docs/specs/io.md` does not name.
+// example: spec_named(drawn.seeded(1), ir.little_library()).source != ""
+fn spec_named(draw: drawn.Draw, library: ir.Library) -> Drawing {
+    at := drawn.number(draw, 3)
+    module := or(list.at(["environment", "files", "io"], at), "")
+    call := or(list.at(["_ = environment.read(text)", "_ = files.read(text)", "io.println(text)"], at), "")
+    source := "import " + module + "\n\nfn go(text: String) -> () {\n    " + call + "\n}\n"
+    classes := compiled.module_classes(compiled.lowered_alone(source, library), "bux/library/" + module)
+    var why = ""
+    if list.length(classes) == 0 {
+        why = "it writes no class of " + module
+    }
+    for class in classes {
+        for method in class.methods {
+            why = unnamed_why(compiled.reached_in(method.body.instructions), why)
+        }
+    }
+    Drawing { source: source, why: why }
+}
+
+/// `why`, or what is wrong where one of `reached` is a JVM class the spec does not name.
+// example: unnamed_why(["java/lang/String", "bux/library/files"], "") == ""
+// example: unnamed_why(["java/net/Socket"], "") == "it reaches java/net/Socket, which the spec does not name"
+fn unnamed_why(reached: List<String>, why: String) -> String {
+    for class in reached {
+        if is_java(class) && !list.has_value(spec_classes(), class) {
+            return "it reaches " + class + ", which the spec does not name"
+        }
+    }
+    why
+}
+
+/// Whether `class` is one of Java's own.
+// example: is_java("java/io/File")
+// example: !is_java("bux/List")
+fn is_java(class: String) -> Bool {
+    or(strings.cut(class, 0, 5), "") == "java/"
+}
+
+/// Every JVM class the library modules reach, which `docs/specs/io.md` names each of.
+///
+/// The last ones are what the class file itself is made of: a boxed `Bool`, what a guard catches,
+/// the arm of a `match` nothing reaches, and the boxes of a character and of a whole number.
+// example: list.length(spec_classes()) == 18
+fn spec_classes() -> List<String> {
+    ["java/lang/String", "java/lang/System", "java/io/PrintStream", "java/io/PrintWriter", "java/io/File", "java/nio/file/Path", "java/nio/file/Files", "java/nio/charset/Charset", "java/nio/charset/StandardCharsets", "java/util/stream/Stream", "java/util/List", "java/util/Iterator", "java/lang/Object", "java/lang/Boolean", "java/lang/Throwable", "java/lang/AssertionError", "java/lang/Character", "java/lang/Long"]
+}
+
+/// A drawn declaration, guarded once exactly where it gives back a `Result`.
+// example: guarded(drawn.seeded(1), ir.little_library()).source != ""
+fn guarded(draw: drawn.Draw, library: ir.Library) -> Drawing {
+    at := drawn.number(draw, 4)
+    wrap := drawn.picked(drawn.next(draw), ["{held}", "Option<{held}>", "Result<{held}, String>"], "")
+    result := compiled.replaced(wrap, "{held}", or(list.at(reached_types(), at), ""))
+    source := declaring(declared: or(list.at(reaching(), at), ""), result: result)
+    body := or(compiled.body_of(compiled.lowered_alone(source, library), or(list.at(reaching_names(), at), "")), no_body())
+    var guards = 0
+    if or(strings.cut(result, 0, 7), "") == "Result<" {
+        guards = 1
+    }
+    var why = ""
+    if list.length(body.guards) != guards {
+        why = "it guards " + shown(list.length(body.guards)) + " spans, not " + shown(guards)
+    }
+    for guard in body.guards {
+        if guard.catching != "java/lang/Throwable" {
+            why = "a guard catches " + guard.catching
+        }
+    }
+    Drawing { source: source, why: why }
+}
+
+/// A drawn declaration with a `Result`, which builds `Ok` before its handler and `Err` after it.
+// example: both_paths(drawn.seeded(1), ir.little_library()).source != ""
+fn both_paths(draw: drawn.Draw, library: ir.Library) -> Drawing {
+    at := drawn.number(draw, 4)
+    result := "Result<" + or(list.at(reached_types(), at), "") + ", String>"
+    source := declaring(declared: or(list.at(reaching(), at), ""), result: result)
+    body := or(compiled.body_of(compiled.lowered_alone(source, library), or(list.at(reaching_names(), at), "")), no_body())
+    Drawing { source: source, why: paths_why(body) }
+}
+
+/// Every way an `extern` reaches a member, each written with the result left to be filled in.
+// example: list.length(reaching()) == 4
+fn reaching() -> List<String> {
+    ["extern field held() -> {result} = \"java.lang.System.out\"", "extern static worded(value: Int) -> {result} = \"java.lang.String.valueOf\"", "extern method trimmed(text: String) -> {result} = \"trim\"", "extern new named(path: String) -> {result}"]
+}
+
+/// The type each of `reaching` gives back, in the same order.
+// example: list.length(reached_types()) == 4
+fn reached_types() -> List<String> {
+    ["PrintStream", "String", "String", "File"]
+}
+
+/// The name each of `reaching` declares, in the same order.
+// example: list.length(reaching_names()) == 4
+fn reaching_names() -> List<String> {
+    ["held", "worded", "trimmed", "named"]
+}
+
+/// A body of no instruction, which stands where a module wrote no method.
+// example: list.length(no_body().guards) == 0
+fn no_body() -> ir.Body {
+    ir.Body { instructions: [], locals: 0, guards: [] }
+}
+
+/// What is wrong with the paths of `body`, which is empty where it holds one guard and both paths.
+// example: paths_why(no_body()) == "it guards 0 spans, not one"
+fn paths_why(body: ir.Body) -> String {
+    if list.length(body.guards) != 1 {
+        return "it guards " + shown(list.length(body.guards)) + " spans, not one"
+    }
+    handler := or(list.at(body.guards, 0), ir.Guard { from: 0, to: 0, handler: 0, catching: "" }).handler
+    at := label_at(body.instructions, handler)
+    taken := results_built(compiled.part(body.instructions, 0, at))
+    thrown := results_built(compiled.part(body.instructions, at, list.length(body.instructions)))
+    if at < 0 || taken != ["bux/Result$Ok"] || thrown != ["bux/Result$Err"] {
+        return "it builds " + strings.join(taken, ", ") + " on the path taken, and " + strings.join(thrown, ", ") + " on the one thrown"
+    }
+    ""
+}
+
+/// The `Result` variants `instructions` build, in the order they build them.
+// example: results_built([ir.New("bux/Result$Ok"), ir.New("bux/Option$None")]) == ["bux/Result$Ok"]
+fn results_built(instructions: List<ir.Instruction>) -> List<String> {
+    var built = []
+    for instruction in instructions {
+        class := class_made(instruction)
+        if or(strings.cut(class, 0, 11), "") == "bux/Result$" {
+            built = list.push(built, class)
+        }
+    }
+    built
+}
+
+/// The class `instruction` makes a new instance of, and nothing where it makes none.
+// example: class_made(ir.New("a/B")) == "a/B"
+// example: class_made(ir.Copy) == ""
+fn class_made(instruction: ir.Instruction) -> String {
+    match instruction {
+        ir.New(class) => class
+        _ => ""
+    }
+}
+
+/// A drawn declaration of a number, which reaches its member for its width and widens only a width.
+// example: widened(drawn.seeded(1), ir.little_library()).source != ""
+fn widened(draw: drawn.Draw, library: ir.Library) -> Drawing {
+    at := drawn.number(draw, 3)
+    width := drawn.picked(drawn.next(draw), ["", "int ", "char "], "")
+    result := drawn.picked(drawn.next(drawn.next(draw)), ["Int", "Result<Int, String>"], "")
+    written := compiled.replaced(or(list.at(numbers(), at), ""), "{width}", width)
+    source := declaring(declared: written, result: result)
+    body := compiled.instructions_of(compiled.lowered_alone(source, library), or(list.at(["held", "worded", "trimmed"], at), ""))
+    var gives = ir.Long
+    if width == "int " {
+        gives = ir.Integer
+    }
+    if width == "char " {
+        gives = ir.Character
+    }
+    Drawing { source: source, why: width_why(body: body, gives: gives, width: width) }
+}
+
+/// Every way an `extern` reaches a member giving a number, with the width left to be filled in.
+// example: list.length(numbers()) == 3
+fn numbers() -> List<String> {
+    ["extern field {width}held() -> {result} = \"java.lang.Integer.MAX_VALUE\"", "extern static {width}worded(text: String) -> {result} = \"java.lang.String.length\"", "extern method {width}trimmed(text: String) -> {result} = \"length\""]
+}
+
+/// What is wrong with `body` as a reach of a member that `gives` at `width`, or nothing.
+// example: width_why(body: [], gives: ir.Long, width: "") == "it reaches no member"
+fn width_why(body: List<ir.Instruction>, gives: ir.Descriptor, width: String) -> String {
+    given := gives_back(body)
+    if compiled.is_none(given) {
+        return "it reaches no member"
+    }
+    if or(given, ir.Array(ir.Long)) != gives {
+        return "it reaches a member for what it does not say that member gives back"
+    }
+    widens := width != ""
+    if has_widen(body) != widens {
+        return "it widens: " + shown(has_widen(body)) + ", and a width is written: " + shown(widens)
+    }
+    ""
+}
+
+/// Whether `body` widens an `int` to a `long`.
+// example: has_widen([ir.Widen])
+// example: !has_widen([ir.Narrow])
+fn has_widen(body: List<ir.Instruction>) -> Bool {
+    for instruction in body {
+        if is_widen(instruction) {
+            return true
+        }
+    }
+    false
+}
+
+/// Whether `instruction` widens.
+// example: is_widen(ir.Widen)
+fn is_widen(instruction: ir.Instruction) -> Bool {
+    match instruction {
+        ir.Widen => true
+        _ => false
+    }
+}
+
+/// A drawn declaration taking a number, narrowed or not, and what an unfit argument reaches.
+// example: narrowed(drawn.seeded(1), ir.little_library()).source != ""
+fn narrowed(draw: drawn.Draw, library: ir.Library) -> Drawing {
+    at := drawn.number(draw, 2)
+    taken := drawn.picked(drawn.next(draw), ["", "int "], "")
+    result := drawn.picked(drawn.next(drawn.next(draw)), ["Option<String>", "Result<Option<String>, String>"], "")
+    written := compiled.replaced(or(list.at(taking(), at), ""), "{taken}", taken)
+    source := declaring(declared: written, result: result)
+    body := compiled.instructions_of(compiled.lowered_alone(source, library), or(list.at(["worded", "charred"], at), ""))
+    Drawing { source: source, why: narrowing_why(body: body, taken: taken) }
+}
+
+/// A module holding `declared` with `result` filled in, over the types that declaration names.
+// example: declaring(declared: "a {result}", result: "Int") == "a Int\n\nextern type PrintStream = \"java.io.PrintStream\"\n\nextern type File = \"java.io.File\"\n"
+fn declaring(declared: String, result: String) -> String {
+    compiled.replaced(declared, "{result}", result) + "\n\nextern type PrintStream = \"java.io.PrintStream\"\n\nextern type File = \"java.io.File\"\n"
+}
+
+/// Every way an `extern` reaches a member that takes a number, with the narrowing left open.
+// example: list.length(taking()) == 2
+fn taking() -> List<String> {
+    ["extern static worded({taken}index: Int) -> {result} = \"java.lang.String.valueOf\"", "extern method charred(text: String, {taken}index: Int) -> {result} = \"substring\""]
+}
+
+/// What is wrong with how `body` narrows the argument written `taken`, which is empty if nothing.
+///
+/// An argument outside the `int` range lands on the label 4, and the path from there to the answer
+/// it gives back reaches only the classes the compiler writes.
+// example: narrowing_why(body: [], taken: "") == "it reaches no member"
+fn narrowing_why(body: List<ir.Instruction>, taken: String) -> String {
+    narrows := taken != ""
+    if compiled.is_none(gives_back(body)) {
+        return "it reaches no member"
+    }
+    if has_narrow(body) != narrows {
+        return "it narrows: " + shown(has_narrow(body)) + ", and a narrowing is written: " + shown(narrows)
+    }
+    unfit := label_at(body, 4)
+    if (unfit >= 0) != narrows {
+        return "an unfit argument lands somewhere: " + shown(unfit >= 0) + ", and a narrowing is written: " + shown(narrows)
+    }
+    for reached in compiled.reached_in(answered_from(body, unfit)) {
+        if or(strings.cut(reached, 0, 4), "") != "bux/" {
+            return "an argument outside the `int` range reaches " + reached
+        }
+    }
+    ""
+}
+
+/// Where `instructions` write the label `label`, and -1 where they write none.
+// example: label_at([ir.Copy, ir.Label(3)], 3) == 1
+// example: label_at([], 3) == -1
+fn label_at(instructions: List<ir.Instruction>, label: Int) -> Int {
+    var at = 0
+    for instruction in instructions {
+        if is_label(instruction, label) {
+            return at
+        }
+        at += 1
+    }
+    -1
+}
+
+/// Whether `instruction` is the label `label`.
+// example: is_label(ir.Label(2), 2)
+// example: !is_label(ir.Jump(2), 2)
+fn is_label(instruction: ir.Instruction, label: Int) -> Bool {
+    match instruction {
+        ir.Label(written) => written == label
+        _ => false
+    }
+}
+
+/// What the member `body` reaches gives back: the field it reads, or the result of its method.
+// example: compiled.is_none(gives_back([ir.Copy]))
+fn gives_back(body: List<ir.Instruction>) -> Option<ir.Descriptor> {
+    for instruction in body {
+        given := member_gives(instruction)
+        if !compiled.is_none(given) {
+            return given
+        }
+    }
+    None
+}
+
+/// What one instruction's member gives back, where it reaches one that gives something.
+// example: compiled.is_none(member_gives(ir.Copy))
+fn member_gives(instruction: ir.Instruction) -> Option<ir.Descriptor> {
+    match instruction {
+        ir.GetStatic(field) => Some(field.of)
+        _ => result_of(compiled.called(instruction))
+    }
+}
+
+/// What `reference` gives back, where there is a reference.
+// example: compiled.is_none(result_of(None))
+fn result_of(reference: Option<ir.MethodRef>) -> Option<ir.Descriptor> {
+    match reference {
+        Some(one) => one.descriptor.result
+        None => None
+    }
+}
+
+/// Whether `body` narrows a `long` to an `int`.
+// example: has_narrow([ir.Narrow])
+// example: !has_narrow([ir.Widen])
+fn has_narrow(body: List<ir.Instruction>) -> Bool {
+    for instruction in body {
+        if is_narrow(instruction) {
+            return true
+        }
+    }
+    false
+}
+
+/// Whether `instruction` narrows.
+// example: is_narrow(ir.Narrow)
+fn is_narrow(instruction: ir.Instruction) -> Bool {
+    match instruction {
+        ir.Narrow => true
+        _ => false
+    }
+}
+
+/// The path of `body` from `from` up to the first return, which is none where `from` is -1.
+// example: list.length(answered_from([ir.Copy, ir.Return(None), ir.Copy], 0)) == 2
+// example: list.length(answered_from([ir.Copy], -1)) == 0
+fn answered_from(body: List<ir.Instruction>, from: Int) -> List<ir.Instruction> {
+    if from < 0 {
+        return []
+    }
+    var path = []
+    for instruction in compiled.part(body, from, list.length(body)) {
+        path = list.push(path, instruction)
+        if is_return(instruction) {
+            return path
+        }
+    }
+    path
+}
+
+/// Whether `instruction` gives back from the method.
+// example: is_return(ir.Return(None))
+fn is_return(instruction: ir.Instruction) -> Bool {
+    match instruction {
+        ir.Return(_) => true
+        _ => false
+    }
+}
+
+/// A `method` on a type written `interface` or not, whose call is the kind that type is.
+// example: interface(drawn.seeded(1), ir.little_library()).source != ""
+fn interface(draw: drawn.Draw, library: ir.Library) -> Drawing {
+    class := drawn.picked(draw, ["", "interface "], "")
+    source := "extern method to_path(file: File) -> File = \"toPath\"\n\nextern type " + class + "File = \"java.io.File\"\n"
+    body := compiled.instructions_of(compiled.lowered_alone(source, library), "to_path")
+    var why = "it calls no member"
+    for instruction in body {
+        if why == "it calls no member" && !compiled.is_none(compiled.called(instruction)) {
+            why = interface_why(instruction, class)
+        }
+    }
+    Drawing { source: source, why: why }
+}
+
+/// What is wrong with `call` as the call of a member of the type written `class`, or nothing.
+// example: interface_why(ir.InvokeInterface(ir.MethodRef { class: "a", name: "b", descriptor: ir.MethodDescriptor { parameters: [], result: None } }), "interface ") == ""
+fn interface_why(call: ir.Instruction, class: String) -> String {
+    is_an_interface := class != ""
+    if is_interface_call(call) != is_an_interface {
+        return "it is called as an interface: " + shown(is_interface_call(call)) + ", and the type is one: " + shown(is_an_interface)
+    }
+    ""
+}
+
+/// Whether `instruction` calls a method the way the JVM calls an interface's.
+// example: !is_interface_call(ir.Copy)
+fn is_interface_call(instruction: ir.Instruction) -> Bool {
+    match instruction {
+        ir.InvokeInterface(_) => true
+        _ => false
+    }
+}
+
+/// One drawn module, and what went wrong with it, which is empty where the property held.
+type Drawing = {
+    source: String
+    why: String
+}
+
+/// Each property of a declaration that reaches the JVM.
+type Property =
+    | IntoTheLibrary
+    | SpecNamed
+    | Guarded
+    | BothPaths
+    | Widened
+    | Narrowed
+    | Interface

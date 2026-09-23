@@ -33,13 +33,13 @@ if [ ! -f "$root/bin/seed.jar" ]; then
 fi
 cd "$root"
 rm -rf compiler/target
-"$java" --enable-preview -cp "$root/bin/seed.jar:$root" main build compiler/main.lm
+"$java" --enable-preview -cp "$root/bin/seed.jar:$root" main build compiler/main.bx
 
 copy=$(mktemp -d "${TMPDIR:-/tmp}/bux-bootstrap.XXXXXX")
 trap 'rm -rf "$copy"' EXIT
 cp -R compiler "$copy/compiler"
 rm -rf "$copy/compiler/target"
-"$java" --enable-preview -cp "$root/compiler/target:$root/compiler:$root" main build "$copy/compiler/main.lm"
+"$java" --enable-preview -cp "$root/compiler/target:$root/compiler:$root" main build "$copy/compiler/main.bx"
 
 one=$(cd compiler/target && find . -name '*.class' | LC_ALL=C sort)
 two=$(cd "$copy/compiler/target" && find . -name '*.class' | LC_ALL=C sort)

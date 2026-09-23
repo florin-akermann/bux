@@ -1,10 +1,10 @@
 Report the first thing about a source file that the compiler will not have.
 
-`lumen check` runs the front end over a file and stops at the first refusal. It reads the file,
+`bux check` runs the front end over a file and stops at the first refusal. It reads the file,
 holds it to canonical form, parses it, resolves every name in it, gives every expression a type,
 and checks that every `match` answers for every value it may meet. Nothing is written back.
 
-Loading comes first. `import greeting` names `greeting.lm`, beside the file that writes it, and
+Loading comes first. `import greeting` names `greeting.bx`, beside the file that writes it, and
 every module the file reaches is read before any of them is checked. There is no search path:
 a module is the file of that name beside the importing one, or nothing, and an import that names
 no such file is refused. `io`, `files`, `programs`, `list`, `strings`, `map`, and `set` are modules
@@ -26,8 +26,8 @@ that call settled.
 
 Canonical form is the first thing each module is held to: a file that differs is reported with
 the line and column it is about, that line under a row of carets, and a `help:` line naming the
-text canonical form writes there. `lumen fmt` is the command that fixes it. An import written
-after a declaration, or two imports out of sort, is reported here too, and `lumen fmt` does not
+text canonical form writes there. `bux fmt` is the command that fixes it. An import written
+after a declaration, or two imports out of sort, is reported here too, and `bux fmt` does not
 fix that one: where an import belongs is said, never rewritten.
 
 How a name is spelled is part of canonical form too, and is reported here for the same reason: a
@@ -37,7 +37,7 @@ is Bool is held to a name that asks the question it answers, which is reported w
 because the result read is the one inference settled.
 
 Name resolution comes next. A name with no definition, a module that declares one name twice, and
-a binding that hides a name already in scope are each refused, because in Lumen one name has one
+a binding that hides a name already in scope are each refused, because in Bux one name has one
 definition. A declaration written above something that uses it is refused here as well: a file
 reads top down, so the reader meets the intent before the detail.
 
@@ -49,7 +49,7 @@ purpose and says so. Inside a function the types are inferred, so a signature is
 documents a boundary rather than on every line.
 
 An `extern` declaration is held here too. It names one member of one Java class and gives it a
-Lumen signature: `extern type PrintStream = "java.io.PrintStream"` names the class, and `field`,
+Bux signature: `extern type PrintStream = "java.io.PrintStream"` names the class, and `field`,
 `static`, `method`, and `new` name the four kinds of member the JVM has. A parameter or a result
 is `Bool`, `Int`, `String`, or a type an `extern type` names, and nothing else crosses; a result
 may also be `()`, an `Option` whose `None` is the `null` the member gave back, or a `Result` whose
@@ -88,12 +88,12 @@ prelude supplies, so naming the arguments of either is refused rather than read 
 Exhaustiveness comes last. A `match` that leaves a value of the type it matches unanswered is
 refused, and the refusal names a value it does not cover. A `match` that answers for everything
 but lists its arms in an order the type does not declare its variants in is refused too, so a new
-variant has exactly one place to be handled. `lumen explain` says more about any code that is
+variant has exactly one place to be handled. `bux explain` says more about any code that is
 printed.
 
 A hole is accepted. `todo("a reason")` stands where a value belongs and takes whatever type is
 expected there, so an unfinished body is still resolved, typed, and checked like finished work.
-`lumen build` is what refuses a hole, so this is the command to run while one is still there.
+`bux build` is what refuses a hole, so this is the command to run while one is still there.
 
 `--json` writes the refusal as data rather than as a page to read. One diagnostic is one JSON
 object on one line: the file, the code, the message, and the span as byte offsets, with the
@@ -103,7 +103,7 @@ into a tool. A file the compiler accepts writes nothing at all, and a file that 
 all is said on standard error and exits 2, with the flag exactly as without it.
 
 Canonical form is the one refusal that carries an edit, because it is the one whose answer the
-compiler already knows. That edit is the whole file, and it is exactly the text `lumen fmt`
+compiler already knows. That edit is the whole file, and it is exactly the text `bux fmt`
 writes, so a tool applies the compiler's own repair rather than reformatting by hand. Where a
 declaration belongs, what a name should have been, and which variant a `match` is missing are all
 the author's to decide, so those carry advice and no edit. Applying the edit answers the refusal it

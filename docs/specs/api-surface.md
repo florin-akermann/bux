@@ -2,7 +2,7 @@
 
 ## Intent
 
-`lumen api <file>` prints what a module offers, and nothing else.
+`bux api <file>` prints what a module offers, and nothing else.
 One page then replaces reading a file to learn a signature.
 
 A reader who wants to call something needs the name, what it takes, and what it gives back.
@@ -93,10 +93,10 @@ is a thing to read rather than a signature to paste.
 The page goes to standard output and a refusal goes to standard error, so a page piped somewhere
 is a page and never a refusal.
 
-`lumen api` runs the same front end `lumen check` runs, and refuses what it refuses, with the same
+`bux api` runs the same front end `bux check` runs, and refuses what it refuses, with the same
 diagnostic.
 A module that holds a hole has a page: a hole is well typed, and `docs/specs/holes.md` leaves
-refusing one to `lumen build`.
+refusing one to `bux build`.
 
 ## Properties
 

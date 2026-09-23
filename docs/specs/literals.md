@@ -56,7 +56,7 @@ domain its author means it to have, and the compiler holds every literal to it.
 
 ## What the library writes
 
-`library/prelude.lm` is Lumen source the compiler carries, which `docs/specs/library.md` states,
+`library/prelude.bx` is Bux source the compiler carries, which `docs/specs/library.md` states,
 and it declares the trait and writes the one instance:
 
 ```text
@@ -65,7 +65,7 @@ instance IntegerLiteral<Int>
 
 Its bounds are the whole numbers an `Int` holds, so every literal the lexer accepts fits `Int`.
 `docs/specs/lexer.md` refuses a number that does not, as `L0103`, before any of this is reached.
-Its `lowest` is written `-9223372036854775808`, which Lumen source can write because a `-` before
+Its `lowest` is written `-9223372036854775808`, which Bux source can write because a `-` before
 a number is part of that number: `docs/specs/grammar.md` states the rule, and the smallest
 whole number is the reason for it.
 

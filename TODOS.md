@@ -49,7 +49,7 @@ The allow list leaves out reflection, class loaders, method handles, and deseria
 
 ## 🔴 Item 089: A `test` block states a test, and `bux test` runs every test and example in a package
 **Depends on:** Item 081 — `bux test` runs `.bx` files.
-Today `lumen test` takes one file and runs only the `// example:` lines of that module.
+Today `bux test` takes one file and runs only the `// example:` lines of that module.
 One example line cannot hold a test that needs setup over several statements or needs `io`.
 A `test "name" { … }` block at the top level of a module holds such a test, and its body is `Bool`.
 A block is not a function, so it has no signature, no example, and no caller but the runner.
@@ -91,21 +91,21 @@ Item 091 found it: the pool prints every part line after `ended`, so the run sho
 The example-line jobs of `compiler/` and `tests/` write the same classes again, and each takes 27 s.
 [103][a] - The runner prints each part line when that part ends, and the line order is stable.
 [103][b] - The example-line runs of one module share one set of written classes.
-[103][c] - `tests/launched.lm` holds its 2 s window under a full pool, or states a wider one.
+[103][c] - `tests/launched.bx` holds its 2 s window under a full pool, or states a wider one.
 
 ## 🔴 Item 104: `L0702` sees a clash of two class names that differ only in case
 Item 099 found it: on a file system that ignores case, `List.class` and `list.class` are one file.
 A build then writes one class over the other, and `L0702` compares the two names exactly.
 The library no longer has such a pair, but a program's own types and modules can still meet.
-The `L0702` message also names `lumen` for a library class, because it reads up to the first `/`.
+The `L0702` message also names `bux` for a library class, because it reads up to the first `/`.
 [104][a] - `docs/specs/codegen.md` states that two class names that differ only in case clash.
 [104][b] - `L0702` refuses such a pair, and its message names the module that owns the class.
 [104][c] - A `tests/spec/` example shows a program whose type and module differ only in case.
 
 ## 🔴 Item 105: A golden file holds every command on every example, and `fmt` changes no later answer
-Item 092 found it: `tests/commanded.lm` runs every command line of a golden file in one stage.
+Item 092 found it: `tests/commanded.bx` runs every command line of a golden file in one stage.
 So `$ fmt` rewrites the staged copy, and `$ build` of a refused file then records status 0.
-`tests/spec/interop/outside_java_base.lm` has no entry at all, and nothing reports a missing one.
+`tests/spec/interop/outside_java_base.bx` has no entry at all, and nothing reports a missing one.
 [105][a] - `docs/specs/executable-examples.md` states that each command line sees the example as written.
 [105][b] - `bin/runner` fails when an example under `tests/spec/` has no entry in `fixtures.txt`.
 [105][c] - `bin/runner golden` adds the entries of a new example, and the missing entries are added.

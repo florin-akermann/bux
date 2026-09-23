@@ -1,0 +1,7 @@
+// A module that declares a type, which `imported_gap.bx` and `imported_order.bx` match on.
+type Payment =
+    | Pending
+    | Authorized {
+        authorization_id: String
+    }
+    | Failed(String)

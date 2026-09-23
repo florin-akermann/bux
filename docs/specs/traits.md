@@ -192,7 +192,7 @@ instance<T: Eq<T>> Eq<List<T>>        instance<T: Ord<T>> Ord<List<T>>
 instance<T: Hash<T>> Hash<List<T>>    instance<T: Show<T>> Show<List<T>>
 ```
 
-All sixteen are source the prelude carries, a few lines each, and `library/prelude.lm` is where a
+All sixteen are source the prelude carries, a few lines each, and `library/prelude.bx` is where a
 reader goes to find what one of them says.
 `Hash<String>` reads a string by the characters it holds, over a `String.hashCode` declared with
 the width `docs/specs/interop.md` states.
@@ -279,7 +279,7 @@ So `Eq` at `List<T>` is answered inside a body written over `T: Eq<T>`, for the 
 A generic is compiled once per set of types, so the second case is a case only while type checking.
 The body written for `has_value` at `Point` has `T` standing for `Point`, and the `is_equal` it
 calls is the one `instance Eq<Point>` declares.
-The instance `has_value` at `Int` resolves to is the one `library/prelude.lm` writes for `Int`,
+The instance `has_value` at `Int` resolves to is the one `library/prelude.bx` writes for `Int`,
 and what that instance amounts to is written out in place rather than called.
 
 `==` and `!=` are resolved the same way, against `Eq`.
@@ -289,7 +289,7 @@ the language keeps.
 
 ## What the library writes and what the compiler supplies
 
-`library/prelude.lm` is Lumen source the compiler carries, which `docs/specs/library.md` states,
+`library/prelude.bx` is Bux source the compiler carries, which `docs/specs/library.md` states,
 and it declares every trait and writes every instance of one for `Bool`, `Int`, `String`, and
 `List<T>`.
 The four standard traits are written out above; `docs/specs/operators.md` writes out the six the
@@ -311,9 +311,9 @@ No instance over `Bool`, `Int`, or `String` has a body anything calls.
 `is_equal` at `Int`, at `Bool`, or at `String` is written out where it is called, as `or` is, and
 the comparison it writes is the one `==` already wrote: two whole numbers or two truth values as the
 JVM compares them, and two strings by the characters they hold.
-The body in `library/prelude.lm` is what says in Lumen what that instruction does, and reading it
+The body in `library/prelude.bx` is what says in Bux what that instruction does, and reading it
 is what holds it to its type.
-Each instance over `List<T>` is different: its body in `library/prelude.lm` is the one lowered.
+Each instance over `List<T>` is different: its body in `library/prelude.bx` is the one lowered.
 `docs/specs/codegen.md` states the class that the method is written into.
 Nothing asks whether two references are one object, which `docs/specs/codegen.md` requires.
 
@@ -321,7 +321,7 @@ Nothing asks whether two references are one object, which `docs/specs/codegen.md
 
 An instance's method is a static method of the module class, named for its trait, its type, and
 itself, joined by `$`: `Eq$Point$is_equal`.
-`$` is legal in a JVM method name and Lumen writes no operator with it, which is the same reason
+`$` is legal in a JVM method name and Bux writes no operator with it, which is the same reason
 `docs/specs/codegen.md` names a specialized generic that way.
 
 An instance's method is written whether anything calls it or not, as a function that declares no
@@ -376,8 +376,8 @@ A trait's name and the type an instance is for are written in `PascalCase`, and 
 | `L0419` | A parameter of a method a trait declares states no type. |
 
 `L0308`, `L0309`, `L0310`, `L0311`, and `L0318` are raised by name resolution, which
-`compiler/resolver.lm` words.
-`L0401`, `L0418`, and `L0419` are raised by type inference, which `compiler/refusal.lm`
+`compiler/resolver.bx` words.
+`L0401`, `L0418`, and `L0419` are raised by type inference, which `compiler/refusal.bx`
 words.
 
 ## Properties
@@ -396,9 +396,9 @@ These hold and are checked by drawn properties in the runner:
    instance of the trait declaring them, as `==` is.
 
 What each instance over those three types answers is a claim about a running program, so it is
-held to by `tests/spec/traits/supplied.lm` rather than by a property: that `is_less` is a total
+held to by `tests/spec/traits/supplied.bx` rather than by a property: that `is_less` is a total
 order over `Bool`, `Int`, and `String` and is transitive, that equal values hash alike, and that
 `shown` renders each of the three as this spec states.
 What the four over `List<T>` answer is held to the same way, by
-`tests/spec/traits/over_a_list.lm`, and what a module's own instance over its own type answers by
-`tests/spec/traits/over_a_generic_type.lm`.
+`tests/spec/traits/over_a_list.bx`, and what a module's own instance over its own type answers by
+`tests/spec/traits/over_a_generic_type.bx`.

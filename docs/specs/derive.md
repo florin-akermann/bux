@@ -38,7 +38,7 @@ derive := "derive" Name { "," Name } "for" Name
 The list is written with `, ` between two names and no trailing comma, and the whole item is one
 line however long it is, because it holds nothing that could be broken across lines.
 
-A derive names the type below it, as every use in Lumen names a declaration below it, so
+A derive names the type below it, as every use in Bux names a declaration below it, so
 `docs/specs/naming.md` puts `derive Eq for User` above `type User`.
 
 ## What it writes
@@ -164,18 +164,18 @@ of `Failed(String, List<Int>)` is `Failed.1` and the `tags` of a `Sent { tags: L
 `Sent.tags`.
 
 `L0300`, `L0303`, `L0308`, `L0310`, `L0311`, and `L0312` are raised by name resolution, which
-`compiler/resolver.lm` words.
-`L0401` and `L0422` are raised by type inference, which `compiler/refusal.lm` words.
+`compiler/resolver.bx` words.
+`L0401` and `L0422` are raised by type inference, which `compiler/refusal.bx` words.
 
 ## Executable examples
 
-`tests/spec/traits/derived.lm` runs a record and a variant that each derive `Eq`, which is where
+`tests/spec/traits/derived.bx` runs a record and a variant that each derive `Eq`, which is where
 the claim that a derived `Eq` agrees with the state of two values is held to a running program.
-`tests/spec/traits/derived_ord.lm`, `tests/spec/traits/derived_hash.lm`, and
-`tests/spec/traits/derived_show.lm` do the same for the other three.
-`tests/spec/traits/derived_holds_no_instance.lm` and `tests/spec/traits/derive_not_derivable.lm`
+`tests/spec/traits/derived_ord.bx`, `tests/spec/traits/derived_hash.bx`, and
+`tests/spec/traits/derived_show.bx` do the same for the other three.
+`tests/spec/traits/derived_holds_no_instance.bx` and `tests/spec/traits/derive_not_derivable.bx`
 are the two refusals; the first holds a `List<Crate>`, whose element has no instance.
-`tests/spec/traits/over_a_list.lm` runs a record that holds a `List<Int>` and derives `Eq`, which
+`tests/spec/traits/over_a_list.bx` runs a record that holds a `List<Int>` and derives `Eq`, which
 is where the claim that a derive reaches through a list is held to a running program.
 
 ## Properties
@@ -190,8 +190,8 @@ These hold and are checked by drawn properties in the runner:
    field, `Ord` reads them both ways round, and `Hash` and `Show` read the one they are handed.
 
 What each derived instance then answers is a claim about a running program, so it is held to by
-the executable examples above rather than by a property: `derived_ord.lm` holds the order to
-trichotomy and transitivity over the values it names, and `derived_hash.lm` holds equal values to
+the executable examples above rather than by a property: `derived_ord.bx` holds the order to
+trichotomy and transitivity over the values it names, and `derived_hash.bx` holds equal values to
 hashing alike.
 
 That a derived instance is reached the way a written one is, so that the two lower to the same

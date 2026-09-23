@@ -1,5 +1,0 @@
-// The module that `module_not_in_case.lm` imports, which is there so that only its name is wrong.
-// example: greeting() == "hi"
-fn greeting() -> String {
-    "hi"
-}

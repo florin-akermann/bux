@@ -1,6 +1,6 @@
 # Reaching a Java class
 
-An `extern` declaration names one member of one Java class and gives it a Lumen signature.
+An `extern` declaration names one member of one Java class and gives it a Bux signature.
 
 ## Intent
 
@@ -8,7 +8,7 @@ An `extern` declaration names one member of one Java class and gives it a Lumen 
 It says that each target has its own `extern` form, and this spec is the form of the JVM target.
 The member kinds, the widths, `interface`, and the two mappings are JVM facts, so they are here.
 `docs/implementation.md` section 3 asks for the boundary.
-`io` and `files` were the compiler's own modules because each reaches a JVM method no Lumen source
+`io` and `files` were the compiler's own modules because each reaches a JVM method no Bux source
 could name, and they are library modules written over these declarations once one can.
 This spec says what an `extern` declaration is, what crosses the boundary, and what is refused.
 
@@ -36,7 +36,7 @@ extern method char at(text: String, int index: Int) -> Option<Int> = "charAt"
 extern new opened(name: String) -> File
 ```
 
-`type` names a class, under a Lumen type name that values of it are held as.
+`type` names a class, under a Bux type name that values of it are held as.
 `field` names a static field, and reading it is a call of no arguments.
 `static` names a static method.
 `method` names an instance method of a class, whose receiver is the first parameter.
@@ -59,10 +59,10 @@ a call like any other.
 
 ## What crosses
 
-A parameter and a result are Lumen types, and each compiles to exactly the JVM type the member's
+A parameter and a result are Bux types, and each compiles to exactly the JVM type the member's
 own descriptor names.
 
-| Lumen         | JVM                     | where          |
+| Bux         | JVM                     | where          |
 |---------------|-------------------------|----------------|
 | `Bool`        | `boolean`               | either         |
 | `Int`         | `long`                  | either         |
@@ -74,9 +74,9 @@ own descriptor names.
 | `List<T>`     | `java.util.List`        | a parameter    |
 
 Nothing else crosses.
-A record, a variant, and a type parameter are each a Lumen type a Java member has no descriptor
+A record, a variant, and a type parameter are each a Bux type a Java member has no descriptor
 for, and an `extern` naming one is `L0425`.
-The JVM's `double` and the rest of its primitives are types no Lumen type compiles to, so a
+The JVM's `double` and the rest of its primitives are types no Bux type compiles to, so a
 member whose descriptor names one is not reachable and the answer is to name one that does not.
 The two widths are the exception, and the sections on them state each one.
 
@@ -122,14 +122,14 @@ extern method int length(text: String) -> Int = "length"
 extern method int hashed_text(value: String) -> Int = "hashCode"
 ```
 
-`library/prelude.lm` writes the second of those, and `instance Hash<String>` is written over it.
+`library/prelude.bx` writes the second of those, and `instance Hash<String>` is written over it.
 
 The member is reached for its `int` and the answer is widened to the `Int` the signature declares.
-`int` is no Lumen type, no program can write one, and no type a signature writes compiles to one.
+`int` is no Bux type, no program can write one, and no type a signature writes compiles to one.
 It is a fact about the member, written where every other fact about the member is written.
 
 `char` is the other width, and a result reads it exactly as it reads `int`.
-`String.charAt` gives back a `char`, which is no type Lumen has and no type a signature writes.
+`String.charAt` gives back a `char`, which is no type Bux has and no type a signature writes.
 `char` after the kind says the member's own descriptor gives one, whose descriptor letter is `C`,
 and the answer is widened to the `Int` the signature declares:
 
@@ -161,7 +161,7 @@ extern method char at(text: String, int index: Int) -> Option<Int> = "charAt"
 extern method cut_out(text: String, int from: Int, int to: Int) -> Option<String> = "substring"
 ```
 
-The parameter's Lumen type stays `Int`, and a caller hands over the whole number it always did.
+The parameter's Bux type stays `Int`, and a caller hands over the whole number it always did.
 The member is reached for an `int` there, so the argument is narrowed to one.
 
 Narrowing a `long` to an `int` loses whatever does not fit, and nothing in Bux is partial, so the
@@ -227,7 +227,7 @@ type in `PascalCase`, so the word takes no name a program could have used.
 
 ## The two mappings
 
-`Option<T>` and `Result<T, String>` are what the two things Java gives back that Lumen has no
+`Option<T>` and `Result<T, String>` are what the two things Java gives back that Bux has no
 word for become.
 
 A result declared `Option<T>` reads the reference the member gives back.
@@ -270,7 +270,7 @@ calls the instance method, and `new` builds the class and calls its constructor.
 A guarded body is a method of its own by construction, because every `extern` is one: a guarded
 span begins with an empty stack, and a call may be written wherever an expression is.
 
-Nothing of this is visible from Lumen.
+Nothing of this is visible from Bux.
 A program that writes `io.println` never learns what carries it, exactly as before.
 
 A `method` is called the way an instance method of a class is called, and a `method` whose

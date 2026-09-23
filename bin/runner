@@ -1,5 +1,5 @@
 #!/bin/sh
-# The runner in tests/runner.lm, built by the Bux compiler and started from the repository root.
+# The runner in tests/runner.bx, built by the Bux compiler and started from the repository root.
 #
 # `bin/bux build` writes the classes of the runner, and of every compiler module it imports, in
 # tests/target/. The runner then runs on a JVM whose class path also holds compiler/ and the root,
@@ -17,6 +17,6 @@ while [ -L "$self" ]; do
 done
 root=$(cd "$(dirname "$self")/.." && pwd)
 cd "$root"
-bin/bux build tests/runner.lm
+bin/bux build tests/runner.bx
 exec "$JAVA_HOME/bin/java" --enable-preview -Dstdout.encoding=UTF-8 -Dstderr.encoding=UTF-8 \
     -cp "$root/tests/target:$root/compiler:$root" runner "$@"

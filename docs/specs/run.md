@@ -2,7 +2,7 @@
 
 ## Intent
 
-`lumen run <file> [argument...]` compiles a module and runs it.
+`bux run <file> [argument...]` compiles a module and runs it.
 It is the shortest way from a source file to the thing the source file does, and it is what an
 executable example uses to prove a program does not only compile but works.
 
@@ -11,8 +11,8 @@ A module that declares `main` at that shape is a program; every other module is 
 
 ## What running amounts to
 
-`lumen run` does what `lumen build` does and then hands the result to a JVM.
-The class files are written as `lumen build` writes them, so a run leaves what a build leaves.
+`bux run` does what `bux build` does and then hands the result to a JVM.
+The class files are written as `bux build` writes them, so a run leaves what a build leaves.
 
 The JVM is started on the module class, with the one `target/` of the build as its class path.
 The next section states that directory.
@@ -23,7 +23,7 @@ The runner also limits what the program can reach, and the next section states h
 
 The program's own output is the runner's output: what it writes to standard output and to
 standard error, the runner passes through unchanged, and the status it ends with is the status
-`lumen run` ends with.
+`bux run` ends with.
 
 ## Where a build writes
 
@@ -42,7 +42,7 @@ That one `target/` is the whole class path for classes, for a run and for each s
 They are there only for resources: the help text, the explanations, and the library sources.
 Neither holds a class beside a source, so no class there can hide a class of `target/`.
 
-`lumen test` is the one exception, and it writes nothing into `target/`.
+`bux test` is the one exception, and it writes nothing into `target/`.
 It writes the classes of its run into a directory made for that run alone, and then deletes it.
 `docs/specs/doc-examples.md` states why.
 
@@ -77,9 +77,9 @@ No other variable of the environment changes, so a program still reads its envir
 The JVM of the compiler still reads the three variables, because `bin/bux` starts it unchanged.
 
 `run` and `test` build the command line with one function, `program_line`.
-Both remove the variables with one function, `cleared`, in `compiler/command.lm`.
-`tests/spec/interop/outside_java_base.lm` shows that no class of `java.naming` loads.
-`tests/started.lm` starts `run` and `test` with `JAVA_TOOL_OPTIONS` set.
+Both remove the variables with one function, `cleared`, in `compiler/command.bx`.
+`tests/spec/interop/outside_java_base.bx` shows that no class of `java.naming` loads.
+`tests/started.bx` starts `run` and `test` with `JAVA_TOOL_OPTIONS` set.
 It shows that the program sees no such variable and that its JVM writes nothing about one.
 
 ## The arguments
@@ -87,7 +87,7 @@ It shows that the program sees no such variable and that its JVM writes nothing 
 Every word after the file goes to the program, and nothing else does.
 
 ```sh
-lumen run report.lm --wide notes.txt
+bux run report.bx --wide notes.txt
 ```
 
 `--wide` and `notes.txt` reach the program, in that order, unchanged.
@@ -99,10 +99,10 @@ The runner passes them to the JVM's own `main(String[])`, and the entry point th
 gathers that array into the `List<String>` it hands `main`.
 A command that writes no word after the file runs the program with an empty list.
 
-`--help` is one of those words, so `lumen run` has no help flag of its own.
+`--help` is one of those words, so `bux run` has no help flag of its own.
 A word that meant one thing to the program and another to the runner would be a special case, and
 the rule that every word after the file belongs to the program leaves no room for one.
-`lumen help run` is where this topic is read, and `lumen --help` still names the command.
+`bux help run` is where this topic is read, and `bux --help` still names the command.
 
 ## The status
 
@@ -134,7 +134,7 @@ None of these is a diagnostic: they are things about the run rather than about t
 they carry no code and point at no span.
 
 ```text
-error: demo.lm: a module is run through `fn main(arguments: List<String>) -> Int`, which this one does not declare
+error: demo.bx: a module is run through `fn main(arguments: List<String>) -> Int`, which this one does not declare
 error: JAVA_HOME is not set, and running a program needs the JDK it names
 error: /opt/nothing/bin/java: JAVA_HOME names no JDK
 ```
@@ -153,14 +153,14 @@ told what to write instead of sent looking for what is already there.
 ```
 
 Both are given before a program runs, so neither is ever a status a program chose.
-Once a program runs, `lumen run` ends with the status the program ended with, whatever it is.
+Once a program runs, `bux run` ends with the status the program ended with, whatever it is.
 A program the operating system stopped rather than let end has no status of its own, and is
 reported as 128 plus the number of the signal.
 
 ## The command line written in Bux
 
-`compiler/main.lm` is the command line written in Bux.
-`compiler/command.lm` holds every command, because no module can import a module named `main`.
+`compiler/main.bx` is the command line written in Bux.
+`compiler/command.bx` holds every command, because no module can import a module named `main`.
 The help text is read as a class-path resource: a file in `compiler/help/`.
 
 `bin/bux` is the launcher, a POSIX `sh` script.
@@ -185,13 +185,14 @@ The JVM gives an error in words of its own, so the command line looks at the pat
 A directory, a file that it cannot open, and a file that is not UTF-8 each get fixed words.
 An example is `Is a directory (os error 21)`.
 A path that ends in `/` and names a file is refused before it is read.
+A file whose name does not end in `.bx` is refused as `L0605`, and its help names the new name.
 
-`tests/commanded.lm` holds the command line to golden answers under `tests/commands/`.
+`tests/commanded.bx` holds the command line to golden answers under `tests/commands/`.
 `lines.txt` holds the argument parser, and `fixtures.txt` holds each command on each example.
 A golden answer is the status and every line of each stream.
-`tests/enacted.lm` holds the files that each command writes, and what each command says.
-`tests/started.lm` holds each command that starts a JVM.
-`tests/launched.lm` holds the launcher where it starts the compiler and where it cannot.
+`tests/enacted.bx` holds the files that each command writes, and what each command says.
+`tests/started.bx` holds each command that starts a JVM.
+`tests/launched.bx` holds the launcher where it starts the compiler and where it cannot.
 With no JDK, the runner skips each check that starts a JVM and says why.
 
 ## The bootstrap

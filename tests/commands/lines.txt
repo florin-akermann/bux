@@ -2,7 +2,7 @@ $ check a b
 status 2
 ! error: unexpected argument 'b' found
 !
-! Usage: lumen check [OPTIONS] <PATH>
+! Usage: bux check [OPTIONS] <PATH>
 !
 ! For more information, try '--help'.
 
@@ -12,7 +12,7 @@ status 2
 !
 !   tip: a similar argument exists: '--json'
 !
-! Usage: lumen check --json <PATH>
+! Usage: bux check --json <PATH>
 !
 ! For more information, try '--help'.
 
@@ -20,7 +20,7 @@ $ help chek
 status 2
 ! error: unrecognized subcommand 'chek'
 !
-! Usage: lumen <COMMAND>
+! Usage: bux <COMMAND>
 !
 ! For more information, try '--help'.
 
@@ -28,7 +28,7 @@ $ help run
 status 0
 > Compile a source file and run the program it holds.
 >
-> `lumen run` does what `lumen build` does and then hands the result to a JVM. The class files are
+> `bux run` does what `bux build` does and then hands the result to a JVM. The class files are
 > written under `target/` exactly as a build writes them, so a run leaves the same files behind and
 > nothing more. That includes the class of every module the program imports, because the program
 > reaches them while it runs. That one `target/` directory is the whole class path of the program.
@@ -50,7 +50,7 @@ status 0
 > A module that declares `main` at that shape is a program; every other module is a library, and
 > running one is refused rather than guessed at. The whole signature is read: the one parameter is
 > `List<String>`, and the result is `Int`. The entry point a JVM starts at is written with the
-> module. The JVM gets `--enable-preview` because every class Lumen writes is a value class, which
+> module. The JVM gets `--enable-preview` because every class Bux writes is a value class, which
 > JDK 28 holds in preview.
 >
 > A program reaches its library and the `java.base` module of the JDK, and nothing more of the JDK.
@@ -58,20 +58,20 @@ status 0
 > `java.scripting` loads. It also gets `-Djdk.serialFilter=!*`, so it makes no object from
 > serialized bytes. `JAVA_TOOL_OPTIONS`, `JDK_JAVA_OPTIONS`, and `_JAVA_OPTIONS` are removed from
 > the environment of the program, because each can add an option such as `-javaagent` to its JVM.
-> `lumen test` starts the JVM of its examples in the same way.
+> `bux test` starts the JVM of its examples in the same way.
 >
 > Every word written after the file goes to the program, in that order and unchanged, and nothing
 > else does:
 >
 > ```sh
-> lumen run report.lm --wide notes.txt
+> bux run report.bx --wide notes.txt
 > ```
 >
 > `--wide` and `notes.txt` are what the program reads out of `arguments`. The name of the program
 > is not among them, and a command that writes no word after the file runs it with an empty list.
 >
-> `--help` is one of those words too, so `lumen run` has no help flag of its own: a word cannot
-> mean one thing to the program and another to the runner. Read this topic with `lumen help run`.
+> `--help` is one of those words too, so `bux run` has no help flag of its own: a word cannot
+> mean one thing to the program and another to the runner. Read this topic with `bux help run`.
 >
 > The status the run ends with is the `Int` `main` gave back. A program with nothing to say gives
 > back `0`. A status is eight bits wide wherever the JDK runs, so a program is ended with the low
@@ -108,8 +108,8 @@ status 0
 > happened to be first on it, and a build that is reproducible deserves a run that is too. An unset
 > `JAVA_HOME`, or one holding no `bin/java`, is reported as such.
 >
-> What the program writes to standard output and to standard error, `lumen run` passes through
-> untouched, and the status the program ends with is the status `lumen run` ends with.
+> What the program writes to standard output and to standard error, `bux run` passes through
+> untouched, and the status the program ends with is the status `bux run` ends with.
 >
 > Exit codes before a program runs: 1 when the compiler refuses the program, and 2 when a file
 > cannot be read or written, the JDK is not found, or the module declares no `main` at that shape.
@@ -117,7 +117,7 @@ status 0
 > program the operating system stopped rather than let end is reported as 128.
 >
 >
-> Usage: lumen run <FILE> [ARGUMENTS]...
+> Usage: bux run <FILE> [ARGUMENTS]...
 >
 > Arguments:
 >   <FILE>
@@ -132,18 +132,18 @@ status 2
 !
 !   tip: to pass '--help' as a value, use '-- --help'
 !
-! Usage: lumen run <FILE> [ARGUMENTS]...
+! Usage: bux run <FILE> [ARGUMENTS]...
 
 $ --version check
 status 0
-> lumen 0.1.0
+> bux 0.1.0
 
 $ check --json
 status 2
 ! error: the following required arguments were not provided:
 !   <PATH>
 !
-! Usage: lumen check --json <PATH>
+! Usage: bux check --json <PATH>
 !
 ! For more information, try '--help'.
 
@@ -151,7 +151,7 @@ $ help help
 status 0
 > Print this message or the help of the given subcommand(s)
 >
-> Usage: lumen help [COMMAND]...
+> Usage: bux help [COMMAND]...
 >
 > Arguments:
 >   [COMMAND]...  Print help for the subcommand(s)
@@ -160,7 +160,7 @@ $ explain L0100 x
 status 2
 ! error: unexpected argument 'x' found
 !
-! Usage: lumen explain <CODE>
+! Usage: bux explain <CODE>
 !
 ! For more information, try '--help'.
 
@@ -176,7 +176,7 @@ $ help fmt check
 status 2
 ! error: unrecognized subcommand 'check'
 !
-! Usage: lumen fmt <FILE>
+! Usage: bux fmt <FILE>
 !
 ! For more information, try '--help'.
 
@@ -184,7 +184,7 @@ $ check --json=1 a
 status 2
 ! error: unexpected value '1' for '--json' found; no more were expected
 !
-! Usage: lumen check --json <PATH>
+! Usage: bux check --json <PATH>
 !
 ! For more information, try '--help'.
 
@@ -192,7 +192,7 @@ $ check --json --json a
 status 2
 ! error: the argument '--json' cannot be used multiple times
 !
-! Usage: lumen check [OPTIONS] <PATH>
+! Usage: bux check [OPTIONS] <PATH>
 !
 ! For more information, try '--help'.
 
@@ -200,13 +200,13 @@ $ help run x
 status 2
 ! error: unrecognized subcommand 'x'
 !
-! Usage: lumen run <FILE> [ARGUMENTS]...
+! Usage: bux run <FILE> [ARGUMENTS]...
 
 $ check -h a
 status 0
 > Report the first thing about a source file or a package the compiler will not have
 >
-> Usage: lumen check [OPTIONS] <PATH>
+> Usage: bux check [OPTIONS] <PATH>
 >
 > Arguments:
 >   <PATH>  
@@ -217,10 +217,10 @@ status 0
 
 $ --help check
 status 0
-> Lumen is a small, statically typed language that compiles to JVM bytecode.
+> Bux is a small, statically typed language that compiles to JVM bytecode.
 > Go's simplicity. Haskell's types. The JVM's runtime. A compiler written in itself.
 >
-> Source that is not in canonical form does not compile: run `lumen fmt` first.
+> Source that is not in canonical form does not compile: run `bux fmt` first.
 >
 > Commands:
 >   fmt       Rewrite a source file in canonical form
@@ -231,23 +231,23 @@ status 0
 >   api       Print the public surface of a module
 >   explain   Print the long form of one diagnostic code
 >
-> Run `lumen help <command>` for the long form of any of them.
+> Run `bux help <command>` for the long form of any of them.
 >
 > A package is a directory of modules with a `bux.package` manifest beside them; `check` and
-> `build` each take one. `lumen help check` says what the manifest states and where an import
+> `build` each take one. `bux help check` says what the manifest states and where an import
 > looks.
 >
-> Every error carries a code on its first line; `lumen explain <code>` says more about it.
+> Every error carries a code on its first line; `bux explain <code>` says more about it.
 >
-> A process owns a state and takes messages; `lumen help process` says how one is written.
+> A process owns a state and takes messages; `bux help process` says how one is written.
 >
 > The same command line is written in Bux, in `compiler/`. Build it with
-> `lumen build compiler/main.lm`, then start it with `bin/bux`, on the JDK that JAVA_HOME names.
+> `bux build compiler/main.bx`, then start it with `bin/bux`, on the JDK that JAVA_HOME names.
 >
 > Further commands land one at a time; each is documented here in the change that adds it.
 >
 >
-> Usage: lumen <COMMAND>
+> Usage: bux <COMMAND>
 >
 > Commands:
 >   fmt      Rewrite a source file in canonical form
@@ -272,7 +272,7 @@ status 2
 !
 !   tip: to pass '-x' as a value, use '-- -x'
 !
-! Usage: lumen explain <CODE>
+! Usage: bux explain <CODE>
 !
 ! For more information, try '--help'.
 
@@ -286,13 +286,13 @@ status 2
 !
 !   tip: to pass '-x' as a value, use '-- -x'
 !
-! Usage: lumen run <FILE> [ARGUMENTS]...
+! Usage: bux run <FILE> [ARGUMENTS]...
 
 $ help --help
 status 2
 ! error: unrecognized subcommand '--help'
 !
-! Usage: lumen <COMMAND>
+! Usage: bux <COMMAND>
 !
 ! For more information, try '--help'.
 
@@ -300,7 +300,7 @@ $ help -h
 status 2
 ! error: unrecognized subcommand '-h'
 !
-! Usage: lumen <COMMAND>
+! Usage: bux <COMMAND>
 !
 ! For more information, try '--help'.
 
@@ -308,11 +308,11 @@ $ check --help --json
 status 0
 > Report the first thing about a source file that the compiler will not have.
 >
-> `lumen check` runs the front end over a file and stops at the first refusal. It reads the file,
+> `bux check` runs the front end over a file and stops at the first refusal. It reads the file,
 > holds it to canonical form, parses it, resolves every name in it, gives every expression a type,
 > and checks that every `match` answers for every value it may meet. Nothing is written back.
 >
-> Loading comes first. `import greeting` names `greeting.lm`, beside the file that writes it, and
+> Loading comes first. `import greeting` names `greeting.bx`, beside the file that writes it, and
 > every module the file reaches is read before any of them is checked. There is no search path:
 > a module is the file of that name beside the importing one, or nothing, and an import that names
 > no such file is refused. `io`, `files`, `programs`, `list`, `strings`, `map`, and `set` are modules
@@ -334,8 +334,8 @@ status 0
 >
 > Canonical form is the first thing each module is held to: a file that differs is reported with
 > the line and column it is about, that line under a row of carets, and a `help:` line naming the
-> text canonical form writes there. `lumen fmt` is the command that fixes it. An import written
-> after a declaration, or two imports out of sort, is reported here too, and `lumen fmt` does not
+> text canonical form writes there. `bux fmt` is the command that fixes it. An import written
+> after a declaration, or two imports out of sort, is reported here too, and `bux fmt` does not
 > fix that one: where an import belongs is said, never rewritten.
 >
 > How a name is spelled is part of canonical form too, and is reported here for the same reason: a
@@ -345,7 +345,7 @@ status 0
 > because the result read is the one inference settled.
 >
 > Name resolution comes next. A name with no definition, a module that declares one name twice, and
-> a binding that hides a name already in scope are each refused, because in Lumen one name has one
+> a binding that hides a name already in scope are each refused, because in Bux one name has one
 > definition. A declaration written above something that uses it is refused here as well: a file
 > reads top down, so the reader meets the intent before the detail.
 >
@@ -357,7 +357,7 @@ status 0
 > documents a boundary rather than on every line.
 >
 > An `extern` declaration is held here too. It names one member of one Java class and gives it a
-> Lumen signature: `extern type PrintStream = "java.io.PrintStream"` names the class, and `field`,
+> Bux signature: `extern type PrintStream = "java.io.PrintStream"` names the class, and `field`,
 > `static`, `method`, and `new` name the four kinds of member the JVM has. A parameter or a result
 > is `Bool`, `Int`, `String`, or a type an `extern type` names, and nothing else crosses; a result
 > may also be `()`, an `Option` whose `None` is the `null` the member gave back, or a `Result` whose
@@ -396,12 +396,12 @@ status 0
 > Exhaustiveness comes last. A `match` that leaves a value of the type it matches unanswered is
 > refused, and the refusal names a value it does not cover. A `match` that answers for everything
 > but lists its arms in an order the type does not declare its variants in is refused too, so a new
-> variant has exactly one place to be handled. `lumen explain` says more about any code that is
+> variant has exactly one place to be handled. `bux explain` says more about any code that is
 > printed.
 >
 > A hole is accepted. `todo("a reason")` stands where a value belongs and takes whatever type is
 > expected there, so an unfinished body is still resolved, typed, and checked like finished work.
-> `lumen build` is what refuses a hole, so this is the command to run while one is still there.
+> `bux build` is what refuses a hole, so this is the command to run while one is still there.
 >
 > `--json` writes the refusal as data rather than as a page to read. One diagnostic is one JSON
 > object on one line: the file, the code, the message, and the span as byte offsets, with the
@@ -411,7 +411,7 @@ status 0
 > all is said on standard error and exits 2, with the flag exactly as without it.
 >
 > Canonical form is the one refusal that carries an edit, because it is the one whose answer the
-> compiler already knows. That edit is the whole file, and it is exactly the text `lumen fmt`
+> compiler already knows. That edit is the whole file, and it is exactly the text `bux fmt`
 > writes, so a tool applies the compiler's own repair rather than reformatting by hand. Where a
 > declaration belongs, what a name should have been, and which variant a `match` is missing are all
 > the author's to decide, so those carry advice and no edit. Applying the edit answers the refusal it
@@ -425,7 +425,7 @@ status 0
 > --------
 >
 > A package is a directory of modules with a manifest called `bux.package` beside them. Handed a
-> directory rather than a file, `lumen check` and `lumen build` run over every module the package
+> directory rather than a file, `bux check` and `bux build` run over every module the package
 > holds, in the order their names sort, and stop at the first refusal. A directory holding no
 > manifest is no package, and a command handed one says so and stops with exit code 2.
 >
@@ -451,11 +451,11 @@ status 0
 > The name and the version are stated and nothing reads either yet. A manifest that leaves one out
 > is refused all the same, because a package says what it is before anything asks.
 >
-> `lumen fmt`, `lumen run`, `lumen test`, and `lumen api` each take a file. A package has no
+> `bux fmt`, `bux run`, `bux test`, and `bux api` each take a file. A package has no
 > canonical text of its own, no `main` to run, no examples, and no surface beyond its modules'.
 >
 >
-> Usage: lumen check [OPTIONS] <PATH>
+> Usage: bux check [OPTIONS] <PATH>
 >
 > Arguments:
 >   <PATH>
@@ -474,7 +474,7 @@ status 2
 !
 !   tip: to pass '--json' as a value, use '-- --json'
 !
-! Usage: lumen fmt <FILE>
+! Usage: bux fmt <FILE>
 !
 ! For more information, try '--help'.
 
@@ -484,15 +484,15 @@ status 2
 !
 !   tip: to pass '-j' as a value, use '-- -j'
 !
-! Usage: lumen check [OPTIONS] <PATH>
+! Usage: bux check [OPTIONS] <PATH>
 !
 ! For more information, try '--help'.
 
 $
 status 2
-! The Lumen compiler: Go's simplicity, Haskell's types, the JVM's runtime
+! The Bux compiler: Go's simplicity, Haskell's types, the JVM's runtime
 !
-! Usage: lumen <COMMAND>
+! Usage: bux <COMMAND>
 !
 ! Commands:
 !   fmt      Rewrite a source file in canonical form
@@ -512,7 +512,7 @@ $ fmt -h
 status 0
 > Rewrite a source file in canonical form
 >
-> Usage: lumen fmt <FILE>
+> Usage: bux fmt <FILE>
 >
 > Arguments:
 >   <FILE>  
@@ -524,7 +524,7 @@ $ build -h
 status 0
 > Compile a source file or a package to the class files a JVM loads
 >
-> Usage: lumen build <PATH>
+> Usage: bux build <PATH>
 >
 > Arguments:
 >   <PATH>  
@@ -536,7 +536,7 @@ $ test -h
 status 0
 > Run the examples a module states about its functions
 >
-> Usage: lumen test <FILE>
+> Usage: bux test <FILE>
 >
 > Arguments:
 >   <FILE>  
@@ -548,7 +548,7 @@ $ api -h
 status 0
 > Print the public surface of a module
 >
-> Usage: lumen api <FILE>
+> Usage: bux api <FILE>
 >
 > Arguments:
 >   <FILE>  
@@ -560,7 +560,7 @@ $ explain -h
 status 0
 > Print the long form of one diagnostic code
 >
-> Usage: lumen explain <CODE>
+> Usage: bux explain <CODE>
 >
 > Arguments:
 >   <CODE>  
@@ -572,8 +572,8 @@ $ help fmt
 status 0
 > Rewrite a source file in canonical form.
 >
-> There is exactly one canonical formatting of every Lumen program, and source that is not
-> written in it does not compile. `lumen fmt` is how a file gets there: it reads the file,
+> There is exactly one canonical formatting of every Bux program, and source that is not
+> written in it does not compile. `bux fmt` is how a file gets there: it reads the file,
 > prints the canonical text of the program it holds, and writes that text back. A file that is
 > already canonical is left untouched.
 >
@@ -589,17 +589,17 @@ status 0
 > directly above it; a comment already alone on its line stays where it is.
 >
 > Formatting never changes what a program says: the tree parsed from the canonical text is the
-> tree parsed from the original. That is also why `lumen fmt` does not put a file in order.
+> tree parsed from the original. That is also why `bux fmt` does not put a file in order.
 > Canonical form covers sequence too — imports come first and sorted, a declaration is written
 > below what uses it, and a `match` lists its arms in the order the type declares its variants —
-> but where a declaration belongs is the author's decision, so `lumen check` says where it goes
+> but where a declaration belongs is the author's decision, so `bux check` says where it goes
 > rather than moving it there.
 >
 > How a name is spelled is fixed the same way and rewritten no more than order is. A function, a
 > parameter, a record field, and an imported module are snake_case; a type, a variant, and a type
 > parameter are PascalCase; an acronym is a word, so UserId compiles and UserID does not. A
 > declared name is two characters or more, and a function whose result is Bool begins is_, has_,
-> can_, or should_. What a thing is called is the author's decision, so `lumen check` says what
+> can_, or should_. What a thing is called is the author's decision, so `bux check` says what
 > canonical form spells it rather than spelling it.
 >
 > A file that does not parse is reported as a diagnostic, and nothing is written.
@@ -608,7 +608,7 @@ status 0
 > 2 when it cannot be read or written.
 >
 >
-> Usage: lumen fmt <FILE>
+> Usage: bux fmt <FILE>
 >
 > Arguments:
 >   <FILE>
@@ -622,15 +622,15 @@ $ help build
 status 0
 > Compile a source file to the class files a JVM loads.
 >
-> `lumen build` runs the whole compiler over a file and writes the result under `target/`, in the
-> directory of that file. Everything `lumen check` reports is reported here too, in the same layout,
+> `bux build` runs the whole compiler over a file and writes the result under `target/`, in the
+> directory of that file. Everything `bux check` reports is reported here too, in the same layout,
 > and nothing is written when the compiler refuses the program.
 >
 > Every class of a build lands in that one `target/` directory, and no class lands beside a source.
 > A file of a package sits in the package's directory, so the package's `target/` holds its classes.
 > A clean build is `rm -rf target/`, because no other directory holds what a build writes.
 >
-> A module is one source file, so `demo.lm` becomes `target/demo.class`, holding one `public static`
+> A module is one source file, so `demo.bx` becomes `target/demo.class`, holding one `public static`
 > method per function the module declares. Each type the module declares becomes a class of its
 > own in a package named after the module, so `type User` becomes `target/demo/User.class`. A
 > variant of an algebraic data type becomes a class beside its type, named after both.
@@ -639,17 +639,17 @@ status 0
 > written too, so `import greeting` puts `target/greeting.class` beside `target/demo.class`, and a
 > call of `greeting.hello` is a call of a static method of that class. A module beside the file that
 > nothing imports is not read and not written. A module of the library is written in the package
-> `lumen/library`, so `import strings` puts `target/lumen/library/strings.class` there, and a file of
+> `bux/library`, so `import strings` puts `target/bux/library/strings.class` there, and a file of
 > the program may have the name of a library module.
 >
-> The types the prelude supplies are written on every build, in the package `lumen` under
+> The types the prelude supplies are written on every build, in the package `bux` under
 > `target/`. There is no runtime to install and no version of one to agree with: a build is
 > self-contained.
 >
 > The output is reproducible. Two builds of one unchanged file write identical bytes, so nothing in
 > them depends on a timestamp, on where the build ran, or on the order a hash map iterated.
 >
-> The class-file version is the current JDK's, which is the only one Lumen targets. A JDK is needed
+> The class-file version is the current JDK's, which is the only one Bux targets. A JDK is needed
 > to run what is written, not to write it.
 >
 > A module is named after its file, so the file's name has to be one a class may have: a name
@@ -658,7 +658,7 @@ status 0
 > A hole is refused here. `todo("a reason")` is what an unfinished body is written as, and a hole
 > has nothing to run, so there is nothing for a build to write. Every hole in the module is named
 > rather than the first, because a build is how a reader learns what is left; nothing is written
-> when a module holds one. `lumen check` is the command that accepts a hole.
+> when a module holds one. `bux check` is the command that accepts a hole.
 >
 > Exit codes: 0 when the class files are written, 1 when the compiler refuses the program, and 2
 > when a file cannot be read or written, or is named something no class can be called.
@@ -667,7 +667,7 @@ status 0
 > --------
 >
 > A package is a directory of modules with a manifest called `bux.package` beside them. Handed a
-> directory rather than a file, `lumen check` and `lumen build` run over every module the package
+> directory rather than a file, `bux check` and `bux build` run over every module the package
 > holds, in the order their names sort, and stop at the first refusal. A directory holding no
 > manifest is no package, and a command handed one says so and stops with exit code 2.
 >
@@ -693,11 +693,11 @@ status 0
 > The name and the version are stated and nothing reads either yet. A manifest that leaves one out
 > is refused all the same, because a package says what it is before anything asks.
 >
-> `lumen fmt`, `lumen run`, `lumen test`, and `lumen api` each take a file. A package has no
+> `bux fmt`, `bux run`, `bux test`, and `bux api` each take a file. A package has no
 > canonical text of its own, no `main` to run, no examples, and no surface beyond its modules'.
 >
 >
-> Usage: lumen build <PATH>
+> Usage: bux build <PATH>
 >
 > Arguments:
 >   <PATH>
@@ -715,7 +715,7 @@ status 0
 > is the stable handle on that kind of error: it is assigned once and never reused, so a spec, a
 > test, or a note to a colleague can cite the code and stay right however the wording changes.
 >
-> `lumen explain <code>` prints what the code means, why the language refuses it, and what to
+> `bux explain <code>` prints what the code means, why the language refuses it, and what to
 > write instead, at more length than the one `help:` line of a diagnostic has room for.
 >
 > The codes are grouped by the phase that raises them: the grammar writes L01xx, canonical form
@@ -724,7 +724,7 @@ status 0
 > Exit codes: 0 when the code is one the compiler can raise, and 2 when it is not.
 >
 >
-> Usage: lumen explain <CODE>
+> Usage: bux explain <CODE>
 >
 > Arguments:
 >   <CODE>
@@ -738,8 +738,8 @@ $ help test
 status 0
 > Run the examples a module states about its functions.
 >
-> Every function a module declares at the top level states at least one example, and `lumen test`
-> runs them. An example is a line of the comment above the function, and it is Lumen rather than
+> Every function a module declares at the top level states at least one example, and `bux test`
+> runs them. An example is a line of the comment above the function, and it is Bux rather than
 > prose:
 >
 > ```text
@@ -763,33 +763,33 @@ status 0
 > above `main`, or above nothing at all — is refused rather than skipped, because a marker the run
 > would silently pass over is a claim nobody would ever check.
 >
-> The examples are run as a module, because a module is the only thing there is to run. `lumen test`
+> The examples are run as a module, because a module is the only thing there is to run. `bux test`
 > writes one out of what it was given: the module's imports, a `main` that tries each example in
 > turn, and every declaration the module makes other than its own `main`. That module is compiled
 > and started the way any other is, its class files go into a directory made for that run alone so
-> nothing `lumen build` wrote is touched, and a refusal of it is reported against the line in the
+> nothing `bux build` wrote is touched, and a refusal of it is reported against the line in the
 > original file. Every module it imports is compiled into that directory too, so an example reaching
 > a name through an import runs exactly as the module does.
 >
 > The run says which example did not hold by writing a line, and every line it writes opens with a
 > mark of its own, so a line the program writes for itself is never read as a report. Writing a line
 > is what `io.println` is for, so the module the run writes reaches `io`; a module that declares `io`
-> of its own leaves the run no room, and `L0604` says so. Only `lumen test` is affected, because only
-> `lumen test` writes a module.
+> of its own leaves the run no room, and `L0604` says so. Only `bux test` is affected, because only
+> `bux test` writes a module.
 >
 > A run in which every example held prints nothing, as every command that found nothing to report
 > prints nothing. An example that did not hold is reported as `L0603`, where it is written, and
 > every one that did not hold is reported rather than the first. A module that states no example has
 > nothing to run, and a module of types alone is such a module.
 >
-> Running needs a JDK, which comes from `JAVA_HOME` and from nowhere else, exactly as `lumen run`
+> Running needs a JDK, which comes from `JAVA_HOME` and from nowhere else, exactly as `bux run`
 > takes it.
 >
 > Exit codes: 0 when every example the module states held, 1 when the compiler refuses the module or
 > an example did not hold, and 2 when the examples could not be run at all.
 >
 >
-> Usage: lumen test <FILE>
+> Usage: bux test <FILE>
 >
 > Arguments:
 >   <FILE>
@@ -803,7 +803,7 @@ $ help api
 status 0
 > Print what a module offers, and nothing else.
 >
-> `lumen api` runs the front end over a file and prints one page: every name the file declares at
+> `bux api` runs the front end over a file and prints one page: every name the file declares at
 > the top level, with the type it has. That is the whole surface, because every top-level
 > declaration is public and there is no private one. Learning a signature is then reading a page
 > rather than reading a file.
@@ -819,7 +819,7 @@ status 0
 > page reads the same way, so a reader who knows the file knows where to look.
 >
 > The page is the named file's alone. A module the file imports is compiled, because the names
-> reached through it have to have types, but nothing it declares is on the page: `lumen api` run
+> reached through it have to have types, but nothing it declares is on the page: `bux api` run
 > against that module is what prints its surface.
 >
 > Every type printed is the type inference settled on, not the text the author wrote. `fn twice(n)`
@@ -827,9 +827,9 @@ status 0
 > whether or not a signature was written. A type nothing in the module settled prints as `_`, which
 > is how a diagnostic spells the same thing; writing the signature is what turns it into a type.
 >
-> The same refusals `lumen check` gives apply here, with the same diagnostics, because it is the
+> The same refusals `bux check` gives apply here, with the same diagnostics, because it is the
 > same front end. A module that holds a hole still has a page: a hole is well typed, and refusing
-> one is left to `lumen build`.
+> one is left to `bux build`.
 >
 > The page goes to standard output and a refusal to standard error, so a page piped somewhere is a
 > page and never a refusal.
@@ -838,7 +838,7 @@ status 0
 > file cannot be read.
 >
 >
-> Usage: lumen api <FILE>
+> Usage: bux api <FILE>
 >
 > Arguments:
 >   <FILE>
@@ -852,8 +852,8 @@ $ fmt --help
 status 0
 > Rewrite a source file in canonical form.
 >
-> There is exactly one canonical formatting of every Lumen program, and source that is not
-> written in it does not compile. `lumen fmt` is how a file gets there: it reads the file,
+> There is exactly one canonical formatting of every Bux program, and source that is not
+> written in it does not compile. `bux fmt` is how a file gets there: it reads the file,
 > prints the canonical text of the program it holds, and writes that text back. A file that is
 > already canonical is left untouched.
 >
@@ -869,17 +869,17 @@ status 0
 > directly above it; a comment already alone on its line stays where it is.
 >
 > Formatting never changes what a program says: the tree parsed from the canonical text is the
-> tree parsed from the original. That is also why `lumen fmt` does not put a file in order.
+> tree parsed from the original. That is also why `bux fmt` does not put a file in order.
 > Canonical form covers sequence too — imports come first and sorted, a declaration is written
 > below what uses it, and a `match` lists its arms in the order the type declares its variants —
-> but where a declaration belongs is the author's decision, so `lumen check` says where it goes
+> but where a declaration belongs is the author's decision, so `bux check` says where it goes
 > rather than moving it there.
 >
 > How a name is spelled is fixed the same way and rewritten no more than order is. A function, a
 > parameter, a record field, and an imported module are snake_case; a type, a variant, and a type
 > parameter are PascalCase; an acronym is a word, so UserId compiles and UserID does not. A
 > declared name is two characters or more, and a function whose result is Bool begins is_, has_,
-> can_, or should_. What a thing is called is the author's decision, so `lumen check` says what
+> can_, or should_. What a thing is called is the author's decision, so `bux check` says what
 > canonical form spells it rather than spelling it.
 >
 > A file that does not parse is reported as a diagnostic, and nothing is written.
@@ -888,7 +888,7 @@ status 0
 > 2 when it cannot be read or written.
 >
 >
-> Usage: lumen fmt <FILE>
+> Usage: bux fmt <FILE>
 >
 > Arguments:
 >   <FILE>
@@ -902,7 +902,7 @@ $ -x
 status 2
 ! error: unexpected argument '-x' found
 !
-! Usage: lumen <COMMAND>
+! Usage: bux <COMMAND>
 !
 ! For more information, try '--help'.
 
@@ -910,7 +910,7 @@ $ --x
 status 2
 ! error: unexpected argument '--x' found
 !
-! Usage: lumen <COMMAND>
+! Usage: bux <COMMAND>
 !
 ! For more information, try '--help'.
 
@@ -920,7 +920,7 @@ status 2
 !
 !   tip: a similar argument exists: '--help'
 !
-! Usage: lumen --help <COMMAND>
+! Usage: bux --help <COMMAND>
 !
 ! For more information, try '--help'.
 
@@ -930,15 +930,15 @@ status 2
 !
 !   tip: a similar argument exists: '--version'
 !
-! Usage: lumen --version <COMMAND>
+! Usage: bux --version <COMMAND>
 !
 ! For more information, try '--help'.
 
 $ -hx
 status 0
-> The Lumen compiler: Go's simplicity, Haskell's types, the JVM's runtime
+> The Bux compiler: Go's simplicity, Haskell's types, the JVM's runtime
 >
-> Usage: lumen <COMMAND>
+> Usage: bux <COMMAND>
 >
 > Commands:
 >   fmt      Rewrite a source file in canonical form
@@ -956,13 +956,13 @@ status 0
 
 $ -Vh
 status 0
-> lumen 0.1.0
+> bux 0.1.0
 
 $ --help=1
 status 2
 ! error: unexpected value '1' for '--help' found; no more were expected
 !
-! Usage: lumen --help <COMMAND>
+! Usage: bux --help <COMMAND>
 !
 ! For more information, try '--help'.
 
@@ -972,7 +972,7 @@ status 2
 !
 !   tip: to pass '-x' as a value, use '-- -x'
 !
-! Usage: lumen check [OPTIONS] <PATH>
+! Usage: bux check [OPTIONS] <PATH>
 !
 ! For more information, try '--help'.
 
@@ -982,7 +982,7 @@ status 2
 !
 !   tip: a similar argument exists: '--json'
 !
-! Usage: lumen check --json <PATH>
+! Usage: bux check --json <PATH>
 !
 ! For more information, try '--help'.
 
@@ -992,7 +992,7 @@ status 2
 !
 !   tip: to pass '-x' as a value, use '-- -x'
 !
-! Usage: lumen check [OPTIONS] <PATH>
+! Usage: bux check [OPTIONS] <PATH>
 !
 ! For more information, try '--help'.
 
@@ -1002,7 +1002,7 @@ status 2
 !
 !   tip: to pass '--x' as a value, use '-- --x'
 !
-! Usage: lumen check [OPTIONS] <PATH>
+! Usage: bux check [OPTIONS] <PATH>
 !
 ! For more information, try '--help'.
 
@@ -1012,7 +1012,7 @@ status 2
 !
 !   tip: a similar argument exists: '--help'
 !
-! Usage: lumen fmt --help <FILE>
+! Usage: bux fmt --help <FILE>
 !
 ! For more information, try '--help'.
 
@@ -1020,7 +1020,7 @@ $ fmt a b
 status 2
 ! error: unexpected argument 'b' found
 !
-! Usage: lumen fmt <FILE>
+! Usage: bux fmt <FILE>
 !
 ! For more information, try '--help'.
 
@@ -1028,7 +1028,7 @@ $ fmt a -h
 status 0
 > Rewrite a source file in canonical form
 >
-> Usage: lumen fmt <FILE>
+> Usage: bux fmt <FILE>
 >
 > Arguments:
 >   <FILE>  
@@ -1042,7 +1042,7 @@ status 2
 !
 !   tip: to pass '-h' as a value, use '-- -h'
 !
-! Usage: lumen run <FILE> [ARGUMENTS]...
+! Usage: bux run <FILE> [ARGUMENTS]...
 
 $ run --hel
 status 2
@@ -1050,7 +1050,7 @@ status 2
 !
 !   tip: to pass '--hel' as a value, use '-- --hel'
 !
-! Usage: lumen run <FILE> [ARGUMENTS]...
+! Usage: bux run <FILE> [ARGUMENTS]...
 
 $ run -- -h
 status 2
@@ -1065,7 +1065,7 @@ status 2
 ! error: the following required arguments were not provided:
 !   <CODE>
 !
-! Usage: lumen explain <CODE>
+! Usage: bux explain <CODE>
 !
 ! For more information, try '--help'.
 
@@ -1073,7 +1073,7 @@ $ explain -- a b
 status 2
 ! error: unexpected argument 'b' found
 !
-! Usage: lumen explain <CODE>
+! Usage: bux explain <CODE>
 !
 ! For more information, try '--help'.
 
@@ -1081,7 +1081,7 @@ $ check --json a --json
 status 2
 ! error: the argument '--json' cannot be used multiple times
 !
-! Usage: lumen check [OPTIONS] <PATH>
+! Usage: bux check [OPTIONS] <PATH>
 !
 ! For more information, try '--help'.
 
@@ -1089,7 +1089,7 @@ $ check a -- --json
 status 2
 ! error: unexpected argument '--json' found
 !
-! Usage: lumen check [OPTIONS] <PATH>
+! Usage: bux check [OPTIONS] <PATH>
 !
 ! For more information, try '--help'.
 
@@ -1099,7 +1099,7 @@ status 2
 !
 !   tip: a similar subcommand exists: 'help'
 !
-! Usage: lumen <COMMAND>
+! Usage: bux <COMMAND>
 !
 ! For more information, try '--help'.
 
@@ -1109,7 +1109,7 @@ status 2
 !
 !   tip: a similar subcommand exists: 'help'
 !
-! Usage: lumen <COMMAND>
+! Usage: bux <COMMAND>
 !
 ! For more information, try '--help'.
 
@@ -1119,7 +1119,7 @@ status 2
 !
 !   tip: a similar subcommand exists: 'check'
 !
-! Usage: lumen <COMMAND>
+! Usage: bux <COMMAND>
 !
 ! For more information, try '--help'.
 
@@ -1129,7 +1129,7 @@ status 2
 !
 !   tip: to pass '--json' as a value, use '-- --json'
 !
-! Usage: lumen api <FILE>
+! Usage: bux api <FILE>
 !
 ! For more information, try '--help'.
 
@@ -1141,7 +1141,7 @@ $ check --help=x
 status 2
 ! error: unexpected value 'x' for '--help' found; no more were expected
 !
-! Usage: lumen check --help <PATH>
+! Usage: bux check --help <PATH>
 !
 ! For more information, try '--help'.
 
@@ -1149,7 +1149,7 @@ $ fmt -hh
 status 0
 > Rewrite a source file in canonical form
 >
-> Usage: lumen fmt <FILE>
+> Usage: bux fmt <FILE>
 >
 > Arguments:
 >   <FILE>  
@@ -1163,7 +1163,7 @@ status 2
 !
 !   tip: to pass '-j' as a value, use '-- -j'
 !
-! Usage: lumen check [OPTIONS] <PATH>
+! Usage: bux check [OPTIONS] <PATH>
 !
 ! For more information, try '--help'.
 
@@ -1171,13 +1171,13 @@ $ help help help
 status 2
 ! error: unrecognized subcommand 'help'
 !
-! Usage: lumen help [COMMAND]...
+! Usage: bux help [COMMAND]...
 
 $ help fmt -h
 status 2
 ! error: unrecognized subcommand '-h'
 !
-! Usage: lumen fmt <FILE>
+! Usage: bux fmt <FILE>
 !
 ! For more information, try '--help'.
 
@@ -1185,7 +1185,7 @@ $ help check a
 status 2
 ! error: unrecognized subcommand 'a'
 !
-! Usage: lumen check [OPTIONS] <PATH>
+! Usage: bux check [OPTIONS] <PATH>
 !
 ! For more information, try '--help'.
 
@@ -1193,7 +1193,7 @@ $ help run a
 status 2
 ! error: unrecognized subcommand 'a'
 !
-! Usage: lumen run <FILE> [ARGUMENTS]...
+! Usage: bux run <FILE> [ARGUMENTS]...
 
 $ help process
 status 0
@@ -1222,7 +1222,7 @@ status 0
 > and one message, and gives `Continue` of the next state or `Done`, which ends the process. Every
 > type is written, and neither function is generic. The body of `receive` is one `match` on the
 > message, and each arm is one call or one name; other work goes in a function the arm calls.
-> Each break of the shape has its own code, `L0802` to `L0810`, and `lumen explain` says more.
+> Each break of the shape has its own code, `L0802` to `L0810`, and `bux explain` says more.
 >
 > `spawn Counter(10)` starts a process on a JVM virtual thread and gives its handle, a
 > `Process<Counted, Int>`: what it accepts, then its state. A handle has no `Eq` and crosses no
@@ -1240,7 +1240,7 @@ $ help process a
 status 2
 ! error: unrecognized subcommand 'a'
 !
-! Usage: lumen help process
+! Usage: bux help process
 
 $ -- check
 status 2
@@ -1248,7 +1248,7 @@ status 2
 !
 !   tip: subcommand 'check' exists; to use it, remove the '--' before it
 !
-! Usage: lumen <COMMAND>
+! Usage: bux <COMMAND>
 !
 ! For more information, try '--help'.
 
@@ -1256,7 +1256,7 @@ $ -xy
 status 2
 ! error: unexpected argument '-x' found
 !
-! Usage: lumen <COMMAND>
+! Usage: bux <COMMAND>
 !
 ! For more information, try '--help'.
 
@@ -1264,7 +1264,7 @@ $ check -h --json
 status 0
 > Report the first thing about a source file or a package the compiler will not have
 >
-> Usage: lumen check [OPTIONS] <PATH>
+> Usage: bux check [OPTIONS] <PATH>
 >
 > Arguments:
 >   <PATH>  
@@ -1277,7 +1277,7 @@ $ check --json -h
 status 0
 > Report the first thing about a source file or a package the compiler will not have
 >
-> Usage: lumen check [OPTIONS] <PATH>
+> Usage: bux check [OPTIONS] <PATH>
 >
 > Arguments:
 >   <PATH>  
@@ -1286,22 +1286,22 @@ status 0
 >       --json  Write the refusal as one line of JSON on standard output, edit included
 >   -h, --help  Print help (see more with '--help')
 
-$ run echo.lm -- b
+$ run echo.bx -- b
 status 0
 > b
 
-$ run echo.lm b -- c
+$ run echo.bx b -- c
 status 0
 > b
 > --
 > c
 
-$ run -- echo.lm -- x
+$ run -- echo.bx -- x
 status 0
 > --
 > x
 
-$ run echo.lm --
+$ run echo.bx --
 status 0
 
 $ check a -j
@@ -1310,7 +1310,7 @@ status 2
 !
 !   tip: to pass '-j' as a value, use '-- -j'
 !
-! Usage: lumen check [OPTIONS] <PATH>
+! Usage: bux check [OPTIONS] <PATH>
 !
 ! For more information, try '--help'.
 
@@ -1322,15 +1322,15 @@ $ -
 status 2
 ! error: unrecognized subcommand '-'
 !
-! Usage: lumen <COMMAND>
+! Usage: bux <COMMAND>
 !
 ! For more information, try '--help'.
 
 $ --
 status 2
-! The Lumen compiler: Go's simplicity, Haskell's types, the JVM's runtime
+! The Bux compiler: Go's simplicity, Haskell's types, the JVM's runtime
 !
-! Usage: lumen <COMMAND>
+! Usage: bux <COMMAND>
 !
 ! Commands:
 !   fmt      Rewrite a source file in canonical form
@@ -1350,7 +1350,7 @@ $ help check --json
 status 2
 ! error: unrecognized subcommand '--json'
 !
-! Usage: lumen check [OPTIONS] <PATH>
+! Usage: bux check [OPTIONS] <PATH>
 !
 ! For more information, try '--help'.
 
@@ -1358,7 +1358,7 @@ $ explain a -- b
 status 2
 ! error: unexpected argument 'b' found
 !
-! Usage: lumen explain <CODE>
+! Usage: bux explain <CODE>
 !
 ! For more information, try '--help'.
 
@@ -1366,7 +1366,7 @@ $ help explain x
 status 2
 ! error: unrecognized subcommand 'x'
 !
-! Usage: lumen explain <CODE>
+! Usage: bux explain <CODE>
 !
 ! For more information, try '--help'.
 
@@ -1374,7 +1374,7 @@ $ help build x
 status 2
 ! error: unrecognized subcommand 'x'
 !
-! Usage: lumen build <PATH>
+! Usage: bux build <PATH>
 !
 ! For more information, try '--help'.
 
@@ -1382,7 +1382,7 @@ $ help api x
 status 2
 ! error: unrecognized subcommand 'x'
 !
-! Usage: lumen api <FILE>
+! Usage: bux api <FILE>
 !
 ! For more information, try '--help'.
 
@@ -1390,7 +1390,7 @@ $ help test x
 status 2
 ! error: unrecognized subcommand 'x'
 !
-! Usage: lumen test <FILE>
+! Usage: bux test <FILE>
 !
 ! For more information, try '--help'.
 
@@ -1400,7 +1400,7 @@ status 2
 !
 !   tip: 'check --json' exists
 !
-! Usage: lumen <COMMAND>
+! Usage: bux <COMMAND>
 !
 ! For more information, try '--help'.
 
@@ -1408,7 +1408,7 @@ $ -- xyz
 status 2
 ! error: unrecognized subcommand 'xyz'
 !
-! Usage: lumen <COMMAND>
+! Usage: bux <COMMAND>
 !
 ! For more information, try '--help'.
 
@@ -1418,7 +1418,7 @@ status 2
 !
 !   tip: subcommand 'help' exists; to use it, remove the '--' before it
 !
-! Usage: lumen <COMMAND>
+! Usage: bux <COMMAND>
 !
 ! For more information, try '--help'.
 
@@ -1428,13 +1428,13 @@ status 2
 !
 !   tip: 'check --json' exists
 !
-! Usage: lumen <COMMAND>
+! Usage: bux <COMMAND>
 !
 ! For more information, try '--help'.
 
 $ -V check
 status 0
-> lumen 0.1.0
+> bux 0.1.0
 
 $ check -V
 status 2
@@ -1442,7 +1442,7 @@ status 2
 !
 !   tip: to pass '-V' as a value, use '-- -V'
 !
-! Usage: lumen check [OPTIONS] <PATH>
+! Usage: bux check [OPTIONS] <PATH>
 !
 ! For more information, try '--help'.
 
@@ -1450,7 +1450,7 @@ $ help -V
 status 2
 ! error: unrecognized subcommand '-V'
 !
-! Usage: lumen <COMMAND>
+! Usage: bux <COMMAND>
 !
 ! For more information, try '--help'.
 
@@ -1458,15 +1458,15 @@ $ --version=1
 status 2
 ! error: unexpected value '1' for '--version' found; no more were expected
 !
-! Usage: lumen --version <COMMAND>
+! Usage: bux --version <COMMAND>
 !
 ! For more information, try '--help'.
 
 $ -h=1
 status 0
-> The Lumen compiler: Go's simplicity, Haskell's types, the JVM's runtime
+> The Bux compiler: Go's simplicity, Haskell's types, the JVM's runtime
 >
-> Usage: lumen <COMMAND>
+> Usage: bux <COMMAND>
 >
 > Commands:
 >   fmt      Rewrite a source file in canonical form
@@ -1486,11 +1486,11 @@ $ check --json=
 status 2
 ! error: unexpected value '' for '--json' found; no more were expected
 !
-! Usage: lumen check --json <PATH>
+! Usage: bux check --json <PATH>
 !
 ! For more information, try '--help'.
 
-$ run echo.lm -h
+$ run echo.bx -h
 status 0
 > -h
 
@@ -1500,7 +1500,7 @@ status 2
 !
 !   tip: to pass '-x' as a value, use '-- -x'
 !
-! Usage: lumen run <FILE> [ARGUMENTS]...
+! Usage: bux run <FILE> [ARGUMENTS]...
 
 $ fmt -- -h
 status 2
@@ -1510,7 +1510,7 @@ $ help --
 status 2
 ! error: unrecognized subcommand '--'
 !
-! Usage: lumen <COMMAND>
+! Usage: bux <COMMAND>
 !
 ! For more information, try '--help'.
 
@@ -1518,7 +1518,7 @@ $ help -- fmt
 status 2
 ! error: unrecognized subcommand '--'
 !
-! Usage: lumen <COMMAND>
+! Usage: bux <COMMAND>
 !
 ! For more information, try '--help'.
 
@@ -1527,7 +1527,7 @@ status 2
 ! error: the following required arguments were not provided:
 !   <PATH>
 !
-! Usage: lumen check <PATH>
+! Usage: bux check <PATH>
 !
 ! For more information, try '--help'.
 
@@ -1536,7 +1536,7 @@ status 2
 ! error: the following required arguments were not provided:
 !   <FILE>
 !
-! Usage: lumen fmt <FILE>
+! Usage: bux fmt <FILE>
 !
 ! For more information, try '--help'.
 
@@ -1545,14 +1545,14 @@ status 2
 ! error: the following required arguments were not provided:
 !   <FILE>
 !
-! Usage: lumen run <FILE> [ARGUMENTS]...
+! Usage: bux run <FILE> [ARGUMENTS]...
 
 $ explain
 status 2
 ! error: the following required arguments were not provided:
 !   <CODE>
 !
-! Usage: lumen explain <CODE>
+! Usage: bux explain <CODE>
 !
 ! For more information, try '--help'.
 
@@ -1562,7 +1562,7 @@ status 2
 !
 !   tip: to pass '--x' as a value, use '-- --x'
 !
-! Usage: lumen check [OPTIONS] <PATH>
+! Usage: bux check [OPTIONS] <PATH>
 !
 ! For more information, try '--help'.
 
@@ -1572,7 +1572,7 @@ status 2
 !
 !   tip: to pass '-x' as a value, use '-- -x'
 !
-! Usage: lumen run <FILE> [ARGUMENTS]...
+! Usage: bux run <FILE> [ARGUMENTS]...
 
 $ -- chek
 status 2
@@ -1580,7 +1580,7 @@ status 2
 !
 !   tip: a similar subcommand exists: 'check'
 !
-! Usage: lumen <COMMAND>
+! Usage: bux <COMMAND>
 !
 ! For more information, try '--help'.
 
@@ -1588,9 +1588,9 @@ $ help help x
 status 2
 ! error: unrecognized subcommand 'x'
 !
-! Usage: lumen help [COMMAND]...
+! Usage: bux help [COMMAND]...
 
-$ run echo.lm -- --
+$ run echo.bx -- --
 status 0
 > --
 
@@ -1598,7 +1598,7 @@ $ check a b c
 status 2
 ! error: unexpected argument 'b' found
 !
-! Usage: lumen check [OPTIONS] <PATH>
+! Usage: bux check [OPTIONS] <PATH>
 !
 ! For more information, try '--help'.
 
@@ -1606,7 +1606,7 @@ $ --x=1
 status 2
 ! error: unexpected argument '--x' found
 !
-! Usage: lumen <COMMAND>
+! Usage: bux <COMMAND>
 !
 ! For more information, try '--help'.
 
@@ -1616,16 +1616,16 @@ status 2
 !
 !   tip: to pass '-j' as a value, use '-- -j'
 !
-! Usage: lumen check [OPTIONS] <PATH>
+! Usage: bux check [OPTIONS] <PATH>
 !
 ! For more information, try '--help'.
 
 $ help
 status 0
-> Lumen is a small, statically typed language that compiles to JVM bytecode.
+> Bux is a small, statically typed language that compiles to JVM bytecode.
 > Go's simplicity. Haskell's types. The JVM's runtime. A compiler written in itself.
 >
-> Source that is not in canonical form does not compile: run `lumen fmt` first.
+> Source that is not in canonical form does not compile: run `bux fmt` first.
 >
 > Commands:
 >   fmt       Rewrite a source file in canonical form
@@ -1636,23 +1636,23 @@ status 0
 >   api       Print the public surface of a module
 >   explain   Print the long form of one diagnostic code
 >
-> Run `lumen help <command>` for the long form of any of them.
+> Run `bux help <command>` for the long form of any of them.
 >
 > A package is a directory of modules with a `bux.package` manifest beside them; `check` and
-> `build` each take one. `lumen help check` says what the manifest states and where an import
+> `build` each take one. `bux help check` says what the manifest states and where an import
 > looks.
 >
-> Every error carries a code on its first line; `lumen explain <code>` says more about it.
+> Every error carries a code on its first line; `bux explain <code>` says more about it.
 >
-> A process owns a state and takes messages; `lumen help process` says how one is written.
+> A process owns a state and takes messages; `bux help process` says how one is written.
 >
 > The same command line is written in Bux, in `compiler/`. Build it with
-> `lumen build compiler/main.lm`, then start it with `bin/bux`, on the JDK that JAVA_HOME names.
+> `bux build compiler/main.bx`, then start it with `bin/bux`, on the JDK that JAVA_HOME names.
 >
 > Further commands land one at a time; each is documented here in the change that adds it.
 >
 >
-> Usage: lumen <COMMAND>
+> Usage: bux <COMMAND>
 >
 > Commands:
 >   fmt      Rewrite a source file in canonical form
@@ -1677,7 +1677,7 @@ status 2
 !
 !   tip: a similar argument exists: '--help'
 !
-! Usage: lumen --help <COMMAND>
+! Usage: bux --help <COMMAND>
 !
 ! For more information, try '--help'.
 
@@ -1687,7 +1687,7 @@ status 2
 !
 !   tip: a similar argument exists: '--json'
 !
-! Usage: lumen check --json <PATH>
+! Usage: bux check --json <PATH>
 !
 ! For more information, try '--help'.
 
@@ -1697,7 +1697,7 @@ status 2
 !
 !   tip: a similar argument exists: '--json'
 !
-! Usage: lumen check --json <PATH>
+! Usage: bux check --json <PATH>
 !
 ! For more information, try '--help'.
 
@@ -1705,7 +1705,7 @@ $ check --json a b
 status 2
 ! error: unexpected argument 'b' found
 !
-! Usage: lumen check [OPTIONS] <PATH>
+! Usage: bux check [OPTIONS] <PATH>
 !
 ! For more information, try '--help'.
 
@@ -1713,11 +1713,11 @@ $ help check
 status 0
 > Report the first thing about a source file that the compiler will not have.
 >
-> `lumen check` runs the front end over a file and stops at the first refusal. It reads the file,
+> `bux check` runs the front end over a file and stops at the first refusal. It reads the file,
 > holds it to canonical form, parses it, resolves every name in it, gives every expression a type,
 > and checks that every `match` answers for every value it may meet. Nothing is written back.
 >
-> Loading comes first. `import greeting` names `greeting.lm`, beside the file that writes it, and
+> Loading comes first. `import greeting` names `greeting.bx`, beside the file that writes it, and
 > every module the file reaches is read before any of them is checked. There is no search path:
 > a module is the file of that name beside the importing one, or nothing, and an import that names
 > no such file is refused. `io`, `files`, `programs`, `list`, `strings`, `map`, and `set` are modules
@@ -1739,8 +1739,8 @@ status 0
 >
 > Canonical form is the first thing each module is held to: a file that differs is reported with
 > the line and column it is about, that line under a row of carets, and a `help:` line naming the
-> text canonical form writes there. `lumen fmt` is the command that fixes it. An import written
-> after a declaration, or two imports out of sort, is reported here too, and `lumen fmt` does not
+> text canonical form writes there. `bux fmt` is the command that fixes it. An import written
+> after a declaration, or two imports out of sort, is reported here too, and `bux fmt` does not
 > fix that one: where an import belongs is said, never rewritten.
 >
 > How a name is spelled is part of canonical form too, and is reported here for the same reason: a
@@ -1750,7 +1750,7 @@ status 0
 > because the result read is the one inference settled.
 >
 > Name resolution comes next. A name with no definition, a module that declares one name twice, and
-> a binding that hides a name already in scope are each refused, because in Lumen one name has one
+> a binding that hides a name already in scope are each refused, because in Bux one name has one
 > definition. A declaration written above something that uses it is refused here as well: a file
 > reads top down, so the reader meets the intent before the detail.
 >
@@ -1762,7 +1762,7 @@ status 0
 > documents a boundary rather than on every line.
 >
 > An `extern` declaration is held here too. It names one member of one Java class and gives it a
-> Lumen signature: `extern type PrintStream = "java.io.PrintStream"` names the class, and `field`,
+> Bux signature: `extern type PrintStream = "java.io.PrintStream"` names the class, and `field`,
 > `static`, `method`, and `new` name the four kinds of member the JVM has. A parameter or a result
 > is `Bool`, `Int`, `String`, or a type an `extern type` names, and nothing else crosses; a result
 > may also be `()`, an `Option` whose `None` is the `null` the member gave back, or a `Result` whose
@@ -1801,12 +1801,12 @@ status 0
 > Exhaustiveness comes last. A `match` that leaves a value of the type it matches unanswered is
 > refused, and the refusal names a value it does not cover. A `match` that answers for everything
 > but lists its arms in an order the type does not declare its variants in is refused too, so a new
-> variant has exactly one place to be handled. `lumen explain` says more about any code that is
+> variant has exactly one place to be handled. `bux explain` says more about any code that is
 > printed.
 >
 > A hole is accepted. `todo("a reason")` stands where a value belongs and takes whatever type is
 > expected there, so an unfinished body is still resolved, typed, and checked like finished work.
-> `lumen build` is what refuses a hole, so this is the command to run while one is still there.
+> `bux build` is what refuses a hole, so this is the command to run while one is still there.
 >
 > `--json` writes the refusal as data rather than as a page to read. One diagnostic is one JSON
 > object on one line: the file, the code, the message, and the span as byte offsets, with the
@@ -1816,7 +1816,7 @@ status 0
 > all is said on standard error and exits 2, with the flag exactly as without it.
 >
 > Canonical form is the one refusal that carries an edit, because it is the one whose answer the
-> compiler already knows. That edit is the whole file, and it is exactly the text `lumen fmt`
+> compiler already knows. That edit is the whole file, and it is exactly the text `bux fmt`
 > writes, so a tool applies the compiler's own repair rather than reformatting by hand. Where a
 > declaration belongs, what a name should have been, and which variant a `match` is missing are all
 > the author's to decide, so those carry advice and no edit. Applying the edit answers the refusal it
@@ -1830,7 +1830,7 @@ status 0
 > --------
 >
 > A package is a directory of modules with a manifest called `bux.package` beside them. Handed a
-> directory rather than a file, `lumen check` and `lumen build` run over every module the package
+> directory rather than a file, `bux check` and `bux build` run over every module the package
 > holds, in the order their names sort, and stop at the first refusal. A directory holding no
 > manifest is no package, and a command handed one says so and stops with exit code 2.
 >
@@ -1856,11 +1856,11 @@ status 0
 > The name and the version are stated and nothing reads either yet. A manifest that leaves one out
 > is refused all the same, because a package says what it is before anything asks.
 >
-> `lumen fmt`, `lumen run`, `lumen test`, and `lumen api` each take a file. A package has no
+> `bux fmt`, `bux run`, `bux test`, and `bux api` each take a file. A package has no
 > canonical text of its own, no `main` to run, no examples, and no surface beyond its modules'.
 >
 >
-> Usage: lumen check [OPTIONS] <PATH>
+> Usage: bux check [OPTIONS] <PATH>
 >
 > Arguments:
 >   <PATH>
@@ -1879,7 +1879,7 @@ status 2
 !
 !   tip: a similar argument exists: '--help'
 !
-! Usage: lumen --help <COMMAND>
+! Usage: bux --help <COMMAND>
 !
 ! For more information, try '--help'.
 
@@ -1889,7 +1889,7 @@ status 2
 !
 !   tip: a similar argument exists: '--version'
 !
-! Usage: lumen --version <COMMAND>
+! Usage: bux --version <COMMAND>
 !
 ! For more information, try '--help'.
 
@@ -1899,7 +1899,7 @@ status 2
 !
 !   tip: a similar argument exists: '--version'
 !
-! Usage: lumen --version <COMMAND>
+! Usage: bux --version <COMMAND>
 !
 ! For more information, try '--help'.
 
@@ -1909,7 +1909,7 @@ status 2
 !
 !   tip: a similar subcommand exists: 'check'
 !
-! Usage: lumen <COMMAND>
+! Usage: bux <COMMAND>
 !
 ! For more information, try '--help'.
 
@@ -1919,7 +1919,7 @@ status 2
 !
 !   tip: a similar subcommand exists: 'test'
 !
-! Usage: lumen <COMMAND>
+! Usage: bux <COMMAND>
 !
 ! For more information, try '--help'.
 
@@ -1929,7 +1929,7 @@ status 2
 !
 !   tip: a similar subcommand exists: 'build'
 !
-! Usage: lumen <COMMAND>
+! Usage: bux <COMMAND>
 !
 ! For more information, try '--help'.
 
@@ -1939,7 +1939,7 @@ status 2
 !
 !   tip: a similar subcommand exists: 'fmt'
 !
-! Usage: lumen <COMMAND>
+! Usage: bux <COMMAND>
 !
 ! For more information, try '--help'.
 
@@ -1949,7 +1949,7 @@ status 2
 !
 !   tip: a similar subcommand exists: 'help'
 !
-! Usage: lumen <COMMAND>
+! Usage: bux <COMMAND>
 !
 ! For more information, try '--help'.
 
@@ -1957,7 +1957,7 @@ $ -- -h
 status 2
 ! error: unrecognized subcommand '-h'
 !
-! Usage: lumen <COMMAND>
+! Usage: bux <COMMAND>
 !
 ! For more information, try '--help'.
 
@@ -1965,7 +1965,7 @@ $ test -- a b
 status 2
 ! error: unexpected argument 'b' found
 !
-! Usage: lumen test <FILE>
+! Usage: bux test <FILE>
 !
 ! For more information, try '--help'.
 
@@ -1975,39 +1975,39 @@ status 2
 !
 !   tip: to pass '--json' as a value, use '-- --json'
 !
-! Usage: lumen explain <CODE>
+! Usage: bux explain <CODE>
 !
 ! For more information, try '--help'.
 
-$ run echo.lm a -- b
+$ run echo.bx a -- b
 status 0
 > a
 > --
 > b
 
-$ run echo.lm -- -- b
+$ run echo.bx -- -- b
 status 0
 > --
 > b
 
-$ run -- echo.lm -- b
+$ run -- echo.bx -- b
 status 0
 > --
 > b
 
-$ run echo.lm --x -- b
+$ run echo.bx --x -- b
 status 0
 > --x
 > --
 > b
 
-$ run --x=1 echo.lm
+$ run --x=1 echo.bx
 status 2
 ! error: unexpected argument '--x' found
 !
 !   tip: to pass '--x' as a value, use '-- --x'
 !
-! Usage: lumen run <FILE> [ARGUMENTS]...
+! Usage: bux run <FILE> [ARGUMENTS]...
 
 $ run -
 status 2
@@ -2017,7 +2017,7 @@ $ check --json --help=1 a
 status 2
 ! error: unexpected value '1' for '--help' found; no more were expected
 !
-! Usage: lumen check --help <PATH|--json>
+! Usage: bux check --help <PATH|--json>
 !
 ! For more information, try '--help'.
 
@@ -2027,7 +2027,7 @@ status 2
 !
 !   tip: a similar argument exists: '--help'
 !
-! Usage: lumen fmt --help <FILE>
+! Usage: bux fmt --help <FILE>
 !
 ! For more information, try '--help'.
 
@@ -2035,7 +2035,7 @@ $ check --help=1 a
 status 2
 ! error: unexpected value '1' for '--help' found; no more were expected
 !
-! Usage: lumen check --help <PATH>
+! Usage: bux check --help <PATH>
 !
 ! For more information, try '--help'.
 
@@ -2043,7 +2043,7 @@ $ check --json=1
 status 2
 ! error: unexpected value '1' for '--json' found; no more were expected
 !
-! Usage: lumen check --json <PATH>
+! Usage: bux check --json <PATH>
 !
 ! For more information, try '--help'.
 
@@ -2051,7 +2051,7 @@ $ check --json --json=1
 status 2
 ! error: unexpected value '1' for '--json' found; no more were expected
 !
-! Usage: lumen check <PATH|--json>
+! Usage: bux check <PATH|--json>
 !
 ! For more information, try '--help'.
 
@@ -2059,7 +2059,7 @@ $ check --json --json
 status 2
 ! error: the argument '--json' cannot be used multiple times
 !
-! Usage: lumen check [OPTIONS] <PATH>
+! Usage: bux check [OPTIONS] <PATH>
 !
 ! For more information, try '--help'.
 
@@ -2069,7 +2069,7 @@ status 2
 !
 !   tip: a similar argument exists: '--help'
 !
-! Usage: lumen check --json --help <PATH>
+! Usage: bux check --json --help <PATH>
 !
 ! For more information, try '--help'.
 
@@ -2079,7 +2079,7 @@ status 2
 !
 !   tip: to pass '--xyz' as a value, use '-- --xyz'
 !
-! Usage: lumen check --json <PATH>
+! Usage: bux check --json <PATH>
 !
 ! For more information, try '--help'.
 
@@ -2089,7 +2089,7 @@ status 2
 !
 !   tip: a similar argument exists: '--help'
 !
-! Usage: lumen check --json --help <PATH>
+! Usage: bux check --json --help <PATH>
 !
 ! For more information, try '--help'.
 
@@ -2099,7 +2099,7 @@ status 2
 !
 !   tip: a similar argument exists: '--help'
 !
-! Usage: lumen check --help <PATH>
+! Usage: bux check --help <PATH>
 !
 ! For more information, try '--help'.
 
@@ -2107,7 +2107,7 @@ $ check a --json --json
 status 2
 ! error: the argument '--json' cannot be used multiple times
 !
-! Usage: lumen check [OPTIONS] <PATH>
+! Usage: bux check [OPTIONS] <PATH>
 !
 ! For more information, try '--help'.
 
@@ -2117,7 +2117,7 @@ status 2
 !
 !   tip: to pass '-x' as a value, use '-- -x'
 !
-! Usage: lumen check [OPTIONS] <PATH>
+! Usage: bux check [OPTIONS] <PATH>
 !
 ! For more information, try '--help'.
 
@@ -2125,7 +2125,7 @@ $ fmt --help=
 status 2
 ! error: unexpected value '' for '--help' found; no more were expected
 !
-! Usage: lumen fmt --help <FILE>
+! Usage: bux fmt --help <FILE>
 !
 ! For more information, try '--help'.
 
@@ -2135,9 +2135,9 @@ status 2
 
 $ -h
 status 0
-> The Lumen compiler: Go's simplicity, Haskell's types, the JVM's runtime
+> The Bux compiler: Go's simplicity, Haskell's types, the JVM's runtime
 >
-> Usage: lumen <COMMAND>
+> Usage: bux <COMMAND>
 >
 > Commands:
 >   fmt      Rewrite a source file in canonical form
@@ -2157,7 +2157,7 @@ $ check -h
 status 0
 > Report the first thing about a source file or a package the compiler will not have
 >
-> Usage: lumen check [OPTIONS] <PATH>
+> Usage: bux check [OPTIONS] <PATH>
 >
 > Arguments:
 >   <PATH>  
@@ -2168,4 +2168,4 @@ status 0
 
 $ --version
 status 0
-> lumen 0.1.0
+> bux 0.1.0

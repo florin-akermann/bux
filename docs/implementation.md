@@ -1,10 +1,10 @@
-# Lumen: Implementation and Roadmap
+# Bux: Implementation and Roadmap
 
 The language is specified in `docs/design.md`; this document covers how it is built and shipped.
 
 ## 1. JVM target
 
-The JVM is the initial and primary runtime target, and Valhalla is what Lumen is built on.
+The JVM is the initial and primary runtime target, and Valhalla is what Bux is built on.
 
 **JDK 28 or later is targeted**, early access until it ships.
 The emitted class-file version is 72, and no older JVM is supported or tested.
@@ -12,7 +12,7 @@ Every class the compiler writes is a value class, which JDK 28 holds in preview.
 That preview is JEP 401, Value Classes and Objects, with JEP 539, Strict Field Initialization.
 Every field the compiler writes is strict, which JEP 401 asks of every value class.
 A preview class file carries minor version 65535, and a JVM loads one only when told to.
-`lumen run` starts the JVM with `--enable-preview`, so a run needs nothing the reader must know.
+`bux run` starts the JVM with `--enable-preview`, so a run needs nothing the reader must know.
 Modern JVM features are used freely: invokedynamic, records, sealed classes, value classes.
 A release of the JDK moves the target with it; there is no compatibility matrix and never will be.
 
@@ -148,20 +148,20 @@ It should not attempt to recreate the entire Java ecosystem.
 There should be one primary executable:
 
 ```text
-lumen
+bux
 ```
 
 Commands:
 
 ```text
-lumen build
-lumen run
-lumen test
-lumen fmt
-lumen check
-lumen api
-lumen repl
-lumen add
+bux build
+bux run
+bux test
+bux fmt
+bux check
+bux api
+bux repl
+bux add
 ```
 
 The project should avoid requiring users to understand:
@@ -189,14 +189,14 @@ No native binary is needed to compile the compiler with itself.
 GraalVM native-image waits until GraalVM tracks JDK 28 and Valhalla, and section 12 holds it.
 
 The compiler lives in `compiler/`, one module for each phase, and the lexer is the first.
-`compiler/main.lm` is its command line, and `compiler/command.lm` holds every command.
+`compiler/main.bx` is its command line, and `compiler/command.bx` holds every command.
 A build writes every class under `target/`, in the directory of the module it builds.
 So a build of the compiler writes `compiler/target/`, and no class lands beside a source.
 The launcher `bin/bux` starts them with `compiler/target/` on the class path.
 `compiler/` and the directory above it are on the class path too, only for resources.
 `compiler/help/` and `compiler/explanations/` hold the help text and the long form of each code.
 The directory above holds `library/`, and the compiler reads all three as resources.
-A module there has a `.lm` name for now, because the module loader reads no other extension.
+A module there has a `.bx` name, and the module loader reads no other extension.
 
 What remains of the repository is small, and a JDK is the one tool it needs:
 
@@ -220,7 +220,7 @@ No class file other than the seed is kept in the repository, so a checkout boots
 
 The first seed is the compiler that the Rust compiler built, before Item 087 deleted the Rust.
 A change to the compiler changes stage 1, and stage 2 still equals it, because stage 1 built it.
-So the seed is replaced for one of four reasons, and for no other.
+So the seed is replaced for one of five reasons, and for no other.
 The first reason is that the compiler needs a feature that the seed cannot compile.
 The item that needs it builds stage 1 with the old seed, and it packs stage 1 as the new seed.
 The second reason is that the lowering or the writer changed the bytes of the compiler's classes.
@@ -228,8 +228,8 @@ Then stage 1, which the old seed wrote, differs from stage 2, which the changed 
 The item builds stage 2 with stage 1, and stage 3 with stage 2, and stage 3 must equal stage 2.
 It packs stage 2 as the new seed, with the `jar` tool of the JDK.
 Item 093 did this when `list.length` became a read of the length field.
-The old seed calls the `length` that the old `library/list.lm` declared.
-So the old seed built stage 1 beside the old `library/list.lm`, not beside the new one.
+The old seed calls the `length` that the old `library/list.bx` declared.
+So the old seed built stage 1 beside the old `library/list.bx`, not beside the new one.
 The third reason is that a build writes its classes to another place.
 The old seed writes stage 1 where the new `bin/bootstrap` does not read it.
 The item builds stage 1 with the old seed, stage 2 with stage 1, and stage 3 with stage 2.
@@ -241,6 +241,12 @@ The `bux fmt` of stage 1 then writes every source in the new form.
 Stage 1 builds stage 2, stage 2 builds stage 3, and stage 3 must equal stage 2.
 The item packs stage 2 as the new seed.
 Item 092 did this when the blank line between two imports was taken out.
+The fifth reason is that the sources or the classes get new names.
+The old seed reads no source of the new name, or it writes each class under its old name.
+The item changes the compiler first, and the old seed builds stage 1 from the sources as named.
+Then the sources get their new names, stage 1 builds stage 2, and stage 2 builds stage 3.
+Stage 3 must equal stage 2, and the item packs stage 2 as the new seed.
+Item 081 did this when every source got the extension `.bx` and the JVM package became `bux/`.
 In each case, `bin/bootstrap` must then hold stage 2 equal to stage 1 with the new seed.
 The item says so, and it replaces the seed in its own commit.
 
@@ -268,21 +274,21 @@ rather than one mutable AST that means different things at different stages.
 
 Compiler development is specification-driven, and the executable examples are the specification.
 `docs/specs/executable-examples.md` says what an example file is and what it expects.
-An example is a `.lm` file under `tests/spec/<area>/`, and an area exists when an example needs it.
+An example is a `.bx` file under `tests/spec/<area>/`, and an area exists when an example needs it.
 
 ### The runner
 
-`tests/runner.lm` is the runner, a Bux program, and `bin/runner` builds it and starts it.
+`tests/runner.bx` is the runner, a Bux program, and `bin/runner` builds it and starts it.
 It starts from the root of the repository and holds the compiler in one JVM.
 It calls the functions of the compiler, so it starts no compiler process for each file.
 It holds these parts, each in a module of its own under `tests/`:
 
-- `exemplified.lm`: every example under `tests/spec`, to its header and to canonical form.
-- `siblings.lm`: every sibling file, to the view of its phase: tokens, tree, surface, format.
-- `documented.lm`: every `// example:` line of `tests/spec`, `library/`, `compiler/`, and `tests/`.
-- The property modules that `every_property_held` in `runner.lm` names, one for each phase.
-- `commanded.lm`: the command line, held to the golden answers under `tests/commands/`.
-- `launched.lm`: the launcher `bin/bux`, and the time limit that a started program has.
+- `exemplified.bx`: every example under `tests/spec`, to its header and to canonical form.
+- `siblings.bx`: every sibling file, to the view of its phase: tokens, tree, surface, format.
+- `documented.bx`: every `// example:` line of `tests/spec`, `library/`, `compiler/`, and `tests/`.
+- The property modules that `every_property_held` in `runner.bx` names, one for each phase.
+- `commanded.bx`: the command line, held to the golden answers under `tests/commands/`.
+- `launched.bx`: the launcher `bin/bux`, and the time limit that a started program has.
 
 The runner splits the parts into jobs, and one pool process hands each job to a worker process.
 There is one worker for each processor that `Runtime.availableProcessors` gives.
@@ -307,25 +313,25 @@ Each job of example lines holds one memo of typed modules, `command.Memo`, from 
 The memo holds each module by the canonical path of its file, so each module is typed once a job.
 It also holds each module that `whole` found whole, and `whole` is not run on it again.
 A command starts with an empty memo, so no answer of the command line depends on one.
-`documented.lm` writes the run of each module, as `lumen test` writes it, into a directory.
+`documented.bx` writes the run of each module, as `bux test` writes it, into a directory.
 Each run gets a directory of its own, inside one directory made for the runs of its job.
-Then the job starts `tests/examined.lm` once, and that program calls the `main` of each run.
+Then the job starts `tests/examined.bx` once, and that program calls the `main` of each run.
 Each run gets a class loader of its own, because two runs can hold one class name for two classes.
-Before each run, `examined.lm` writes a line that names it, so a failure names its module.
+Before each run, `examined.bx` writes a line that names it, so a failure names its module.
 A run that stops with an error, such as a stack overflow, is a failure, and the next run starts.
-A run past the limit is a failure, and `examined.lm` starts again with the runs after it.
-A module whose run cannot be built is reported as `lumen test` reports it, and the others run.
+A run past the limit is a failure, and `examined.bx` starts again with the runs after it.
+A module whose run cannot be built is reported as `bux test` reports it, and the others run.
 
 `walk.ended` starts each program that the runner starts, and it gives each one a time limit.
-`start_limit` in `runner.lm` is the one limit, in seconds, and every started program gets it.
+`start_limit` in `runner.bx` is the one limit, in seconds, and every started program gets it.
 A program that is still running at the limit is stopped, and it is a failure that names its check.
 The runner then continues with the next check, so one program that never ends cannot stop it.
 The limit is 60 s, because it guards against a hang, and not against a slow program.
-The longest program is `examined.lm`, which took 3.9 s on 2026-09-23 for 146 runs.
+The longest program is `examined.bx`, which took 3.9 s on 2026-09-23 for 146 runs.
 It runs the examples of all modules, so its time grows with the modules and with machine load.
 Two runners often run at the same time, so a limit near 3.9 s would stop a correct run.
 Before Item 094, the longest program took 0.14 s, and the limit was 1 s.
-`launched.lm` holds the mechanism: a program that never ends is stopped at a limit of 1 s.
+`launched.bx` holds the mechanism: a program that never ends is stopped at a limit of 1 s.
 `bin/runner golden` writes each golden file again, for an answer that changes on purpose.
 On 2026-09-23 `bin/runner` took 182 s before Item 093 and 97 s after it.
 On 2026-09-23 `bin/runner` took 98 s before Item 094 and 53 s after it.
@@ -343,7 +349,7 @@ The processes spent four times the processor time, most likely in code the JIT h
 ### Drawn properties
 
 A property is a Bux function that tries one invariant on drawn input.
-`tests/drawn.lm` is the generator, a linear congruential generator seeded by the case number.
+`tests/drawn.bx` is the generator, a linear congruential generator seeded by the case number.
 The runner tries each property on 100 cases, so two runs draw the same input.
 A failure names the property, the seed, and the drawn input, so a reader can try that case again.
 Round trips come first: print then parse, a format that is idempotent, spans that cover the input.

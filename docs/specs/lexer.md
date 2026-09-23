@@ -76,16 +76,16 @@ The lexer accepts any string, including empty input, which lexes to no tokens.
 
 ## Executable examples
 
-`tests/spec/lexer/<name>.lm` files are lexed and compared with the sibling `<name>.tokens` file.
+`tests/spec/lexer/<name>.bx` files are lexed and compared with the sibling `<name>.tokens` file.
 Each line of the `.tokens` file is `<kind> <start>..<end> <text>`, one per token, in source order.
 A keyword and a punctuation are named by the text that spells them, as in `Punct(:=)`.
 The text is quoted, and a quote, a backslash, a line break, a tab, and a return are escaped.
-`tests/siblings.lm` walks that directory and names the failing file.
+`tests/siblings.bx` walks that directory and names the failing file.
 An example is a whole program held to `docs/specs/executable-examples.md`, not a fragment.
 
 ## The lexer written in Bux
 
-`compiler/lexer.lm` is this lexer, written in Bux.
+`compiler/lexer.bx` is this lexer, written in Bux.
 It is the first phase of the Bux compiler, which `docs/implementation.md` section 6 states.
 
 A Bux string is read one UTF-16 code unit at a time, and a span still counts UTF-8 bytes.
@@ -103,8 +103,8 @@ A token kind, a keyword, and a punctuation derive `Eq`, so the parser compares k
 A keyword and a punctuation show the text that spells them, as `Keyword(fn)` and `Punct(:=)` do.
 Every other kind shows its name, as `Identifier` and `UnterminatedString` do.
 
-`tests/lexing.lm` holds the lexer to the properties below, on drawn text.
-`tests/siblings.lm` holds it to every `.tokens` file under `tests/spec`, token for token.
+`tests/lexing.bx` holds the lexer to the properties below, on drawn text.
+`tests/siblings.bx` holds it to every `.tokens` file under `tests/spec`, token for token.
 
 ## Properties
 
