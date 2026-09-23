@@ -16,8 +16,9 @@ one source must produce the same bytes.
 
 ## What is written
 
-`lumen build <file>` writes class files beside the source file.
-A module is one source file, so `demo.lm` yields these:
+`lumen build <file>` writes every class of a build into one `target/`, in that file's directory.
+That `target/` is the whole class path for classes, and `docs/specs/run.md` states the rest.
+A module is one source file, so `demo.lm` yields these under `target/`, and none beside a source:
 
 ```text
 demo.class                   the module: one static method per function
@@ -41,7 +42,7 @@ They are `Option`, `Result`, `Next`, `Sent`, and `Waiting`, and each of their va
 Writing them with the module keeps a build self-contained: there is no runtime jar to install and
 no version of one to agree with.
 
-A program of several modules is one such set for each module, written beside the source file.
+A program of several modules is one set for each module, and that one `target/` holds them all.
 Each module is its own class in its own package, so `greeting.lm` yields `greeting.class` too.
 A module that nothing imports is not read and not written, as `docs/specs/modules.md` states.
 
@@ -515,8 +516,7 @@ The constant pool is built in the order entries are first asked for, which the l
 
 ## The lowering and the class-file writer written in Bux
 
-`compiler/ir.lm` lowers a program in Bux, and `compiler/jvm.lm` writes its class files.
-`compiler/bytes.lm` writes the bytes of a class file.
+`compiler/ir.lm` lowers, `compiler/jvm.lm` writes each class, and `compiler/bytes.lm` its bytes.
 
 `ir.program_lowered(path, library)` lowers the module at `path` and each module that it reaches.
 It gives `skipped` when a phase before the lowering refuses the program, or a module holds a hole.

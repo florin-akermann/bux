@@ -46,21 +46,22 @@ fn classes_verified(library: ir.Library, limit: Int) -> held.Held {
     scene := enacted.scene_of([enacted.Written { at: "example.lm", text: everything_text() }])
     said := enacted.said_to(["build", modules.joined(scene, "example.lm")], library)
     var facts = [enacted.status_fact(said, 0)]
-    for class in enacted.relative_files(scene) {
+    target := modules.joined(scene, "target")
+    for class in enacted.relative_files(target) {
         if walk.is_ending_in(class, ".class") {
-            facts = list.push(facts, class_loaded(scene: scene, class: class, limit: limit))
+            facts = list.push(facts, class_loaded(target: target, class: class, limit: limit))
         }
     }
     command.removed_whole(scene)
     enacted.facts_held("every class build writes is one a JVM loads and verifies", facts)
 }
 
-/// The fact that a JVM loads the class written at `class` under `scene`, which it does where it
+/// The fact that a JVM loads the class written at `class` under `target`, which it does where it
 /// says nothing but that the class declares no `main`.
 // example: is_loaded("Error: Main method not found in class a")
-fn class_loaded(scene: String, class: String, limit: Int) -> enacted.Fact {
-    line := [java(), "--enable-preview", "-cp", scene, class_named(class)]
-    errors := errors_of(walk.completed(line, scene, limit))
+fn class_loaded(target: String, class: String, limit: Int) -> enacted.Fact {
+    line := [java(), "--enable-preview", "-cp", target, class_named(class)]
+    errors := errors_of(walk.completed(line, target, limit))
     if is_loaded(errors) {
         return enacted.Fact { what: class, expected: "loaded", found: "loaded" }
     }
@@ -197,7 +198,7 @@ fn every_missing_jdk_held(limit: Int) -> held.Held {
 fn run_without_a_jdk(limit: Int) -> held.Held {
     scene := enacted.scene_of([enacted.Written { at: "example.lm", text: enacted.counting_program_text() }])
     said := without_a_jdk(["run", modules.joined(scene, "example.lm")], scene, limit)
-    facts := [enacted.status_fact(said, 2), enacted.Fact { what: "errors", expected: no_jdk_line(), found: said.errors }, enacted.Fact { what: "example.class", expected: "written", found: enacted.presence(scene, "example.class") }]
+    facts := [enacted.status_fact(said, 2), enacted.Fact { what: "errors", expected: no_jdk_line(), found: said.errors }, enacted.presence_fact(scene, "target/example.class")]
     command.removed_whole(scene)
     enacted.facts_held("run says which variable names the JDK where nothing does", facts)
 }
@@ -312,12 +313,14 @@ fn program_said(completion: Result<walk.Ended, walk.Unended>) -> command.Said {
 
 /// The line that starts the command line in a JVM of its own, given `words`.
 ///
-/// The class path names the compiler and the directory above it by their whole paths, because the
-/// command line reads its help, its explanations, and the library there as resources.
+/// The class path names `compiler/target`, which holds the classes, then the compiler and the
+/// directory above it, because the command line reads its help, its explanations, and the library
+/// there as resources. Each is named by its whole path.
 // example: or(list.at(command_line(["a"]), 5), "") == "a"
 fn command_line(words: List<String>) -> List<String> {
     root := or(property("user.dir"), ".")
-    command.all_of([java(), "--enable-preview", "-cp", modules.joined(root, "compiler") + ":" + root, "main"], words)
+    compiler := modules.joined(root, "compiler")
+    command.all_of([java(), "--enable-preview", "-cp", modules.joined(compiler, "target") + ":" + compiler + ":" + root, "main"], words)
 }
 
 /// The line every refusal of a run where `JAVA_HOME` is not set reads.

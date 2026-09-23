@@ -20,8 +20,8 @@ compiler has, and the pre-commit sweep holds it to the same bar as the rest of t
 It is not an executable example, so it carries no `// expect-` header and
 `docs/specs/executable-examples.md` does not reach it.
 
-A build writes class files beside the source.
-Those are output, not source, and git ignores them.
+A build writes class files under `target/`, in the directory of the source, and none beside it.
+Those are output, not source, and git ignores `target/`.
 
 ## What the program is
 

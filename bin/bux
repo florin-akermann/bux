@@ -1,9 +1,9 @@
 #!/bin/sh
 # The `bux` command line written in Bux, started on the JDK that JAVA_HOME names.
 #
-# The classes are the ones `lumen build compiler/main.lm` writes beside the sources in compiler/.
-# The compiler reads the help topics and the explanations in compiler/ as resources, and the
-# directory above compiler/ is on the class path too, because the library is read there.
+# The classes are the ones `lumen build compiler/main.lm` writes in compiler/target/, and that
+# directory is the one on the class path that holds classes. compiler/ is on the class path only for
+# resources, the help topics and the explanations, and the directory above it only for the library.
 # A link to this script, as on PATH, is followed to the script itself, which sits in bin/.
 self=$0
 while [ -L "$self" ]; do
@@ -14,8 +14,8 @@ while [ -L "$self" ]; do
     esac
 done
 root=$(cd "$(dirname "$self")/.." && pwd)
-if [ ! -f "$root/compiler/main.class" ]; then
-    echo "error: $root/compiler/main.class: the compiler is not built; bin/bootstrap builds it" >&2
+if [ ! -f "$root/compiler/target/main.class" ]; then
+    echo "error: $root/compiler/target/main.class: the compiler is not built; bin/bootstrap builds it" >&2
     exit 2
 fi
 if [ -z "$JAVA_HOME" ]; then
@@ -27,4 +27,4 @@ if [ ! -x "$JAVA_HOME/bin/java" ]; then
     exit 2
 fi
 exec "$JAVA_HOME/bin/java" --enable-preview -Dstdout.encoding=UTF-8 -Dstderr.encoding=UTF-8 \
-    -cp "$root/compiler:$root" main "$@"
+    -cp "$root/compiler/target:$root/compiler:$root" main "$@"

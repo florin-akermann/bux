@@ -22,9 +22,10 @@ CLAUDE.md
 # Python bytecode from `uv run` dev tooling.
 __pycache__/
 
-# Compiler output that a `lumen build` writes beside a source file, wherever it writes it.
+# Compiler output: a build writes every class only under `target/` in the directory of the module
+# it builds, so `target/` is the one output directory, and deleting it is a clean build.
 # The repository keeps the source; no class file is part of a test, and none is published.
-*.class
+target/
 *.jar
 # The seed of the bootstrap is the one archive the repository keeps: `bin/bootstrap` starts from it.
 !bin/seed.jar

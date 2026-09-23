@@ -12,10 +12,10 @@ A module that declares `main` at that shape is a program; every other module is 
 ## What running amounts to
 
 `lumen run` does what `lumen build` does and then hands the result to a JVM.
-The class files are written beside the source, exactly as `lumen build` writes them, so a run
-leaves the same artefacts a build does and nothing more.
+The class files are written as `lumen build` writes them, so a run leaves what a build leaves.
 
-The JVM is started on the module class, in the directory the classes were written to.
+The JVM is started on the module class, with the one `target/` of the build as its class path.
+The next section states that directory.
 The entry point is part of what is written and not something the runner supplies.
 The runner adds `--enable-preview`, because every class written is a value class.
 JDK 28 holds value classes in preview, and `docs/specs/codegen.md` says how the bytes look.
@@ -24,6 +24,27 @@ The runner also limits what the program can reach, and the next section states h
 The program's own output is the runner's output: what it writes to standard output and to
 standard error, the runner passes through unchanged, and the status it ends with is the status
 `lumen run` ends with.
+
+## Where a build writes
+
+A build writes every class into one `target/`, in the directory of the module the command names.
+A module of a package sits in the package's directory, so that is the package's `target/`.
+That `target/` holds the module, each module it reaches, the library, and the prelude.
+A module of another package is written there too, and not in the `target/` of that package.
+So a build never writes into a directory of another package.
+No class lands beside a source, and no option chooses another directory.
+A clean build is `rm -rf target/`, because no other directory holds what a build writes.
+`docs/specs/codegen.md` states the path of each class under `target/`.
+
+That one `target/` is the whole class path for classes, for a run and for each script below.
+`bin/bux` starts the classes of `compiler/target/`, and `bin/runner` those of `tests/target/`.
+`bin/bux` and `bin/runner` both put `compiler/` and the repository root on the class path.
+They are there only for resources: the help text, the explanations, and the library sources.
+Neither holds a class beside a source, so no class there can hide a class of `target/`.
+
+`lumen test` is the one exception, and it writes nothing into `target/`.
+It writes the classes of its run into a directory made for that run alone, and then deletes it.
+`docs/specs/doc-examples.md` states why.
 
 ## What the program can reach
 
@@ -144,13 +165,14 @@ The help text is read as a class-path resource: a file in `compiler/help/`.
 
 `bin/bux` is the launcher, a POSIX `sh` script.
 It starts `java --enable-preview` on the class `main`, with every word it was given.
-The class path is `compiler/`, with the help text, and the directory above it, with the library.
+The class path is `compiler/target/`, which holds the classes, then `compiler/` and the root.
+`compiler/` holds the help text and the explanations, and the root holds the library sources.
 A link to the launcher, as on `PATH`, works: the launcher follows the link to find `compiler/`.
 It finds the JDK as this page says: `JAVA_HOME` names it, and nothing else is searched.
 It refuses with status `2` when the compiler is not built, and when `JAVA_HOME` names no JDK.
 
 ```text
-error: <root>/compiler/main.class: the compiler is not built; bin/bootstrap builds it
+error: <root>/compiler/target/main.class: the compiler is not built; bin/bootstrap builds it
 error: JAVA_HOME is not set, and the bux compiler runs on the JDK it names
 error: /opt/nothing/bin/java: JAVA_HOME names no JDK
 ```
@@ -179,9 +201,10 @@ The seed `bin/seed.jar` holds the classes of a Bux compiler that an earlier comp
 It is the one archive that the repository keeps, and `docs/implementation.md` section 6 says why.
 
 `bin/bootstrap` is a POSIX `sh` script, and it needs only `JAVA_HOME` and the checkout.
-It deletes every class file under `compiler/`, so no class of an old build is left.
-The seed then builds stage 1, the classes beside the sources in `compiler/`, which `bin/bux` starts.
+It deletes `compiler/target/`, so no class of an old build is left.
+The seed then builds stage 1, the classes in `compiler/target/`, which `bin/bux` starts.
 Stage 1 then builds stage 2 from a copy of `compiler/` in a temporary directory.
+Stage 2 is in the `target/` of that copy.
 That directory is outside the repository, and the script deletes it when it ends.
 
 Stage 2 is stage 1 byte for byte.
@@ -200,6 +223,7 @@ These hold, and each is checked:
 1. A module that declares `main` at the one shape is written with an entry point a JVM starts
    at, and every other module is written without one.
 2. Running a module leaves exactly the class files building it leaves.
+   A build leaves no class beside a source: each class it writes is under `target/`.
 3. A run ends with the low eight bits of the `Int` `main` gave back.
 4. Every word after the file reaches the program unchanged, `--help` among them.
 5. Stage 2 of the bootstrap is stage 1 byte for byte, and both stages pass `tests/spec`.
