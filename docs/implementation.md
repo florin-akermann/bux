@@ -218,10 +218,18 @@ No class file other than the seed is kept in the repository, so a checkout boots
 
 The first seed is the compiler that the Rust compiler built, before Item 087 deleted the Rust.
 A change to the compiler changes stage 1, and stage 2 still equals it, because stage 1 built it.
-So the seed is replaced only when the compiler needs a feature that the seed cannot compile.
+So the seed is replaced for one of two reasons, and for no other.
+The first reason is that the compiler needs a feature that the seed cannot compile.
 The item that needs it builds stage 1 with the old seed, and it packs stage 1 as the new seed.
-Then `bin/bootstrap` must still hold stage 2 equal to stage 1.
-That item says so, and it replaces the seed in its own commit.
+The second reason is that the lowering or the writer changed the bytes of the compiler's classes.
+Then stage 1, which the old seed wrote, differs from stage 2, which the changed compiler wrote.
+The item builds stage 2 with stage 1, and stage 3 with stage 2, and stage 3 must equal stage 2.
+It packs stage 2 as the new seed, with the `jar` tool of the JDK.
+Item 093 did this when `list.length` became a read of the length field.
+The old seed calls the `length` that the old `library/list.lm` declared.
+So the old seed built stage 1 beside the old `library/list.lm`, not beside the new one.
+In both cases, `bin/bootstrap` must then hold stage 2 equal to stage 1 with the new seed.
+The item says so, and it replaces the seed in its own commit.
 
 The compiler should itself use strong typed representations for compiler phases.
 
@@ -267,6 +275,7 @@ The runner starts a JVM only for an example headed `expect-run` and for a comman
 It writes one line for each check it skipped and for each failure, then one line of counts.
 It ends with status 0 only when nothing failed.
 `bin/runner golden` writes each golden file again, for an answer that changes on purpose.
+On 2026-09-23 `bin/runner` took 182 s before Item 093 and 97 s after it.
 
 ### Drawn properties
 
