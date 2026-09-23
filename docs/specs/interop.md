@@ -4,8 +4,10 @@ An `extern` declaration names one member of one Java class and gives it a Lumen 
 
 ## Intent
 
-`docs/design.md` section 17 states the boundary, and `docs/implementation.md` section 3 asks for
-it.
+`docs/design.md` section 17 states the boundary for every target.
+It says that each target has its own `extern` form, and this spec is the form of the JVM target.
+The member kinds, the widths, `interface`, and the two mappings are JVM facts, so they are here.
+`docs/implementation.md` section 3 asks for the boundary.
 `io` and `files` were the compiler's own modules because each reaches a JVM method no Lumen source
 could name, and they are library modules written over these declarations once one can.
 This spec says what an `extern` declaration is, what crosses the boundary, and what is refused.
@@ -77,6 +79,11 @@ for, and an `extern` naming one is `L0425`.
 The JVM's `double` and the rest of its primitives are types no Lumen type compiles to, so a
 member whose descriptor names one is not reachable and the answer is to name one that does not.
 The two widths are the exception, and the sections on them state each one.
+
+There is no subtyping and no implicit conversion.
+So a member that takes `java.lang.Object` is not reachable from a program that holds a `String`.
+The answer is to name a member that takes what the caller holds.
+That is what keeps the boundary a signature rather than a second type system.
 
 A `List<T>` crosses as a `java.util.List` that holds what the list holds, and nothing more.
 `docs/specs/codegen.md` states the copy that builds it, so the member cannot change the Bux list.
