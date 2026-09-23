@@ -199,10 +199,10 @@ What such a name means is inference's to say, because the module declaring it is
 A type and a pattern reached through a module are resolved the same way: the module is a name in
 scope and what follows the dot is not.
 
-The name of a call is the exception, and only where a module is not what is before the dot.
-`maybe.or(0)` is the call `or(maybe, 0)`, which `docs/specs/calls.md` states, so `or` is a name of
-this module and is resolved here like any other.
-The name before the dot is what says which of the two a call is, and nothing else is.
+The name after a dot is never resolved here, and the name of a call is no exception.
+A call through a module is inference's to say, as every other name reached through one is.
+A call with a value before the dot is refused by inference as `L0433`, which
+`docs/specs/arguments.md` states, so `maybe.or(0)` is written `or(maybe, 0)`.
 
 A bare name in a pattern is a use when it names a variant in scope, and a binding otherwise.
 That choice is the resolver's, which is why the parser writes both as the same node.

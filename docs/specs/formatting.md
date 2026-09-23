@@ -53,8 +53,8 @@ second way to write the same program.
 
 One space goes around every binary operator, and around `=`, `:=`, `+=`, `->`, `=>`, and `|`.
 A prefix `!` or `-` is written against what it negates, as is a `?`, a `.`, and a call's `(`.
-A `-` before something whose first character is a digit keeps its parentheses, as `-(7.abs())`.
-The grammar reads a `-` before a number as part of it, so `-7.abs()` is a different program.
+A `-` before something whose first character is a digit keeps its parentheses, as `-(7.size)`.
+The grammar reads a `-` before a number as part of it, so `-7.size` is a different program.
 A `,` and a `:` are written against what precedes them and followed by one space.
 Nothing is written inside `(`, `[`, or `<` and their closing partners.
 A record literal with fields is spaced inside its braces, as `User { id: id }`; an empty one is

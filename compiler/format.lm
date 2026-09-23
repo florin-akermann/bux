@@ -940,9 +940,9 @@ fn expression(printer: Printer, written: ast.Expr, records: Records) -> Printer 
 
 /// `!ready` or `-count`, with the operand written against the operator.
 ///
-/// The grammar reads a `-` before a number as part of that number, so `-(7.abs())` keeps its
-/// parentheses: written as `-7.abs()`, it would come back as `(-7).abs()`.
-// example: nested(printer_of(""), expression_of("-(7.abs())"), 0, Allowed).text == "-(7.abs())"
+/// The grammar reads a `-` before a number as part of that number, so `-(7.size)` keeps its
+/// parentheses: written as `-7.size`, it would come back as `(-7).size`.
+// example: nested(printer_of(""), expression_of("-(7.size)"), 0, Allowed).text == "-(7.size)"
 // example: nested(printer_of(""), expression_of("!(a && b)"), 0, Allowed).text == "!(a && b)"
 fn unary(printer: Printer, prefix: Prefix, records: Records) -> Printer {
     match prefix.operator {
@@ -952,8 +952,8 @@ fn unary(printer: Printer, prefix: Prefix, records: Records) -> Printer {
 }
 
 /// How tightly the operand of a `-` must bind to be written without parentheses.
-// example: power_after_minus(expression_of("7.abs()")) == 8
-// example: power_after_minus(expression_of("x.abs()")) == 5
+// example: power_after_minus(expression_of("7.size")) == 8
+// example: power_after_minus(expression_of("x.size")) == 5
 fn power_after_minus(operand: ast.Expr) -> Int {
     if is_opened_by_a_number(operand) {
         return parenthesised_power()
@@ -964,7 +964,7 @@ fn power_after_minus(operand: ast.Expr) -> Int {
 /// Whether the first thing written for this expression is the digits of a number.
 ///
 /// A negative number opens with a `-`, which the grammar reads as a second minus sign.
-// example: is_opened_by_a_number(expression_of("7.abs()?"))
+// example: is_opened_by_a_number(expression_of("7.size?"))
 // example: !is_opened_by_a_number(expression_of("-7"))
 fn is_opened_by_a_number(written: ast.Expr) -> Bool {
     match written.kind {

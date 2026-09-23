@@ -7,6 +7,8 @@ import ast
 
 import declared
 
+import format
+
 import lexer
 
 import list
@@ -456,9 +458,9 @@ fn binary_walked(inference: Inference, operator: ast.BinaryOperator, operands: O
 /// A call: the type of what it calls, met against the type of each value it passes.
 // example: typed_code("fn count(held: Int) -> Int {\n    count(1, 2)\n}\n") == "L0401 33..38"
 fn call_walked(inference: Inference, callee: ast.Expr, arguments: ast.Arguments, at: lexer.Span) -> Result<Typed, refusal.TypeError> {
-    _ = names_none_in_front(inference, callee, arguments, at)?
+    _ = called_plainly(inference, callee, arguments, at)?
     signature := callee_type(inference, callee)?
-    passed := passed_of(signature.inference, callee, arguments)
+    passed := values_of(arguments)
     var walking = signature.inference
     var given = []
     for argument in passed {
@@ -483,7 +485,7 @@ fn call_walked(inference: Inference, callee: ast.Expr, arguments: ast.Arguments,
 // example: typed_code("import demo\n\nfn count() -> Int {\n    demo.total()\n}\n") == "L0414 42..47"
 fn callee_type(inference: Inference, callee: ast.Expr) -> Result<Typed, refusal.TypeError> {
     match callee.kind {
-        ast.Field { receiver, name } => kept_at(called_through(inference, receiver, name), callee.span)
+        ast.Field { receiver, name } => kept_at(field_walked(inference, receiver, name, AsACall), callee.span)
         _ => walked_expr(inference, callee)
     }
 }
@@ -493,15 +495,6 @@ fn callee_type(inference: Inference, callee: ast.Expr) -> Result<Typed, refusal.
 fn kept_at(walked: Result<Typed, refusal.TypeError>, span: lexer.Span) -> Result<Typed, refusal.TypeError> {
     one := walked?
     Ok(Typed { inference: typed_at(one.inference, span, one.found), found: one.found })
-}
-
-/// A name after a dot: a function of a module, or a name in scope called on what is in front.
-// example: typed_code("fn count(held: Int) -> Int {\n    held.count()\n}\n") == ""
-fn called_through(inference: Inference, receiver: ast.Expr, named: ast.Name) -> Result<Typed, refusal.TypeError> {
-    if is_a_module(inference, receiver) {
-        return field_walked(inference, receiver, named, AsACall)
-    }
-    Ok(value_of_name(inference, named))
 }
 
 /// A field is looked up as soon as the type it is reached through is known, and waits where not.
@@ -753,17 +746,100 @@ fn span_at(passed: List<ast.Expr>, index: Int) -> lexer.Span {
     }
 }
 
-/// Every value a call passes, which begins with the receiver where one is written in front.
-// example: list.length(passed_of(nothing_inferred(), ast.Expr { kind: ast.Unit, span: lexer.Span { start: 0, length: 2 } }, ast.Positional([]))) == 0
-fn passed_of(inference: Inference, callee: ast.Expr, arguments: ast.Arguments) -> List<ast.Expr> {
-    var passed = []
-    for receiver in in_front(inference, callee) {
-        passed = list.push(passed, receiver)
+/// A call through a dot is a call of a function of a module, and a dot after a value calls nothing.
+// example: typed_code("fn count(held: Int) -> Int {\n    held.count()\n}\n") == "L0433 33..45"
+// example: typed_code("fn count(held: Int) -> Int {\n    count(held)\n}\n") == ""
+fn called_plainly(inference: Inference, callee: ast.Expr, arguments: ast.Arguments, at: lexer.Span) -> Result<(), refusal.TypeError> {
+    match callee.kind {
+        ast.Field { receiver, name } => if is_a_module(inference, receiver) {
+            Ok(())
+        } else {
+            Err(refusal.TypeError { kind: refusal.CalledOnAValue { function: name.text, plain: plain_call(inference, Moved { receiver: receiver, called: name, arguments: arguments }) }, span: at })
+        }
+        _ => Ok(())
     }
-    for written in values_of(arguments) {
-        passed = list.push(passed, written)
+}
+
+/// The call a dot after a value stands for, with the value passed first, as canonical form writes it.
+// example: plain_call(nothing_inferred(), Moved { receiver: format.expression_of("maybe"), called: ast.Name { text: "or", span: lexer.Span { start: 0, length: 2 } }, arguments: ast.Positional([format.expression_of("0")]) }) == "or(maybe, 0)"
+fn plain_call(inference: Inference, moved: Moved) -> String {
+    callee := ast.Expr { kind: ast.NameExpr(moved.called), span: moved.called.span }
+    written := ast.Expr { kind: ast.Call { callee: callee, arguments: passed_first(inference, moved) }, span: moved.receiver.span }
+    format.nested(format.printer_of(""), written, 0, format.Allowed).text
+}
+
+/// The arguments of the plain call: the value first, named for the first parameter where the rest are.
+///
+/// Only a function this module declares has parameter names, so any other call passes them in order.
+// example: plain_call(nothing_inferred(), Moved { receiver: format.expression_of("old"), called: ast.Name { text: "rename", span: lexer.Span { start: 0, length: 6 } }, arguments: ast.Named([]) }) == "rename(old)"
+fn passed_first(inference: Inference, moved: Moved) -> ast.Arguments {
+    match moved.arguments {
+        ast.Positional(values) => ast.Positional(pushed_before(moved.receiver, values))
+        ast.Named(written) => named_first(moved.receiver, parameter_names(inference.resolved.program, moved.called), written)
     }
-    passed
+}
+
+/// `value` named for the first of `names` before the arguments `written`, or all of them in order
+/// where there is no name to give it, or where `written` already names that one.
+// example: list.length(values_of(named_first(format.expression_of("old"), [], []))) == 1
+fn named_first(value: ast.Expr, names: List<ast.Name>, written: List<ast.NamedArgument>) -> ast.Arguments {
+    match list.at(names, 0) {
+        Some(first) => if is_named_among(first, written) {
+            ast.Positional(pushed_before(value, named_values(written)))
+        } else {
+            ast.Named(pushed_before(ast.NamedArgument { name: first, value: value }, written))
+        }
+        None => ast.Positional(pushed_before(value, named_values(written)))
+    }
+}
+
+/// Whether one of the arguments `written` is named as `parameter` is.
+// example: !is_named_among(no_name(), [])
+fn is_named_among(parameter: ast.Name, written: List<ast.NamedArgument>) -> Bool {
+    for argument in written {
+        if argument.name.text == parameter.text {
+            return true
+        }
+    }
+    false
+}
+
+/// `first`, then each of `rest` in order.
+// example: pushed_before(1, [2, 3]) == [1, 2, 3]
+fn pushed_before<T>(first: T, rest: List<T>) -> List<T> {
+    var together = [first]
+    for one in rest {
+        together = list.push(together, one)
+    }
+    together
+}
+
+/// The name of each parameter of the function this module declares as `called`, and none where
+/// it declares no such function at the top level.
+// example: list.length(parameter_names(declared.first_program("fn rename(from: String, to: String) -> String {\n    from + to\n}\n"), ast.Name { text: "rename", span: lexer.Span { start: 0, length: 6 } })) == 2
+fn parameter_names(program: ast.Program, called: ast.Name) -> List<ast.Name> {
+    var names = []
+    for item in program.items {
+        for function in declared_as(item, called) {
+            for parameter in function.parameters {
+                names = list.push(names, parameter.name)
+            }
+        }
+    }
+    names
+}
+
+/// The function `item` declares, as a list of one where it is a function named `called`, or none.
+// example: list.length(declared_as(declared.first_item("type Box = Box\n"), no_name())) == 0
+fn declared_as(item: ast.Item, called: ast.Name) -> List<ast.FunctionDeclaration> {
+    match item {
+        ast.Function(function) => if function.name.text == called.text {
+            [function]
+        } else {
+            []
+        }
+        _ => []
+    }
 }
 
 /// The values of the arguments, in the order they are written.
@@ -791,45 +867,6 @@ fn applied(inference: Inference, calling: unify.Type, given: List<unify.Type>, a
     made := fresh(inference)
     met := expect(inference: made.inference, expected: calling, found: unify.Function { parameters: given, result: made.found }, at: at)?
     Ok(Typed { inference: met, found: made.found })
-}
-
-/// A call written with its first value in front names none of its arguments.
-// example: typed_code("fn count(held: Int) -> Int {\n    held.count(held: 1)\n}\n") == "L0423 33..52"
-fn names_none_in_front(inference: Inference, callee: ast.Expr, arguments: ast.Arguments, at: lexer.Span) -> Result<(), refusal.TypeError> {
-    if list.length(in_front(inference, callee)) == 0 || !is_named_arguments(arguments) {
-        return Ok(())
-    }
-    match name_of(callee) {
-        Some(named) => Err(refusal.TypeError { kind: refusal.NamedInFront(named.text), span: at })
-        None => Ok(())
-    }
-}
-
-/// What a call passes first where it is written in front of the name, as a list of one, or none.
-// example: list.length(in_front(nothing_inferred(), ast.Expr { kind: ast.Unit, span: lexer.Span { start: 0, length: 2 } })) == 0
-fn in_front(inference: Inference, callee: ast.Expr) -> List<ast.Expr> {
-    match callee.kind {
-        ast.Field { receiver, name } => receiver_unless_a_module(inference, receiver)
-        _ => []
-    }
-}
-
-/// `receiver` as a list of one, unless it is a module's name.
-// example: list.length(receiver_unless_a_module(nothing_inferred(), ast.Expr { kind: ast.Unit, span: lexer.Span { start: 0, length: 2 } })) == 1
-fn receiver_unless_a_module(inference: Inference, receiver: ast.Expr) -> List<ast.Expr> {
-    if is_a_module(inference, receiver) {
-        return []
-    }
-    [receiver]
-}
-
-/// Whether a call names its arguments.
-// example: is_named_arguments(ast.Named([]))
-fn is_named_arguments(arguments: ast.Arguments) -> Bool {
-    match arguments {
-        ast.Positional(_) => false
-        ast.Named(_) => true
-    }
 }
 
 /// One call held to the rule for naming its arguments, or left waiting on the whole module.
@@ -1968,6 +2005,13 @@ type Calling = {
     callee: ast.Expr
     reached: ast.Name
     at: lexer.Span
+}
+
+/// A call written after a dot on a value: the value, the name after the dot, and the arguments.
+type Moved = {
+    receiver: ast.Expr
+    called: ast.Name
+    arguments: ast.Arguments
 }
 
 /// What a call calls, the values it passes, and how many its function takes.

@@ -24,28 +24,6 @@ import surface
 
 import types
 
-/// What the check says of the program at `path`, in the form the harness compares.
-///
-/// A program whose every `match` is accepted is `exhaustive`. A refusal is `refused` and the
-/// module, then the code, the span, and the message, then the help. A program that does not load,
-/// resolve, or type is `skipped`, because that is a phase before this one.
-// example: printed("no-such-directory/main.lm", types.little_prelude()) == "skipped\n"
-fn printed(path: String, prelude: types.Prelude) -> String {
-    match modules.load(path) {
-        Ok(loaded) => answer_printed(modules_checked(loaded, prelude))
-        Err(_) => "skipped\n"
-    }
-}
-
-/// `exhaustive`, or the answer of the first module that is not.
-// example: answer_printed(Ok([])) == "exhaustive\n"
-fn answer_printed(answer: Result<List<infer.Inference>, String>) -> String {
-    match answer {
-        Ok(_) => "exhaustive\n"
-        Err(refused) => refused
-    }
-}
-
 /// Each module typed and checked in the order it was loaded, or the answer where one is not.
 // example: list.length(ok_or(modules_checked([], types.little_prelude()), [types.checked_of("")])) == 0
 fn modules_checked(loaded: List<modules.Module>, prelude: types.Prelude) -> Result<List<infer.Inference>, String> {
@@ -61,7 +39,7 @@ fn modules_checked(loaded: List<modules.Module>, prelude: types.Prelude) -> Resu
 }
 
 /// One module, resolved and typed, and `skipped` where it is not.
-// example: answer_printed(typed_list(typed(modules.Module { name: "main", path: "main.lm", source: "", program: ast.Program { items: [] } }, surface.nothing_imported(), types.little_prelude()))) == "exhaustive\n"
+// example: list.length(ok_or(typed(modules.Module { name: "main", path: "main.lm", source: "", program: ast.Program { items: [] } }, surface.nothing_imported(), types.little_prelude()), types.checked_of("fn f() -> Int {\n    1\n}\n")).resolved.program.items) == 0
 fn typed(module: modules.Module, imported: surface.Imported, prelude: types.Prelude) -> Result<infer.Inference, String> {
     match resolver.resolve(module.program, module.name, prelude.names) {
         Ok(resolved) => typed_or_skipped(types.check(resolved, imported, prelude))
@@ -69,17 +47,8 @@ fn typed(module: modules.Module, imported: surface.Imported, prelude: types.Prel
     }
 }
 
-/// `answer` as a list of one module, which is what the examples of `typed` print.
-// example: answer_printed(typed_list(Err("skipped\n"))) == "skipped\n"
-fn typed_list(answer: Result<infer.Inference, String>) -> Result<List<infer.Inference>, String> {
-    match answer {
-        Ok(inferred) => Ok([inferred])
-        Err(refused) => Err(refused)
-    }
-}
-
 /// The typed module, and `skipped` where inference refuses it.
-// example: answer_printed(typed_list(typed_or_skipped(Ok(types.checked_of(""))))) == "exhaustive\n"
+// example: list.length(ok_or(typed_or_skipped(Ok(types.checked_of(""))), types.checked_of("fn f() -> Int {\n    1\n}\n")).resolved.program.items) == 0
 fn typed_or_skipped<E>(answer: Result<infer.Inference, E>) -> Result<infer.Inference, String> {
     match answer {
         Ok(inferred) => Ok(inferred)

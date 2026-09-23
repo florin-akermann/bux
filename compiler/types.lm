@@ -33,68 +33,6 @@ import surface
 
 import unify
 
-/// What the type inference says of the program at `path`, in the form the harness compares.
-///
-/// A program that types is `typed` and the API page of its last module. A refusal is `refused`
-/// and the module, then the code, the span, and the message, then the help. A program that does
-/// not load or resolve is `skipped`, because that is a phase before this one.
-// example: printed("no-such-directory/main.lm", little_prelude()) == "skipped\n"
-fn printed(path: String, prelude: Prelude) -> String {
-    match modules.load(path) {
-        Ok(loaded) => modules_printed(loaded, prelude)
-        Err(_) => "skipped\n"
-    }
-}
-
-/// The page of the last module, or the answer of the first module that does not type.
-// example: modules_printed([], little_prelude()) == "typed\n"
-fn modules_printed(loaded: List<modules.Module>, prelude: Prelude) -> String {
-    match modules_typed(loaded, prelude) {
-        Ok(page) => "typed\n" + page
-        Err(answer) => answer
-    }
-}
-
-/// Each module checked in the order it was loaded, which puts a dependency before its dependents.
-// example: ok_or(modules_typed([], little_prelude()), "refused") == ""
-fn modules_typed(loaded: List<modules.Module>, prelude: Prelude) -> Result<String, String> {
-    var imported = surface.nothing_imported()
-    var page = ""
-    for module in loaded {
-        checked := module_checked(module, imported, prelude)?
-        page = page_of(checked)
-        imported = surface.offering(imported, module.name, surface_of(checked))
-    }
-    Ok(page)
-}
-
-/// One module, resolved and checked, or the answer the program gives where it is not.
-// example: !is_refused(module_checked(modules.Module { name: "main", path: "main.lm", source: "", program: ast.Program { items: [] } }, surface.nothing_imported(), little_prelude()))
-fn module_checked(module: modules.Module, imported: surface.Imported, prelude: Prelude) -> Result<infer.Inference, String> {
-    match resolver.resolve(module.program, module.name, prelude.names) {
-        Ok(resolved) => refused_in(module.name, check(resolved, imported, prelude))
-        Err(_) => Err("skipped\n")
-    }
-}
-
-/// `answer`, with a refusal printed as the answer of the module called `module`.
-// example: is_refused(refused_in("main", Err(refusal.TypeError { kind: refusal.DivisorIsZero, span: lexer.Span { start: 1, length: 1 } })))
-fn refused_in(module: String, answer: Result<infer.Inference, refusal.TypeError>) -> Result<infer.Inference, String> {
-    match answer {
-        Ok(checked) => Ok(checked)
-        Err(refused) => Err("refused " + module + "\n" + refusal.printed(refused))
-    }
-}
-
-/// Whether a module was refused.
-// example: !is_refused(Ok(checked_of("")))
-fn is_refused(answer: Result<infer.Inference, String>) -> Bool {
-    match answer {
-        Ok(_) => false
-        Err(_) => true
-    }
-}
-
 /// The prelude a program is checked against, read out of the prelude's own `source`.
 // example: !has_names(prelude_read("fn ("))
 fn prelude_read(source: String) -> Prelude {

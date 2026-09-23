@@ -397,7 +397,7 @@ The compiler refuses `Option<()>` wherever a program writes it or inference reac
 `docs/specs/interop.md` states the boundary rule, and `docs/specs/types.md` the refusal.
 
 There is no `unwrap` and no `expect`, in the prelude or anywhere else.
-`maybe.or(fallback)` is the total default, named for what it does rather than for what it is not.
+`or(maybe, fallback)` is the total default, named for what it does rather than for what it is not.
 
 **A value nothing takes is a compile error**, because a dropped `Result` is a swallowed failure.
 A statement written for its effect has nothing to leave behind, so its type is `()`.
@@ -716,7 +716,7 @@ fn user_name(user: User) -> String {
     user.name
 }
 
-active_names := users.filter(is_active).map(user_name)
+active_names := map(filter(users, is_active), user_name)
 ```
 
 **There are no anonymous functions**.
@@ -731,32 +731,18 @@ Nothing then reaches code generation that it has no way to write.
 
 A name forces the author to say what the function is for, and gives the reader a word to search.
 
-### A call with its first argument in front
+### A function is called one way
 
-`maybe.or(fallback)` is the call `or(maybe, fallback)`, written with its first argument in front.
-`or` is looked up in scope exactly as a plain call looks its callee up, and `maybe` is passed first.
-The two spellings are one call: the same function, the same type, and every rule of this section.
-Which function is called is settled by the name alone, before any type is known.
+A call writes the name of what it calls, then every argument inside the parentheses.
+`or(maybe, 0)` is the call, and `maybe.or(0)` is refused: a dot never moves an argument in front.
+A second spelling of one call is a cost with no guarantee behind it, as section 2 states.
 
-Nothing is declared to earn the form, so a declared type has it exactly as `Option` and `Int` do.
-There is no method and no receiver type, because a function takes what it takes.
-The dot moves nothing but the reader's eye.
+A dot does one of two things, and the name before it says which.
+`io.print("hi")` reaches a function of the module `io`, and `user.name` reads a field.
+`maybe` is a binding, and a binding is never a module, so the dot after it reads a field.
+So the name alone says which function a call reaches, before any type is known.
 
-The form reads in the order the work happens.
-`find_user(id).or(guest)` says what is looked for before what stands in for it.
-`or(find_user(id), guest)` says the same thing inside out.
-A chain of calls then reads left to right, as the snippet above does.
-
-The name before the dot says which of three things the dot does.
-`user.name` reads a field, and `io.print("hi")` reaches a function of a module.
-`maybe.or(0)` reaches `or` in scope, because `maybe` is a binding and a binding is never a module.
-A field and a call are told apart by the parentheses: `user.or` reads a field named `or`.
-
-The receiver is an argument, and it is never named.
-`old.rename(to: new)` names one argument and not the other, so it is refused as the rule below says.
-A call that has to name its arguments is written plainly.
-
-The formatter keeps whichever form the author wrote.
+`docs/specs/arguments.md` states the refusal, whose `help:` is the plain call.
 
 ### Named arguments
 
@@ -862,7 +848,7 @@ Every `Int` maps to one status that way, so giving back a status is never a part
 ```text
 // Divides `total` among `people`, giving back nothing where there is nobody to divide among.
 //
-// example: shared(total: 17, people: 5).or(0) == 3
+// example: or(shared(total: 17, people: 5), 0) == 3
 fn shared(total: Int, people: Int) -> Option<Int> {
     total / people
 }
@@ -888,10 +874,10 @@ Everyday code is imperative: basically a bunch of `for` loops.
 
 ```text
 fn active_names(users: List<User>) -> List<String> {
-    var names = List.empty()
+    var names = []
     for user in users {
         if user.active {
-            names = names.push(user.name)
+            names = list.push(names, user.name)
         }
     }
     names
@@ -900,7 +886,7 @@ fn active_names(users: List<User>) -> List<String> {
 
 A list is written between brackets: `[first, second]`, and `[]` holds nothing.
 That is the language's own way to build a list, and it builds it whole.
-`List.empty` and `push` above are library code that a later version supplies.
+`list.push` above is a function of the library module `list`, reached through its name.
 
 The control-flow surface is:
 
@@ -1081,7 +1067,7 @@ fn added(total: Int, amount: Int) -> Next<Int> {
 
 counting := spawn Counter(0)
 
-_ = counting.send(Add(3))
+_ = send(counting, Add(3))
 ```
 
 `spawn` takes a `process`, never a function and never an anonymous block.
@@ -1261,8 +1247,8 @@ A type is a name like any other, and a module is what a name is reached through.
 A field of a record and a name of an imported module are each reached through something else.
 Neither is a name in scope.
 `user.name` is looked up in the record and `io.print` in the module, never in the file.
-`maybe.or(0)` is neither: its dot puts an argument in front, and `or` is looked up in scope.
-Section 11 states that form.
+A dot after anything else reads a field, so `maybe.or(0)` is refused and `or(maybe, 0)` is written.
+Section 11 states why a function is called one way.
 
 An import names the file the module is written in, beside the file that writes the import.
 `import greeting` therefore reads `greeting.lm` from the same directory, and nowhere else but

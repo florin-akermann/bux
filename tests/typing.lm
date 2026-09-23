@@ -1,5 +1,5 @@
 // The drawn properties of the type inference over whole modules, which `docs/specs/types.md` and
-// `docs/specs/calls.md` state.
+// `docs/specs/arguments.md` state.
 //
 // Each case draws a module from a fixed seed and checks it in-process with `compiler/types.lm`
 // against the prelude the runner reads. A failure names the seed and the module it drew.
@@ -28,7 +28,7 @@ import types
 /// One `Held` for each property of the inference over whole modules, in a fixed order.
 // example: list.length(every_property(0, ir.little_library())) == 10
 fn every_property(cases: Int, library: ir.Library) -> List<held.Held> {
-    [inference_is_deterministic(cases, library), a_call_in_front_infers_as_the_plain_call(cases, library), a_module_of_pieces_infers(cases, library), a_refusal_points_inside_the_source(cases, library), every_expression_has_a_type(cases, library), no_expression_is_left_unsettled(cases, library), a_generic_is_general_enough_for_any_two_uses(cases, library), a_ring_of_records_is_refused_whatever_its_length(cases, library), a_chain_of_records_is_accepted(cases, library), an_option_of_unit_is_refused_where_it_is_reached(cases, library)]
+    [inference_is_deterministic(cases, library), a_call_in_front_is_refused_for_the_plain_call(cases, library), a_module_of_pieces_infers(cases, library), a_refusal_points_inside_the_source(cases, library), every_expression_has_a_type(cases, library), no_expression_is_left_unsettled(cases, library), a_generic_is_general_enough_for_any_two_uses(cases, library), a_ring_of_records_is_refused_whatever_its_length(cases, library), a_chain_of_records_is_accepted(cases, library), an_option_of_unit_is_refused_where_it_is_reached(cases, library)]
 }
 
 /// A drawn module is checked to one answer, however many times it is checked.
@@ -62,27 +62,39 @@ fn answer_text(answer: Result<infer.Inference, command.Diagnostic>) -> String {
     }
 }
 
-/// A call written in front of the name infers what the plain call of it infers.
-// example: held.is_held(a_call_in_front_infers_as_the_plain_call(2, ir.little_library()))
-fn a_call_in_front_infers_as_the_plain_call(cases: Int, library: ir.Library) -> held.Held {
+/// A call written with its first argument in front of the name is refused, and its `help:` is
+/// the plain call, which types.
+// example: held.is_held(a_call_in_front_is_refused_for_the_plain_call(2, ir.little_library()))
+fn a_call_in_front_is_refused_for_the_plain_call(cases: Int, library: ir.Library) -> held.Held {
     var found = held.nothing_failed(cases)
     for seed in checking.seeds(cases) {
-        found = checking.noted(found, "a_call_in_front_infers_as_the_plain_call", seed, call_tried(drawn.seeded(seed), library))
+        found = checking.noted(found, "a_call_in_front_is_refused_for_the_plain_call", seed, call_tried(drawn.seeded(seed), library))
     }
     found
 }
 
-/// A drawn call, written in front of the name and plainly, each binding what comes back.
+/// A drawn call, written in front of the name and plainly: the first refused, the second not.
 // example: call_tried(drawn.seeded(1), ir.little_library()).why == ""
 fn call_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
     first := drawn.picked(draw, ["count", "1", "twice(count)"], "count")
     rest := drawn.picked(drawn.next(draw), ["said", "\"hi\""], "said")
-    in_front := checking.type_written(calling(first + ".held(" + rest + ")"), "answer", 2, library)
-    plain := checking.type_written(calling("held(" + first + ", " + rest + ")"), "answer", 2, library)
-    if in_front != plain {
-        return checking.Tried { input: first + ".held(" + rest + ")", why: "in front it is " + in_front + ", plainly " + plain }
+    in_front := first + ".held(" + rest + ")"
+    plain := "held(" + first + ", " + rest + ")"
+    refused := checking.checked(calling(in_front), library)
+    said := checking.code_of(refused) + " " + help_given(refused)
+    if said != "L0433 write `" + plain + "`" {
+        return checking.Tried { input: in_front, why: "in front it gives " + held.quoted(said) }
     }
-    checking.Tried { input: first + ".held(" + rest + ")", why: "" }
+    checking.Tried { input: in_front, why: checking.code_of(checking.checked(calling(plain), library)) }
+}
+
+/// The `help:` line of a refusal, and nothing where there is no refusal or no help.
+// example: help_given(checking.checked("fn one() -> Int {\n    1\n}\n", ir.little_library())) == ""
+fn help_given(answer: Result<infer.Inference, command.Diagnostic>) -> String {
+    match answer {
+        Ok(_) => ""
+        Err(refused) => or(refused.help, "")
+    }
 }
 
 /// A module that binds what `call` gives back, with the functions it calls declared below.

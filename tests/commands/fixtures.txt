@@ -109,10 +109,14 @@ $ check tests/spec/calls/fallback.lm
 status 0
 
 $ check tests/spec/calls/in_front.lm
-status 0
-
-$ check tests/spec/calls/in_front_of_anything.lm
-status 0
+status 1
+! error[L0433]: a dot after a value reads a field, so this call of `described` is written plainly
+!   --> tests/spec/calls/in_front.lm:8:16
+!
+!   8 |     io.println(count.described("apples"))
+!     |                ^^^^^^^^^^^^^^^^^^^^^^^^^
+!
+! help: write `described(count, "apples")`
 
 $ check tests/spec/examples/stated.lm
 status 0
@@ -1031,16 +1035,6 @@ status 1
 !
 !   4 |     count := count + 1
 !     |              ^^^^^
-!
-! help: a name is declared in this file, imported, or supplied by the prelude
-
-$ check tests/spec/name_resolution/called_through_nothing.lm
-status 1
-! error[L0300]: there is nothing named `missing`
-!   --> tests/spec/name_resolution/called_through_nothing.lm:5:11
-!
-!   5 |     count.missing(2)
-!     |           ^^^^^^^
 !
 ! help: a name is declared in this file, imported, or supplied by the prelude
 
@@ -2394,10 +2388,8 @@ $ check --json tests/spec/calls/fallback.lm
 status 0
 
 $ check --json tests/spec/calls/in_front.lm
-status 0
-
-$ check --json tests/spec/calls/in_front_of_anything.lm
-status 0
+status 1
+> {"file":"tests/spec/calls/in_front.lm","code":"L0433","message":"a dot after a value reads a field, so this call of `described` is written plainly","span":{"start":300,"len":25},"help":"write `described(count, \"apples\")`"}
 
 $ check --json tests/spec/examples/stated.lm
 status 0
@@ -2896,10 +2888,6 @@ status 1
 $ check --json tests/spec/name_resolution/binding_sees_itself.lm
 status 1
 > {"file":"tests/spec/name_resolution/binding_sees_itself.lm","code":"L0300","message":"there is nothing named `count`","span":{"start":149,"len":5},"help":"a name is declared in this file, imported, or supplied by the prelude"}
-
-$ check --json tests/spec/name_resolution/called_through_nothing.lm
-status 1
-> {"file":"tests/spec/name_resolution/called_through_nothing.lm","code":"L0300","message":"there is nothing named `missing`","span":{"start":143,"len":7},"help":"a name is declared in this file, imported, or supplied by the prelude"}
 
 $ check --json tests/spec/name_resolution/constraint_of_a_type.lm
 status 1
@@ -3740,22 +3728,14 @@ status 0
 > fn shared(total: Int, people: Int) -> Option<Int>
 
 $ api tests/spec/calls/in_front.lm
-status 0
-> fn main(arguments: List<String>) -> Int
->
-> fn described(count: Int, said: String) -> String
->
-> fn twice(count: Int) -> Int
-
-$ api tests/spec/calls/in_front_of_anything.lm
-status 0
-> fn main(arguments: List<String>) -> Int
->
-> fn amount(payment: Payment) -> Int
->
-> instance Show<Payment>
->
-> type Payment = Payment(Int)
+status 1
+! error[L0433]: a dot after a value reads a field, so this call of `described` is written plainly
+!   --> tests/spec/calls/in_front.lm:8:16
+!
+!   8 |     io.println(count.described("apples"))
+!     |                ^^^^^^^^^^^^^^^^^^^^^^^^^
+!
+! help: write `described(count, "apples")`
 
 $ api tests/spec/examples/stated.lm
 status 0
@@ -5204,16 +5184,6 @@ status 1
 !
 !   4 |     count := count + 1
 !     |              ^^^^^
-!
-! help: a name is declared in this file, imported, or supplied by the prelude
-
-$ api tests/spec/name_resolution/called_through_nothing.lm
-status 1
-! error[L0300]: there is nothing named `missing`
-!   --> tests/spec/name_resolution/called_through_nothing.lm:5:11
-!
-!   5 |     count.missing(2)
-!     |           ^^^^^^^
 !
 ! help: a name is declared in this file, imported, or supplied by the prelude
 
@@ -7584,10 +7554,14 @@ $ test tests/spec/calls/fallback.lm
 status 0
 
 $ test tests/spec/calls/in_front.lm
-status 0
-
-$ test tests/spec/calls/in_front_of_anything.lm
-status 0
+status 1
+! error[L0433]: a dot after a value reads a field, so this call of `described` is written plainly
+!   --> tests/spec/calls/in_front.lm:8:16
+!
+!   8 |     io.println(count.described("apples"))
+!     |                ^^^^^^^^^^^^^^^^^^^^^^^^^
+!
+! help: write `described(count, "apples")`
 
 $ test tests/spec/examples/stated.lm
 status 0
@@ -8793,16 +8767,6 @@ status 1
 !
 !   4 |     count := count + 1
 !     |              ^^^^^
-!
-! help: a name is declared in this file, imported, or supplied by the prelude
-
-$ test tests/spec/name_resolution/called_through_nothing.lm
-status 1
-! error[L0300]: there is nothing named `missing`
-!   --> tests/spec/name_resolution/called_through_nothing.lm:5:11
-!
-!   5 |     count.missing(2)
-!     |           ^^^^^^^
 !
 ! help: a name is declared in this file, imported, or supplied by the prelude
 
@@ -11561,9 +11525,6 @@ status 0
 $ fmt tests/spec/calls/in_front.lm
 status 0
 
-$ fmt tests/spec/calls/in_front_of_anything.lm
-status 0
-
 $ fmt tests/spec/examples/stated.lm
 status 0
 
@@ -12029,9 +11990,6 @@ $ fmt tests/spec/name_resolution/arm_binding_gone.lm
 status 0
 
 $ fmt tests/spec/name_resolution/binding_sees_itself.lm
-status 0
-
-$ fmt tests/spec/name_resolution/called_through_nothing.lm
 status 0
 
 $ fmt tests/spec/name_resolution/constraint_of_a_type.lm
@@ -12917,10 +12875,14 @@ $ build tests/spec/calls/fallback.lm
 status 0
 
 $ build tests/spec/calls/in_front.lm
-status 0
-
-$ build tests/spec/calls/in_front_of_anything.lm
-status 0
+status 1
+! error[L0433]: a dot after a value reads a field, so this call of `described` is written plainly
+!   --> tests/spec/calls/in_front.lm:8:16
+!
+!   8 |     io.println(count.described("apples"))
+!     |                ^^^^^^^^^^^^^^^^^^^^^^^^^
+!
+! help: write `described(count, "apples")`
 
 $ build tests/spec/examples/stated.lm
 status 0
@@ -14126,16 +14088,6 @@ status 1
 !
 !   4 |     count := count + 1
 !     |              ^^^^^
-!
-! help: a name is declared in this file, imported, or supplied by the prelude
-
-$ build tests/spec/name_resolution/called_through_nothing.lm
-status 1
-! error[L0300]: there is nothing named `missing`
-!   --> tests/spec/name_resolution/called_through_nothing.lm:5:11
-!
-!   5 |     count.missing(2)
-!     |           ^^^^^^^
 !
 ! help: a name is declared in this file, imported, or supplied by the prelude
 

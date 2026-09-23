@@ -201,6 +201,7 @@ An expression whose type is that field's `Option<()>` is then refused, as every 
 | bound is not a number | `L0421` | `lowest` of `Int32` is read rather than run, so it is one whole number |
 | trait stays in its module | `L0424` | `holder.labelled` requires `Named`, which `holder` declares and nothing here names |
 | unit in an option | `L0432` | `Option` never carries `()`, because `Some(())` says no more than `true` |
+| call on a value   | `L0433` | a dot after a value reads a field, so this call of `or` is written plainly |
 
 `L0406` covers every operator, because every operator is a trait method and a type is written
 with one exactly where it has that trait's instance, which `docs/specs/operators.md` states.
@@ -237,6 +238,8 @@ alone; every other name inside a module is written as the call `docs/specs/modul
 All three are reached after `L0401` and after the arguments have met the parameter types, because
 how many there are and what they are is each settled before which of them is which.
 `L0411` also says a name was written on a call of the prelude, which declares none to check.
+`L0433` is a call with a value in front of the name, which `docs/specs/arguments.md` states.
+It is raised before anything else about the call, and its `help:` is the plain call.
 `L0412` is a parameter that is a bare `Bool`, which `docs/specs/arguments.md` states as well.
 It is raised where the parameter is written, because the declaration is what changes.
 It is reached after the body, because the type it reads is the one inference settled.
@@ -280,13 +283,6 @@ The phase reads no file for the prelude, so the caller gives it the prelude.
 
 It stops at the first refusal, which has a code, a span, a message, and a help line.
 A module that the phase infers has the `lumen api` page of `docs/specs/api-surface.md`.
-
-`types.printed(path, prelude)` gives the answer for a program as text.
-The program is the module at `path` and each module that it reaches, loaded in order.
-A program that does not load or does not resolve is `skipped`.
-A refusal is `refused` and the module name, then the code, the span, and the message.
-Then the refusal gives `help:` and the help.
-A program whose every module infers is `typed`, and then the `lumen api` page of its last module.
 
 `tests/typing.lm` and `tests/conventions.lm` hold the phase to its properties, on drawn modules.
 `tests/siblings.lm` holds the page of each example to its `.api` file.

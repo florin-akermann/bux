@@ -100,17 +100,9 @@ A call is a hole when resolution says that its callee is the `todo` of the prelu
 `holes.of_module(resolved)` gives every hole of one module, in the order they are written.
 The code, the message, and the help of each hole are the ones that `lumen build` shows.
 
-`holes.printed(path, prelude)` gives the listing for a program.
-The program is the module at `path` and each module that it reaches, loaded in order.
-A program that a phase before a build refuses is `skipped`.
-Every other program is `checked`, and then one refusal for each hole.
-A refusal is the module name, then the code, the span, and the message.
-Then the refusal gives `help:` and the help.
+`compiler/command.lm` renders the line and the column of each hole from the span.
 
-The listing shows the parts of each block that `lumen build` shows, one hole after the other.
-`compiler/command.lm` renders the line and the column of a block from the span.
-
-`tests/unfinished.lm` holds the listing to the properties below, on modules with drawn holes.
+`tests/unfinished.lm` holds the holes to the properties below, on modules with drawn holes.
 The `holes_refused` check of `tests/enacted.lm` holds `lumen build` to its refusal.
 
 ## Properties

@@ -144,7 +144,6 @@ Type inference raises these, and `compiler/refusal.lm` words them:
 - `L0420` — a whole number does not fit the type it is written at.
 - `L0421` — a bound of an `IntegerLiteral` instance is not one whole number.
 - `L0422` — a type derives a trait and holds a value of a type that has no instance of it.
-- `L0423` — a call written with its first argument in front names its arguments.
 - `L0424` — a generic of another module is constrained by a trait that stays in that module.
 - `L0425` — an `extern` signature names a type no Java member takes or gives back.
 - `L0426` — an `extern` states something that is no Java name.
@@ -154,6 +153,7 @@ Type inference raises these, and `compiler/refusal.lm` words them:
 - `L0430` — an `extern new` gives back a type an `extern type` named an interface.
 - `L0431` — an `extern` narrows a parameter and gives back something other than an `Option`.
 - `L0432` — a program writes `Option<()>`, or inference gives an expression a type that holds it.
+- `L0433` — a call is written with a value in front of the name, where a dot reads a field.
 
 Exhaustiveness raises these, in `compiler/exhaustiveness.lm`:
 
