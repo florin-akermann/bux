@@ -6,15 +6,6 @@
 
 ## Open
 
-## 🔴 Item 081: No Lumen name remains; the tree says Bux and every source is a `.bx` file
-Lumen survives in 333 files, and 5665 sources still end in `.lm`, so each name has two spellings.
-AGENTS.md makes a tree-wide rename one item that lands whole, and this item is that rename.
-[081][a] - Every `.lm` source under `compiler/`, `library/`, `example/`, and `tests/` becomes `.bx`.
-[081][b] - The compiler reads `.bx` sources only, and a `.lm` path gets a diagnostic, not a crash.
-[081][c] - The JVM package `lumen/` in generated class files becomes `bux/`.
-[081][d] - Docs, help text, hooks, `mycs.toml`, and comments say Bux; open todos say `.bx`.
-[081][e] - The Name section in AGENTS.md drops the old name, and a search for `lumen` finds nothing.
-
 ## 🔴 Item 082: `let` makes a name that never changes and `var` a name that can; `:=` is gone
 **Depends on:** Item 081 — this item lands on `.bx` files.
 Today `x := 0` and `var x = 0` make a name with two operators, so a binding has two spellings.
@@ -106,6 +97,6 @@ The `L0702` message also names `bux` for a library class, because it reads up to
 Item 092 found it: `tests/commanded.bx` runs every command line of a golden file in one stage.
 So `$ fmt` rewrites the staged copy, and `$ build` of a refused file then records status 0.
 `tests/spec/interop/outside_java_base.bx` has no entry at all, and nothing reports a missing one.
-[105][a] - `docs/specs/executable-examples.md` states that each command line sees the example as written.
+[105][a] - `docs/specs/executable-examples.md` states that each command sees the example as written.
 [105][b] - `bin/runner` fails when an example under `tests/spec/` has no entry in `fixtures.txt`.
 [105][c] - `bin/runner golden` adds the entries of a new example, and the missing entries are added.
