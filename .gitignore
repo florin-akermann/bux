@@ -1,25 +1,40 @@
+# Build output; `cargo build` writes it again.
 /target
+
+# CLAUDE.md is a local copy of AGENTS.md, and AGENTS.md is the file this repository keeps.
 CLAUDE.md
 
-# transient /code-review pre-commit gate file
-.review-passed
+# Publish no file and no directory whose name starts with a dot, at any depth. A secret file
+# (.env, .netrc, .npmrc) and a local tool directory stay out of the repository by default.
+# The lines below name each dot file that the repository keeps. Nothing else is published.
+.*
+!.gitattributes
+!.gitignore
+!.githooks/
+!.cargo/
+!.config/
+!.claude/
+.claude/*
+!.claude/settings.json
 
-# dev-team plugin exhaust: metrics, scratch memory, review reports. Disposable;
-# nothing in this repo reads it.
-.claude/metrics/
-.claude/memory/
-.claude/agent-memory/
-.dev-team-reports/
+# Private key material and keystores, whatever the file name says.
+*.pem
+*.key
+*.p12
+*.jks
+*.keystore
 
-# Python bytecode from `uv run` dev tooling
+# Python bytecode from `uv run` dev tooling.
 __pycache__/
 
-# hegeltest regression corpora, rebuilt by a run; nothing in this repo reads them
-.hegel/
+# Compiler output that a `lumen build` writes beside a source file, wherever it writes it.
+# The repository keeps the source; no class file is part of a test, and none is published.
+*.class
+*.jar
+*.jmod
+*.jsa
 
-# class files a `lumen build` writes beside a source file; the source is what the repo keeps
-tests/spec/**/*.class
-example/**/*.class
-
-# macOS folder metadata; nothing in this repo reads it
-.DS_Store
+# Crash and profile files that a JVM writes into the directory it runs in.
+hs_err_pid*.log
+replay_pid*.log
+*.hprof

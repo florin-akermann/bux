@@ -147,4 +147,4 @@ This file is that anchor; consistency is the throughline, and the bar is Code He
 
 ## Commit Message Rules
 - Commit messages read `Item NNN: <what changed>`; `chore:` for housekeeping outside an item.
-- Never name the AI agent in a commit message, nor add a `Co-Authored-By` trailer naming an AI tool.
+- Never name the AI agent in a commit message.

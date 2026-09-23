@@ -1,4 +1,8 @@
 {
+  "attribution": {
+    "commit": "",
+    "pr": ""
+  },
   "env": {
     "DEV_TEAM_COST_METER": "off",
     "DEV_TEAM_TASK_METRICS": "off"
