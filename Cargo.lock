@@ -422,6 +422,7 @@ dependencies = [
  "lumen-holes",
  "lumen-ir",
  "lumen-jvm",
+ "lumen-lexer",
  "lumen-modules",
  "lumen-parser",
  "lumen-resolver",

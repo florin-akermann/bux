@@ -29,7 +29,7 @@ No token is decoded here: the value of an integer or string literal is the parse
 
 The keywords are the words the grammar reserves:
 `fn`, `type`, `trait`, `instance`, `derive`, `var`, `if`, `else`, `for`, `in`, `match`,
-`break`, `continue`, `return`, `import`, `true`, `false`.
+`break`, `continue`, `return`, `import`, `extern`, `true`, `false`.
 `_` is reserved alongside them: it is the discard, never an identifier, and `_x` is a name as ever.
 A later grammar item that reserves a word adds it here first.
 
@@ -80,6 +80,27 @@ The lexer accepts any string, including empty input, which lexes to no tokens.
 Each line of the `.tokens` file is `<kind> <start>..<end> <text>`, one per token, in source order.
 The lexer crate's integration tests walk that directory and name the failing example.
 An example is a whole program held to `docs/specs/executable-examples.md`, not a fragment.
+
+## The lexer written in Bux
+
+`compiler/lexer.lm` is this lexer written in Bux, and the Rust lexer is the answer it must give.
+It is the first phase of the Bux compiler, which `docs/implementation.md` section 6 states.
+
+A Bux string is read one UTF-16 code unit at a time, and a span still counts UTF-8 bytes.
+So the lexer scans code units and adds up the UTF-8 width of each unit that a token covers.
+A unit below 128 is one byte, and a unit below 2048 is two bytes.
+Each half of a surrogate pair is two bytes, because the pair is one four-byte character.
+Every other unit is three bytes.
+An `Unknown` token covers a whole surrogate pair, as the Rust lexer covers a whole character.
+
+`lexer.listed(source)` writes one line for each token: the kind, a space, and `<start>..<end>`.
+A keyword and a punctuation show the text that spells them, as `Keyword(fn)` and `Punct(:=)` do.
+Every other kind shows its name, as `Identifier` and `UnterminatedString` do.
+
+The harness `crates/cli/tests/integration/bux_lexer.rs` builds the Bux lexer with the Rust `lumen`.
+It runs the Bux lexer over every `tests/spec/lexer` example and over drawn text.
+It compares each list with the list of the Rust lexer, token for token.
+A build needs no JDK, and a run needs one; with no JDK, the harness skips each run and says why.
 
 ## Properties
 

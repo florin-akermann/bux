@@ -188,6 +188,10 @@ The self-hosted compiler runs on the JVM under `--enable-preview`, started by a 
 No native binary is needed to compile the compiler with itself.
 GraalVM native-image waits until GraalVM tracks JDK 28 and Valhalla, and section 12 holds it.
 
+The Bux compiler lives in `compiler/`, one module for each phase, and the lexer is the first.
+A module there has a `.lm` name for now, because the module loader reads no other extension.
+A harness in `crates/cli` holds each phase to the answer of the Rust phase it replaces.
+
 The bootstrap has three stages.
 Stage 0 is the Rust `bux`, which compiles the Bux-written compiler to stage 1.
 Stage 1 compiles the same source to stage 2.
