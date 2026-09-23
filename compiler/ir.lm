@@ -1021,9 +1021,13 @@ fn little_lowering(source: String) -> Lowering {
 }
 
 /// The small prelude of the examples, which declares `Option`, `Result`, `Eq`, `Add`, and literals.
+///
+/// It is resolved as `library_read` resolves the prelude, so a type parameter of `Option` is held
+/// as an object in each module that writes the classes of `Option`.
 // example: set.has_value(little_library().types, "Result")
 fn little_library() -> Library {
-    library_of(types.little_prelude(), resolver.Resolved { module: "prelude", program: declared.little_prelude(), found: map.empty() })
+    program := declared.little_prelude()
+    library_of(types.little_prelude(), ok_or(resolver.prelude_resolved(program), resolver.Resolved { module: "prelude", program: program, found: map.empty() }))
 }
 
 /// The prelude of `prelude` and `resolved`, with its own bodies typed.
@@ -2241,8 +2245,10 @@ fn through_the_operator(builder: Builder, asked: OperatorAsk, answerer: Instance
 
 /// The builder after each operand is put aside and the two are loaded back last first.
 ///
-/// An operand that is `()` is written and left where it is, as the Rust lowering left it.
+/// Each operand is adapted to its parameter as `calling` adapts it: a `()` a type parameter stands
+/// for is put aside as a new `Object`, and an operand whose parameter is `()` is written and dropped.
 // example: held_text(the_other_way_round(little_builder(""), Instance { class: "main", reaching: Reaching { named: "is_less", signature: Signature { parameters: [], result: Some(Boolean) } } }, []).held) == "Z"
+// example: list.length(the_other_way_round(little_builder("fn f() {\n    ()\n}\n"), Instance { class: "main", reaching: Reaching { named: "is_less", signature: Signature { parameters: [Some(object()), Some(object())], result: Some(Boolean) } } }, [first_expr("fn f() {\n    ()\n}\n"), first_expr("fn f() {\n    ()\n}\n")]).builder.instructions) == 11
 fn the_other_way_round(builder: Builder, answerer: Instance, operands: List<ast.Expr>) -> Left {
     var writing = builder
     var kept = []
@@ -2266,9 +2272,22 @@ fn the_other_way_round(builder: Builder, answerer: Instance, operands: List<ast.
 // example: list.length(operand_aside(little_builder(""), no_expr(), None).slots) == 0
 fn operand_aside(builder: Builder, operand: ast.Expr, wanted: Option<Descriptor>) -> Asides {
     match wanted {
-        Some(of) => aside_of(put_aside_as(builder, operand, of))
-        None => Asides { builder: value_built(builder, operand).builder, slots: [] }
+        Some(of) => aside_of(handed_aside(builder, operand, of))
+        None => Asides { builder: handed(builder, operand, None), slots: [] }
     }
+}
+
+/// The builder after `operand` is handed on as what `of` holds and put aside in a new slot.
+///
+/// A `()` is handed on as `handed` hands it, and any other operand as `put_aside_as` puts it.
+// example: handed_aside(little_builder(""), no_expr(), Long).slot.at == 0
+fn handed_aside(builder: Builder, operand: ast.Expr, of: Descriptor) -> Aside {
+    if !is_holding_nothing(builder, operand.span) {
+        return put_aside_as(builder, operand, of)
+    }
+    handing := handed(builder, operand, Some(of))
+    at := handing.next_slot
+    Aside { builder: emit(temporary(handing, of), Store { slot: at, of: of }), slot: Slot { at: at, of: of } }
 }
 
 /// The builder after `operator` is written out as the JVM writes it over two values.

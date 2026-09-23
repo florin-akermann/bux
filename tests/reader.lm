@@ -143,7 +143,7 @@ fn text_of(bytes: List<Int>, from: Int, to: Int) -> String {
 }
 
 /// The fields or the methods of `bytes` that start with their count at `at`, and the place after.
-// example: members_at(bytes: [0, 1, 0, 1, 0, 1, 0, 1, 0, 0], at: 0, pool: [Utf8("go")]).value == [Member { access: 1, name: "go", descriptor: "go" }]
+// example: members_at(bytes: [0, 1, 0, 1, 0, 1, 0, 1, 0, 0], at: 0, pool: [Utf8("go")]).value == [Member { access: 1, name: "go", descriptor: "go", stack: 0 }]
 fn members_at(bytes: List<Int>, at: Int, pool: List<Constant>) -> Placed<List<Member>> {
     count := u2(bytes, at)
     var members = []
@@ -151,10 +151,27 @@ fn members_at(bytes: List<Int>, at: Int, pool: List<Constant>) -> Placed<List<Me
     var passed = 0
     for passed < count {
         passed += 1
-        members = list.push(members, Member { access: u2(bytes, next), name: named(pool, u2(bytes, next + 2)), descriptor: named(pool, u2(bytes, next + 4)) })
+        members = list.push(members, Member { access: u2(bytes, next), name: named(pool, u2(bytes, next + 2)), descriptor: named(pool, u2(bytes, next + 4)), stack: stack_at(bytes: bytes, at: next + 6, pool: pool) })
         next = past_attributes(bytes, next + 6)
     }
     Placed { value: members, next: next }
+}
+
+/// The deepest stack the `Code` attribute among the attributes at `at` declares, or 0 without one.
+// example: stack_at(bytes: [0, 1, 0, 1, 0, 0, 0, 4, 0, 3, 0, 0], at: 0, pool: [Utf8("Code")]) == 3
+// example: stack_at(bytes: [0, 0], at: 0, pool: []) == 0
+fn stack_at(bytes: List<Int>, at: Int, pool: List<Constant>) -> Int {
+    count := u2(bytes, at)
+    var next = at + 2
+    var passed = 0
+    for passed < count {
+        if named(pool, u2(bytes, next)) == "Code" {
+            return u2(bytes, next + 6)
+        }
+        next += 6 + u4(bytes, next + 2)
+        passed += 1
+    }
+    0
 }
 
 /// The place after the attributes of `bytes` that start with their count at `at`.
@@ -258,11 +275,12 @@ type Constant =
     | Unusable
     | Unknown(Int)
 
-/// One field or one method: its access, its name, and its descriptor.
+/// One field or one method: its access, its name, its descriptor, and the deepest its stack goes.
 type Member = {
     access: Int
     name: String
     descriptor: String
+    stack: Int
 }
 
 /// A value read out of the bytes, and the place just after it.

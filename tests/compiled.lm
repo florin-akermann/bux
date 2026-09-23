@@ -19,7 +19,13 @@ import strings
 /// Every class file of `source`, written as a build writes them, or none where it is refused.
 // example: list.length(written_alone("fn (", ir.little_library())) == 0
 fn written_alone(source: String, library: ir.Library) -> List<jvm.ClassFile> {
-    jvm.program_written(lowered_alone(source, library))
+    classes_of(lowered_alone(source, library))
+}
+
+/// Every class file of `program`, or none where the writer refuses it.
+// example: list.length(classes_of([])) == 0
+fn classes_of(program: List<ir.Lowered>) -> List<jvm.ClassFile> {
+    ok_or(jvm.program_written(program), [])
 }
 
 /// Every module of `source`, lowered as the module `demo`, which imports only the library.
