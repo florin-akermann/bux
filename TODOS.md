@@ -24,13 +24,6 @@ The compiler and its checks are the first program that uses processes, so dogfoo
 [091][l] - Each gap or bottleneck that this dogfood finds becomes its own item in `TODOS.md`.
 [091][m] - `bux help process` states the process shape, and section 15 drops its 0.4 note.
 
-## 🔴 Item 080: `Option<()>` is refused wherever a program writes it or inference reaches it
-`Some(())` says only that a value is there, which is `Bool` spelled a second way and nullability.
-`Result<(), E>` stays, because its `Err` carries a reason; `docs/design.md` section 5 says why.
-[080][a] - `docs/specs/types.md` states the refusal; `docs/specs/diagnostics.md` lists its code.
-[080][b] - The Bux type phase refuses `Option<()>`, written or inferred.
-[080][c] - `tests/spec/unit/carried.lm` carries `()` through `Result` only, next to a refused one.
-
 ## 🔴 Item 081: No Lumen name remains; the tree says Bux and every source is a `.bx` file
 Lumen survives in 333 files, and 5665 sources still end in `.lm`, so each name has two spellings.
 AGENTS.md makes a tree-wide rename one item that lands whole, and this item is that rename.
