@@ -6,11 +6,6 @@
 
 ## Open
 
-## 🔴 Item 070: Name resolution is written in Bux
-**Depends on:** Item 063, Item 069 — scopes are maps keyed by names the program declares.
-[070][a] - `compiler/resolver.bx` produces the resolved tree with every name resolution error.
-[070][b] - The harness compares its diagnostics with the Rust resolver's on every fixture.
-
 ## 🔴 Item 071: Type inference is written in Bux
 **Depends on:** Item 064, Item 065, Item 070 — unification keys a table by type variables.
 This is the largest phase, at 5,313 lines of Rust, and mutable tables become returned values.

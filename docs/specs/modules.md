@@ -298,6 +298,38 @@ Without the refusal it lowers into a store with nowhere to write, and does nothi
 
 Resolution stops at the first error, as parsing does.
 
+## The resolver written in Bux
+
+`compiler/resolver.lm` is this resolver written in Bux, and the Rust resolver is its answer.
+It reads the name and the tree of each module that `compiler/modules.lm` loads.
+The tree is the tree of `compiler/parser.lm`, and nothing in it changes.
+The answer is the tree and, for each name that has a definition, the definition that it means.
+
+`resolver.prelude_of(program)` reads the names of the prelude out of its parsed tree.
+The resolver reads no file and no resource, so the caller gives it the prelude.
+`resolver.resolve(program, module, prelude)` resolves one module against that prelude.
+`resolver.prelude_resolved(program)` resolves the prelude itself, with the names the JVM holds.
+
+The Bux resolver refuses what the Rust resolver refuses, at the same name.
+It gives the same code, span, message, and help, and it stops at the first refusal too.
+The check of where a declaration belongs finds the same first declaration as the Rust check.
+
+`resolver.printed(source, prelude)` gives the answer in the form that the harness compares.
+A resolved module is `resolved`, and then one line for each name that has a definition.
+A line is the span of the name, `type` or `value`, the kind of definition, and its origin.
+The kinds are `module`, `type`, `trait`, `type-parameter`, `constructor`, `function`,
+`trait-method`, `parameter`, `local`, and `variable`.
+The origin is `prelude`, or `declared` and the span of the name that declares it.
+The lines are in the order of their spans, and a `type` line comes before a `value` line.
+A refusal is `refused`, then the code, span, and message, then `help:` and the help.
+A source that does not parse is `unparsed`.
+
+The harness `crates/cli/tests/integration/bux_resolver.rs` builds the Bux resolver with `lumen`.
+It resolves each fixture with both resolvers, and it compares the two answers line for line.
+The fixtures are every `.lm` file of `tests/spec`, `library/`, and `compiler/` that parses.
+Modules that each refusal names, and modules drawn at random, are fixtures too.
+A build needs no JDK, and a run needs one; with no JDK, the harness skips each run and says why.
+
 ## Properties
 
 These hold and are checked with property-based tests:

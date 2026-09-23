@@ -7,6 +7,7 @@ mod bux_format;
 mod bux_lexer;
 mod bux_modules;
 mod bux_parser;
+mod bux_resolver;
 mod checking;
 mod collections;
 mod common;
