@@ -1,0 +1,12 @@
+// expect-error: L0100
+// A `|` between patterns is followed by one more pattern.
+fn waiting(payment: Payment) -> Int {
+    match payment {
+        Pending | => 1
+        _ => 0
+    }
+}
+
+type Payment =
+    | Pending
+    | Paid

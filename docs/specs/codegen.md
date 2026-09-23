@@ -515,20 +515,18 @@ The constant pool is built in the order entries are first asked for, which the l
 
 `compiler/ir.lm` lowers a program in Bux, and `compiler/jvm.lm` writes its class files.
 `compiler/bytes.lm` writes the bytes of a class file.
-The Rust phases give the answer that the Bux phases must give.
-That answer is the same class files, in the same order, byte for byte.
 
 `ir.program_lowered(path, library)` lowers the module at `path` and each module that it reaches.
 It gives `skipped` when a phase before the lowering refuses the program.
 It also gives `skipped` when a module of the program holds a hole.
 It does not check the examples of a function, which `lumen build` does.
-The examples are a check before the lowering, and the harness does not compare that check.
+The examples are a check before the lowering.
 
-The Bux lowering runs the passes that `crates/cli/src/lowering.rs` runs.
+The Bux lowering runs in passes.
 Each pass lowers the modules last first, and then the prelude.
 A pass that asks a module for more than that module knew starts one more pass.
 The pass that asks for nothing new gives the classes, the prelude first.
-`ir.library_read(source)` reads the prelude and types its bodies, as the Rust phase does.
+`ir.library_read(source)` reads the prelude and types its bodies.
 
 `jvm.program_written(program)` gives a `ClassFile` for each class of each lowered module.
 A `ClassFile` is the path of the class and its bytes.
@@ -537,9 +535,7 @@ The bytes are a `List<Int>`, and each value is from 0 to 255.
 The high byte comes first, and a negative value is written as its complement.
 `files.write_bytes` writes such a list as a file, which `docs/specs/io.md` states.
 
-The Bux writer keeps each behaviour of the Rust writer, and some of them are not correct.
-The Bux writer does the same, so that the two writers write the same bytes.
-A fix goes into the Rust phase first, and then into the Bux phase.
+Some behaviours of the Bux writer are not correct.
 These are the behaviours:
 
 - A class name that two modules write is written twice, and the hierarchy keeps the last one.
@@ -551,15 +547,15 @@ These are the behaviours:
 
 A value of the Bux writer is its state, so each step gives back the state that it makes.
 The constant pool, the code, and the frames are values that go from one step to the next.
-The order in which the steps ask the pool for an entry is the order of the Rust writer.
-So each entry has the same index in the two writers.
+The steps ask the pool for their entries in a fixed order.
+So each entry has the same index in each build of one program.
 A label that the assembler makes is 4294967294 minus the number of labels made before it.
 
-The harness `crates/cli/tests/integration/bux_classes.rs` writes the class files with both phases.
-The fixtures are every `.lm` file under `tests/spec`, `library/`, and `compiler/`.
-Programs with drawn statements are fixtures too.
-For each fixture, the harness compares the list of paths and lengths, and then the bytes.
-The Bux phase runs on a JVM, so the harness skips a test with a reason when there is no JDK.
+The runner holds the two phases in `tests/lowering.lm`, `branching.lm`, and `instances.lm`.
+It also holds them in `tests/escaping.lm` and `tests/written.lm`.
+Each holds some of the properties below, on modules that it draws.
+`tests/reader.lm` reads the written bytes back.
+The JVM verifier reads each class that an `expect-run` example loads.
 
 ## The errors
 
@@ -569,7 +565,7 @@ this phase is written out.
 
 ## Properties
 
-These hold and are checked with property-based tests:
+These hold and are checked by drawn properties in the runner:
 
 1. Lowering and writing a checked module never panics and is deterministic.
 2. Compiling one source twice gives byte-identical class files.
@@ -595,6 +591,6 @@ a claim about a running program, so it is held to by `tests/spec/traits/over_a_l
 `tests/spec/traits/over_a_generic_type.lm` rather than by a property.
 
 What a push does to a buffer is a claim about a running program too.
-`crates/cli/tests/integration/lists.rs` holds that two pushes onto one list leave three lists.
+`tests/collected.lm` holds that two pushes onto one list leave three lists, in the runner's JVM.
 Each of the three holds what it held when it was made.
 `tests/spec/library/growing_long.lm` pushes a million elements, which a copy on each push cannot.

@@ -1,0 +1,89 @@
+// Canonical form spaces an operator and leaves a bracket bare. It keeps a bracket only where the
+// shape needs one, joins a call, a record, and a list onto one line, and writes a string's escapes.
+import list
+
+// example: spaced(first: 1, second: 2) == 8
+fn spaced(first: Int, second: Int) -> Int {
+    flag := first > 0
+    listed := [1, 2]
+    empty := []
+    joined := first + second * 3
+    grouped := (first + second) * 3
+    kept := first - (second - 3)
+    left := first - second - 3
+    negated := -first
+    written := -7
+    if !(flag && first < second) || !flag && flag {
+        return 0
+    }
+    list.length(listed) + list.length(empty) + joined + grouped + kept + left + negated + written
+}
+
+// example: escaped() == 5
+fn escaped() -> Int {
+    list.length(["a\"b", "a\nb", "a\\b", "a\tb", "a\rb"])
+}
+
+// example: built(Point { across: 1, down: 2 }).across == 3
+fn built(point: Point) -> Point {
+    moved := point { across: or(first_of([point.across, point.down]), 0) + point.down }
+    _ = sized(moved, 0)
+    for other in [Point { across: 1, down: 1 }] {
+        if other.across > 1 {
+            break
+        } else if other.down > 1 {
+            continue
+        } else {
+            return moved
+        }
+    }
+    moved
+}
+
+// example: or(first_of([4]), 0) == 4
+fn first_of<T>(items: List<T>) -> Option<T> {
+    list.at(items, 0)
+}
+
+// example: has_value(1)
+fn has_value<T: Eq<T>>(value: T) -> Bool {
+    value == value
+}
+
+// example: sized(Point { across: 1, down: 2 }, 1) == 4
+fn sized(point: Point, extra) -> Int {
+    var total = 0
+    for total < point.across {
+        total += 1
+    }
+    total = total + point.down + extra
+    total
+}
+
+instance Wide<Point> {
+    fn wide(value: Point) -> String {
+        "point"
+    }
+
+    fn widest(value: Point) -> Int {
+        5
+    }
+}
+
+trait Wide<T> {
+    fn wide(value: T) -> String
+    fn widest(value: T) -> Int
+}
+
+// compared by what it holds
+derive Eq, Ord, Hash for Point
+
+type Point = {
+    across: Int
+    down: Int
+}
+
+type Empty = {
+}
+
+type Mark = Mark(Int)

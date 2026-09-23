@@ -1,0 +1,8 @@
+// expect-error: L0100
+// A file holds imports, types, traits, instances, derives, functions, and externs.
+// A statement is written inside a function, never at the top of a file.
+total := 1
+
+fn main(arguments: List<String>) -> Int {
+    0
+}

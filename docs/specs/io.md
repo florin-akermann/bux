@@ -313,7 +313,7 @@ which every `extern` already is.
 
 ## Properties
 
-These hold and are checked with property-based tests:
+These hold and are checked by drawn properties in the runner:
 
 1. A name a module here declares has the type this spec gives it, wherever it is written.
 2. A name a module here does not declare is refused with `L0414`, naming the module and it.

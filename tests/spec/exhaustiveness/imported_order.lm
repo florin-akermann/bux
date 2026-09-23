@@ -1,0 +1,11 @@
+// expect-error: L0501
+// A match over a type of another module lists its arms in the order that module declares.
+import ledger
+
+fn described(payment: ledger.Payment) -> String {
+    match payment {
+        ledger.Failed(reason) => reason
+        ledger.Pending => "pending"
+        ledger.Authorized { authorization_id } => authorization_id
+    }
+}

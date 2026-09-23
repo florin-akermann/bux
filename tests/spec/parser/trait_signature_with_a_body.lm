@@ -1,0 +1,7 @@
+// expect-error: L0100
+// A trait writes the signature of each method and no body; an instance writes the body.
+trait Sized<T> {
+    fn size(item: T) -> Int {
+        0
+    }
+}

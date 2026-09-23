@@ -1,0 +1,81 @@
+// expect-run
+// > across
+// > down
+// > 3
+// > passed 7
+// > given back 9
+// > bound again 11
+// > updated 13
+// > held in a var 15
+// > carried by a variant 17
+// A record that leaves the function it is built in is built, and holds what it was given.
+// A record that stays in the function is kept in locals, and reads back the same values.
+// Either way, its fields are worked out in the order the type declares them, not as written.
+import io
+
+fn main(arguments: List<String>) -> Int {
+    kept := Point { down: said(word: "down", count: 2), across: said(word: "across", count: 1) }
+    io.println(shown(kept.across + kept.down))
+    io.println("passed " + shown(summed(Point { across: 3, down: 4 })))
+    io.println("given back " + shown(summed(built(count: 4))))
+    io.println("bound again " + shown(rebound(count: 5)))
+    io.println("updated " + shown(moved(count: 6)))
+    io.println("held in a var " + shown(replaced(count: 7)))
+    io.println("carried by a variant " + shown(carried(count: 8)))
+    0
+}
+
+// example: said(word: "one", count: 1) == 1
+fn said(word: String, count: Int) -> Int {
+    io.println(word)
+    count
+}
+
+// example: summed(Point { across: 1, down: 2 }) == 3
+fn summed(point: Point) -> Int {
+    point.across + point.down
+}
+
+// example: built(count: 1).down == 2
+fn built(count: Int) -> Point {
+    Point { across: count, down: count + 1 }
+}
+
+// example: rebound(count: 1) == 3
+fn rebound(count: Int) -> Int {
+    point := Point { across: count, down: count + 1 }
+    other := point
+    other.across + point.down
+}
+
+// example: moved(count: 1) == 3
+fn moved(count: Int) -> Int {
+    point := Point { across: 0, down: count + 1 }
+    shifted := point { across: count }
+    shifted.across + shifted.down
+}
+
+// example: replaced(count: 1) == 3
+fn replaced(count: Int) -> Int {
+    var point = Point { across: 0, down: 0 }
+    point = Point { across: count, down: count + 1 }
+    point.across + point.down
+}
+
+// example: carried(count: 1) == 3
+fn carried(count: Int) -> Int {
+    placed := Placed(Point { across: count, down: count + 1 })
+    match placed {
+        Placed(point) => point.across + point.down
+        Nowhere => 0
+    }
+}
+
+type Place =
+    | Placed(Point)
+    | Nowhere
+
+type Point = {
+    across: Int
+    down: Int
+}

@@ -1,0 +1,5 @@
+// expect-error: L0300
+// Nothing declares `nowhere`, so the type reached through it is refused as an unresolved name.
+fn held(value: nowhere.Thing) -> Int {
+    1
+}

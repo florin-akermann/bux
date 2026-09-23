@@ -1,0 +1,161 @@
+// The runner: every example under `tests/spec`, every sibling file, every `// example:` line, every
+// drawn property, and the command line, held in one JVM.
+//
+// `docs/implementation.md` section 7 states the runner, and `bin/runner` starts it from the root
+// of the repository. It writes a line for each check it skipped and for each failure, then a line
+// that counts what it held, and it ends with status 0 only where nothing failed. With the word
+// `golden`, it writes the golden files under `tests/commands` again and holds nothing.
+import boundaries
+
+import branching
+
+import collected
+
+import command
+
+import commanded
+
+import conventions
+
+import covered
+
+import crossing
+
+import deriving
+
+import documented
+
+import escaping
+
+import exampled
+
+import exemplified
+
+import held
+
+import instances
+
+import io
+
+import ir
+
+import launched
+
+import layout
+
+import lexing
+
+import list
+
+import loading
+
+import lowering
+
+import modules
+
+import naming
+
+import operating
+
+import paged
+
+import parsing
+
+import rendering
+
+import siblings
+
+import typing
+
+import unfinished
+
+import written
+
+fn main(arguments: List<String>) -> Int {
+    library := ir.library_read(or(modules.carried("prelude"), ""))
+    if or(list.at(arguments, 0), "") == "golden" {
+        commanded.every_golden_written(library)
+        return 0
+    }
+    examples := exemplified.every_example_held(library, "tests/spec")
+    beside := siblings.every_sibling_held(library, "tests/spec")
+    lines := documented.every_line_held(documented.modules_of("tests/spec", ["library", "compiler", "tests"]), library)
+    properties := every_property_held(library)
+    root := ok_or(modules.canonical_path(modules.file_at(".")), ".")
+    commands := held.added(commanded.every_line_held(library), launched.every_start_held(root))
+    all := held.added(held.added(held.added(examples, beside), held.added(lines, every_of(properties))), commands)
+    for skipped in all.skipped {
+        io.println("skipped: " + skipped)
+    }
+    for failure in all.failures {
+        io.println(failure)
+    }
+    io.println(summary(Counted { examples: examples, siblings: beside, lines: lines, properties: properties, commands: commands, all: all }))
+    status_of(all)
+}
+
+/// Every drawn property, each tried on the same number of drawn cases, in a fixed order.
+// example: list.length(command.all_of([held.nothing_failed(1)], [held.nothing_failed(2)])) == 2
+fn every_property_held(library: ir.Library) -> List<held.Held> {
+    cases := 100
+    var found = lexing.every_property(cases, library)
+    found = command.all_of(found, parsing.every_property(cases, library))
+    found = command.all_of(found, layout.every_property(cases, library))
+    found = command.all_of(found, collected.every_property(cases, library))
+    found = command.all_of(found, rendering.every_property(cases, library))
+    found = command.all_of(found, exampled.every_property(cases, library))
+    found = command.all_of(found, covered.every_property(cases, library))
+    found = command.all_of(found, unfinished.every_property(cases, library))
+    found = command.all_of(found, paged.every_property(cases, library))
+    found = command.all_of(found, naming.every_property(cases, library))
+    found = command.all_of(found, loading.every_property(cases, library))
+    found = command.all_of(found, typing.every_property(cases, library))
+    found = command.all_of(found, conventions.every_property(cases, library))
+    found = command.all_of(found, boundaries.every_property(cases, library))
+    found = command.all_of(found, operating.every_property(cases, library))
+    found = command.all_of(found, deriving.every_property(cases, library))
+    found = command.all_of(found, lowering.every_property(cases, library))
+    found = command.all_of(found, branching.every_property(cases, library))
+    found = command.all_of(found, crossing.every_property(cases, library))
+    found = command.all_of(found, instances.every_property(cases, library))
+    found = command.all_of(found, escaping.every_property(cases, library))
+    command.all_of(found, written.every_property(cases, library))
+}
+
+/// The line that counts what the runner held, what it could not try, and what failed.
+// example: summary(Counted { examples: held.nothing_failed(2), siblings: held.nothing_failed(1), lines: held.nothing_failed(3), properties: [held.nothing_failed(100)], commands: held.nothing_failed(4), all: held.nothing_failed(110) }) == "runner: 2 examples, 1 siblings, 3 example lines, 1 properties of 100 drawn cases, 4 command lines; 0 failed, 0 skipped"
+fn summary(counted: Counted) -> String {
+    drawn := shown(list.length(counted.properties)) + " properties of " + shown(every_of(counted.properties).cases) + " drawn cases"
+    held_part := shown(counted.examples.cases) + " examples, " + shown(counted.siblings.cases) + " siblings, " + shown(counted.lines.cases) + " example lines, " + drawn + ", " + shown(counted.commands.cases) + " command lines"
+    "runner: " + held_part + "; " + shown(list.length(counted.all.failures)) + " failed, " + shown(list.length(counted.all.skipped)) + " skipped"
+}
+
+/// The status the runner ends with: 0 where nothing failed, and 1 where anything did.
+// example: status_of(held.nothing_failed(1)) == 0
+// example: status_of(held.with_failure(held.nothing_failed(1), "a.lm: gone")) == 1
+fn status_of(all: held.Held) -> Int {
+    if held.is_held(all) {
+        return 0
+    }
+    1
+}
+
+/// Everything each of `parts` held, together.
+// example: every_of([held.nothing_failed(2), held.nothing_failed(3)]).cases == 5
+fn every_of(parts: List<held.Held>) -> held.Held {
+    var found = held.nothing_failed(0)
+    for part in parts {
+        found = held.added(found, part)
+    }
+    found
+}
+
+/// What each part of the runner held, and all of it together.
+type Counted = {
+    examples: held.Held
+    siblings: held.Held
+    lines: held.Held
+    properties: List<held.Held>
+    commands: held.Held
+    all: held.Held
+}

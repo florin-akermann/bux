@@ -1,0 +1,12 @@
+// expect-error: L0100
+// An instance writes at least one method.
+instance Sized<Box> {
+}
+
+trait Sized<T> {
+    fn size(item: T) -> Int
+}
+
+type Box = {
+    width: Int
+}

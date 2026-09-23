@@ -1,0 +1,6 @@
+// expect-error: L0100
+// A `var` names what it binds, because a value thrown away is never changed.
+fn thrown(count: Int) -> Int {
+    var _ = count
+    count
+}

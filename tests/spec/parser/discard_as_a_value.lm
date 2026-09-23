@@ -1,0 +1,10 @@
+// expect-error: L0100
+// `_` is written on the left of `=` and in a pattern, and it is never a value.
+fn thrown(count: Int) -> Int {
+    kept(_)
+}
+
+// example: kept(1) == 1
+fn kept(count: Int) -> Int {
+    count
+}

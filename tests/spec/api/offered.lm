@@ -1,0 +1,23 @@
+// A page keeps the type parameters a function declares, and prints a parameter inference made a
+// function the way a diagnostic prints one.
+// An import brings a name in and puts none out, so it is not on the page.
+// A hole is well typed, so a module that holds one has a page.
+import io
+
+fn first<A, B>(pair: Pair<A, B>) -> A {
+    pair.left
+}
+
+fn counted() -> Int {
+    todo("count them")
+}
+
+fn applied(action, value) {
+    action(value)
+}
+
+/// A comment above a type is left off the page, as every other comment is.
+type Pair<A, B> = {
+    left: A
+    right: B
+}

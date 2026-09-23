@@ -1,0 +1,54 @@
+function built 311..645
+  parameter payment 320..341
+    named-type demo.Payment 329..341
+  result
+    named-type Holder 346..352
+  block 353..645
+    binding Immutable first 359..387
+      record demo.User 368..387
+        field-value id 380..385
+          integer 1 384..385
+    binding Immutable second 392..414
+      field Pending 402..414
+        name demo 402..406
+    binding Immutable third 419..436
+      call 428..436
+        field abs 428..434
+          integer -5 428..430
+    binding Immutable fourth 441..454
+      try 451..454
+        integer -5 451..453
+    binding Immutable fifth 459..471
+      unary Negate 468..471
+        integer -5 469..471
+    binding Immutable sixth 476..504
+      try 485..504
+        field name 485..503
+          call 485..498
+            field first 485..496
+              name users 485..490
+    match 509..643
+      name payment 515..522
+      arm 533..562
+        pattern demo.Pending 533..545
+        call 549..562
+          name Holder 549..555
+          name first 556..561
+      arm 571..600
+        pattern-tuple demo.Failed 571..590
+          pattern reason 583..589
+        name reason 594..600
+      arm 609..637
+        pattern-record demo.Authorized 609..631
+          pattern-field id 627..629
+        name id 635..637
+type Holder 647..683
+  variant Holder 661..683
+    named-type demo.Held 668..682
+      named-type Int 678..681
+extern static int 685..751
+  java java.lang.String.length 726..751
+  parameter text 703..715
+    named-type String 709..715
+  result
+    named-type Int 720..723

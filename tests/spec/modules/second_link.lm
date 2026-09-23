@@ -1,0 +1,7 @@
+// expect-error: L0307
+// The second of three modules in a ring of imports.
+import third_link
+
+fn second() -> Int {
+    2
+}

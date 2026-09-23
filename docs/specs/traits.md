@@ -376,13 +376,13 @@ A trait's name and the type an instance is for are written in `PascalCase`, and 
 | `L0419` | A parameter of a method a trait declares states no type. |
 
 `L0308`, `L0309`, `L0310`, `L0311`, and `L0318` are raised by name resolution, which
-`crates/resolver/src/error.rs` words.
-`L0401`, `L0418`, and `L0419` are raised by type inference, which `crates/types/src/error.rs`
+`compiler/resolver.lm` words.
+`L0401`, `L0418`, and `L0419` are raised by type inference, which `compiler/refusal.lm`
 words.
 
 ## Properties
 
-These hold and are checked with property-based tests:
+These hold and are checked by drawn properties in the runner:
 
 1. A trait, an instance over a plain type, an instance over type parameters, and a constraint
    each survive printing and parsing unchanged.

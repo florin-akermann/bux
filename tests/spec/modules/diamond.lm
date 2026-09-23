@@ -1,0 +1,16 @@
+// expect-run
+// > relayed
+// > world
+// `relay` imports `holder` and this module imports both, so `holder` is reached two ways.
+// A module two modules import is read once, and that is no ring.
+import holder
+
+import io
+
+import relay
+
+fn main(arguments: List<String>) -> Int {
+    io.println(relay.got().name)
+    io.println(holder.name_of(holder.wrapped("world")))
+    0
+}

@@ -1,0 +1,63 @@
+// expect-run
+// > two wallets of the same point are one value
+// > two wallets of different points are two values
+// > Wallet { point: (1, 2) }
+// > Empty {}
+// > Sent {}
+// > Pending
+// A derive reaches the instance a held type has, whether that type derives it or writes it.
+// `Point` writes its own `Eq` and `Show`, and the derives of `Wallet` call exactly those.
+// A record or a variant that declares no field is shown as its name and two braces.
+import io
+
+fn main(arguments: List<String>) -> Int {
+    near := Wallet { point: Point { across: 1, down: 2 } }
+    far := Wallet { point: Point { across: 1, down: 3 } }
+    also_near := Wallet { point: Point { across: 1, down: 2 } }
+    if near == also_near {
+        io.println("two wallets of the same point are one value")
+    }
+    if near != far {
+        io.println("two wallets of different points are two values")
+    }
+    io.println(shown(near))
+    io.println(shown(Empty {}))
+    io.println(shown(Sent {}))
+    io.println(shown(Pending))
+    0
+}
+
+instance Eq<Point> {
+    fn is_equal(one: Point, other: Point) -> Bool {
+        one.across == other.across && one.down == other.down
+    }
+}
+
+instance Show<Point> {
+    fn shown(point: Point) -> String {
+        "(" + shown(point.across) + ", " + shown(point.down) + ")"
+    }
+}
+
+derive Eq, Show for Wallet
+
+type Wallet = {
+    point: Point
+}
+
+type Point = {
+    across: Int
+    down: Int
+}
+
+derive Show for Empty
+
+type Empty = {
+}
+
+derive Show for Payment
+
+type Payment =
+    | Sent {
+    }
+    | Pending

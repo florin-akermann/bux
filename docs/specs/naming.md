@@ -112,24 +112,23 @@ help: begin the name with `is_`, `has_`, `can_`, or `should_`
 
 ## Where each rule is checked
 
-Case and length are about the text, so `crates/format/src/naming.rs` checks them with the rest of
+Case and length are about the text, so `compiler/format.lm` checks them with the rest of
 canonical form, before a name is resolved or a type is settled.
 The first name a file writes out of form is the one reported, in the order the file writes them.
 
-The predicate rule reads a type, so `crates/types/src/infer/predicate.rs` checks it as inference
+The predicate rule reads a type, so `compiler/infer.lm` checks it as inference
 settles each function.
 It is reached after the body, because the type it reads is the one inference settled.
 
 ## The name check written in Bux
 
-`compiler/format.lm` checks case and length with the rest of canonical form, as the Rust crate does.
+`compiler/format.lm` checks case and length with the rest of canonical form.
 It gives `L0202` for a name in the wrong case and `L0203` for a name of one letter.
-The message, the `help:` line, and the span are the ones the Rust check gives.
-The harness `crates/cli/tests/integration/bux_command.rs` holds the two to one answer.
+`tests/conventions.lm` holds the name check to the properties below, on drawn modules.
 
 ## Properties
 
-These hold and are checked with property-based tests:
+These hold and are checked by drawn properties in the runner:
 
 1. A name canonical form rewrites is rewritten to one it accepts, so no spelling it advises is
    refused in its turn.

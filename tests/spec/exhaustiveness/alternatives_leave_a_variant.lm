@@ -1,0 +1,14 @@
+// expect-error: L0500
+// An or-pattern covers only what its alternatives cover, so `Authorized(_)` is left out.
+fn described(payment: Payment) -> String {
+    match payment {
+        Pending | Failed(_) => "seen"
+    }
+}
+
+type Payment =
+    | Pending
+    | Authorized {
+        authorization_id: String
+    }
+    | Failed(String)

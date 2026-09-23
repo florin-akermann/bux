@@ -1,7 +1,7 @@
 // What an `extern` declaration may name, held to the rules of the Java boundary.
 //
-// `docs/specs/interop.md` states the rules, and `crates/types/src/boundary.rs` holds the Rust
-// phase to the same ones. The boundary is a signature and a Java name beside it and nothing more,
+// `docs/specs/interop.md` states the rules.
+// The boundary is a signature and a Java name beside it and nothing more,
 // so each check reads the types the signature names and the words the declaration writes.
 import ast
 
@@ -120,7 +120,7 @@ fn narrowed(parameter: ast.ExternParameter, held: unify.Type) -> Result<(), refu
 
 /// What an `extern` gives back, held to the rules of the class it reaches and the width it states.
 ///
-/// The checks run in the order the Rust phase runs them, so the first refusal is the same one.
+/// The checks run in one fixed order, so the first refusal is always the same one.
 // example: refusal.code_given(gives_back_checked(extern_of("extern new now() -> Int"), [], unify.int(), map.empty())) == "L0428 20..23"
 fn gives_back_checked(declaration: ast.ExternDeclaration, taken: List<unify.Type>, result: unify.Type, foreign: map.Map<String, ast.Called>) -> Result<(), refusal.TypeError> {
     _ = reaches_a_class(declaration, taken, result, foreign)?
@@ -368,7 +368,7 @@ fn arguments_of(held: unify.Type) -> List<unify.Type> {
 
 /// Whether `segment` is a Java name: a letter, `_`, or `$`, then those or a number.
 ///
-/// Java decides what a letter and a number are, which is the Unicode property the Rust phase reads.
+/// Java decides what a letter and a number are, from the Unicode property of each.
 // example: is_a_segment("$a1")
 // example: is_a_segment("café")
 // example: !is_a_segment("a→b")

@@ -1,0 +1,22 @@
+// expect-run
+// > 7
+// A function states the examples written in the comment above it, and `lumen test` holds each.
+// `docs/specs/doc-examples.md` states them; the runner holds every example line of this file.
+import io
+
+// The `main` a module declares is reached by running it, so it states no example.
+fn main(arguments: List<String>) -> Int {
+    io.println(shown(shared(total: 7)))
+    0
+}
+
+// Gives back whatever it was handed, which is as much as it does.
+//
+// A comment line that is not an example is not read as one.
+// The example is the text after the marker, with the blanks around it left out.
+//    example:   shared(total: 7) == 7
+/// example: shared(total: 8) == 8
+// example: shared(total: 9) == 9
+fn shared(total: Int) -> Int {
+    total
+}

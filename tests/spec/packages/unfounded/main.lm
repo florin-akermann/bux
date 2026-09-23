@@ -1,0 +1,5 @@
+// expect-error: L0316
+// The manifest depends on `../nowhere`, which holds no manifest, so there is no package there.
+fn held() -> Int {
+    1
+}

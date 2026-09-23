@@ -1,0 +1,7 @@
+// `strings` is a module the library carries, so the file of that name beside this one is not
+// what the import reaches, and `strings.length` is the library's.
+import strings
+
+fn measured() -> Int {
+    strings.length("four")
+}

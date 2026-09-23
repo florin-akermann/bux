@@ -1,0 +1,7 @@
+// expect-error: L0201
+// An import written below a declaration is sent to the top, above every declaration.
+fn greeting() -> String {
+    "hi"
+}
+
+import io

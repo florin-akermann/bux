@@ -141,16 +141,8 @@ Every other example is held to its expectation either way, because nothing else 
 
 ## The harness
 
-One test binary walks `tests/spec/` and holds every example to its expectation.
+`tests/exemplified.lm` walks `tests/spec/` and holds every example to its expectation.
 It walks in a stable order so two runs report the same first failure.
 A failure names the example's path, so the file to open is never in doubt.
 An empty `tests/spec/` is itself a failure: the specification is never allowed to be nothing.
-
-## Under the launcher
-
-Every example is also run under `bin/bux`, the command line written in Bux.
-The harness `crates/cli/tests/integration/bux_command.rs` runs `bin/bux run` on each example.
-Each run must write what `lumen run` writes on each stream, and end with the same status.
-So an example that holds under `lumen` also holds under the launcher.
-`crates/cli/tests/integration/bux_bootstrap.rs` does the same under the launcher of stage 2.
-Stage 2 is the compiler that the Bux compiler writes for itself, which `docs/specs/run.md` states.
+It runs an example headed `// expect-run` from the line that `lumen run` starts it with.

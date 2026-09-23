@@ -1,0 +1,3 @@
+// expect-error: L0100
+// An extern field is read, never called, so it takes no parameter.
+extern field separator(count: Int) -> String = "java.io.File.separator"

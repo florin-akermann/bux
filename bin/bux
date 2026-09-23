@@ -2,8 +2,8 @@
 # The `bux` command line written in Bux, started on the JDK that JAVA_HOME names.
 #
 # The classes are the ones `lumen build compiler/main.lm` writes beside the sources in compiler/.
-# The directory above compiler/ is on the class path too, because the compiler reads the library,
-# the help topics, and the explanations there as resources.
+# The compiler reads the help topics and the explanations in compiler/ as resources, and the
+# directory above compiler/ is on the class path too, because the library is read there.
 # A link to this script, as on PATH, is followed to the script itself, which sits in bin/.
 self=$0
 while [ -L "$self" ]; do
@@ -15,7 +15,7 @@ while [ -L "$self" ]; do
 done
 root=$(cd "$(dirname "$self")/.." && pwd)
 if [ ! -f "$root/compiler/main.class" ]; then
-    echo "error: $root/compiler/main.class: the compiler is not built; lumen build compiler/main.lm builds it" >&2
+    echo "error: $root/compiler/main.class: the compiler is not built; bin/bootstrap builds it" >&2
     exit 2
 fi
 if [ -z "$JAVA_HOME" ]; then

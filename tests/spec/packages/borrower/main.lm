@@ -1,0 +1,10 @@
+// expect-error: L0317
+// `helper` reaches the `circle` of `lender`, and this file reaches the `circle` beside it.
+// One build would hold both, so the name is refused whichever of the two loads first.
+import circle
+
+import helper
+
+fn edge() -> Int {
+    helper.helped() + circle.kept()
+}

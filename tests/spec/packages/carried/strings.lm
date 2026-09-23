@@ -1,0 +1,8 @@
+// A file named as a library module. It is reached as the module the command names, and
+// `helper` imports `strings` out of the library, which is no ring.
+import helper
+
+// example: counted() == 4
+fn counted() -> Int {
+    helper.measured()
+}

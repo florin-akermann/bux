@@ -1,8 +1,7 @@
 // The `bux` command line, written in Bux: `bin/bux` starts it on a JVM.
 //
-// `compiler/command.lm` holds every command, because a module named `main` cannot be imported, and
-// the harness in `crates/cli` holds the two command lines to one answer. This file only writes the
-// answer out.
+// `compiler/command.lm` holds every command, because a module named `main` cannot be imported.
+// This file only writes the answer out.
 import command
 
 import io

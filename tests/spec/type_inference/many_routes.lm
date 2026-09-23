@@ -1,0 +1,150 @@
+// Each record here holds the next one twice, so there are two to the power of 24 routes down.
+// A search for a ring goes into each record once, rather than once for each route to it.
+// Nothing here is a ring, so the module compiles, and it does so at once.
+fn counted(held: Held0) -> Int {
+    held.count
+}
+
+type Held0 = {
+    count: Int
+    one: Held1
+    two: Held1
+}
+
+type Held1 = {
+    count: Int
+    one: Held2
+    two: Held2
+}
+
+type Held2 = {
+    count: Int
+    one: Held3
+    two: Held3
+}
+
+type Held3 = {
+    count: Int
+    one: Held4
+    two: Held4
+}
+
+type Held4 = {
+    count: Int
+    one: Held5
+    two: Held5
+}
+
+type Held5 = {
+    count: Int
+    one: Held6
+    two: Held6
+}
+
+type Held6 = {
+    count: Int
+    one: Held7
+    two: Held7
+}
+
+type Held7 = {
+    count: Int
+    one: Held8
+    two: Held8
+}
+
+type Held8 = {
+    count: Int
+    one: Held9
+    two: Held9
+}
+
+type Held9 = {
+    count: Int
+    one: Held10
+    two: Held10
+}
+
+type Held10 = {
+    count: Int
+    one: Held11
+    two: Held11
+}
+
+type Held11 = {
+    count: Int
+    one: Held12
+    two: Held12
+}
+
+type Held12 = {
+    count: Int
+    one: Held13
+    two: Held13
+}
+
+type Held13 = {
+    count: Int
+    one: Held14
+    two: Held14
+}
+
+type Held14 = {
+    count: Int
+    one: Held15
+    two: Held15
+}
+
+type Held15 = {
+    count: Int
+    one: Held16
+    two: Held16
+}
+
+type Held16 = {
+    count: Int
+    one: Held17
+    two: Held17
+}
+
+type Held17 = {
+    count: Int
+    one: Held18
+    two: Held18
+}
+
+type Held18 = {
+    count: Int
+    one: Held19
+    two: Held19
+}
+
+type Held19 = {
+    count: Int
+    one: Held20
+    two: Held20
+}
+
+type Held20 = {
+    count: Int
+    one: Held21
+    two: Held21
+}
+
+type Held21 = {
+    count: Int
+    one: Held22
+    two: Held22
+}
+
+type Held22 = {
+    count: Int
+    one: Held23
+    two: Held23
+}
+
+type Held23 = {
+    count: Int
+    one: Int
+    two: Int
+}

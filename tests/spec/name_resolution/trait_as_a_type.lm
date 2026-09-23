@@ -1,0 +1,5 @@
+// expect-error: L0311
+// `Eq` is a trait, so it is written where a constraint belongs and never where a type does.
+fn compared(value: Eq) -> Eq {
+    value
+}

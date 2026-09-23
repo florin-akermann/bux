@@ -1,6 +1,3 @@
-# Build output; `cargo build` writes it again.
-/target
-
 # CLAUDE.md is a local copy of AGENTS.md, and AGENTS.md is the file this repository keeps.
 CLAUDE.md
 
@@ -11,8 +8,6 @@ CLAUDE.md
 !.gitattributes
 !.gitignore
 !.githooks/
-!.cargo/
-!.config/
 !.claude/
 .claude/*
 !.claude/settings.json
@@ -31,6 +26,8 @@ __pycache__/
 # The repository keeps the source; no class file is part of a test, and none is published.
 *.class
 *.jar
+# The seed of the bootstrap is the one archive the repository keeps: `bin/bootstrap` starts from it.
+!bin/seed.jar
 *.jmod
 *.jsa
 

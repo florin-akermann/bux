@@ -98,69 +98,64 @@ told what to write instead of sent looking for what is already there.
 Both are given before a program runs, so neither is ever a status a program chose.
 Once a program runs, `lumen run` ends with the status the program ended with, whatever it is.
 A program the operating system stopped rather than let end has no status of its own, and is
-reported as 128.
+reported as 128 plus the number of the signal.
 
 ## The command line written in Bux
 
 `compiler/main.lm` is the command line written in Bux.
 `compiler/command.lm` holds every command, because no module can import a module named `main`.
-For every command and every word, it writes what `lumen` writes on each stream, byte for byte.
-It also ends with the status that `lumen` ends with.
-The argument parser gives the same usage lines, tips, and help text as the Rust parser.
-The help text is read as a class-path resource: the file that the Rust binary embeds.
+The help text is read as a class-path resource: a file in `compiler/help/`.
 
 `bin/bux` is the launcher, a POSIX `sh` script.
 It starts `java --enable-preview` on the class `main`, with every word it was given.
-The class path is `compiler/` and the directory above it, where the library and help text are.
+The class path is `compiler/`, with the help text, and the directory above it, with the library.
 A link to the launcher, as on `PATH`, works: the launcher follows the link to find `compiler/`.
 It finds the JDK as this page says: `JAVA_HOME` names it, and nothing else is searched.
 It refuses with status `2` when the compiler is not built, and when `JAVA_HOME` names no JDK.
 
 ```text
-error: <root>/compiler/main.class: the compiler is not built; lumen build compiler/main.lm builds it
+error: <root>/compiler/main.class: the compiler is not built; bin/bootstrap builds it
 error: JAVA_HOME is not set, and the bux compiler runs on the JDK it names
 error: /opt/nothing/bin/java: JAVA_HOME names no JDK
 ```
 
-`run` starts the program with the streams of the command line, as the Rust runner does.
+`run` starts the program with the streams of the command line.
 The status of the command line is the status that the program ends with.
 A program that a signal stops ends with the status the JVM gives it, which is 128 and the signal.
-The Rust runner gives 128 for each signal, so these two statuses are not the same.
 
 The JVM gives an error in words of its own, so the command line looks at the path instead.
-A directory, a file that it cannot open, and a file that is not UTF-8 each get the Rust words.
-A path that ends in `/` and names a file is refused before it is read, as the Rust binary does.
+A directory, a file that it cannot open, and a file that is not UTF-8 each get fixed words.
+An example is `Is a directory (os error 21)`.
+A path that ends in `/` and names a file is refused before it is read.
 
-The harness `crates/cli/tests/integration/bux_command.rs` holds the Bux command line to `lumen`.
-One JVM, the driver `answers.lm`, answers a list of command lines, and two such JVMs share it.
-The harness compares every stream and the status of each, and the files that each side writes.
-It holds the launcher to `lumen` on every program under `tests/spec`.
-With no JDK, the harness skips each test that starts a JVM and says why.
+`tests/commanded.lm` holds the command line to golden answers under `tests/commands/`.
+`lines.txt` holds the argument parser, and `fixtures.txt` holds each command on each example.
+A golden answer is the status and every line of each stream.
+`tests/enacted.lm` holds the files that each command writes, and what each command says.
+`tests/started.lm` holds each command that starts a JVM.
+`tests/launched.lm` holds the launcher where it starts the compiler and where it cannot.
+With no JDK, the runner skips each check that starts a JVM and says why.
 
 ## The bootstrap
 
-The Bux compiler builds itself, in two stages that `docs/implementation.md` section 6 names.
-Stage 1 is the compiler that `lumen build compiler/main.lm` writes.
-Stage 2 is the compiler that stage 1 writes when `bin/bux build compiler/main.lm` starts it.
-Both stages are built from the same `compiler/` source.
+The Bux compiler builds itself from a seed, and `bin/bootstrap` does it.
+The seed `bin/seed.jar` holds the classes of a Bux compiler that an earlier compiler built.
+It is the one archive that the repository keeps, and `docs/implementation.md` section 6 says why.
 
-`bux build` writes the class files beside the source, as `lumen build` does.
-So each stage is built from a copy of its own of `compiler/`, made outside the repository.
-The two stages then never write over each other, and the working tree stays clean.
-Each copy also holds `library/`, the help text, the explanations, and `bin/bux`.
-So each stage has a launcher of its own, and each launcher starts its own stage.
+`bin/bootstrap` is a POSIX `sh` script, and it needs only `JAVA_HOME` and the checkout.
+It deletes every class file under `compiler/`, so no class of an old build is left.
+The seed then builds stage 1, the classes beside the sources in `compiler/`, which `bin/bux` starts.
+Stage 1 then builds stage 2 from a copy of `compiler/` in a temporary directory.
+That directory is outside the repository, and the script deletes it when it ends.
 
 Stage 2 is stage 1 byte for byte.
 Stage 2 has the same class files as stage 1, at the same paths, with the same bytes.
+When they differ, the script names the first class that differs and ends with status 1.
 A difference is a defect in the compiler under `compiler/`, and the fix goes there.
-Both stages pass `tests/spec`: each program there runs under each launcher as under `lumen`.
+The script refuses with status `2` when `JAVA_HOME` names no JDK and when the seed is missing.
 
-The harness `crates/cli/tests/integration/bux_bootstrap.rs` builds the two stages.
-It compares the list of class-file paths and lengths first, and then the bytes of each file.
-A difference in the bytes names the file and the first offset that differs.
-It holds stage 2 to `lumen` on every program under `tests/spec`.
-`bux_launcher.rs` does the same for stage 1.
-With no JDK, the harness skips each test and says why, because stage 1 runs on a JVM.
+The script is the check of the bootstrap, because it compares the two stages itself.
+The runner runs on stage 1, so each check of the runner is a check of stage 1.
 
 ## Properties
 
@@ -172,3 +167,4 @@ These hold, and each is checked:
 3. A run ends with the low eight bits of the `Int` `main` gave back.
 4. Every word after the file reaches the program unchanged, `--help` among them.
 5. Stage 2 of the bootstrap is stage 1 byte for byte, and both stages pass `tests/spec`.
+6. A checkout with no class file bootstraps with `JAVA_HOME` alone, and `bin/bux` then starts.

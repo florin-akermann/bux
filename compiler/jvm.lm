@@ -1,6 +1,6 @@
 // Writing class files: every lowered module of a program as the bytes a JVM loads.
 //
-// `docs/specs/codegen.md` states the class file, and `crates/jvm` writes the same bytes in Rust.
+// `docs/specs/codegen.md` states the class file, and `tests/written.lm` reads the bytes back.
 // Nothing here knows the language: it knows classes, descriptors, opcodes, and the verifier.
 // Each step takes the state it writes to and gives back the state it made, which is a value.
 import bytes

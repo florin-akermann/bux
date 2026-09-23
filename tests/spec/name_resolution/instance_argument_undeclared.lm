@@ -1,0 +1,12 @@
+// expect-error: L0318
+// An instance writes the arguments of its type as the type parameters it declares, and `Int` is
+// none of them.
+instance Area<List<Int>> {
+    fn covered(shape: List<Int>) -> Int {
+        5
+    }
+}
+
+trait Area<T> {
+    fn covered(shape: T) -> Int
+}

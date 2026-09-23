@@ -5,7 +5,7 @@
 `example/` holds one Lumen program that somebody would actually write.
 
 Everything else in the tree is evidence about the compiler.
-`tests/spec/` holds files that exist to be accepted or refused, and `crates/` holds the compiler.
+`tests/spec/` holds files that exist to be accepted or refused, and `compiler/` holds the compiler.
 Neither is a program, and a reader looking for what Lumen is like has nowhere to look.
 
 `example/main.lm` is that place.

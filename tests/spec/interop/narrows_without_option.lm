@@ -1,0 +1,9 @@
+// expect-error: L0431
+// A narrowed argument that no `int` holds never reaches the member, so the call has no answer.
+// An `Option` says that with `None`, and a bare `Int` result has no way to say it.
+fn main(arguments: List<String>) -> Int {
+    _ = code_unit_at("hello", 1)
+    0
+}
+
+extern method char code_unit_at(text: String, int index: Int) -> Int = "charAt"

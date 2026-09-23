@@ -1,0 +1,19 @@
+// expect-error: L0309
+// `Area` declares `covered` once, so an instance writes one body for it and never two.
+instance Area<Square> {
+    fn covered(shape: Square) -> Int {
+        shape.side * shape.side
+    }
+
+    fn covered(shape: Square) -> Int {
+        4 * shape.side
+    }
+}
+
+trait Area<T> {
+    fn covered(shape: T) -> Int
+}
+
+type Square = {
+    side: Int
+}

@@ -1,0 +1,3 @@
+// expect-error: L0202
+// A type is `PascalCase`, so canonical form spells this one `UserId`.
+type user_id = user_id(Int)

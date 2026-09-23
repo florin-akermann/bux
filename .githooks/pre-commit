@@ -1,21 +1,14 @@
 #!/bin/sh
 set -e
 
-# `.cargo/config.toml` sets `-D warnings` for every cargo call in this repo, so the commands below
-# share one set of compiled artifacts with ordinary development builds.
+# The seed builds the compiler, and the compiler builds itself again: stage 2 must be stage 1 byte
+# for byte. `docs/specs/run.md` states the bootstrap.
+bin/bootstrap
 
-# Formatting is a compile error in Lumen; the compiler's own tree holds itself to the same bar.
-cargo fmt --all --check
-
-# clippy --all-targets compile-checks every target (lib, bin, tests) with warnings denied, so it is
-# the single gate for compile errors and lints.
-cargo clippy --all-targets -- -D warnings
-
-cargo nextest run
-
-# Dependency-advisory gate. Policy lives in `.cargo/audit.toml`: offline against the cached
-# advisory database, vulnerabilities block, informational warnings are surfaced only.
-cargo audit
+# The runner holds the compiler to every example, every example line, every drawn property, and
+# the command line. `docs/implementation.md` section 7 states it. It ends with status 0 only when
+# nothing failed.
+bin/runner
 
 mycs_fail() {
     echo "mycs check failed. Fix the violation; never suppress it without a reason beside it."

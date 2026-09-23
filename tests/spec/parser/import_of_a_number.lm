@@ -1,0 +1,3 @@
+// expect-error: L0100
+// An import names a module, and the refusal points at the token that is not a name.
+import 1

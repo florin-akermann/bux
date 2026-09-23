@@ -1,0 +1,5 @@
+// expect-error: L0315
+// A manifest states `version` after `package`, and this one does not.
+fn held() -> Int {
+    1
+}

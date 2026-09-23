@@ -94,16 +94,13 @@ A hole given the wrong number of arguments is `L0401`, for the same reason.
 ## The hole listing written in Bux
 
 `compiler/holes.lm` finds the holes in Bux.
-The Rust phase is the answer that it must give.
 It reads each module that `compiler/exhaustiveness.lm` accepts, in the order they load.
 A call is a hole when resolution says that its callee is the `todo` of the prelude.
 
 `holes.of_module(resolved)` gives every hole of one module, in the order they are written.
-The Bux phase finds the holes that the Rust phase finds, at the same spans.
 The code, the message, and the help of each hole are the ones that `lumen build` shows.
 
 `holes.printed(path, prelude)` gives the listing for a program.
-The listing is in the form that the harness compares.
 The program is the module at `path` and each module that it reaches, loaded in order.
 A program that a phase before a build refuses is `skipped`.
 Every other program is `checked`, and then one refusal for each hole.
@@ -111,17 +108,14 @@ A refusal is the module name, then the code, the span, and the message.
 Then the refusal gives `help:` and the help.
 
 The listing shows the parts of each block that `lumen build` shows, one hole after the other.
-The diagnostics phase renders the line and the column of a block from the span.
-The Bux compiler renders no diagnostic yet, so the harness compares the parts and not the render.
+`compiler/command.lm` renders the line and the column of a block from the span.
 
-The harness `crates/cli/tests/integration/bux_checks.rs` lists the holes with both phases.
-It compares the two listings line for line, on the fixtures that the exhaustiveness check uses.
-Modules with drawn holes are fixtures too.
-A build needs no JDK, and a run needs one; with no JDK, the harness skips each run and says why.
+`tests/unfinished.lm` holds the listing to the properties below, on modules with drawn holes.
+The `holes_refused` check of `tests/enacted.lm` holds `lumen build` to its refusal.
 
 ## Properties
 
-These hold and are checked with property-based tests:
+These hold and are checked by drawn properties in the runner:
 
 1. A module that holds no hole gives back no hole, whatever it is written out of.
 2. Every hole a module holds is found, wherever in the module it is written.

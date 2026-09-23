@@ -1,0 +1,6 @@
+// expect-error: L0101
+// A carriage return before a line break is a blank, so a comment and a string stop before it.
+fn f() {
+    name := "Alice
+    other := "a backslash does not escape a line break\
+}

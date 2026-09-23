@@ -60,7 +60,7 @@ Nothing reads `_` back, because `_ =` binds nothing.
 
 ## The error
 
-A discarded value is `L0408`, raised by inference in `crates/types/src/error.rs`:
+A discarded value is `L0408`, raised by inference and worded by `compiler/refusal.lm`:
 
 ```text
 error[L0408]: `Result<(), Error>` is left here and nothing takes it
@@ -77,7 +77,7 @@ is a mistake: a `Result` almost always is, and something else may not be.
 
 ## Properties
 
-These hold and are checked with property-based tests:
+These hold and are checked by drawn properties in the runner:
 
 1. A statement of type `()` is accepted wherever it is written in a block.
 2. A statement of any other type is accepted as a block's last statement and refused above it.

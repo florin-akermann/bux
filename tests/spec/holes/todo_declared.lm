@@ -1,0 +1,9 @@
+// expect-error: L0302
+// Nothing hides `todo`, so a hole is always a hole: a declaration of that name is refused.
+fn count() -> Int {
+    todo("not a hole at all")
+}
+
+fn todo(reason: String) -> Int {
+    7
+}

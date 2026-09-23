@@ -1,0 +1,7 @@
+// A module that imports `strings`, which is the library's however the command started.
+import strings
+
+// example: measured() == 4
+fn measured() -> Int {
+    strings.length("four")
+}

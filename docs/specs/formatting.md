@@ -136,10 +136,10 @@ reported for the way it ends, which is how a missing final newline reads.
 `tests/spec/format/<name>.lm` files are already in canonical form, and formatting one changes
 nothing.
 A sibling `<name>.unformatted` file, where there is one, formats to the `.lm` file beside it.
-The format crate's integration tests walk that directory and name the failing example.
+`tests/siblings.lm` walks that directory and names the failing file.
 
 Every `.lm` file under `tests/spec/` is in canonical form unless it says which diagnostic refuses
-it, which `docs/specs/executable-examples.md` describes and the harness in `crates/cli` holds
+it, which `docs/specs/executable-examples.md` describes and `tests/exemplified.lm` holds
 every example to.
 The language's own examples are then the largest evidence that the printer is right.
 
@@ -150,31 +150,28 @@ A rule is checked by the phase that holds the information it needs, and no earli
 How a name is spelled is a rule of the same kind, and `docs/specs/naming.md` says where each of
 those is checked.
 
-Import order is syntax, so `lumen-format` checks it alongside canonical form and raises `L0201`.
+Import order is syntax, so `compiler/format.lm` checks it with canonical form and raises `L0201`.
 Whether a declaration is written above what uses it needs to know which name means which
-declaration, so `lumen-resolver` checks it and raises `L0303`; `docs/specs/modules.md` states it.
-Arm order needs the variant list, so `lumen-exhaustiveness` checks it and raises `L0501`;
-`docs/specs/exhaustiveness.md` states it.
+declaration, so `compiler/resolver.lm` checks it and raises `L0303`.
+`docs/specs/modules.md` states that rule.
+Arm order needs the variant list, so `compiler/exhaustiveness.lm` checks it and raises `L0501`.
+`docs/specs/exhaustiveness.md` states that rule.
 
 ## The formatter written in Bux
 
-`compiler/format.lm` is this formatter written in Bux, and the Rust formatter is its answer.
+`compiler/format.lm` is this formatter, written in Bux.
 It prints the tree of `compiler/parser.lm`, and it reads the comments from `compiler/lexer.lm`.
 `format.format(source)` gives the canonical text, or the parse error where the source is no program.
 `format.check(source)` holds a source to canonical form, as `lumen check` does.
 It gives the first refusal it finds: the parse error, then `L0200`, `L0201`, `L0202`, `L0203`.
 
-The harness `crates/cli/tests/integration/bux_format.rs` builds the Bux formatter with `lumen`.
-It runs the Bux formatter over every `.lm` file of the repository, `compiler/` included.
-A file that parses must format to itself, and a file the Rust parser refuses must be refused.
-It also runs the Bux formatter over each `tests/spec/format` example and over drawn files.
-There, the answer must be the text of the Rust formatter, byte for byte.
-A build needs no JDK, and a run needs one; with no JDK, the harness skips each run and says why.
-The harness `bux_command.rs` holds `format.check` to `lumen check` on every fixture.
+`tests/layout.lm` holds the formatter to the properties below, on drawn programs and drawn files.
+`tests/exemplified.lm` holds every example under `tests/spec` to canonical form.
+`tests/commanded.lm` holds `lumen check` and `lumen fmt` to golden answers on every example.
 
 ## Properties
 
-These hold and are checked with property-based tests:
+These hold and are checked by drawn properties in the runner:
 
 1. Formatting is idempotent: `format(format(source))` equals `format(source)`.
 2. Formatted output parses.

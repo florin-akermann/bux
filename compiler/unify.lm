@@ -1,6 +1,6 @@
 // The types of type inference, the table of what each variable was settled on, and the schemes.
 //
-// `docs/specs/types.md` states the types and unification, and `crates/types` does the same in Rust.
+// `docs/specs/types.md` states the types and unification.
 // Nothing here knows a program: this is the part of the phase that reads types and nothing else.
 // The table is a value, so each step that settles a variable gives back the table it made.
 import list
@@ -518,7 +518,7 @@ type Held = {
 /// The two ways unification fails.
 ///
 /// A mismatch keeps the table as far as it got, because what it settled before it failed is what
-/// the refusal reads its two types with, as the Rust phase reads its own table.
+/// the refusal reads its two types with, as the Rust phase read its own table.
 type Clash =
     | Mismatch(Table)
     | Infinite

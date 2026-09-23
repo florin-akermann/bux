@@ -154,7 +154,7 @@ error[L0411]: `Span` is a constructor, so it carries its values in order and nam
 help: a variant whose values want names declares them as fields and is built as a record
 ```
 
-All three are raised in `crates/types/src/infer/arguments.rs`.
+All three are raised in `compiler/infer.lm`.
 `L0410` and `L0411` are raised as inference reaches the call.
 `L0409` is raised once inference has walked every function of the module.
 A function declared above its caller is walked after the caller, so its types settle later.
@@ -292,7 +292,7 @@ A body that does not typecheck is `L0400` first, as it is before every rule here
 
 ## Properties
 
-These hold and are checked with property-based tests:
+These hold and are checked by drawn properties in the runner:
 
 1. A call of a declaration that repeats a type compiles when it names its arguments, and does not
    when it passes them positionally.

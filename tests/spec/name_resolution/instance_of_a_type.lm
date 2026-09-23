@@ -1,0 +1,11 @@
+// expect-error: L0310
+// An instance names a trait, and `Square` is a type.
+instance Square<Square> {
+    fn covered(shape: Square) -> Int {
+        shape.side
+    }
+}
+
+type Square = {
+    side: Int
+}

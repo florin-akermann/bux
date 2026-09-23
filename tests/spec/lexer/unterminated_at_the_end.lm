@@ -1,0 +1,4 @@
+// expect-error: L0101
+// A string that the file ends inside of runs up to the end of the file.
+fn f() {
+    name := "Alice

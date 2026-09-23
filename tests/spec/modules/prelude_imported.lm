@@ -1,0 +1,7 @@
+// expect-error: L0306
+// The prelude is in scope in every module without an import, so no import reaches it.
+import prelude
+
+fn held() -> Int {
+    1
+}

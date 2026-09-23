@@ -1,0 +1,54 @@
+#!/bin/sh
+# The bootstrap: the seed builds the Bux compiler, and that compiler builds itself once more.
+#
+# bin/seed.jar holds the classes of a Bux compiler that an earlier compiler built. It writes
+# stage 1, the classes beside the sources in compiler/, which bin/bux starts. Stage 1 then builds
+# stage 2 from a copy of the sources in a temporary directory outside the repository. Stage 2 must
+# be stage 1 byte for byte. If it is not, the compiler does not build itself as it says, and this
+# script names the first class that differs and ends with status 1.
+# A link to this script is followed to the script itself, which sits in bin/.
+set -e
+self=$0
+while [ -L "$self" ]; do
+    link=$(readlink "$self")
+    case $link in
+        /*) self=$link ;;
+        *) self=$(dirname "$self")/$link ;;
+    esac
+done
+root=$(cd "$(dirname "$self")/.." && pwd)
+if [ -z "$JAVA_HOME" ]; then
+    echo "error: JAVA_HOME is not set, and the bootstrap runs on the JDK it names" >&2
+    exit 2
+fi
+java="$JAVA_HOME/bin/java"
+if [ ! -x "$java" ]; then
+    echo "error: $java: JAVA_HOME names no JDK" >&2
+    exit 2
+fi
+if [ ! -f "$root/bin/seed.jar" ]; then
+    echo "error: $root/bin/seed.jar: the seed is missing, and the bootstrap starts from it" >&2
+    exit 2
+fi
+cd "$root"
+find compiler -name '*.class' -exec rm -f {} +
+"$java" --enable-preview -cp "$root/bin/seed.jar:$root" main build compiler/main.lm
+
+copy=$(mktemp -d "${TMPDIR:-/tmp}/bux-bootstrap.XXXXXX")
+trap 'rm -rf "$copy"' EXIT
+cp -R compiler "$copy/compiler"
+find "$copy/compiler" -name '*.class' -exec rm -f {} +
+"$java" --enable-preview -cp "$root/compiler:$root" main build "$copy/compiler/main.lm"
+
+one=$(cd compiler && find . -name '*.class' | LC_ALL=C sort)
+two=$(cd "$copy/compiler" && find . -name '*.class' | LC_ALL=C sort)
+if [ "$one" != "$two" ]; then
+    echo "error: stage 2 does not write the classes stage 1 holds" >&2
+    exit 1
+fi
+for class in $one; do
+    if ! cmp -s "compiler/$class" "$copy/compiler/$class"; then
+        echo "error: compiler/${class#./}: stage 2 differs from stage 1" >&2
+        exit 1
+    fi
+done

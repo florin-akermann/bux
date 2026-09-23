@@ -1,0 +1,7 @@
+// expect-error: L0300
+// A program reaches a module of the library only through an import of it, so a program that
+// imports none reaches none of the names the library declares.
+fn main(arguments: List<String>) -> Int {
+    _ = strings.join([], "-")
+    0
+}

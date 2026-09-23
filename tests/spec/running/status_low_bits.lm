@@ -1,0 +1,11 @@
+// expect-run
+// > something went wrong
+// status 255
+// A status is eight bits wide, so the run ends with the low eight bits of what `main` gives back.
+// `-1` holds all ones in those eight bits, which is `255`. `docs/specs/run.md` states the rule.
+import io
+
+fn main(arguments: List<String>) -> Int {
+    io.println("something went wrong")
+    -1
+}

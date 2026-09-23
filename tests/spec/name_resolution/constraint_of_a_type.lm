@@ -1,0 +1,9 @@
+// expect-error: L0310
+// A constraint names a trait, and `Square` is a type.
+fn kept<T: Square<T>>(value: T) -> T {
+    value
+}
+
+type Square = {
+    side: Int
+}

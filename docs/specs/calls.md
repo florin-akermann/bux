@@ -97,7 +97,7 @@ Spacing inside the call is the spacing of any other call, which `docs/specs/form
 
 ## The errors
 
-`L0423` is raised by inference, in `crates/types/src/error.rs`:
+`L0423` is raised by inference, and `compiler/refusal.lm` words it:
 
 ```text
 error[L0423]: `rename` is written with its first argument in front, so this call names none of them
@@ -118,7 +118,7 @@ call earns it: `L0300` for a name nothing declares, `L0401` for a count, `L0400`
 
 ## Properties
 
-These hold and are checked with property-based tests:
+These hold and are checked by drawn properties in the runner:
 
 1. `first.f(rest)` and `f(first, rest)` infer the same type wherever both are written.
 2. The two spellings compile to the same instructions, apart from where they are written.

@@ -107,37 +107,29 @@ a constraint over a trait the declaring module keeps to itself is refused as `L0
 
 ## The loader written in Bux
 
-`compiler/modules.lm` is this loader written in Bux, and the Rust loader is the answer it must give.
+`compiler/modules.lm` is this loader, written in Bux.
 `modules.load(path)` reads the module at `path` and every module it reaches, as this section and
 `docs/specs/packages.md` state.
-It gives the modules in the order the Rust loader gives them, dependencies before dependents.
+It gives the modules in order, dependencies before dependents.
 Each module keeps its name, the path it was read from, its source, and the tree of
 `compiler/parser.lm`.
 
-It stops at the first refusal, and that refusal is the Rust loader's: the same file, code, span,
-message, and help.
+It stops at the first refusal, which has a file, a code, a span, a message, and a help line.
 A span counts UTF-8 bytes, as a span of `compiler/lexer.lm` does.
 A library module is a resource on the class path, which `docs/specs/library.md` states.
-Whether two routes reach one file is the JVM's canonical path of each, where Rust asks the file
-system for the same answer.
+Whether two routes reach one file is the JVM's canonical path of each.
 
-A file the Rust loader cannot read is a file the Bux loader cannot read, with the path it named.
-The reason differs, because each is the words of its own platform, so the harness compares the
-path alone.
-Both loaders ask whether a file is there before they look beside a module or in a package.
-The Bux loader asks through `java.io.File.isFile`, so a directory of that name is no module.
+A file that the loader cannot read is refused with the path that the import named.
+The loader asks whether a file is there before it looks beside a module or in a package.
+It asks through `java.io.File.isFile`, so a directory of that name is no module.
 
-`modules.printed(path)` gives the answer in the form the harness compares.
+`modules.printed(path)` gives the answer in the form that `tests/loading.lm` compares.
 A load is `loaded`, and then one line for each module: its name and its path.
 A refusal is `refused` and the path of the file it is about, then the code, span, and message,
 then `help:` and the help.
 A file that cannot be read is `unreadable` and its path.
 
-The harness `crates/cli/tests/integration/bux_modules.rs` builds the Bux loader with `lumen`.
-It loads each case with both loaders, and it compares the two answers line for line.
-The cases are the ones of the Rust loader's tests, and trees of modules and manifests drawn at
-random.
-A build needs no JDK, and a run needs one; with no JDK, the harness skips each run and says why.
+`tests/loading.lm` holds the loader to its properties, on trees of modules and manifests it draws.
 
 ## Scopes
 
@@ -300,7 +292,7 @@ Resolution stops at the first error, as parsing does.
 
 ## The resolver written in Bux
 
-`compiler/resolver.lm` is this resolver written in Bux, and the Rust resolver is its answer.
+`compiler/resolver.lm` is this resolver, written in Bux.
 It reads the name and the tree of each module that `compiler/modules.lm` loads.
 The tree is the tree of `compiler/parser.lm`, and nothing in it changes.
 The answer is the tree and, for each name that has a definition, the definition that it means.
@@ -310,11 +302,9 @@ The resolver reads no file and no resource, so the caller gives it the prelude.
 `resolver.resolve(program, module, prelude)` resolves one module against that prelude.
 `resolver.prelude_resolved(program)` resolves the prelude itself, with the names the JVM holds.
 
-The Bux resolver refuses what the Rust resolver refuses, at the same name.
-It gives the same code, span, message, and help, and it stops at the first refusal too.
-The check of where a declaration belongs finds the same first declaration as the Rust check.
+It stops at the first refusal, which has a code, a span, a message, and a help line.
 
-`resolver.printed(source, prelude)` gives the answer in the form that the harness compares.
+`resolver.printed(source, prelude)` gives the answer in the form that `tests/naming.lm` compares.
 A resolved module is `resolved`, and then one line for each name that has a definition.
 A line is the span of the name, `type` or `value`, the kind of definition, and its origin.
 The kinds are `module`, `type`, `trait`, `type-parameter`, `constructor`, `function`,
@@ -324,15 +314,11 @@ The lines are in the order of their spans, and a `type` line comes before a `val
 A refusal is `refused`, then the code, span, and message, then `help:` and the help.
 A source that does not parse is `unparsed`.
 
-The harness `crates/cli/tests/integration/bux_resolver.rs` builds the Bux resolver with `lumen`.
-It resolves each fixture with both resolvers, and it compares the two answers line for line.
-The fixtures are every `.lm` file of `tests/spec`, `library/`, and `compiler/` that parses.
-Modules that each refusal names, and modules drawn at random, are fixtures too.
-A build needs no JDK, and a run needs one; with no JDK, the harness skips each run and says why.
+`tests/naming.lm` holds the resolver to the properties below, on modules drawn at random.
 
 ## Properties
 
-These hold and are checked with property-based tests:
+These hold and are checked by drawn properties in the runner:
 
 1. Resolving a program never panics and is deterministic.
 2. A module built of pieces that each resolve resolves.

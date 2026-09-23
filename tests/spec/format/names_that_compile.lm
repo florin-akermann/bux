@@ -1,0 +1,11 @@
+// A digit continues the word it is written in, and a name of two letters is a word.
+// A local binding is private to its body, so no naming rule is about one.
+// example: go(Int32(2)) == 2
+fn go(count: Int32) -> Int {
+    aBc := count
+    match aBc {
+        Int32(held) => held
+    }
+}
+
+type Int32 = Int32(Int)

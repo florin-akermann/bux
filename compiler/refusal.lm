@@ -1,7 +1,6 @@
 // What type inference refuses a module with, and the words each refusal is written in.
 //
 // `docs/specs/types.md` and `docs/specs/diagnostics.md` state the codes and the wording.
-// `crates/types` writes the same words in Rust, and a harness holds the two to one answer.
 // A refusal carries the types it names, so this module reads types and knows no program.
 import lexer
 

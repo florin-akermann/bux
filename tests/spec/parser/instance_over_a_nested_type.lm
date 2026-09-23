@@ -1,0 +1,11 @@
+// expect-error: L0100
+// An instance writes the arguments of its type as names, never as types of their own.
+instance Sized<List<List<T>>> {
+    fn size(items: List<List<T>>) -> Int {
+        0
+    }
+}
+
+trait Sized<T> {
+    fn size(item: T) -> Int
+}

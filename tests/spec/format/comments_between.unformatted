@@ -1,0 +1,28 @@
+// A comment between two fields, two variants, or two arms keeps its place, and canonical form
+// takes the blanks off the end of it. A comment inside a line that canonical form joins moves
+// below the joined line.
+import list
+
+// example: counted(Pending) == 2
+fn counted(payment: Payment) -> Int {
+    listed := list.length(
+        // the length of what is listed
+        [1, 2]
+    )
+    match payment {
+    Pending => listed
+// and then the rest
+    Done => 0
+    }
+}
+
+type User = {
+// who they are
+id: Int
+active: Bool
+}
+
+type Payment =
+| Pending
+        // and then
+| Done

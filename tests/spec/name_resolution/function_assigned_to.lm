@@ -1,0 +1,11 @@
+// expect-error: L0304
+// A function is reached by a call, so its name is not a value on the left of an assignment
+// either.
+fn go() -> Int {
+    helper = 1
+    helper()
+}
+
+fn helper() -> Int {
+    1
+}

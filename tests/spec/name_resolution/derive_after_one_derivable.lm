@@ -1,0 +1,7 @@
+// expect-error: L0312
+// A derive names the first trait it lists that no type derives, after the ones that pass.
+derive Eq, Add for User
+
+type User = {
+    id: Int
+}

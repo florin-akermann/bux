@@ -1,0 +1,23 @@
+// A module gives its own type an instance of `IntegerLiteral`, and the instance travels with it.
+// example: shown(tallied(3)) == "Tally(3)"
+fn tallied(count: Int) -> Tally {
+    Tally(count)
+}
+
+instance IntegerLiteral<Tally> {
+    fn lowest() -> Int {
+        0
+    }
+
+    fn highest() -> Int {
+        100
+    }
+
+    fn from_literal(literal: Int) -> Tally {
+        Tally(literal)
+    }
+}
+
+derive Eq, Show for Tally
+
+type Tally = Tally(Int)

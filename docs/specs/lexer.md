@@ -78,12 +78,14 @@ The lexer accepts any string, including empty input, which lexes to no tokens.
 
 `tests/spec/lexer/<name>.lm` files are lexed and compared with the sibling `<name>.tokens` file.
 Each line of the `.tokens` file is `<kind> <start>..<end> <text>`, one per token, in source order.
-The lexer crate's integration tests walk that directory and name the failing example.
+A keyword and a punctuation are named by the text that spells them, as in `Punct(:=)`.
+The text is quoted, and a quote, a backslash, a line break, a tab, and a return are escaped.
+`tests/siblings.lm` walks that directory and names the failing file.
 An example is a whole program held to `docs/specs/executable-examples.md`, not a fragment.
 
 ## The lexer written in Bux
 
-`compiler/lexer.lm` is this lexer written in Bux, and the Rust lexer is the answer it must give.
+`compiler/lexer.lm` is this lexer, written in Bux.
 It is the first phase of the Bux compiler, which `docs/implementation.md` section 6 states.
 
 A Bux string is read one UTF-16 code unit at a time, and a span still counts UTF-8 bytes.
@@ -91,7 +93,7 @@ So the lexer scans code units and adds up the UTF-8 width of each unit that a to
 A unit below 128 is one byte, and a unit below 2048 is two bytes.
 Each half of a surrogate pair is two bytes, because the pair is one four-byte character.
 Every other unit is three bytes.
-An `Unknown` token covers a whole surrogate pair, as the Rust lexer covers a whole character.
+An `Unknown` token covers a whole surrogate pair, so it covers one whole character.
 
 A Bux token also holds its text, because a later phase cannot cut a string at a byte offset.
 The parser reads a name, a number, and a string from that text.
@@ -101,14 +103,12 @@ A token kind, a keyword, and a punctuation derive `Eq`, so the parser compares k
 A keyword and a punctuation show the text that spells them, as `Keyword(fn)` and `Punct(:=)` do.
 Every other kind shows its name, as `Identifier` and `UnterminatedString` do.
 
-The harness `crates/cli/tests/integration/bux_lexer.rs` builds the Bux lexer with the Rust `lumen`.
-It runs the Bux lexer over every `tests/spec/lexer` example and over drawn text.
-It compares each list with the list of the Rust lexer, token for token.
-A build needs no JDK, and a run needs one; with no JDK, the harness skips each run and says why.
+`tests/lexing.lm` holds the lexer to the properties below, on drawn text.
+`tests/siblings.lm` holds it to every `.tokens` file under `tests/spec`, token for token.
 
 ## Properties
 
-These hold for arbitrary text and are checked with property-based tests:
+These hold for arbitrary text and are checked by drawn properties in the runner:
 
 1. Lexing never panics.
 2. Spans are in order, non-overlapping, non-empty, and on character boundaries.

@@ -1,0 +1,7 @@
+// expect-error: L0202
+// A field of a record variant is `snake_case`, so canonical form spells it `authorization_id`.
+type Payment =
+    | Pending
+    | Authorized {
+        authorizationID: String
+    }

@@ -1,6 +1,6 @@
 // Holes: every `todo(…)` a module holds, which `lumen check` accepts and `lumen build` refuses.
 //
-// `docs/specs/holes.md` states the rule, and `crates/holes` finds the holes in Rust.
+// `docs/specs/holes.md` states the rule, and `tests/unfinished.lm` holds it on drawn modules.
 // A hole is a call of the prelude's `todo`, and resolution says which calls are of that one.
 // Every hole is found, in the order the module writes them, because a build names every one.
 import ast

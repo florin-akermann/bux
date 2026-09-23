@@ -1,0 +1,16 @@
+// expect-error: L0501
+// An alternative inside a constructor is held to the order of its type as well.
+fn described(held: Option<Payment>) -> String {
+    match held {
+        Some(Failed(_) | Pending) => "seen"
+        Some(Authorized { authorization_id }) => authorization_id
+        None => "nothing"
+    }
+}
+
+type Payment =
+    | Pending
+    | Authorized {
+        authorization_id: String
+    }
+    | Failed(String)

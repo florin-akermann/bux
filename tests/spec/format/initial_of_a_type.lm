@@ -1,0 +1,3 @@
+// expect-error: L0203
+// A name that is an initial and is in the wrong case too is refused as the initial.
+type F = F(Int)

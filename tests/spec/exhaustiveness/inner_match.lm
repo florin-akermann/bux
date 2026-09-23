@@ -1,0 +1,10 @@
+// expect-error: L0500
+// A match written inside the arm of another match is checked too, and this one leaves `false`.
+fn described(outcome: Option<Bool>) -> String {
+    match outcome {
+        Some(flag) => match flag {
+            true => "yes"
+        }
+        None => "nothing"
+    }
+}

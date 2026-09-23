@@ -1,0 +1,4 @@
+// expect-error: L0100
+// A trait declares at least one method.
+trait Sized<T> {
+}

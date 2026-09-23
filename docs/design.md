@@ -3,7 +3,7 @@
 > Go's simplicity.
 > Haskell's type system.
 > Valhalla's values.
-> A compiler written in Rust.
+> A compiler written in itself.
 
 A small, statically typed language for building practical software.
 It is built on Valhalla, the JVM's value classes, and every Lumen value is a value.
@@ -11,7 +11,7 @@ No type a program declares has identity, and equality is by state, only where a 
 No built-in type is special: a type a library declares can do everything `Int` can.
 It inherits neither Java's object model, Rust's ownership model, nor Haskell's complexity.
 
-The compiler is written in Rust and targets JVM bytecode, on JDK 28 or later.
+The compiler is written in Bux and targets JVM bytecode, on JDK 28 or later.
 The JVM is the first compilation target and nothing more; section 2 says what that rules out.
 
 This document is the language specification; every change to the language is a change here first.

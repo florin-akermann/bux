@@ -1,0 +1,5 @@
+// expect-error: L0100
+// A parameter list that is never closed is refused at the first token that is no parameter.
+fn opened( {
+    0
+}

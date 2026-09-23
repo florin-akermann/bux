@@ -1,0 +1,9 @@
+// expect-error: L0304
+// A function name is refused wherever a value is written, and a `return` writes a value.
+fn go() -> Int {
+    return helper
+}
+
+fn helper() -> Int {
+    1
+}

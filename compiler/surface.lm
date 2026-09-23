@@ -1,6 +1,6 @@
 // What a module offers the modules that import it, and what they offer back.
 //
-// `docs/specs/modules.md` states what that is, and `crates/types/src/surface.rs` does it in Rust.
+// `docs/specs/modules.md` states what that is.
 // A module offers every function and every type it declares, and the instances of the prelude's
 // traits that it gives those types. A module that imports it reaches each of them through the
 // module's name, so each type the surface holds is written as `module.Name` once it is offered.

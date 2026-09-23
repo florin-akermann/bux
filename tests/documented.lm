@@ -1,0 +1,127 @@
+// Every `// example:` line of every module, run the way `lumen test <file>` runs them.
+//
+// `docs/specs/doc-examples.md` states what an example line is and what running one amounts to.
+// The modules are those under `tests/spec`, `library/`, `compiler/`, and `tests/` itself. An example
+// under `tests/spec` that its header says is refused cannot be run, so its lines are not either.
+import command
+
+import files
+
+import header
+
+import held
+
+import ir
+
+import list
+
+import strings
+
+import walk
+
+/// Every example line of every module of `modules`, each module tested once.
+// example: every_line_held(["no-such-directory/a.lm"], ir.little_library()).cases == 0
+fn every_line_held(modules: List<String>, library: ir.Library) -> held.Held {
+    var found = held.nothing_failed(0)
+    for path in modules {
+        found = held.added(found, module_held(path, library))
+    }
+    found
+}
+
+/// Every module the runner tests: those under `spec` at any depth, and those directly in each of
+/// `directories`, which are the library, the compiler, and the runner.
+// example: list.length(modules_of(spec: "no-such-directory", directories: ["no-such-directory"])) == 0
+fn modules_of(spec: String, directories: List<String>) -> List<String> {
+    var found = walk.every_file(spec, ".lm")
+    for directory in directories {
+        for path in walk.files_in(directory, ".lm") {
+            found = list.push(found, path)
+        }
+    }
+    found
+}
+
+/// Every example line of the module at `path`, which is one case each, and a line for each failure.
+// example: module_held("no-such-directory/a.lm", ir.little_library()).cases == 0
+fn module_held(path: String, library: ir.Library) -> held.Held {
+    source := ok_or(files.read(path), "")
+    count := lines_stated(source)
+    if count == 0 || is_refused(header.expectation_of(source)) {
+        return held.nothing_failed(0)
+    }
+    if path == "library/prelude.lm" {
+        return held.with_skip(held.nothing_failed(0), path + ": the run of its examples declares `or` beside the prelude's own, which `lumen test` refuses as L0302")
+    }
+    said := command.tested(path, library)
+    var found = held.nothing_failed(count)
+    for line in reported(errors: said.errors, path: path) {
+        found = held.with_failure(found, line)
+    }
+    found
+}
+
+/// Whether an example says the compiler refuses it, which leaves nothing to run.
+// example: is_refused(header.Refused("L0100"))
+// example: !is_refused(header.Compiles)
+fn is_refused(expectation: header.Expectation) -> Bool {
+    match expectation {
+        header.Refused(_) => true
+        header.Misstated(_) => true
+        _ => false
+    }
+}
+
+/// How many example lines `source` states: comment lines whose text opens with `example:`.
+// example: lines_stated("/// a\n// example: f() == 1\n    // example: g()\n") == 2
+fn lines_stated(source: String) -> Int {
+    var count = 0
+    for line in walk.lines_of(source) {
+        if is_an_example_line(command.trimmed_start(line)) {
+            count += 1
+        }
+    }
+    count
+}
+
+/// Whether `line` is a comment of one run of slashes whose text opens with `example:`.
+// example: is_an_example_line("/// example: f()")
+// example: !is_an_example_line("// an example: f()")
+fn is_an_example_line(line: String) -> Bool {
+    var index = 0
+    for or(strings.at(line, index), 0) == 47 {
+        index += 1
+    }
+    index >= 2 && command.has_prefix(or(strings.cut(line, index, strings.length(line)), ""), " example:")
+}
+
+/// One line for each refusal `errors` holds, naming where it points and what it says.
+///
+/// A refusal is its `error` line and, where it points somewhere, the `-->` line under it. One that
+/// points nowhere is reported against `path`.
+// example: reported(errors: "error[L0603]: the example of `f` does not hold\n  --> a.lm:3:1\n", path: "a.lm") == ["a.lm:3:1: error[L0603]: the example of `f` does not hold"]
+// example: reported(errors: "error: gone\n", path: "a.lm") == ["a.lm: error: gone"]
+fn reported(errors: String, path: String) -> List<String> {
+    var lines = []
+    var message = ""
+    for line in walk.lines_of(errors) {
+        pointed := command.trimmed_start(line)
+        if command.has_prefix(line, "error") {
+            lines = with_message(lines: lines, at: path, message: message)
+            message = line
+        } else if command.has_prefix(pointed, "--> ") && message != "" {
+            lines = with_message(lines: lines, at: or(strings.cut(pointed, 4, strings.length(pointed)), path), message: message)
+            message = ""
+        }
+    }
+    with_message(lines: lines, at: path, message: message)
+}
+
+/// `lines` with `message` after them, said about `at`, where there is a message.
+// example: with_message(lines: [], at: "a.lm", message: "") == []
+fn with_message(lines: List<String>, at: String, message: String) -> List<String> {
+    if message == "" {
+        return lines
+    }
+    list.push(lines, at + ": " + message)
+}

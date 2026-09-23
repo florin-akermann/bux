@@ -1,0 +1,7 @@
+// expect-error: L0100
+// A derive names at least one trait before `for`, and a comma is followed by one more.
+derive Eq, for User
+
+type User = {
+    id: Int
+}

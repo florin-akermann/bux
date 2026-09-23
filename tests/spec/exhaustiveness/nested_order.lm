@@ -1,0 +1,9 @@
+// expect-error: L0501
+// Two arms that reach inside one variant are held to the order the inner type declares.
+fn described(outcome: Option<Result<Int, String>>) -> String {
+    match outcome {
+        Some(Err(problem)) => problem
+        Some(Ok(value)) => "ok"
+        None => "nothing"
+    }
+}

@@ -1,0 +1,8 @@
+// expect-error: L0500
+// The arms that reach inside a value are covered between them, and this one leaves `Some(Err(_))`.
+fn described(outcome: Option<Result<Int, String>>) -> String {
+    match outcome {
+        Some(Ok(value)) => "ok"
+        None => "nothing"
+    }
+}

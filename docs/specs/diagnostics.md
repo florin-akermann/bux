@@ -58,16 +58,15 @@ The grammar writes `L01xx`, canonical form `L02xx`, loading and name resolution 
 inference `L04xx`.
 Exhaustiveness writes `L05xx`, and what a build asks of a module it compiles writes `L06xx`.
 
-Every number and every long form lives in `crates/diagnostics/src/code.rs`, which declares them
-together so that neither can be added without the other.
-The long form of a code is the file in `crates/diagnostics/src/explanations/` named after it.
+The long form of a code is the file in `compiler/explanations/` named after it.
+`command.explanation_of` reads that file as a class-path resource, so there is one copy of it.
 
 A code that stops being raised is taken out whole: the number, the long form, and the paragraph
 that stated it.
 The number is not given to anything else afterwards, so a gap in the run is a code that was
 retired and nothing more.
 
-The grammar raises these, in `crates/parser/src/error.rs`:
+The grammar raises these, in `compiler/parser.lm`:
 
 - `L0100` — the grammar expected one thing and the source wrote another.
 - `L0101` — a string has no closing quote.
@@ -79,7 +78,7 @@ The grammar raises these, in `crates/parser/src/error.rs`:
 - `L0107` — something other than a name is written on the left of `=` or `+=`.
 - `L0108` — a call names some of its arguments and not others.
 
-Canonical form raises these, in `crates/format/src/lib.rs`:
+Canonical form raises these, in `compiler/format.lm`:
 
 - `L0200` — the file is not in canonical form.
 - `L0201` — an import is written after a declaration, or two imports are out of sort.
@@ -97,7 +96,7 @@ knows.
 `L0413` is with inference rather than here because the result it reads is the one inference
 settled, which `docs/specs/naming.md` states.
 
-Name resolution raises these, in `crates/resolver/src/error.rs`:
+Name resolution raises these, in `compiler/resolver.lm`:
 
 - `L0300` — nothing in scope has this name.
 - `L0301` — a module declares the same name twice.
@@ -114,7 +113,7 @@ Name resolution raises these, in `crates/resolver/src/error.rs`:
 - `L0314` — a name that binds is written inside an or-pattern, which binds nothing.
 - `L0318` — an instance writes an argument of its type that is no type parameter it declares.
 
-Loading raises these, in `crates/modules/src/error.rs`, before any module is resolved:
+Loading raises these, in `compiler/modules.lm`, before any module is resolved:
 
 - `L0306` — an import names a module neither a file beside it nor a package it reaches holds.
 - `L0307` — a ring of imports, which leaves the modules in it no order to be compiled in.
@@ -122,7 +121,7 @@ Loading raises these, in `crates/modules/src/error.rs`, before any module is res
 - `L0316` — a directory named as a package holds no manifest, so there is no package there.
 - `L0317` — two files claim the module name an import writes, so one build would hold both.
 
-Type inference raises these, in `crates/types/src/error.rs`:
+Type inference raises these, and `compiler/refusal.lm` words them:
 
 - `L0400` — a type met a type it does not match.
 - `L0401` — a call passes more or fewer arguments than the function takes.
@@ -155,22 +154,21 @@ Type inference raises these, in `crates/types/src/error.rs`:
 - `L0430` — an `extern new` gives back a type an `extern type` named an interface.
 - `L0431` — an `extern` narrows a parameter and gives back something other than an `Option`.
 
-Exhaustiveness raises these, in `crates/exhaustiveness/src/error.rs`:
+Exhaustiveness raises these, in `compiler/exhaustiveness.lm`:
 
 - `L0500` — a `match` leaves a value of the type it matches unanswered.
 - `L0501` — a `match` lists its arms in an order the type does not declare its variants in.
 
-`lumen build` raises this one, in `crates/holes/src/hole.rs`:
+`lumen build` raises this one, in `compiler/command.lm`, for each hole `compiler/holes.lm` finds:
 
 - `L0600` — a hole is still in the program, and a hole has nothing to compile.
 
-`lumen build`, `lumen run`, and `lumen test` raise these, in `crates/examples/src/refusal.rs`:
+`lumen build`, `lumen run`, and `lumen test` raise these, in `compiler/command.lm`:
 
 - `L0601` — a function a module declares at the top level states no example.
 - `L0602` — an example is written where nothing carries one.
 
-`lumen test` raises these alone, the first in `crates/examples/src/example.rs` and the second in
-`crates/examples/src/refusal.rs`:
+`lumen test` raises these alone, in `compiler/command.lm`:
 
 - `L0603` — an example a module states did not hold when it was run.
 - `L0604` — a module declares the name a run of its examples reaches for.
@@ -257,21 +255,20 @@ Both `1` and `2` are given before a program runs, so neither is ever a status a 
 
 ## The diagnostics written in Bux
 
-`compiler/command.lm` renders a diagnostic in Bux, and the Rust renderer is its answer.
+`compiler/command.lm` renders a diagnostic in Bux.
 It writes the layout above: the `error[` line, the location, the source line, and the carets.
 It counts the column in characters and keeps a tab before the span as a tab.
 A span that runs on to a later line gets the note that names the line it ends on.
 The data form is the same one line of JSON, with the same escapes, and `fix` where there is one.
 The one edit is the edit above: the whole file, replaced by the text `lumen fmt` writes.
 `explain` reads the long form of a code as a class-path resource.
-That resource is the file the Rust binary embeds, so the two never drift.
 
-The harness `crates/cli/tests/integration/bux_command.rs` holds the Bux renderer to `lumen`.
-It compares every stream of `check`, `check --json`, and `explain`, byte for byte.
+`tests/rendering.lm` holds the renderer to the properties below, on drawn sources and spans.
+`tests/commanded.lm` holds `check`, `check --json`, and `explain` to golden answers.
 
 ## Properties
 
-These hold and are checked with property-based tests:
+These hold and are checked by drawn properties in the runner:
 
 1. A rendering names a line and a column that lie inside the source.
 2. A rendering opens with its code and ends with a newline, for any span at all.
@@ -279,7 +276,4 @@ These hold and are checked with property-based tests:
 4. Text a data form writes reads back as the text it was given.
 5. Applying the fix of a file that departs from canonical form makes it its own canonical text.
 
-A code without an explanation, and two codes written the same way, are unwriteable rather than
-checked.
-`crates/diagnostics/src/code.rs` declares each code, its number, and the file holding its long
-form in one place, so none of the three can be added without the others.
+`tests/commanded.lm` holds `explain` of each code that has a long form to the text of that file.

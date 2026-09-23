@@ -100,7 +100,7 @@ refusing one to `lumen build`.
 
 ## Properties
 
-These hold and are checked with property-based tests:
+These hold and are checked by drawn properties in the runner:
 
 1. A module of types alone, holding no comment, is its own page, character for character.
 2. Every name a module declares at the top level is on its page.

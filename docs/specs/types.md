@@ -224,7 +224,7 @@ Inference stops at the first error it reaches, which is the one lowest in the fi
 
 ## The type inference written in Bux
 
-`compiler/types.lm` is this phase written in Bux, and the Rust phase is the answer it must give.
+`compiler/types.lm` is this phase, written in Bux.
 It reads each module that `compiler/resolver.lm` resolves, in the order `compiler/modules.lm` loads.
 Six more modules hold the parts of the phase, one concern each, and no two import each other.
 `compiler/unify.lm` holds the types, the unification table, and the schemes.
@@ -237,7 +237,7 @@ It asks `java.lang.Character` whether each code point of a Java name is a letter
 
 The unification table is a value: each step gives back a new table, and no step changes one.
 The table is a `Map` from each type variable to the type it was settled on.
-Each other table of the Rust phase is a `Map` or a `Set` of the library, or a `List`.
+Each other table of the phase is a `Map` or a `Set` of the library, or a `List`.
 A name is kept under its key, which is where it is declared, its prelude name, or `module.Name`.
 
 `types.prelude_read(source)` reads the declarations of the prelude out of its source.
@@ -245,26 +245,22 @@ The phase reads no file for the prelude, so the caller gives it the prelude.
 `types.check(resolved, imported, prelude)` infers one module against the surfaces of its imports.
 `types.surface_of` gives what an inferred module offers, and `surface.offering` adds it.
 
-The Bux phase refuses what the Rust phase refuses, at the same span.
-It gives the same code, message, and help, and it stops at the first refusal too.
-A module that the Bux phase infers has the `lumen api` page that the Rust phase gives it.
+It stops at the first refusal, which has a code, a span, a message, and a help line.
+A module that the phase infers has the `lumen api` page of `docs/specs/api-surface.md`.
 
-`types.printed(path, prelude)` gives the answer for a program in the form the harness compares.
+`types.printed(path, prelude)` gives the answer for a program as text.
 The program is the module at `path` and each module that it reaches, loaded in order.
 A program that does not load or does not resolve is `skipped`.
 A refusal is `refused` and the module name, then the code, the span, and the message.
 Then the refusal gives `help:` and the help.
 A program whose every module infers is `typed`, and then the `lumen api` page of its last module.
 
-The harness `crates/cli/tests/integration/bux_types.rs` builds the Bux phase with `lumen`.
-It infers each fixture with both phases, and it compares the two answers line for line.
-The fixtures are every `.lm` file of `tests/spec`, `library/`, and `compiler/`.
-Modules drawn at random are fixtures too.
-A build needs no JDK, and a run needs one; with no JDK, the harness skips each run and says why.
+`tests/typing.lm` and `tests/conventions.lm` hold the phase to its properties, on drawn modules.
+`tests/siblings.lm` holds the page of each example to its `.api` file.
 
 ## Properties
 
-These hold and are checked with property-based tests:
+These hold and are checked by drawn properties in the runner:
 
 1. Inferring a program never panics and is deterministic.
 2. A module built of pieces that each infer infers.

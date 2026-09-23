@@ -1,0 +1,9 @@
+// expect-error: L0308
+// A derive written twice for one type writes the same instance twice.
+derive Eq for User
+
+derive Eq for User
+
+type User = {
+    id: Int
+}

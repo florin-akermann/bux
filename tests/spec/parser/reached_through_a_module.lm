@@ -1,0 +1,21 @@
+// expect-error: L0300
+// The parser reads a name reached through a module before any module is loaded, so it keeps
+// `demo.User`, `demo.Pending`, and `demo.Held<Int>` whole, and a later phase finds `demo` missing.
+// A minus before digits is part of the number, and a postfix operator applies to that number.
+fn built(payment: demo.Payment) -> Holder {
+    first := demo.User { id: 1 }
+    second := demo.Pending
+    third := -5.abs()
+    fourth := -5?
+    fifth := --5
+    sixth := users.first().name?
+    match payment {
+        demo.Pending => Holder(first)
+        demo.Failed(reason) => reason
+        demo.Authorized { id } => id
+    }
+}
+
+type Holder = Holder(demo.Held<Int>)
+
+extern static int(text: String) -> Int = "java.lang.String.length"

@@ -1,0 +1,2 @@
+// A module that declares nothing has an empty page, and its import is not on it.
+import io

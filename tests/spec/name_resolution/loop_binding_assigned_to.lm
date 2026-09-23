@@ -1,0 +1,8 @@
+// expect-error: L0305
+// The name a `for` binds is not a `var`, so an assignment cannot name it.
+fn go(items: List<Int>) -> Int {
+    for item in items {
+        item = 1
+    }
+    0
+}

@@ -1,0 +1,7 @@
+// expect-error: L0307
+// Three modules each import the next, and the last imports the first, which is a ring as well.
+import second_link
+
+fn first() -> Int {
+    1
+}

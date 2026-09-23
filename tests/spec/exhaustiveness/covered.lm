@@ -1,0 +1,92 @@
+// More shapes of match that cover the type they match, each in the order its type declares.
+// A record type has one constructor, so one arm covers it.
+fn named(user: User) -> String {
+    match user {
+        User { name } => name
+    }
+}
+
+// An `_` covers every value the arms above it left, and an alternative places its arm by the
+// first variant it writes.
+fn described(payment: Payment) -> String {
+    match payment {
+        Pending | Failed(_) => "seen"
+        _ => "the rest"
+    }
+}
+
+// A name that binds is placed by nothing, so it may follow any arm.
+fn is_authorized(payment: Payment) -> Bool {
+    match payment {
+        Authorized { authorization_id } => true
+        other => false
+    }
+}
+
+// No declaration writes the values of a number down, so literal arms come in any order.
+fn counted(count: Int) -> String {
+    match count {
+        1 => "one"
+        0 => "none"
+        _ => "some"
+    }
+}
+
+// The two values of a `Bool` are written either way, at the top and inside a variant.
+fn spoken(count: Int) -> String {
+    match count > 1 {
+        false => "no"
+        true => "yes"
+    }
+}
+
+fn flagged(flag: Option<Bool>) -> Int {
+    match flag {
+        Some(false) => 0
+        Some(true) => 1
+        None => 2
+    }
+}
+
+// An alternative inside a constructor covers what it names between its alternatives.
+fn held(flag: Option<Bool>) -> String {
+    match flag {
+        Some(true | false) => "held"
+        None => "nothing"
+    }
+}
+
+// `Option` and `Result` are covered by the two variants the prelude declares for each.
+fn or_else(value: Option<Int>, fallback: Int) -> Int {
+    match value {
+        Some(inner) => inner
+        None => fallback
+    }
+}
+
+fn settled(result: Result<Int, String>) -> String {
+    match result {
+        Ok(value) => "ok"
+        Err(problem) => problem
+    }
+}
+
+// A name that binds inside a variant stops the arm being placed any deeper.
+fn unwrapped(outcome: Option<Result<Int, String>>) -> String {
+    match outcome {
+        Some(Err(problem)) => problem
+        Some(inner) => "something"
+        None => "nothing"
+    }
+}
+
+type User = {
+    name: String
+}
+
+type Payment =
+    | Pending
+    | Authorized {
+        authorization_id: String
+    }
+    | Failed(String)

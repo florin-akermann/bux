@@ -1,0 +1,7 @@
+// expect-error: L0100
+// `unparsed` does not parse, so the program that imports it is refused with that parse error.
+import unparsed
+
+fn held() -> Int {
+    1
+}

@@ -1,0 +1,5 @@
+// A module that the package `borrower` holds a module of the same name beside.
+// example: lent() == 1
+fn lent() -> Int {
+    1
+}

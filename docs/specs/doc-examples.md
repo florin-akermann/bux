@@ -213,18 +213,18 @@ and `L0604` says so the same way.
 
 ## The examples written in Bux
 
-`compiler/command.lm` finds the examples of a module in Bux, as the Rust `stated_by` does.
+`compiler/command.lm` finds the examples of a module in Bux.
 A `build`, a `run`, and a `test` refuse `L0601` and `L0602` with it, before the module is lowered.
-`test` writes the run as this page says, byte for byte as the Rust run writes it.
+`test` writes the run as this page says.
 It puts a refusal of the run back into the file the author wrote.
 It reads the marked lines back, and it gives `L0603` for each example that did not hold.
 
-The harness `crates/cli/tests/integration/bux_command.rs` holds `test` to `lumen test`.
-It runs `test` on every `.lm` file under `tests/spec`, `library`, and `compiler`.
+`tests/documented.lm` runs every `// example:` line of every module, as `lumen test` runs it.
+`tests/commanded.lm` holds `test` to golden answers on each example of `tests/spec` and `library/`.
 
 ## Properties
 
-These hold and are checked with property-based tests:
+These hold and are checked by drawn properties in the runner:
 
 1. Every example a module states is found, wherever in the module it is written.
 2. A module whose every function states an example is accepted, however many they state.

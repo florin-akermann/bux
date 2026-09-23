@@ -1,0 +1,262 @@
+// The public surface page of a module: every name it declares, with the type it has, in order.
+//
+// `docs/specs/api-surface.md` states the properties. Each case writes a module of drawn type and
+// function declarations, types it against the prelude, and prints its page with the compiler's own
+// `types.page_of`, which is what `bux surface` prints, in the runner's JVM.
+import ast
+
+import drawn
+
+import held
+
+import ir
+
+import lexer
+
+import list
+
+import parser
+
+import strings
+
+import typed
+
+import types
+
+/// Every property of the page over `cases` drawn cases each, in a fixed order.
+// example: list.length(every_property(0, ir.little_library())) == 3
+fn every_property(cases: Int, library: ir.Library) -> List<held.Held> {
+    var found = []
+    for property in [TypesAreTheirPage, EveryNameOnThePage, PrintedAlike] {
+        found = list.push(found, held_over(property: property, cases: cases, prelude: library.prelude))
+    }
+    found
+}
+
+/// `property` tried on `cases` cases, each drawn from a seed of its own.
+// example: held.is_held(held_over(property: PrintedAlike, cases: 2, prelude: types.little_prelude()))
+fn held_over(property: Property, cases: Int, prelude: types.Prelude) -> held.Held {
+    var found = held.nothing_failed(cases)
+    var index = 0
+    for index < cases {
+        seed := drawn.seed_of(index)
+        tried := tried_by(property: property, draw: drawn.seeded(seed), prelude: prelude)
+        if tried.why != "" {
+            found = held.with_failure(found, held.drawn_failure(name_of(property), seed, tried.case, tried.why))
+        }
+        index += 1
+    }
+    found
+}
+
+/// One case of `property`, drawn from `draw`, typed against `prelude`.
+// example: tried_by(property: TypesAreTheirPage, draw: drawn.seeded(1), prelude: types.little_prelude()).why == ""
+fn tried_by(property: Property, draw: drawn.Draw, prelude: types.Prelude) -> Tried {
+    match property {
+        TypesAreTheirPage => a_module_of_types_alone_holding_no_comment_is_its_own_page(draw, prelude)
+        EveryNameOnThePage => every_name_a_module_declares_is_on_its_page(draw, prelude)
+        PrintedAlike => printing_a_page_is_deterministic(draw, prelude)
+    }
+}
+
+/// The name a failure of `property` is reported with.
+// example: name_of(PrintedAlike) == "printing_a_page_is_deterministic"
+fn name_of(property: Property) -> String {
+    match property {
+        TypesAreTheirPage => "a_module_of_types_alone_holding_no_comment_is_its_own_page"
+        EveryNameOnThePage => "every_name_a_module_declares_is_on_its_page"
+        PrintedAlike => "printing_a_page_is_deterministic"
+    }
+}
+
+/// A module of type declarations alone, in canonical form and holding no comment, is its page.
+// example: a_module_of_types_alone_holding_no_comment_is_its_own_page(drawn.seeded(1), types.little_prelude()).why == ""
+fn a_module_of_types_alone_holding_no_comment_is_its_own_page(draw: drawn.Draw, prelude: types.Prelude) -> Tried {
+    source := module_of(declared_types(draw))
+    page := page_of(source, prelude)
+    var why = ""
+    if page != source {
+        why = "the page is " + held.quoted(page)
+    }
+    Tried { case: source, why: why }
+}
+
+/// Every name a module declares at the top level, a variant among them, is on its page.
+// example: every_name_a_module_declares_is_on_its_page(drawn.seeded(1), types.little_prelude()).why == ""
+fn every_name_a_module_declares_is_on_its_page(draw: drawn.Draw, prelude: types.Prelude) -> Tried {
+    source := module_of(anything(draw))
+    page := page_of(source, prelude)
+    var why = ""
+    for declared in declarations(ok_or(parser.parse(source), ast.Program { items: [] })) {
+        if why == "" && !has_text(text: page, piece: declared) {
+            why = declared + " is missing from " + held.quoted(page)
+        }
+    }
+    Tried { case: source, why: why }
+}
+
+/// A page printed twice is the same page.
+// example: printing_a_page_is_deterministic(drawn.seeded(1), types.little_prelude()).why == ""
+fn printing_a_page_is_deterministic(draw: drawn.Draw, prelude: types.Prelude) -> Tried {
+    source := module_of(anything(draw))
+    first := page_of(source, prelude)
+    second := page_of(source, prelude)
+    var why = ""
+    if first != second || first == "the module does not type" {
+        why = "one page is " + held.quoted(first) + ", the other " + held.quoted(second)
+    }
+    Tried { case: source, why: why }
+}
+
+/// Up to four function declarations, then up to four type declarations, each numbered apart.
+// example: list.length(anything(drawn.seeded(1))) < 9
+fn anything(draw: drawn.Draw) -> List<String> {
+    var written = []
+    var at = drawn.next(drawn.next(draw))
+    var index = 0
+    for index < drawn.number(drawn.next(draw), 5) {
+        written = list.push(written, function_numbered(which: drawn.number(at, 4), number: index))
+        at = drawn.next(at)
+        index += 1
+    }
+    for declaration in declared_types(draw) {
+        written = list.push(written, declaration)
+    }
+    written
+}
+
+/// Up to four type declarations, each numbered by where it is drawn so that no two share a name.
+// example: list.length(declared_types(drawn.seeded(1))) < 5
+fn declared_types(draw: drawn.Draw) -> List<String> {
+    var written = []
+    var at = drawn.seeded(draw.state + 7)
+    for list.length(written) < drawn.number(draw, 5) {
+        written = list.push(written, type_numbered(which: drawn.number(at, 4), number: list.length(written)))
+        at = drawn.next(at)
+    }
+    written
+}
+
+/// The type declaration numbered `which`, as canonical form writes it, with `number` in its names.
+// example: type_numbered(which: 2, number: 0) == "type Held0 = Held0(String)"
+fn type_numbered(which: Int, number: Int) -> String {
+    n := shown(number)
+    match which {
+        0 => "type Basket" + n + " = {\n    apples: Int\n    pears: Int\n}"
+        1 => "type Order" + n + " =\n    | Unplaced" + n + "\n    | Placed" + n + "(Int)"
+        2 => "type Held" + n + " = Held" + n + "(String)"
+        _ => "type Pair" + n + "<A, B> = {\n    left: A\n    right: B\n}"
+    }
+}
+
+/// The function numbered `which`, which needs no other declaration, with `number` in its name.
+// example: function_numbered(which: 0, number: 1) == "fn answer1() -> Int {\n    7\n}"
+fn function_numbered(which: Int, number: Int) -> String {
+    n := shown(number)
+    match which {
+        0 => "fn answer" + n + "() -> Int {\n    7\n}"
+        1 => "fn named" + n + "(word: String) -> String {\n    word\n}"
+        2 => "fn shared" + n + "(total: Int, people: Int) -> Int {\n    or(total / people, 0)\n}"
+        _ => "fn kept" + n + "<A>(value: A) -> A {\n    value\n}"
+    }
+}
+
+/// The source of a module of `written`, one blank line between two, which is empty where none is.
+// example: module_of(["type A = A", "type B = B"]) == "type A = A\n\ntype B = B\n"
+// example: module_of([]) == ""
+fn module_of(written: List<String>) -> String {
+    if list.length(written) == 0 {
+        return ""
+    }
+    strings.join(written, "\n\n") + "\n"
+}
+
+/// Every name `program` declares at the top level, which is what a page holds.
+///
+/// An import names another module, and neither an instance nor a derive declares a name.
+// example: declarations(ok_or(parser.parse("type A =\n    | B\n    | C\n"), ast.Program { items: [] })) == ["A", "B", "C"]
+fn declarations(program: ast.Program) -> List<String> {
+    var declared = []
+    for item in program.items {
+        for name in names_of(item) {
+            declared = list.push(declared, name)
+        }
+    }
+    declared
+}
+
+/// The names one item declares.
+// example: names_of(ast.Import(ast.ImportDeclaration { module: ast.Name { text: "io", span: lexer.Span { start: 7, length: 2 } }, span: lexer.Span { start: 0, length: 9 } })) == []
+fn names_of(item: ast.Item) -> List<String> {
+    match item {
+        ast.Type(declaration) => with_variants(declaration)
+        ast.Trait(declaration) => with_methods(declaration)
+        ast.Function(function) => [function.name.text]
+        ast.Extern(declaration) => [declaration.name.text]
+        _ => []
+    }
+}
+
+/// The name of a type, then the name of each variant it declares, which a record has none of.
+// example: names_of(or(list.at(ok_or(parser.parse("type A = {\n    b: Int\n}\n"), ast.Program { items: [] }).items, 0), ast.Import(ast.ImportDeclaration { module: ast.Name { text: "", span: lexer.Span { start: 0, length: 0 } }, span: lexer.Span { start: 0, length: 0 } }))) == ["A"]
+fn with_variants(declaration: ast.TypeDeclaration) -> List<String> {
+    match declaration.definition {
+        ast.Variants(declared) => variant_names([declaration.name.text], declared)
+        _ => [declaration.name.text]
+    }
+}
+
+/// `names`, then the name of each of `declared`.
+// example: variant_names(["A"], []) == ["A"]
+fn variant_names(names: List<String>, declared: List<ast.Variant>) -> List<String> {
+    var all = names
+    for variant in declared {
+        all = list.push(all, variant.name.text)
+    }
+    all
+}
+
+/// The name of a trait, then the name of each method it declares.
+// example: list.length(names_of(or(list.at(ok_or(parser.parse("trait Sized<T> {\n    fn size(of: T) -> Int\n}\n"), ast.Program { items: [] }).items, 0), ast.Import(ast.ImportDeclaration { module: ast.Name { text: "", span: lexer.Span { start: 0, length: 0 } }, span: lexer.Span { start: 0, length: 0 } })))) == 2
+fn with_methods(declaration: ast.TraitDeclaration) -> List<String> {
+    var names = [declaration.name.text]
+    for method in declaration.methods {
+        names = list.push(names, method.name.text)
+    }
+    names
+}
+
+/// The page of `source`, and a line that says so where `source` does not type.
+// example: page_of("fn f() -> Int {\n    1\n}\n", types.little_prelude()) == "fn f() -> Int\n"
+fn page_of(source: String, prelude: types.Prelude) -> String {
+    match typed.inferred(source, prelude) {
+        Some(inferred) => types.page_of(inferred)
+        None => "the module does not type"
+    }
+}
+
+/// Whether `piece` is somewhere in `text`.
+// example: has_text(text: "abc", piece: "bc")
+// example: !has_text(text: "abc", piece: "ca")
+fn has_text(text: String, piece: String) -> Bool {
+    var at = 0
+    for at + strings.length(piece) <= strings.length(text) {
+        if or(strings.cut(text, at, at + strings.length(piece)), "") == piece {
+            return true
+        }
+        at += 1
+    }
+    false
+}
+
+/// One case of a property: the drawn input as text, and why it failed, which is `""` where it held.
+type Tried = {
+    case: String
+    why: String
+}
+
+/// Each property of the page.
+type Property =
+    | TypesAreTheirPage
+    | EveryNameOnThePage
+    | PrintedAlike

@@ -1,0 +1,5 @@
+// expect-error: L0302
+// The prelude supplies `Eq`, so a module never declares a trait of that name.
+trait Eq<T> {
+    fn is_equal(one: T, other: T) -> Bool
+}

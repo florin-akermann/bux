@@ -108,33 +108,26 @@ adding the missing arm is what settles where the arms go.
 ## The exhaustiveness check written in Bux
 
 `compiler/exhaustiveness.lm` is this phase written in Bux.
-The Rust phase is the answer that it must give.
 It reads each module that `compiler/types.lm` infers, in the order `compiler/modules.lm` loads.
-It keeps the algorithm of the Rust phase and its cost: one row for each arm, one column at a time.
+The algorithm costs one row for each arm, and it reads one column at a time.
 The constructors of each type are a `List` for each type and a `Map` from each name to its type.
-Each other table of the Rust phase is a `List` of the library.
+Each other table of the phase is a `List` of the library.
 
 `exhaustiveness.check(inferred)` checks one inferred module against the types that it reaches.
-The Bux phase refuses what the Rust phase refuses, at the same span.
-It gives the same code, message, and help, and it stops at the first refusal too.
+It stops at the first refusal, which has a code, a span, a message, and a help line.
 
 `exhaustiveness.printed(path, prelude)` gives the answer for a program.
-The answer is in the form that the harness compares.
 The program is the module at `path` and each module that it reaches, loaded in order.
 A program that does not load, does not resolve, or does not infer is `skipped`.
 A refusal is `refused` and the module name, then the code, the span, and the message.
 Then the refusal gives `help:` and the help.
 A program whose every `match` is accepted is `exhaustive`.
 
-The harness `crates/cli/tests/integration/bux_checks.rs` builds the Bux phase with `lumen`.
-It checks each fixture with both phases, and it compares the two answers line for line.
-The fixtures are every `.lm` file of `tests/spec`, `library/`, and `compiler/`.
-Modules with a `match` of drawn arms are fixtures too.
-A build needs no JDK, and a run needs one; with no JDK, the harness skips each run and says why.
+`tests/covered.lm` holds the check to the properties below, on modules with a `match` of drawn arms.
 
 ## Properties
 
-These hold and are checked with property-based tests:
+These hold and are checked by drawn properties in the runner:
 
 1. Checking a typed program never panics and is deterministic.
 2. A match whose arms cover every constructor of its scrutinee, in order, is accepted.

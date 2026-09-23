@@ -1,6 +1,6 @@
 // Lowering: each typed module turned into the classes of the JVM, as instructions over a stack.
 //
-// `docs/specs/codegen.md` states the rules, and `crates/ir` lowers in Rust.
+// `docs/specs/codegen.md` states the rules, and `tests/lowering.lm` holds them on drawn modules.
 // A module gives its own class, one class for each type it declares, and the class of a list.
 // A generic is written once for each set of types a use settles it on, which a pass asks for.
 // The passes go on until no module asks another for a method it has not written.
@@ -2241,7 +2241,7 @@ fn through_the_operator(builder: Builder, asked: OperatorAsk, answerer: Instance
 
 /// The builder after each operand is put aside and the two are loaded back last first.
 ///
-/// An operand that is `()` is written and left where it is, as the Rust lowering leaves it.
+/// An operand that is `()` is written and left where it is, as the Rust lowering left it.
 // example: held_text(the_other_way_round(little_builder(""), Instance { class: "main", reaching: Reaching { named: "is_less", signature: Signature { parameters: [], result: Some(Boolean) } } }, []).held) == "Z"
 fn the_other_way_round(builder: Builder, answerer: Instance, operands: List<ast.Expr>) -> Left {
     var writing = builder

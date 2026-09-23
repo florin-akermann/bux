@@ -1,0 +1,7 @@
+// expect-error: L0306
+// No import reaches the prelude, not even with a file called `prelude` beside this one.
+import prelude
+
+fn held() -> Int {
+    1
+}

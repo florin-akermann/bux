@@ -1,0 +1,5 @@
+// expect-error: L0100
+// A trait is declared over one type parameter and no more.
+trait Pair<T, U> {
+    fn first(both: T) -> U
+}

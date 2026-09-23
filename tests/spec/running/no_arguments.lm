@@ -1,0 +1,11 @@
+// expect-run
+// > 0
+// A run with no word after the file gives `main` an empty list, and no name of the program.
+import io
+
+import list
+
+fn main(arguments: List<String>) -> Int {
+    io.println(shown(list.length(arguments)))
+    0
+}
