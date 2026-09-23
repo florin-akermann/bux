@@ -6,12 +6,6 @@
 
 ## Open
 
-## 🟡 Item 075: The compiler compiles itself
-**Depends on:** nothing — Item 074 landed, and the fixpoint has the whole compiler.
-[075][a] - Stage 1, built by the Rust `bux`, builds stage 2 from the same source.
-[075][b] - A harness holds stage 2 equal to stage 1 byte for byte.
-[075][c] - The Rust crates are deleted, and `docs/implementation.md` section 6 says what remains.
-
 ## 🔴 Item 080: `Option<()>` is refused wherever a program writes it or inference reaches it
 **Depends on:** Item 071 — the Rust and the Bux type phases refuse it alike, at the same span.
 `Some(())` says only that a value is there, which is `Bool` spelled a second way and nullability.
@@ -83,3 +77,22 @@ A second target would then change the language specification, and it must change
 [086][c] - Section 17 says that each target has its own `extern` form, which a spec states.
 [086][d] - The JVM form, the member kinds, and the two widths move to `docs/specs/interop.md`.
 [086][e] - The other sections of `docs/design.md` name Java only where they describe the JVM target.
+
+## 🔴 Item 087: The Rust crates are deleted, and a `bux`-driven runner holds `tests/spec`
+**Depends on:** Item 080, Item 081, Item 085 — each still names a Rust phase or a Rust harness.
+Item 075 landed stage 2 equal to stage 1 byte for byte, and every harness is a Rust test binary.
+The deletion waits until nothing but the harnesses needs Rust, and a Bux runner replaces them.
+[087][a] - A `bux`-driven runner runs every example under `tests/spec` and every `// example:`.
+[087][b] - Every hegeltest property a Bux phase has is written in Bux, or its loss is stated.
+[087][c] - The Rust crates and the Cargo workspace are deleted; the commit hook runs the runner.
+[087][d] - `docs/implementation.md` section 6 says what remains, and AGENTS.md names no crate.
+
+## 🔴 Item 088: The class-file writer's copied defects are fixed in Bux
+**Depends on:** Item 087 — while Rust ships, the Bux writer must match it byte for byte.
+Item 073 copied seven defects of the Rust writer so that the bytes match; the spec names six.
+[088][a] - A class name two modules write is refused, and no hierarchy entry is written twice.
+[088][b] - A frame merge with locals or a stack of two lengths is a defect the writer reports.
+[088][c] - A call and a constructor pop two stack slots for a `long`.
+[088][d] - A branch to a label that never lands, or past the i16 range, is refused, not patched.
+[088][e] - A Utf8 pool entry over 65535 bytes is refused, not capped.
+[088][f] - The operand swap in the lowering adapts a unit operand, and the spec says so.
