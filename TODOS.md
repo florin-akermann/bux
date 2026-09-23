@@ -132,14 +132,6 @@ A block is not a function, so it has no signature, no example, and no caller but
 [089][h] - `tests/spec/testing/` shows a block that holds, one that does not, and a refused one.
 [089][i] - `bux help test` states the block and the package run, and `packages.md` agrees.
 
-## 🔴 Item 090: A generic function called with its first argument in front builds a class the JVM refuses
-Item 087 found it in both compilers, and the example that showed it was removed rather than kept.
-`count.labelled("x")` with `fn labelled<T>(value: T, said: String) -> T` builds, and the run fails.
-The JVM says `VerifyError: Operand stack underflow`: the lowering drops the argument with `pop2`.
-[090][a] - `tests/spec/calls/` holds an `expect-run` example of such a call, on `T` and on `Int`.
-[090][b] - The lowering in `compiler/` keeps the argument on the stack, and the example runs.
-[090][c] - `printed` has no caller, and `exhaustiveness.lm`, `holes.lm`, and `types.lm` drop it.
-
 ## 🔴 Item 092: Imports form one block with no blank line between two of them
 Today canonical form puts one blank line between two top-level items, and an import is one.
 A file with ten imports thus spends ten lines on blanks, and the block does not read as one.
@@ -167,14 +159,17 @@ A clean build is one step: delete `target/`, and no other directory holds compil
 [096][f] - A `tests/spec/` example shows that a build leaves no class beside its source.
 [096][g] - `bux help build` states where the classes go.
 
-## 🔴 Item 097: `or` is a method of `Option<T>`, and `maybe.or(fallback)` is its one spelling
-**Depends on:** Item 090 — every call of `or` moves to the dot form, which Item 090 repairs.
-Today `or` is a free function in `library/prelude.lm`, and a call can put `maybe` first or inside.
-So a program has two spellings for one call, and about 120 calls use `or(maybe, fallback)`.
-The new rule: `or` belongs to `Option<T>`, and `maybe.or(fallback)` is the one way to write it.
-A free `or` no longer takes the name in scope, so a program can declare its own `or`.
-[097][a] - `docs/design.md` section 11 states how a type owns a method, and section 5 uses it.
-[097][b] - `docs/specs/` states the rule, and says what a call `or(maybe, fallback)` reports.
-[097][c] - `library/prelude.lm` declares `or` on `Option<T>`, and the free function is gone.
-[097][d] - `tests/spec/calls/` holds a method call on `Option` and a refused free call of `or`.
-[097][e] - Every call under `compiler/`, `library/`, `example/`, and `tests/` uses the dot form.
+## 🔴 Item 098: A function is called one way, with its arguments inside the parentheses
+Today `maybe.or(0)` is a second spelling of `or(maybe, 0)`, and the tree uses it once.
+Two spellings of one call break "one way to write a thing", so the dot form goes.
+A dot then reads a field or reaches a module, and never moves an argument.
+So the name alone selects a function, and no call waits for a type to find its callee.
+The lowering of the dot form also drops a generic argument, and the JVM refuses the class.
+With the form gone, that defect goes too, and no repair is needed.
+[098][a] - `docs/design.md` sections 5 and 11 remove the form, and `docs/specs/calls.md` goes.
+[098][b] - `docs/specs/arguments.md`, `arithmetic.md`, and `diagnostics.md` drop the form.
+[098][c] - `maybe.or(0)` is refused, and the `help:` of the refusal shows `or(maybe, 0)`.
+[098][d] - `L0423` and its explanation are removed, because no call puts an argument in front.
+[098][e] - `tests/spec/calls/in_front.lm` becomes a refused example, and the other file goes.
+[098][f] - The one call in the tree that uses the form is written as a plain call.
+[098][g] - `printed` has no caller, and `exhaustiveness.lm`, `holes.lm`, and `types.lm` drop it.
