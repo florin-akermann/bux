@@ -108,21 +108,6 @@ A clean build is one step: delete `target/`, and no other directory holds compil
 [096][f] - A `tests/spec/` example shows that a build leaves no class beside its source.
 [096][g] - `bux help build` states where the classes go.
 
-## 🔴 Item 098: A function is called one way, with its arguments inside the parentheses
-Today `maybe.or(0)` is a second spelling of `or(maybe, 0)`, and the tree uses it once.
-Two spellings of one call break "one way to write a thing", so the dot form goes.
-A dot then reads a field or reaches a module, and never moves an argument.
-So the name alone selects a function, and no call waits for a type to find its callee.
-The lowering of the dot form also drops a generic argument, and the JVM refuses the class.
-With the form gone, that defect goes too, and no repair is needed.
-[098][a] - `docs/design.md` sections 5 and 11 remove the form, and `docs/specs/calls.md` goes.
-[098][b] - `docs/specs/arguments.md`, `arithmetic.md`, and `diagnostics.md` drop the form.
-[098][c] - `maybe.or(0)` is refused, and the `help:` of the refusal shows `or(maybe, 0)`.
-[098][d] - `L0423` and its explanation are removed, because no call puts an argument in front.
-[098][e] - `tests/spec/calls/in_front.lm` becomes a refused example, and the other file goes.
-[098][f] - The one call in the tree that uses the form is written as a plain call.
-[098][g] - `printed` has no caller, and `exhaustiveness.lm`, `holes.lm`, and `types.lm` drop it.
-
 ## 🔴 Item 099: A module named as a library module runs, because its class is not the library's
 Item 094 found it: `bux test tests/spec/packages/carried/strings.lm` ends with `NoSuchMethodError`.
 The run writes a class `strings` beside the module, and the class path holds the library's `strings`.
