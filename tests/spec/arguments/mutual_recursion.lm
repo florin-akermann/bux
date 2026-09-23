@@ -1,0 +1,30 @@
+// expect-run
+// `is_even` and `is_odd` call each other, so one of the two calls reaches a function above it.
+// Their parameter types differ, so each call passes its arguments in order, wherever it is.
+fn main(arguments: List<String>) -> Int {
+    even := is_even(4, "four")
+    odd := is_odd(4, "four")
+    _ = even
+    _ = odd
+    0
+}
+
+/// Whether `steps` is even, which `is_odd` answers for one step fewer.
+// example: is_even(4, "four") == true
+fn is_even(steps: Int, label: String) -> Bool {
+    if steps == 0 {
+        true
+    } else {
+        is_odd(steps - 1, label)
+    }
+}
+
+/// Whether `steps` is odd, which `is_even` answers for one step fewer.
+// example: is_odd(4, "four") == false
+fn is_odd(steps: Int, label: String) -> Bool {
+    if steps == 0 {
+        false
+    } else {
+        is_even(steps - 1, label)
+    }
+}

@@ -115,6 +115,9 @@ struct Inference<'a> {
     /// What each use of a generic another module declares reaches, by where the use is written,
     /// still standing for whatever the rest of the module settles.
     generics_reached: HashMap<Span, GenericUse>,
+    /// The calls of this module's functions that pass their arguments in order, each waiting on
+    /// the types inference settles for the function it calls.
+    positional: Vec<arguments::Positional>,
 }
 
 impl<'a> Inference<'a> {
@@ -143,16 +146,18 @@ impl<'a> Inference<'a> {
             promised: Vec::new(),
             methods_at: HashMap::new(),
             generics_reached: HashMap::new(),
+            positional: Vec::new(),
         }
     }
 }
 
 impl Inference<'_> {
-    /// Each function bottom up, so a call reads a signature already inferred.
+    /// Each function bottom up, so a call mostly reads a signature already inferred.
     ///
     /// A module is written top down: a definition sits below what uses it, which `docs/design.md`
-    /// section 13 requires. Walking the other way is therefore walking uses last, and a function
-    /// that declares no signature has been given one by the time anything calls it.
+    /// section 13 requires. Walking the other way is therefore walking uses last. Mutual
+    /// recursion is the exception, because one of the two calls reaches a function above it,
+    /// so nothing that reads a settled signature may rest on the order of the walk.
     /// Walks the whole module, and gives back everything the walk settled.
     fn inferred(mut self) -> Result<Inferred, TypeError> {
         self.module()?;
@@ -189,7 +194,7 @@ impl Inference<'_> {
         for function in written.into_iter().rev() {
             self.function(function)?;
         }
-        Ok(())
+        self.settle_positional()
     }
 
     /// Every type the module declares, as a module importing it needs to write one.
@@ -309,7 +314,7 @@ impl Inference<'_> {
         self.settle_operators()?;
         self.settle_requirements()?;
         self.settle_discards()?;
-        self.settle_parameters(function, &key)?;
+        self.settle_parameters(function, &key, &parameters)?;
         self.settle_predicate(function)?;
         for gone in mem::take(&mut self.introduced) {
             self.environment.unbind(&gone);

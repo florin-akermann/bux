@@ -26,6 +26,9 @@ impl Inference<'_> {
     ///
     /// An instance method has none to answer for: its trait wrote them.
     ///
+    /// `declared` is what the function's signature gives its parameters, which the walk of its
+    /// body has settled by now.
+    ///
     /// # Errors
     ///
     /// Returns the first parameter that is a bare `Bool` outside a boolean operation.
@@ -33,11 +36,12 @@ impl Inference<'_> {
         &mut self,
         function: &Function,
         key: &Key,
+        declared: &[Type],
     ) -> Result<(), TypeError> {
         if self.environment.written_as(key).is_some() {
             return Ok(());
         }
-        let taken = self.parameter_types(function);
+        let taken: Vec<Type> = declared.iter().map(|one| self.table.solved(one)).collect();
         if operates_on_booleans(&taken, &self.table.solved(&self.result)) {
             return Ok(());
         }
@@ -77,24 +81,6 @@ impl Inference<'_> {
             }
         }
         Ok(())
-    }
-
-    /// The type inference settled for each parameter, in the order the declaration lists them.
-    fn parameter_types(&self, function: &Function) -> Vec<Type> {
-        function
-            .parameters
-            .iter()
-            .map(|written| self.parameter_type(written))
-            .collect()
-    }
-
-    /// The type of one parameter, which it was given a name for before the body was walked.
-    fn parameter_type(&self, written: &Parameter) -> Type {
-        let found = self
-            .types
-            .get(&written.name.span)
-            .unwrap_or_else(|| unreachable!("a parameter is typed before the body is walked"));
-        self.table.solved(found)
     }
 }
 

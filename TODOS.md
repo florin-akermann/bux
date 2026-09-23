@@ -6,17 +6,8 @@
 
 ## Open
 
-## 🔴 Item 078: A positional call to a function declared above its caller compiles
-**Depends on:** nothing — the defect is in the Rust type checker as it is.
-A positional call in mutual recursion panics at `crates/types/src/infer/arguments.rs` (`takes`).
-The `unreachable!` says a function has its type before anything below it calls it, which is false.
-Items 067 to 070 wrote named arguments at every such call, and Item 071 would write many more.
-[078][a] - A spec example calls two functions positionally in mutual recursion, and it compiles.
-[078][b] - The positional-argument rule reads the declared signature however the module is walked.
-[078][c] - No `unreachable!` or `expect` in `crates/types` rests on the order a body is walked in.
-
 ## 🔴 Item 071: Type inference is written in Bux
-**Depends on:** Item 064, Item 065, Item 070, Item 078 — unification keys a table.
+**Depends on:** Item 064, Item 065, Item 070 — unification keys a table.
 This is the largest phase, at 5,313 lines of Rust, and mutable tables become returned values.
 [071][a] - `compiler/types.bx` infers, unifies, resolves constraints, and derives per the specs.
 [071][b] - The harness compares every diagnostic and every `api` surface with the Rust phase's.

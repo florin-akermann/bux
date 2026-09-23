@@ -53,6 +53,36 @@ type, and a call of it names them.
 `fn apply<T, U>(value: T, other: U)` does not, however a call happens to instantiate `T` and `U`.
 The rule is about the signature, so it reads the same at every call site.
 
+## A function declared above its caller
+
+A call may reach a function declared above it, which mutual recursion always does.
+
+```text
+fn is_even(steps: Int, label: String) -> Bool {
+    if steps == 0 {
+        true
+    } else {
+        is_odd(steps - 1, label)
+    }
+}
+
+fn is_odd(steps: Int, label: String) -> Bool {
+    if steps == 0 {
+        false
+    } else {
+        is_even(steps - 1, label)
+    }
+}
+```
+
+The types of `steps` and `label` differ, so both calls pass their arguments in order and compile.
+Where the two functions sit is not part of the rule.
+A call of a function above it reads the same signature as a call of a function below it.
+That holds for a signature the author left unwritten too.
+`fn is_even(steps, label)` counts the types that inference settled for its parameters.
+Nothing about the rule rests on the order in which the compiler walks the bodies of a module.
+`tests/spec/arguments/mutual_recursion.lm` is the example.
+
 ## What has no names to write
 
 A constructor carries its values in order and has no names to write for them.
@@ -124,8 +154,10 @@ error[L0411]: `Span` is a constructor, so it carries its values in order and nam
 help: a variant whose values want names declares them as fields and is built as a record
 ```
 
-All three are raised in `crates/types/src/infer/arguments.rs`, as inference reaches the call.
-A module is inferred bottom up, so a declaration has the types it has before anything calls it.
+All three are raised in `crates/types/src/infer/arguments.rs`.
+`L0410` and `L0411` are raised as inference reaches the call.
+`L0409` is raised once inference has walked every function of the module.
+A function declared above its caller is walked after the caller, so its types settle later.
 
 Three refusals come before them, because each settles something they take for granted.
 A call with the wrong number of arguments is `L0401`: how many there are is settled before which
