@@ -15,7 +15,7 @@ Items 067 to 070 wrote named arguments at every such call, and Item 071 would wr
 [078][b] - The positional-argument rule reads the declared signature however the module is walked.
 [078][c] - No `unreachable!` or `expect` in `crates/types` rests on the order a body is walked in.
 
-## 🔴 Item 079: A match that gives variants of another module's type passes JVM verification
+## 🟡 Item 079: A match that gives variants of another module's type passes JVM verification
 **Depends on:** nothing — the defect is in the Rust lowering as it is.
 A `match` whose arms give `other.Held(1)` and `other.Free` fails as `VerifyError: Bad return type`.
 At the join the stack holds `Object`, where the method returns the sum type of the other module.
