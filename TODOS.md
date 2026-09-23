@@ -113,7 +113,7 @@ Item 087 found it in both compilers, and the example that showed it was removed 
 The JVM says `VerifyError: Operand stack underflow`: the lowering drops the argument with `pop2`.
 [090][a] - `tests/spec/calls/` holds an `expect-run` example of such a call, on `T` and on `Int`.
 [090][b] - The lowering in `compiler/` keeps the argument on the stack, and the example runs.
-[090][c] - `compiler/exhaustiveness.lm`, `holes.lm`, and `types.lm` lose `printed`, which has no caller.
+[090][c] - `printed` has no caller, so `compiler/exhaustiveness.lm`, `holes.lm`, and `types.lm` drop it.
 
 ## 🔴 Item 092: Imports form one block with no blank line between two of them
 Today canonical form puts one blank line between two top-level items, and an import is one.
