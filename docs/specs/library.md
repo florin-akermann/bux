@@ -206,7 +206,7 @@ strings:     at  cut  join  length
 map:         empty  insert  get
 set:         empty  insert  has_value
 io:          print  println  eprintln
-files:       read  write  listed  made  removed
+files:       read  write  write_bytes  listed  made  removed
 process:     run
 environment: read
 ```

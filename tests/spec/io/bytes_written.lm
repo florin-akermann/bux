@@ -1,0 +1,21 @@
+// expect-run
+// > Bux
+// Bytes are written whole and read back, which is how a compiler keeps a class file it writes.
+// Each value is one byte, so the three bytes 66, 117, and 120 read back as the text `Bux`.
+import files
+
+import io
+
+fn main(arguments: List<String>) -> Int {
+    io.println(ok_or(kept("written.bin"), "the bytes were not written"))
+    0
+}
+
+/// The text the file at `path` holds after three bytes are written as the whole of it.
+// example: ok_or(kept(""), "nothing") == "nothing"
+fn kept(path: String) -> Result<String, String> {
+    match files.write_bytes(path, [66, 117, 120]) {
+        Ok(at) => files.read(at)
+        Err(why) => Err(why)
+    }
+}

@@ -420,7 +420,7 @@ fn at_one_use(table: Table, scheme: Scheme) -> UseOf {
     for asked in scheme.required {
         required = list.push(required, Required { trait_name: asked.trait_name, at: replaced(asked.at, given) })
     }
-    UseOf { table: made, found: replaced(scheme.body, given), required: required }
+    UseOf { table: made, found: replaced(scheme.body, given), required: required, given: given }
 }
 
 /// A variable no other place in the program has, and the table that made it.
@@ -543,6 +543,16 @@ type Scheme = {
     required: List<Required>
 }
 
+/// One use of a scheme: the table, the type the use has, and the traits it must answer for.
+///
+/// `given` is the variable each stand-in got at this use, which lowering names a generic after.
+type UseOf = {
+    table: Table
+    found: Type
+    required: List<Required>
+    given: List<Given>
+}
+
 /// One stand-in, and the type it stands for at one use.
 type Given = {
     one: Quantified
@@ -555,13 +565,6 @@ derive Eq for Quantified
 type Quantified =
     | Generalised(Int)
     | Written(TypeParameter)
-
-/// One use of a scheme: the table, the type the use has, and the traits it must answer for.
-type UseOf = {
-    table: Table
-    found: Type
-    required: List<Required>
-}
 
 /// What each variable was settled on, which variables stand for a whole number, and where a
 /// whole number may be written.

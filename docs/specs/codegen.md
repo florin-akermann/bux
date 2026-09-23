@@ -511,6 +511,56 @@ Two compilations of one source produce identical files, so nothing in the writer
 timestamp, a build path, or the order a hash map iterates.
 The constant pool is built in the order entries are first asked for, which the lowering fixes.
 
+## The lowering and the class-file writer written in Bux
+
+`compiler/ir.lm` lowers a program in Bux, and `compiler/jvm.lm` writes its class files.
+`compiler/bytes.lm` writes the bytes of a class file.
+The Rust phases give the answer that the Bux phases must give.
+That answer is the same class files, in the same order, byte for byte.
+
+`ir.program_lowered(path, library)` lowers the module at `path` and each module that it reaches.
+It gives `skipped` when a phase before the lowering refuses the program.
+It also gives `skipped` when a module of the program holds a hole.
+It does not check the examples of a function, which `lumen build` does.
+The examples are a check before the lowering, and the harness does not compare that check.
+
+The Bux lowering runs the passes that `crates/cli/src/lowering.rs` runs.
+Each pass lowers the modules last first, and then the prelude.
+A pass that asks a module for more than that module knew starts one more pass.
+The pass that asks for nothing new gives the classes, the prelude first.
+`ir.library_read(source)` reads the prelude and types its bodies, as the Rust phase does.
+
+`jvm.program_written(program)` gives a `ClassFile` for each class of each lowered module.
+A `ClassFile` is the path of the class and its bytes.
+The bytes are a `List<Int>`, and each value is from 0 to 255.
+`bytes.u1`, `bytes.u2`, `bytes.u4`, and `bytes.u8` write a value in 1, 2, 4, or 8 bytes.
+The high byte comes first, and a negative value is written as its complement.
+`files.write_bytes` writes such a list as a file, which `docs/specs/io.md` states.
+
+The Bux writer keeps each behaviour of the Rust writer, and some of them are not correct.
+The Bux writer does the same, so that the two writers write the same bytes.
+A fix goes into the Rust phase first, and then into the Bux phase.
+These are the behaviours:
+
+- A class name that two modules write is written twice, and the hierarchy keeps the last one.
+- A frame merge compares the locals and the stack only as far as the shorter of the two.
+- A call and a constructor pop one stack entry for each parameter, also for a `long`.
+- A branch to a label that never lands is written with the offset from zero.
+- A branch that is farther than a two-byte offset holds is written with the offset 32767.
+- The length of a text in the constant pool is 65535 at most, and all of its bytes are written.
+
+A value of the Bux writer is its state, so each step gives back the state that it makes.
+The constant pool, the code, and the frames are values that go from one step to the next.
+The order in which the steps ask the pool for an entry is the order of the Rust writer.
+So each entry has the same index in the two writers.
+A label that the assembler makes is 4294967294 minus the number of labels made before it.
+
+The harness `crates/cli/tests/integration/bux_classes.rs` writes the class files with both phases.
+The fixtures are every `.lm` file under `tests/spec`, `library/`, and `compiler/`.
+Programs with drawn statements are fixtures too.
+For each fixture, the harness compares the list of paths and lengths, and then the bytes.
+The Bux phase runs on a JVM, so the harness skips a test with a reason when there is no JDK.
+
 ## The errors
 
 Code generation raises no diagnostic.

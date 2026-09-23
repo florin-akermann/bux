@@ -15,7 +15,7 @@ use crate::common;
 /// `Bool` an `Ok` carries is boxed, a guarded declaration asks whatever it caught what it says of
 /// itself, and the arm of a `match` nothing reaches says so rather than runs on, which
 /// `docs/specs/codegen.md` states.
-const REACHED: [&str; 16] = [
+const REACHED: [&str; 18] = [
     "java/lang/String",
     "java/lang/System",
     "java/io/PrintStream",
@@ -32,6 +32,8 @@ const REACHED: [&str; 16] = [
     "java/lang/Boolean",
     "java/lang/Throwable",
     "java/lang/AssertionError",
+    "java/lang/Character",
+    "java/lang/Long",
 ];
 
 /// The library modules that reach outside a program, which is what `docs/specs/io.md` is about.

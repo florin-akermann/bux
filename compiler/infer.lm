@@ -116,10 +116,11 @@ fn declared_and_typed(resolved: resolver.Resolved) -> String {
 // example: typed_code("fn count() -> Int {\n    1\n}\n") == ""
 // example: typed_code("fn count() -> Int {\n    \"one\"\n}\n") == "L0400 18..31"
 fn module_inferred(resolved: resolver.Resolved, imported: surface.Imported, declaring: declared.Declaring) -> Result<Inference, refusal.TypeError> {
-    var walking = inference_of(resolved, imported, declaring)
+    var walking = derives_typed(inference_of(resolved, imported, declaring))
     for item in resolved.program.items {
         walking = trait_settled(walking, item)?
     }
+    walking = externs_typed(walking)
     written := functions_of(resolved.program)
     var index = list.length(written) - 1
     for index >= 0 {
@@ -127,6 +128,69 @@ fn module_inferred(resolved: resolver.Resolved, imported: surface.Imported, decl
         index = index - 1
     }
     settle_positional(walking)
+}
+
+/// The inference with the type of each method a derive writes at the name of its trait.
+///
+/// Lowering reads the method a derive writes off that name, as it reads a function's off its own.
+// example: unify.text_of(or(type_at(derives_typed(inference_of(declared.resolved_of("derive Eq for Box\n\ntype Box = Box\n"), surface.nothing_imported(), no_declaring())), lexer.Span { start: 7, length: 2 }), unify.Unit)) == "(Box, Box) -> Bool"
+fn derives_typed(inference: Inference) -> Inference {
+    var walking = inference
+    for item in inference.resolved.program.items {
+        walking = derive_typed(walking, item)
+    }
+    walking
+}
+
+/// The inference with the method of each trait `item` derives, where `item` is a derive.
+// example: derive_typed(nothing_inferred(), declared.first_item("type Box = Box\n")).table.made == 0
+fn derive_typed(inference: Inference, item: ast.Item) -> Inference {
+    match item {
+        ast.Derive(declaration) => each_derived(inference, declaration)
+        _ => inference
+    }
+}
+
+/// The inference with the method of each trait `declaration` names, at the type it names.
+// example: each_derived(nothing_inferred(), ast.DeriveDeclaration { traits: [], for_type: no_name(), span: no_name().span }).table.made == 0
+fn each_derived(inference: Inference, declaration: ast.DeriveDeclaration) -> Inference {
+    var walking = inference
+    at := unify.Named { name: declaration.for_type.text, arguments: [] }
+    for of in declaration.traits {
+        method := or(declared.method_at(inference.environment, of.text, derived_method(of.text), at), unify.Unit)
+        walking = typed_at(walking, of.span, method)
+    }
+    walking
+}
+
+/// The one method of a trait a derive may name, which `docs/specs/derive.md` lists.
+// example: derived_method("Ord") == "is_less"
+fn derived_method(of: String) -> String {
+    match of {
+        "Eq" => "is_equal"
+        "Ord" => "is_less"
+        "Hash" => "hashed"
+        _ => "shown"
+    }
+}
+
+/// The inference with the type of each `extern` at its name, which is the method it writes.
+// example: list.length(externs_typed(nothing_inferred()).functions) == 0
+fn externs_typed(inference: Inference) -> Inference {
+    var walking = inference
+    for item in inference.resolved.program.items {
+        walking = extern_typed(walking, item)
+    }
+    walking
+}
+
+/// The inference with the type of `item` at its name, where `item` is an `extern`.
+// example: extern_typed(nothing_inferred(), declared.first_item("type Box = Box\n")).table.made == 0
+fn extern_typed(inference: Inference, item: ast.Item) -> Inference {
+    match item {
+        ast.Extern(declaration) => typed_at(inference, declaration.name.span, scheme_at(inference, declared.at_key(declaration.name.span.start)).body)
+        _ => inference
+    }
 }
 
 /// One run of inference over `resolved`, holding nothing yet but what it is walked against.
@@ -138,7 +202,7 @@ fn inference_of(resolved: resolver.Resolved, imported: surface.Imported, declari
     for function in functions_of(resolved.program) {
         keys = list.push(keys, declared.at_key(function.name.span.start))
     }
-    Inference { resolved: resolved, imported: imported, environment: environment, table: table { written_at: environment.written_at }, named: map.empty(), result: unify.Unit, introduced: [], operated: [], literals: [], discards: [], lookups: [], propagations: [], requirements: [], promised: [], positional: [], functions: keys }
+    Inference { resolved: resolved, imported: imported, environment: environment, table: table { written_at: environment.written_at }, named: map.empty(), result: unify.Unit, introduced: [], operated: [], literals: [], discards: [], lookups: [], propagations: [], requirements: [], promised: [], positional: [], functions: keys, types: map.empty(), methods: map.empty(), generics_reached: map.empty() }
 }
 
 /// The function at `index` of `written`, walked.
@@ -176,7 +240,7 @@ fn methods_settled(inference: Inference, methods: List<ast.Signature>) -> Result
 fn function_walked(inference: Inference, function: ast.FunctionDeclaration) -> Result<Inference, refusal.TypeError> {
     key := declared.at_key(function.name.span.start)
     scheme := scheme_at(inference, key)
-    started := inference { promised: scheme.required, named: map.insert(inference.named, function.name.span.start, scheme.body) }
+    started := typed_at(inference { promised: scheme.required, named: map.insert(inference.named, function.name.span.start, scheme.body) }, function.name.span, scheme.body)
     var walking = writes_the_method(started, key, scheme.body, function.name.span)?
     taken := unify.parameters_of(scheme.body)
     var index = 0
@@ -326,9 +390,16 @@ fn over_walked(inference: Inference, binding: ast.Name, iterable: ast.Expr) -> R
     Ok(introduce(met, binding, unify.monomorphic(item.found)))
 }
 
-/// The type of one expression.
+/// The type of one expression, which is kept at where it is written for lowering to read.
 // example: typed_code("fn count() -> Int {\n    ()\n}\n") == "L0400 18..28"
 fn walked_expr(inference: Inference, written: ast.Expr) -> Result<Typed, refusal.TypeError> {
+    walked := expr_written(inference, written)?
+    Ok(Typed { inference: typed_at(walked.inference, written.span, walked.found), found: walked.found })
+}
+
+/// The type of one expression, by the form it is written in.
+// example: typed_code("fn count() -> Int {\n    \"one\"\n}\n") == "L0400 18..31"
+fn expr_written(inference: Inference, written: ast.Expr) -> Result<Typed, refusal.TypeError> {
     match written.kind {
         ast.NameExpr(named) => Ok(value_of_name(inference, named))
         ast.Integer(number) => Ok(literal(inference, number, written.span))
@@ -412,9 +483,16 @@ fn call_walked(inference: Inference, callee: ast.Expr, arguments: ast.Arguments,
 // example: typed_code("import demo\n\nfn count() -> Int {\n    demo.total()\n}\n") == "L0414 42..47"
 fn callee_type(inference: Inference, callee: ast.Expr) -> Result<Typed, refusal.TypeError> {
     match callee.kind {
-        ast.Field { receiver, name } => called_through(inference, receiver, name)
+        ast.Field { receiver, name } => kept_at(called_through(inference, receiver, name), callee.span)
         _ => walked_expr(inference, callee)
     }
+}
+
+/// `walked`, with the type it found kept at `span`, where the step was not refused.
+// example: found_after(kept_at(Ok(Typed { inference: nothing_inferred(), found: unify.int() }), no_name().span)) == unify.int()
+fn kept_at(walked: Result<Typed, refusal.TypeError>, span: lexer.Span) -> Result<Typed, refusal.TypeError> {
+    one := walked?
+    Ok(Typed { inference: typed_at(one.inference, span, one.found), found: one.found })
 }
 
 /// A name after a dot: a function of a module, or a name in scope called on what is in front.
@@ -1054,13 +1132,71 @@ fn offered_inside(inference: Inference, reached: surface.Reached, module: String
 /// module's behalf.
 // example: offered_use(nothing_inferred(), surface.Plain(unify.monomorphic(unify.int())), Reaching { module: "demo", field: no_name() }).found == unify.int()
 fn offered_use(inference: Inference, offered: surface.Offered, reaching: Reaching) -> Typed {
-    made := unify.at_one_use(inference.table, surface.scheme_offered(offered))
-    how := if surface.is_generic(offered) {
-        ByAnotherModule { module: reaching.module, name: reaching.field.text }
-    } else {
-        ByConstraint
+    scheme := surface.scheme_offered(offered)
+    made := unify.at_one_use(inference.table, scheme)
+    if !surface.is_generic(offered) {
+        return Typed { inference: asking(inference { table: made.table }, made.required, reaching.field.span, ByConstraint), found: made.found }
     }
-    Typed { inference: asking(inference { table: made.table }, made.required, reaching.field.span, how), found: made.found }
+    how := ByAnotherModule { module: reaching.module, name: reaching.field.text }
+    asked := asking(inference { table: made.table }, made.required, reaching.field.span, how)
+    reached := map.insert(asked.generics_reached, span_key(reaching.field.span), generic_use(scheme, made.given))
+    Typed { inference: asked { generics_reached: reached }, found: made.found }
+}
+
+/// What one use of a generic gave each stand-in its declaration wrote, and what each asks.
+///
+/// Each stand-in inference made is erased from the declared type, which is how the method the
+/// other module writes is written: over the parameters it declares and nothing else.
+// example: generic_use(unify.monomorphic(unify.int()), []).written_as == unify.int()
+fn generic_use(scheme: unify.Scheme, given: List<unify.Given>) -> GenericUse {
+    var settled = []
+    var constrained = []
+    var erasing = []
+    for one in given {
+        settled = with_written(settled, one)
+        constrained = with_constraints(scheme: scheme, one: one, constrained: constrained)
+        erasing = list.push(erasing, erased(one))
+    }
+    GenericUse { settled: settled, constrained: constrained, written_as: unify.replaced(scheme.body, erasing) }
+}
+
+/// `settled` with what `one` stands for, where the declaration wrote `one`.
+// example: with_written([], unify.Given { one: unify.Generalised(0), at: unify.int() }) == []
+fn with_written(settled: List<unify.Type>, one: unify.Given) -> List<unify.Type> {
+    match one.one {
+        unify.Generalised(_) => settled
+        unify.Written(_) => list.push(settled, one.at)
+    }
+}
+
+/// `constrained` with the traits `scheme` asks of `one`, where the declaration wrote `one`.
+// example: with_constraints(scheme: unify.monomorphic(unify.int()), one: unify.Given { one: unify.Generalised(0), at: unify.int() }, constrained: []) == []
+fn with_constraints(scheme: unify.Scheme, one: unify.Given, constrained: List<List<String>>) -> List<List<String>> {
+    match one.one {
+        unify.Generalised(_) => constrained
+        unify.Written(parameter) => list.push(constrained, constraints_on(scheme, parameter))
+    }
+}
+
+/// `one`, erased where inference made it, as what every value fits then carries it.
+// example: erased(unify.Given { one: unify.Generalised(0), at: unify.int() }).at == unify.Parameter(unify.prelude_parameter("_"))
+fn erased(one: unify.Given) -> unify.Given {
+    match one.one {
+        unify.Generalised(_) => one { at: unify.Parameter(unify.prelude_parameter("_")) }
+        unify.Written(_) => one
+    }
+}
+
+/// The traits `scheme` asks of `parameter`, in the order it asks them.
+// example: constraints_on(unify.monomorphic(unify.int()), unify.prelude_parameter("T")) == []
+fn constraints_on(scheme: unify.Scheme, parameter: unify.TypeParameter) -> List<String> {
+    var traits = []
+    for required in scheme.required {
+        if required.at == unify.Parameter(parameter) {
+            traits = list.push(traits, required.trait_name)
+        }
+    }
+    traits
 }
 
 /// The constructor a module offers as `field`, which builds a value of a type it declares.
@@ -1189,7 +1325,7 @@ fn literal(inference: Inference, number: Int, written: lexer.Span) -> Typed {
 // example: typed_code("fn count(held: Box) -> Int {\n    match held {\n        1 => 1\n        _ => 2\n    }\n}\n\ntype Box = Box\n") == "L0400 54..55"
 fn literal_pattern(inference: Inference, matched: Matched, at: lexer.Span) -> Result<Inference, refusal.TypeError> {
     met := expect(inference: inference, expected: matched.expected, found: matched.written, at: at)?
-    Ok(asking(met, [unify.Required { trait_name: "Eq", at: matched.expected }], at, ByConstraint))
+    Ok(typed_at(asking(met, [unify.Required { trait_name: "Eq", at: matched.expected }], at, ByConstraint), at, matched.expected))
 }
 
 /// A bare name matches a variant that carries nothing, or binds whatever is matched.
@@ -1415,10 +1551,23 @@ fn settle_operators(inference: Inference) -> Result<Inference, refusal.TypeError
 /// The traits the current function asked for, each answered by an instance or refused.
 // example: typed_code("fn is_same(one: String, other: String) -> Bool {\n    one == other\n}\n") == "L0406 53..65"
 fn settle_requirements(inference: Inference) -> Result<Inference, refusal.TypeError> {
+    var methods = inference.methods
     for requirement in inference.requirements {
         _ = requirement_answered(inference, requirement)?
+        if is_by_method(requirement.how) {
+            methods = map.insert(methods, span_key(requirement.written), unify.solved(inference.table, requirement.required.at))
+        }
     }
-    Ok(inference { requirements: [] })
+    Ok(inference { requirements: [], methods: methods })
+}
+
+/// Whether a trait was asked by a use of one of its methods, whose instance lowering calls.
+// example: is_by_method(ByMethod)
+fn is_by_method(how: Asked) -> Bool {
+    match how {
+        ByMethod => true
+        _ => false
+    }
 }
 
 /// One trait asked at one use, answered by an instance or refused.
@@ -1610,7 +1759,7 @@ fn fresh(inference: Inference) -> Typed {
 // example: list.length(introduce(nothing_inferred(), no_name(), unify.monomorphic(unify.int())).introduced) == 1
 fn introduce(inference: Inference, named: ast.Name, scheme: unify.Scheme) -> Inference {
     key := declared.at_key(named.span.start)
-    inference { environment: declared.bound(inference.environment, key, scheme), introduced: list.push(inference.introduced, key) }
+    typed_at(inference { environment: declared.bound(inference.environment, key, scheme), introduced: list.push(inference.introduced, key) }, named.span, scheme.body)
 }
 
 /// The type `named` has at this one use, fresh in whatever its definition is free over.
@@ -1733,6 +1882,54 @@ fn code_of_error(refused: refusal.TypeError) -> String {
     refusal.code_of(refused.kind) + " " + shown(refused.span)
 }
 
+/// The inference with `found` recorded as the type of what is written at `span`.
+// example: or(type_at(typed_at(nothing_inferred(), no_name().span, unify.int()), no_name().span), unify.Unit) == unify.int()
+fn typed_at(inference: Inference, span: lexer.Span, found: unify.Type) -> Inference {
+    inference { types: map.insert(inference.types, span_key(span), found) }
+}
+
+/// The type recorded at `span`, followed to what the whole module settled it on.
+// example: or(type_at(nothing_inferred(), no_name().span), unify.int()) == unify.int()
+fn type_at(inference: Inference, span: lexer.Span) -> Option<unify.Type> {
+    match map.get(inference.types, span_key(span)) {
+        Some(found) => Some(unify.solved(inference.table, found))
+        None => None
+    }
+}
+
+/// The type a call of a trait method at `span` asked its trait of, which names the instance.
+// example: or(method_type_at(nothing_inferred(), no_name().span), unify.int()) == unify.int()
+fn method_type_at(inference: Inference, span: lexer.Span) -> Option<unify.Type> {
+    map.get(inference.methods, span_key(span))
+}
+
+/// What the use of another module's generic at `span` settled, followed to what it settled on.
+// example: list.length(or(generic_at(nothing_inferred(), no_name().span), GenericUse { settled: [], constrained: [], written_as: unify.Unit }).settled) == 0
+fn generic_at(inference: Inference, span: lexer.Span) -> Option<GenericUse> {
+    match map.get(inference.generics_reached, span_key(span)) {
+        Some(reaching) => Some(reaching { settled: each_solved(inference.table, reaching.settled), written_as: unify.solved(inference.table, reaching.written_as) })
+        None => None
+    }
+}
+
+/// Each of `types`, followed to what `table` settled it on.
+// example: each_solved(unify.empty_table(), [unify.int()]) == [unify.int()]
+fn each_solved(table: unify.Table, types: List<unify.Type>) -> List<unify.Type> {
+    var solved = []
+    for one in types {
+        solved = list.push(solved, unify.solved(table, one))
+    }
+    solved
+}
+
+/// One number for each span, which a map of what is written where is keyed by.
+///
+/// No source file this compiler reads is a mebibyte long, so no two spans share a number.
+// example: span_key(lexer.Span { start: 1, length: 2 }) == 1048578
+fn span_key(span: lexer.Span) -> Int {
+    span.start * 1048576 + span.length
+}
+
 /// The inference after one step, and the type that step found.
 type Typed = {
     inference: Inference
@@ -1815,6 +2012,20 @@ type Inference = {
     promised: List<unify.Required>
     positional: List<Positional>
     functions: List<String>
+    types: map.Map<Int, unify.Type>
+    methods: map.Map<Int, unify.Type>
+    generics_reached: map.Map<Int, GenericUse>
+}
+
+/// What one use of another module's generic settled, which says which method of it is reached.
+///
+/// `settled` is the type each written type parameter settled on, in the order it is written, and
+/// `constrained` is the traits each of those is constrained by. `written_as` is the declared type
+/// at those, with every stand-in inference made erased.
+type GenericUse = {
+    settled: List<unify.Type>
+    constrained: List<List<String>>
+    written_as: unify.Type
 }
 
 /// One operator waiting on the type its operands settle on, which its trait is asked of.
