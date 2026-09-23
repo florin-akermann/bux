@@ -6,6 +6,24 @@
 
 ## Open
 
+## 🔴 Item 091: The compiler and `bin/runner` are fast because they run on Bux processes
+Self-hosting is done, and `bin/runner` now runs so long that it looks stuck.
+Section 15 of `docs/design.md` designs the concurrency, and this item builds it and uses it first.
+The compiler and its checks are the first program that uses processes, so dogfood finds the gaps.
+[091][a] - The wall time of `bin/bootstrap` and `bin/runner` is measured, and the slow part named.
+[091][b] - `docs/specs/concurrency.md` answers the two open questions that section 15 leaves.
+[091][c] - The spec states `process`, `spawn`, the handle, the bounded mailbox, and the deadline.
+[091][d] - The Bux lexer, parser, and formatter accept `process` and `spawn`.
+[091][e] - The type phase holds the one process shape, and each break of it gets a diagnostic.
+[091][f] - `send` gives a typed result for a process that has ended, and a full mailbox waits.
+[091][g] - The lowering runs each process on a JVM virtual thread, and no program can see how.
+[091][h] - `tests/spec/concurrency/` holds a counter, a worker pool, and each refused shape.
+[091][i] - `bin/runner` hands its checks to a pool of processes, one for each processor.
+[091][j] - The compiler lowers and writes independent modules in processes of their own.
+[091][k] - The new wall times are measured against the times of [091][a], and both are recorded.
+[091][l] - Each gap or bottleneck that this dogfood finds becomes its own item in `TODOS.md`.
+[091][m] - `bux help process` states the process shape, and section 15 drops its 0.4 note.
+
 ## 🔴 Item 080: `Option<()>` is refused wherever a program writes it or inference reaches it
 `Some(())` says only that a value is there, which is `Bool` spelled a second way and nullability.
 `Result<(), E>` stays, because its `Err` carries a reason; `docs/design.md` section 5 says why.
