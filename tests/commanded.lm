@@ -165,7 +165,7 @@ fn first_part(path: String) -> String {
 fn ended_in(answer: command.Answer, stage: Stage) -> command.Said {
     match answer {
         command.Spoken(said) => said
-        command.Starts(line) => started.program_said(walk.ended(line, stage.directory, stage.limit))
+        command.Starts(line) => started.program_said(walk.completed(line, stage.directory, stage.limit))
     }
 }
 

@@ -79,7 +79,7 @@ status 0
 > back `-1` ends it with `255`.
 >
 > A program reaches the console with `io`, the file system with `files`, and another program with
-> `process`, three library modules the compiler carries rather than reading from a file:
+> `programs`, three library modules the compiler carries rather than reading from a file:
 >
 > ```text
 > import files
@@ -98,7 +98,7 @@ status 0
 > `io.print` writes its text and nothing else, `io.println` writes it and then a line break,
 > `io.eprintln` writes it and a line break to standard error, and `files.read` gives back the whole
 > file as a `Result` the program must open, so a file that is not there is a case the program states
-> rather than a failure that ends it. `process.run` takes a program and the list of arguments it is
+> rather than a failure that ends it. `programs.run` takes a program and the list of arguments it is
 > given, starts it, reads what it wrote, and waits for it to end, and what it gives back holds the
 > code it ended with and both of the texts it wrote.
 >
@@ -240,6 +240,8 @@ status 0
 >
 > Every error carries a code on its first line; `lumen explain <code>` says more about it.
 >
+> A process owns a state and takes messages; `lumen help process` says how one is written.
+>
 > The same command line is written in Bux, in `compiler/`. Build it with
 > `lumen build compiler/main.lm`, then start it with `bin/bux`, on the JDK that JAVA_HOME names.
 >
@@ -314,7 +316,7 @@ status 0
 > Loading comes first. `import greeting` names `greeting.lm`, beside the file that writes it, and
 > every module the file reaches is read before any of them is checked. There is no search path:
 > a module is the file of that name beside the importing one, or nothing, and an import that names
-> no such file is refused. `io`, `files`, `process`, `list`, `strings`, `map`, and `set` are modules
+> no such file is refused. `io`, `files`, `programs`, `list`, `strings`, `map`, and `set` are modules
 > of the library the compiler carries, so an import of any of them looks for no file at all and a
 > file of that name beside the importing one does not shadow it.
 > `map` holds `Map<K, V>`, built by `map.empty` and `map.insert` and read by `map.get`; `set` holds
@@ -372,7 +374,7 @@ status 0
 > name that is no Java name, a `derive` of an extern type, a `method` or a `new` whose signature
 > names no class, a width written where the result is no `Int`, a narrowed parameter whose result
 > is no `Option`, and a `new` whose result is an interface are each refused. `io`, `files`,
-> `process`, and the readings of a string in `strings` are written over these declarations, so a
+> `programs`, and the readings of a string in `strings` are written over these declarations, so a
 > program reaches the console, the file system, another program, and the code units of a string
 > without writing one.
 >
@@ -1179,6 +1181,53 @@ status 2
 !
 ! Usage: lumen run <FILE> [ARGUMENTS]...
 
+$ help process
+status 0
+> Processes
+> ---------
+>
+> A process owns a state, and a message is the only way to that state. A module declares a process
+> with `process`, a name, and two functions: `start`, then `receive`, and nothing else.
+>
+> ```text
+> process Counter {
+>     fn start(initial: Int) -> Int {
+>         initial
+>     }
+>
+>     fn receive(total: Int, message: Counted) -> Next<Int> {
+>         match message {
+>             Add(amount) => Continue(total + amount)
+>             Stop => Done
+>         }
+>     }
+> }
+> ```
+>
+> `start` takes the values `spawn` is given and gives the first state. `receive` takes the state
+> and one message, and gives `Continue` of the next state or `Done`, which ends the process. Every
+> type is written, and neither function is generic. The body of `receive` is one `match` on the
+> message, and each arm is one call or one name; other work goes in a function the arm calls.
+> Each break of the shape has its own code, `L0802` to `L0810`, and `lumen explain` says more.
+>
+> `spawn Counter(10)` starts a process on a JVM virtual thread and gives its handle, a
+> `Process<Counted, Int>`: what it accepts, then its state. A handle has no `Eq` and crosses no
+> `extern`. A message can carry one, which is how a process is given an address to answer on.
+>
+> `send(counting, Add(3), NoLimit)` puts a message in the mailbox and gives a `Sent`: `Delivered`,
+> `MailboxFull`, or `ProcessEnded`. A mailbox holds 64 messages. While it is full, `send` waits as
+> the third argument says: `NoWait`, `Milliseconds(n)`, or `NoLimit`. A process that has ended
+> takes nothing, and `send` says so without a wait.
+>
+> `ended(counting)` waits for the process to end and gives its last state. A process wakes only for
+> a message: there is no timeout on `receive`, no timer, and no sleep.
+
+$ help process a
+status 2
+! error: unrecognized subcommand 'a'
+!
+! Usage: lumen help process
+
 $ -- check
 status 2
 ! error: unexpected argument 'check' found
@@ -1581,6 +1630,8 @@ status 0
 >
 > Every error carries a code on its first line; `lumen explain <code>` says more about it.
 >
+> A process owns a state and takes messages; `lumen help process` says how one is written.
+>
 > The same command line is written in Bux, in `compiler/`. Build it with
 > `lumen build compiler/main.lm`, then start it with `bin/bux`, on the JDK that JAVA_HOME names.
 >
@@ -1655,7 +1706,7 @@ status 0
 > Loading comes first. `import greeting` names `greeting.lm`, beside the file that writes it, and
 > every module the file reaches is read before any of them is checked. There is no search path:
 > a module is the file of that name beside the importing one, or nothing, and an import that names
-> no such file is refused. `io`, `files`, `process`, `list`, `strings`, `map`, and `set` are modules
+> no such file is refused. `io`, `files`, `programs`, `list`, `strings`, `map`, and `set` are modules
 > of the library the compiler carries, so an import of any of them looks for no file at all and a
 > file of that name beside the importing one does not shadow it.
 > `map` holds `Map<K, V>`, built by `map.empty` and `map.insert` and read by `map.get`; `set` holds
@@ -1713,7 +1764,7 @@ status 0
 > name that is no Java name, a `derive` of an extern type, a `method` or a `new` whose signature
 > names no class, a width written where the result is no `Int`, a narrowed parameter whose result
 > is no `Option`, and a `new` whose result is an interface are each refused. `io`, `files`,
-> `process`, and the readings of a string in `strings` are written over these declarations, so a
+> `programs`, and the readings of a string in `strings` are written over these declarations, so a
 > program reaches the console, the file system, another program, and the code units of a string
 > without writing one.
 >

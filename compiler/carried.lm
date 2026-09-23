@@ -127,6 +127,7 @@ fn inside_read(inference: infer.Inference, written: ast.Expr) -> Result<(), refu
         ast.Record { base, fields } => fields_read(inference, fields)
         ast.If(chain) => if_read(inference, chain)
         ast.Match(matched) => match_read(inference, matched)
+        ast.Spawn(started) => expression_read(inference, started)
         _ => Ok(())
     }
 }

@@ -114,7 +114,7 @@ fn no_reading() -> Reading {
     Reading { found: map.empty(), space: no_space() }
 }
 
-/// The constructors of `Bool`, `Option`, and `Result`, and nothing else.
+/// The constructors of the types of the prelude, and nothing else.
 // example: or(declared_at(no_space(), "true"), -1) == 1
 fn no_space() -> Space {
     space_of(ast.Program { items: [] }, [])
@@ -193,6 +193,7 @@ fn expression_checked(reading: Reading, walked: ast.Expr) -> Result<(), MatchErr
         ast.Record { base, fields } => fields_checked(reading, fields)
         ast.If(chain) => if_checked(reading, chain)
         ast.Match(matched) => match_checked(reading, matched, walked.span)
+        ast.Spawn(started) => expression_checked(reading, started)
         _ => Ok(())
     }
 }
@@ -712,13 +713,16 @@ fn rest_of(row: List<Pat>, count: Int) -> List<Pat> {
 
 /// Every constructor `program` can write, grouped by the type that declares it.
 ///
-/// `Bool`, `Option`, and `Result` come first, then the types of `program`, then those it reaches.
+/// The types of the prelude come first, then the types of `program`, then those it reaches.
 /// A constructor is found by its name alone, because resolution makes that name unambiguous.
 // example: carried_by(space_of(ast.Program { items: [] }, []), "Err") == 1
 fn space_of(program: ast.Program, reached: List<surface.OfferedType>) -> Space {
     var space = declare(Space { declared: [], of_constructor: map.empty() }, [Signature { name: "false", carries: 0 }, Signature { name: "true", carries: 0 }])
     space = declare(space, [Signature { name: "Some", carries: 1 }, Signature { name: "None", carries: 0 }])
     space = declare(space, [Signature { name: "Ok", carries: 1 }, Signature { name: "Err", carries: 1 }])
+    space = declare(space, [Signature { name: "Continue", carries: 1 }, Signature { name: "Done", carries: 0 }])
+    space = declare(space, [Signature { name: "Delivered", carries: 0 }, Signature { name: "MailboxFull", carries: 0 }, Signature { name: "ProcessEnded", carries: 0 }])
+    space = declare(space, [Signature { name: "NoWait", carries: 0 }, Signature { name: "Milliseconds", carries: 1 }, Signature { name: "NoLimit", carries: 0 }])
     for item in program.items {
         space = declare(space, constructors_of(item))
     }

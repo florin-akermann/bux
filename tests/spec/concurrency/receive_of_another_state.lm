@@ -1,0 +1,25 @@
+// expect-error: L0810
+// `receive` takes the state that `start` gives.
+fn main(arguments: List<String>) -> Int {
+    _ = spawn Counter()
+    0
+}
+
+/// A total that each `Add` grows.
+process Counter {
+    fn start() -> Int {
+        0
+    }
+
+    fn receive(total: String, message: Counted) -> Next<String> {
+        match message {
+            Add(amount) => Continue(total)
+            Stop => Done
+        }
+    }
+}
+
+/// What a counter is sent.
+type Counted =
+    | Add(Int)
+    | Stop

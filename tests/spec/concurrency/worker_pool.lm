@@ -1,0 +1,87 @@
+// expect-run
+// > 91
+// Two workers share six jobs, and each worker sends its answer to one collector.
+// A message carries the handle of the collector, which is the address a worker answers to.
+// The answers arrive in any order, so the program shows their total, which has one value.
+import io
+
+import list
+
+fn main(arguments: List<String>) -> Int {
+    collecting := spawn Collector()
+    first := spawn Worker(collecting)
+    second := spawn Worker(collecting)
+    for number in [1, 3, 5] {
+        _ = send(first, Square(number), NoLimit)
+    }
+    for number in [2, 4, 6] {
+        _ = send(second, Square(number), NoLimit)
+    }
+    for worker in [first, second] {
+        _ = send(worker, Quit, NoLimit)
+        _ = ended(worker)
+    }
+    io.println(shown(total(collected(collecting))))
+    0
+}
+
+/// Every answer `collector` holds, once it is sent `Finish` and has ended.
+// example: list.length(collected(spawn Collector())) == 0
+fn collected(collector: Process<Collected, List<Int>>) -> List<Int> {
+    _ = send(collector, Finish, NoLimit)
+    ended(collector)
+}
+
+// example: total([1, 4]) == 5
+fn total(answers: List<Int>) -> Int {
+    var sum = 0
+    for answer in answers {
+        sum += answer
+    }
+    sum
+}
+
+/// A worker squares each number it is sent, and sends the square to the collector it holds.
+process Worker {
+    fn start(collector: Process<Collected, List<Int>>) -> Process<Collected, List<Int>> {
+        collector
+    }
+
+    fn receive(collector: Process<Collected, List<Int>>, message: Job) -> Next<Process<Collected, List<Int>>> {
+        match message {
+            Square(number) => Continue(answered(collector, number))
+            Quit => Done
+        }
+    }
+}
+
+/// `collector`, after the square of `number` is sent to it.
+// example: total(collected(answered(spawn Collector(), 3))) == 9
+fn answered(collector: Process<Collected, List<Int>>, number: Int) -> Process<Collected, List<Int>> {
+    _ = send(collector, Answer(number * number), NoLimit)
+    collector
+}
+
+/// A collector holds each answer it is sent, until `Finish` ends it.
+process Collector {
+    fn start() -> List<Int> {
+        []
+    }
+
+    fn receive(answers: List<Int>, message: Collected) -> Next<List<Int>> {
+        match message {
+            Answer(number) => Continue(list.push(answers, number))
+            Finish => Done
+        }
+    }
+}
+
+/// What a worker is sent.
+type Job =
+    | Square(Int)
+    | Quit
+
+/// What the collector is sent.
+type Collected =
+    | Answer(Int)
+    | Finish

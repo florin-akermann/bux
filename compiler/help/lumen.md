@@ -20,6 +20,8 @@ looks.
 
 Every error carries a code on its first line; `lumen explain <code>` says more about it.
 
+A process owns a state and takes messages; `lumen help process` says how one is written.
+
 The same command line is written in Bux, in `compiler/`. Build it with
 `lumen build compiler/main.lm`, then start it with `bin/bux`, on the JDK that JAVA_HOME names.
 

@@ -1,0 +1,72 @@
+// expect-run
+// > delivered
+// > the mailbox is full
+// > the mailbox is full
+// > delivered
+// > the process has ended
+// A mailbox holds 64 messages, and `send` waits for room only as long as `waiting` says.
+// The holder takes one message and then waits for a process that never ends, so its mailbox fills.
+// A process that has ended takes no message, and `send` says so rather than wait.
+import io
+
+fn main(arguments: List<String>) -> Int {
+    holding := spawn Holder()
+    io.println(told(send(holding, Hold(spawn Idle()), NoLimit)))
+    var filled = 0
+    for filled < 64 {
+        _ = send(holding, Release, NoLimit)
+        filled += 1
+    }
+    io.println(told(send(holding, Release, NoWait)))
+    io.println(told(send(holding, Release, Milliseconds(10))))
+    counting := spawn Idle()
+    io.println(told(send(counting, Stop, NoWait)))
+    _ = ended(counting)
+    io.println(told(send(counting, Stop, NoLimit)))
+    0
+}
+
+/// What `sent` says of a message.
+// example: told(Delivered) == "delivered"
+fn told(sent: Sent) -> String {
+    match sent {
+        Delivered => "delivered"
+        MailboxFull => "the mailbox is full"
+        ProcessEnded => "the process has ended"
+    }
+}
+
+/// A process that waits on the first process it is sent, and never takes a second message.
+process Holder {
+    fn start() -> Int {
+        0
+    }
+
+    fn receive(held: Int, message: Held) -> Next<Int> {
+        match message {
+            Hold(idle) => Continue(ended(idle))
+            Release => Done
+        }
+    }
+}
+
+/// A process that ends only when it is sent `Stop`.
+process Idle {
+    fn start() -> Int {
+        0
+    }
+
+    fn receive(count: Int, message: Stopped) -> Next<Int> {
+        match message {
+            Stop => Done
+        }
+    }
+}
+
+/// What a holder is sent.
+type Held =
+    | Hold(Process<Stopped, Int>)
+    | Release
+
+/// What an idle process is sent.
+type Stopped = Stop

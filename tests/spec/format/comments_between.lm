@@ -10,7 +10,7 @@ fn counted(payment: Payment) -> Int {
     match payment {
         Pending => listed
         // and then the rest
-        Done => 0
+        Finished => 0
     }
 }
 
@@ -23,4 +23,4 @@ type User = {
 type Payment =
     | Pending
     // and then
-    | Done
+    | Finished

@@ -44,10 +44,10 @@ fn stopped_held() -> held.Held {
 fn stopped_in(directory: String) -> held.Held {
     _ = files.write(modules.joined(directory, "forever.sh"), forever_text())
     from := command.nanoseconds()
-    ended := walk.ended(["sh", "forever.sh"], directory, 1)
+    completion := walk.completed(["sh", "forever.sh"], directory, 1)
     seconds := or((command.nanoseconds() - from) / 1000000000, 0)
     command.removed_whole(directory)
-    stopped_compared(ended, seconds)
+    stopped_compared(completion, seconds)
 }
 
 /// One case that held where the program was stopped at its limit of one second, and reported so
@@ -55,9 +55,9 @@ fn stopped_in(directory: String) -> held.Held {
 // example: stopped_compared(Err(walk.PastLimit(1, "")), 1).failures == []
 // example: stopped_compared(Err(walk.PastLimit(1, "")), 3).failures == ["a program that never ends: seconds until it was reported: expected \"2 or fewer\", found \"3\""]
 // example: stopped_compared(Err(walk.NotStarted), 0).failures == ["a program that never ends: expected \"the program did not end within 1 s, and was stopped\", found \"the program could not be started\""]
-fn stopped_compared(ended: Result<walk.Ended, walk.Unended>, seconds: Int) -> held.Held {
+fn stopped_compared(completion: Result<walk.Ended, walk.Unended>, seconds: Int) -> held.Held {
     var found = held.nothing_failed(1)
-    said := ended_said(ended)
+    said := ended_said(completion)
     expected := walk.unended_said(walk.PastLimit(1, ""), "the program")
     if said != expected {
         found = held.with_failure(found, held.failure("a program that never ends", expected, said))
@@ -76,8 +76,8 @@ fn forever_text() -> String {
 
 /// What a check says of how a started program ended: its status, or why it gave none.
 // example: ended_said(Ok(walk.Ended { output: "", errors: "", status: 3 })) == "status 3"
-fn ended_said(ended: Result<walk.Ended, walk.Unended>) -> String {
-    match ended {
+fn ended_said(completion: Result<walk.Ended, walk.Unended>) -> String {
+    match completion {
         Ok(done) => "status " + shown(done.status)
         Err(unended) => walk.unended_said(unended, "the program")
     }
@@ -101,7 +101,7 @@ fn unbuilt_in(launcher: String, directory: String, limit: Int) -> held.Held {
     _ = files.write(copy, ok_or(files.read(launcher), ""))
     expected := Expected { status: 2, output: "", errors: "the compiler is not built; bin/bootstrap builds it\n" }
     line := ["sh", copy, "--version"]
-    found := ended_held(line, walk.ended(line, directory, limit), expected)
+    found := ended_held(line, walk.completed(line, directory, limit), expected)
     command.removed_whole(directory)
     found
 }
@@ -118,17 +118,17 @@ fn start_held(line: List<String>, limit: Int, expected: Expected) -> held.Held {
 /// The launcher started with `line` in `directory`, which is taken away again once it has ended.
 // example: started_in(["no-such-program-at-all"], "no-such-directory", 1, Expected { status: 0, output: "", errors: "" }).cases == 1
 fn started_in(line: List<String>, directory: String, limit: Int, expected: Expected) -> held.Held {
-    ended := walk.ended(line, directory, limit)
+    completion := walk.completed(line, directory, limit)
     command.removed_whole(directory)
-    ended_held(line, ended, expected)
+    ended_held(line, completion, expected)
 }
 
 /// What the start of `line` ended with, held to `expected`, or why it gave no status back.
 // example: ended_held(["x"], Err(walk.NotStarted), Expected { status: 0, output: "", errors: "" }).failures == ["x: the launcher could not be started"]
 // example: ended_held(["x"], Err(walk.PastLimit(9, "")), Expected { status: 0, output: "", errors: "" }).failures == ["x: the launcher did not end within 9 s, and was stopped"]
-fn ended_held(line: List<String>, ended: Result<walk.Ended, walk.Unended>, expected: Expected) -> held.Held {
+fn ended_held(line: List<String>, completion: Result<walk.Ended, walk.Unended>, expected: Expected) -> held.Held {
     name := strings.join(line, " ")
-    match ended {
+    match completion {
         Ok(done) => compared(name, done, expected)
         Err(unended) => held.with_failure(held.nothing_failed(1), name + ": " + walk.unended_said(unended, "the launcher"))
     }

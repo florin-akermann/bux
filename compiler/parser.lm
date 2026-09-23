@@ -46,7 +46,7 @@ fn program(from: Cursor) -> Result<ast.Program, ParseError> {
 
 /// A top-level declaration, which the keyword it starts with says the kind of.
 // example: position_after(item(over("import io\n"))) == 2
-// example: failed(item(over("x"))) == "0..1 expected an import, a type, a trait, an instance, a derive, a function, or an extern, found `x`\n"
+// example: failed(item(over("x"))) == "0..1 expected an import, a type, a trait, an instance, a derive, a function, an extern, or a process, found `x`\n"
 fn item(cursor: Cursor) -> Result<Parsed<ast.Item>, ParseError> {
     if is_at_keyword(cursor, lexer.Import) {
         return import_item(cursor)
@@ -69,6 +69,9 @@ fn item(cursor: Cursor) -> Result<Parsed<ast.Item>, ParseError> {
     }
     if is_at_keyword(cursor, lexer.Extern) {
         return reaching_java(cursor)
+    }
+    if is_at_keyword(cursor, lexer.Process) {
+        return process_item(cursor)
     }
     Err(error(cursor, ItemWanted))
 }
@@ -441,6 +444,26 @@ fn instance_item(cursor: Cursor) -> Result<Parsed<ast.Item>, ParseError> {
     Ok(Parsed { value: ast.Instance(declared), cursor: cursor_of(step) })
 }
 
+/// `process Counter { … }`: the name of a process, and each function written inside the braces.
+///
+/// Any number of functions parses here, because the type phase holds them to the one process shape.
+// example: item_printed(process_item(over("process Counter {\n    fn start() -> Int {\n        0\n    }\n}"))) == "process Counter 0..59\n  function start 22..57\n    result\n      named-type Int 36..39\n    block 40..57\n      integer 0 50..51\n"
+fn process_item(cursor: Cursor) -> Result<Parsed<ast.Item>, ParseError> {
+    start := offset(cursor)
+    past_process := expect_keyword(cursor, lexer.Process)?
+    name := expect_name(past_process, NameWanted)?
+    opened := expect_punct(name.cursor, lexer.LBrace)?
+    var functions = []
+    var step = body_opening(opened, 0)
+    for is_open(step) {
+        function := function_declaration(cursor_of(step))?
+        functions = list.push(functions, function.value)
+        step = body_opening(function.cursor, 1)
+    }
+    declared := ast.ProcessDeclaration { name: name.value, functions: functions, span: span_since(cursor_of(step), start) }
+    Ok(Parsed { value: ast.Process(declared), cursor: cursor_of(step) })
+}
+
 /// `derive Eq, Ord for User`: the traits the compiler writes, and the type it writes them for.
 // example: item_printed(derive_item(over("derive Eq, Hash for Id"))) == "derive Eq, Hash for Id 0..22\n"
 fn derive_item(cursor: Cursor) -> Result<Parsed<ast.Item>, ParseError> {
@@ -550,8 +573,8 @@ fn statement_kind(cursor: Cursor) -> Result<Parsed<ast.StatementKind>, ParseErro
     if is_at_keyword(cursor, lexer.Break) {
         return Ok(Parsed { value: ast.Break, cursor: advanced(cursor) })
     }
-    if is_at_keyword(cursor, lexer.Continue) {
-        return Ok(Parsed { value: ast.Continue, cursor: advanced(cursor) })
+    if is_at_keyword(cursor, lexer.ContinueLoop) {
+        return Ok(Parsed { value: ast.ContinueLoop, cursor: advanced(cursor) })
     }
     if is_at_keyword(cursor, lexer.For) {
         return for_statement(cursor)
@@ -788,7 +811,7 @@ fn infix_operator(punctuation: lexer.Punct) -> Option<ast.BinaryOperator> {
     }
 }
 
-/// A `!` or a `-` before an operand, or the operand alone.
+/// A `!`, a `-`, or `spawn` before an operand, or the operand alone.
 ///
 /// A `-` before a number is part of that number, so the smallest whole number can be written.
 // example: expression_printed(unary(over("-5"), Allowed)) == "integer -5 0..2\n"
@@ -797,6 +820,9 @@ fn unary(cursor: Cursor, records: RecordLiterals) -> Result<Parsed<ast.Expr>, Pa
     start := offset(cursor)
     if is_at_punct(cursor, lexer.Bang) {
         return prefixed(advanced(cursor), records, ast.Not, start)
+    }
+    if is_at_keyword(cursor, lexer.Spawn) {
+        return spawned(advanced(cursor), records, start)
     }
     if !is_at_punct(cursor, lexer.Minus) {
         return postfix(cursor, records)
@@ -814,6 +840,17 @@ fn prefixed(cursor: Cursor, records: RecordLiterals, operator: ast.UnaryOperator
     operand := unary(cursor: inside, records: records)?
     kind := ast.Unary { operator: operator, operand: operand.value }
     Ok(Parsed { value: ast.Expr { kind: kind, span: span_since(operand.cursor, start) }, cursor: shallower(operand.cursor) })
+}
+
+/// The call after `spawn`, which starts a process, and which spends one level of the nesting budget.
+///
+/// The parser takes any operand here, and the type phase refuses one that names no process.
+// example: expression_printed(spawned(over("Counter(0)"), Allowed, 0)) == "spawn 0..10\n  call 0..10\n    name Counter 0..7\n    integer 0 8..9\n"
+fn spawned(cursor: Cursor, records: RecordLiterals, start: Int) -> Result<Parsed<ast.Expr>, ParseError> {
+    inside := deeper(cursor)?
+    started := postfix(inside, records)?
+    kind := ast.Spawn(started.value)
+    Ok(Parsed { value: ast.Expr { kind: kind, span: span_since(started.cursor, start) }, cursor: shallower(started.cursor) })
 }
 
 /// The number after a `-`, which the `-` is part of, and whatever is applied to it after.
@@ -1539,7 +1576,7 @@ fn significant_tokens(tokens: List<lexer.Token>) -> List<lexer.Token> {
 fn can_end_a_line(kind: lexer.TokenKind) -> Bool {
     match kind {
         lexer.Identifier => true
-        lexer.Keyword(keyword) => keyword == lexer.True || keyword == lexer.False || keyword == lexer.Break || keyword == lexer.Continue || keyword == lexer.Return
+        lexer.Keyword(keyword) => keyword == lexer.True || keyword == lexer.False || keyword == lexer.Break || keyword == lexer.ContinueLoop || keyword == lexer.Return
         lexer.Integer => true
         lexer.String => true
         lexer.Punct(punctuation) => punctuation == lexer.RParen || punctuation == lexer.RBracket || punctuation == lexer.RBrace || punctuation == lexer.Gt || punctuation == lexer.Question
@@ -1918,7 +1955,7 @@ fn expected_text(expected: Expected) -> String {
         ExternKindWanted => "`field`, `static`, `method`, or `new`"
         JavaNameWanted => "a Java name in quotes"
         TraitWanted => "a trait"
-        ItemWanted => "an import, a type, a trait, an instance, a derive, a function, or an extern"
+        ItemWanted => "an import, a type, a trait, an instance, a derive, a function, an extern, or a process"
         ExpressionWanted => "an expression"
         TypeWanted => "a type"
         PatternWanted => "a pattern"

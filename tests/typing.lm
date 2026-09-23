@@ -519,6 +519,7 @@ fn inside(written: ast.Expr) -> List<ast.Expr> {
         ast.Record { base, fields } => from_all(field_values(fields))
         ast.If(chain) => in_if(chain)
         ast.Match(matched) => both(first: from_expr(matched.scrutinee), second: from_all(arm_bodies(matched.arms)))
+        ast.Spawn(started) => from_expr(started)
         _ => []
     }
 }

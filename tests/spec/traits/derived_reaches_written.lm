@@ -3,7 +3,7 @@
 // > two wallets of different points are two values
 // > Wallet { point: (1, 2) }
 // > Empty {}
-// > Sent {}
+// > Posted {}
 // > Pending
 // A derive reaches the instance a held type has, whether that type derives it or writes it.
 // `Point` writes its own `Eq` and `Show`, and the derives of `Wallet` call exactly those.
@@ -22,7 +22,7 @@ fn main(arguments: List<String>) -> Int {
     }
     io.println(shown(near))
     io.println(shown(Empty {}))
-    io.println(shown(Sent {}))
+    io.println(shown(Posted {}))
     io.println(shown(Pending))
     0
 }
@@ -58,6 +58,6 @@ type Empty = {
 derive Show for Payment
 
 type Payment =
-    | Sent {
+    | Posted {
     }
     | Pending

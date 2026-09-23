@@ -84,8 +84,9 @@ They are named types like any other from where a program stands, which is what
 Everything else the prelude used to supply is library source:
 
 ```text
-types:        Option  Result
-constructors: Some  None  Ok  Err
+types:        Option  Result  Next  Sent  Waiting
+constructors: Some  None  Ok  Err  Continue  Done  Delivered  MailboxFull  ProcessEnded
+              NoWait  Milliseconds  NoLimit
 functions:    or  ok_or
 traits:       Add  Div  Eq  Hash  IntegerLiteral  Mul  Neg  Ord  Rem  Show  Sub
 instances:    each of those traits for the types of it the library writes
@@ -93,6 +94,8 @@ instances:    each of those traits for the types of it the library writes
 
 `todo` stays the compiler's, because a hole has no body for the library to write:
 `docs/specs/holes.md` has `lumen build` refuse every one of them before a class file is written.
+`Process`, `send`, and `ended` stay the compiler's too, which `docs/specs/concurrency.md` states.
+A handle reaches a thread, a queue, and a future, and no Bux declaration can name any of them.
 
 ## An operator over a type the compiler holds
 
@@ -204,7 +207,7 @@ are called.
 `prelude` is every name above, and nothing else.
 
 `list`, `strings`, `map`, and `set` each hold what a `for` loop writes the same way twice, and
-`io`, `files`, `process`, and `environment` hold what no `for` loop writes at all.
+`io`, `files`, `programs`, and `environment` hold what no `for` loop writes at all.
 `strings` holds each of them: `join` is the loop, `length` is what no loop reads, and `at` and
 `cut` are a check written over two more `extern` declarations.
 `list` holds three more: `length`, `push`, and `at`, which the section above gives the compiler.
@@ -220,16 +223,16 @@ process:     run
 environment: read
 ```
 
-A library module may import another, and `map`, `set`, `files`, and `process` are the four
+A library module may import another, and `map`, `set`, `files`, and `programs` are the four
 that do.
 Three of them import `list`: `map` grows the children of a node with `list.push` and reads one
-with `list.at`, `files` builds the list `files.listed` gives back the same way, and `process`
+with `list.at`, `files` builds the list `files.listed` gives back the same way, and `programs`
 grows the list a JVM starts a program from.
 `set` imports `map`, because a set is the trie a map is, at a key for each value it holds.
 Loading hands an imported library module over below the one that imports it, as it does for a
 module read out of a file, so nothing about the order a module is read in changes.
 
-`io`, `files`, `process`, and `environment` are written over `extern` declarations, which
+`io`, `files`, `programs`, and `environment` are written over `extern` declarations, which
 `docs/specs/interop.md` states and `docs/specs/io.md` says what each of the four reaches. Each
 declares those declarations beside its functions, and every top-level name is public, so every one
 of those surfaces is wider than the names above; `docs/specs/io.md` names the rest.

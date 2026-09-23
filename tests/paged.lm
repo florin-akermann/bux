@@ -193,6 +193,7 @@ fn names_of(item: ast.Item) -> List<String> {
         ast.Trait(declaration) => with_methods(declaration)
         ast.Function(function) => [function.name.text]
         ast.Extern(declaration) => [declaration.name.text]
+        ast.Process(declaration) => [declaration.name.text]
         _ => []
     }
 }

@@ -2,7 +2,7 @@
 // > User { id: 1, name: ada }
 // > Pending
 // > Failed(late)
-// > Sent { to: User { id: 1, name: ada }, note: hi }
+// > Posted { to: User { id: 1, name: ada }, note: hi }
 // A record and a variant each derive `Show`, and a value is shown as the source that builds it.
 import io
 
@@ -11,7 +11,7 @@ fn main(arguments: List<String>) -> Int {
     io.println(shown(ada))
     io.println(shown(Pending))
     io.println(shown(Failed("late")))
-    io.println(shown(Sent { to: ada, note: "hi" }))
+    io.println(shown(Posted { to: ada, note: "hi" }))
     0
 }
 
@@ -20,7 +20,7 @@ derive Show for Payment
 type Payment =
     | Pending
     | Failed(String)
-    | Sent {
+    | Posted {
         to: User
         note: String
     }

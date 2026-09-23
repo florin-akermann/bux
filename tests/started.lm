@@ -60,7 +60,7 @@ fn classes_verified(library: ir.Library, limit: Int) -> held.Held {
 // example: is_loaded("Error: Main method not found in class a")
 fn class_loaded(scene: String, class: String, limit: Int) -> enacted.Fact {
     line := [java(), "--enable-preview", "-cp", scene, class_named(class)]
-    errors := errors_of(walk.ended(line, scene, limit))
+    errors := errors_of(walk.completed(line, scene, limit))
     if is_loaded(errors) {
         return enacted.Fact { what: class, expected: "loaded", found: "loaded" }
     }
@@ -69,8 +69,8 @@ fn class_loaded(scene: String, class: String, limit: Int) -> enacted.Fact {
 
 /// What a program wrote on standard error, or why it gave no status back.
 // example: errors_of(Err(walk.NotStarted)) == "Error: the JVM could not be started"
-fn errors_of(ended: Result<walk.Ended, walk.Unended>) -> String {
-    match ended {
+fn errors_of(completion: Result<walk.Ended, walk.Unended>) -> String {
+    match completion {
         Ok(done) => done.errors
         Err(unended) => "Error: " + walk.unended_said(unended, "the JVM")
     }
@@ -179,7 +179,7 @@ fn example_program_tested(library: ir.Library) -> held.Held {
 fn ended_said(answer: command.Answer, directory: String, limit: Int) -> command.Said {
     match answer {
         command.Spoken(said) => said
-        command.Starts(line) => program_said(walk.ended(line, directory, limit))
+        command.Starts(line) => program_said(walk.completed(line, directory, limit))
     }
 }
 
@@ -297,14 +297,14 @@ fn without_a_jdk(words: List<String>, directory: String, limit: Int) -> command.
 /// What the program `line` starts in `directory` wrote and ended with.
 // example: command_line_said(["no-such-program-at-all"], "no-such-directory", 1).status == -1
 fn command_line_said(line: List<String>, directory: String, limit: Int) -> command.Said {
-    program_said(walk.ended(line, directory, limit))
+    program_said(walk.completed(line, directory, limit))
 }
 
 /// What a started program wrote and ended with, or why it gave no status back.
 // example: program_said(Err(walk.NotStarted)).errors == "the program could not be started\n"
 // example: program_said(Err(walk.PastLimit(3, ""))).status == -1
-fn program_said(ended: Result<walk.Ended, walk.Unended>) -> command.Said {
-    match ended {
+fn program_said(completion: Result<walk.Ended, walk.Unended>) -> command.Said {
+    match completion {
         Ok(done) => command.Said { output: done.output, errors: done.errors, status: done.status }
         Err(unended) => command.Said { output: "", errors: walk.unended_said(unended, "the program") + "\n", status: -1 }
     }

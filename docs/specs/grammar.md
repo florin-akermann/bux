@@ -41,6 +41,11 @@ A `method` declares at least one parameter, because its receiver is the first of
 `field` declares none; both are the shape above rather than a refusal.
 Every one of them writes its result, because there is no body for inference to read one off.
 
+A `process` holds functions and nothing else, and the parser takes any number of them.
+The type phase holds them to the one shape that `docs/specs/concurrency.md` states.
+`spawn` takes one postfix operand, so `spawn Counter(0)` is one expression before any operator.
+The parser takes any operand after `spawn`, and name resolution refuses one that is no process.
+
 A width after the kind says what the member's descriptor gives back, `int` before a parameter's
 name says the member takes one there, and `interface` after `type` says the class is one.
 Each is an ordinary identifier everywhere else, including as the name of the declaration itself.
@@ -79,7 +84,7 @@ Uppercase and lowercase spellings are not distinguished; `Name` below is any ide
 program        := { item }
 
 item           := import | type_declaration | trait | instance | derive | function
-                | extern_type | extern
+                | extern_type | extern | process
 
 import         := "import" Name
 
@@ -95,6 +100,7 @@ trait          := "trait" Name "<" Name ">" "{" signature { signature } "}"
 signature      := "fn" Name "(" [ parameters ] ")" [ "->" type ]
 instance       := "instance" Name "<" Name ">" "{" function { function } "}"
 derive         := "derive" Name { "," Name } "for" Name
+process        := "process" Name "{" { function } "}"
 
 extern_type    := "extern" "type" [ "interface" ] Name "=" String
 extern         := "extern" ( extern_field | extern_static | extern_method | extern_new )
@@ -127,7 +133,7 @@ and            := comparison { "&&" comparison }
 comparison     := sum [ ( "==" | "!=" | "<" | "<=" | ">" | ">=" ) sum ]
 sum            := product { ( "+" | "-" ) product }
 product        := unary { ( "*" | "/" | "%" ) unary }
-unary          := [ "!" | "-" ] unary | postfix
+unary          := [ "!" | "-" ] unary | "spawn" postfix | postfix
 postfix        := primary { "(" [ arguments ] ")" | "." Name | "?" }
 arguments      := expression { "," expression }
                 | named_argument { "," named_argument }

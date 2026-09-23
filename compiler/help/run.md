@@ -51,7 +51,7 @@ eight bits of that answer and nothing else: giving back `256` ends the run with 
 back `-1` ends it with `255`.
 
 A program reaches the console with `io`, the file system with `files`, and another program with
-`process`, three library modules the compiler carries rather than reading from a file:
+`programs`, three library modules the compiler carries rather than reading from a file:
 
 ```text
 import files
@@ -70,7 +70,7 @@ fn main(arguments: List<String>) -> Int {
 `io.print` writes its text and nothing else, `io.println` writes it and then a line break,
 `io.eprintln` writes it and a line break to standard error, and `files.read` gives back the whole
 file as a `Result` the program must open, so a file that is not there is a case the program states
-rather than a failure that ends it. `process.run` takes a program and the list of arguments it is
+rather than a failure that ends it. `programs.run` takes a program and the list of arguments it is
 given, starts it, reads what it wrote, and waits for it to end, and what it gives back holds the
 code it ended with and both of the texts it wrote.
 

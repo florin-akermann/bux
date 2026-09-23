@@ -22,7 +22,7 @@ import list
 
 import modules
 
-import process
+import programs
 
 import strings
 
@@ -208,8 +208,8 @@ fn every_run_held(runs: List<Staged>, line: List<String>, setting: Setting) -> h
 /// The entry program started once over `runs`: what failed, and the runs it did not reach.
 // example: arguments_of(line: ["java"], runs: []) == ["java"]
 fn entry_ran(runs: List<Staged>, line: List<String>, setting: Setting) -> Ran {
-    match walk.ended(arguments_of(line: line, runs: runs), setting.directory, setting.limit) {
-        Ok(ended) => ended_read(runs, Outcome { output: ended.output, why: why_ended(ended.status) })
+    match walk.completed(arguments_of(line: line, runs: runs), setting.directory, setting.limit) {
+        Ok(completion) => ended_read(runs, Outcome { output: completion.output, why: why_ended(completion.status) })
         Err(walk.NotStarted) => Ran { failures: each_failed(runs, "error: the JVM that runs the examples could not be started"), rest: [] }
         Err(walk.PastLimit(limit, output)) => ended_read(runs, Outcome { output: output, why: "error: the run of its examples did not end within " + shown(limit) + " s, and was stopped" })
     }
@@ -285,9 +285,9 @@ fn each_failed(runs: List<Staged>, why: String) -> List<String> {
 // example: stopped_in("lumen: stopped java.lang.StackOverflowError\n") == "java.lang.StackOverflowError"
 fn segment_read(segment: String, staged: Staged) -> List<String> {
     stopped := stopped_in(segment)
-    var finished = process.Finished { code: 0, output: segment, errors: "" }
+    var finished = programs.Finished { code: 0, output: segment, errors: "" }
     if stopped != "" {
-        finished = process.Finished { code: 1, output: "", errors: "error: the run of its examples stopped: " + stopped + "\n" }
+        finished = programs.Finished { code: 1, output: "", errors: "error: the run of its examples stopped: " + stopped + "\n" }
     }
     failed_as(command.finished_read(finished, staged.run, staged.root), staged.path)
 }

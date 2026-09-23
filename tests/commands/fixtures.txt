@@ -118,6 +118,125 @@ status 1
 !
 ! help: write `described(count, "apples")`
 
+$ check tests/spec/concurrency/arm_does_work.lm
+status 1
+! error[L0809]: this arm of the `match` on `message` is not one call or one name
+!   --> tests/spec/concurrency/arm_does_work.lm:16:28
+!
+!   16 |             Add(amount) => if amount > 0 {
+!      |                            ^^^^^^^^^^^^^^^ this runs on to line 20
+!
+! help: move the work into a function, give it a name, and call it here
+
+$ check tests/spec/concurrency/counter.lm
+status 0
+
+$ check tests/spec/concurrency/function_after_receive.lm
+status 1
+! error[L0804]: `Counter` declares a function after `receive`
+!   --> tests/spec/concurrency/function_after_receive.lm:21:8
+!
+!   21 |     fn reset() -> Int {
+!      |        ^^^^^
+!
+! help: a process declares `start`, then `receive`, and nothing else; move the function out
+
+$ check tests/spec/concurrency/generic_start.lm
+status 1
+! error[L0805]: `start` of a process declares a type parameter
+!   --> tests/spec/concurrency/generic_start.lm:10:8
+!
+!   10 |     fn start<T>() -> Int {
+!      |        ^^^^^
+!
+! help: a process has one type of state and one type of message; write them out
+
+$ check tests/spec/concurrency/mailbox_full.lm
+status 0
+
+$ check tests/spec/concurrency/process_called.lm
+status 1
+! error[L0801]: `Counter` is a process, so `spawn` starts it
+!   --> tests/spec/concurrency/process_called.lm:4:9
+!
+!   4 |     _ = Counter()
+!     |         ^^^^^^^
+!
+! help: write `spawn` before the call; a process is never called or held as a value
+
+$ check tests/spec/concurrency/receive_not_a_match.lm
+status 1
+! error[L0808]: the body of `receive` is not one `match` on `message`
+!   --> tests/spec/concurrency/receive_not_a_match.lm:14:59
+!
+!   14 |     fn receive(total: Int, message: Counted) -> Next<Int> {
+!      |                                                           ^ this runs on to line 16
+!
+! help: write the body as one `match` on the message, and move other work into a function
+
+$ check tests/spec/concurrency/receive_not_second.lm
+status 1
+! error[L0803]: the second function of `Counter` is not `receive`
+!   --> tests/spec/concurrency/receive_not_second.lm:14:8
+!
+!   14 |     fn handle(total: Int, message: Counted) -> Next<Int> {
+!      |        ^^^^^^
+!
+! help: a process declares `start`, then `receive`, and nothing else
+
+$ check tests/spec/concurrency/receive_of_another_state.lm
+status 1
+! error[L0810]: `start` gives `Int`, and `receive` is `(String, Counted) -> Next<String>`
+!   --> tests/spec/concurrency/receive_of_another_state.lm:14:8
+!
+!   14 |     fn receive(total: String, message: Counted) -> Next<String> {
+!      |        ^^^^^^^
+!
+! help: `receive` takes the state `start` gives and one message, and gives `Next` of that state
+
+$ check tests/spec/concurrency/receive_of_one_value.lm
+status 1
+! error[L0807]: `receive` of `Counter` does not take a state and a message
+!   --> tests/spec/concurrency/receive_of_one_value.lm:14:8
+!
+!   14 |     fn receive(message: Counted) -> Next<Int> {
+!      |        ^^^^^^^
+!
+! help: write `fn receive(state: S, message: M) -> Next<S>`
+
+$ check tests/spec/concurrency/spawn_of_a_function.lm
+status 1
+! error[L0800]: `spawn` starts a process this module declares, and `counted` is not one
+!   --> tests/spec/concurrency/spawn_of_a_function.lm:4:15
+!
+!   4 |     _ = spawn counted()
+!     |               ^^^^^^^
+!
+! help: declare a `process` in this module and name it after `spawn`
+
+$ check tests/spec/concurrency/start_not_first.lm
+status 1
+! error[L0802]: the first function of `Counter` is not `start`
+!   --> tests/spec/concurrency/start_not_first.lm:10:8
+!
+!   10 |     fn begin() -> Int {
+!      |        ^^^^^
+!
+! help: a process declares `start`, then `receive`, and nothing else
+
+$ check tests/spec/concurrency/unwritten_parameter.lm
+status 1
+! error[L0806]: `start` of a process leaves a type unwritten
+!   --> tests/spec/concurrency/unwritten_parameter.lm:10:14
+!
+!   10 |     fn start(initial) -> Int {
+!      |              ^^^^^^^
+!
+! help: write the type of each parameter and the result, because a process is never inferred
+
+$ check tests/spec/concurrency/worker_pool.lm
+status 0
+
 $ check tests/spec/examples/stated.lm
 status 0
 
@@ -417,6 +536,9 @@ status 1
 !     |          ^^^^^^^
 !
 ! help: canonical form spells this name `the_word`
+
+$ check tests/spec/format/process.lm
+status 0
 
 $ check tests/spec/format/spacing.lm
 status 0
@@ -1853,6 +1975,9 @@ status 1
 !
 ! help: a call names all of its arguments or none of them
 
+$ check tests/spec/parser/process.lm
+status 0
+
 $ check tests/spec/parser/program.lm
 status 0
 
@@ -1871,7 +1996,7 @@ status 0
 
 $ check tests/spec/parser/statement_outside_a_function.lm
 status 1
-! error[L0100]: expected an import, a type, a trait, an instance, a derive, a function, or an extern, found `total`
+! error[L0100]: expected an import, a type, a trait, an instance, a derive, a function, an extern, or a process, found `total`
 !   --> tests/spec/parser/statement_outside_a_function.lm:4:1
 !
 !   4 | total := 1
@@ -2316,7 +2441,7 @@ status 1
 !
 ! help: rename the inner one; Lumen never hides a name
 
-$ check library/process.lm
+$ check library/programs.lm
 status 0
 
 $ check library/set.lm
@@ -2390,6 +2515,59 @@ status 0
 $ check --json tests/spec/calls/in_front.lm
 status 1
 > {"file":"tests/spec/calls/in_front.lm","code":"L0433","message":"a dot after a value reads a field, so this call of `described` is written plainly","span":{"start":300,"len":25},"help":"write `described(count, \"apples\")`"}
+
+$ check --json tests/spec/concurrency/arm_does_work.lm
+status 1
+> {"file":"tests/spec/concurrency/arm_does_work.lm","code":"L0809","message":"this arm of the `match` on `message` is not one call or one name","span":{"start":385,"len":112},"help":"move the work into a function, give it a name, and call it here"}
+
+$ check --json tests/spec/concurrency/counter.lm
+status 0
+
+$ check --json tests/spec/concurrency/function_after_receive.lm
+status 1
+> {"file":"tests/spec/concurrency/function_after_receive.lm","code":"L0804","message":"`Counter` declares a function after `receive`","span":{"start":446,"len":5},"help":"a process declares `start`, then `receive`, and nothing else; move the function out"}
+
+$ check --json tests/spec/concurrency/generic_start.lm
+status 1
+> {"file":"tests/spec/concurrency/generic_start.lm","code":"L0805","message":"`start` of a process declares a type parameter","span":{"start":251,"len":5},"help":"a process has one type of state and one type of message; write them out"}
+
+$ check --json tests/spec/concurrency/mailbox_full.lm
+status 0
+
+$ check --json tests/spec/concurrency/process_called.lm
+status 1
+> {"file":"tests/spec/concurrency/process_called.lm","code":"L0801","message":"`Counter` is a process, so `spawn` starts it","span":{"start":139,"len":7},"help":"write `spawn` before the call; a process is never called or held as a value"}
+
+$ check --json tests/spec/concurrency/receive_not_a_match.lm
+status 1
+> {"file":"tests/spec/concurrency/receive_not_a_match.lm","code":"L0808","message":"the body of `receive` is not one `match` on `message`","span":{"start":306,"len":31},"help":"write the body as one `match` on the message, and move other work into a function"}
+
+$ check --json tests/spec/concurrency/receive_not_second.lm
+status 1
+> {"file":"tests/spec/concurrency/receive_not_second.lm","code":"L0803","message":"the second function of `Counter` is not `receive`","span":{"start":249,"len":6},"help":"a process declares `start`, then `receive`, and nothing else"}
+
+$ check --json tests/spec/concurrency/receive_of_another_state.lm
+status 1
+> {"file":"tests/spec/concurrency/receive_of_another_state.lm","code":"L0810","message":"`start` gives `Int`, and `receive` is `(String, Counted) -> Next<String>`","span":{"start":248,"len":7},"help":"`receive` takes the state `start` gives and one message, and gives `Next` of that state"}
+
+$ check --json tests/spec/concurrency/receive_of_one_value.lm
+status 1
+> {"file":"tests/spec/concurrency/receive_of_one_value.lm","code":"L0807","message":"`receive` of `Counter` does not take a state and a message","span":{"start":245,"len":7},"help":"write `fn receive(state: S, message: M) -> Next<S>`"}
+
+$ check --json tests/spec/concurrency/spawn_of_a_function.lm
+status 1
+> {"file":"tests/spec/concurrency/spawn_of_a_function.lm","code":"L0800","message":"`spawn` starts a process this module declares, and `counted` is not one","span":{"start":135,"len":7},"help":"declare a `process` in this module and name it after `spawn`"}
+
+$ check --json tests/spec/concurrency/start_not_first.lm
+status 1
+> {"file":"tests/spec/concurrency/start_not_first.lm","code":"L0802","message":"the first function of `Counter` is not `start`","span":{"start":205,"len":5},"help":"a process declares `start`, then `receive`, and nothing else"}
+
+$ check --json tests/spec/concurrency/unwritten_parameter.lm
+status 1
+> {"file":"tests/spec/concurrency/unwritten_parameter.lm","code":"L0806","message":"`start` of a process leaves a type unwritten","span":{"start":240,"len":7},"help":"write the type of each parameter and the result, because a process is never inferred"}
+
+$ check --json tests/spec/concurrency/worker_pool.lm
+status 0
 
 $ check --json tests/spec/examples/stated.lm
 status 0
@@ -2528,6 +2706,9 @@ status 1
 $ check --json tests/spec/format/parameter_not_in_case.lm
 status 1
 > {"file":"tests/spec/format/parameter_not_in_case.lm","code":"L0202","message":"`theWord` is a parameter, so canonical form writes it in `snake_case`","span":{"start":132,"len":7},"help":"canonical form spells this name `the_word`"}
+
+$ check --json tests/spec/format/process.lm
+status 0
 
 $ check --json tests/spec/format/spacing.lm
 status 0
@@ -3272,6 +3453,9 @@ $ check --json tests/spec/parser/partly_named_call.lm
 status 1
 > {"file":"tests/spec/parser/partly_named_call.lm","code":"L0108","message":"this call names some of its arguments and not others","span":{"start":168,"len":2},"help":"a call names all of its arguments or none of them"}
 
+$ check --json tests/spec/parser/process.lm
+status 0
+
 $ check --json tests/spec/parser/program.lm
 status 0
 
@@ -3284,7 +3468,7 @@ status 0
 
 $ check --json tests/spec/parser/statement_outside_a_function.lm
 status 1
-> {"file":"tests/spec/parser/statement_outside_a_function.lm","code":"L0100","message":"expected an import, a type, a trait, an instance, a derive, a function, or an extern, found `total`","span":{"start":180,"len":5}}
+> {"file":"tests/spec/parser/statement_outside_a_function.lm","code":"L0100","message":"expected an import, a type, a trait, an instance, a derive, a function, an extern, or a process, found `total`","span":{"start":180,"len":5}}
 
 $ check --json tests/spec/parser/trait_over_two_types.lm
 status 1
@@ -3539,7 +3723,7 @@ $ check --json library/prelude.lm
 status 1
 > {"file":"library/prelude.lm","code":"L0302","message":"`or` is already in scope here","span":{"start":343,"len":2},"help":"rename the inner one; Lumen never hides a name"}
 
-$ check --json library/process.lm
+$ check --json library/programs.lm
 status 0
 
 $ check --json library/set.lm
@@ -3736,6 +3920,164 @@ status 1
 !     |                ^^^^^^^^^^^^^^^^^^^^^^^^^
 !
 ! help: write `described(count, "apples")`
+
+$ api tests/spec/concurrency/arm_does_work.lm
+status 1
+! error[L0809]: this arm of the `match` on `message` is not one call or one name
+!   --> tests/spec/concurrency/arm_does_work.lm:16:28
+!
+!   16 |             Add(amount) => if amount > 0 {
+!      |                            ^^^^^^^^^^^^^^^ this runs on to line 20
+!
+! help: move the work into a function, give it a name, and call it here
+
+$ api tests/spec/concurrency/counter.lm
+status 0
+> fn main(arguments: List<String>) -> Int
+>
+> process Counter
+>
+> type Counted =
+>     | Add(Int)
+>     | Stop
+
+$ api tests/spec/concurrency/function_after_receive.lm
+status 1
+! error[L0804]: `Counter` declares a function after `receive`
+!   --> tests/spec/concurrency/function_after_receive.lm:21:8
+!
+!   21 |     fn reset() -> Int {
+!      |        ^^^^^
+!
+! help: a process declares `start`, then `receive`, and nothing else; move the function out
+
+$ api tests/spec/concurrency/generic_start.lm
+status 1
+! error[L0805]: `start` of a process declares a type parameter
+!   --> tests/spec/concurrency/generic_start.lm:10:8
+!
+!   10 |     fn start<T>() -> Int {
+!      |        ^^^^^
+!
+! help: a process has one type of state and one type of message; write them out
+
+$ api tests/spec/concurrency/mailbox_full.lm
+status 0
+> fn main(arguments: List<String>) -> Int
+>
+> fn told(sent: Sent) -> String
+>
+> process Holder
+>
+> process Idle
+>
+> type Held =
+>     | Hold(Process<Stopped, Int>)
+>     | Release
+>
+> type Stopped = Stop
+
+$ api tests/spec/concurrency/process_called.lm
+status 1
+! error[L0801]: `Counter` is a process, so `spawn` starts it
+!   --> tests/spec/concurrency/process_called.lm:4:9
+!
+!   4 |     _ = Counter()
+!     |         ^^^^^^^
+!
+! help: write `spawn` before the call; a process is never called or held as a value
+
+$ api tests/spec/concurrency/receive_not_a_match.lm
+status 1
+! error[L0808]: the body of `receive` is not one `match` on `message`
+!   --> tests/spec/concurrency/receive_not_a_match.lm:14:59
+!
+!   14 |     fn receive(total: Int, message: Counted) -> Next<Int> {
+!      |                                                           ^ this runs on to line 16
+!
+! help: write the body as one `match` on the message, and move other work into a function
+
+$ api tests/spec/concurrency/receive_not_second.lm
+status 1
+! error[L0803]: the second function of `Counter` is not `receive`
+!   --> tests/spec/concurrency/receive_not_second.lm:14:8
+!
+!   14 |     fn handle(total: Int, message: Counted) -> Next<Int> {
+!      |        ^^^^^^
+!
+! help: a process declares `start`, then `receive`, and nothing else
+
+$ api tests/spec/concurrency/receive_of_another_state.lm
+status 1
+! error[L0810]: `start` gives `Int`, and `receive` is `(String, Counted) -> Next<String>`
+!   --> tests/spec/concurrency/receive_of_another_state.lm:14:8
+!
+!   14 |     fn receive(total: String, message: Counted) -> Next<String> {
+!      |        ^^^^^^^
+!
+! help: `receive` takes the state `start` gives and one message, and gives `Next` of that state
+
+$ api tests/spec/concurrency/receive_of_one_value.lm
+status 1
+! error[L0807]: `receive` of `Counter` does not take a state and a message
+!   --> tests/spec/concurrency/receive_of_one_value.lm:14:8
+!
+!   14 |     fn receive(message: Counted) -> Next<Int> {
+!      |        ^^^^^^^
+!
+! help: write `fn receive(state: S, message: M) -> Next<S>`
+
+$ api tests/spec/concurrency/spawn_of_a_function.lm
+status 1
+! error[L0800]: `spawn` starts a process this module declares, and `counted` is not one
+!   --> tests/spec/concurrency/spawn_of_a_function.lm:4:15
+!
+!   4 |     _ = spawn counted()
+!     |               ^^^^^^^
+!
+! help: declare a `process` in this module and name it after `spawn`
+
+$ api tests/spec/concurrency/start_not_first.lm
+status 1
+! error[L0802]: the first function of `Counter` is not `start`
+!   --> tests/spec/concurrency/start_not_first.lm:10:8
+!
+!   10 |     fn begin() -> Int {
+!      |        ^^^^^
+!
+! help: a process declares `start`, then `receive`, and nothing else
+
+$ api tests/spec/concurrency/unwritten_parameter.lm
+status 1
+! error[L0806]: `start` of a process leaves a type unwritten
+!   --> tests/spec/concurrency/unwritten_parameter.lm:10:14
+!
+!   10 |     fn start(initial) -> Int {
+!      |              ^^^^^^^
+!
+! help: write the type of each parameter and the result, because a process is never inferred
+
+$ api tests/spec/concurrency/worker_pool.lm
+status 0
+> fn main(arguments: List<String>) -> Int
+>
+> fn collected(collector: Process<Collected, List<Int>>) -> List<Int>
+>
+> fn total(answers: List<Int>) -> Int
+>
+> process Worker
+>
+> fn answered(collector: Process<Collected, List<Int>>, number: Int) -> Process<Collected, List<Int>>
+>
+> process Collector
+>
+> type Job =
+>     | Square(Int)
+>     | Quit
+>
+> type Collected =
+>     | Answer(Int)
+>     | Finish
 
 $ api tests/spec/examples/stated.lm
 status 0
@@ -4000,7 +4342,7 @@ status 0
 >
 > type Payment =
 >     | Pending
->     | Done
+>     | Finished
 
 $ api tests/spec/format/field_not_in_case.lm
 status 1
@@ -4141,6 +4483,16 @@ status 1
 !     |          ^^^^^^^
 !
 ! help: canonical form spells this name `the_word`
+
+$ api tests/spec/format/process.lm
+status 0
+> fn main(arguments: List<String>) -> Int
+>
+> process Counter
+>
+> type Counted =
+>     | Add(Int)
+>     | Stop
 
 $ api tests/spec/format/spacing.lm
 status 0
@@ -4582,9 +4934,9 @@ $ api tests/spec/io/running_a_process.lm
 status 0
 > fn main(arguments: List<String>) -> Int
 >
-> fn told(ran: process.Finished) -> String
+> fn told(ran: programs.Finished) -> String
 >
-> fn has_run_as_java_does(ran: process.Finished) -> Bool
+> fn has_run_as_java_does(ran: programs.Finished) -> Bool
 
 $ api tests/spec/io/undeclared_name.lm
 status 1
@@ -6133,6 +6485,16 @@ status 1
 !
 ! help: a call names all of its arguments or none of them
 
+$ api tests/spec/parser/process.lm
+status 0
+> fn main(arguments: List<String>) -> Int
+>
+> process Counter
+>
+> type Counted =
+>     | Add(Int)
+>     | Stop
+
 $ api tests/spec/parser/program.lm
 status 0
 > fn describe(payment: Payment) -> String
@@ -6179,7 +6541,7 @@ status 0
 >
 > fn kept(payment: Option<Payment>) -> String
 >
-> fn ended() -> Result<(), String>
+> fn stopped() -> Result<(), String>
 >
 > fn nothing() -> ()
 >
@@ -6220,7 +6582,7 @@ status 0
 
 $ api tests/spec/parser/statement_outside_a_function.lm
 status 1
-! error[L0100]: expected an import, a type, a trait, an instance, a derive, a function, or an extern, found `total`
+! error[L0100]: expected an import, a type, a trait, an instance, a derive, a function, an extern, or a process, found `total`
 !   --> tests/spec/parser/statement_outside_a_function.lm:4:1
 !
 !   4 | total := 1
@@ -6338,7 +6700,7 @@ status 0
 >     | Pending
 >     | Running
 >     | Failed(String)
->     | Done
+>     | Finished
 
 $ api tests/spec/patterns/binds_inside_an_alternative.lm
 status 1
@@ -6634,7 +6996,7 @@ status 0
 > instance Show<Payment>
 >
 > type Payment =
->     | Sent {
+>     | Posted {
 >     }
 >     | Pending
 
@@ -6647,7 +7009,7 @@ status 0
 > type Payment =
 >     | Pending
 >     | Failed(String)
->     | Sent {
+>     | Posted {
 >         to: User
 >         note: String
 >     }
@@ -7308,7 +7670,7 @@ status 1
 !
 ! help: rename the inner one; Lumen never hides a name
 
-$ api library/process.lm
+$ api library/programs.lm
 status 0
 > fn run(command: String, arguments: List<String>) -> Result<Finished, String>
 >
@@ -7322,13 +7684,13 @@ status 0
 >
 > extern field inherited() -> Redirect = "java.lang.ProcessBuilder$Redirect.INHERIT"
 >
-> extern method started(builder: ProcessBuilder) -> Result<Process, String> = "start"
+> extern method started(builder: ProcessBuilder) -> Result<Running, String> = "start"
 >
-> extern method output_of(ran: Process) -> InputStream = "getInputStream"
+> extern method output_of(ran: Running) -> InputStream = "getInputStream"
 >
-> extern method errors_of(ran: Process) -> InputStream = "getErrorStream"
+> extern method errors_of(ran: Running) -> InputStream = "getErrorStream"
 >
-> extern method int ended(ran: Process) -> Result<Int, String> = "waitFor"
+> extern method int waited_for(ran: Running) -> Result<Int, String> = "waitFor"
 >
 > extern new over(stream: InputStream) -> Scanner
 >
@@ -7348,7 +7710,7 @@ status 0
 >
 > extern type ProcessBuilder = "java.lang.ProcessBuilder"
 >
-> extern type Process = "java.lang.Process"
+> extern type Running = "java.lang.Process"
 >
 > extern type InputStream = "java.io.InputStream"
 >
@@ -7562,6 +7924,125 @@ status 1
 !     |                ^^^^^^^^^^^^^^^^^^^^^^^^^
 !
 ! help: write `described(count, "apples")`
+
+$ test tests/spec/concurrency/arm_does_work.lm
+status 1
+! error[L0809]: this arm of the `match` on `message` is not one call or one name
+!   --> tests/spec/concurrency/arm_does_work.lm:16:28
+!
+!   16 |             Add(amount) => if amount > 0 {
+!      |                            ^^^^^^^^^^^^^^^ this runs on to line 20
+!
+! help: move the work into a function, give it a name, and call it here
+
+$ test tests/spec/concurrency/counter.lm
+status 0
+
+$ test tests/spec/concurrency/function_after_receive.lm
+status 1
+! error[L0804]: `Counter` declares a function after `receive`
+!   --> tests/spec/concurrency/function_after_receive.lm:21:8
+!
+!   21 |     fn reset() -> Int {
+!      |        ^^^^^
+!
+! help: a process declares `start`, then `receive`, and nothing else; move the function out
+
+$ test tests/spec/concurrency/generic_start.lm
+status 1
+! error[L0805]: `start` of a process declares a type parameter
+!   --> tests/spec/concurrency/generic_start.lm:10:8
+!
+!   10 |     fn start<T>() -> Int {
+!      |        ^^^^^
+!
+! help: a process has one type of state and one type of message; write them out
+
+$ test tests/spec/concurrency/mailbox_full.lm
+status 0
+
+$ test tests/spec/concurrency/process_called.lm
+status 1
+! error[L0801]: `Counter` is a process, so `spawn` starts it
+!   --> tests/spec/concurrency/process_called.lm:4:9
+!
+!   4 |     _ = Counter()
+!     |         ^^^^^^^
+!
+! help: write `spawn` before the call; a process is never called or held as a value
+
+$ test tests/spec/concurrency/receive_not_a_match.lm
+status 1
+! error[L0808]: the body of `receive` is not one `match` on `message`
+!   --> tests/spec/concurrency/receive_not_a_match.lm:14:59
+!
+!   14 |     fn receive(total: Int, message: Counted) -> Next<Int> {
+!      |                                                           ^ this runs on to line 16
+!
+! help: write the body as one `match` on the message, and move other work into a function
+
+$ test tests/spec/concurrency/receive_not_second.lm
+status 1
+! error[L0803]: the second function of `Counter` is not `receive`
+!   --> tests/spec/concurrency/receive_not_second.lm:14:8
+!
+!   14 |     fn handle(total: Int, message: Counted) -> Next<Int> {
+!      |        ^^^^^^
+!
+! help: a process declares `start`, then `receive`, and nothing else
+
+$ test tests/spec/concurrency/receive_of_another_state.lm
+status 1
+! error[L0810]: `start` gives `Int`, and `receive` is `(String, Counted) -> Next<String>`
+!   --> tests/spec/concurrency/receive_of_another_state.lm:14:8
+!
+!   14 |     fn receive(total: String, message: Counted) -> Next<String> {
+!      |        ^^^^^^^
+!
+! help: `receive` takes the state `start` gives and one message, and gives `Next` of that state
+
+$ test tests/spec/concurrency/receive_of_one_value.lm
+status 1
+! error[L0807]: `receive` of `Counter` does not take a state and a message
+!   --> tests/spec/concurrency/receive_of_one_value.lm:14:8
+!
+!   14 |     fn receive(message: Counted) -> Next<Int> {
+!      |        ^^^^^^^
+!
+! help: write `fn receive(state: S, message: M) -> Next<S>`
+
+$ test tests/spec/concurrency/spawn_of_a_function.lm
+status 1
+! error[L0800]: `spawn` starts a process this module declares, and `counted` is not one
+!   --> tests/spec/concurrency/spawn_of_a_function.lm:4:15
+!
+!   4 |     _ = spawn counted()
+!     |               ^^^^^^^
+!
+! help: declare a `process` in this module and name it after `spawn`
+
+$ test tests/spec/concurrency/start_not_first.lm
+status 1
+! error[L0802]: the first function of `Counter` is not `start`
+!   --> tests/spec/concurrency/start_not_first.lm:10:8
+!
+!   10 |     fn begin() -> Int {
+!      |        ^^^^^
+!
+! help: a process declares `start`, then `receive`, and nothing else
+
+$ test tests/spec/concurrency/unwritten_parameter.lm
+status 1
+! error[L0806]: `start` of a process leaves a type unwritten
+!   --> tests/spec/concurrency/unwritten_parameter.lm:10:14
+!
+!   10 |     fn start(initial) -> Int {
+!      |              ^^^^^^^
+!
+! help: write the type of each parameter and the result, because a process is never inferred
+
+$ test tests/spec/concurrency/worker_pool.lm
+status 0
 
 $ test tests/spec/examples/stated.lm
 status 0
@@ -8025,6 +8506,9 @@ status 1
 !     |          ^^^^^^^
 !
 ! help: canonical form spells this name `the_word`
+
+$ test tests/spec/format/process.lm
+status 0
 
 $ test tests/spec/format/spacing.lm
 status 0
@@ -9672,6 +10156,9 @@ status 1
 !
 ! help: a call names all of its arguments or none of them
 
+$ test tests/spec/parser/process.lm
+status 0
+
 $ test tests/spec/parser/program.lm
 status 1
 ! error[L0601]: `describe` states no example
@@ -9721,7 +10208,7 @@ status 0
 
 $ test tests/spec/parser/statement_outside_a_function.lm
 status 1
-! error[L0100]: expected an import, a type, a trait, an instance, a derive, a function, or an extern, found `total`
+! error[L0100]: expected an import, a type, a trait, an instance, a derive, a function, an extern, or a process, found `total`
 !   --> tests/spec/parser/statement_outside_a_function.lm:4:1
 !
 !   4 | total := 1
@@ -10229,6 +10716,10 @@ $ check tests/spec/calls
 status 2
 ! error: tests/spec/calls: there is no package here, which is a directory holding `bux.package`
 
+$ check tests/spec/concurrency
+status 2
+! error: tests/spec/concurrency: there is no package here, which is a directory holding `bux.package`
+
 $ check tests/spec/examples
 status 2
 ! error: tests/spec/examples: there is no package here, which is a directory holding `bux.package`
@@ -10490,6 +10981,10 @@ $ check --json tests/spec/calls
 status 2
 ! error: tests/spec/calls: there is no package here, which is a directory holding `bux.package`
 
+$ check --json tests/spec/concurrency
+status 2
+! error: tests/spec/concurrency: there is no package here, which is a directory holding `bux.package`
+
 $ check --json tests/spec/examples
 status 2
 ! error: tests/spec/examples: there is no package here, which is a directory holding `bux.package`
@@ -10672,6 +11167,10 @@ status 2
 $ api tests/spec/calls
 status 2
 ! error: tests/spec/calls: Is a directory (os error 21)
+
+$ api tests/spec/concurrency
+status 2
+! error: tests/spec/concurrency: Is a directory (os error 21)
 
 $ api tests/spec/examples
 status 2
@@ -10865,6 +11364,10 @@ $ fmt tests/spec/calls
 status 2
 ! error: tests/spec/calls: Is a directory (os error 21)
 
+$ fmt tests/spec/concurrency
+status 2
+! error: tests/spec/concurrency: Is a directory (os error 21)
+
 $ fmt tests/spec/examples
 status 2
 ! error: tests/spec/examples: Is a directory (os error 21)
@@ -11056,6 +11559,10 @@ status 2
 $ build tests/spec/calls
 status 2
 ! error: tests/spec/calls: there is no package here, which is a directory holding `bux.package`
+
+$ build tests/spec/concurrency
+status 2
+! error: tests/spec/concurrency: there is no package here, which is a directory holding `bux.package`
 
 $ build tests/spec/examples
 status 2
@@ -11527,6 +12034,48 @@ status 0
 $ fmt tests/spec/calls/in_front.lm
 status 0
 
+$ fmt tests/spec/concurrency/arm_does_work.lm
+status 0
+
+$ fmt tests/spec/concurrency/counter.lm
+status 0
+
+$ fmt tests/spec/concurrency/function_after_receive.lm
+status 0
+
+$ fmt tests/spec/concurrency/generic_start.lm
+status 0
+
+$ fmt tests/spec/concurrency/mailbox_full.lm
+status 0
+
+$ fmt tests/spec/concurrency/process_called.lm
+status 0
+
+$ fmt tests/spec/concurrency/receive_not_a_match.lm
+status 0
+
+$ fmt tests/spec/concurrency/receive_not_second.lm
+status 0
+
+$ fmt tests/spec/concurrency/receive_of_another_state.lm
+status 0
+
+$ fmt tests/spec/concurrency/receive_of_one_value.lm
+status 0
+
+$ fmt tests/spec/concurrency/spawn_of_a_function.lm
+status 0
+
+$ fmt tests/spec/concurrency/start_not_first.lm
+status 0
+
+$ fmt tests/spec/concurrency/unwritten_parameter.lm
+status 0
+
+$ fmt tests/spec/concurrency/worker_pool.lm
+status 0
+
 $ fmt tests/spec/examples/stated.lm
 status 0
 
@@ -11636,6 +12185,9 @@ $ fmt tests/spec/format/nothing_but_underscores.lm
 status 0
 
 $ fmt tests/spec/format/parameter_not_in_case.lm
+status 0
+
+$ fmt tests/spec/format/process.lm
 status 0
 
 $ fmt tests/spec/format/spacing.lm
@@ -12417,6 +12969,9 @@ status 1
 !
 ! help: a call names all of its arguments or none of them
 
+$ fmt tests/spec/parser/process.lm
+status 0
+
 $ fmt tests/spec/parser/program.lm
 status 0
 
@@ -12428,7 +12983,7 @@ status 0
 
 $ fmt tests/spec/parser/statement_outside_a_function.lm
 status 1
-! error[L0100]: expected an import, a type, a trait, an instance, a derive, a function, or an extern, found `total`
+! error[L0100]: expected an import, a type, a trait, an instance, a derive, a function, an extern, or a process, found `total`
 !   --> tests/spec/parser/statement_outside_a_function.lm:4:1
 !
 !   4 | total := 1
@@ -12712,7 +13267,7 @@ status 0
 $ fmt library/prelude.lm
 status 0
 
-$ fmt library/process.lm
+$ fmt library/programs.lm
 status 0
 
 $ fmt library/set.lm
@@ -12885,6 +13440,125 @@ status 1
 !     |                ^^^^^^^^^^^^^^^^^^^^^^^^^
 !
 ! help: write `described(count, "apples")`
+
+$ build tests/spec/concurrency/arm_does_work.lm
+status 1
+! error[L0809]: this arm of the `match` on `message` is not one call or one name
+!   --> tests/spec/concurrency/arm_does_work.lm:16:28
+!
+!   16 |             Add(amount) => if amount > 0 {
+!      |                            ^^^^^^^^^^^^^^^ this runs on to line 20
+!
+! help: move the work into a function, give it a name, and call it here
+
+$ build tests/spec/concurrency/counter.lm
+status 0
+
+$ build tests/spec/concurrency/function_after_receive.lm
+status 1
+! error[L0804]: `Counter` declares a function after `receive`
+!   --> tests/spec/concurrency/function_after_receive.lm:21:8
+!
+!   21 |     fn reset() -> Int {
+!      |        ^^^^^
+!
+! help: a process declares `start`, then `receive`, and nothing else; move the function out
+
+$ build tests/spec/concurrency/generic_start.lm
+status 1
+! error[L0805]: `start` of a process declares a type parameter
+!   --> tests/spec/concurrency/generic_start.lm:10:8
+!
+!   10 |     fn start<T>() -> Int {
+!      |        ^^^^^
+!
+! help: a process has one type of state and one type of message; write them out
+
+$ build tests/spec/concurrency/mailbox_full.lm
+status 0
+
+$ build tests/spec/concurrency/process_called.lm
+status 1
+! error[L0801]: `Counter` is a process, so `spawn` starts it
+!   --> tests/spec/concurrency/process_called.lm:4:9
+!
+!   4 |     _ = Counter()
+!     |         ^^^^^^^
+!
+! help: write `spawn` before the call; a process is never called or held as a value
+
+$ build tests/spec/concurrency/receive_not_a_match.lm
+status 1
+! error[L0808]: the body of `receive` is not one `match` on `message`
+!   --> tests/spec/concurrency/receive_not_a_match.lm:14:59
+!
+!   14 |     fn receive(total: Int, message: Counted) -> Next<Int> {
+!      |                                                           ^ this runs on to line 16
+!
+! help: write the body as one `match` on the message, and move other work into a function
+
+$ build tests/spec/concurrency/receive_not_second.lm
+status 1
+! error[L0803]: the second function of `Counter` is not `receive`
+!   --> tests/spec/concurrency/receive_not_second.lm:14:8
+!
+!   14 |     fn handle(total: Int, message: Counted) -> Next<Int> {
+!      |        ^^^^^^
+!
+! help: a process declares `start`, then `receive`, and nothing else
+
+$ build tests/spec/concurrency/receive_of_another_state.lm
+status 1
+! error[L0810]: `start` gives `Int`, and `receive` is `(String, Counted) -> Next<String>`
+!   --> tests/spec/concurrency/receive_of_another_state.lm:14:8
+!
+!   14 |     fn receive(total: String, message: Counted) -> Next<String> {
+!      |        ^^^^^^^
+!
+! help: `receive` takes the state `start` gives and one message, and gives `Next` of that state
+
+$ build tests/spec/concurrency/receive_of_one_value.lm
+status 1
+! error[L0807]: `receive` of `Counter` does not take a state and a message
+!   --> tests/spec/concurrency/receive_of_one_value.lm:14:8
+!
+!   14 |     fn receive(message: Counted) -> Next<Int> {
+!      |        ^^^^^^^
+!
+! help: write `fn receive(state: S, message: M) -> Next<S>`
+
+$ build tests/spec/concurrency/spawn_of_a_function.lm
+status 1
+! error[L0800]: `spawn` starts a process this module declares, and `counted` is not one
+!   --> tests/spec/concurrency/spawn_of_a_function.lm:4:15
+!
+!   4 |     _ = spawn counted()
+!     |               ^^^^^^^
+!
+! help: declare a `process` in this module and name it after `spawn`
+
+$ build tests/spec/concurrency/start_not_first.lm
+status 1
+! error[L0802]: the first function of `Counter` is not `start`
+!   --> tests/spec/concurrency/start_not_first.lm:10:8
+!
+!   10 |     fn begin() -> Int {
+!      |        ^^^^^
+!
+! help: a process declares `start`, then `receive`, and nothing else
+
+$ build tests/spec/concurrency/unwritten_parameter.lm
+status 1
+! error[L0806]: `start` of a process leaves a type unwritten
+!   --> tests/spec/concurrency/unwritten_parameter.lm:10:14
+!
+!   10 |     fn start(initial) -> Int {
+!      |              ^^^^^^^
+!
+! help: write the type of each parameter and the result, because a process is never inferred
+
+$ build tests/spec/concurrency/worker_pool.lm
+status 0
 
 $ build tests/spec/examples/stated.lm
 status 0
@@ -13348,6 +14022,9 @@ status 1
 !     |          ^^^^^^^
 !
 ! help: canonical form spells this name `the_word`
+
+$ build tests/spec/format/process.lm
+status 0
 
 $ build tests/spec/format/spacing.lm
 status 0
@@ -14995,6 +15672,9 @@ status 1
 !
 ! help: a call names all of its arguments or none of them
 
+$ build tests/spec/parser/process.lm
+status 0
+
 $ build tests/spec/parser/program.lm
 status 1
 ! error[L0601]: `describe` states no example
@@ -15044,7 +15724,7 @@ status 0
 
 $ build tests/spec/parser/statement_outside_a_function.lm
 status 1
-! error[L0100]: expected an import, a type, a trait, an instance, a derive, a function, or an extern, found `total`
+! error[L0100]: expected an import, a type, a trait, an instance, a derive, a function, an extern, or a process, found `total`
 !   --> tests/spec/parser/statement_outside_a_function.lm:4:1
 !
 !   4 | total := 1
@@ -15541,7 +16221,7 @@ status 1
 !
 ! help: rename the inner one; Lumen never hides a name
 
-$ build library/process.lm
+$ build library/programs.lm
 status 0
 
 $ build library/set.lm

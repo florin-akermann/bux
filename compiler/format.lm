@@ -373,6 +373,7 @@ fn label_of(kind: NameKind) -> String {
         FieldName => "a record field"
         ModuleName => "a module"
         TypeName => "a type"
+        ProcessName => "a process"
         VariantName => "a variant"
         TypeParameterName => "a type parameter"
     }
@@ -405,7 +406,7 @@ fn spelling(written: String, kind: NameKind) -> String {
 /// Whether a kind of name is a type rather than a value, which is what the two cases divide on.
 // example: !is_pascal_case(ModuleName)
 fn is_pascal_case(kind: NameKind) -> Bool {
-    kind == TypeName || kind == VariantName || kind == TypeParameterName
+    kind == TypeName || kind == VariantName || kind == TypeParameterName || kind == ProcessName
 }
 
 /// The words `written` is made of, each in lowercase, split on `_` and where the case turns.
@@ -511,6 +512,7 @@ fn item_names(names: List<Declared>, written: ast.Item) -> List<Declared> {
         ast.Derive(_) => names
         ast.Function(declaration) => function_names(names, declaration)
         ast.Extern(declaration) => extern_names(names, declaration)
+        ast.Process(declaration) => methods_names(list.push(names, Declared { name: declaration.name, kind: ProcessName }), declaration.functions)
     }
 }
 
@@ -647,6 +649,7 @@ fn item(printer: Printer, declared: ast.Item) -> Printer {
         ast.Derive(declaration) => line(printer, declaration.span, derive_text(declaration))
         ast.Function(declaration) => function(printer, declaration, declaration.type_parameters)
         ast.Extern(declaration) => line(printer, declaration.span, extern_text(declaration))
+        ast.Process(declaration) => process_declaration(printer, declaration)
     }
 }
 
@@ -789,6 +792,22 @@ fn instance_declaration(printer: Printer, declaration: ast.InstanceDeclaration) 
     end_line(close_block(printed, end_of(declaration.span)))
 }
 
+/// `process Counter { … }`, with one blank line between two of the functions it declares.
+// example: ok_or(format("process Counter{\n    fn start() -> Int {\n        0\n    }\n}"), "") == "process Counter {\n    fn start() -> Int {\n        0\n    }\n}\n"
+fn process_declaration(printer: Printer, declaration: ast.ProcessDeclaration) -> Printer {
+    opened := open_line(comments_above(printer, declaration.span))
+    var printed = open_block(word(opened, "process " + declaration.name.text))
+    var position = 0
+    for function_written in declaration.functions {
+        if position > 0 {
+            printed = end_line(printed)
+        }
+        printed = function(printed, function_written, function_written.type_parameters)
+        position += 1
+    }
+    end_line(close_block(printed, end_of(declaration.span)))
+}
+
 /// `instance<T: Eq<T>> Eq<List<T>>`: the first line of an instance.
 // example: ok_or(format("instance Ord<Id>{\n    fn is_less(one: Id, other: Id) -> Bool {\n        true\n    }\n}"), "") == "instance Ord<Id> {\n    fn is_less(one: Id, other: Id) -> Bool {\n        true\n    }\n}\n"
 fn instance_head(declaration: ast.InstanceDeclaration) -> String {
@@ -835,7 +854,7 @@ fn statement_text(printer: Printer, statement: ast.Statement) -> Printer {
         ast.Assign { target, operator, value } => nested(word(printer, target.text + assign_joiner(operator)), value, 0, Allowed)
         ast.Return(value) => returned(printer, value)
         ast.Break => word(printer, "break")
-        ast.Continue => word(printer, "continue")
+        ast.ContinueLoop => word(printer, "continue")
         ast.For(written) => for_loop(printer, written)
         ast.Discard(value) => nested(word(printer, "_ = "), value, 0, Allowed)
         ast.Evaluated(value) => nested(printer, value, 0, Allowed)
@@ -935,6 +954,7 @@ fn expression(printer: Printer, written: ast.Expr, records: Records) -> Printer 
         ast.Record { base, fields } => record(printer, base, fields)
         ast.If(chain) => if_expression(printer, chain)
         ast.Match(matched) => match_expression(printer, matched, written.span)
+        ast.Spawn(started) => nested(printer: word(printer, "spawn "), written: started, least: postfix_power(), records: records)
     }
 }
 
@@ -1263,6 +1283,7 @@ fn binding_power(kind: ast.ExprKind) -> Int {
         ast.Call { callee, arguments } => postfix_power()
         ast.Field { receiver, name } => postfix_power()
         ast.Try(inner) => postfix_power()
+        ast.Spawn(started) => unary_power()
         _ => 7
     }
 }
@@ -1368,8 +1389,8 @@ fn comments_before(printer: Printer, offset: Int) -> Printer {
     var printed = printer
     for has_comment_before(printed, offset) {
         text := trimmed(or(list.at(printed.texts, printed.written), ""))
-        ended := end_line(word(open_line(printed), text))
-        printed = ended { written: ended.written + 1 }
+        completion := end_line(word(open_line(printed), text))
+        printed = completion { written: completion.written + 1 }
     }
     printed
 }
@@ -1655,5 +1676,6 @@ type NameKind =
     | FieldName
     | ModuleName
     | TypeName
+    | ProcessName
     | VariantName
     | TypeParameterName

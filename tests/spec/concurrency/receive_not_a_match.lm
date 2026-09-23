@@ -1,0 +1,22 @@
+// expect-error: L0808
+// The body of `receive` is one `match` on the message.
+fn main(arguments: List<String>) -> Int {
+    _ = spawn Counter()
+    0
+}
+
+/// A total that each `Add` grows.
+process Counter {
+    fn start() -> Int {
+        0
+    }
+
+    fn receive(total: Int, message: Counted) -> Next<Int> {
+        Continue(total)
+    }
+}
+
+/// What a counter is sent.
+type Counted =
+    | Add(Int)
+    | Stop

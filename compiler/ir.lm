@@ -183,8 +183,215 @@ fn lowered_prelude(library: Library, asked: Asked) -> Lowered {
 fn lowered(lowering: Lowering, asked: Asked) -> Lowered {
     reached := lowering { shapes: asked_reached(lowering.shapes, asked, lowering.module) }
     classed := module_class(reached, asked)
-    classes := list.push(concatenated(first: [classed.class], second: shape_classes(reached.shapes)), carrier())
-    Lowered { classes: classes, asks: classed.lowering.asks }
+    written := concatenated(first: concatenated(first: [classed.class], second: shape_classes(reached.shapes)), second: process_classes(classed.lowering))
+    Lowered { classes: list.push(written, carrier()), asks: classed.lowering.asks }
+}
+
+/// The class of each process the module declares, then the class of a handle where it declares
+/// one.
+///
+/// Every module that declares a process writes the class of a handle, and each writes the same
+/// bytes, as each module writes the same class of a list.
+// example: list.length(process_classes(little_lowering("fn f() -> Int {\n    1\n}\n"))) == 0
+fn process_classes(lowering: Lowering) -> List<Class> {
+    var classes = []
+    for item in lowering.typed.resolved.program.items {
+        classes = match item {
+            ast.Process(declaration) => list.push(classes, process_class(lowering, declaration))
+            _ => classes
+        }
+    }
+    if list.length(classes) == 0 {
+        return []
+    }
+    list.push(classes, handle_class(lowering.shapes))
+}
+
+/// The class a process runs as: what `start` takes, the mailbox, and the end, with the method
+/// `spawn` calls and the method the virtual thread of the process runs.
+// example: process_class(little_lowering(""), ast.ProcessDeclaration { name: infer.no_name(), functions: [], span: infer.no_name().span }).implements == ["java/lang/Runnable"]
+fn process_class(lowering: Lowering, declaration: ast.ProcessDeclaration) -> Class {
+    started := signature_of_process(lowering, declaration, 0)
+    received := signature_of_process(lowering, declaration, 1)
+    shape := process_shape(process_class_name(module: lowering.shapes.module, named: declaration.name.text), started)
+    ran := Ran { module: lowering.shapes.module, named: declaration.name.text, started: started, received: received }
+    methods := [constructor_method(shape, object_class()), spawned_method(shape, started), run_method(lowering.shapes, shape, ran)]
+    Class { name: shape.class, extends: object_class(), extending: Never, implements: ["java/lang/Runnable"], fields: held_fields(shape), methods: methods }
+}
+
+/// The fields of a process: each value `start` takes, then the mailbox, then the end.
+// example: list.length(process_shape("main/process$Counter", Signature { parameters: [Some(Long)], result: Some(Long) }).carries) == 3
+fn process_shape(class: String, started: Signature) -> Shape {
+    var carries = []
+    var index = 0
+    for taken in started.parameters {
+        carries = list.push(carries, Carried { name: "argument" + shown(index), of: taken })
+        index += 1
+    }
+    carries = concatenated(first: carries, second: [Carried { name: "mailbox", of: Some(mailbox_descriptor()) }, Carried { name: "finished", of: Some(finished_descriptor()) }])
+    Shape { class: class, base: class, tag: None, carries: carries }
+}
+
+/// The method `spawn` calls: a mailbox and an end, the process on a virtual thread of its own,
+/// and the handle of both.
+///
+/// `start` runs on the new thread, so `spawn` never waits for it.
+// example: spawned_method(process_shape("main/process$Counter", Signature { parameters: [], result: Some(Long) }), Signature { parameters: [], result: Some(Long) }).name == "spawned"
+fn spawned_method(shape: Shape, started: Signature) -> Method {
+    taken := descriptor_of(Signature { parameters: started.parameters, result: None }).parameters
+    mailbox := parameters_width(MethodDescriptor { parameters: taken, result: None })
+    finished := mailbox + 1
+    var loading = []
+    var slot = 0
+    for one in taken {
+        loading = list.push(loading, Load { slot: slot, of: one })
+        slot += width(one)
+    }
+    opened := [New(mailbox_class()), Copy, IntegerOf(mailbox_bound()), Construct(MethodRef { class: mailbox_class(), name: "<init>", descriptor: MethodDescriptor { parameters: [Integer], result: None } }), Store { slot: mailbox, of: mailbox_descriptor() }, New(finished_class()), Copy, Construct(MethodRef { class: finished_class(), name: "<init>", descriptor: MethodDescriptor { parameters: [], result: None } }), Store { slot: finished, of: finished_descriptor() }]
+    held := [Load { slot: mailbox, of: mailbox_descriptor() }, Load { slot: finished, of: finished_descriptor() }]
+    started_thread := concatenated(first: concatenated(first: concatenated(first: [New(shape.class), Copy], second: loading), second: held), second: [Construct(MethodRef { class: shape.class, name: "<init>", descriptor: constructor_descriptor(shape) }), InvokeStatic(virtual_thread_started()), Drop(Reference("java/lang/Thread"))])
+    handed_back := concatenated(first: concatenated(first: [New(handle_class_name()), Copy], second: held), second: [Construct(MethodRef { class: handle_class_name(), name: "<init>", descriptor: constructor_descriptor(handle_shape()) }), Return(Some(handle_descriptor()))])
+    body := Body { instructions: concatenated(first: concatenated(first: opened, second: started_thread), second: handed_back), locals: 2, guards: [] }
+    Method { name: "spawned", descriptor: MethodDescriptor { parameters: taken, result: Some(handle_descriptor()) }, reached: ThroughTheClass, body: body }
+}
+
+/// `Thread.startVirtualThread`, which runs what it is given on a virtual thread of its own.
+// example: virtual_thread_started().name == "startVirtualThread"
+fn virtual_thread_started() -> MethodRef {
+    MethodRef { class: "java/lang/Thread", name: "startVirtualThread", descriptor: MethodDescriptor { parameters: [Reference("java/lang/Runnable")], result: Some(Reference("java/lang/Thread")) } }
+}
+
+/// The method the virtual thread runs: `start`, then `receive` of each message the mailbox gives,
+/// until `receive` gives `Done`, and then the state it held completes the end.
+///
+/// The state is held as an object between two messages, and each call is given it as it takes it.
+// example: run_method(no_shapes(), process_shape("main/process$Counter", Signature { parameters: [], result: Some(Long) }), Ran { module: "main", named: "Counter", started: Signature { parameters: [], result: Some(Long) }, received: Signature { parameters: [Some(Long), Some(Long)], result: Some(object()) } }).name == "run"
+fn run_method(shapes: Shapes, shape: Shape, ran: Ran) -> Method {
+    this := Reference(shape.class)
+    var starting = []
+    for carried in shape.carries {
+        starting = match carried.of {
+            Some(of) => if carried.name != "mailbox" && carried.name != "finished" {
+                concatenated(first: starting, second: [Load { slot: 0, of: this }, GetField(FieldRef { class: shape.class, name: carried.name, of: of })])
+            } else {
+                starting
+            }
+            None => starting
+        }
+    }
+    module := ran.module
+    named := ran.named
+    started := concatenated(first: list.push(starting, InvokeStatic(MethodRef { class: module, name: named + "$start", descriptor: descriptor_of(ran.started) })), second: as_object(ran.started.result))
+    taking := [Store { slot: 1, of: object() }, Label(0), Load { slot: 0, of: this }, GetField(FieldRef { class: shape.class, name: "mailbox", of: mailbox_descriptor() }), InvokeVirtual(MethodRef { class: mailbox_class(), name: "take", descriptor: MethodDescriptor { parameters: [], result: Some(object()) } }), Store { slot: 2, of: object() }]
+    receiving := concatenated(first: concatenated(first: object_as(1, or(list.at(ran.received.parameters, 0), None)), second: object_as(2, or(list.at(ran.received.parameters, 1), None))), second: [InvokeStatic(MethodRef { class: module, name: named + "$receive", descriptor: descriptor_of(ran.received) }), Store { slot: 3, of: next_descriptor() }])
+    again := built_shape(shapes, "Continue")
+    tested := carrying_tag(again, Slot { at: 3, of: next_descriptor() }, 1)
+    kept := concatenated(first: [Load { slot: 3, of: next_descriptor() }, Cast(again.class), GetField(FieldRef { class: again.class, name: first_carried_name(again), of: or(first_carried(again), object()) })], second: as_object(first_carried(again)))
+    ending := [Store { slot: 1, of: object() }, Jump(0), Label(1), Load { slot: 0, of: this }, GetField(FieldRef { class: shape.class, name: "finished", of: finished_descriptor() }), Load { slot: 1, of: object() }, InvokeVirtual(MethodRef { class: finished_class(), name: "complete", descriptor: MethodDescriptor { parameters: [object()], result: Some(Boolean) } }), Drop(Boolean), Return(None)]
+    instructions := concatenated(first: concatenated(first: concatenated(first: concatenated(first: [Label(2)], second: started), second: taking), second: concatenated(first: receiving, second: tested)), second: concatenated(first: concatenated(first: kept, second: ending), second: failed_end(shape)))
+    guard := Guard { from: 2, to: 4, handler: 4, catching: "java/lang/Throwable" }
+    Method { name: "run", descriptor: MethodDescriptor { parameters: [], result: None }, reached: ThroughAnInstance, body: Body { instructions: instructions, locals: 3, guards: [guard] } }
+}
+
+/// What a throw out of `start` or `receive` becomes: the end of the process completes with the
+/// throwable, and the throwable goes on to the thread, which writes it to standard error.
+///
+/// So `send` to that process gives `ProcessEnded`, and `ended` on it throws in its turn, and no
+/// one waits for an end that never comes.
+// example: list.length(failed_end(process_shape("main/process$Counter", Signature { parameters: [], result: Some(Long) }))) == 9
+fn failed_end(shape: Shape) -> List<Instruction> {
+    thrown := Reference("java/lang/Throwable")
+    completed := InvokeVirtual(MethodRef { class: finished_class(), name: "completeExceptionally", descriptor: MethodDescriptor { parameters: [thrown], result: Some(Boolean) } })
+    [Label(4), Store { slot: 1, of: thrown }, Load { slot: 0, of: Reference(shape.class) }, GetField(FieldRef { class: shape.class, name: "finished", of: finished_descriptor() }), Load { slot: 1, of: thrown }, completed, Drop(Boolean), Load { slot: 1, of: thrown }, Throw]
+}
+
+/// The instructions that turn a value `held` holds into an object, and a new object for `()`.
+// example: list.length(as_object(None)) == 3
+fn as_object(held: Option<Descriptor>) -> List<Instruction> {
+    match held {
+        Some(of) => converted(held: of, wanted: object())
+        None => [New(object_class()), Copy, Construct(MethodRef { class: object_class(), name: "<init>", descriptor: MethodDescriptor { parameters: [], result: None } })]
+    }
+}
+
+/// The object in `slot`, loaded as what `wanted` takes, and nothing where `wanted` takes `()`.
+// example: list.length(object_as(1, None)) == 0
+fn object_as(slot: Int, wanted: Option<Descriptor>) -> List<Instruction> {
+    match wanted {
+        Some(of) => concatenated(first: [Load { slot: slot, of: object() }], second: converted(held: object(), wanted: of))
+        None => []
+    }
+}
+
+/// The class of a handle: the mailbox and the end of one process, and the method `send` calls.
+// example: list.length(handle_class(no_shapes()).methods) == 2
+fn handle_class(shapes: Shapes) -> Class {
+    shape := handle_shape()
+    Class { name: shape.class, extends: object_class(), extending: Never, implements: [], fields: held_fields(shape), methods: [constructor_method(shape, object_class()), sent_method(shapes)] }
+}
+
+/// The method `send` calls: an ended process refuses the message, and a full mailbox is waited on
+/// as `waiting` says.
+///
+/// A wait without limit offers the message a tenth of a second at a time and looks for the end
+/// in between, so a process that ends while the sender waits is told as ended.
+// example: sent_method(no_shapes()).name == "sent"
+fn sent_method(shapes: Shapes) -> Method {
+    waiting := Slot { at: 2, of: named_descriptor(shapes, "Waiting") }
+    opened := concatenated(first: ended_test(shapes, 0), second: [Label(0)])
+    unlimited := concatenated(first: carrying_tag(built_shape(shapes, "NoLimit"), waiting, 2), second: [Label(1)])
+    offered := concatenated(first: offer_within([LongOf(100)], shapes, 5), second: [Label(5)])
+    again := concatenated(first: ended_test(shapes, 1), second: [Label(2), LongOf(0), Store { slot: 3, of: Long }])
+    timed := built_shape(shapes, "Milliseconds")
+    limit := concatenated(first: carrying_tag(timed, waiting, 3), second: [Load { slot: 2, of: waiting.of }, Cast(timed.class), GetField(FieldRef { class: timed.class, name: first_carried_name(timed), of: or(first_carried(timed), Long) }), Store { slot: 3, of: Long }, Label(3)])
+    bounded := concatenated(first: offer_within([Load { slot: 3, of: Long }], shapes, 4), second: concatenated(first: [Label(4)], second: ended_test(shapes, 6)))
+    full := concatenated(first: [Label(6)], second: sent_answer(shapes, "MailboxFull"))
+    instructions := concatenated(first: concatenated(first: concatenated(first: opened, second: unlimited), second: concatenated(first: offered, second: again)), second: concatenated(first: concatenated(first: limit, second: bounded), second: full))
+    taken := [handle_descriptor(), object(), waiting.of]
+    Method { name: "sent", descriptor: MethodDescriptor { parameters: taken, result: Some(named_descriptor(shapes, "Sent")) }, reached: ThroughTheClass, body: Body { instructions: instructions, locals: 2, guards: [] } }
+}
+
+/// `ProcessEnded` where the process of the handle in slot 0 has ended, and a jump to `open` where
+/// it has not.
+// example: list.length(ended_test(no_shapes(), 0)) == 8
+fn ended_test(shapes: Shapes, open: Int) -> List<Instruction> {
+    tested := [Load { slot: 0, of: handle_descriptor() }, GetField(handle_finished()), InvokeVirtual(MethodRef { class: finished_class(), name: "isDone", descriptor: MethodDescriptor { parameters: [], result: Some(Boolean) } }), JumpIfFalse(open)]
+    concatenated(first: tested, second: sent_answer(shapes, "ProcessEnded"))
+}
+
+/// `Delivered` where the mailbox takes the message within the milliseconds `within` loads, and a
+/// jump to `missed` where it does not.
+// example: list.length(offer_within([LongOf(0)], no_shapes(), 0)) == 11
+fn offer_within(within: List<Instruction>, shapes: Shapes, missed: Int) -> List<Instruction> {
+    unit := GetStatic(FieldRef { class: "java/util/concurrent/TimeUnit", name: "MILLISECONDS", of: Reference("java/util/concurrent/TimeUnit") })
+    offer := MethodRef { class: mailbox_class(), name: "offer", descriptor: MethodDescriptor { parameters: [object(), Long, Reference("java/util/concurrent/TimeUnit")], result: Some(Boolean) } }
+    loaded := concatenated(first: [Load { slot: 0, of: handle_descriptor() }, GetField(handle_mailbox()), Load { slot: 1, of: object() }], second: within)
+    concatenated(first: concatenated(first: loaded, second: [unit, InvokeVirtual(offer), JumpIfFalse(missed)]), second: sent_answer(shapes, "Delivered"))
+}
+
+/// The variant `named` of `Sent`, built and given back.
+// example: list.length(sent_answer(no_shapes(), "Delivered")) == 4
+fn sent_answer(shapes: Shapes, named: String) -> List<Instruction> {
+    shape := built_shape(shapes, named)
+    [New(shape.class), Copy, Construct(MethodRef { class: shape.class, name: "<init>", descriptor: constructor_descriptor(shape) }), Return(Some(named_descriptor(shapes, "Sent")))]
+}
+
+/// What a handle holds: the mailbox of its process, and the end of it.
+// example: list.length(handle_shape().carries) == 2
+fn handle_shape() -> Shape {
+    Shape { class: handle_class_name(), base: handle_class_name(), tag: None, carries: [Carried { name: "mailbox", of: Some(mailbox_descriptor()) }, Carried { name: "finished", of: Some(finished_descriptor()) }] }
+}
+
+/// What holds a `Next`, which `receive` gives back and the prelude declares.
+// example: descriptor_text(next_descriptor()) == "Llumen/Next;"
+fn next_descriptor() -> Descriptor {
+    Reference("lumen/Next")
+}
+
+/// How many messages a mailbox holds at most, which is one bound for every mailbox.
+// example: mailbox_bound() == 64
+fn mailbox_bound() -> Int {
+    64
 }
 
 /// The class of the module: every method nothing has to ask for, every one asked for, and `main`.
@@ -193,7 +400,7 @@ fn module_class(lowering: Lowering, asked: Asked) -> Classed {
     owing := every_asked_owed(every_plain_owed(lowering), asked)
     written := methods_owed(owing)
     methods := concatenated(first: written.methods, second: entry_point(written.lowering))
-    Classed { lowering: written.lowering, class: Class { name: owing.shapes.module, extends: object_class(), extending: Never, fields: [], methods: methods } }
+    Classed { lowering: written.lowering, class: Class { name: owing.shapes.module, extends: object_class(), extending: Never, implements: [], fields: [], methods: methods } }
 }
 
 /// `lowering` owing each method a module writes whatever is asked of it.
@@ -362,7 +569,7 @@ fn entry_point(lowering: Lowering) -> List<Method> {
 // example: or(function_named(little_lowering("fn f() -> Int {\n    1\n}\n"), "f"), no_function()).name.text == "f"
 fn function_named(lowering: Lowering, named: String) -> Option<ast.FunctionDeclaration> {
     for function in infer.functions_of(lowering.typed.resolved.program) {
-        if function.name.text == named {
+        if named_at(lowering, function.name.span) == named {
             return Some(function)
         }
     }
@@ -631,6 +838,7 @@ fn expr_walked(lowering: Lowering, walk: Escape, written: ast.Expr) -> Escape {
         ast.Record { base, fields } => fields_walked(lowering, record_base_walked(lowering, walk, base), fields)
         ast.If(chain) => chain_walked(lowering, walk, chain)
         ast.Match(matched) => arms_walked(lowering, expr_walked(lowering, walk, matched.scrutinee), matched.arms)
+        ast.Spawn(started) => expr_walked(lowering, walk, started)
         _ => walk
     }
 }
@@ -822,13 +1030,13 @@ fn base_class(base: String) -> Class {
     this := Reference(base)
     instructions := [Load { slot: 0, of: this }, Load { slot: 1, of: Integer }, PutField(FieldRef { class: base, name: "tag", of: Integer }), Load { slot: 0, of: this }, Construct(MethodRef { class: object_class(), name: "<init>", descriptor: MethodDescriptor { parameters: [], result: None } }), Return(None)]
     made := Method { name: "<init>", descriptor: MethodDescriptor { parameters: [Integer], result: None }, reached: ThroughAnInstance, body: Body { instructions: instructions, locals: 0, guards: [] } }
-    Class { name: base, extends: object_class(), extending: ByItsVariants, fields: [Field { name: "tag", of: Integer }], methods: [made] }
+    Class { name: base, extends: object_class(), extending: ByItsVariants, implements: [], fields: [Field { name: "tag", of: Integer }], methods: [made] }
 }
 
 /// The class of one variant, which extends `base`.
 // example: variant_class(no_shape(), "main/Box").extends == "main/Box"
 fn variant_class(shape: Shape, base: String) -> Class {
-    Class { name: shape.class, extends: base, extending: Never, fields: held_fields(shape), methods: [constructor_method(shape, base)] }
+    Class { name: shape.class, extends: base, extending: Never, implements: [], fields: held_fields(shape), methods: [constructor_method(shape, base)] }
 }
 
 /// The class of a list: its slots and length, and the methods that build, push onto, and cross it.
@@ -841,7 +1049,7 @@ fn carrier() -> Class {
 /// The class of a record: a field for each value it carries, and a constructor that sets them.
 // example: list.length(record_class(no_shape()).methods) == 1
 fn record_class(shape: Shape) -> Class {
-    Class { name: shape.class, extends: object_class(), extending: Never, fields: held_fields(shape), methods: [constructor_method(shape, object_class())] }
+    Class { name: shape.class, extends: object_class(), extending: Never, implements: [], fields: held_fields(shape), methods: [constructor_method(shape, object_class())] }
 }
 
 /// The constructor of `shape`: each value set on its field, then the constructor of `extends`.
@@ -1091,8 +1299,20 @@ fn item_declared(declarations: map.Map<Int, Declared>, program: ast.Program, lib
         ast.Derive(deriving) => derive_declared(declarations, program, library, deriving)
         ast.Function(function) => map.insert(declarations, infer.span_key(function.name.span), Declared { named: function.name.text, body: Source(function) })
         ast.Extern(declaration) => map.insert(declarations, infer.span_key(declaration.name.span), Declared { named: declaration.name.text, body: FromJava(declaration) })
+        ast.Process(declaration) => process_declared(declarations, declaration)
         _ => declarations
     }
+}
+
+/// `declarations` with `start` and `receive` of `process`, each named after the process.
+// example: named_at(little_lowering("process Counter {\n    fn start() -> Int {\n        0\n    }\n\n    fn receive(total: Int, message: Int) -> Next<Int> {\n        match message {\n            _ => Done\n        }\n    }\n}\n"), lexer.Span { start: 25, length: 5 }) == "Counter$start"
+fn process_declared(declarations: map.Map<Int, Declared>, process_of: ast.ProcessDeclaration) -> map.Map<Int, Declared> {
+    var declaring = declarations
+    for function in process_of.functions {
+        named := process_of.name.text + "$" + function.name.text
+        declaring = map.insert(declaring, infer.span_key(function.name.span), Declared { named: named, body: Source(function) })
+    }
+    declaring
 }
 
 /// `declarations` with each method of `instance`, named after its trait and its type.
@@ -1657,7 +1877,7 @@ fn performed(builder: Builder, kind: ast.StatementKind) -> Builder {
         ast.Assign { target, operator, value } => assigned(builder, target, operator, value)
         ast.Return(value) => returned(builder, value)
         ast.Break => left_for(builder, repeat_done(builder.repeat))
-        ast.Continue => left_for(builder, repeat_again(builder.repeat))
+        ast.ContinueLoop => left_for(builder, repeat_again(builder.repeat))
         ast.For(repeated) => for_loop(builder, repeated)
         ast.Discard(value) => discarded(builder, value)
         ast.Evaluated(_) => builder
@@ -1836,6 +2056,48 @@ fn expr_built(builder: Builder, written: ast.Expr) -> Left {
         ast.Record { base, fields } => record(builder, base, fields)
         ast.If(chain) => if_expr(builder, chain, written.span)
         ast.Match(matched) => match_expr(builder, matched, written.span)
+        ast.Spawn(started) => spawn_built(builder, started)
+    }
+}
+
+/// The builder after the process `started` calls is spawned, which gives back its handle.
+// example: held_text(spawn_built(little_builder(""), no_expr()).held) == "Llumen/Process;"
+fn spawn_built(builder: Builder, started: ast.Expr) -> Left {
+    requested := match started.kind {
+        ast.Call { callee, arguments } => callee_of(callee, infer.values_of(arguments))
+        _ => callee_of(started, [])
+    }
+    declaration := spawned_declaration(builder.lowering, value_definition(builder, requested.name).origin)
+    signature := signature_of_process(builder.lowering, declaration, 0)
+    handing := each_handed(builder, requested.passed, signature.parameters)
+    taken := descriptor_of(Signature { parameters: signature.parameters, result: None }).parameters
+    spawned := MethodRef { class: process_class_name(module: builder.lowering.shapes.module, named: declaration.name.text), name: "spawned", descriptor: MethodDescriptor { parameters: taken, result: Some(handle_descriptor()) } }
+    Left { builder: emit(handing, InvokeStatic(spawned)), held: Some(handle_descriptor()) }
+}
+
+/// The process declared at `origin`, which the resolver holds `spawn` to.
+// example: spawned_declaration(little_lowering(""), resolver.InPrelude).name.text == ""
+fn spawned_declaration(lowering: Lowering, origin: resolver.Origin) -> ast.ProcessDeclaration {
+    var found = ast.ProcessDeclaration { name: infer.no_name(), functions: [], span: infer.no_name().span }
+    for item in lowering.typed.resolved.program.items {
+        found = match item {
+            ast.Process(declaration) => if is_declared_at(origin, declaration.name.span) {
+                declaration
+            } else {
+                found
+            }
+            _ => found
+        }
+    }
+    found
+}
+
+/// Whether `origin` is the declaration written at `written`.
+// example: !is_declared_at(resolver.InPrelude, infer.no_name().span)
+fn is_declared_at(origin: resolver.Origin, written: lexer.Span) -> Bool {
+    match origin {
+        resolver.InPrelude => false
+        resolver.Declared(at) => infer.span_key(at) == infer.span_key(written)
     }
 }
 
@@ -2298,10 +2560,83 @@ fn written_out_operator(builder: Builder, operator: ast.BinaryOperator, left: as
 /// `or` and `ok_or`, which read their answer or fall back.
 // example: held_text(supplied(little_builder(""), infer.no_name(), [], infer.no_name().span).held) == "V"
 fn supplied(builder: Builder, name: ast.Name, arguments: List<ast.Expr>, written: lexer.Span) -> Left {
+    if name.text == "send" || name.text == "ended" {
+        return process_supplied(builder, name.text, arguments, written)
+    }
     match held_named(builder, name.text, arguments) {
         Some(left) => left
         None => with_fallback(builder, name.text, arguments, written)
     }
+}
+
+/// The builder after `send` or `ended`, which the handle of a process reaches.
+///
+/// `send` hands the message on as an object and gives a `Sent`; `ended` waits on the end, and
+/// gives the last state as the call's type holds it.
+// example: held_text(process_supplied(little_builder(""), "ended", [no_expr()], infer.no_name().span).held) == "V"
+fn process_supplied(builder: Builder, name: String, arguments: List<ast.Expr>, written: lexer.Span) -> Left {
+    handle := handed(builder, or(list.at(arguments, 0), no_expr()), Some(handle_descriptor()))
+    if name == "ended" {
+        joined := MethodRef { class: finished_class(), name: "join", descriptor: MethodDescriptor { parameters: [], result: Some(object()) } }
+        wanted := carried_at(builder, written)
+        return Left { builder: adapt(builder: emits(handle, [GetField(handle_finished()), InvokeVirtual(joined)]), from: Some(object()), to: wanted), held: wanted }
+    }
+    waiting := named_descriptor(builder.lowering.shapes, "Waiting")
+    sent := named_descriptor(builder.lowering.shapes, "Sent")
+    handing := handed(handed(handle, or(list.at(arguments, 1), no_expr()), Some(object())), or(list.at(arguments, 2), no_expr()), Some(waiting))
+    offered := MethodRef { class: handle_class_name(), name: "sent", descriptor: MethodDescriptor { parameters: [handle_descriptor(), object(), waiting], result: Some(sent) } }
+    Left { builder: emit(handing, InvokeStatic(offered)), held: Some(sent) }
+}
+
+/// The signature of the function at `index` of a process, which the one shape puts there.
+// example: is_nothing(signature_of_process(little_lowering(""), ast.ProcessDeclaration { name: infer.no_name(), functions: [], span: infer.no_name().span }, 0).result)
+fn signature_of_process(lowering: Lowering, declaration: ast.ProcessDeclaration, index: Int) -> Signature {
+    match list.at(declaration.functions, index) {
+        Some(function) => signature_of(lowering, function.name.span, whole())
+        None => Signature { parameters: [], result: None }
+    }
+}
+
+/// The class of the process `named` of `module`, a name no type has, since `process` is a keyword.
+// example: process_class_name(module: "main", named: "Counter") == "main/process$Counter"
+fn process_class_name(module: String, named: String) -> String {
+    module + "/process$" + named
+}
+
+/// The field of a handle that holds the mailbox.
+// example: handle_mailbox().name == "mailbox"
+fn handle_mailbox() -> FieldRef {
+    FieldRef { class: handle_class_name(), name: "mailbox", of: mailbox_descriptor() }
+}
+
+/// The field of a handle that holds the end.
+// example: handle_finished().name == "finished"
+fn handle_finished() -> FieldRef {
+    FieldRef { class: handle_class_name(), name: "finished", of: finished_descriptor() }
+}
+
+/// What holds a mailbox.
+// example: descriptor_text(mailbox_descriptor()) == "Ljava/util/concurrent/ArrayBlockingQueue;"
+fn mailbox_descriptor() -> Descriptor {
+    Reference(mailbox_class())
+}
+
+/// The class of a mailbox: a queue of one fixed bound, whose `put` and `take` wait.
+// example: mailbox_class() == "java/util/concurrent/ArrayBlockingQueue"
+fn mailbox_class() -> String {
+    "java/util/concurrent/ArrayBlockingQueue"
+}
+
+/// What holds the end of a process.
+// example: descriptor_text(finished_descriptor()) == "Ljava/util/concurrent/CompletableFuture;"
+fn finished_descriptor() -> Descriptor {
+    Reference(finished_class())
+}
+
+/// The class of the end of a process, which the last state completes and `ended` waits on.
+// example: finished_class() == "java/util/concurrent/CompletableFuture"
+fn finished_class() -> String {
+    "java/util/concurrent/CompletableFuture"
 }
 
 /// The builder after `or` or `ok_or`: the value the answer carries, or the fallback.
@@ -4402,10 +4737,25 @@ fn plain_descriptor(shapes: Shapes, named: String) -> Descriptor {
     if named == "List" {
         return list_descriptor()
     }
+    if named == "Process" {
+        return handle_descriptor()
+    }
     if set.has_value(shapes.prelude_types, named) {
         return Reference("lumen/" + named)
     }
     Reference(declared_class(shapes, named))
+}
+
+/// What holds a handle.
+// example: descriptor_text(handle_descriptor()) == "Llumen/Process;"
+fn handle_descriptor() -> Descriptor {
+    Reference(handle_class_name())
+}
+
+/// The class of a handle, which is laid out beside the classes of the prelude.
+// example: handle_class_name() == "lumen/Process"
+fn handle_class_name() -> String {
+    "lumen/Process"
 }
 
 /// The class a module lays out the type `declared` as: its own package, or the module's before a dot.
@@ -5000,11 +5350,13 @@ type Left = {
     held: Option<Descriptor>
 }
 
-/// One class: its name, what it extends, how it is extended, its fields, and its methods.
+/// One class: its name, what it extends, how it is extended, the interfaces it implements, its
+/// fields, and its methods.
 type Class = {
     name: String
     extends: String
     extending: Extending
+    implements: List<String>
     fields: List<Field>
     methods: List<Method>
 }
@@ -5118,6 +5470,15 @@ type Reaches = {
 type Reaching = {
     named: String
     signature: Signature
+}
+
+/// What the thread of a process calls: the module and name of the process, and the signatures
+/// of `start` and `receive`.
+type Ran = {
+    module: String
+    named: String
+    started: Signature
+    received: Signature
 }
 
 /// What carries each parameter and the result of a method, and nothing where it is `()`.

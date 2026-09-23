@@ -1,6 +1,6 @@
 // A `List<String>` crosses as a `java.util.List` of what it holds, so a member takes one the
 // way it takes any other value. `java.lang.ProcessBuilder` is built from exactly such a list,
-// which is what `process.run` reaches for.
+// which is what `programs.run` reaches for.
 fn main(arguments: List<String>) -> Int {
     _ = of_command(["java", "-version"])
     0

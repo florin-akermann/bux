@@ -1,0 +1,11 @@
+// expect-error: L0800
+// `spawn` starts a process, and a function is not one.
+fn main(arguments: List<String>) -> Int {
+    _ = spawn counted()
+    0
+}
+
+// example: counted() == 0
+fn counted() -> Int {
+    0
+}

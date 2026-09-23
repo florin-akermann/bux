@@ -1,0 +1,25 @@
+// expect-error: L0802
+// The first function of a process is `start`.
+fn main(arguments: List<String>) -> Int {
+    _ = spawn Counter()
+    0
+}
+
+/// A total that each `Add` grows.
+process Counter {
+    fn begin() -> Int {
+        0
+    }
+
+    fn receive(total: Int, message: Counted) -> Next<Int> {
+        match message {
+            Add(amount) => Continue(total + amount)
+            Stop => Done
+        }
+    }
+}
+
+/// What a counter is sent.
+type Counted =
+    | Add(Int)
+    | Stop

@@ -57,7 +57,7 @@ A code is `L` and four digits, grouped by the phase that raises it.
 The grammar writes `L01xx`, canonical form `L02xx`, loading and name resolution `L03xx`, and
 inference `L04xx`.
 Exhaustiveness writes `L05xx`, and what a build asks of a module it compiles writes `L06xx`.
-Code generation writes `L07xx`.
+Code generation writes `L07xx`, and the shape of a process writes `L08xx`.
 
 The long form of a code is the file in `compiler/explanations/` named after it.
 `command.explanation_of` reads that file as a class-path resource, so there is one copy of it.
@@ -185,6 +185,23 @@ class that the writer cannot write:
 - `L0701` — a text or a name takes more than 65535 bytes.
 - `L0702` — two parts of one program, a module or the library, have one name.
 - `L0703` — the compiler did not write a function, which is a defect of the compiler.
+
+Name resolution raises the first two of these, in `compiler/resolver.lm`.
+The shape check raises the next eight, in `compiler/processes.lm`, before inference.
+The declarations raise the last one, in `compiler/declared.lm`.
+`docs/specs/concurrency.md` states the shape that each one holds.
+
+- `L0800` — `spawn` names no process this module declares, or names one without a call.
+- `L0801` — a process is called as a function or held as a value, without `spawn`.
+- `L0802` — the first function of a process is not `start`.
+- `L0803` — the second function of a process is not `receive`.
+- `L0804` — a process declares a function after `receive`.
+- `L0805` — a function of a process declares a type parameter.
+- `L0806` — a function of a process leaves the type of a parameter or of its result unwritten.
+- `L0807` — `receive` does not take exactly two values, a state and a message.
+- `L0808` — the body of `receive` is not one `match` on the message.
+- `L0809` — an arm of that `match` is not one call or one name.
+- `L0810` — `receive` does not take the state `start` gives and give `Next` of that state.
 
 ## As data
 

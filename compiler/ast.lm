@@ -35,6 +35,7 @@ fn item_lines(declared: Item) -> String {
         Derive(declaration) => derive_lines(declaration)
         Function(declaration) => function_lines(declaration, 0)
         Extern(declaration) => extern_lines(declaration)
+        Process(declaration) => process_lines(declaration)
     }
 }
 
@@ -122,6 +123,16 @@ fn instance_lines(declaration: InstanceDeclaration) -> String {
     var written = node(0, "instance " + declaration.trait_name.text + "<" + declaration.for_type.text + ">", declaration.span)
     for method in declaration.methods {
         written += function_lines(method, 1)
+    }
+    written
+}
+
+/// A process: its name, then each function it declares, one level in.
+// example: process_lines(ProcessDeclaration { name: Name { text: "Counter", span: lexer.Span { start: 8, length: 7 } }, functions: [], span: lexer.Span { start: 0, length: 19 } }) == "process Counter 0..19\n"
+fn process_lines(declaration: ProcessDeclaration) -> String {
+    var written = node(0, "process " + declaration.name.text, declaration.span)
+    for function in declaration.functions {
+        written += function_lines(function, 1)
     }
     written
 }
@@ -291,7 +302,7 @@ fn statement_lines(statement: Statement, depth: Int) -> String {
         Assign { target, operator, value } => node(depth, "assign " + assign_word(operator), span) + node(depth + 1, "name " + target.text, target.span) + expression_lines(value, depth + 1)
         Return(value) => node(depth, "return", span) + optional_lines(value, depth + 1)
         Break => node(depth, "break", span)
-        Continue => node(depth, "continue", span)
+        ContinueLoop => node(depth, "continue", span)
         For(written) => for_lines(written, span, depth)
         Discard(value) => node(depth, "discard", span) + expression_lines(value, depth + 1)
         Evaluated(value) => expression_lines(value, depth)
@@ -356,6 +367,7 @@ fn expression_lines(expr: Expr, depth: Int) -> String {
         Record { base, fields } => node(depth, "record " + path_text(base), span) + field_value_lines(fields, depth + 1)
         If(chain) => if_lines(chain, span, depth)
         Match(matched) => match_lines(matched, span, depth)
+        Spawn(started) => node(depth, "spawn", span) + expression_lines(started, depth + 1)
     }
 }
 
@@ -606,6 +618,16 @@ type Item =
     | Derive(DeriveDeclaration)
     | Function(FunctionDeclaration)
     | Extern(ExternDeclaration)
+    | Process(ProcessDeclaration)
+
+/// `process Counter { … }`: a name, and the functions written inside the braces.
+///
+/// The parser takes any functions here, and the type phase holds them to the one process shape.
+type ProcessDeclaration = {
+    name: Name
+    functions: List<FunctionDeclaration>
+    span: lexer.Span
+}
 
 /// `extern static read_string(path: Path) -> String = "java.nio.file.Files.readString"`.
 ///
@@ -794,7 +816,7 @@ type StatementKind =
     }
     | Return(Option<Expr>)
     | Break
-    | Continue
+    | ContinueLoop
     | For(ForLoop)
     | Discard(Expr)
     | Evaluated(Expr)
@@ -862,6 +884,7 @@ type ExprKind =
     }
     | If(IfExpr)
     | Match(MatchExpr)
+    | Spawn(Expr)
 
 /// What a call passes: the values in order, or each value with the parameter it is passed for.
 type Arguments =

@@ -371,7 +371,7 @@ fn named_twice(draw: drawn.Draw) -> Drawing {
 /// The record `demo/Box`, which holds one whole number under the name `field`.
 // example: boxed("held").name == "demo/Box"
 fn boxed(field: String) -> ir.Class {
-    ir.Class { name: "demo/Box", extends: "java/lang/Object", extending: ir.Never, fields: [ir.Field { name: field, of: ir.Long }], methods: [] }
+    ir.Class { name: "demo/Box", extends: "java/lang/Object", extending: ir.Never, implements: [], fields: [ir.Field { name: field, of: ir.Long }], methods: [] }
 }
 
 /// A method that passes a drawn number of `long` values to a call or a constructor, then adds.
@@ -448,7 +448,7 @@ fn greater(one: Int, other: Int) -> Int {
 fn one_body(instructions: List<ir.Instruction>, locals: Int) -> ir.Lowered {
     body := ir.Body { instructions: instructions, locals: locals, guards: [] }
     method := ir.Method { name: "answer0", descriptor: ir.MethodDescriptor { parameters: [], result: Some(ir.Long) }, reached: ir.ThroughTheClass, body: body }
-    jvm.one_class(ir.Class { name: "demo", extends: "java/lang/Object", extending: ir.Never, fields: [], methods: [method] })
+    jvm.one_class(ir.Class { name: "demo", extends: "java/lang/Object", extending: ir.Never, implements: [], fields: [], methods: [method] })
 }
 
 /// Why `answer` is not refused with `code` past the limit, or not written within it, or nothing.
@@ -562,7 +562,7 @@ fn a_module(draw: drawn.Draw) -> ir.Lowered {
         body := ir.Body { instructions: list.push(body_of_kind(which), ir.Return(Some(ir.Long))), locals: 0, guards: [] }
         methods = list.push(methods, ir.Method { name: "answer" + shown(list.length(methods)), descriptor: ir.MethodDescriptor { parameters: [], result: Some(ir.Long) }, reached: ir.ThroughTheClass, body: body })
     }
-    ir.Lowered { classes: [ir.Class { name: "demo", extends: "java/lang/Object", extending: ir.Never, fields: [], methods: methods }], asks: ir.no_asks() }
+    ir.Lowered { classes: [ir.Class { name: "demo", extends: "java/lang/Object", extending: ir.Never, implements: [], fields: [], methods: methods }], asks: ir.no_asks() }
 }
 
 /// The body of the kind `which`, each of which leaves one whole number on the stack.

@@ -12,7 +12,7 @@ fn counted(payment: Payment) -> Int {
     match payment {
     Pending => listed
 // and then the rest
-    Done => 0
+    Finished => 0
     }
 }
 
@@ -25,4 +25,4 @@ active: Bool
 type Payment =
 | Pending
         // and then
-| Done
+| Finished
