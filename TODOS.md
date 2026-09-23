@@ -47,7 +47,7 @@ Nothing is fetched, so an archive is a file already on disk, and its hash pins i
 [083][e] - `docs/implementation.md` says the archive line is for the JVM target only.
 
 ## 🔴 Item 084: An `extern` names only a class that the build can account for
-**Depends on:** Item 083, Item 086, Item 087 — stated archives, a neutral section 17, Bux only.
+**Depends on:** Item 083, Item 087 — stated archives, and the Bux compiler only.
 Today an `extern` can name `java.lang.Class.forName` and load a class whose name comes at run time.
 The same form reaches `javax.naming.InitialContext.doLookup`, which is the Log4Shell call.
 An accepted class is in a stated archive, or in a `java.base` package on a fixed allow list.
@@ -67,16 +67,6 @@ A stated archive can still load a class at run time, and these flags narrow what
 [085][c] - The runner removes the three variables from the environment of the JVM.
 [085][d] - A spec example that the Item 087 runner runs shows that no `javax.naming` class loads.
 [085][e] - `bux help run` says a program reaches only its library and its stated archives.
-
-## 🔴 Item 086: `docs/design.md` section 17 says how a program reaches a target, with no Java word
-The JVM is the first target and not the model, but section 17 is titled "Reaching Java".
-It states the member kinds, the `int` and `char` widths, and `interface`, which are JVM facts.
-A second target would then change the language specification, and it must change only a boundary.
-[086][a] - Section 17 gets a target-neutral title, such as "Reaching the platform".
-[086][b] - Section 17 states what crosses a boundary and what is refused, in words of no target.
-[086][c] - Section 17 says that each target has its own `extern` form, which a spec states.
-[086][d] - The JVM form, the member kinds, and the two widths move to `docs/specs/interop.md`.
-[086][e] - The other sections of `docs/design.md` name Java only where they describe the JVM target.
 
 ## 🔴 Item 087: The Rust crates are deleted, and a `bux`-driven runner holds `tests/spec`
 Item 075 landed stage 2 equal to stage 1 byte for byte, and every harness is a Rust test binary.
