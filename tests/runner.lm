@@ -98,7 +98,7 @@ fn every_part_held(library: ir.Library) -> Counted {
     mark = told(part: "examples", cases: examples.cases, mark: mark)
     beside := siblings.every_sibling_held(library, "tests/spec")
     mark = told(part: "siblings", cases: beside.cases, mark: mark)
-    lines := documented.every_line_held(documented.modules_of("tests/spec", ["library", "compiler", "tests"]), library)
+    lines := documented.every_line_held(documented.modules_of("tests/spec", ["library", "compiler", "tests"]), library, command.no_memo(), limit)
     mark = told(part: "example lines", cases: lines.cases, mark: mark)
     properties := every_property_held(library)
     mark = told(part: "properties", cases: list.length(properties), mark: mark)
@@ -112,9 +112,9 @@ fn every_part_held(library: ir.Library) -> Counted {
 /// The seconds every program the runner starts has to end in, after which it is stopped.
 ///
 /// `docs/implementation.md` section 7 states why it is this number.
-// example: start_limit() == 1
+// example: start_limit() == 12
 fn start_limit() -> Int {
-    1
+    12
 }
 
 /// Writes the line of a part that began at `mark` and has ended now, and gives back now.

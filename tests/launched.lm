@@ -52,13 +52,13 @@ fn stopped_in(directory: String) -> held.Held {
 
 /// One case that held where the program was stopped at its limit of one second, and reported so
 /// within two seconds: the limit, and one more to stop the program.
-// example: stopped_compared(Err(walk.PastLimit(1)), 1).failures == []
-// example: stopped_compared(Err(walk.PastLimit(1)), 3).failures == ["a program that never ends: seconds until it was reported: expected \"2 or fewer\", found \"3\""]
+// example: stopped_compared(Err(walk.PastLimit(1, "")), 1).failures == []
+// example: stopped_compared(Err(walk.PastLimit(1, "")), 3).failures == ["a program that never ends: seconds until it was reported: expected \"2 or fewer\", found \"3\""]
 // example: stopped_compared(Err(walk.NotStarted), 0).failures == ["a program that never ends: expected \"the program did not end within 1 s, and was stopped\", found \"the program could not be started\""]
 fn stopped_compared(ended: Result<walk.Ended, walk.Unended>, seconds: Int) -> held.Held {
     var found = held.nothing_failed(1)
     said := ended_said(ended)
-    expected := walk.unended_said(walk.PastLimit(1), "the program")
+    expected := walk.unended_said(walk.PastLimit(1, ""), "the program")
     if said != expected {
         found = held.with_failure(found, held.failure("a program that never ends", expected, said))
     }
@@ -125,7 +125,7 @@ fn started_in(line: List<String>, directory: String, limit: Int, expected: Expec
 
 /// What the start of `line` ended with, held to `expected`, or why it gave no status back.
 // example: ended_held(["x"], Err(walk.NotStarted), Expected { status: 0, output: "", errors: "" }).failures == ["x: the launcher could not be started"]
-// example: ended_held(["x"], Err(walk.PastLimit(9)), Expected { status: 0, output: "", errors: "" }).failures == ["x: the launcher did not end within 9 s, and was stopped"]
+// example: ended_held(["x"], Err(walk.PastLimit(9, "")), Expected { status: 0, output: "", errors: "" }).failures == ["x: the launcher did not end within 9 s, and was stopped"]
 fn ended_held(line: List<String>, ended: Result<walk.Ended, walk.Unended>, expected: Expected) -> held.Held {
     name := strings.join(line, " ")
     match ended {

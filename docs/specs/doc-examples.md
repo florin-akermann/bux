@@ -220,6 +220,7 @@ It puts a refusal of the run back into the file the author wrote.
 It reads the marked lines back, and it gives `L0603` for each example that did not hold.
 
 `tests/documented.lm` runs every `// example:` line of every module, as `lumen test` runs it.
+It writes each run as `lumen test` writes it, and it starts all the runs in one JVM.
 `tests/commanded.lm` holds `test` to golden answers on each example of `tests/spec` and `library/`.
 
 ## Properties

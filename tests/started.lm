@@ -247,7 +247,7 @@ fn command_line_said(line: List<String>, directory: String, limit: Int) -> comma
 
 /// What a started program wrote and ended with, or why it gave no status back.
 // example: program_said(Err(walk.NotStarted)).errors == "the program could not be started\n"
-// example: program_said(Err(walk.PastLimit(3))).status == -1
+// example: program_said(Err(walk.PastLimit(3, ""))).status == -1
 fn program_said(ended: Result<walk.Ended, walk.Unended>) -> command.Said {
     match ended {
         Ok(done) => command.Said { output: done.output, errors: done.errors, status: done.status }

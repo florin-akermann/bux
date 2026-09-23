@@ -97,15 +97,16 @@ fn ended(line: List<String>, directory: String, limit: Int) -> Result<Ended, Une
 
 /// What `running` wrote into the files `streams` names, where it ends within `limit` seconds.
 ///
-/// A program that does not end by then is stopped, and the runner waits until it is gone.
-// example: unended_said(PastLimit(2), "the program") == "the program did not end within 2 s, and was stopped"
+/// A program that does not end by then is stopped, and the runner waits until it is gone. What
+/// it wrote on its standard output until then is kept, so a caller can see how far it came.
+// example: unended_said(PastLimit(2, ""), "the program") == "the program did not end within 2 s, and was stopped"
 fn ended_or_stopped(running: Running, limit: Int, streams: Streams) -> Result<Ended, Unended> {
     if ok_or(is_ended_within(running, limit, seconds()), false) {
         return Ok(read_after(status: ok_or(waited(running), -1), output: streams.output, errors: streams.errors))
     }
     _ = stopped(running)
     _ = waited(running)
-    Err(PastLimit(limit))
+    Err(PastLimit(limit, ok_or(files.read(streams.output), "")))
 }
 
 /// What a check says of a program, named `program`, that gave no status back.
@@ -113,7 +114,7 @@ fn ended_or_stopped(running: Running, limit: Int, streams: Streams) -> Result<En
 fn unended_said(unended: Unended, program: String) -> String {
     match unended {
         NotStarted => program + " could not be started"
-        PastLimit(limit) => program + " did not end within " + shown(limit) + " s, and was stopped"
+        PastLimit(limit, _) => program + " did not end within " + shown(limit) + " s, and was stopped"
     }
 }
 
@@ -166,9 +167,11 @@ type Ended = {
 }
 
 /// Why a started program gave no status back: it never started, or it ran past its limit.
+///
+/// A program stopped at its limit keeps what it wrote on its standard output until then.
 type Unended =
     | NotStarted
-    | PastLimit(Int)
+    | PastLimit(Int, String)
 
 /// The files a started program writes its standard output and its standard error into.
 type Streams = {

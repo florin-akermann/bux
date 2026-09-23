@@ -26,6 +26,8 @@ import lexer
 
 import list
 
+import map
+
 import modules
 
 import parser
@@ -470,8 +472,20 @@ fn has_unit_of(text: String, units: List<Int>) -> Bool {
 /// The modules of the run, checked as the run wrote them and lowered.
 // example: !is_refused(page_said(run_lowered(Run { source: "", stretches: [], examples: [], module: lexer.Span { start: 0, length: 0 } }, Typed { module: modules.Module { name: "main", path: "no-such-directory/main.lm", source: "", program: ast.Program { items: [] } }, inferred: types.checked_of("") }, ir.little_library())))
 fn run_lowered(run: Run, root: Typed, library: ir.Library) -> Result<List<ir.Lowered>, NotCompiled> {
-    program := checked_as_written(Page { source: run.source, path: root.module.path }, library)?
-    lowered_of(program, library)
+    run_lowered_once(run, root, library, no_memo()).found
+}
+
+/// The modules of the run, checked as the run wrote them and lowered, each module typed once.
+///
+/// The run stands where the module under test stands, and it is typed anew, because its text is
+/// not the text of that module. Every module it imports is taken from `memo` where it is there.
+// example: !is_refused(page_said(run_lowered_once(Run { source: "", stretches: [], examples: [], module: lexer.Span { start: 0, length: 0 } }, Typed { module: modules.Module { name: "main", path: "no-such-directory/main.lm", source: "", program: ast.Program { items: [] } }, inferred: types.checked_of("") }, ir.little_library(), no_memo()).found))
+fn run_lowered_once(run: Run, root: Typed, library: ir.Library, memo: Memo) -> Memoed<List<ir.Lowered>> {
+    written := written_once(Page { source: run.source, path: root.module.path }, library, memo)
+    match written.found {
+        Ok(program) => lowered_once(program, library, written.memo)
+        Err(not) => Memoed { found: Err(not), memo: written.memo }
+    }
 }
 
 /// A refusal of the run, shown against the file a reader would go and change.
@@ -730,8 +744,25 @@ fn unusable(line: String) -> Said {
 /// the order they load, so a module is checked after everything it imports.
 // example: is_refused(page_said(checked("no-such-directory/a.lm", ir.little_library())))
 fn checked(path: String, library: ir.Library) -> Result<Checked, NotCompiled> {
+    checked_once(path, library, no_memo()).found
+}
+
+/// The program at `path`, checked as `checked` checks it, with each module typed once.
+///
+/// A module that `memo` holds is not typed again, and each module typed here is added to it. A
+/// caller that hands the memo on from one call to the next types each module once, and the runner
+/// does so. A command starts with an empty memo, so what it says never depends on one.
+// example: is_refused(page_said(checked_once("no-such-directory/a.lm", ir.little_library(), no_memo()).found))
+fn checked_once(path: String, library: ir.Library, memo: Memo) -> Memoed<Checked> {
+    found := loaded_checked(path, library, memo)
+    Memoed { found: found, memo: remembered(memo: memo, found: found, form: ToCanonicalForm) }
+}
+
+/// The program at `path`, loaded, and each of its modules accepted or taken from `memo`.
+// example: is_refused(page_said(loaded_checked("no-such-directory/a.lm", ir.little_library(), no_memo())))
+fn loaded_checked(path: String, library: ir.Library, memo: Memo) -> Result<Checked, NotCompiled> {
     loaded := loaded_or_refused(modules.load(path))?
-    each_accepted(loaded, ToCanonicalForm, library)
+    each_accepted(loaded, Accepting { imported: surface.nothing_imported(), form: ToCanonicalForm }, library, memo)
 }
 
 /// The modules `page.source` reaches, as though it were the file at `page.path`, each checked.
@@ -740,23 +771,38 @@ fn checked(path: String, library: ir.Library) -> Result<Checked, NotCompiled> {
 /// was written: it is held to everything but canonical form, which the run does not keep.
 // example: !is_refused(page_said(checked_as_written(Page { source: "fn one() -> Int {\n    1\n}\n", path: "no-such-directory/main.lm" }, ir.little_library())))
 fn checked_as_written(page: Page, library: ir.Library) -> Result<Checked, NotCompiled> {
-    loaded := loaded_or_refused(modules.load_written(page.source, page.path))?
-    each_accepted(loaded, AsWritten, library)
+    written_once(page, library, no_memo()).found
 }
 
-/// Every module of `loaded` accepted in turn, the last of them held to `root` form.
-// example: is_refused(page_said(each_accepted([], ToCanonicalForm, ir.little_library())))
-fn each_accepted(loaded: List<modules.Module>, root: RootForm, library: ir.Library) -> Result<Checked, NotCompiled> {
-    var imported = surface.nothing_imported()
+/// The modules `page.source` reaches, checked as `checked_as_written` checks them, with each
+/// module but the one written typed once.
+// example: !is_refused(page_said(written_once(Page { source: "fn one() -> Int {\n    1\n}\n", path: "no-such-directory/main.lm" }, ir.little_library(), no_memo()).found))
+fn written_once(page: Page, library: ir.Library, memo: Memo) -> Memoed<Checked> {
+    found := loaded_written(page, library, memo)
+    Memoed { found: found, memo: remembered(memo: memo, found: found, form: AsWritten) }
+}
+
+/// The modules `page.source` reaches, loaded, and each accepted or taken from `memo`.
+// example: !is_refused(page_said(loaded_written(Page { source: "fn one() -> Int {\n    1\n}\n", path: "no-such-directory/main.lm" }, ir.little_library(), no_memo())))
+fn loaded_written(page: Page, library: ir.Library, memo: Memo) -> Result<Checked, NotCompiled> {
+    loaded := loaded_or_refused(modules.load_written(page.source, page.path))?
+    each_accepted(loaded, Accepting { imported: surface.nothing_imported(), form: AsWritten }, library, memo)
+}
+
+/// Every module of `loaded` accepted in turn, or taken from `memo`, the last of them held to the
+/// form `root` gives, with what `root` says is imported before the first.
+// example: is_refused(page_said(each_accepted([], Accepting { imported: surface.nothing_imported(), form: ToCanonicalForm }, ir.little_library(), no_memo())))
+fn each_accepted(loaded: List<modules.Module>, root: Accepting, library: ir.Library, memo: Memo) -> Result<Checked, NotCompiled> {
+    var imported = root.imported
     var typed = []
     var index = 0
     for module in loaded {
         index += 1
         var form = ToCanonicalForm
         if index == list.length(loaded) {
-            form = root
+            form = root.form
         }
-        inferred := refused_in(accepted(module, Accepting { imported: imported, form: form }, library), module)?
+        inferred := refused_in(accepted_once(module, Accepting { imported: imported, form: form }, Typing { library: library, memo: memo }), module)?
         typed = list.push(typed, Typed { module: module, inferred: inferred })
         imported = surface.offering(imported, module.name, types.surface_of(inferred))
     }
@@ -800,6 +846,26 @@ fn not_loaded(not: modules.NotLoaded) -> NotCompiled {
         modules.Unreadable { path, why } => Unusable("error: " + path + ": " + read_refusal(path) + "\n")
         modules.Unparsed { path, source, error } => Refused(Refusal { diagnostics: [parse_diagnostic(error)], page: Page { source: source, path: path } })
         modules.Refused { path, source, error } => Refused(Refusal { diagnostics: [load_diagnostic(error)], page: Page { source: source, path: path } })
+    }
+}
+
+/// One module accepted, or the inference `typing.memo` holds of it already.
+///
+/// Only a module held to canonical form is looked up, because only such a module is remembered.
+/// The inference is taken only where the text is the text that was typed.
+// example: code_refused(accepted_once(modules.Module { name: "main", path: "main.lm", source: "fn (", program: ast.Program { items: [] } }, Accepting { imported: surface.nothing_imported(), form: AsWritten }, Typing { library: ir.little_library(), memo: no_memo() })) == ""
+fn accepted_once(module: modules.Module, accepting: Accepting, typing: Typing) -> Result<infer.Inference, Diagnostic> {
+    var found = None
+    if accepting.form == ToCanonicalForm {
+        found = map.get(typing.memo.typed, key_of(module))
+    }
+    match found {
+        Some(one) => if one.module.source == module.source {
+            Ok(one.inferred)
+        } else {
+            accepted(module, accepting, typing.library)
+        }
+        None => accepted(module, accepting, typing.library)
     }
 }
 
@@ -915,14 +981,109 @@ fn help_written(help: String) -> Option<String> {
 /// build is how a reader learns what is left. Lowering refuses nothing.
 // example: list.length(ok_or(lowered_of(Checked { modules: [], root: Typed { module: modules.Module { name: "main", path: "main.lm", source: "", program: ast.Program { items: [] } }, inferred: types.checked_of("") } }, ir.little_library()), [])) == 1
 fn lowered_of(program: Checked, library: ir.Library) -> Result<List<ir.Lowered>, NotCompiled> {
-    for one in turned(program.modules) {
-        _ = whole(one)?
+    lowered_once(program, library, no_memo()).found
+}
+
+/// Every module of `program` checked for holes and examples, as `lowered_of` checks them, then
+/// lowered, with each module that `memo` found whole already not checked again.
+// example: list.length(ok_or(lowered_once(Checked { modules: [], root: Typed { module: modules.Module { name: "main", path: "main.lm", source: "", program: ast.Program { items: [] } }, inferred: types.checked_of("") } }, ir.little_library(), no_memo()).found, [])) == 1
+fn lowered_once(program: Checked, library: ir.Library, memo: Memo) -> Memoed<List<ir.Lowered>> {
+    match each_whole(program.modules, memo) {
+        Ok(kept) => Memoed { found: Ok(passes_of(program, library)), memo: kept }
+        Err(not) => Memoed { found: Err(not), memo: memo }
     }
+}
+
+/// `memo` with every module of `typed` found whole, root first, or the refusal of the first
+/// that is not.
+///
+/// A module is marked whole only where `memo` holds it with the same text. A run stands at the
+/// path of the module it tests, and its text is not that module's, so it is never marked.
+// example: !is_refused(page_said(each_whole([], no_memo())))
+fn each_whole(typed: List<Typed>, memo: Memo) -> Result<Memo, NotCompiled> {
+    var kept = memo
+    for one in turned(typed) {
+        if !is_whole_already(one, kept) {
+            _ = whole(one)?
+            if is_remembered_as(one, kept) {
+                kept = kept { whole: set.insert(kept.whole, key_of(one.module)) }
+            }
+        }
+    }
+    Ok(kept)
+}
+
+/// Whether `memo` found the module `one` whole already, which it did only for the same text.
+// example: !is_whole_already(Typed { module: modules.Module { name: "main", path: "main.lm", source: "", program: ast.Program { items: [] } }, inferred: types.checked_of("") }, no_memo())
+fn is_whole_already(one: Typed, memo: Memo) -> Bool {
+    is_remembered_as(one, memo) && set.has_value(memo.whole, key_of(one.module))
+}
+
+/// Whether `memo` holds the module `one` with the text `one` has.
+// example: !is_remembered_as(Typed { module: modules.Module { name: "main", path: "main.lm", source: "", program: ast.Program { items: [] } }, inferred: types.checked_of("") }, no_memo())
+fn is_remembered_as(one: Typed, memo: Memo) -> Bool {
+    match map.get(memo.typed, key_of(one.module)) {
+        Some(typed) => typed.module.source == one.module.source
+        None => false
+    }
+}
+
+/// Every module of `program` lowered, as the passes of the lowering lower a whole program.
+// example: list.length(passes_of(Checked { modules: [], root: Typed { module: modules.Module { name: "main", path: "main.lm", source: "", program: ast.Program { items: [] } }, inferred: types.checked_of("") } }, ir.little_library())) == 1
+fn passes_of(program: Checked, library: ir.Library) -> List<ir.Lowered> {
     var typed = []
     for one in program.modules {
         typed = list.push(typed, one.inferred)
     }
-    Ok(ir.passes_lowered(typed, library))
+    ir.passes_lowered(typed, library)
+}
+
+/// A memo that holds no module, which is where every command starts.
+// example: !set.has_value(no_memo().whole, "main.lm")
+fn no_memo() -> Memo {
+    Memo { typed: map.empty(), whole: set.empty() }
+}
+
+/// `memo` with every module of `found` that is typed as a file is typed, where `found` is a program.
+///
+/// A root held only to what it was written as is not the file at its path, so it is not remembered.
+// example: !is_typed(remembered(memo: no_memo(), found: Err(Unusable("")), form: ToCanonicalForm), "main.lm")
+fn remembered(memo: Memo, found: Result<Checked, NotCompiled>, form: RootForm) -> Memo {
+    match found {
+        Ok(program) => each_remembered(memo: memo, program: program, form: form)
+        Err(_) => memo
+    }
+}
+
+/// `memo` with every module of `program`, and its root only where the root is in canonical form.
+///
+/// A module `memo` holds already keeps the text it was typed from, so a mark of `whole` stays true.
+// example: !is_typed(each_remembered(memo: no_memo(), program: Checked { modules: [], root: Typed { module: modules.Module { name: "main", path: "main.lm", source: "", program: ast.Program { items: [] } }, inferred: types.checked_of("") } }, form: AsWritten), "main.lm")
+fn each_remembered(memo: Memo, program: Checked, form: RootForm) -> Memo {
+    var kept = memo
+    var index = 0
+    for one in program.modules {
+        index += 1
+        if (index < list.length(program.modules) || form == ToCanonicalForm) && !is_typed(kept, one.module.path) {
+            kept = kept { typed: map.insert(kept.typed, key_of(one.module), one) }
+        }
+    }
+    kept
+}
+
+/// The key a module is remembered under: the canonical path of its file.
+// example: key_of(modules.Module { name: "main", path: "no-such-directory/../main.lm", source: "", program: ast.Program { items: [] } }) != "no-such-directory/../main.lm"
+fn key_of(module: modules.Module) -> String {
+    modules.route_to(module.path).found
+}
+
+/// Whether `memo` holds a module typed from the file at `path`.
+// example: !is_typed(no_memo(), "main.lm")
+fn is_typed(memo: Memo, path: String) -> Bool {
+    match map.get(memo.typed, modules.route_to(path).found) {
+        Some(_) => true
+        None => false
+    }
 }
 
 /// Nothing where `one` holds no hole and states an example for each function, else every refusal.
@@ -2689,6 +2850,26 @@ type Built = {
 type Checked = {
     modules: List<Typed>
     root: Typed
+}
+
+/// What a step found, and the memo as that step left it.
+type Memoed<T> = {
+    found: Result<T, NotCompiled>
+    memo: Memo
+}
+
+/// What a module is typed with: the library, and the modules typed already.
+type Typing = {
+    library: ir.Library
+    memo: Memo
+}
+
+/// Every module typed so far, by the canonical path of its file, and the paths of those whole.
+///
+/// A module is whole where it holds no hole and each of its functions states an example.
+type Memo = {
+    typed: map.Map<String, Typed>
+    whole: set.Set<String>
 }
 
 /// One module, and what inference settled of it.

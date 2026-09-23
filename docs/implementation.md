@@ -271,22 +271,43 @@ It holds these parts, each in a module of its own under `tests/`:
 - `commanded.lm`: the command line, held to the golden answers under `tests/commands/`.
 - `launched.lm`: the launcher `bin/bux`, and the time limit that a started program has.
 
-The runner starts a JVM only for an example headed `expect-run` and for a command that runs one.
+The runner starts a JVM for an example headed `expect-run` and for a command that runs one.
+It starts one more JVM, which runs the example lines of all modules.
 When a part ends, the runner writes one line with the name, the count, and the seconds of it.
 An example of such a line is `examples: 332 held in 4 s`, so a slow run does not look like a hang.
 The parts are examples, siblings, example lines, properties, and command lines, in that order.
 Then it writes one line for each check it skipped and for each failure, then one line of counts.
 It ends with status 0 only when nothing failed.
 
+The runner holds one memo of typed modules, `command.Memo`, and passes it from call to call.
+The memo holds each module by the canonical path of its file, so each module is typed once.
+It also holds each module that `whole` found whole, and `whole` is not run on it again.
+A command starts with an empty memo, so no answer of the command line depends on one.
+`documented.lm` writes the run of each module, as `lumen test` writes it, into a directory.
+Each run gets a directory of its own, and all of them are in one directory made for the runs.
+Then it starts `tests/examined.lm` once, and that program calls the `main` of each run in turn.
+Each run gets a class loader of its own, because two runs can hold one class name for two classes.
+Before each run, `examined.lm` writes a line that names it, so a failure names its module.
+A run that stops with an error, such as a stack overflow, is a failure, and the next run starts.
+A run past the limit is a failure, and `examined.lm` starts again with the runs after it.
+A module whose run cannot be built is reported as `lumen test` reports it, and the others run.
+
 `walk.ended` starts each program that the runner starts, and it gives each one a time limit.
 `start_limit` in `runner.lm` is the one limit, in seconds, and every started program gets it.
 A program that is still running at the limit is stopped, and it is a failure that names its check.
 The runner then continues with the next check, so one program that never ends cannot stop it.
-The limit is 1 s, and the longest program that the runner started on 2026-09-23 took 0.14 s.
-Three times that is less than one second, so the limit is the smallest whole number of seconds.
+The limit is 12 s, which is three times the longest program that the runner starts, rounded.
+That program is `examined.lm`, which took 3.9 s on 2026-09-23 for 146 runs.
+Before Item 094, the longest program took 0.14 s, and the limit was 1 s.
 `launched.lm` holds the mechanism: a program that never ends is stopped at a limit of 1 s.
 `bin/runner golden` writes each golden file again, for an answer that changes on purpose.
 On 2026-09-23 `bin/runner` took 182 s before Item 093 and 97 s after it.
+On 2026-09-23 `bin/runner` took 98 s before Item 094 and 53 s after it.
+Before Item 094 the examples took 5 s, and after it they took 4 s.
+Before Item 094 the siblings took 0 s, and after it they took 0 s.
+Before Item 094 the example lines took 78 s, and after it they took 34 s.
+Before Item 094 the properties took 5 s, and after it they took 5 s.
+Before Item 094 the command lines took 8 s, and after it they took 8 s.
 
 ### Drawn properties
 
