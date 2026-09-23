@@ -388,6 +388,14 @@ An error type there would carry nothing the caller is not already holding.
 `?` propagates either, each into a function that gives back its kind.
 `docs/specs/arithmetic.md` works the choice through for `/` and `%`.
 
+**`Option` never carries `()`.**
+`Some(())` says only that a value is there, and `None` that it is not: `Bool` spelled a second way.
+At the boundary to Java it is worse, because `Some` there also reads a `null` that did not come.
+`Some(())` is then a flag for `null`, and nullability is a non-goal of section 2.
+The compiler refuses `Option<()>` wherever a program writes it or inference reaches it.
+`Result<(), E>` stays, because its `Err` carries a reason the caller could not work out.
+`docs/specs/interop.md` states the boundary rule, and `docs/specs/types.md` the refusal.
+
 There is no `unwrap` and no `expect`, in the prelude or anywhere else.
 `maybe.or(fallback)` is the total default, named for what it does rather than for what it is not.
 

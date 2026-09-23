@@ -24,3 +24,11 @@ The writer has 172 sites of narrow integers, and a `bytes` module hides `% 256` 
 [075][a] - Stage 1, built by the Rust `bux`, builds stage 2 from the same source.
 [075][b] - A harness holds stage 2 equal to stage 1 byte for byte.
 [075][c] - The Rust crates are deleted, and `docs/implementation.md` section 6 says what remains.
+
+## 🔴 Item 080: `Option<()>` is refused wherever a program writes it or inference reaches it
+**Depends on:** Item 071 — the Rust and the Bux type phases refuse it alike, at the same span.
+`Some(())` says only that a value is there, which is `Bool` spelled a second way and nullability.
+`Result<(), E>` stays, because its `Err` carries a reason; `docs/design.md` section 5 says why.
+[080][a] - `docs/specs/types.md` states the refusal; `docs/specs/diagnostics.md` lists its code.
+[080][b] - The Rust and the Bux type phases refuse `Option<()>`, written or inferred, alike.
+[080][c] - `tests/spec/unit/carried.lm` carries `()` through `Result` only, beside a refused example.

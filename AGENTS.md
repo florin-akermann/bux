@@ -42,6 +42,7 @@ An example of the second half: `17 / 0` is `None`, because a panic is simpler an
 - An operator is a function with other syntax; `main` is `fn main(arguments: List<String>) -> Int`.
 - **Values, not objects.** A value has no identity, `hashCode`, or `toString`; it is its state.
 - Equality is opt-in: `==` needs `Eq`, which a type derives, and compares what a value holds.
+- **`Option` never carries `()`**: `Some(())` is nullability by another name; `Result<(), E>` stays.
 - Every type is a Valhalla value class from day one: identity-free, null-free, equal by state.
 - **Nothing panics, ever.** No operation is partial, and the type says so; there is no `unwrap`.
 - The compiler is held to the same: a program it cannot compile gets a diagnostic, never a crash.
@@ -49,7 +50,6 @@ An example of the second half: `17 / 0` is `None`, because a panic is simpler an
 - **Formatting is a compile error.** Source that is not in canonical form does not compile.
 - **Non-goals**, never implemented, suggested, or planned: ownership, borrowing, lifetimes.
 - Likewise inheritance, null, checked exceptions, macros, implicit runtime magic, Java's types.
-- Version 0.1 is `docs/implementation.md` section 9; nothing from a later version lands earlier.
 
 ## Library principles
 
