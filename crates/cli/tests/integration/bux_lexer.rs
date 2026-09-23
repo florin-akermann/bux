@@ -6,19 +6,24 @@
 
 use std::fmt::Write as _;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use hegel::TestCase;
 use hegel::generators as gs;
 use lumen_lexer::{TokenKind, lex};
 
-use crate::common::{Example, Sibling, Within, as_argument, jdk, lumen, repository};
+use crate::common::{Example, Sibling, answers_of_one_run, as_argument, jdk, lumen, repository};
 
-/// A program that writes the tokens of each file it is run with, as the Bux lexer lists them.
-const LISTS_THE_TOKENS: &str = "import files\n\nimport io\n\nimport lexer\n\nfn main(arguments: List<String>) -> Int {\n    for path in arguments {\n        match files.read(path) {\n            Ok(source) => io.print(lexer.listed(source))\n            Err(why) => io.eprintln(why)\n        }\n    }\n    0\n}\n";
+/// A program that writes, beside each file it is run with, its tokens as the Bux lexer lists them.
+///
+/// One run lexes every file, because each run is one compiler and one JVM.
+const WRITES_THE_TOKENS: &str = "import files\n\nimport lexer\n\nfn main(arguments: List<String>) -> Int {\n    for path in arguments {\n        _ = files.write(path + \".answer\", lexer.listed(ok_or(files.read(path), \"\")))\n    }\n    0\n}\n";
 
-/// How many drawn sources the property lexes, which is one compiler and one JVM each.
-const CASES: u64 = 40;
+/// How many runs the property makes, which is one compiler and one JVM each.
+const CASES: u64 = 10;
+
+/// How many drawn sources one run lexes.
+const SOURCES_A_RUN: usize = 8;
 
 /// What a drawn source is made of: a piece of every token class, and each character that ends
 /// one, starts one, or is two bytes or four in UTF-8.
@@ -29,7 +34,7 @@ const PIECES: [&str; 22] = [
 
 #[test]
 fn the_bux_lexer_builds_under_the_rust_compiler() {
-    let program = the_bux_lexer_beside(LISTS_THE_TOKENS);
+    let program = the_bux_lexer_beside(WRITES_THE_TOKENS);
 
     let run = lumen(&["build", as_argument(&program.path)]);
 
@@ -53,37 +58,37 @@ fn the_bux_lexer_gives_the_rust_lexers_tokens_on_every_lexer_example() {
     let examples = lexer_examples();
     assert!(!examples.is_empty(), "tests/spec/lexer holds an example");
 
-    for example in examples {
-        let source = fs::read_to_string(&example).expect("an example is UTF-8");
+    let sources: Vec<String> = examples
+        .iter()
+        .map(|example| fs::read_to_string(example).expect("an example is UTF-8"))
+        .collect();
 
-        let Some(written) = listed_by_the_bux_lexer(&example) else {
-            return;
-        };
+    let Some(written) = listed_by_the_bux_lexer(&sources) else {
+        return;
+    };
 
-        assert_eq!(written, listed(&source), "{}", example.display());
+    for ((example, source), written) in examples.iter().zip(&sources).zip(written) {
+        assert_eq!(written, listed(source), "{}", example.display());
     }
 }
 
 /// `docs/specs/lexer.md`: the Bux lexer and the Rust lexer give one answer on any text.
 #[hegel::test(test_cases = CASES, phases = [hegel::Phase::Generate])]
 fn the_bux_lexer_gives_the_rust_lexers_tokens_on_drawn_text(tc: TestCase) {
-    let source = drawn_source(&tc);
-    let drawn = Example::new("");
-    drawn.within_it(&Within {
-        at: "drawn.txt",
-        content: &source,
-    });
+    let sources: Vec<String> = (0..SOURCES_A_RUN).map(|_| drawn_source(&tc)).collect();
 
-    let Some(written) = listed_by_the_bux_lexer(&drawn.directory.join("drawn.txt")) else {
+    let Some(written) = listed_by_the_bux_lexer(&sources) else {
         return;
     };
 
-    assert_eq!(written, listed(&source), "{source:?}");
+    for (source, written) in sources.iter().zip(written) {
+        assert_eq!(written, listed(source), "{source:?}");
+    }
 }
 
 /// A source of pieces run together, long enough that one run of the JVM meets many of them.
 ///
-/// A case costs a build and a JVM, so each draws a long source rather than many short ones.
+/// A case costs a build and a JVM, so each draws long sources rather than many short ones.
 fn drawn_source(tc: &TestCase) -> String {
     let pieces: Vec<&str> = tc.draw(
         gs::vecs(gs::sampled_from(&PIECES))
@@ -93,18 +98,14 @@ fn drawn_source(tc: &TestCase) -> String {
     pieces.concat()
 }
 
-/// What the Bux lexer lists for the file at `path`, and nothing where no JDK is there to run it.
-fn listed_by_the_bux_lexer(path: &Path) -> Option<String> {
+/// What the Bux lexer lists for each source, in order, and nothing where no JDK can run it.
+fn listed_by_the_bux_lexer(sources: &[String]) -> Option<Vec<String>> {
     if jdk().is_none() {
         eprintln!("skipped: JAVA_HOME names no JDK, and running the Bux lexer needs one");
         return None;
     }
-    let program = the_bux_lexer_beside(LISTS_THE_TOKENS);
-
-    let run = lumen(&["run", as_argument(&program.path), as_argument(path)]);
-
-    assert_eq!(run.code, 0, "{}: {}", path.display(), run.stderr);
-    Some(run.stdout)
+    let program = the_bux_lexer_beside(WRITES_THE_TOKENS);
+    Some(answers_of_one_run(&program, sources))
 }
 
 /// A program of `content`, with the Bux lexer beside it as the module `lexer`.

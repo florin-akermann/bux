@@ -24,8 +24,11 @@ const WRITES_THE_ANSWER: &str = "import files\n\nimport modules\n\nfn main(argum
 /// The modules of the Bux compiler that the loader is, beside the program as siblings.
 const MODULES: [&str; 4] = ["lexer", "ast", "parser", "modules"];
 
-/// How many drawn trees the property loads, which is one compiler and one JVM each.
-const CASES: u64 = 10;
+/// How many runs the property makes, which is one compiler and one JVM each.
+const CASES: u64 = 5;
+
+/// How many drawn trees one run loads.
+const TREES_A_RUN: usize = 16;
 
 /// A module that declares one function and imports nothing.
 const DECLARING: &str = "fn hello() -> Int {\n    1\n}\n";
@@ -388,7 +391,7 @@ fn the_bux_loader_gives_the_rust_loaders_answer_on_every_case() {
 #[hegel::test(test_cases = CASES, phases = [hegel::Phase::Generate])]
 fn the_bux_loader_gives_the_rust_loaders_answer_on_drawn_trees(tc: TestCase) {
     let program = the_bux_loader_beside(WRITES_THE_ANSWER);
-    let roots: Vec<PathBuf> = (0..8)
+    let roots: Vec<PathBuf> = (0..TREES_A_RUN)
         .map(|index| {
             let case = drawn_case(&tc);
             written_out_as(&program, &format!("drawn-{index}"), &case)

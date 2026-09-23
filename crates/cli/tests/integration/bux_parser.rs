@@ -5,24 +5,29 @@
 //! needs one, and a test that runs it is skipped with a named reason when `JAVA_HOME` names none.
 
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use hegel::TestCase;
 use hegel::generators as gs;
 
-use crate::common::{Example, Sibling, Within, as_argument, jdk, lumen, repository};
+use crate::common::{Example, Sibling, answers_of_one_run, as_argument, jdk, lumen, repository};
 
 #[path = "../../../parser/tests/integration/printed.rs"]
 mod printed;
 
-/// A program that writes the answer of the Bux parser for each file it is run with.
-const PRINTS_THE_ANSWER: &str = "import files\n\nimport io\n\nimport parser\n\nfn main(arguments: List<String>) -> Int {\n    for path in arguments {\n        match files.read(path) {\n            Ok(source) => io.print(parser.printed(source))\n            Err(why) => io.eprintln(why)\n        }\n    }\n    0\n}\n";
+/// A program that writes, beside each file it is run with, the answer of the Bux parser.
+///
+/// One run parses every file, because each run is one compiler and one JVM.
+const WRITES_THE_ANSWER: &str = "import files\n\nimport parser\n\nfn main(arguments: List<String>) -> Int {\n    for path in arguments {\n        _ = files.write(path + \".answer\", parser.printed(ok_or(files.read(path), \"\")))\n    }\n    0\n}\n";
 
 /// The modules of the Bux compiler that the parser is, beside the program as siblings.
 const MODULES: [&str; 3] = ["lexer", "ast", "parser"];
 
-/// How many drawn sources the property parses, which is one compiler and one JVM each.
-const CASES: u64 = 40;
+/// How many runs the property makes, which is one compiler and one JVM each.
+const CASES: u64 = 10;
+
+/// How many drawn sources one run parses.
+const SOURCES_A_RUN: usize = 8;
 
 /// How a drawn source opens, so that most sources reach past the first item before they fail.
 const OPENINGS: [&str; 8] = [
@@ -46,7 +51,7 @@ const PIECES: [&str; 47] = [
 
 #[test]
 fn the_bux_parser_builds_under_the_rust_compiler() {
-    let program = the_bux_parser_beside(PRINTS_THE_ANSWER);
+    let program = the_bux_parser_beside(WRITES_THE_ANSWER);
 
     let run = lumen(&["build", as_argument(&program.path)]);
 
@@ -72,32 +77,32 @@ fn the_bux_parser_gives_the_rust_parsers_answer_on_every_parser_example() {
     let examples = parser_examples();
     assert!(!examples.is_empty(), "tests/spec/parser holds an example");
 
-    for example in examples {
-        let source = fs::read_to_string(&example).expect("an example is UTF-8");
+    let sources: Vec<String> = examples
+        .iter()
+        .map(|example| fs::read_to_string(example).expect("an example is UTF-8"))
+        .collect();
 
-        let Some(written) = printed_by_the_bux_parser(&example) else {
-            return;
-        };
+    let Some(written) = printed_by_the_bux_parser(&sources) else {
+        return;
+    };
 
-        assert_eq!(written, answer(&source), "{}", example.display());
+    for ((example, source), written) in examples.iter().zip(&sources).zip(written) {
+        assert_eq!(written, answer(source), "{}", example.display());
     }
 }
 
 /// `docs/specs/grammar.md`: the Bux parser and the Rust parser give one answer on any text.
 #[hegel::test(test_cases = CASES, phases = [hegel::Phase::Generate])]
 fn the_bux_parser_gives_the_rust_parsers_answer_on_drawn_text(tc: TestCase) {
-    let source = drawn_source(&tc);
-    let drawn = Example::new("");
-    drawn.within_it(&Within {
-        at: "drawn.txt",
-        content: &source,
-    });
+    let sources: Vec<String> = (0..SOURCES_A_RUN).map(|_| drawn_source(&tc)).collect();
 
-    let Some(written) = printed_by_the_bux_parser(&drawn.directory.join("drawn.txt")) else {
+    let Some(written) = printed_by_the_bux_parser(&sources) else {
         return;
     };
 
-    assert_eq!(written, answer(&source), "{source:?}");
+    for (source, written) in sources.iter().zip(written) {
+        assert_eq!(written, answer(source), "{source:?}");
+    }
 }
 
 /// An opening and pieces run together, long enough that one run of the JVM meets many of them.
@@ -107,18 +112,14 @@ fn drawn_source(tc: &TestCase) -> String {
     format!("{opening}{}", pieces.concat())
 }
 
-/// What the Bux parser writes for the file at `path`, and nothing where no JDK can run it.
-fn printed_by_the_bux_parser(path: &Path) -> Option<String> {
+/// What the Bux parser writes for each source, in order, and nothing where no JDK can run it.
+fn printed_by_the_bux_parser(sources: &[String]) -> Option<Vec<String>> {
     if jdk().is_none() {
         eprintln!("skipped: JAVA_HOME names no JDK, and running the Bux parser needs one");
         return None;
     }
-    let program = the_bux_parser_beside(PRINTS_THE_ANSWER);
-
-    let run = lumen(&["run", as_argument(&program.path), as_argument(path)]);
-
-    assert_eq!(run.code, 0, "{}: {}", path.display(), run.stderr);
-    Some(run.stdout)
+    let program = the_bux_parser_beside(WRITES_THE_ANSWER);
+    Some(answers_of_one_run(&program, sources))
 }
 
 /// A program of `content`, with each module of the Bux parser beside it.
