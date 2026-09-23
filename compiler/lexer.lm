@@ -33,7 +33,8 @@ fn lex(source: String) -> List<Token> {
     for rest.start < strings.length(source) {
         scanned := scan_token(rest)
         length := byte_length(rest, scanned.units)
-        tokens = list.push(tokens, Token { kind: scanned.kind, span: Span { start: offset, length: length } })
+        text := or(strings.cut(source, rest.start, rest.start + scanned.units), "")
+        tokens = list.push(tokens, Token { kind: scanned.kind, span: Span { start: offset, length: length }, text: text })
         after := rest { start: rest.start + scanned.units }
         blanks := run_length(after, Blanks)
         offset += length + blanks
@@ -352,10 +353,14 @@ fn punctuation_text(punctuation: Punct) -> String {
     }
 }
 
-/// One token of the source: what it is, and where its text lies.
+/// One token of the source: what it is, where its text lies, and the text itself.
+///
+/// A span counts UTF-8 bytes and a string is read in UTF-16 code units, so a span alone cannot
+/// cut the text out of the source again; the parser reads a name and a literal from `text`.
 type Token = {
     kind: TokenKind
     span: Span
+    text: String
 }
 
 /// Where a token's text lies, as a byte offset into the UTF-8 source and a length in bytes.
@@ -375,6 +380,12 @@ type Scanned = {
     kind: TokenKind
     units: Int
 }
+
+derive Eq for TokenKind
+
+derive Eq for Keyword
+
+derive Eq for Punct
 
 /// The token classes, with the two that keep lexing total last.
 type TokenKind =

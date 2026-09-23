@@ -415,6 +415,7 @@ dependencies = [
  "clap",
  "hegeltest",
  "lumen-api",
+ "lumen-ast",
  "lumen-diagnostics",
  "lumen-examples",
  "lumen-exhaustiveness",

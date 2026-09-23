@@ -1,0 +1,34 @@
+// The expressions and patterns the other examples leave out: lists, a discard, named arguments,
+// a negative number, and every form of pattern.
+import list
+
+// example: named(-3) == "negative"
+fn named(count: Int) -> String {
+    match count {
+        0 => "none"
+        1 | 2 => "few"
+        _ => if -count > -1 {
+            "negative"
+        } else {
+            "many"
+        }
+    }
+}
+
+// example: answered("yes") == 1
+fn answered(word: String) -> Int {
+    held := [word, "maybe"]
+    _ = list.length(held)
+    match word == "yes" {
+        true => weighed(word: word, weight: 1)
+        false => weighed(word: word, weight: 0)
+    }
+}
+
+// example: weighed(word: "no", weight: 5) == 0
+fn weighed(word: String, weight: Int) -> Int {
+    match word {
+        "yes" => weight
+        _ => 0
+    }
+}

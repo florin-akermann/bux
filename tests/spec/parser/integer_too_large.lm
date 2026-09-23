@@ -1,0 +1,5 @@
+// expect-error: L0103
+// A whole number is 64 bits wide, so one more than the largest is refused where it is written.
+fn largest() -> Int {
+    9223372036854775808
+}

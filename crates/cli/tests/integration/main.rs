@@ -4,6 +4,7 @@
 
 mod building;
 mod bux_lexer;
+mod bux_parser;
 mod checking;
 mod collections;
 mod common;

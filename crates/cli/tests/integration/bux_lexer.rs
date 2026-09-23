@@ -12,7 +12,7 @@ use hegel::TestCase;
 use hegel::generators as gs;
 use lumen_lexer::{TokenKind, lex};
 
-use crate::common::{Example, Sibling, Within, jdk, lumen};
+use crate::common::{Example, Sibling, Within, as_argument, jdk, lumen, repository};
 
 /// A program that writes the tokens of each file it is run with, as the Bux lexer lists them.
 const LISTS_THE_TOKENS: &str = "import files\n\nimport io\n\nimport lexer\n\nfn main(arguments: List<String>) -> Int {\n    for path in arguments {\n        match files.read(path) {\n            Ok(source) => io.print(lexer.listed(source))\n            Err(why) => io.eprintln(why)\n        }\n    }\n    0\n}\n";
@@ -150,12 +150,4 @@ fn lexer_examples() -> Vec<PathBuf> {
 
 fn bux_lexer() -> PathBuf {
     repository().join("compiler/lexer.lm")
-}
-
-fn repository() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")
-}
-
-fn as_argument(path: &Path) -> &str {
-    path.to_str().expect("a UTF-8 path")
 }

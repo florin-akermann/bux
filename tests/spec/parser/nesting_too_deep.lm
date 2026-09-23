@@ -1,0 +1,5 @@
+// expect-error: L0106
+// Brackets nest at most 32 deep, which keeps the parser inside its stack on any file.
+fn nested() -> Int {
+    (((((((((((((((((((((((((((((((((1)))))))))))))))))))))))))))))))))
+}

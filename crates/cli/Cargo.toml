@@ -29,6 +29,7 @@ clap = { version = "4", features = ["derive"] } # approved: argument parsing, he
 
 [dev-dependencies]
 hegeltest = "0.23" # approved: property-based testing, required by AGENTS.md for every phase
+lumen-ast = { path = "../ast" }
 lumen-lexer = { path = "../lexer" }
 
 [lints]

@@ -109,6 +109,16 @@ pub fn jdk() -> Option<PathBuf> {
     java.is_file().then_some(java)
 }
 
+/// The root of the repository, where `compiler/` and `tests/spec/` are.
+pub fn repository() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")
+}
+
+/// A path as an argument of the binary.
+pub fn as_argument(path: &Path) -> &str {
+    path.to_str().expect("a UTF-8 path")
+}
+
 fn running(arguments: &[&str]) -> Command {
     let mut command = Command::new(env!("CARGO_BIN_EXE_lumen"));
     command.args(arguments);

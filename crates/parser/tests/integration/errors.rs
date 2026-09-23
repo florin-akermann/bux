@@ -1,6 +1,6 @@
 //! The first thing that does not fit the grammar, and the words it is reported in.
 
-use crate::common::render_error;
+use crate::printed::render_error;
 
 /// The `error:` line of the failure, without its span or its help.
 fn message(source: &str) -> String {

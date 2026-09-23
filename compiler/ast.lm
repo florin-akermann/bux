@@ -1,0 +1,970 @@
+// The untyped abstract syntax tree of a source file, and the one printed form of it.
+//
+// `docs/specs/grammar.md` states the shape, and the Rust tree in `crates/ast` has the same one.
+// Every node carries the span of the source it was parsed from, and nothing here is ever changed:
+// a later phase builds a new representation rather than writing into this one.
+// The tree knows no types and no definitions, so `User { id: id }` and `user { name: "Bob" }`
+// are the same node until name resolution tells them apart.
+import lexer
+
+import list
+
+import strings
+
+/// The tree of `program`, one line for each node, as a `tests/spec/parser` `.ast` file holds it.
+///
+/// A node is written `<indent><label> <start>..<end>`, two blanks of indent for each level, and a
+/// node that only groups others, such as `result`, is written with no span.
+// example: printed(Program { items: [] }) == ""
+fn printed(program: Program) -> String {
+    var written = ""
+    for declared in program.items {
+        written += item_lines(declared)
+    }
+    written
+}
+
+/// The lines of one top-level declaration, at the left margin.
+// example: item_lines(Import(ImportDeclaration { module: Name { text: "io", span: lexer.Span { start: 7, length: 2 } }, span: lexer.Span { start: 0, length: 9 } })) == "import io 0..9\n"
+fn item_lines(declared: Item) -> String {
+    match declared {
+        Import(imported) => node(0, "import " + imported.module.text, imported.span)
+        Type(declaration) => type_lines(declaration)
+        Trait(declaration) => trait_lines(declaration)
+        Instance(declaration) => instance_lines(declaration)
+        Derive(declaration) => derive_lines(declaration)
+        Function(declaration) => function_lines(declaration, 0)
+        Extern(declaration) => extern_lines(declaration)
+    }
+}
+
+/// An `extern`: the member it reaches, the Java name, each parameter, and the result.
+// example: extern_lines(ExternDeclaration { name: Name { text: "now", span: lexer.Span { start: 0, length: 3 } }, reaches: Constructor, gives: GivesAsDeclared, parameters: [], result: TypeRef { kind: UnitType, span: lexer.Span { start: 5, length: 2 } }, span: lexer.Span { start: 0, length: 7 } }) == "extern new now 0..7\n  result\n    unit-type 5..7\n"
+fn extern_lines(declaration: ExternDeclaration) -> String {
+    width := written_before(gives_word(declaration.gives))
+    var written = node(0, "extern " + reaches_word(declaration.reaches) + " " + width + declaration.name.text, declaration.span)
+    written += reached_lines(declaration.reaches)
+    for taken in declaration.parameters {
+        narrowed := written_before(takes_word(taken.takes))
+        written += parameter_lines(taken.declared, narrowed, 1)
+    }
+    written + group(1, "result") + type_ref_lines(declaration.result, 2)
+}
+
+/// The Java name an `extern` states, which a constructor states none of.
+// example: reached_lines(Constructor) == ""
+fn reached_lines(reaches: Reaches) -> String {
+    match reaches {
+        StaticField(named) => node(1, "java " + named.text, named.span)
+        StaticMethod(named) => node(1, "java " + named.text, named.span)
+        InstanceMethod(named) => node(1, "java " + named.text, named.span)
+        Constructor => ""
+    }
+}
+
+/// The word written after `extern`, which says which kind of member it reaches.
+// example: reaches_word(Constructor) == "new"
+fn reaches_word(reaches: Reaches) -> String {
+    match reaches {
+        StaticField(named) => "field"
+        StaticMethod(named) => "static"
+        InstanceMethod(named) => "method"
+        Constructor => "new"
+    }
+}
+
+/// The width written before an `extern`'s name, and `""` where it writes none.
+// example: gives_word(GivesChar) == "char"
+fn gives_word(gives: Gives) -> String {
+    match gives {
+        GivesAsDeclared => ""
+        GivesInt => "int"
+        GivesChar => "char"
+    }
+}
+
+/// The width written before a parameter's name, and `""` where it writes none.
+// example: takes_word(TakesInt) == "int"
+fn takes_word(takes: Takes) -> String {
+    match takes {
+        TakesAsDeclared => ""
+        TakesInt => "int"
+    }
+}
+
+/// A trait, the one type it is written over, and each signature it declares.
+// example: trait_lines(TraitDeclaration { name: Name { text: "Eq", span: lexer.Span { start: 6, length: 2 } }, parameter: Name { text: "T", span: lexer.Span { start: 9, length: 1 } }, methods: [], span: lexer.Span { start: 0, length: 20 } }) == "trait Eq 0..20\n  type-parameter T 9..10\n"
+fn trait_lines(declaration: TraitDeclaration) -> String {
+    var written = node(0, "trait " + declaration.name.text, declaration.span)
+    written += node(1, "type-parameter " + declaration.parameter.text, declaration.parameter.span)
+    for method in declaration.methods {
+        written += signature_lines(method)
+    }
+    written
+}
+
+/// A method a trait declares: its name, its parameters, and its result where one is written.
+// example: signature_lines(Signature { name: Name { text: "go", span: lexer.Span { start: 3, length: 2 } }, parameters: [], result: None, span: lexer.Span { start: 0, length: 7 } }) == "  signature go 0..7\n"
+fn signature_lines(method: Signature) -> String {
+    var written = node(1, "signature " + method.name.text, method.span)
+    for parameter in method.parameters {
+        written += parameter_lines(parameter, "", 2)
+    }
+    written + result_lines(method.result, 3)
+}
+
+/// An instance, and each method it writes a body for.
+///
+/// The type it is for is written with the trait, and each method carries the instance's own
+/// type parameters, so the arguments the type is written with are not written again.
+// example: instance_lines(InstanceDeclaration { trait_name: Name { text: "Eq", span: lexer.Span { start: 9, length: 2 } }, type_parameters: [], for_type: Name { text: "Id", span: lexer.Span { start: 12, length: 2 } }, arguments: [], methods: [], span: lexer.Span { start: 0, length: 30 } }) == "instance Eq<Id> 0..30\n"
+fn instance_lines(declaration: InstanceDeclaration) -> String {
+    var written = node(0, "instance " + declaration.trait_name.text + "<" + declaration.for_type.text + ">", declaration.span)
+    for method in declaration.methods {
+        written += function_lines(method, 1)
+    }
+    written
+}
+
+/// A derive: the traits it names, and the type it names them for, on one line.
+// example: derive_lines(DeriveDeclaration { traits: [Name { text: "Eq", span: lexer.Span { start: 7, length: 2 } }], for_type: Name { text: "Id", span: lexer.Span { start: 14, length: 2 } }, span: lexer.Span { start: 0, length: 16 } }) == "derive Eq for Id 0..16\n"
+fn derive_lines(declaration: DeriveDeclaration) -> String {
+    var named = []
+    for trait_name in declaration.traits {
+        named = list.push(named, trait_name.text)
+    }
+    node(0, "derive " + strings.join(named, ", ") + " for " + declaration.for_type.text, declaration.span)
+}
+
+/// A type declaration: its name, its type parameters, and what it defines.
+// example: type_lines(TypeDeclaration { name: Name { text: "Id", span: lexer.Span { start: 5, length: 2 } }, parameters: [], definition: RecordType([]), span: lexer.Span { start: 0, length: 12 } }) == "type Id 0..12\n"
+fn type_lines(declaration: TypeDeclaration) -> String {
+    var written = node(0, "type " + declaration.name.text, declaration.span)
+    for parameter in declaration.parameters {
+        written += node(1, "type-parameter " + parameter.text, parameter.span)
+    }
+    written + definition_lines(declaration.definition)
+}
+
+/// The fields of a record, each variant, or the Java class a foreign type is held as.
+// example: definition_lines(Variants([])) == ""
+fn definition_lines(definition: TypeDefinition) -> String {
+    match definition {
+        RecordType(fields) => field_lines(fields, 1)
+        Variants(variants) => variant_lines(variants)
+        Foreign { class, called } => node(1, "java " + written_before(called_word(called)) + class.text, class.span)
+    }
+}
+
+/// A word and the blank after it, or nothing at all where the word is empty.
+// example: written_before("int") == "int "
+// example: written_before("") == ""
+fn written_before(word: String) -> String {
+    if word == "" {
+        return ""
+    }
+    word + " "
+}
+
+/// The word written before a foreign type's name, and `""` where it names an ordinary class.
+// example: called_word(AsAnInterface) == "interface"
+fn called_word(called: Called) -> String {
+    match called {
+        AsAClass => ""
+        AsAnInterface => "interface"
+    }
+}
+
+/// Each variant of a type, with whatever it carries one level in.
+// example: variant_lines([Variant { name: Name { text: "On", span: lexer.Span { start: 2, length: 2 } }, payload: NoPayload, span: lexer.Span { start: 2, length: 2 } }]) == "  variant On 2..4\n"
+fn variant_lines(variants: List<Variant>) -> String {
+    var written = ""
+    for variant in variants {
+        written += node(1, "variant " + variant.name.text, variant.span)
+        written += payload_lines(variant.payload)
+    }
+    written
+}
+
+/// What a variant carries: nothing, a type for each value, or a field for each name.
+// example: payload_lines(NoPayload) == ""
+fn payload_lines(payload: VariantPayload) -> String {
+    match payload {
+        NoPayload => ""
+        TuplePayload(types) => type_list_lines(types, 2)
+        RecordPayload(fields) => field_lines(fields, 2)
+    }
+}
+
+/// Each type of a list, at `depth`.
+// example: type_list_lines([TypeRef { kind: UnitType, span: lexer.Span { start: 0, length: 2 } }], 1) == "  unit-type 0..2\n"
+fn type_list_lines(types: List<TypeRef>, depth: Int) -> String {
+    var written = ""
+    for type_ref in types {
+        written += type_ref_lines(type_ref, depth)
+    }
+    written
+}
+
+/// Each field of a record body, with its type one level in.
+// example: field_lines([], 1) == ""
+fn field_lines(fields: List<RecordField>, depth: Int) -> String {
+    var written = ""
+    for field in fields {
+        written += node(depth, "field " + field.name.text, field.span)
+        written += type_ref_lines(field.type_ref, depth + 1)
+    }
+    written
+}
+
+/// A function: its type parameters, its parameters, its result, and its body.
+// example: function_lines(FunctionDeclaration { name: Name { text: "go", span: lexer.Span { start: 3, length: 2 } }, type_parameters: [], parameters: [], result: None, body: Block { statements: [], span: lexer.Span { start: 8, length: 3 } }, span: lexer.Span { start: 0, length: 11 } }, 0) == "function go 0..11\n  block 8..11\n"
+fn function_lines(declaration: FunctionDeclaration, depth: Int) -> String {
+    var written = node(depth, "function " + declaration.name.text, declaration.span)
+    for parameter in declaration.type_parameters {
+        written += type_parameter_lines(parameter, depth + 1)
+    }
+    for parameter in declaration.parameters {
+        written += parameter_lines(parameter, "", depth + 1)
+    }
+    written += result_lines(declaration.result, depth + 2)
+    written + block_lines(declaration.body, depth + 1)
+}
+
+/// A parameter at `depth`, with `narrowed` before its name and its type one level in.
+// example: parameter_lines(Parameter { name: Name { text: "at", span: lexer.Span { start: 0, length: 2 } }, type_ref: None, span: lexer.Span { start: 0, length: 2 } }, "", 1) == "  parameter at 0..2\n"
+fn parameter_lines(parameter: Parameter, narrowed: String, depth: Int) -> String {
+    written := node(depth, "parameter " + narrowed + parameter.name.text, parameter.span)
+    match parameter.type_ref {
+        Some(type_ref) => written + type_ref_lines(type_ref, depth + 1)
+        None => written
+    }
+}
+
+/// The result a signature declares, under a `result` line, and nothing where it declares none.
+// example: result_lines(None, 2) == ""
+fn result_lines(result: Option<TypeRef>, depth: Int) -> String {
+    match result {
+        Some(type_ref) => group(depth - 1, "result") + type_ref_lines(type_ref, depth)
+        None => ""
+    }
+}
+
+/// A type parameter of a function, with each trait it is constrained by one level in.
+// example: type_parameter_lines(TypeParameter { name: Name { text: "T", span: lexer.Span { start: 6, length: 1 } }, constraints: [] }, 1) == "  type-parameter T 6..7\n"
+fn type_parameter_lines(parameter: TypeParameter, depth: Int) -> String {
+    var written = node(depth, "type-parameter " + parameter.name.text, parameter.name.span)
+    for constraint in parameter.constraints {
+        written += node(depth + 1, "constraint " + constraint.name.text, constraint.span)
+        written += type_ref_lines(constraint.argument, depth + 2)
+    }
+    written
+}
+
+/// A written type, with each of its arguments one level in.
+// example: type_ref_lines(TypeRef { kind: UnitType, span: lexer.Span { start: 0, length: 2 } }, 0) == "unit-type 0..2\n"
+fn type_ref_lines(type_ref: TypeRef, depth: Int) -> String {
+    match type_ref.kind {
+        NamedType { path, arguments } => node(depth, "named-type " + path_text(path), type_ref.span) + type_list_lines(types: arguments, depth: depth + 1)
+        UnitType => node(depth, "unit-type", type_ref.span)
+    }
+}
+
+/// A block, and each statement it holds one level in.
+// example: block_lines(Block { statements: [], span: lexer.Span { start: 0, length: 3 } }, 1) == "  block 0..3\n"
+fn block_lines(block: Block, depth: Int) -> String {
+    var written = node(depth, "block", block.span)
+    for statement in block.statements {
+        written += statement_lines(statement, depth + 1)
+    }
+    written
+}
+
+/// One statement, and what it holds one level in.
+///
+/// An expression written as a statement is no node of its own, so it is written at `depth`.
+// example: statement_lines(Statement { kind: Break, span: lexer.Span { start: 4, length: 5 } }, 2) == "    break 4..9\n"
+fn statement_lines(statement: Statement, depth: Int) -> String {
+    span := statement.span
+    match statement.kind {
+        Binding { mutability, name, value } => node(depth, "binding " + mutability_word(mutability) + " " + name.text, span) + expression_lines(value, depth + 1)
+        Assign { target, operator, value } => node(depth, "assign " + assign_word(operator), span) + node(depth + 1, "name " + target.text, target.span) + expression_lines(value, depth + 1)
+        Return(value) => node(depth, "return", span) + optional_lines(value, depth + 1)
+        Break => node(depth, "break", span)
+        Continue => node(depth, "continue", span)
+        For(written) => for_lines(written, span, depth)
+        Discard(value) => node(depth, "discard", span) + expression_lines(value, depth + 1)
+        Evaluated(value) => expression_lines(value, depth)
+    }
+}
+
+/// The word that says whether a binding may be assigned to afterwards.
+// example: mutability_word(Mutable) == "Mutable"
+fn mutability_word(mutability: Mutability) -> String {
+    match mutability {
+        Immutable => "Immutable"
+        Mutable => "Mutable"
+    }
+}
+
+/// The word that says whether an assignment replaces the value or adds to it.
+// example: assign_word(AddTo) == "Add"
+fn assign_word(operator: AssignOperator) -> String {
+    match operator {
+        SetTo => "Set"
+        AddTo => "Add"
+    }
+}
+
+/// The value a `return` gives back, and nothing where it gives back none.
+// example: optional_lines(None, 1) == ""
+fn optional_lines(value: Option<Expr>, depth: Int) -> String {
+    match value {
+        Some(returned) => expression_lines(returned, depth)
+        None => ""
+    }
+}
+
+/// A `for` loop, which is named by what it loops over, and its body one level in.
+// example: for_lines(ForLoop { header: Forever, body: Block { statements: [], span: lexer.Span { start: 4, length: 3 } } }, lexer.Span { start: 0, length: 7 }, 0) == "for 0..7\n  block 4..7\n"
+fn for_lines(written: ForLoop, span: lexer.Span, depth: Int) -> String {
+    header := match written.header {
+        Forever => node(depth, "for", span)
+        While(condition) => node(depth, "for-while", span) + expression_lines(condition, depth + 1)
+        Over { binding, iterable } => node(depth, "for-in " + binding.text, span) + expression_lines(iterable, depth + 1)
+    }
+    header + block_lines(block: written.body, depth: depth + 1)
+}
+
+/// One expression, and what it is made of one level in.
+// example: expression_lines(Expr { kind: Integer(-7), span: lexer.Span { start: 0, length: 2 } }, 0) == "integer -7 0..2\n"
+// example: expression_lines(Expr { kind: Text("a\"b"), span: lexer.Span { start: 0, length: 6 } }, 0) == "string \"a\\\"b\" 0..6\n"
+fn expression_lines(expr: Expr, depth: Int) -> String {
+    span := expr.span
+    match expr.kind {
+        NameExpr(name) => node(depth, "name " + name.text, span)
+        Integer(value) => node(depth, "integer " + shown(value), span)
+        Text(value) => node(depth, "string " + quoted(value), span)
+        Truth(value) => node(depth, "bool " + shown(value), span)
+        Unit => node(depth, "unit", span)
+        Unary { operator, operand } => node(depth, "unary " + unary_word(operator), span) + expression_lines(operand, depth + 1)
+        Binary { operator, left, right } => node(depth, "binary " + binary_word(operator), span) + expression_lines(left, depth + 1) + expression_lines(right, depth + 1)
+        Call { callee, arguments } => node(depth, "call", span) + expression_lines(callee, depth + 1) + argument_lines(arguments, depth + 1)
+        Field { receiver, name } => node(depth, "field " + name.text, span) + expression_lines(receiver, depth + 1)
+        Try(inner) => node(depth, "try", span) + expression_lines(inner, depth + 1)
+        Written(elements) => node(depth, "list", span) + expression_list_lines(elements, depth + 1)
+        Record { base, fields } => node(depth, "record " + path_text(base), span) + field_value_lines(fields, depth + 1)
+        If(chain) => if_lines(chain, span, depth)
+        Match(matched) => match_lines(matched, span, depth)
+    }
+}
+
+/// Each expression of a list, at `depth`.
+// example: expression_list_lines([], 1) == ""
+fn expression_list_lines(values: List<Expr>, depth: Int) -> String {
+    var written = ""
+    for value in values {
+        written += expression_lines(expr: value, depth: depth)
+    }
+    written
+}
+
+/// Each field of a record literal, with its value one level in.
+// example: field_value_lines([], 1) == ""
+fn field_value_lines(fields: List<FieldValue>, depth: Int) -> String {
+    var written = ""
+    for field in fields {
+        written += node(depth, "field-value " + field.name.text, field.span)
+        written += expression_lines(expr: field.value, depth: depth + 1)
+    }
+    written
+}
+
+/// What a call passes, with each name written where the call writes one.
+// example: argument_lines(Positional([]), 1) == ""
+fn argument_lines(arguments: Arguments, depth: Int) -> String {
+    match arguments {
+        Positional(values) => expression_list_lines(values: values, depth: depth)
+        Named(written) => named_argument_lines(written, depth)
+    }
+}
+
+/// Each argument a call names, with its value one level in.
+// example: named_argument_lines([], 1) == ""
+fn named_argument_lines(arguments: List<NamedArgument>, depth: Int) -> String {
+    var written = ""
+    for argument in arguments {
+        span := lexer.Span { start: argument.name.span.start, length: end_of(argument.value.span) - argument.name.span.start }
+        written += node(depth, "argument " + argument.name.text, span)
+        written += expression_lines(expr: argument.value, depth: depth + 1)
+    }
+    written
+}
+
+/// An `if` chain: each branch, its condition, and its block, then the block of a final `else`.
+// example: if_lines(IfExpr { branches: [], otherwise: None }, lexer.Span { start: 0, length: 9 }, 0) == "if 0..9\n"
+fn if_lines(chain: IfExpr, span: lexer.Span, depth: Int) -> String {
+    var written = node(depth, "if", span)
+    for branch in chain.branches {
+        written += node(depth + 1, "branch", branch.span)
+        written += expression_lines(expr: branch.condition, depth: depth + 2)
+        written += block_lines(block: branch.block, depth: depth + 2)
+    }
+    match chain.otherwise {
+        Some(otherwise) => written + group(depth + 1, "else") + block_lines(block: otherwise, depth: depth + 2)
+        None => written
+    }
+}
+
+/// A `match`: what it matches, then each arm, its pattern, and its body.
+// example: match_lines(MatchExpr { scrutinee: Expr { kind: Unit, span: lexer.Span { start: 6, length: 2 } }, arms: [] }, lexer.Span { start: 0, length: 12 }, 0) == "match 0..12\n  unit 6..8\n"
+fn match_lines(matched: MatchExpr, span: lexer.Span, depth: Int) -> String {
+    var written = node(depth, "match", span) + expression_lines(expr: matched.scrutinee, depth: depth + 1)
+    for arm in matched.arms {
+        written += node(depth + 1, "arm", arm.span)
+        written += pattern_lines(arm.pattern, depth + 2)
+        written += expression_lines(expr: arm.body, depth: depth + 2)
+    }
+    written
+}
+
+/// A pattern, and what it is made of one level in.
+// example: pattern_lines(Pattern { kind: Wildcard, span: lexer.Span { start: 0, length: 1 } }, 0) == "pattern-wildcard 0..1\n"
+fn pattern_lines(pattern: Pattern, depth: Int) -> String {
+    span := pattern.span
+    match pattern.kind {
+        NamePattern(path) => node(depth, "pattern " + path_text(path), span)
+        TuplePattern { path, elements } => node(depth, "pattern-tuple " + path_text(path), span) + pattern_list_lines(elements, depth + 1)
+        RecordPattern { path, fields } => node(depth, "pattern-record " + path_text(path), span) + pattern_field_lines(fields, depth + 1)
+        IntegerPattern(value) => node(depth, "pattern-integer " + shown(value), span)
+        TextPattern(value) => node(depth, "pattern-string " + quoted(value), span)
+        TruthPattern(value) => node(depth, "pattern-bool " + shown(value), span)
+        Wildcard => node(depth, "pattern-wildcard", span)
+        OrPattern(alternatives) => node(depth, "pattern-or", span) + pattern_list_lines(alternatives, depth + 1)
+    }
+}
+
+/// A name as it was written: the module, a dot, and the name, or the name alone.
+// example: path_text(Path { module: None, name: Name { text: "Int", span: lexer.Span { start: 0, length: 3 } } }) == "Int"
+fn path_text(path: Path) -> String {
+    match path.module {
+        Some(module) => module.text + "." + path.name.text
+        None => path.name.text
+    }
+}
+
+/// Each pattern of a list, at `depth`.
+// example: pattern_list_lines([], 1) == ""
+fn pattern_list_lines(patterns: List<Pattern>, depth: Int) -> String {
+    var written = ""
+    for pattern in patterns {
+        written += pattern_lines(pattern: pattern, depth: depth)
+    }
+    written
+}
+
+/// Each field a record pattern names.
+// example: pattern_field_lines([], 1) == ""
+fn pattern_field_lines(fields: List<Name>, depth: Int) -> String {
+    var written = ""
+    for field in fields {
+        written += node(depth, "pattern-field " + field.text, field.span)
+    }
+    written
+}
+
+/// The word a prefix operator is printed as.
+// example: unary_word(Negate) == "Negate"
+fn unary_word(operator: UnaryOperator) -> String {
+    match operator {
+        Not => "Not"
+        Negate => "Negate"
+    }
+}
+
+/// The word an infix operator is printed as.
+// example: binary_word(LessOrEqual) == "LessOrEqual"
+fn binary_word(operator: BinaryOperator) -> String {
+    match operator {
+        Or => "Or"
+        And => "And"
+        Equal => "Equal"
+        NotEqual => "NotEqual"
+        Less => "Less"
+        LessOrEqual => "LessOrEqual"
+        Greater => "Greater"
+        GreaterOrEqual => "GreaterOrEqual"
+        Add => "Add"
+        Subtract => "Subtract"
+        Multiply => "Multiply"
+        Divide => "Divide"
+        Remainder => "Remainder"
+    }
+}
+
+/// `text` between quotes, with each quote, backslash, and control character escaped.
+///
+/// The Rust printer writes a string the same way: the escapes a string literal has, `\0`, and each
+/// other ASCII control character as `\u{…}` in hexadecimal. Every other character stays as it is.
+// example: quoted("say \"hi\"\n") == "\"say \\\"hi\\\"\\n\""
+// example: quoted("é") == "\"é\""
+fn quoted(text: String) -> String {
+    var written = "\""
+    var index = 0
+    for index < strings.length(text) {
+        written += escaped(or(strings.at(text, index), 0), or(strings.cut(text, index, index + 1), ""))
+        index += 1
+    }
+    written + "\""
+}
+
+/// One code unit as `quoted` writes it: `unit` is its number, and `letter` is the unit as text.
+// example: escaped(9, "\t") == "\\t"
+// example: escaped(1, "") == "\\u{1}"
+// example: escaped(97, "a") == "a"
+fn escaped(unit: Int, letter: String) -> String {
+    if letter == "\"" || letter == "\\" {
+        return "\\" + letter
+    }
+    if letter == "\n" {
+        return "\\n"
+    }
+    if letter == "\t" {
+        return "\\t"
+    }
+    if letter == "\r" {
+        return "\\r"
+    }
+    if unit == 0 {
+        return "\\0"
+    }
+    if unit < 32 || unit == 127 {
+        return "\\u{" + hexadecimal(unit) + "}"
+    }
+    letter
+}
+
+/// `value` in hexadecimal, lower case, with no leading zero.
+// example: hexadecimal(127) == "7f"
+// example: hexadecimal(0) == "0"
+fn hexadecimal(value: Int) -> String {
+    digits := "0123456789abcdef"
+    var rest = value
+    var written = ""
+    for {
+        digit := or(rest % 16, 0)
+        written = or(strings.cut(digits, digit, digit + 1), "") + written
+        rest = or(rest / 16, 0)
+        if rest == 0 {
+            return written
+        }
+    }
+    written
+}
+
+/// One node on a line of its own: the indent, the label, and the span.
+// example: node(1, "unit", lexer.Span { start: 0, length: 2 }) == "  unit 0..2\n"
+fn node(depth: Int, label: String, span: lexer.Span) -> String {
+    indent(depth) + label + " " + shown(span.start) + ".." + shown(end_of(span)) + "\n"
+}
+
+/// A node that groups others and has no span of its own, such as `result`.
+// example: group(1, "else") == "  else\n"
+fn group(depth: Int, label: String) -> String {
+    indent(depth) + label + "\n"
+}
+
+/// Two blanks for each level of `depth`.
+// example: indent(2) == "    "
+fn indent(depth: Int) -> String {
+    var written = ""
+    var level = 0
+    for level < depth {
+        written += "  "
+        level += 1
+    }
+    written
+}
+
+/// Where `span` ends, which is one byte past the last byte it covers.
+// example: end_of(lexer.Span { start: 3, length: 4 }) == 7
+fn end_of(span: lexer.Span) -> Int {
+    span.start + span.length
+}
+
+/// One source file: the items it declares, in source order.
+type Program = {
+    items: List<Item>
+}
+
+/// A top-level declaration.
+type Item =
+    | Import(ImportDeclaration)
+    | Type(TypeDeclaration)
+    | Trait(TraitDeclaration)
+    | Instance(InstanceDeclaration)
+    | Derive(DeriveDeclaration)
+    | Function(FunctionDeclaration)
+    | Extern(ExternDeclaration)
+
+/// `extern static read_string(path: Path) -> String = "java.nio.file.Files.readString"`.
+///
+/// One member of one Java class, under the name and the signature this declaration gives it.
+type ExternDeclaration = {
+    name: Name
+    reaches: Reaches
+    gives: Gives
+    parameters: List<ExternParameter>
+    result: TypeRef
+    span: lexer.Span
+}
+
+/// One parameter of an `extern`: the parameter itself, and what the member takes it as.
+type ExternParameter = {
+    declared: Parameter
+    takes: Takes
+}
+
+/// Which width the member's own descriptor takes, where `int` before the name says one.
+type Takes =
+    | TakesAsDeclared
+    | TakesInt
+
+/// Which width the member's own descriptor gives back, where `int` or `char` says one.
+type Gives =
+    | GivesAsDeclared
+    | GivesInt
+    | GivesChar
+
+/// Which kind of member an `extern` reaches, and the Java name that says which one.
+type Reaches =
+    | StaticField(JavaName)
+    | StaticMethod(JavaName)
+    | InstanceMethod(JavaName)
+    | Constructor
+
+/// `derive Eq for User`: the traits the compiler writes the instances of, and the type.
+type DeriveDeclaration = {
+    traits: List<Name>
+    for_type: Name
+    span: lexer.Span
+}
+
+/// `import io`: another module's names are brought into scope.
+type ImportDeclaration = {
+    module: Name
+    span: lexer.Span
+}
+
+/// `type User = { … }` or `type Payment = | Pending | Failed(String)`.
+type TypeDeclaration = {
+    name: Name
+    parameters: List<Name>
+    definition: TypeDefinition
+    span: lexer.Span
+}
+
+/// What a type declaration declares: a record, one or more variants, or a Java class.
+type TypeDefinition =
+    | RecordType(List<RecordField>)
+    | Variants(List<Variant>)
+    | Foreign {
+        class: JavaName
+        called: Called
+    }
+
+/// Which kind of class an `extern type` names, where the two are called in two different ways.
+type Called =
+    | AsAClass
+    | AsAnInterface
+
+/// One variant of a type, with whatever it carries.
+type Variant = {
+    name: Name
+    payload: VariantPayload
+    span: lexer.Span
+}
+
+/// What a variant carries: nothing, positional types, or named fields.
+type VariantPayload =
+    | NoPayload
+    | TuplePayload(List<TypeRef>)
+    | RecordPayload(List<RecordField>)
+
+/// `name: Type`, one line of a record body.
+type RecordField = {
+    name: Name
+    type_ref: TypeRef
+    span: lexer.Span
+}
+
+/// `trait Eq<T> { fn is_equal(one: T, other: T) -> Bool }`.
+type TraitDeclaration = {
+    name: Name
+    parameter: Name
+    methods: List<Signature>
+    span: lexer.Span
+}
+
+/// One method a trait declares: a function's first line, with no body to go with it.
+type Signature = {
+    name: Name
+    parameters: List<Parameter>
+    result: Option<TypeRef>
+    span: lexer.Span
+}
+
+/// `instance Eq<Point> { … }`, whose methods each carry the instance's type parameters.
+type InstanceDeclaration = {
+    trait_name: Name
+    type_parameters: List<TypeParameter>
+    for_type: Name
+    arguments: List<Name>
+    methods: List<FunctionDeclaration>
+    span: lexer.Span
+}
+
+/// `fn count_active(users: List<User>, limit: Int) -> Int { … }`.
+type FunctionDeclaration = {
+    name: Name
+    type_parameters: List<TypeParameter>
+    parameters: List<Parameter>
+    result: Option<TypeRef>
+    body: Block
+    span: lexer.Span
+}
+
+/// `T`, or `T: Eq<T> + Hash<T>`: a type parameter, with what it may be asked to do.
+type TypeParameter = {
+    name: Name
+    constraints: List<Constraint>
+}
+
+/// `Eq<T>`: the trait a type parameter is constrained by, written over what it constrains.
+type Constraint = {
+    name: Name
+    argument: TypeRef
+    span: lexer.Span
+}
+
+/// One parameter of a function, with its type where the author wrote one.
+type Parameter = {
+    name: Name
+    type_ref: Option<TypeRef>
+    span: lexer.Span
+}
+
+/// A written type, such as `Int`, `List<User>`, or `()`.
+type TypeRef = {
+    kind: TypeRefKind
+    span: lexer.Span
+}
+
+/// The two shapes a written type takes: a name with its arguments, or `()`.
+type TypeRefKind =
+    | NamedType {
+        path: Path
+        arguments: List<TypeRef>
+    }
+    | UnitType
+
+/// A `{ … }` body: its statements, in source order.
+type Block = {
+    statements: List<Statement>
+    span: lexer.Span
+}
+
+/// One statement of a block.
+type Statement = {
+    kind: StatementKind
+    span: lexer.Span
+}
+
+/// The statement forms.
+type StatementKind =
+    | Binding {
+        mutability: Mutability
+        name: Name
+        value: Expr
+    }
+    | Assign {
+        target: Name
+        operator: AssignOperator
+        value: Expr
+    }
+    | Return(Option<Expr>)
+    | Break
+    | Continue
+    | For(ForLoop)
+    | Discard(Expr)
+    | Evaluated(Expr)
+
+/// Whether a binding may be assigned to afterwards.
+type Mutability =
+    | Immutable
+    | Mutable
+
+/// Whether an assignment replaces the value or adds to it.
+type AssignOperator =
+    | SetTo
+    | AddTo
+
+/// `for user in users { … }`, `for total < limit { … }`, or a bare `for { … }`.
+type ForLoop = {
+    header: ForHeader
+    body: Block
+}
+
+/// What a `for` loops over, if anything.
+type ForHeader =
+    | Forever
+    | While(Expr)
+    | Over {
+        binding: Name
+        iterable: Expr
+    }
+
+/// An expression, with the span of the source it was parsed from.
+type Expr = {
+    kind: ExprKind
+    span: lexer.Span
+}
+
+/// The expression forms.
+type ExprKind =
+    | NameExpr(Name)
+    | Integer(Int)
+    | Text(String)
+    | Truth(Bool)
+    | Unit
+    | Unary {
+        operator: UnaryOperator
+        operand: Expr
+    }
+    | Binary {
+        operator: BinaryOperator
+        left: Expr
+        right: Expr
+    }
+    | Call {
+        callee: Expr
+        arguments: Arguments
+    }
+    | Field {
+        receiver: Expr
+        name: Name
+    }
+    | Try(Expr)
+    | Written(List<Expr>)
+    | Record {
+        base: Path
+        fields: List<FieldValue>
+    }
+    | If(IfExpr)
+    | Match(MatchExpr)
+
+/// What a call passes: the values in order, or each value with the parameter it is passed for.
+type Arguments =
+    | Positional(List<Expr>)
+    | Named(List<NamedArgument>)
+
+/// One argument written with the parameter it is passed for, as `from: old`.
+type NamedArgument = {
+    name: Name
+    value: Expr
+}
+
+/// `name: value`, one field of a record literal.
+type FieldValue = {
+    name: Name
+    value: Expr
+    span: lexer.Span
+}
+
+/// The prefix operators.
+type UnaryOperator =
+    | Not
+    | Negate
+
+/// The infix operators, each left-associative except the comparisons, which do not chain.
+type BinaryOperator =
+    | Or
+    | And
+    | Equal
+    | NotEqual
+    | Less
+    | LessOrEqual
+    | Greater
+    | GreaterOrEqual
+    | Add
+    | Subtract
+    | Multiply
+    | Divide
+    | Remainder
+
+/// `if a { … } else if b { … } else { … }`, a flat chain of branches.
+type IfExpr = {
+    branches: List<Branch>
+    otherwise: Option<Block>
+}
+
+/// One `condition { … }` of an `if` chain.
+type Branch = {
+    condition: Expr
+    block: Block
+    span: lexer.Span
+}
+
+/// `match payment { … }`.
+type MatchExpr = {
+    scrutinee: Expr
+    arms: List<MatchArm>
+}
+
+/// `Failed(reason) => "Failed: " + reason`.
+type MatchArm = {
+    pattern: Pattern
+    body: Expr
+    span: lexer.Span
+}
+
+/// A pattern, with the span of the source it was parsed from.
+type Pattern = {
+    kind: PatternKind
+    span: lexer.Span
+}
+
+/// The forms a pattern is written in.
+type PatternKind =
+    | NamePattern(Path)
+    | TuplePattern {
+        path: Path
+        elements: List<Pattern>
+    }
+    | RecordPattern {
+        path: Path
+        fields: List<Name>
+    }
+    | IntegerPattern(Int)
+    | TextPattern(String)
+    | TruthPattern(Bool)
+    | Wildcard
+    | OrPattern(List<Pattern>)
+
+/// `User`, or `demo.User`: a name, and the module it is reached inside of when one is written.
+type Path = {
+    module: Option<Name>
+    name: Name
+}
+
+/// The Java name an `extern` states, as it was written.
+type JavaName = {
+    text: String
+    span: lexer.Span
+}
+
+/// One occurrence of an identifier, with the text it was spelled with.
+type Name = {
+    text: String
+    span: lexer.Span
+}

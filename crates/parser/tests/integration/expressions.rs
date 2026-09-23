@@ -308,7 +308,7 @@ fn a_written_list_is_walked_by_a_for_in_without_parentheses() {
 fn a_written_list_covers_both_of_its_brackets() {
     let source = "fn f() {\n    [1]\n}";
     let written = source.find('[').expect("the list is written here");
-    let rendered = crate::common::render(source);
+    let rendered = crate::printed::render(source);
     let covering = format!("list {written}..{}", written + "[1]".len());
     assert!(rendered.contains(&covering), "{rendered}");
 }

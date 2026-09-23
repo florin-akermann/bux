@@ -237,6 +237,33 @@ A `<name>.error` file holds `<start>..<end> <message>`, then a `help: <text>` li
 A `.lm` file has exactly one of the two, and the parser crate's tests name the failing example.
 An example is a whole program held to `docs/specs/executable-examples.md`, not a fragment.
 
+The two files are the printed form of the parser's answer, and each line of it ends in `\n`.
+Each level of depth indents a node by two spaces.
+A node that only holds other nodes, such as `result` or `else`, has no span.
+A string shows between quotes, and `"`, `\`, and each ASCII control character in it are escaped.
+A newline, a tab, a return, and a zero are `\n`, `\t`, `\r`, and `\0`; another control is `\u{…}`.
+Every other character is written as it is, so the printed form of a string has one spelling.
+
+## The parser written in Bux
+
+`compiler/parser.lm` is this parser written in Bux, and the Rust parser is the answer it must give.
+It reads the tokens of `compiler/lexer.lm` by kind and builds the tree `compiler/ast.lm` declares.
+It is the second phase of the Bux compiler, which `docs/implementation.md` section 6 states.
+
+`parser.printed(source)` gives the printed form: the tree, or the error that stops the parse.
+`ast.printed(program)` writes the tree, and the Rust printer of the parser's tests is its twin.
+That Rust printer is `crates/parser/tests/integration/printed.rs`.
+
+The Bux parser keeps the rules of the Rust parser that a reader can see.
+It stops at the first error, and it gives the same span, message, and help as the Rust parser.
+It spends one level of the budget of 32 where the Rust parser spends one.
+It decodes a literal where the Rust parser decodes it, so a bad number or escape fails at one place.
+
+The harness `crates/cli/tests/integration/bux_parser.rs` builds the Bux parser with `lumen`.
+It runs the Bux parser over every `tests/spec/parser` example and over drawn text.
+It compares each answer with the printed answer of the Rust parser, line for line.
+A build needs no JDK, and a run needs one; with no JDK, the harness skips each run and says why.
+
 ## Properties
 
 These hold and are checked with property-based tests:

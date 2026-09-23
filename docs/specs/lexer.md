@@ -93,6 +93,10 @@ Each half of a surrogate pair is two bytes, because the pair is one four-byte ch
 Every other unit is three bytes.
 An `Unknown` token covers a whole surrogate pair, as the Rust lexer covers a whole character.
 
+A Bux token also holds its text, because a later phase cannot cut a string at a byte offset.
+The parser reads a name, a number, and a string from that text.
+A token kind, a keyword, and a punctuation derive `Eq`, so the parser compares kinds with `==`.
+
 `lexer.listed(source)` writes one line for each token: the kind, a space, and `<start>..<end>`.
 A keyword and a punctuation show the text that spells them, as `Keyword(fn)` and `Punct(:=)` do.
 Every other kind shows its name, as `Identifier` and `UnterminatedString` do.

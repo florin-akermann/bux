@@ -1,0 +1,113 @@
+function is_larger 174..292
+  type-parameter T 187..188
+    constraint Area 190..197
+      named-type T 195..196
+    constraint Eq 200..205
+      named-type T 203..204
+  parameter shape 207..215
+    named-type T 214..215
+  parameter other 217..225
+    named-type T 224..225
+  result
+    named-type Bool 230..234
+  block 235..292
+    binary And 241..290
+      binary NotEqual 241..255
+        name shape 241..246
+        name other 250..255
+      binary Greater 259..290
+        call 259..273
+          name covered 259..266
+          name shape 267..272
+        call 276..290
+          name covered 276..283
+          name other 284..289
+function listed 341..403
+  parameter file 351..361
+    named-type File 357..361
+  result
+    named-type String 366..372
+  block 373..403
+    call 379..401
+      name as_text 379..386
+      call 387..400
+        name to_path 387..394
+        name file 395..399
+function first_unit 449..531
+  parameter text 463..475
+    named-type String 469..475
+  parameter at 477..484
+    named-type Int 481..484
+  result
+    named-type Option 489..500
+      named-type Int 496..499
+  block 501..531
+    call 507..529
+      name code_unit_at 507..519
+      name text 520..524
+      name at 526..528
+instance Area<Square> 533..635
+  function covered 561..633
+    parameter shape 572..585
+      named-type Square 579..585
+    result
+      named-type Int 590..593
+    block 594..633
+      binary Multiply 604..627
+        field side 604..614
+          name shape 604..609
+        field side 617..627
+          name shape 617..622
+trait Area 637..686
+  type-parameter T 648..649
+  signature covered 657..684
+    parameter shape 668..676
+      named-type T 675..676
+    result
+      named-type Int 681..684
+derive Eq, Show for Square 688..714
+type Square 716..747
+  field side 736..745
+    named-type Int 742..745
+extern method as_text 749..805
+  java toString 795..805
+  parameter path 771..781
+    named-type Path 777..781
+  result
+    named-type String 786..792
+extern method to_path 807..859
+  java toPath 851..859
+  parameter file 829..839
+    named-type File 835..839
+  result
+    named-type Path 844..848
+extern new opened 861..900
+  parameter name 879..891
+    named-type String 885..891
+  result
+    named-type File 896..900
+extern method char code_unit_at 902..989
+  java charAt 981..989
+  parameter text 934..946
+    named-type String 940..946
+  parameter int index 952..962
+    named-type Int 959..962
+  result
+    named-type Option 967..978
+      named-type Int 974..977
+extern static int bits 991..1060
+  java java.lang.Long.bitCount 1035..1060
+  parameter value 1014..1024
+    named-type Int 1021..1024
+  result
+    named-type Int 1029..1032
+extern field out 1062..1120
+  java java.lang.System.out 1098..1120
+  result
+    named-type PrintStream 1084..1095
+type Path 1122..1171
+  java interface java.nio.file.Path 1151..1171
+type File 1173..1206
+  java java.io.File 1192..1206
+type PrintStream 1208..1255
+  java java.io.PrintStream 1234..1255

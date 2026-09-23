@@ -1,0 +1,9 @@
+// expect-error: L0108
+// A call names all of its arguments or none of them.
+fn moved(from: Int, to: Int) -> Int {
+    to - from
+}
+
+fn distance() -> Int {
+    moved(1, to: 5)
+}

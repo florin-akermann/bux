@@ -1,0 +1,49 @@
+// Every item the grammar has beside a function: a trait, an instance, a derive, and each extern.
+// example: is_larger(shape: Square { side: 4 }, other: Square { side: 1 })
+fn is_larger<T: Area<T> + Eq<T>>(shape: T, other: T) -> Bool {
+    shape != other && covered(shape) > covered(other)
+}
+
+// example: listed(opened("notes")) == "notes"
+fn listed(file: File) -> String {
+    as_text(to_path(file))
+}
+
+// example: or(first_unit("A", 0), 0) == 65
+fn first_unit(text: String, at: Int) -> Option<Int> {
+    code_unit_at(text, at)
+}
+
+instance Area<Square> {
+    fn covered(shape: Square) -> Int {
+        shape.side * shape.side
+    }
+}
+
+trait Area<T> {
+    fn covered(shape: T) -> Int
+}
+
+derive Eq, Show for Square
+
+type Square = {
+    side: Int
+}
+
+extern method as_text(path: Path) -> String = "toString"
+
+extern method to_path(file: File) -> Path = "toPath"
+
+extern new opened(name: String) -> File
+
+extern method char code_unit_at(text: String, int index: Int) -> Option<Int> = "charAt"
+
+extern static int bits(value: Int) -> Int = "java.lang.Long.bitCount"
+
+extern field out() -> PrintStream = "java.lang.System.out"
+
+extern type interface Path = "java.nio.file.Path"
+
+extern type File = "java.io.File"
+
+extern type PrintStream = "java.io.PrintStream"

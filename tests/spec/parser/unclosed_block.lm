@@ -1,0 +1,4 @@
+// expect-error: L0100
+// A block that the file ends inside of is refused at the last token the file holds.
+fn unfinished() -> Int {
+    1
