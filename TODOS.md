@@ -72,16 +72,6 @@ The allow list leaves out reflection, class loaders, method handles, and deseria
 [084][c] - The Bux phases read the entry names of each stated archive and refuse other classes.
 [084][d] - A spec example shows an `extern` on `java.lang.Class.forName` that is refused.
 
-## 🔴 Item 085: `bux run` starts a JVM that has only `java.base` and no injected options
-The JVM starts with all its modules, so `java.naming`, `java.rmi`, and `java.scripting` load.
-`JAVA_TOOL_OPTIONS`, `JDK_JAVA_OPTIONS`, and `_JAVA_OPTIONS` can add a `-javaagent` to a run.
-A stated archive can still load a class at run time, and these flags narrow what it can reach.
-[085][a] - `docs/specs/run.md` states the flags, the removed variables, and the reason for each.
-[085][b] - The runner passes `--limit-modules java.base` and `-Djdk.serialFilter=!*`.
-[085][c] - The runner removes the three variables from the environment of the JVM.
-[085][d] - A spec example that `bin/runner` runs shows that no `javax.naming` class loads.
-[085][e] - `bux help run` says a program reaches only its library and its stated archives.
-
 ## 🔴 Item 088: The class-file writer's copied defects are fixed in Bux
 Item 073 copied seven defects of the Rust writer so that the bytes match; the spec names six.
 [088][a] - A class name two modules write is refused, and no hierarchy entry is written twice.
