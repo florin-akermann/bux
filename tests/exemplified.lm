@@ -23,12 +23,12 @@ import modules
 
 import walk
 
-/// Every example under `tests/spec`, each held to its header and to canonical form.
+/// Every example of `paths`, which are under `directory`, each held to its header and to canonical
+/// form.
 ///
-/// An empty `tests/spec` is a failure, because the specification is never allowed to be nothing.
-// example: every_example_held(ir.little_library(), "no-such-directory", 1).failures == ["no-such-directory: holds no example"]
-fn every_example_held(library: ir.Library, directory: String, limit: Int) -> held.Held {
-    paths := walk.every_file(directory, ".lm")
+/// No example at all is a failure, because the specification is never allowed to be nothing.
+// example: every_example_held("no-such-directory", [], ir.little_library(), 1).failures == ["no-such-directory: holds no example"]
+fn every_example_held(directory: String, paths: List<String>, library: ir.Library, limit: Int) -> held.Held {
     if list.length(paths) == 0 {
         return held.with_failure(held.nothing_failed(0), directory + ": holds no example")
     }

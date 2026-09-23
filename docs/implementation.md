@@ -271,21 +271,32 @@ It holds these parts, each in a module of its own under `tests/`:
 - `commanded.lm`: the command line, held to the golden answers under `tests/commands/`.
 - `launched.lm`: the launcher `bin/bux`, and the time limit that a started program has.
 
+The runner splits the parts into jobs, and one pool process hands each job to a worker process.
+There is one worker for each processor that `Runtime.availableProcessors` gives.
+The example lines and the examples are each split into at most one job for each worker.
+Each golden file is one job, and each other check of the command line is one job.
+The properties are one job, and the siblings are one job.
+A worker sends the answer of its job to the pool, which holds each answer by the number of the job.
+When every worker has left, the pool ends, and the runner counts the parts from its last state.
+The runner waits for each worker before the pool, so a JVM error in a worker stops the runner.
+It counts them in the order of the jobs, so no line depends on which worker ended first.
+
 The runner starts a JVM for an example headed `expect-run` and for a command that runs one.
-It starts one more JVM, which runs the example lines of all modules.
-When a part ends, the runner writes one line with the name, the count, and the seconds of it.
-An example of such a line is `examples: 332 held in 4 s`, so a slow run does not look like a hang.
+It starts one more JVM for each job of example lines, which runs the example lines of that job.
+When the pool has ended, the runner writes one line for each part: the name, the count, and seconds.
+The seconds are the sum of the times of the jobs of the part, which can be more than the wall time.
+An example of such a line is `examples: 332 held in 4 s`.
 The parts are examples, siblings, example lines, properties, and command lines, in that order.
 Then it writes one line for each check it skipped and for each failure, then one line of counts.
 It ends with status 0 only when nothing failed.
 
-The runner holds one memo of typed modules, `command.Memo`, and passes it from call to call.
-The memo holds each module by the canonical path of its file, so each module is typed once.
+Each job of example lines holds one memo of typed modules, `command.Memo`, from call to call.
+The memo holds each module by the canonical path of its file, so each module is typed once a job.
 It also holds each module that `whole` found whole, and `whole` is not run on it again.
 A command starts with an empty memo, so no answer of the command line depends on one.
 `documented.lm` writes the run of each module, as `lumen test` writes it, into a directory.
-Each run gets a directory of its own, and all of them are in one directory made for the runs.
-Then it starts `tests/examined.lm` once, and that program calls the `main` of each run in turn.
+Each run gets a directory of its own, inside one directory made for the runs of its job.
+Then the job starts `tests/examined.lm` once, and that program calls the `main` of each run.
 Each run gets a class loader of its own, because two runs can hold one class name for two classes.
 Before each run, `examined.lm` writes a line that names it, so a failure names its module.
 A run that stops with an error, such as a stack overflow, is a failure, and the next run starts.
