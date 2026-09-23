@@ -6,7 +6,7 @@
 
 ## Open
 
-## 🔴 Item 074: The `bux` command line is written in Bux
+## 🟡 Item 074: The `bux` command line is written in Bux
 **Depends on:** Item 060, Item 062, Item 068, Item 072, Item 073 — every command is a phase.
 [074][a] - `compiler/main.bx` parses the arguments and runs every command `bux --help` lists.
 [074][b] - A `bux` launcher script starts the JVM with `--enable-preview` on the compiled compiler.
