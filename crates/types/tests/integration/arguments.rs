@@ -262,3 +262,54 @@ fn a_swapped_pair_of_one_type_is_still_named_where_it_is_written() {
         "this argument is named `to`, and the parameter here is `from`"
     );
 }
+
+/// A module where `is_even` and `is_odd` call each other positionally, each as `signature` says.
+///
+/// `is_four_even` passes `arguments` to `is_even`. One of the two calls reaches a function that
+/// is declared above it, whatever order the module is walked in.
+fn in_mutual_recursion(signature: &str, arguments: &str) -> String {
+    let body = |stops: &str, other: &str| {
+        format!(
+            "    if steps == 0 {{\n        {stops}\n    }} else {{\n        \
+             {other}(steps - 1, label)\n    }}\n"
+        )
+    };
+    format!(
+        "fn is_four_even() -> Bool {{\n    is_even({arguments})\n}}\n\n\
+         fn is_even{signature} {{\n{}}}\n\n\
+         fn is_odd{signature} {{\n{}}}\n",
+        body("true", "is_odd"),
+        body("false", "is_even"),
+    )
+}
+
+#[test]
+fn a_positional_call_of_a_function_declared_above_its_caller_compiles() {
+    let source = in_mutual_recursion("(steps: Int, label: String) -> Bool", "4, \"even\"");
+
+    inferred(&source);
+}
+
+#[test]
+fn a_positional_call_of_a_function_declared_above_its_caller_is_held_to_the_rule() {
+    let source = in_mutual_recursion("(steps: Int, label: Int) -> Bool", "steps: 4, label: 4");
+
+    let error = refusal(&source);
+
+    assert_eq!(
+        error.message(),
+        "`is_even` gives two parameters the type `Int`, so this call names its arguments"
+    );
+}
+
+#[test]
+fn a_function_declared_above_its_caller_is_held_to_the_types_inference_settled() {
+    let source = in_mutual_recursion("(steps, label) -> Bool", "steps: 4, label: 4");
+
+    let error = refusal(&source);
+
+    assert_eq!(
+        error.message(),
+        "`is_even` gives two parameters the type `Int`, so this call names its arguments"
+    );
+}

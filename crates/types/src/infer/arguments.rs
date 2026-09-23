@@ -2,16 +2,29 @@
 //!
 //! `docs/specs/arguments.md` states the rule: a call names its arguments when the declaration
 //! gives two of its parameters one type, and wherever it names them it names them in the order
-//! the declaration lists them. A module is inferred bottom up, so a declaration has the types it
-//! has by the time anything calls it, and a signature the author left unwritten counts exactly as
-//! one they wrote out.
+//! the declaration lists them. A signature the author left unwritten counts exactly as one they
+//! wrote out, so a call that names none of its arguments is held to the rule once the whole module
+//! is walked: a function declared above its caller is walked after it, in mutual recursion.
+
+use std::mem;
 
 use lumen_ast::{Arguments, Expr, ExprKind, Function, Name, NamedArgument, Span};
 use lumen_resolver::{DefinitionKind, Namespace, Origin};
 
+use crate::environment::Key;
 use crate::error::{TypeError, TypeErrorKind};
 use crate::infer::{Inference, name_of};
+use crate::scheme::Scheme;
 use crate::types::Type;
+
+/// A call that passes its arguments in order to a function this module declares.
+///
+/// Whether it had to name them rests on the types inference settles for that function, which the
+/// walk may not have reached yet, so the call waits for the whole module.
+pub(crate) struct Positional {
+    function: Name,
+    at: Span,
+}
 
 impl Inference<'_> {
     /// One call held to the rule.
@@ -24,7 +37,7 @@ impl Inference<'_> {
     /// A call written with its first argument in front is held to the rule before it gets here,
     /// by [`Self::names_none_in_front`].
     pub(crate) fn named_as_declared(
-        &self,
+        &mut self,
         callee: &Expr,
         arguments: &Arguments,
         at: Span,
@@ -35,7 +48,9 @@ impl Inference<'_> {
         match (self.declaration(reached), arguments) {
             (Some(declared), Arguments::Named(written)) => in_order(declared, written),
             (Some(declared), Arguments::Positional(_)) => {
-                held_apart(&declared.name, &self.takes(declared), at)
+                let function = declared.name.clone();
+                self.positional.push(Positional { function, at });
+                Ok(())
             }
             (None, Arguments::Named(_)) => Err(TypeError::at(at, self.unnameable(callee, reached))),
             (None, Arguments::Positional(_)) => Ok(()),
@@ -94,17 +109,37 @@ impl Inference<'_> {
         Some(format!("{}.{}", module.text, name.text))
     }
 
+    /// Every call of this module that names none of its arguments, held to the rule.
+    ///
+    /// Every function is walked by now, so each call reads the types inference settled for what
+    /// it calls, whether that function is declared above the call or below it.
+    ///
+    /// # Errors
+    ///
+    /// Returns the first call that passes two arguments of one type in order.
+    pub(crate) fn settle_positional(&mut self) -> Result<(), TypeError> {
+        for call in mem::take(&mut self.positional) {
+            held_apart(&call.function, &self.takes(&call.function), call.at)?;
+        }
+        Ok(())
+    }
+
     /// The types the declaration gives its parameters, rather than the ones this call gave them.
     ///
     /// The rule is about the signature, so it reads the same at every call site and names the
     /// type the declaration writes: `T` where a type parameter is repeated, not whatever the
     /// call happened to instantiate it as.
     ///
-    /// A function is given its type before its body is walked, and a module reads top down, so
-    /// every function a call can reach has one by the time the call is reached.
-    fn takes(&self, declared: &Function) -> Vec<Type> {
-        let Some(Type::Function { parameters, .. }) = self.types.get(&declared.name.span) else {
-            unreachable!("a function has its type before anything below it can call it")
+    /// The environment holds the signature of every function this module declares from before
+    /// the first body is walked. A name it holds no function type for takes no parameter at all,
+    /// so there is nothing for a call of it to hold apart.
+    fn takes(&self, function: &Name) -> Vec<Type> {
+        let signature = self
+            .environment
+            .scheme(&Key::at(function))
+            .map(Scheme::body);
+        let Some(Type::Function { parameters, .. }) = signature else {
+            return Vec::new();
         };
         parameters
             .iter()
