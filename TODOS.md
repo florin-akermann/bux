@@ -6,15 +6,6 @@
 
 ## Open
 
-## 🟢 Item 078: A positional call to a function declared above its caller compiles
-**Depends on:** nothing — the defect is in the Rust type checker as it is.
-A positional call in mutual recursion panics at `crates/types/src/infer/arguments.rs` (`takes`).
-The `unreachable!` says a function has its type before anything below it calls it, which is false.
-Items 067 to 070 wrote named arguments at every such call, and Item 071 would write many more.
-[078][a] - A spec example calls two functions positionally in mutual recursion, and it compiles.
-[078][b] - The positional-argument rule reads the declared signature however the module is walked.
-[078][c] - No `unreachable!` or `expect` in `crates/types` rests on the order a body is walked in.
-
 ## 🔴 Item 079: A match that gives variants of another module's type passes JVM verification
 **Depends on:** nothing — the defect is in the Rust lowering as it is.
 A `match` whose arms give `other.Held(1)` and `other.Free` fails as `VerifyError: Bad return type`.
