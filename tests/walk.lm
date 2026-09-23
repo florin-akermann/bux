@@ -82,15 +82,38 @@ fn lines_of(text: String) -> List<String> {
 /// Starts `line` in `directory` with no input, and gives back what it wrote and its status.
 ///
 /// What the program writes goes into two files of the directory, so a program writing much on one
-/// stream never waits on a reader of the other.
-// example: or(ended(line: ["no-such-program-at-all"], directory: "no-such-directory"), Ended { output: "", errors: "", status: 7 }).status == 7
-fn ended(line: List<String>, directory: String) -> Option<Ended> {
+/// stream never waits on a reader of the other. A program still running `limit` seconds after it
+/// started is stopped, so one program that never ends cannot stop the runner.
+// example: ok_or(ended(line: ["no-such-program-at-all"], directory: "no-such-directory", limit: 1), Ended { output: "", errors: "", status: 7 }).status == 7
+fn ended(line: List<String>, directory: String, limit: Int) -> Result<Ended, Unended> {
     output := modules.joined(directory, ".output")
     errors := modules.joined(directory, ".errors")
     starting := errors_to(output_to(input_from(within(starter(line), place(directory)), place("/dev/null")), place(output)), place(errors))
     match started(starting) {
-        Ok(running) => Some(read_after(status: ok_or(waited(running), -1), output: output, errors: errors))
-        Err(_) => None
+        Ok(running) => ended_or_stopped(running, limit, Streams { output: output, errors: errors })
+        Err(_) => Err(NotStarted)
+    }
+}
+
+/// What `running` wrote into the files `streams` names, where it ends within `limit` seconds.
+///
+/// A program that does not end by then is stopped, and the runner waits until it is gone.
+// example: unended_said(PastLimit(2), "the program") == "the program did not end within 2 s, and was stopped"
+fn ended_or_stopped(running: Running, limit: Int, streams: Streams) -> Result<Ended, Unended> {
+    if ok_or(is_ended_within(running, limit, seconds()), false) {
+        return Ok(read_after(status: ok_or(waited(running), -1), output: streams.output, errors: streams.errors))
+    }
+    _ = stopped(running)
+    _ = waited(running)
+    Err(PastLimit(limit))
+}
+
+/// What a check says of a program, named `program`, that gave no status back.
+// example: unended_said(NotStarted, "the launcher") == "the launcher could not be started"
+fn unended_said(unended: Unended, program: String) -> String {
+    match unended {
+        NotStarted => program + " could not be started"
+        PastLimit(limit) => program + " did not end within " + shown(limit) + " s, and was stopped"
     }
 }
 
@@ -123,6 +146,15 @@ extern method started(builder: Starter) -> Result<Running, String> = "start"
 /// The status the program ends with, once it has ended.
 extern method int waited(running: Running) -> Result<Int, String> = "waitFor"
 
+/// Whether the program ended within `limit` of `unit`, having waited no longer than that.
+extern method is_ended_within(running: Running, limit: Int, unit: Unit) -> Result<Bool, String> = "waitFor"
+
+/// The program stopped at once, as the platform stops a program that is not asked.
+extern method stopped(running: Running) -> Running = "destroyForcibly"
+
+/// The unit a limit is counted in.
+extern field seconds() -> Unit = "java.util.concurrent.TimeUnit.SECONDS"
+
 /// The file or directory `path` names.
 extern new place(path: String) -> Place
 
@@ -132,6 +164,20 @@ type Ended = {
     errors: String
     status: Int
 }
+
+/// Why a started program gave no status back: it never started, or it ran past its limit.
+type Unended =
+    | NotStarted
+    | PastLimit(Int)
+
+/// The files a started program writes its standard output and its standard error into.
+type Streams = {
+    output: String
+    errors: String
+}
+
+/// A unit of time, which a limit is counted in.
+extern type Unit = "java.util.concurrent.TimeUnit"
 
 /// A program to start, with where it starts and what it reads and writes.
 extern type Starter = "java.lang.ProcessBuilder"

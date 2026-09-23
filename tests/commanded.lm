@@ -50,26 +50,26 @@ import walk
 /// Every check of the command line: each line of each golden file, each explanation, each command
 /// done on files written for it, and each command that starts a JVM.
 // example: list.length(cases_read("$ --version\nstatus 0\n> lumen 0.1.0\n")) == 1
-fn every_line_held(library: ir.Library) -> held.Held {
+fn every_line_held(library: ir.Library, limit: Int) -> held.Held {
     var found = held.nothing_failed(0)
     for path in golden_files() {
-        found = held.added(found, golden_held(path, library))
+        found = held.added(found, golden_held(path, library, limit))
     }
     found = held.added(found, every_explanation_held(library))
-    found = held.added(found, enacted.every_scene_held(library))
-    held.added(found, started.every_run_held(library))
+    found = held.added(found, enacted.every_scene_held(library, limit))
+    held.added(found, started.every_run_held(library, limit))
 }
 
 /// Writes each golden file again: its own command lines, each with the answer it gets now.
 ///
 /// An answer that changes on purpose, such as a message said in other words, is written down so.
-fn every_golden_written(library: ir.Library) -> () {
+fn every_golden_written(library: ir.Library, limit: Int) -> () {
     for path in golden_files() {
         var lines = []
         for written in cases_read(ok_or(files.read(path), "")) {
             lines = list.push(lines, written.words)
         }
-        _ = files.write(path, golden_written(lines, library))
+        _ = files.write(path, golden_written(lines, library, limit))
     }
 }
 
@@ -81,14 +81,14 @@ fn golden_files() -> List<String> {
 
 /// The text of a golden file: each of `lines` and the answer it gets now.
 // example: case_written(Case { words: ["a"], said: command.unusable("b") }) == "$ a\nstatus 2\n! error: b\n"
-fn golden_written(lines: List<List<String>>, library: ir.Library) -> String {
+fn golden_written(lines: List<List<String>>, library: ir.Library, limit: Int) -> String {
     stage := staged()
     var written = ""
     for words in lines {
         if written != "" {
             written += "\n"
         }
-        written += case_written(Case { words: words, said: answered_in(words: words, stage: stage, library: library) })
+        written += case_written(Case { words: words, said: answered_in(words: words, stage: Stage { directory: stage, limit: limit }, library: library) })
     }
     command.removed_whole(stage)
     written
@@ -97,13 +97,13 @@ fn golden_written(lines: List<List<String>>, library: ir.Library) -> String {
 /// Every command line of the golden file at `path`, each held to the answer written under it in a
 /// stage of the file's own.
 // example: list.length(cases_read("")) == 0
-fn golden_held(path: String, library: ir.Library) -> held.Held {
-    golden := Golden { path: path, stage: staged() }
+fn golden_held(path: String, library: ir.Library, limit: Int) -> held.Held {
+    golden := Golden { path: path, stage: Stage { directory: staged(), limit: limit } }
     var found = held.nothing_failed(0)
     for written in cases_read(ok_or(files.read(path), "")) {
         found = held.added(found, case_held(golden, written, library))
     }
-    command.removed_whole(golden.stage)
+    command.removed_whole(golden.stage.directory)
     if found.cases == 0 && list.length(found.skipped) == 0 {
         return held.with_failure(found, path + ": holds no command line")
     }
@@ -130,13 +130,13 @@ fn is_jvm_needed(words: List<String>) -> Bool {
 
 /// What the command line says to `words` in `stage`, with the path of the stage taken out.
 // example: placed_in(word: "-h", stage: "no-such-directory") == "-h"
-fn answered_in(words: List<String>, stage: String, library: ir.Library) -> command.Said {
+fn answered_in(words: List<String>, stage: Stage, library: ir.Library) -> command.Said {
     var placed = []
     for word in words {
-        placed = list.push(placed, placed_in(word: word, stage: stage))
+        placed = list.push(placed, placed_in(word: word, stage: stage.directory))
     }
     said := ended_in(command.answered_within(placed, library), stage)
-    command.Said { output: enacted.unstaged(said.output, stage), errors: enacted.unstaged(said.errors, stage), status: said.status }
+    command.Said { output: enacted.unstaged(said.output, stage.directory), errors: enacted.unstaged(said.errors, stage.directory), status: said.status }
 }
 
 /// `word`, read in `stage` where its first part names an entry of the stage.
@@ -161,11 +161,11 @@ fn first_part(path: String) -> String {
 }
 
 /// What `answer` says, where a program to start is started in `stage` and ends.
-// example: ended_in(command.Spoken(command.unusable("a")), "no-such-directory").status == 2
-fn ended_in(answer: command.Answer, stage: String) -> command.Said {
+// example: ended_in(command.Spoken(command.unusable("a")), Stage { directory: "no-such-directory", limit: 1 }).status == 2
+fn ended_in(answer: command.Answer, stage: Stage) -> command.Said {
     match answer {
         command.Spoken(said) => said
-        command.Starts(line) => started.program_said(walk.ended(line, stage))
+        command.Starts(line) => started.program_said(walk.ended(line, stage.directory, stage.limit))
     }
 }
 
@@ -341,7 +341,13 @@ fn marked(mark: String, line: String) -> String {
 /// A golden file, and the stage its command lines are answered in.
 type Golden = {
     path: String
-    stage: String
+    stage: Stage
+}
+
+/// The directory command lines are answered in, and the seconds a program started there has.
+type Stage = {
+    directory: String
+    limit: Int
 }
 
 /// One command line of a golden file, and the answer written under it.

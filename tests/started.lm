@@ -28,26 +28,26 @@ import walk
 
 /// Every check of this module, or one skip where `JAVA_HOME` names no JDK.
 // example: dotted("a/b") == "a.b"
-fn every_run_held(library: ir.Library) -> held.Held {
+fn every_run_held(library: ir.Library, limit: Int) -> held.Held {
     if !exemplified.is_a_jdk_named() {
         return held.with_skip(held.nothing_failed(0), "tests/started.lm: JAVA_HOME names no JDK, and each check starts a JVM")
     }
-    var found = classes_verified(library)
+    var found = classes_verified(library, limit)
     found = held.added(found, every_test_held(library))
-    found = held.added(found, example_program_run(library))
+    found = held.added(found, example_program_run(library, limit))
     found = held.added(found, example_program_tested(library))
-    held.added(found, every_missing_jdk_held())
+    held.added(found, every_missing_jdk_held(limit))
 }
 
 /// Every class `build` writes is one a JVM loads and verifies.
 // example: class_named("lumen/Result$Ok.class") == "lumen.Result$Ok"
-fn classes_verified(library: ir.Library) -> held.Held {
+fn classes_verified(library: ir.Library, limit: Int) -> held.Held {
     scene := enacted.scene_of([enacted.Written { at: "example.lm", text: everything_text() }])
     said := enacted.said_to(["build", modules.joined(scene, "example.lm")], library)
     var facts = [enacted.status_fact(said, 0)]
     for class in enacted.relative_files(scene) {
         if walk.is_ending_in(class, ".class") {
-            facts = list.push(facts, class_loaded(scene: scene, class: class))
+            facts = list.push(facts, class_loaded(scene: scene, class: class, limit: limit))
         }
     }
     command.removed_whole(scene)
@@ -57,21 +57,21 @@ fn classes_verified(library: ir.Library) -> held.Held {
 /// The fact that a JVM loads the class written at `class` under `scene`, which it does where it
 /// says nothing but that the class declares no `main`.
 // example: is_loaded("Error: Main method not found in class a")
-fn class_loaded(scene: String, class: String) -> enacted.Fact {
+fn class_loaded(scene: String, class: String, limit: Int) -> enacted.Fact {
     line := [java(), "--enable-preview", "-cp", scene, class_named(class)]
-    errors := errors_of(walk.ended(line, scene))
+    errors := errors_of(walk.ended(line, scene, limit))
     if is_loaded(errors) {
         return enacted.Fact { what: class, expected: "loaded", found: "loaded" }
     }
     enacted.Fact { what: class, expected: "loaded", found: errors }
 }
 
-/// What a program wrote on standard error, or why it could not be started.
-// example: errors_of(None) == "Error: the JVM could not be started"
-fn errors_of(ended: Option<walk.Ended>) -> String {
+/// What a program wrote on standard error, or why it gave no status back.
+// example: errors_of(Err(walk.NotStarted)) == "Error: the JVM could not be started"
+fn errors_of(ended: Result<walk.Ended, walk.Unended>) -> String {
     match ended {
-        Some(done) => done.errors
-        None => "Error: the JVM could not be started"
+        Ok(done) => done.errors
+        Err(unended) => "Error: " + walk.unended_said(unended, "the JVM")
     }
 }
 
@@ -155,17 +155,17 @@ fn imported_examples_tested(library: ir.Library) -> held.Held {
 /// `example/main.lm` runs to the end and writes every answer it works out, which
 /// `docs/specs/example-program.md` states.
 // example: strings.length(java()) >= 0
-fn example_program_run(library: ir.Library) -> held.Held {
+fn example_program_run(library: ir.Library, limit: Int) -> held.Held {
     scene := enacted.scene_of([enacted.Written { at: "main.lm", text: ok_or(files.read("example/main.lm"), "") }])
     answer := command.answered_within(["run", modules.joined(scene, "main.lm")], library)
-    said := ended_said(answer, scene)
+    said := ended_said(answer, scene, limit)
     command.removed_whole(scene)
     facts := [enacted.status_fact(said, 0), enacted.Fact { what: "output", expected: "held: 7\neach: 3\nmost: 6\n", found: said.output }]
     enacted.facts_held("example/main.lm writes every answer it works out", facts)
 }
 
 /// Every example of `example/main.lm` holds.
-// example: ended_said(command.Spoken(command.nothing_said()), "no-such-directory").status == 0
+// example: ended_said(command.Spoken(command.nothing_said()), "no-such-directory", 1).status == 0
 fn example_program_tested(library: ir.Library) -> held.Held {
     scene := enacted.scene_of([enacted.Written { at: "main.lm", text: ok_or(files.read("example/main.lm"), "") }])
     said := enacted.said_to(["test", modules.joined(scene, "main.lm")], library)
@@ -174,28 +174,28 @@ fn example_program_tested(library: ir.Library) -> held.Held {
 }
 
 /// What `answer` says, where a program to start is started in `directory` and ends.
-// example: ended_said(command.Spoken(command.unusable("a")), "no-such-directory").status == 2
-fn ended_said(answer: command.Answer, directory: String) -> command.Said {
+// example: ended_said(command.Spoken(command.unusable("a")), "no-such-directory", 1).status == 2
+fn ended_said(answer: command.Answer, directory: String, limit: Int) -> command.Said {
     match answer {
         command.Spoken(said) => said
-        command.Starts(line) => program_said(walk.ended(line, directory))
+        command.Starts(line) => program_said(walk.ended(line, directory, limit))
     }
 }
 
 /// The checks of what `run` and `test` say where `JAVA_HOME` names no JDK.
 // example: strings.length(no_jdk_line()) > 0
-fn every_missing_jdk_held() -> held.Held {
-    var found = run_without_a_jdk()
-    found = held.added(found, refused_without_a_jdk())
-    found = held.added(found, run_where_no_jdk_is())
-    held.added(found, test_without_a_jdk())
+fn every_missing_jdk_held(limit: Int) -> held.Held {
+    var found = run_without_a_jdk(limit)
+    found = held.added(found, refused_without_a_jdk(limit))
+    found = held.added(found, run_where_no_jdk_is(limit))
+    held.added(found, test_without_a_jdk(limit))
 }
 
 /// `run` says which variable names the JDK where nothing does, having compiled the program first.
 // example: no_jdk_line() == "error: JAVA_HOME is not set, and running a program needs the JDK it names\n"
-fn run_without_a_jdk() -> held.Held {
+fn run_without_a_jdk(limit: Int) -> held.Held {
     scene := enacted.scene_of([enacted.Written { at: "example.lm", text: enacted.counting_program_text() }])
-    said := without_a_jdk(["run", modules.joined(scene, "example.lm")], scene)
+    said := without_a_jdk(["run", modules.joined(scene, "example.lm")], scene, limit)
     facts := [enacted.status_fact(said, 2), enacted.Fact { what: "errors", expected: no_jdk_line(), found: said.errors }, enacted.Fact { what: "example.class", expected: "written", found: enacted.presence(scene, "example.class") }]
     command.removed_whole(scene)
     enacted.facts_held("run says which variable names the JDK where nothing does", facts)
@@ -203,9 +203,9 @@ fn run_without_a_jdk() -> held.Held {
 
 /// `run` reports a program that does not compile, even where no JDK could run it.
 // example: strings.length(enacted.refused_program_text()) > 0
-fn refused_without_a_jdk() -> held.Held {
+fn refused_without_a_jdk(limit: Int) -> held.Held {
     scene := enacted.scene_of([enacted.Written { at: "example.lm", text: enacted.refused_program_text() }])
-    said := without_a_jdk(["run", modules.joined(scene, "example.lm")], scene)
+    said := without_a_jdk(["run", modules.joined(scene, "example.lm")], scene, limit)
     command.removed_whole(scene)
     facts := [enacted.status_fact(said, 1), enacted.opening_fact("errors", said.errors, "error[L03")]
     enacted.facts_held("run reports a program that does not compile where no JDK is", facts)
@@ -213,10 +213,10 @@ fn refused_without_a_jdk() -> held.Held {
 
 /// `run` says where it looked where `JAVA_HOME` names no JDK.
 // example: java_of("/a") == "/a/bin/java"
-fn run_where_no_jdk_is() -> held.Held {
+fn run_where_no_jdk_is(limit: Int) -> held.Held {
     scene := enacted.scene_of([enacted.Written { at: "example.lm", text: enacted.counting_program_text() }])
     home := modules.joined(scene, "nowhere")
-    said := command_line_said(command.all_of(["/usr/bin/env", "JAVA_HOME=" + home], command_line(["run", modules.joined(scene, "example.lm")])), scene)
+    said := command_line_said(command.all_of(["/usr/bin/env", "JAVA_HOME=" + home], command_line(["run", modules.joined(scene, "example.lm")])), scene, limit)
     command.removed_whole(scene)
     facts := [enacted.status_fact(said, 2), enacted.Fact { what: "errors", expected: "error: " + java_of(home) + ": JAVA_HOME names no JDK\n", found: said.errors }]
     enacted.facts_held("run says where it looked where JAVA_HOME names no JDK", facts)
@@ -224,9 +224,9 @@ fn run_where_no_jdk_is() -> held.Held {
 
 /// `test` says which variable names the JDK where nothing does.
 // example: strings.length(enacted.holds_text()) > 0
-fn test_without_a_jdk() -> held.Held {
+fn test_without_a_jdk(limit: Int) -> held.Held {
     scene := enacted.scene_of([enacted.Written { at: "example.lm", text: enacted.holds_text() }])
-    said := without_a_jdk(["test", modules.joined(scene, "example.lm")], scene)
+    said := without_a_jdk(["test", modules.joined(scene, "example.lm")], scene, limit)
     command.removed_whole(scene)
     facts := [enacted.status_fact(said, 2), enacted.within_fact("errors", said.errors, "JAVA_HOME is not set")]
     enacted.facts_held("test says which variable names the JDK where nothing does", facts)
@@ -235,22 +235,23 @@ fn test_without_a_jdk() -> held.Held {
 /// What the command line says to `words` in a JVM of its own, started in `directory` with
 /// `JAVA_HOME` taken away.
 // example: list.length(command_line(["a"])) == 6
-fn without_a_jdk(words: List<String>, directory: String) -> command.Said {
-    command_line_said(command.all_of(["/usr/bin/env", "-u", "JAVA_HOME"], command_line(words)), directory)
+fn without_a_jdk(words: List<String>, directory: String, limit: Int) -> command.Said {
+    command_line_said(command.all_of(["/usr/bin/env", "-u", "JAVA_HOME"], command_line(words)), directory, limit)
 }
 
 /// What the program `line` starts in `directory` wrote and ended with.
-// example: command_line_said(["no-such-program-at-all"], "no-such-directory").status == -1
-fn command_line_said(line: List<String>, directory: String) -> command.Said {
-    program_said(walk.ended(line, directory))
+// example: command_line_said(["no-such-program-at-all"], "no-such-directory", 1).status == -1
+fn command_line_said(line: List<String>, directory: String, limit: Int) -> command.Said {
+    program_said(walk.ended(line, directory, limit))
 }
 
-/// What a started program wrote and ended with, or why it could not be started.
-// example: program_said(None).status == -1
-fn program_said(ended: Option<walk.Ended>) -> command.Said {
+/// What a started program wrote and ended with, or why it gave no status back.
+// example: program_said(Err(walk.NotStarted)).errors == "the program could not be started\n"
+// example: program_said(Err(walk.PastLimit(3))).status == -1
+fn program_said(ended: Result<walk.Ended, walk.Unended>) -> command.Said {
     match ended {
-        Some(done) => command.Said { output: done.output, errors: done.errors, status: done.status }
-        None => command.Said { output: "", errors: "the program could not be started\n", status: -1 }
+        Ok(done) => command.Said { output: done.output, errors: done.errors, status: done.status }
+        Err(unended) => command.Said { output: "", errors: walk.unended_said(unended, "the program") + "\n", status: -1 }
     }
 }
 

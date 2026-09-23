@@ -269,11 +269,22 @@ It holds these parts, each in a module of its own under `tests/`:
 - `documented.lm`: every `// example:` line of `tests/spec`, `library/`, `compiler/`, and `tests/`.
 - The property modules that `every_property_held` in `runner.lm` names, one for each phase.
 - `commanded.lm`: the command line, held to the golden answers under `tests/commands/`.
-- `launched.lm`: the launcher `bin/bux`, where it starts the compiler and where it cannot.
+- `launched.lm`: the launcher `bin/bux`, and the time limit that a started program has.
 
 The runner starts a JVM only for an example headed `expect-run` and for a command that runs one.
-It writes one line for each check it skipped and for each failure, then one line of counts.
+When a part ends, the runner writes one line with the name, the count, and the seconds of it.
+An example of such a line is `examples: 332 held in 4 s`, so a slow run does not look like a hang.
+The parts are examples, siblings, example lines, properties, and command lines, in that order.
+Then it writes one line for each check it skipped and for each failure, then one line of counts.
 It ends with status 0 only when nothing failed.
+
+`walk.ended` starts each program that the runner starts, and it gives each one a time limit.
+`start_limit` in `runner.lm` is the one limit, in seconds, and every started program gets it.
+A program that is still running at the limit is stopped, and it is a failure that names its check.
+The runner then continues with the next check, so one program that never ends cannot stop it.
+The limit is 1 s, and the longest program that the runner started on 2026-09-23 took 0.14 s.
+Three times that is less than one second, so the limit is the smallest whole number of seconds.
+`launched.lm` holds the mechanism: a program that never ends is stopped at a limit of 1 s.
 `bin/runner golden` writes each golden file again, for an answer that changes on purpose.
 On 2026-09-23 `bin/runner` took 182 s before Item 093 and 97 s after it.
 
