@@ -63,19 +63,6 @@ A block is not a function, so it has no signature, no example, and no caller but
 [089][h] - `tests/spec/testing/` shows a block that holds, one that does not, and a refused one.
 [089][i] - `bux help test` states the block and the package run, and `packages.md` agrees.
 
-## 🔴 Item 092: Imports form one block with no blank line between two of them
-Today canonical form puts one blank line between two top-level items, and an import is one.
-A file with ten imports thus spends ten lines on blanks, and the block does not read as one.
-The new rule: no blank line between two imports, and one blank line after the last import.
-`bux fmt` repairs the whitespace, and a file with a blank line between imports does not compile.
-[092][a] - `docs/specs/formatting.md` and `docs/design.md` section 13 state the rule.
-[092][b] - The printer in `compiler/format.lm` writes imports with no blank line between them.
-[092][c] - A blank line between two imports is `L0200`, and its `help:` says to run `bux fmt`.
-[092][d] - The examples in `compiler/format.lm` that show two imports use the new form.
-[092][e] - `tests/spec/` holds a canonical import block and a refused one with a blank line.
-[092][f] - Every source under `compiler/`, `library/`, `example/`, and `tests/` is formatted again.
-[092][g] - `bux help fmt` states the rule, and `bin/runner` shows the whole tree is canonical.
-
 ## 🔴 Item 100: `spawn` starts a process that another module declares
 Item 091 found it: `L0800` refuses a `spawn` of a process outside the module that declares it.
 A library process, such as a ticker or a bus, is then out of reach, and section 15 wants both.
@@ -114,3 +101,11 @@ The `L0702` message also names `lumen` for a library class, because it reads up 
 [104][a] - `docs/specs/codegen.md` states that two class names that differ only in case clash.
 [104][b] - `L0702` refuses such a pair, and its message names the module that owns the class.
 [104][c] - A `tests/spec/` example shows a program whose type and module differ only in case.
+
+## 🔴 Item 105: A golden file holds every command on every example, and `fmt` changes no later answer
+Item 092 found it: `tests/commanded.lm` runs every command line of a golden file in one stage.
+So `$ fmt` rewrites the staged copy, and `$ build` of a refused file then records status 0.
+`tests/spec/interop/outside_java_base.lm` has no entry at all, and nothing reports a missing one.
+[105][a] - `docs/specs/executable-examples.md` states that each command line sees the example as written.
+[105][b] - `bin/runner` fails when an example under `tests/spec/` has no entry in `fixtures.txt`.
+[105][c] - `bin/runner golden` adds the entries of a new example, and the missing entries are added.
