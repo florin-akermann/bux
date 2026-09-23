@@ -1,0 +1,12 @@
+// expect-error: L0426
+// A segment of a Java name holds letters, digits, `_`, and `$`, and Unicode says what a letter is.
+// `→` is past ASCII and is no letter and no number, so `java.io.Fi→le` is no Java name.
+// `café` would be one, because `é` is a letter.
+fn main(arguments: List<String>) -> Int {
+    _ = named("notes.txt")
+    0
+}
+
+extern new named(path: String) -> File
+
+extern type File = "java.io.Fi→le"

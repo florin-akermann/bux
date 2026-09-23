@@ -294,6 +294,7 @@ for a `field`, holds it — because one signature can write all three.
 `L0426` helps with `a Java name is its segments, each a name, with a dot between two of them`.
 A name is refused where a segment is empty, where it begins with a digit, or where it holds
 anything but letters, digits, `_`, and `$`.
+A letter is a character that Unicode calls alphabetic, and a digit is one it calls numeric.
 A `field` and a `static` name at least two segments, because the last is the member and the rest
 is the class; a `type` names at least one; a `method` names exactly one.
 

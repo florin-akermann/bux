@@ -109,12 +109,6 @@ fn is_of_a_call(crossing: refusal.Crossing) -> Bool {
     crossing == refusal.GivenBack || crossing == refusal.Narrowed
 }
 
-/// Whether `held` is `Bool` or `Int`, which a narrowed call gives back in an `Option`.
-// example: is_a_number(unify.truth())
-fn is_a_number(held: unify.Type) -> Bool {
-    list.length(arguments_of(held)) == 0 && (name_of(held) == "Bool" || name_of(held) == "Int")
-}
-
 /// A parameter taken as an `int`, refused where what it takes is no `Int`.
 // example: refusal.code_given(narrowed(ast.ExternParameter { declared: parameter_of("at"), takes: ast.TakesInt }, unify.int())) == ""
 fn narrowed(parameter: ast.ExternParameter, held: unify.Type) -> Result<(), refusal.TypeError> {
@@ -281,24 +275,6 @@ fn inside(wrapper: String, held: unify.Type) -> unify.Type {
     held
 }
 
-/// The name of a named type, and nothing for any other type.
-// example: name_of(unify.int()) == "Int"
-fn name_of(held: unify.Type) -> String {
-    match held {
-        unify.Named { name, arguments } => name
-        _ => ""
-    }
-}
-
-/// The arguments of a named type, and none for any other type.
-// example: arguments_of(unify.list_of(unify.int())) == [unify.int()]
-fn arguments_of(held: unify.Type) -> List<unify.Type> {
-    match held {
-        unify.Named { name, arguments } => arguments
-        _ => []
-    }
-}
-
 /// The Java name an `extern` states, held to the segments its kind of member needs.
 ///
 /// A field and a static member name their class too, and an instance method names itself alone.
@@ -366,34 +342,102 @@ fn is_each_a_segment(segments: List<String>) -> Bool {
     true
 }
 
-/// Whether `segment` is a Java name: a letter, `_`, or `$`, then those or digits.
+/// Whether `held` is `Bool` or `Int`, which a narrowed call gives back in an `Option`.
+// example: is_a_number(unify.truth())
+fn is_a_number(held: unify.Type) -> Bool {
+    list.length(arguments_of(held)) == 0 && (name_of(held) == "Bool" || name_of(held) == "Int")
+}
+
+/// The name of a named type, and nothing for any other type.
+// example: name_of(unify.int()) == "Int"
+fn name_of(held: unify.Type) -> String {
+    match held {
+        unify.Named { name, arguments } => name
+        _ => ""
+    }
+}
+
+/// The arguments of a named type, and none for any other type.
+// example: arguments_of(unify.list_of(unify.int())) == [unify.int()]
+fn arguments_of(held: unify.Type) -> List<unify.Type> {
+    match held {
+        unify.Named { name, arguments } => arguments
+        _ => []
+    }
+}
+
+/// Whether `segment` is a Java name: a letter, `_`, or `$`, then those or a number.
 ///
-/// A code unit past ASCII counts as a letter, which is near enough to what Java takes.
+/// Java decides what a letter and a number are, which is the Unicode property the Rust phase reads.
 // example: is_a_segment("$a1")
+// example: is_a_segment("café")
+// example: !is_a_segment("a→b")
 // example: !is_a_segment("1a")
 // example: !is_a_segment("")
 fn is_a_segment(segment: String) -> Bool {
+    points := code_points(segment)
+    if list.length(points) == 0 {
+        return false
+    }
     var index = 0
-    for index < strings.length(segment) {
-        unit := or(strings.at(segment, index), 0)
-        if !is_a_letter(unit) && (index == 0 || !is_a_digit(unit)) {
+    for point in points {
+        if index == 0 && !is_opening(point) || index > 0 && !is_continuing(point) {
             return false
         }
         index += 1
     }
-    strings.length(segment) > 0
+    true
 }
 
-/// Whether a code unit opens a Java name: a letter, `_`, or `$`.
-// example: is_a_letter(95)
-fn is_a_letter(unit: Int) -> Bool {
-    unit >= 65 && unit <= 90 || unit >= 97 && unit <= 122 || unit == 95 || unit == 36 || unit >= 128
+/// Each character of `text` as its Unicode code point, a surrogate pair read as the one it writes.
+// example: code_points("a𝐀") == [97, 119808]
+// example: code_points("") == []
+fn code_points(text: String) -> List<Int> {
+    var points = []
+    var index = 0
+    for index < strings.length(text) {
+        unit := or(strings.at(text, index), 0)
+        low := or(strings.at(text, index + 1), 0)
+        if is_a_pair(high: unit, low: low) {
+            points = list.push(points, 65536 + (unit - 55296) * 1024 + (low - 56320))
+            index += 2
+        } else {
+            points = list.push(points, unit)
+            index += 1
+        }
+    }
+    points
 }
 
-/// Whether a code unit is a digit.
-// example: is_a_digit(48)
-fn is_a_digit(unit: Int) -> Bool {
-    unit >= 48 && unit <= 57
+/// Whether two code units are the high and the low half of one surrogate pair.
+// example: is_a_pair(high: 55349, low: 56320)
+// example: !is_a_pair(high: 97, low: 56320)
+fn is_a_pair(high: Int, low: Int) -> Bool {
+    high >= 55296 && high <= 56319 && low >= 56320 && low <= 57343
+}
+
+/// Whether a Java name may go on with `point`: what may begin one, or a number.
+// example: is_continuing(48)
+// example: !is_continuing(8594)
+fn is_continuing(point: Int) -> Bool {
+    is_opening(point) || is_numeric(point)
+}
+
+/// Whether a Java name may begin with `point`: a letter, `_`, or `$`, and never a number.
+// example: is_opening(95)
+// example: !is_opening(48)
+fn is_opening(point: Int) -> Bool {
+    point == 95 || point == 36 || or(is_alphabetic(point), false)
+}
+
+/// Whether `point` is a number: a decimal digit, a letter number, or another number.
+///
+/// These are the general categories 9, 10, and 11 that `Character.getType` gives.
+// example: is_numeric(1637)
+// example: !is_numeric(97)
+fn is_numeric(point: Int) -> Bool {
+    category := or(general_category(point), 0)
+    category == 9 || category == 10 || category == 11
 }
 
 /// The first `extern` of `source`, which the examples read declarations from.
@@ -442,3 +486,9 @@ type Boundary = {
 type Segments =
     | AtLeast(Int)
     | Exactly(Int)
+
+/// Whether Java takes `code` for a letter, which is `None` for a number no `int` holds.
+extern static is_alphabetic(int code: Int) -> Option<Bool> = "java.lang.Character.isAlphabetic"
+
+/// The general category Java gives `code`, which is `None` for a number no `int` holds.
+extern static int general_category(int code: Int) -> Option<Int> = "java.lang.Character.getType"

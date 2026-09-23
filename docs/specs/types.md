@@ -230,6 +230,7 @@ Six more modules hold the parts of the phase, one concern each, and no two impor
 `compiler/unify.lm` holds the types, the unification table, and the schemes.
 `compiler/refusal.lm` holds each refusal, with its code, its message, and its help.
 `compiler/boundary.lm` holds the rules for a type that crosses to Java.
+It asks `java.lang.Character` whether each code point of a Java name is a letter or a number.
 `compiler/surface.lm` holds what a module offers the modules that import it.
 `compiler/declared.lm` holds what a module declares, with the checks of each declaration.
 `compiler/infer.lm` walks each function and settles what the walk left open.
