@@ -6,7 +6,7 @@
 
 ## Open
 
-## 🟡 Item 070: Name resolution is written in Bux
+## 🟢 Item 070: Name resolution is written in Bux
 **Depends on:** Item 063, Item 069 — scopes are maps keyed by names the program declares.
 [070][a] - `compiler/resolver.lm` produces the resolved tree with every name resolution error.
 [070][b] - The harness compares its diagnostics with the Rust resolver's on every fixture.
