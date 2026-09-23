@@ -6,7 +6,7 @@
 
 ## Open
 
-## 🔴 Item 075: The compiler compiles itself
+## 🟡 Item 075: The compiler compiles itself
 **Depends on:** nothing — Item 074 landed, and the fixpoint has the whole compiler.
 [075][a] - Stage 1, built by the Rust `bux`, builds stage 2 from the same source.
 [075][b] - A harness holds stage 2 equal to stage 1 byte for byte.
