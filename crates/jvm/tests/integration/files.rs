@@ -199,7 +199,7 @@ fn every_class_of_a_lowered_program_is_written_to_the_path_its_name_gives() {
         ],
     };
 
-    let written = lumen_jvm::write(&lowered);
+    let written = lumen_jvm::write(&[lowered]);
 
     let paths: Vec<&str> = written.iter().map(|file| file.path.as_str()).collect();
     assert_eq!(

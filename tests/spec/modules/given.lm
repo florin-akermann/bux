@@ -1,0 +1,47 @@
+// expect-run
+// > sent by post
+// > pending
+// > sent by hand
+// > pending
+// A branch gives back a variant of another module's type, and the branches meet as that type.
+import holder
+
+import io
+
+fn main(arguments: List<String>) -> Int {
+    io.println(said(payment: chosen(count: 1)))
+    io.println(said(payment: chosen(count: 2)))
+    io.println(said(payment: picked(count: 1)))
+    io.println(said(payment: picked(count: 2)))
+    0
+}
+
+// The arms of a `match` give back both variants, and the `match` is a `holder.Payment`.
+// example: said(payment: chosen(count: 1)) == "sent by post"
+// example: said(payment: chosen(count: 2)) == "pending"
+fn chosen(count: Int) -> holder.Payment {
+    match count {
+        1 => holder.Sent("post")
+        _ => holder.Pending
+    }
+}
+
+// The two blocks of an `if` give back both variants, and the `if` is a `holder.Payment`.
+// example: said(payment: picked(count: 1)) == "sent by hand"
+// example: said(payment: picked(count: 2)) == "pending"
+fn picked(count: Int) -> holder.Payment {
+    payment := if count == 1 {
+        holder.Sent("hand")
+    } else {
+        holder.Pending
+    }
+    payment
+}
+
+// example: said(payment: holder.Pending) == "pending"
+fn said(payment: holder.Payment) -> String {
+    match payment {
+        holder.Sent(how) => "sent by " + how
+        holder.Pending => "pending"
+    }
+}

@@ -1,8 +1,8 @@
-//! Writing class files: a lowered module as the bytes a JVM loads.
+//! Writing class files: a lowered program as the bytes a JVM loads.
 //!
-//! The phase consumes the lowered program and yields one [`ClassFile`] per class it describes.
-//! `docs/specs/codegen.md` is the specification, and the class-file version is the current JDK's.
-//! Nothing here knows Lumen: it knows classes, descriptors, and opcodes.
+//! The phase consumes every lowered module of a program and yields one [`ClassFile`] per class
+//! they describe. `docs/specs/codegen.md` is the specification, and the class-file version is the
+//! current JDK's. Nothing here knows Lumen: it knows classes, descriptors, and opcodes.
 
 mod bytes;
 mod class;
@@ -22,18 +22,16 @@ pub struct ClassFile {
     pub bytes: Vec<u8>,
 }
 
-/// Writes every class of `lowered`, in the order it names them.
+/// Writes every class of every module of `program`, in the order the modules name them.
+///
+/// The modules are written together because a frame names the class two branches share, and a
+/// variant one module gives back may extend a base another module declares.
 #[must_use]
-pub fn write(lowered: &Lowered) -> Vec<ClassFile> {
-    let hierarchy = frame::Hierarchy::of(
-        lowered
-            .classes
-            .iter()
-            .map(|class| (class.name.clone(), class.extends.clone())),
-    );
-    lowered
-        .classes
-        .iter()
+pub fn write(program: &[Lowered]) -> Vec<ClassFile> {
+    let classes = || program.iter().flat_map(|module| &module.classes);
+    let hierarchy =
+        frame::Hierarchy::of(classes().map(|class| (class.name.clone(), class.extends.clone())));
+    classes()
         .map(|class| ClassFile {
             path: class.name.path(),
             bytes: class::write(class, &hierarchy),

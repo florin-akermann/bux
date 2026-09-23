@@ -98,14 +98,17 @@ fn body(which: usize) -> Vec<Instruction> {
 fn writing_a_class_twice_gives_the_same_bytes(tc: TestCase) {
     let lowered = a_module(&tc);
 
-    assert_eq!(lumen_jvm::write(&lowered), lumen_jvm::write(&lowered));
+    assert_eq!(
+        lumen_jvm::write(std::slice::from_ref(&lowered)),
+        lumen_jvm::write(std::slice::from_ref(&lowered))
+    );
 }
 
 #[hegel::test]
 fn every_class_written_begins_with_the_magic_and_the_current_version(tc: TestCase) {
     let lowered = a_module(&tc);
 
-    for file in lumen_jvm::write(&lowered) {
+    for file in lumen_jvm::write(&[lowered]) {
         let read = read(&file.bytes);
         assert_eq!(read.magic, 0xCAFE_BABE);
         assert_eq!(read.major, 72);
@@ -175,7 +178,7 @@ fn every_method_a_module_declares_is_written_as_a_method_of_it(tc: TestCase) {
         .map(|method| method.name.as_str())
         .collect();
 
-    let written = read(&lumen_jvm::write(&lowered)[0].bytes);
+    let written = read(&lumen_jvm::write(std::slice::from_ref(&lowered))[0].bytes);
 
     let names: Vec<&str> = written
         .methods
@@ -189,7 +192,7 @@ fn every_method_a_module_declares_is_written_as_a_method_of_it(tc: TestCase) {
 fn every_constant_a_class_names_is_one_the_pool_holds(tc: TestCase) {
     let lowered = a_module(&tc);
 
-    let written = read(&lumen_jvm::write(&lowered)[0].bytes);
+    let written = read(&lumen_jvm::write(&[lowered])[0].bytes);
 
     assert!(written.this as usize <= written.pool.len());
     assert!(written.extends as usize <= written.pool.len());

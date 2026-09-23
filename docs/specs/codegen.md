@@ -484,6 +484,9 @@ extends it, the class they both extend where neither does, and `java.lang.Object
 share nothing.
 A `match` whose arms give back a variant and the base of that variant's own sum type therefore
 meets as the base, and a frame naming `java.lang.Object` there would write a method no JVM loads.
+A frame knows the classes of every module of the program, and not only those of the one written.
+So a `match` in `demo` whose arms give back `other.Held(1)` and `other.Free` meets as `other.Slot`.
+The same holds where an `if` or a block gives back variants of the sum type of another module.
 A `Code` attribute carries an exception table, which is empty for every method but the one read
 `docs/specs/io.md` states, and the handler's frame says the throwable alone holds where it lands.
 
@@ -493,6 +496,7 @@ into the class holding it only where it already knows what that value holds.
 JEP 401 is how a class file asks for those classes to be loaded before that, and this is that ask.
 A class names the descriptor of each field whose type the same build writes, in the order the
 fields are declared, and names a type two fields share once.
+A build writes every module of the program, so a record of another module is named as well.
 A field carried by a class the JVM ships, `java.lang.String` among them, is not named: it is no
 value class, so nothing of it could be folded into the class holding it.
 No class names itself: a type that holds a value of itself is refused before this, which

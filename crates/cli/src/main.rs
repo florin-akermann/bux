@@ -187,10 +187,7 @@ fn held(program: &Checked, run: &Run) -> Outcome {
     let classes = match compiling::written(run.source(), root.path())
         .and_then(|written| lowered(written.modules()))
     {
-        Ok(lowered) => lowered
-            .iter()
-            .flat_map(lumen_jvm::write)
-            .collect::<Vec<_>>(),
+        Ok(lowered) => lumen_jvm::write(&lowered),
         Err(NotCompiled::Unusable) => return Outcome::Unusable,
         Err(NotCompiled::Refused(refusal)) => return refusing(run, &refusal, root),
     };
@@ -379,7 +376,7 @@ fn built(path: &Path) -> Result<Built, Outcome> {
     };
     let lowered = lowered(program.modules()).map_err(refused_as)?;
     let starts = lowered.last().is_some_and(is_a_program);
-    let classes: Vec<ClassFile> = lowered.iter().flat_map(lumen_jvm::write).collect();
+    let classes = lumen_jvm::write(&lowered);
     let beside = path.parent().unwrap_or(Path::new(".")).to_path_buf();
     match written(&classes, &beside) {
         Outcome::Done => Ok(Built {
