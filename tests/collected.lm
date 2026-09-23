@@ -20,10 +20,10 @@ import strings
 /// Every property of the collections over `cases` drawn cases each, in a fixed order.
 ///
 /// The collections are read in the runner's JVM, so no property needs the prelude it is handed.
-// example: list.length(every_property(1, ir.little_library())) == 5
+// example: list.length(every_property(1, ir.little_library())) == 6
 fn every_property(cases: Int, library: ir.Library) -> List<held.Held> {
     var found = []
-    for property in [MapReadsBack, SetHoldsWhatWentIn, WideKeysReadBack, ListReadsBack, PushLeavesTheList] {
+    for property in [MapReadsBack, SetHoldsWhatWentIn, WideKeysReadBack, ListReadsBack, PushLeavesTheList, LengthCountsPushes] {
         found = list.push(found, held_over(property, cases))
     }
     found
@@ -54,6 +54,7 @@ fn tried_by(property: Property, draw: drawn.Draw) -> Tried {
         WideKeysReadBack => hundreds_of_keys_read_back_out_of_a_map_and_a_set(draw)
         ListReadsBack => a_list_grown_by_push_reads_back_at_every_index_it_holds(draw)
         PushLeavesTheList => a_push_leaves_the_list_it_was_handed_holding_what_it_held(draw)
+        LengthCountsPushes => the_length_of_a_list_is_the_number_of_pushes_that_built_it(draw)
     }
 }
 
@@ -66,6 +67,7 @@ fn name_of(property: Property) -> String {
         WideKeysReadBack => "hundreds_of_keys_read_back_out_of_a_map_and_a_set"
         ListReadsBack => "a_list_grown_by_push_reads_back_at_every_index_it_holds"
         PushLeavesTheList => "a_push_leaves_the_list_it_was_handed_holding_what_it_held"
+        LengthCountsPushes => "the_length_of_a_list_is_the_number_of_pushes_that_built_it"
     }
 }
 
@@ -264,6 +266,43 @@ fn a_push_leaves_the_list_it_was_handed_holding_what_it_held(draw: drawn.Draw) -
     Tried { case: shown(handed), why: why }
 }
 
+/// `docs/specs/library.md` property 7: a list holds the number of pushes that built it.
+///
+/// Every list on the way is kept, and all of them share one buffer, so a later push must change
+/// the length of no earlier list. One more push onto a drawn earlier list copies it.
+// example: the_length_of_a_list_is_the_number_of_pushes_that_built_it(drawn.seeded(3)).why == ""
+fn the_length_of_a_list_is_the_number_of_pushes_that_built_it(draw: drawn.Draw) -> Tried {
+    count := drawn.number(draw, 9)
+    var built = [[]]
+    var newest = []
+    var at = drawn.next(draw)
+    for list.length(built) <= count {
+        newest = list.push(newest, small(at))
+        built = list.push(built, newest)
+        at = drawn.next(at)
+    }
+    branched := drawn.number(at, count + 1)
+    branch := list.push(or(list.at(built, branched), []), 0)
+    Tried { case: shown(count) + " pushes, then one onto list " + shown(branched), why: miscounted(built: built, branch: branch, branched: branched) }
+}
+
+/// Why a length of `built` or of `branch` is wrong, and `""` where each is the number of pushes.
+// example: miscounted(built: [[], [1]], branch: [0], branched: 0) == ""
+// example: miscounted(built: [[1]], branch: [0], branched: 0) == "list 0 holds 1 values"
+fn miscounted(built: List<List<Int>>, branch: List<Int>, branched: Int) -> String {
+    var index = 0
+    for values in built {
+        if list.length(values) != index {
+            return "list " + shown(index) + " holds " + shown(list.length(values)) + " values"
+        }
+        index += 1
+    }
+    if list.length(branch) != branched + 1 {
+        return "the push onto list " + shown(branched) + " holds " + shown(list.length(branch)) + " values"
+    }
+    ""
+}
+
 /// Fewer than `bound` whole numbers from -99 to 99.
 // example: list.length(smalls_of(drawn.seeded(1), 3)) < 3
 fn smalls_of(draw: drawn.Draw, bound: Int) -> List<Int> {
@@ -314,3 +353,4 @@ type Property =
     | WideKeysReadBack
     | ListReadsBack
     | PushLeavesTheList
+    | LengthCountsPushes

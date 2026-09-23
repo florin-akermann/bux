@@ -177,9 +177,9 @@ The array is full, so the first push onto a written list copies it, as the next 
 
 ## How a list is grown and read at an index
 
-`list.push` and `list.at` are the compiler's, which `docs/specs/library.md` states, so neither is
-a method the `list` class declares.
-A call of `at` is written out where it stands, the way an operator over `Int` is.
+`list.length`, `list.push`, and `list.at` are the compiler's, which `docs/specs/library.md` states.
+So no one of the three is a method that the `list` class declares.
+A call of `length` or of `at` is written out where it stands, the way an operator over `Int` is.
 A call of `push` is a call of `lumen.List.push`, because a push branches and copies.
 
 A push onto a list whose length equals the filled count of its buffer claims the next slot.
@@ -200,11 +200,13 @@ The cost is exact.
 A push onto the most recent list of a buffer costs amortized constant time.
 A push onto an older list costs what that list holds, because the push copies it.
 `at` costs the same at every index, because it reads one slot of the buffer.
+`length` costs the same for every list, because it reads one field.
 
 A program runs on one thread in version 0.3, so the claim of a slot is a plain write.
 When concurrency lands in version 0.4, the claim of a slot becomes atomic.
 Two pushes onto one list from two threads then claim the slot once, and the other push copies.
 
+`length` reads the length field of the list and nothing else, widened to the `long` an `Int` is.
 `at` reads the length of the list, and then the slot of the buffer at the index.
 The index is an `Int`, which is a `long`, and a JVM array counts in `int`, so the index is
 narrowed to that width.
@@ -582,8 +584,9 @@ These hold and are checked by drawn properties in the runner:
 13. Every descriptor a class asks to load first names another class the same build writes.
 14. A written list of `n` elements gathers them into an array of `n` and builds one list.
 15. As many values stand for nothing as there are `()`s written where a reference is wanted.
-16. A call of `list.push` or of `list.at` asks the `list` class for no method.
+16. A call of `list.length`, `list.push`, or `list.at` asks the `list` class for no method.
     A push is a call of `lumen.List.push`, and `at` calls nothing but a constructor of `Option`.
+    `length` calls nothing.
 17. A method written for a set of types calls the instance each type in that set has.
 
 That a constrained type parameter settled on two types with one head is written as two methods is

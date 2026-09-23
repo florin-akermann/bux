@@ -137,38 +137,45 @@ Everything else a module's body is held to, an instance body is held to.
 
 ## A list grown and read at an index
 
-`list.push` and `list.at` are the compiler's, and no `extern` declaration names either of them.
+`list.length`, `list.push`, and `list.at` are the compiler's.
+No `extern` declaration names one of them.
 
 `List` is the compiler's, which the section above states, so what a list does is the compiler's
 too.
-Neither function has a body in `library/list.lm`, because neither can be said in Bux.
+None of the three has a body in `library/list.lm`, because none can be said in Bux at its cost.
 A list is built whole by a literal, and no expression the grammar writes builds a list from a
 list, so `push` has no body to write.
-`at` has one a `for` loop writes, and that body counts to the index and costs what the list holds.
+`length` and `at` each have one that a `for` loop writes.
+That body counts every value, or counts to the index, and so costs what the list holds.
+A list holds its length already, so a count is a cost that no program needs to pay.
 
-An `extern` is one Java member under a Lumen signature, and neither of the two is one member.
-A signature for either writes a type parameter, and `docs/specs/interop.md` refuses one: a type
-parameter is carried by nothing a Java descriptor names.
+An `extern` is one Java member under a Lumen signature, and none of the three is one member.
+A signature for one of them writes a type parameter, and `docs/specs/interop.md` refuses one: a
+type parameter is carried by nothing a Java descriptor names.
+The length of a list is a field, not a member that a call reaches.
 The member that reads a list at an index takes an `int` and throws past the end, and `at` gives
 `None` there.
-So the two are written out where they are called, the way an operator over `Int` is, and
+So the three are written out where they are called, the way an operator over `Int` is, and
 `docs/specs/codegen.md` states the instructions each one becomes.
 
 ```text
+fn length<T>(values: List<T>) -> Int
 fn push<T>(values: List<T>, value: T) -> List<T>
 fn at<T>(values: List<T>, index: Int) -> Option<T>
 ```
 
+`length` gives the number of values the list holds, which is the number of pushes that built it.
 `push` gives back the list with `value` after the last element.
 The list it was handed is unchanged, because a list is a value and nothing reaches into one.
 `at` gives `Some` of the element at `index`.
 It gives `None` where the index is below zero, and where it is the length or above it.
-Neither is partial, and neither panics.
+No one of the three is partial, and no one of them panics.
 
+`length` costs the same for every list, because it reads one field.
 `at` costs the same at every index, because it reads one slot.
 `push` onto the most recent list costs amortized constant time.
 `push` onto an older list costs what that list holds.
-`docs/specs/codegen.md` states the buffer and the length that give both costs.
+`docs/specs/codegen.md` states the buffer and the length that give these costs.
 
 ## The instances a list has
 
@@ -190,6 +197,7 @@ Each of the four reads its list with `at`, so `push` and `at` are reachable from
 well as from `list`, and from no other module.
 Nothing else changes about either: both stay the compiler's, and both are written out where they
 are called.
+`length` is reachable from `list` alone, because no body of the prelude reads it.
 
 ## The library modules
 
@@ -199,7 +207,7 @@ are called.
 `io`, `files`, `process`, and `environment` hold what no `for` loop writes at all.
 `strings` holds each of them: `join` is the loop, `length` is what no loop reads, and `at` and
 `cut` are a check written over two more `extern` declarations.
-`list` holds two more, `push` and `at`, which the section above states are the compiler's.
+`list` holds three more: `length`, `push`, and `at`, which the section above gives the compiler.
 
 ```text
 list:        length  has_value  index_of  push  at
@@ -317,6 +325,7 @@ These hold and are checked by drawn properties in the runner:
 4. Every instance body the prelude writes has the type its trait gives it at the instance's type.
 5. `list.at` gives `Some` of the element at every index a list holds, and `None` at every other.
 6. `list.push` gives back what the list held, with the value after it, and leaves the list alone.
+7. `list.length` gives the number of pushes that built a list, and a later push changes no length.
 
 The prelude is not among the modules of property 1 that compile on their own.
 Its own names are in scope in every module, so a compiler reading it as a module would refuse
