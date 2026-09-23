@@ -6,7 +6,46 @@
 
 ## Open
 
+## 🔴 Item 093: `list.length` reads the length a list holds, at the same cost for every list
+High priority: Items 093, 094, and 095 come before every other item, because each check is slow.
+On 2026-09-23, `bin/runner` took 182 seconds and wrote nothing until it ended.
+`length` in `library/list.lm` counts every value, but a list holds its length already.
+`docs/specs/codegen.md` states that length, and no program reads it.
+The tree calls `list.length` 747 times, often in a loop condition, so such a loop costs O(n²).
+The binary search `unit_of` in `compiler/command.lm` calls it at each step, over every character.
+AGENTS.md holds a library data structure to the best known asymptotic cost, and this one misses it.
+[093][a] - `docs/specs/library.md` makes `length` the compiler's, as `push` and `at` are.
+[093][b] - `docs/specs/codegen.md` states that `length` reads the length field and nothing else.
+[093][c] - The compiler gives `length`, and `library/list.lm` drops the body that counts.
+[093][d] - A drawn property holds `length` against the count of pushes for every list it draws.
+[093][e] - The wall time of `bin/runner` after the change is recorded beside the 182 seconds.
+
+## 🔴 Item 094: `bin/runner` types each module once, and every check that needs it shares it
+High priority: this is where most of the 182 seconds of `bin/runner` go.
+18 of 20 stack samples fell in `documented.module_held`, which checks the example lines.
+For each of about 90 modules, `command.tested` types the module and every module it imports.
+`run_lowered` then types the same modules a second time, for the run it wrote.
+`whole` reads the examples of each imported module again, once for each module that imports it.
+So the shared compiler modules are typed about 180 times, and each check starts a new JVM.
+[094][a] - The runner writes the time of each part: examples, siblings, lines, properties, commands.
+[094][b] - The runner types each module once, and the example-line check reuses that result.
+[094][c] - `whole` holds each module once, and not once for each module that imports it.
+[094][d] - The example lines of all modules run in one JVM, and a failure still names its line.
+[094][e] - Every count of the runner summary stays the same, so no check is lost or weakened.
+[094][f] - The wall time of each part after the change is recorded beside the time of [094][a].
+
+## 🔴 Item 095: `bin/runner` shows its progress, and a program that never ends cannot stop it
+High priority: a slow run looks the same as a hang, and a real hang stops every commit.
+The runner writes nothing until it ends, so a run of three minutes looked stuck.
+`walk.ended` waits for a program with no limit, so one example that never ends stops the runner.
+[095][a] - `docs/implementation.md` section 7 states the progress lines and the time limit.
+[095][b] - The runner writes one line as each part ends, with its count and its seconds.
+[095][c] - A started program has one time limit, and a program past it is stopped.
+[095][d] - A program past the limit is a failure that names its example, and the run goes on.
+[095][e] - A runner check shows an example that never ends, held as a failure within the limit.
+
 ## 🔴 Item 091: The compiler and `bin/runner` are fast because they run on Bux processes
+**Depends on:** Item 093, Item 094 — processes must share work that is done once, not twice.
 Self-hosting is done, and `bin/runner` now runs so long that it looks stuck.
 Section 15 of `docs/design.md` designs the concurrency, and this item builds it and uses it first.
 The compiler and its checks are the first program that uses processes, so dogfood finds the gaps.
