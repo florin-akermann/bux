@@ -6,24 +6,6 @@
 
 ## Open
 
-## 🔴 Item 091: The compiler and `bin/runner` are fast because they run on Bux processes
-Self-hosting is done, and `bin/runner` now runs so long that it looks stuck.
-Section 15 of `docs/design.md` designs the concurrency, and this item builds it and uses it first.
-The compiler and its checks are the first program that uses processes, so dogfood finds the gaps.
-[091][a] - The wall time of `bin/bootstrap` and `bin/runner` is measured, and the slow part named.
-[091][b] - `docs/specs/concurrency.md` answers the two open questions that section 15 leaves.
-[091][c] - The spec states `process`, `spawn`, the handle, the bounded mailbox, and the deadline.
-[091][d] - The Bux lexer, parser, and formatter accept `process` and `spawn`.
-[091][e] - The type phase holds the one process shape, and each break of it gets a diagnostic.
-[091][f] - `send` gives a typed result for a process that has ended, and a full mailbox waits.
-[091][g] - The lowering runs each process on a JVM virtual thread, and no program can see how.
-[091][h] - `tests/spec/concurrency/` holds a counter, a worker pool, and each refused shape.
-[091][i] - `bin/runner` hands its checks to a pool of processes, one for each processor.
-[091][j] - The compiler lowers and writes independent modules in processes of their own.
-[091][k] - The new wall times are measured against the times of [091][a], and both are recorded.
-[091][l] - Each gap or bottleneck that this dogfood finds becomes its own item in `TODOS.md`.
-[091][m] - `bux help process` states the process shape, and section 15 drops its 0.4 note.
-
 ## 🔴 Item 081: No Lumen name remains; the tree says Bux and every source is a `.bx` file
 Lumen survives in 333 files, and 5665 sources still end in `.lm`, so each name has two spellings.
 AGENTS.md makes a tree-wide rename one item that lands whole, and this item is that rename.
@@ -116,3 +98,33 @@ So a call of `strings.length` reaches the wrong class, and `bin/runner` skips th
 [099][a] - `docs/specs/codegen.md` states the class name of a library module, distinct from a program's.
 [099][b] - `bux run` and `bux test` on that module work, and the skip in `tests/documented.lm` goes.
 [099][c] - A `tests/spec/` example runs a module named as a library module and calls that library.
+
+## 🔴 Item 100: `spawn` starts a process that another module declares
+Item 091 found it: `L0800` refuses a `spawn` of a process outside the module that declares it.
+A library process, such as a ticker or a bus, is then out of reach, and section 15 wants both.
+[100][a] - `docs/specs/concurrency.md` states how a process is reached through a module name.
+[100][b] - The resolver reaches a process of another module, and `L0800` keeps its other refusals.
+[100][c] - A `tests/spec/concurrency/` example spawns a process that another module declares.
+
+## 🔴 Item 101: A foreign reference given to a process is refused
+Item 091 found it: `docs/design.md` section 14 refuses a foreign reference given to a process.
+No check holds that rule today, so a `spawn` argument or a message can carry one.
+[101][a] - `docs/specs/concurrency.md` states the refusal and its code.
+[101][b] - The type phase refuses a `spawn` argument and a message that hold a foreign reference.
+[101][c] - A `tests/spec/concurrency/` example shows the refusal.
+
+## 🔴 Item 102: A process that a platform error stops has a stated end, and `Delivered` is exact
+Item 091 found it: a JVM error, such as a stack overflow, stops a process and is printed.
+`ended` then stops its caller with the same error, so one stopped worker stops `bin/runner`.
+Section 15 says no process fails, so the spec must say what such an end is and who learns of it.
+A message can also be `Delivered` after `Done`, because the check and the offer are two steps.
+[102][a] - `docs/specs/concurrency.md` states the end, and how `ended` and `send` report it.
+[102][b] - A `tests/spec/concurrency/` example shows a process that a platform error stops.
+[102][c] - `Delivered` means the mailbox took the message before the end, and a property shows it.
+
+## 🔴 Item 103: `bin/runner` prints a part as it ends, and example runs share written classes
+Item 091 found it: the pool prints every part line after `ended`, so the run shows nothing for 30 s.
+The example-line jobs of `compiler/` and `tests/` write the same classes again, and each takes 27 s.
+[103][a] - The runner prints each part line when that part ends, and the line order is stable.
+[103][b] - The example-line runs of one module share one set of written classes.
+[103][c] - `tests/launched.lm` holds its 2 s window under a full pool, or states a wider one.
