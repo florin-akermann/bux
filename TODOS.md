@@ -6,14 +6,8 @@
 
 ## Open
 
-## 🟡 Item 071: Type inference is written in Bux
-**Depends on:** Item 064, Item 065, Item 070 — unification keys a table.
-This is the largest phase, at 5,313 lines of Rust, and mutable tables become returned values.
-[071][a] - `compiler/types.bx` infers, unifies, resolves constraints, and derives per the specs.
-[071][b] - The harness compares every diagnostic and every `api` surface with the Rust phase's.
-
 ## 🔴 Item 072: Exhaustiveness and holes are checked in Bux
-**Depends on:** Item 071 — both read the typed tree.
+**Depends on:** nothing — Item 071 landed; both read the typed tree.
 [072][a] - `compiler/exhaustiveness.bx` reports every gap `docs/specs/exhaustiveness.md` names.
 [072][b] - `compiler/holes.bx` lists every `todo` as `docs/specs/holes.md` states.
 
