@@ -31,4 +31,14 @@ The writer has 172 sites of narrow integers, and a `bytes` module hides `% 256` 
 `Result<(), E>` stays, because its `Err` carries a reason; `docs/design.md` section 5 says why.
 [080][a] - `docs/specs/types.md` states the refusal; `docs/specs/diagnostics.md` lists its code.
 [080][b] - The Rust and the Bux type phases refuse `Option<()>`, written or inferred, alike.
-[080][c] - `tests/spec/unit/carried.lm` carries `()` through `Result` only, beside a refused example.
+[080][c] - `tests/spec/unit/carried.lm` carries `()` through `Result` only, next to a refused one.
+
+## 🔴 Item 081: No Lumen name remains; the tree says Bux and every source is a `.bx` file
+Lumen survives in 333 files, and 5665 sources still end in `.lm`, so each name has two spellings.
+AGENTS.md makes a tree-wide rename one item that lands whole, and this item is that rename.
+[081][a] - Every `.lm` source under `compiler/`, `library/`, `example/`, and `tests/` becomes `.bx`.
+[081][b] - The compiler reads `.bx` sources only, and a `.lm` path gets a diagnostic, not a crash.
+[081][c] - Every `lumen-*` crate becomes `bux-*`, and the `lumen` binary becomes `bux`.
+[081][d] - The JVM package `lumen/` in generated class files becomes `bux/`.
+[081][e] - Docs, help text, hooks, `mycs.toml`, and comments say Bux; open todos say `.bx`.
+[081][f] - The Name section in AGENTS.md drops the old name, and a search for `lumen` finds nothing.
