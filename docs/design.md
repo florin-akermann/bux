@@ -22,7 +22,7 @@ The questions every proposed feature must answer are in `docs/principles.md`.
 
 ## 1. Goals
 
-The language combines five properties.
+The language combines six properties.
 
 ### Go
 
@@ -34,9 +34,19 @@ Take inspiration from Go's:
 * straightforward tooling
 * simple deployment model
 * practical standard library
-* built-in concurrency
 * preference for explicit, boring code
 * one canonical formatting
+
+### Erlang
+
+Take one idea from Erlang, and take it whole:
+
+* a process owns its state, and nothing else reaches that state
+* a message is the only way one process reaches another
+* a process is cheap, so a program writes as many as the work has parts
+
+That idea is the whole of what Lumen takes.
+Section 15 lists what Erlang does beside it, and Lumen refuses each one.
 
 ### Haskell / ML
 
@@ -124,6 +134,10 @@ In particular, the language should initially avoid:
 * syntactic sugar: `++`, `--`, `-=`, `*=`, `/=`, `%=`, a ternary `?:`
 * anonymous functions
 * async/await, or any other function colouring
+* a crash, a supervisor, or a restart; section 15 says why Lumen needs none of them
+* a link, a monitor, a process registry, or hot code loading
+* a mailbox that grows without a bound, or a receive that searches one
+* a channel, or any other message queue that belongs to no process
 * identity, or an equality every type has whether or not it asked for one
 * boxing a program can observe, or a built-in type that is special
 * a special case: a type, an operator, or a function the rules exempt
@@ -668,7 +682,7 @@ Mutation is explicit, which means it is visible at the binding rather than only 
 
 **Every type a program declares is a value with no identity**.
 Nothing can ask whether two of them are one object, so nothing can be reached into from elsewhere.
-Three things do have identity: a channel, a scoped resource, and a foreign reference.
+Three things do have identity: a process, a scoped resource, and a foreign reference.
 A `type` declaration writes none of them, and sections 14, 15, and 17 state what each one is.
 
 ---
@@ -1002,7 +1016,7 @@ Go's `defer` and Java's try-with-resources give only the first; a closed handle 
 The second needs the type system; the classic answer is linear types, which are ownership's family.
 The intended answer is instead an escape check.
 A resource-typed value may be passed as an argument to an ordinary call, and nothing else.
-It may not be returned, stored in a field, sent on a channel, or passed to a spawned function.
+It may not be returned, stored in a field, sent in a message, or passed to a spawned function.
 It therefore cannot outlive the block that opened it.
 A foreign reference is held to the same four clauses, and the reason is the object behind it.
 A Java object has identity and mutates, so one a spawned function holds is shared state again.
@@ -1018,15 +1032,16 @@ It is a JVM interface, and the JVM is a target, not a model.
 
 **A resource has identity, and a `type` declaration does not write one**.
 The file it names is one file, and releasing it is a change every later use would see.
-A channel and a foreign reference are the other two, which sections 15 and 17 state.
+A process and a foreign reference are the other two, which sections 15 and 17 state.
 Section 10 states the rule all three stand outside, which is about a type a program declares.
-The escape check above holds two of the three, and a channel is the one it lets across a spawn.
+The escape check above holds two of the three, and a process handle is the one it lets be sent.
 
 ---
 
 ## 15. Concurrency
 
-Lumen adopts Go's spawned functions, channels, and blocking calls, and refuses Go's locks.
+Lumen adopts Erlang's concurrency model.
+A process owns its state, a message is the only way to that state, and a process is cheap.
 There is no **`async`/`await`** and no function colouring.
 A function that blocks is an ordinary function, called like any other.
 There is one kind of function, and no caller ever has to ask which kind it holds.
@@ -1035,79 +1050,119 @@ The JVM's virtual threads make blocking cheap, so the language never needs a sec
 Conceptually:
 
 ```text
-spawn process_events()
-```
+type Request =
+    | Add(Int)
+    | Stop
 
-Channels:
-
-```text
-fn produce(events: Channel<Event>) {
-    events.send(load_events())
+fn counter(inbox: Mailbox<Request>, start: Int) {
+    var total = start
+    for request in inbox {
+        match request {
+            Add(amount) => total = total + amount
+            Stop => return
+        }
+    }
 }
 
-events := Channel.new()
+counting := spawn counter(0)
 
-spawn produce(events)
-
-event := events.receive()
+_ = counting.send(Add(3))
 ```
 
 `spawn` takes a named function call, never an anonymous block.
+It gives back a handle, and that handle is the one name the rest of the program has for the process.
+`Mailbox<Request>` is the receiving end of one queue, and `Process<Request>` is the sending end.
+`spawn` supplies the mailbox, and the caller supplies every other argument by value.
+A process accepts one type, which is why `Request` is an ADT and not a list of message kinds.
+`match` on that ADT is how a process tells one message from another.
 
-**A channel is the only way two spawned functions communicate**.
+**It is all messages**.
 There is no mutex, no atomic, and no condition variable.
 This is not a rule the compiler polices but a consequence of the value model.
 A lock protects shared mutable state, and no type a program declares holds any.
-Every type a program declares is a value with no identity, so two functions never hold one.
+Every type a program declares is a value with no identity, so two processes never hold one.
 A record is rebuilt rather than reached into, as section 10 says.
 A named function cannot capture a local, and `spawn` passes its arguments by value.
-The one mutable thing, a `var` binding, is therefore never visible from another spawned function.
+The one mutable thing, a `var` binding, is therefore never visible from another process.
 There is no mutable global state, which section 14 lists as an effect for the same reason.
-A sender never knows its receivers, and no value a program declared is ever shared.
 A foreign reference is no value a program declared either.
 Section 14 refuses one passed to a spawned function, which is the clause that keeps it out.
 
-**Three things have identity, and a `type` declaration writes none of them**.
-The example above shows the first: `produce` sends on the `events` the parent holds.
-`send` changes the queue behind the channel, and `receive` sees the change.
-Two holders of one channel is the whole of what a channel is for, so a channel has identity.
+**A queue belongs to a process, and Lumen has no channel**.
+Go gives a queue an identity of its own, and any process may hold it.
+Such a queue is shared mutable state with a name, which the value model refuses everywhere else.
+It also needs rules that a mailbox does not need.
+Nothing owns a channel, so closing one is a protocol rather than an event.
+A reader holds several channels, so a `select` must choose among them.
+A mailbox ends when its process ends, and one mailbox needs no `select` because `match` chooses.
+One queue with many readers is the one shape a channel has and a mailbox does not.
+A worker pool is that shape, and the answer is a process that takes jobs and hands them out.
+That costs one process and one message, and a program writes it rather than the language.
+
+**A process has identity, and a `type` declaration does not write one**.
+The example above shows why: `counting` names one process, and a second `spawn` names another.
+`send` puts a message in that process's queue, and the process reads it.
 A scoped resource is the second and a foreign reference the third, which section 14 holds both of.
 Section 10 states the rule all three stand outside, and a program has no type of its own to lock on.
 
-**A one-place channel is a lock, and the language gives no other**.
-Go writes a mutex that way, and Lumen has no reason to refuse it.
-It is a channel like any other: it blocks, it is not reentrant, and there is nothing else to learn.
-What the language refuses is a second mechanism beside the channel, not this use of the channel.
-
 **A slow receiver makes the sender wait**.
-That is the whole of backpressure, and every channel gives the same answer.
-A shared counter, cache, or pool is a spawned function that owns the state and receives requests.
+A mailbox holds a bounded number of messages, and `send` blocks while the mailbox is full.
+That is the whole of backpressure, and every mailbox gives the same answer.
+Erlang lets a mailbox grow without a bound, and one slow process then exhausts the memory.
+Lumen refuses that, because the type system cannot see it and the program cannot recover from it.
+A shared counter, cache, or pool is a process that owns the state and receives requests.
 That is slower than a lock on a hot path, and the trade is accepted.
 A lock-free structure is a JVM library reached through interop, never something Lumen writes.
 
-Channels alone are not enough; three things arrive with them, or programs reinvent locks badly.
-A `select` chooses over several channels; a timeout, a cancellation, and a fan-in are all `select`.
-A channel closes, and `for … in` over it ends when it does, so a producer can say it is finished.
-Cancellation is a channel that closes; the spec names the idiom rather than adding a primitive.
-These are 0.3 work, and each gets a spec under `docs/specs/` before it lands.
+**A message that cannot arrive is a typed result, never a silent drop**.
+A process ends when its function returns, and its mailbox ends with it.
+Erlang drops a message sent to a process that has ended, and it never tells the sender.
+Lumen says so in the type of `send`, because section 5 gives every operation an answer.
+The same rule refuses Erlang's crash: no Lumen process fails, so none needs a restart.
+A supervisor, a link, and a monitor each answer a failure that Lumen's types answer first.
+A process reports an end the sender must know about through a message, as every result travels.
+Cancellation is a message, and the spec names the idiom rather than adding a primitive.
 
-**Fan-out is a library type, not a primitive**.
-A topic delivers every message to every subscriber.
-It is a spawned owner holding subscriber channels, written in Lumen when a program needs it.
-A topic chooses what a slow subscriber sees: the sender waits, or a bounded buffer drops the oldest.
-The dropping topic reports the loss as a typed result on receive, never silently.
+**A mailbox is read in order, and nothing searches it**.
+Erlang's selective receive walks the mailbox for a message that matches and leaves the rest behind.
+It reads well, and it costs one scan for each receive, which a full mailbox makes slow.
+Lumen takes the next message and matches it, and a process that must wait holds its own state.
+A receive with a deadline gives `Option`, so a timeout is a value and not a second mechanism.
+A send takes a deadline the same way, and a deadline of none is the send that never waits.
+That is what a bus that drops the oldest message needs, and no other primitive answers it.
+
+**An in-application message bus is a library type, not a primitive**.
+A `send` names the process it reaches, and a program often has a message that whoever cares reads.
+A bus is the process that closes that gap, and it is written in Lumen the day a program needs one.
+It carries messages between the processes of one program, and it never leaves that program.
+It holds the handles of its subscribers, and it gives every message to every one of them.
+A subscriber joins by sending the bus one message.
+A publisher sends to the bus and names no subscriber, so a publisher and a subscriber never meet.
+A bus carries one message type, because a handle accepts one type and a mailbox reads one.
+Whoever cares is whoever subscribed to that bus, and one ADT unions several kinds under one bus.
+Subscribing is a message, and unsubscribing is the message beside it.
+A subscriber that has ended makes the next `send` give the result above, and the bus drops it then.
+Both paths are messages, so the bus needs no close protocol and no scoped resource of its own.
+
+A bus chooses what a slow subscriber sees: the publisher waits, or a buffer drops the oldest.
+The dropping bus reports the loss as a typed result on receive, never silently.
 A latest-value cell is a third type, not a mode on the first; a policy knob is refused.
-A subscription is a scoped resource, released as section 14 releases a file, and yields a channel.
-Releasing it is what unsubscribes, and a subscriber has no name to hand back instead.
-The derivation runs one way: a worker pool takes each job exactly once, which fan-out cannot say.
-That is why the channel is underneath and the topic on top.
+The derivation runs one way: a bus is processes and messages, and no process comes from a bus.
+That is why the process is underneath and the bus on top.
+
+A bus that crosses a network is a different thing, and the paragraph below says where it lives.
 
 Distributed messaging is a JVM library a program consumes, never part of the language or runtime.
-A transport that shares the channel's receive shape gets a library wrapper once a program needs one.
+Erlang makes a remote process look like a local one, and Lumen does not.
+A network call fails where a local `send` does not, and one name for both hides that difference.
+A transport that shares the mailbox's receive shape gets a library wrapper once a program needs one.
 
+`spawn`, the mailbox, the handle, the two deadlines, and cancellation are 0.4 work.
+Each gets a spec under `docs/specs/` before it lands.
+One question stays open for that spec: how a request carries the address to answer on.
+A reply is a message, so the reply address is a handle, and a handle accepts one type.
 The underlying implementation can use JVM threads and, where appropriate, virtual threads.
 The language should hide most JVM concurrency boilerplate.
-
 
 ---
 

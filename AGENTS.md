@@ -8,7 +8,7 @@ AI agents write most of the code, and agents drift without a fixed anchor.
 This file is that anchor; consistency is the throughline, and the bar is Code Health 10.0.
 
 ## Project Scope
-- **Goal**: Go's simplicity, Haskell's types, Valhalla's values, a  compiler written in Rust.
+- **Goal**: Go's simplicity, Haskell's types, Erlang's messages, Valhalla's values, a Rust compiler.
 - Everyday Bux code reads like Go: basically a bunch of `for` loops, plus ADTs and `match`.
 - **Dogfood as early as possible.** Bux replaces Rust wherever it can, until no Rust remains.
 - Dogfooding is the sanity check that Bux works, and it finds the features that Bux lacks.
@@ -26,7 +26,7 @@ This file is that anchor; consistency is the throughline, and the bar is Code He
 - A library data structure has the best known asymptotic cost, written plainly and never tuned.
 - **Non-goals** — never implement, suggest, or plan: ownership, borrowing, lifetimes, inheritance.
 - Likewise null, checked exceptions, macros, implicit runtime magic, or Java's type system.
-- **Concurrency is Go's**: spawn, channels, blocking calls; no async/await, no function colouring.
+- **Concurrency is Erlang's**: it is all messages; one mailbox per process, no channel, no crash.
 - **The JVM is the first target, not the model**; its constraints, the object model first, stay out.
 - **Values, not objects.** A declared type has no identity, `hashCode`, or `toString`.
 - Equality is opt-in: `==` needs `Eq`, which a type derives, and compares what a value holds.

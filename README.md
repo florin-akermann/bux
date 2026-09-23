@@ -2,6 +2,7 @@
 
 > Go's simplicity.
 > Haskell's types.
+> Erlang's messages.
 > Valhalla's values.
 > A compiler written in Rust, until Bux compiles itself.
 
@@ -34,8 +35,16 @@ A reader learns both, a formatter chooses between them, and each later feature a
 
 ### One way to run work at the same time
 
-Concurrency is Go's: spawn, channels, and calls that block.
+Concurrency is Erlang's: a process owns its state, and a message is the only way to that state.
+Bux takes that one idea, and it takes nothing else Erlang has.
+A process is spawned by name, and it reads one typed mailbox that `match` takes apart.
 There is no `async`, no `await`, and no second colour of function.
+
+Bux has no channel, because a queue that belongs to no process is shared state with a name.
+An in-application message bus is a process that holds the handles of whoever cares.
+A program writes that bus in Bux, because the language gives processes and messages and no more.
+Erlang's crash, supervisor, link, monitor, and unbounded mailbox are each refused.
+Section 15 of `docs/design.md` says why each one goes.
 Concurrency is version 0.4, so none of it runs today.
 
 ### Nothing panics, ever

@@ -86,7 +86,7 @@ A feature that needs a name, type, or operator treated apart from the rest is re
 
 A rule also states the scope it holds over, because an unstated scope reads as a rule it is not.
 The no-identity rule is the one that needs saying: every type a program declares is a value.
-A channel, a scoped resource, and a foreign reference have identity.
+A process, a scoped resource, and a foreign reference have identity.
 A `type` declaration writes none of the three.
 They stand outside the rule rather than exempt from it, so the rule itself keeps no exception.
 `docs/design.md` sections 10, 14, 15, and 17 state the rule and all three of the things outside it.
@@ -146,8 +146,16 @@ and:
 Go:
     simplicity
     tooling
-    concurrency
     pragmatic deployment
+```
+
+and:
+
+```text
+Erlang:
+    a process owns its state
+    a message is the only way to that state
+    a process is cheap
 ```
 
 The goal is not to maximize language power.
@@ -166,5 +174,6 @@ Or more succinctly:
 
 > Go's simplicity.
 > Haskell's types.
+> Erlang's messages.
 > The JVM's runtime.
 > A Rust compiler.
