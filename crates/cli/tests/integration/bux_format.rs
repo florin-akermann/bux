@@ -10,7 +10,7 @@ use std::path::{Path, PathBuf};
 use hegel::TestCase;
 use hegel::generators as gs;
 
-use crate::common::{Example, Sibling, Within, as_argument, jdk, lumen, repository};
+use crate::common::{Example, Sibling, answers_of_one_run, as_argument, jdk, lumen, repository};
 
 /// A program that writes, beside each file it is run with, what the Bux formatter says of it.
 ///
@@ -152,30 +152,7 @@ fn answers_of_the_bux_formatter(sources: &[String]) -> Option<Vec<String>> {
         return None;
     }
     let program = the_bux_formatter_beside(WRITES_THE_ANSWER);
-    let inputs: Vec<PathBuf> = sources
-        .iter()
-        .enumerate()
-        .map(|(index, source)| {
-            let at = format!("inputs/{index}.txt");
-            program.within_it(&Within {
-                at: &at,
-                content: source,
-            });
-            program.directory.join(at)
-        })
-        .collect();
-    let mut arguments = vec!["run", as_argument(&program.path)];
-    arguments.extend(inputs.iter().map(|input| as_argument(input)));
-
-    let run = lumen(&arguments);
-
-    assert_eq!(run.code, 0, "{}", run.stderr);
-    Some(
-        inputs
-            .iter()
-            .map(|input| read(&input.with_extension("txt.answer")))
-            .collect(),
-    )
+    Some(answers_of_one_run(&program, sources))
 }
 
 /// A program of `content`, with each module of the Bux formatter beside it.

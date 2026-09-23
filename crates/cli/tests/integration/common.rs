@@ -76,6 +76,39 @@ impl Drop for Example {
 
 static NEXT: AtomicUsize = AtomicUsize::new(0);
 
+/// What `program` writes for each of `sources`, in order, from one run of the binary.
+///
+/// Each source goes to a file of its own under the program's directory, and the one run is handed
+/// every file, because each run is one compiler and one JVM. The program writes its answer for a
+/// file at the file's path with `.answer` added.
+pub fn answers_of_one_run(program: &Example, sources: &[String]) -> Vec<String> {
+    let inputs: Vec<PathBuf> = sources
+        .iter()
+        .enumerate()
+        .map(|(index, source)| {
+            let at = format!("inputs/{index}.txt");
+            program.within_it(&Within {
+                at: &at,
+                content: source,
+            });
+            program.directory.join(at)
+        })
+        .collect();
+    let mut arguments = vec!["run", as_argument(&program.path)];
+    arguments.extend(inputs.iter().map(|input| as_argument(input)));
+
+    let run = lumen(&arguments);
+
+    assert_eq!(run.code, 0, "{}", run.stderr);
+    inputs
+        .iter()
+        .map(|input| {
+            std::fs::read_to_string(input.with_extension("txt.answer"))
+                .expect("the program writes a UTF-8 answer for each input")
+        })
+        .collect()
+}
+
 /// Runs the binary with `arguments` and returns what it said and how it exited.
 pub fn lumen(arguments: &[&str]) -> Run {
     finished(running(arguments))
