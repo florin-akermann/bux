@@ -1,0 +1,993 @@
+// The formatter: a source file to the one canonical text of the program it holds.
+//
+// `docs/specs/formatting.md` states the layout, and the Rust formatter in `crates/format` writes
+// the same text. A harness holds the two to one answer on every `.lm` file of the repository.
+// The tree drops comments and parentheses, so the printer reads the comments from the tokens and
+// puts back only the parentheses the shape of the tree needs.
+import ast
+
+import lexer
+
+import list
+
+import parser
+
+import strings
+
+/// The canonical text of `source`, or the error the parser refuses it with.
+// example: ok_or(format("fn main( )  {}"), "") == "fn main() {\n}\n"
+// example: ok_or(format("fn ("), "refused") == "refused"
+fn format(source: String) -> Result<String, parser.ParseError> {
+    parsed := parser.parse(source)?
+    Ok(program(printer_of(source), parsed).text)
+}
+
+/// Every item of the file, with one blank line between two of them, then the last comments.
+///
+/// A comment after the last item goes at the left margin, below one blank line.
+// example: program(printer_of("import io\nimport list"), ok_or(parser.parse("import io\nimport list"), ast.Program { items: [] })).text == "import io\n\nimport list\n"
+// example: program(printer_of("// only"), ast.Program { items: [] }).text == "// only\n"
+fn program(printer: Printer, parsed: ast.Program) -> Printer {
+    var printed = printer
+    var position = 0
+    for declared in parsed.items {
+        if position > 0 {
+            printed = end_line(printed)
+        }
+        printed = appended(outer: printed, inner: item(fresh(printed), declared))
+        position += 1
+    }
+    if has_comments(printed) && position > 0 {
+        printed = end_line(printed)
+    }
+    comments_before(printed, printed.ending)
+}
+
+/// One top-level declaration, with the comments that belong above it.
+// example: item(printer_of(""), ast.Import(ast.ImportDeclaration { module: ast.Name { text: "io", span: lexer.Span { start: 7, length: 2 } }, span: lexer.Span { start: 0, length: 9 } })).text == "import io\n"
+fn item(printer: Printer, declared: ast.Item) -> Printer {
+    match declared {
+        ast.Import(imported) => line(printer, imported.span, "import " + imported.module.text)
+        ast.Type(declaration) => type_declaration(printer, declaration)
+        ast.Trait(declaration) => trait_declaration(printer, declaration)
+        ast.Instance(declaration) => instance_declaration(printer, declaration)
+        ast.Derive(declaration) => line(printer, declaration.span, derive_text(declaration))
+        ast.Function(declaration) => function(printer, declaration, declaration.type_parameters)
+        ast.Extern(declaration) => line(printer, declaration.span, extern_text(declaration))
+    }
+}
+
+/// `extern static read(path: Path) -> String = "java.nio.file.Files.readString"`, on one line.
+///
+/// An extern has no body, so it is always the one line `docs/specs/interop.md` writes it as.
+// example: ok_or(format("extern  new now( ) -> Clock"), "") == "extern new now() -> Clock\n"
+// example: ok_or(format("extern method int length(text: String, int at: Int) -> Int = \"length\""), "") == "extern method int length(text: String, int at: Int) -> Int = \"length\"\n"
+fn extern_text(declaration: ast.ExternDeclaration) -> String {
+    width := ast.written_before(ast.gives_word(declaration.gives))
+    head := "extern " + ast.reaches_word(declaration.reaches) + " " + width + declaration.name.text
+    head + taken_text(declaration.parameters) + " -> " + type_text(declaration.result) + java_text(declaration.reaches)
+}
+
+/// ` = "java.io.File"`, the Java name an extern reaches, which a constructor does not state.
+// example: java_text(ast.Constructor) == ""
+// example: java_text(ast.StaticField(ast.JavaName { text: "a.B.c", span: lexer.Span { start: 0, length: 7 } })) == " = \"a.B.c\""
+fn java_text(reaches: ast.Reaches) -> String {
+    match reaches {
+        ast.StaticField(named) => " = " + spelled(named.text)
+        ast.StaticMethod(named) => " = " + spelled(named.text)
+        ast.InstanceMethod(named) => " = " + spelled(named.text)
+        ast.Constructor => ""
+    }
+}
+
+/// `(text: String, int index: Int)`: the parameters of an extern, each with its width.
+// example: ok_or(format("extern static read(int at: Int,path:Path) -> String = \"a.B.c\""), "") == "extern static read(int at: Int, path: Path) -> String = \"a.B.c\"\n"
+fn taken_text(parameters: List<ast.ExternParameter>) -> String {
+    var written = []
+    for taken in parameters {
+        written = list.push(written, ast.written_before(ast.takes_word(taken.takes)) + parameter_text(taken.declared))
+    }
+    "(" + strings.join(written, ", ") + ")"
+}
+
+/// `derive Eq, Ord for User`, on one line, because nothing in it can be broken.
+// example: ok_or(format("derive Eq ,Hash for User"), "") == "derive Eq, Hash for User\n"
+fn derive_text(declaration: ast.DeriveDeclaration) -> String {
+    var named = []
+    for trait_name in declaration.traits {
+        named = list.push(named, trait_name.text)
+    }
+    "derive " + strings.join(named, ", ") + " for " + declaration.for_type.text
+}
+
+/// A type declaration: a Java class, a record body, or one or more variants.
+// example: ok_or(format("extern type interface Path = \"java.nio.file.Path\""), "") == "extern type interface Path = \"java.nio.file.Path\"\n"
+// example: ok_or(format("type User = { id: Int }"), "") == "type User = {\n    id: Int\n}\n"
+// example: ok_or(format("type Id = Id(Int)"), "") == "type Id = Id(Int)\n"
+fn type_declaration(printer: Printer, declaration: ast.TypeDeclaration) -> Printer {
+    opened := open_line(comments_above(printer, declaration.span))
+    match declaration.definition {
+        ast.RecordType(fields) => end_line(record_body(word(opened, type_head(declaration)), fields, declaration.span))
+        ast.Variants(variants) => variants_of(word(opened, type_head(declaration)), variants, declaration.span)
+        ast.Foreign { class, called } => end_line(word(opened, "extern type " + ast.written_before(ast.called_word(called)) + declaration.name.text + " = " + spelled(class.text)))
+    }
+}
+
+/// `type User<T> =`, which every type a declaration writes the body of opens with.
+// example: ok_or(format("type Box < T > = Box(T)"), "") == "type Box<T> = Box(T)\n"
+fn type_head(declaration: ast.TypeDeclaration) -> String {
+    "type " + declaration.name.text + type_parameters_text(declaration.parameters) + " ="
+}
+
+/// One variant on the `type` line, or two or more with a `|` each, one per line.
+// example: ok_or(format("type Switch = | On | Off"), "") == "type Switch =\n    | On\n    | Off\n"
+// example: ok_or(format("type Switch =\n    | On"), "") == "type Switch = On\n"
+fn variants_of(printer: Printer, variants: List<ast.Variant>, enclosing: lexer.Span) -> Printer {
+    if list.length(variants) > 1 {
+        return variant_lines(printer, variants, enclosing)
+    }
+    match list.at(variants, 0) {
+        Some(only) => end_line(variant(word(printer, " "), only, enclosing))
+        None => end_line(printer)
+    }
+}
+
+/// `| Variant` on a line of its own for each variant, one level in.
+// example: ok_or(format("type Shape =\n    | Dot\n// long\n    | Line { length: Int }"), "") == "type Shape =\n    | Dot\n    // long\n    | Line {\n        length: Int\n    }\n"
+fn variant_lines(printer: Printer, variants: List<ast.Variant>, enclosing: lexer.Span) -> Printer {
+    var printed = indented(end_line(printer))
+    for declared in variants {
+        opened := open_line(comments_above(printed, declared.span))
+        printed = end_line(variant(word(opened, "| "), declared, declared.span))
+    }
+    dedented(comments_before(printed, end_of(enclosing)))
+}
+
+/// A variant's name, then what it carries: nothing, a type for each value, or a record body.
+// example: ok_or(format("type Pair = Pair(Int,String)"), "") == "type Pair = Pair(Int, String)\n"
+fn variant(printer: Printer, declared: ast.Variant, enclosing: lexer.Span) -> Printer {
+    named := word(printer, declared.name.text)
+    match declared.payload {
+        ast.NoPayload => named
+        ast.TuplePayload(types) => word(named, "(" + strings.join(type_texts(types), ", ") + ")")
+        ast.RecordPayload(fields) => record_body(named, fields, enclosing)
+    }
+}
+
+/// `{`, one `name: Type` per line, then `}`, the one shape the grammar spreads over lines.
+///
+/// A type declaration and a variant's payload both write one, and only what follows the `}`
+/// differs, so the `}` line is left open for the caller to end.
+// example: ok_or(format("type Empty = {}"), "") == "type Empty = {\n}\n"
+fn record_body(printer: Printer, fields: List<ast.RecordField>, enclosing: lexer.Span) -> Printer {
+    var printed = open_block(printer)
+    for field in fields {
+        printed = line(printed, field.span, field.name.text + ": " + type_text(field.type_ref))
+    }
+    close_block(printed, end_of(enclosing))
+}
+
+/// `trait Eq<T> { … }`, with one signature per line and no blank line between two of them.
+// example: ok_or(format("trait Named<T> {\n    fn name(value: T)->String\n}"), "") == "trait Named<T> {\n    fn name(value: T) -> String\n}\n"
+fn trait_declaration(printer: Printer, declaration: ast.TraitDeclaration) -> Printer {
+    opened := open_line(comments_above(printer, declaration.span))
+    var printed = open_block(word(opened, "trait " + declaration.name.text + "<" + declaration.parameter.text + ">"))
+    for method in declaration.methods {
+        printed = line(printed, method.span, "fn " + method.name.text + parameters_text(method.parameters) + result_text(method.result))
+    }
+    end_line(close_block(printed, end_of(declaration.span)))
+}
+
+/// `instance Eq<Point> { … }`, with one blank line between two of the functions it writes.
+///
+/// The instance states its type parameters once, so each method is written without them.
+// example: ok_or(format("instance<T: Eq<T>> Eq<Box<T>> {\n    fn is_equal(one: Box<T>, other: Box<T>) -> Bool {\n        true\n    }\n}"), "") == "instance<T: Eq<T>> Eq<Box<T>> {\n    fn is_equal(one: Box<T>, other: Box<T>) -> Bool {\n        true\n    }\n}\n"
+fn instance_declaration(printer: Printer, declaration: ast.InstanceDeclaration) -> Printer {
+    opened := open_line(comments_above(printer, declaration.span))
+    var printed = open_block(word(opened, instance_head(declaration)))
+    var position = 0
+    for method in declaration.methods {
+        if position > 0 {
+            printed = end_line(printed)
+        }
+        printed = function(printed, method, [])
+        position += 1
+    }
+    end_line(close_block(printed, end_of(declaration.span)))
+}
+
+/// `instance<T: Eq<T>> Eq<List<T>>`: the first line of an instance.
+// example: ok_or(format("instance Ord<Id>{\n    fn is_less(one: Id, other: Id) -> Bool {\n        true\n    }\n}"), "") == "instance Ord<Id> {\n    fn is_less(one: Id, other: Id) -> Bool {\n        true\n    }\n}\n"
+fn instance_head(declaration: ast.InstanceDeclaration) -> String {
+    over := constrained_text(declaration.type_parameters)
+    "instance" + over + " " + declaration.trait_name.text + "<" + declaration.for_type.text + type_parameters_text(declaration.arguments) + ">"
+}
+
+/// One function, written over the type parameters `over` names and over no others.
+// example: ok_or(format("fn pick<T>(first: T, second) -> T {\n    first\n}"), "") == "fn pick<T>(first: T, second) -> T {\n    first\n}\n"
+fn function(printer: Printer, declaration: ast.FunctionDeclaration, over: List<ast.TypeParameter>) -> Printer {
+    opened := open_line(comments_above(printer, declaration.span))
+    signature := "fn " + declaration.name.text + constrained_text(over) + parameters_text(declaration.parameters) + result_text(declaration.result)
+    end_line(block(word(opened, signature), declaration.body, Closed))
+}
+
+/// `{`, one statement per line one level in, and the `}` that closes them.
+///
+/// The `}` line is left open, because an `if` continues it with an `else`, and a `closing` of
+/// `LeftOpen` leaves the `}` itself to the caller for the same reason.
+// example: ok_or(format("fn go() {\n    x := 1 // one\n    // last\n}"), "") == "fn go() {\n    // one\n    x := 1\n    // last\n}\n"
+fn block(printer: Printer, body: ast.Block, closing: Closing) -> Printer {
+    var printed = open_block(printer)
+    for statement in body.statements {
+        printed = appended(outer: printed, inner: statement_line(fresh(printed), statement))
+    }
+    closed := open_line(dedented(comments_before(printed, end_of(body.span))))
+    match closing {
+        Closed => word(closed, "}")
+        LeftOpen => closed
+    }
+}
+
+/// One statement on a line of its own, with the comments that belong above it.
+// example: ok_or(format("fn go() {\n    break\n}"), "") == "fn go() {\n    break\n}\n"
+fn statement_line(printer: Printer, statement: ast.Statement) -> Printer {
+    end_line(statement_text(open_line(comments_above(printer, statement.span)), statement))
+}
+
+/// The text of one statement, from the indentation of its line to its end.
+// example: ok_or(format("fn go() {\n    var total=0\n    total+=1\n    _ = total\n    return\n}"), "") == "fn go() {\n    var total = 0\n    total += 1\n    _ = total\n    return\n}\n"
+fn statement_text(printer: Printer, statement: ast.Statement) -> Printer {
+    match statement.kind {
+        ast.Binding { mutability, name, value } => nested(word(printer, binding_head(mutability, name.text)), value, 0, Allowed)
+        ast.Assign { target, operator, value } => nested(word(printer, target.text + assign_joiner(operator)), value, 0, Allowed)
+        ast.Return(value) => returned(printer, value)
+        ast.Break => word(printer, "break")
+        ast.Continue => word(printer, "continue")
+        ast.For(written) => for_loop(printer, written)
+        ast.Discard(value) => nested(word(printer, "_ = "), value, 0, Allowed)
+        ast.Evaluated(value) => nested(printer, value, 0, Allowed)
+    }
+}
+
+/// `total := `, or `var total = ` where the name may be assigned to again.
+// example: binding_head(ast.Mutable, "total") == "var total = "
+// example: binding_head(ast.Immutable, "total") == "total := "
+fn binding_head(mutability: ast.Mutability, name: String) -> String {
+    match mutability {
+        ast.Immutable => name + " := "
+        ast.Mutable => "var " + name + " = "
+    }
+}
+
+/// The operator of an assignment, with one blank on each side of it.
+// example: assign_joiner(ast.AddTo) == " += "
+fn assign_joiner(operator: ast.AssignOperator) -> String {
+    match operator {
+        ast.SetTo => " = "
+        ast.AddTo => " += "
+    }
+}
+
+/// `return`, or `return value`.
+// example: ok_or(format("fn go() -> Int {\n    return  1\n}"), "") == "fn go() -> Int {\n    return 1\n}\n"
+fn returned(printer: Printer, value: Option<ast.Expr>) -> Printer {
+    match value {
+        Some(given) => nested(word(printer, "return "), given, 0, Allowed)
+        None => word(printer, "return")
+    }
+}
+
+/// `for {`, `for condition {`, or `for name in iterable {`, then the body.
+// example: ok_or(format("fn go() {\n    for  {\n        break\n    }\n}"), "") == "fn go() {\n    for {\n        break\n    }\n}\n"
+// example: ok_or(format("fn go(users: List<Int>) {\n    for user in users {\n    }\n}"), "") == "fn go(users: List<Int>) {\n    for user in users {\n    }\n}\n"
+fn for_loop(printer: Printer, written: ast.ForLoop) -> Printer {
+    opened := word(printer, "for")
+    match written.header {
+        ast.Forever => block(printer: opened, body: written.body, closing: Closed)
+        ast.While(condition) => block(printer: nested(word(opened, " "), condition, 0, Forbidden), body: written.body, closing: Closed)
+        ast.Over { binding, iterable } => block(printer: nested(word(opened, " " + binding.text + " in "), iterable, 0, Forbidden), body: written.body, closing: Closed)
+    }
+}
+
+/// `written` where an expression binding at least as tightly as `least` is expected.
+///
+/// Anything looser is put in parentheses, and so is a record literal where the grammar reads a `{`
+/// as the start of a block. Inside the parentheses both rules start over.
+// example: nested(printer_of(""), expression_of("1 + 2"), 5, Allowed).text == "(1 + 2)"
+// example: nested(printer_of(""), expression_of("1 + 2"), 0, Allowed).text == "1 + 2"
+fn nested(printer: Printer, written: ast.Expr, least: Int, records: Records) -> Printer {
+    if !is_parenthesised(written, least, records) {
+        return expression(printer, written, records)
+    }
+    word(expression(word(printer, "("), written, Allowed), ")")
+}
+
+/// Whether `written` needs parentheses where an expression binding as tightly as `least` goes.
+// example: is_parenthesised(expression_of("User {}"), 0, Forbidden)
+// example: !is_parenthesised(expression_of("User {}"), 0, Allowed)
+fn is_parenthesised(written: ast.Expr, least: Int, records: Records) -> Bool {
+    if records == Forbidden && is_record(written.kind) {
+        return true
+    }
+    binding_power(written.kind) < least
+}
+
+/// Whether an expression is a record literal.
+// example: is_record(expression_of("User { id: 1 }").kind)
+// example: !is_record(expression_of("user").kind)
+fn is_record(kind: ast.ExprKind) -> Bool {
+    match kind {
+        ast.Record { base, fields } => true
+        _ => false
+    }
+}
+
+/// An expression as canonical form writes it, on one line unless it holds a block.
+// example: nested(printer_of(""), expression_of("f( a ,b ).name?"), 0, Allowed).text == "f(a, b).name?"
+// example: nested(printer_of(""), expression_of("[ 1,-2 ,\"a\\tb\" ]"), 0, Allowed).text == "[1, -2, \"a\\tb\"]"
+// example: nested(printer_of(""), expression_of("(  )"), 0, Allowed).text == "()"
+fn expression(printer: Printer, written: ast.Expr, records: Records) -> Printer {
+    match written.kind {
+        ast.NameExpr(name) => word(printer, name.text)
+        ast.Integer(value) => word(printer, shown(value))
+        ast.Text(value) => word(printer, spelled(value))
+        ast.Truth(value) => word(printer, shown(value))
+        ast.Unit => word(printer, "()")
+        ast.Unary { operator, operand } => unary(printer, Prefix { operator: operator, operand: operand }, records)
+        ast.Binary { operator, left, right } => binary(printer, Infix { operator: operator, left: left, right: right }, records)
+        ast.Call { callee, arguments } => call(printer, Applied { callee: callee, arguments: arguments }, records)
+        ast.Field { receiver, name } => word(nested(printer: printer, written: receiver, least: postfix_power(), records: records), "." + name.text)
+        ast.Try(inner) => word(nested(printer: printer, written: inner, least: postfix_power(), records: records), "?")
+        ast.Written(elements) => word(listed_values(word(printer, "["), elements), "]")
+        ast.Record { base, fields } => record(printer, base, fields)
+        ast.If(chain) => if_expression(printer, chain)
+        ast.Match(matched) => match_expression(printer, matched, written.span)
+    }
+}
+
+/// `!ready` or `-count`, with the operand written against the operator.
+///
+/// The grammar reads a `-` before a number as part of that number, so `-(7.abs())` keeps its
+/// parentheses: written as `-7.abs()`, it would come back as `(-7).abs()`.
+// example: nested(printer_of(""), expression_of("-(7.abs())"), 0, Allowed).text == "-(7.abs())"
+// example: nested(printer_of(""), expression_of("!(a && b)"), 0, Allowed).text == "!(a && b)"
+fn unary(printer: Printer, prefix: Prefix, records: Records) -> Printer {
+    match prefix.operator {
+        ast.Not => nested(printer: word(printer, "!"), written: prefix.operand, least: unary_power(), records: records)
+        ast.Negate => nested(printer: word(printer, "-"), written: prefix.operand, least: power_after_minus(prefix.operand), records: records)
+    }
+}
+
+/// How tightly the operand of a `-` must bind to be written without parentheses.
+// example: power_after_minus(expression_of("7.abs()")) == 8
+// example: power_after_minus(expression_of("x.abs()")) == 5
+fn power_after_minus(operand: ast.Expr) -> Int {
+    if is_opened_by_a_number(operand) {
+        return parenthesised_power()
+    }
+    unary_power()
+}
+
+/// Whether the first thing written for this expression is the digits of a number.
+///
+/// A negative number opens with a `-`, which the grammar reads as a second minus sign.
+// example: is_opened_by_a_number(expression_of("7.abs()?"))
+// example: !is_opened_by_a_number(expression_of("-7"))
+fn is_opened_by_a_number(written: ast.Expr) -> Bool {
+    match written.kind {
+        ast.Integer(value) => value >= 0
+        ast.Call { callee, arguments } => is_opened_by_a_number(written: callee)
+        ast.Field { receiver, name } => is_opened_by_a_number(written: receiver)
+        ast.Try(inner) => is_opened_by_a_number(written: inner)
+        _ => false
+    }
+}
+
+/// `left op right`, with one blank on each side of the operator and parentheses only where needed.
+///
+/// A comparison does not chain, so both of its operands bind more tightly than it does.
+// example: nested(printer_of(""), expression_of("(a - b) - (c - d)"), 0, Allowed).text == "a - b - (c - d)"
+// example: nested(printer_of(""), expression_of("(a < b) == c"), 0, Allowed).text == "(a < b) == c"
+// example: nested(printer_of(""), expression_of("a || b && c * (d + e)"), 0, Allowed).text == "a || b && c * (d + e)"
+fn binary(printer: Printer, infix: Infix, records: Records) -> Printer {
+    level := operator_power(infix.operator)
+    leftmost := if level == comparison_power() {
+        level + 1
+    } else {
+        level
+    }
+    left := nested(printer: printer, written: infix.left, least: leftmost, records: records)
+    nested(printer: word(left, " " + operator_text(infix.operator) + " "), written: infix.right, least: level + 1, records: records)
+}
+
+/// `callee(values)`, with each argument's name where the call writes one.
+// example: nested(printer_of(""), expression_of("rename(from : a,to: b)"), 0, Allowed).text == "rename(from: a, to: b)"
+fn call(printer: Printer, applied: Applied, records: Records) -> Printer {
+    callee := nested(printer: printer, written: applied.callee, least: postfix_power(), records: records)
+    opened := word(callee, "(")
+    passed := match applied.arguments {
+        ast.Positional(values) => listed_values(opened, values)
+        ast.Named(named) => named_values(opened, named)
+    }
+    word(passed, ")")
+}
+
+/// `old, new`: values in order, with `, ` between two of them.
+// example: listed_values(printer_of(""), [expression_of("a"), expression_of("b")]).text == "a, b"
+fn listed_values(printer: Printer, values: List<ast.Expr>) -> Printer {
+    var printed = printer
+    var position = 0
+    for value in values {
+        if position > 0 {
+            printed = word(printed, ", ")
+        }
+        printed = nested(printer: printed, written: value, least: 0, records: Allowed)
+        position += 1
+    }
+    printed
+}
+
+/// `from: old, to: new`: each value with the parameter it is passed for, spaced as a field is.
+// example: named_values(printer_of(""), []).text == ""
+fn named_values(printer: Printer, arguments: List<ast.NamedArgument>) -> Printer {
+    var printed = printer
+    var position = 0
+    for argument in arguments {
+        if position > 0 {
+            printed = word(printed, ", ")
+        }
+        printed = nested(printer: word(printed, argument.name.text + ": "), written: argument.value, least: 0, records: Allowed)
+        position += 1
+    }
+    printed
+}
+
+/// `User { id: id }`, or `User {}` where it names no field.
+// example: nested(printer_of(""), expression_of("demo.User{id:1,name:\"a\"}"), 0, Allowed).text == "demo.User { id: 1, name: \"a\" }"
+// example: nested(printer_of(""), expression_of("User{ }"), 0, Allowed).text == "User {}"
+fn record(printer: Printer, base: ast.Path, fields: List<ast.FieldValue>) -> Printer {
+    named := word(printer, ast.path_text(base))
+    if list.length(fields) == 0 {
+        return word(named, " {}")
+    }
+    var printed = word(named, " { ")
+    var position = 0
+    for field in fields {
+        if position > 0 {
+            printed = word(printed, ", ")
+        }
+        printed = nested(printer: word(printed, field.name.text + ": "), written: field.value, least: 0, records: Allowed)
+        position += 1
+    }
+    word(printed, " }")
+}
+
+/// `if a {`, its block, and every `} else if b {` and `} else {` that follows on one line.
+// example: ok_or(format("fn go() {\n    if a { b } else if (User {}).on { c } else { d }\n}"), "") == "fn go() {\n    if a {\n        b\n    } else if (User {}).on {\n        c\n    } else {\n        d\n    }\n}\n"
+fn if_expression(printer: Printer, chain: ast.IfExpr) -> Printer {
+    count := list.length(chain.branches)
+    last := match chain.otherwise {
+        Some(otherwise) => LeftOpen
+        None => Closed
+    }
+    var printed = printer
+    var position = 0
+    for branch in chain.branches {
+        opener := if position > 0 {
+            "} else if "
+        } else {
+            "if "
+        }
+        condition := nested(printer: word(printed, opener), written: branch.condition, least: 0, records: Forbidden)
+        closing := if position + 1 < count {
+            LeftOpen
+        } else {
+            last
+        }
+        printed = block(printer: condition, body: branch.block, closing: closing)
+        position += 1
+    }
+    match chain.otherwise {
+        Some(otherwise) => block(printer: word(printed, "} else"), body: otherwise, closing: Closed)
+        None => printed
+    }
+}
+
+/// `match scrutinee {`, then one `pattern => body` per line, then `}`.
+// example: ok_or(format("fn go() {\n    match x {\n        A|B=>1 // both\n    }\n}"), "") == "fn go() {\n    match x {\n        // both\n        A | B => 1\n    }\n}\n"
+fn match_expression(printer: Printer, matched: ast.MatchExpr, span: lexer.Span) -> Printer {
+    scrutinee := nested(printer: word(printer, "match "), written: matched.scrutinee, least: 0, records: Forbidden)
+    var printed = open_block(scrutinee)
+    for arm in matched.arms {
+        opened := open_line(comments_above(printed, arm.span))
+        body := nested(printer: word(opened, pattern_text(arm.pattern) + " => "), written: arm.body, least: 0, records: Allowed)
+        printed = end_line(body)
+    }
+    close_block(printed, end_of(span))
+}
+
+/// One arm's pattern, as the author wrote it, on one line.
+// example: pattern_text(pattern_of("demo.Failed( reason ,_)")) == "demo.Failed(reason, _)"
+// example: pattern_text(pattern_of("Authorized {id,at}")) == "Authorized { id, at }"
+// example: pattern_text(pattern_of("1|2|\"a\"|true")) == "1 | 2 | \"a\" | true"
+fn pattern_text(pattern: ast.Pattern) -> String {
+    match pattern.kind {
+        ast.NamePattern(path) => ast.path_text(path)
+        ast.TuplePattern { path, elements } => ast.path_text(path) + "(" + patterns_joined(elements, ", ") + ")"
+        ast.RecordPattern { path, fields } => ast.path_text(path) + " { " + strings.join(name_texts(fields), ", ") + " }"
+        ast.IntegerPattern(value) => shown(value)
+        ast.TextPattern(value) => spelled(value)
+        ast.TruthPattern(value) => shown(value)
+        ast.Wildcard => "_"
+        ast.OrPattern(alternatives) => patterns_joined(alternatives, " | ")
+    }
+}
+
+/// Each pattern of a list, with `between` written between two of them.
+// example: patterns_joined([pattern_of("_"), pattern_of("x")], " | ") == "_ | x"
+fn patterns_joined(patterns: List<ast.Pattern>, between: String) -> String {
+    var written = []
+    for pattern in patterns {
+        written = list.push(written, pattern_text(pattern: pattern))
+    }
+    strings.join(written, between)
+}
+
+/// `(a: Int, b: Int)`, which a function and a trait's signature write the same way.
+// example: ok_or(format("fn go(a:Int,b) {\n}"), "") == "fn go(a: Int, b) {\n}\n"
+fn parameters_text(parameters: List<ast.Parameter>) -> String {
+    var written = []
+    for declared in parameters {
+        written = list.push(written, parameter_text(declared))
+    }
+    "(" + strings.join(written, ", ") + ")"
+}
+
+/// `name: Type`, or the bare name where the type is left to inference.
+// example: parameter_text(ast.Parameter { name: ast.Name { text: "at", span: lexer.Span { start: 0, length: 2 } }, type_ref: None, span: lexer.Span { start: 0, length: 2 } }) == "at"
+fn parameter_text(declared: ast.Parameter) -> String {
+    match declared.type_ref {
+        Some(written) => declared.name.text + ": " + type_text(written)
+        None => declared.name.text
+    }
+}
+
+/// ` -> Bool`, which a declaration writes only where the author wrote one.
+// example: result_text(None) == ""
+fn result_text(result: Option<ast.TypeRef>) -> String {
+    match result {
+        Some(written) => " -> " + type_text(written)
+        None => ""
+    }
+}
+
+/// `<T>` or `<T: Eq<T> + Hash<T>>`, which a function writes and a type declaration does not.
+// example: ok_or(format("fn go<T:Eq<T>+Hash<T>, U>() {\n}"), "") == "fn go<T: Eq<T> + Hash<T>, U>() {\n}\n"
+fn constrained_text(parameters: List<ast.TypeParameter>) -> String {
+    var written = []
+    for declared in parameters {
+        var constrained = declared.name.text
+        var position = 0
+        for constraint in declared.constraints {
+            joiner := if position == 0 {
+                ": "
+            } else {
+                " + "
+            }
+            constrained += joiner + constraint.name.text + "<" + type_text(constraint.argument) + ">"
+            position += 1
+        }
+        written = list.push(written, constrained)
+    }
+    angled(written)
+}
+
+/// `<T, E>`, which most declarations do not write.
+// example: type_parameters_text([]) == ""
+fn type_parameters_text(parameters: List<ast.Name>) -> String {
+    angled(name_texts(parameters))
+}
+
+/// The text of each name, in order.
+// example: name_texts([ast.Name { text: "id", span: lexer.Span { start: 0, length: 2 } }]) == ["id"]
+fn name_texts(names: List<ast.Name>) -> List<String> {
+    var written = []
+    for named in names {
+        written = list.push(written, named.text)
+    }
+    written
+}
+
+/// `Int`, `List<User>`, `demo.Held<Int>`, or `()`, always on one line.
+// example: type_text(type_of("demo.Held< Map<Int,()> >")) == "demo.Held<Map<Int, ()>>"
+fn type_text(written: ast.TypeRef) -> String {
+    match written.kind {
+        ast.NamedType { path, arguments } => ast.path_text(path) + angled(type_texts(arguments))
+        ast.UnitType => "()"
+    }
+}
+
+/// The text of each type, in order.
+// example: type_texts([type_of("Int"), type_of("()")]) == ["Int", "()"]
+fn type_texts(types: List<ast.TypeRef>) -> List<String> {
+    var written = []
+    for type_ref in types {
+        written = list.push(written, type_text(written: type_ref))
+    }
+    written
+}
+
+/// `<first, second>` around the texts, or nothing at all where there are none.
+// example: angled(["A", "B"]) == "<A, B>"
+// example: angled([]) == ""
+fn angled(texts: List<String>) -> String {
+    if list.length(texts) == 0 {
+        return ""
+    }
+    "<" + strings.join(texts, ", ") + ">"
+}
+
+/// A string literal that decodes to `value`, with the five escapes of the grammar written back.
+// example: spelled("say \"hi\"\n\\") == "\"say \\\"hi\\\"\\n\\\\\""
+// example: spelled("é\t\r") == "\"é\\t\\r\""
+fn spelled(value: String) -> String {
+    var written = "\""
+    var index = 0
+    for index < strings.length(value) {
+        written += escaped(or(strings.cut(value, index, index + 1), ""))
+        index += 1
+    }
+    written + "\""
+}
+
+/// One code unit of a string, as a literal writes it.
+// example: escaped("\"") == "\\\""
+// example: escaped("a") == "a"
+fn escaped(letter: String) -> String {
+    if letter == "\"" || letter == "\\" {
+        return "\\" + letter
+    }
+    if letter == "\n" {
+        return "\\n"
+    }
+    if letter == "\t" {
+        return "\\t"
+    }
+    if letter == "\r" {
+        return "\\r"
+    }
+    letter
+}
+
+/// How tightly an expression binds, which is what decides whether it needs parentheses.
+// example: binding_power(expression_of("a * b").kind) == 4
+// example: binding_power(expression_of("a.b").kind) == 6
+// example: binding_power(expression_of("a").kind) == 7
+fn binding_power(kind: ast.ExprKind) -> Int {
+    match kind {
+        ast.Unary { operator, operand } => unary_power()
+        ast.Binary { operator, left, right } => operator_power(operator)
+        ast.Call { callee, arguments } => postfix_power()
+        ast.Field { receiver, name } => postfix_power()
+        ast.Try(inner) => postfix_power()
+        _ => 7
+    }
+}
+
+/// The level of an infix operator, loosest first, as the parser's table has them.
+// example: operator_power(ast.Or) == 0
+// example: operator_power(ast.Remainder) == 4
+fn operator_power(operator: ast.BinaryOperator) -> Int {
+    match operator {
+        ast.Or => 0
+        ast.And => 1
+        ast.Equal => comparison_power()
+        ast.NotEqual => comparison_power()
+        ast.Less => comparison_power()
+        ast.LessOrEqual => comparison_power()
+        ast.Greater => comparison_power()
+        ast.GreaterOrEqual => comparison_power()
+        ast.Add => 3
+        ast.Subtract => 3
+        ast.Multiply => 4
+        ast.Divide => 4
+        ast.Remainder => 4
+    }
+}
+
+/// The text an infix operator is written as.
+// example: operator_text(ast.GreaterOrEqual) == ">="
+fn operator_text(operator: ast.BinaryOperator) -> String {
+    match operator {
+        ast.Or => "||"
+        ast.And => "&&"
+        ast.Equal => "=="
+        ast.NotEqual => "!="
+        ast.Less => "<"
+        ast.LessOrEqual => "<="
+        ast.Greater => ">"
+        ast.GreaterOrEqual => ">="
+        ast.Add => "+"
+        ast.Subtract => "-"
+        ast.Multiply => "*"
+        ast.Divide => "/"
+        ast.Remainder => "%"
+    }
+}
+
+/// The level of the comparisons, the one level that does not chain.
+// example: comparison_power() == 2
+fn comparison_power() -> Int {
+    2
+}
+
+/// How tightly a prefix operator binds.
+// example: unary_power() == 5
+fn unary_power() -> Int {
+    5
+}
+
+/// How tightly a postfix chain binds: more tightly than any operator, less than a bare value.
+// example: postfix_power() == 6
+fn postfix_power() -> Int {
+    6
+}
+
+/// A binding power no expression has, which is how an operand is made to keep its parentheses.
+// example: parenthesised_power() == 8
+fn parenthesised_power() -> Int {
+    8
+}
+
+/// A line of text that holds no comment, with the comments that belong above it.
+// example: line(printer_of(""), lexer.Span { start: 0, length: 1 }, "x").text == "x\n"
+fn line(printer: Printer, span: lexer.Span, content: String) -> Printer {
+    end_line(word(open_line(comments_above(printer, span)), content))
+}
+
+/// ` {`, the end of the line, and one level more of indentation.
+// example: open_block(printer_of("")).text == " {\n"
+fn open_block(printer: Printer) -> Printer {
+    indented(end_line(word(printer, " {")))
+}
+
+/// The `}` that closes a body, after each comment still waiting that starts before `end`.
+// example: close_block(open_block(printer_of("")), 0).text == " {\n}"
+fn close_block(printer: Printer, end: Int) -> Printer {
+    word(open_line(dedented(comments_before(printer, end))), "}")
+}
+
+/// Writes the comments that belong above the line `span` starts on.
+///
+/// A comment at the end of a line therefore moves to a line of its own above that line, and a
+/// comment already alone on its line stays where it is.
+// example: comments_above(printer_of("x // one\n// two"), lexer.Span { start: 0, length: 1 }).text == "// one\n"
+fn comments_above(printer: Printer, span: lexer.Span) -> Printer {
+    if !has_comments(printer) {
+        return printer
+    }
+    comments_before(printer, end_of_line(printer, span.start))
+}
+
+/// Writes each comment still waiting that starts before `offset`, each on a line of its own.
+// example: comments_before(printer_of("// one  \n// two"), 3).text == "// one\n"
+fn comments_before(printer: Printer, offset: Int) -> Printer {
+    var printed = printer
+    for has_comment_before(printed, offset) {
+        text := trimmed(or(list.at(printed.texts, printed.written), ""))
+        ended := end_line(word(open_line(printed), text))
+        printed = ended { written: ended.written + 1 }
+    }
+    printed
+}
+
+/// Whether the next comment still waiting starts before `offset`.
+// example: has_comment_before(printer_of("// one"), 1)
+// example: !has_comment_before(printer_of("// one"), 0)
+fn has_comment_before(printer: Printer, offset: Int) -> Bool {
+    match list.at(printer.comments, printer.written) {
+        Some(start) => start < offset
+        None => false
+    }
+}
+
+/// Whether any comment of the source is still waiting to be written.
+// example: has_comments(printer_of("// one"))
+// example: !has_comments(printer_of("x"))
+fn has_comments(printer: Printer) -> Bool {
+    printer.written < printer.count
+}
+
+/// The offset of the line break that ends the line `offset` is on, or the end of the source.
+// example: end_of_line(printer_of("ab\ncd\n"), 4) == 5
+// example: end_of_line(printer_of("ab\ncd"), 4) == 5
+fn end_of_line(printer: Printer, offset: Int) -> Int {
+    var low = 0
+    var high = list.length(printer.newlines)
+    for low < high {
+        middle := or((low + high) / 2, 0)
+        if or(list.at(printer.newlines, middle), 0) < offset {
+            low = middle + 1
+        } else {
+            high = middle
+        }
+    }
+    or(list.at(printer.newlines, low), printer.ending)
+}
+
+/// `text` without the blanks at its end.
+// example: trimmed("// a \t") == "// a"
+// example: trimmed("   ") == ""
+fn trimmed(text: String) -> String {
+    var length = strings.length(text)
+    for length > 0 && is_blank(or(strings.at(text, length - 1), 0)) {
+        length = length - 1
+    }
+    or(strings.cut(text, 0, length), text)
+}
+
+/// Whether a code unit is white space, as Unicode states it.
+// example: is_blank(32)
+// example: is_blank(12288)
+// example: !is_blank(97)
+fn is_blank(unit: Int) -> Bool {
+    if unit >= 9 && unit <= 13 || unit == 32 || unit == 133 || unit == 160 || unit == 5760 {
+        return true
+    }
+    unit >= 8192 && unit <= 8202 || unit == 8232 || unit == 8233 || unit == 8239 || unit == 8287 || unit == 12288
+}
+
+/// The indentation that opens a line: four blanks for each level.
+// example: open_line(indented(indented(printer_of("")))).text == "        "
+fn open_line(printer: Printer) -> Printer {
+    var printed = printer
+    var level = 0
+    for level < printer.depth {
+        printed = word(printed, "    ")
+        level += 1
+    }
+    printed
+}
+
+/// The printer, with the line it is on ended.
+// example: end_line(printer_of("")).text == "\n"
+fn end_line(printer: Printer) -> Printer {
+    word(printer, "\n")
+}
+
+/// The printer, with `text` written after what it holds.
+// example: word(printer_of(""), "fn").text == "fn"
+fn word(printer: Printer, text: String) -> Printer {
+    printer { text: printer.text + text }
+}
+
+/// The printer, one level of indentation further in.
+// example: indented(printer_of("")).depth == 1
+fn indented(printer: Printer) -> Printer {
+    printer { depth: printer.depth + 1 }
+}
+
+/// The printer, one level of indentation further out.
+// example: dedented(indented(printer_of(""))).depth == 0
+fn dedented(printer: Printer) -> Printer {
+    printer { depth: printer.depth - 1 }
+}
+
+/// The printer as it is, holding no text yet, so that a part is written apart from the whole.
+///
+/// Adding to a long text copies all of it, so a statement or an item is written apart first.
+// example: fresh(word(printer_of(""), "x")).text == ""
+fn fresh(printer: Printer) -> Printer {
+    printer { text: "" }
+}
+
+/// `inner`, with the text of `outer` written before its own.
+// example: appended(outer: word(printer_of(""), "a"), inner: word(printer_of(""), "b")).text == "ab"
+fn appended(outer: Printer, inner: Printer) -> Printer {
+    inner { text: outer.text + inner.text }
+}
+
+/// A printer at the left margin, with each comment and each line break of `source`.
+// example: printer_of("x // one\ny").count == 1
+// example: printer_of("x // one\ny").ending == 10
+fn printer_of(source: String) -> Printer {
+    var comments = []
+    var texts = []
+    var newlines = []
+    var ending = 0
+    for token in lexer.lex(source) {
+        if token.kind == lexer.LineComment {
+            comments = list.push(comments, token.span.start)
+            texts = list.push(texts, token.text)
+        }
+        if token.kind == lexer.Newline {
+            newlines = list.push(newlines, token.span.start)
+        }
+        ending = end_of(token.span)
+    }
+    Printer { comments: comments, texts: texts, count: list.length(comments), written: 0, newlines: newlines, ending: ending, depth: 0, text: "" }
+}
+
+/// Where `span` ends, which is one byte past the last byte it covers.
+// example: end_of(lexer.Span { start: 3, length: 4 }) == 7
+fn end_of(span: lexer.Span) -> Int {
+    span.start + span.length
+}
+
+/// The expression `source` parses to, and `()` where it does not parse.
+// example: is_record(expression_of("User {}").kind)
+fn expression_of(source: String) -> ast.Expr {
+    unit := ast.Expr { kind: ast.Unit, span: lexer.Span { start: 0, length: 0 } }
+    match parser.expression(parser.over(source), parser.Allowed) {
+        Ok(parsed) => parsed.value
+        Err(refused) => unit
+    }
+}
+
+/// The pattern `source` parses to, and `_` where it does not parse.
+// example: pattern_text(pattern_of("_")) == "_"
+fn pattern_of(source: String) -> ast.Pattern {
+    wildcard := ast.Pattern { kind: ast.Wildcard, span: lexer.Span { start: 0, length: 0 } }
+    match parser.pattern(parser.over(source)) {
+        Ok(parsed) => parsed.value
+        Err(refused) => wildcard
+    }
+}
+
+/// The type `source` parses to, and `()` where it does not parse.
+// example: type_text(type_of("()")) == "()"
+fn type_of(source: String) -> ast.TypeRef {
+    unit := ast.TypeRef { kind: ast.UnitType, span: lexer.Span { start: 0, length: 0 } }
+    match parser.type_ref(parser.over(source)) {
+        Ok(parsed) => parsed.value
+        Err(refused) => unit
+    }
+}
+
+/// The state the printer carries while it writes: the text so far, and what it still has to write.
+///
+/// `comments` holds where each comment of the source starts and `texts` holds what it says, in
+/// source order, and `written` counts how many of them are in the text already.
+type Printer = {
+    comments: List<Int>
+    texts: List<String>
+    count: Int
+    written: Int
+    newlines: List<Int>
+    ending: Int
+    depth: Int
+    text: String
+}
+
+/// The three parts of an infix expression, which is one thing and not three arguments.
+type Infix = {
+    operator: ast.BinaryOperator
+    left: ast.Expr
+    right: ast.Expr
+}
+
+/// A prefix operator and what it is written against.
+type Prefix = {
+    operator: ast.UnaryOperator
+    operand: ast.Expr
+}
+
+/// What is called, and what the call passes.
+type Applied = {
+    callee: ast.Expr
+    arguments: ast.Arguments
+}
+
+derive Eq for Records
+
+/// Whether a `{` after a name reads as a record literal or as the start of a block.
+///
+/// The head of an `if`, a `for`, and a `match` forbids one, as the parser does.
+type Records =
+    | Allowed
+    | Forbidden
+
+/// Whether a block writes its own `}`, or leaves it for an `else` to continue.
+type Closing =
+    | Closed
+    | LeftOpen
