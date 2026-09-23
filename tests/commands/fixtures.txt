@@ -2169,6 +2169,9 @@ status 0
 $ check tests/spec/running/status_low_bits.lm
 status 0
 
+$ check tests/spec/running/strings.lm
+status 0
+
 $ check tests/spec/traits/declared.lm
 status 0
 
@@ -3569,6 +3572,9 @@ $ check --json tests/spec/running/status.lm
 status 0
 
 $ check --json tests/spec/running/status_low_bits.lm
+status 0
+
+$ check --json tests/spec/running/strings.lm
 status 0
 
 $ check --json tests/spec/traits/declared.lm
@@ -6865,6 +6871,16 @@ $ api tests/spec/running/status_low_bits.lm
 status 0
 > fn main(arguments: List<String>) -> Int
 
+$ api tests/spec/running/strings.lm
+status 0
+> fn main(arguments: List<String>) -> Int
+>
+> instance Eq<Word>
+>
+> type Word = {
+>     text: String
+> }
+
 $ api tests/spec/traits/declared.lm
 status 0
 > fn main(arguments: List<String>) -> Int
@@ -9807,14 +9823,7 @@ status 1
 ! help: a module is a file beside this one, or one of a package it depends on
 
 $ test tests/spec/packages/carried/strings.lm
-status 1
-! error[L0702]: two parts of this program are both named `strings`
-!   --> tests/spec/packages/carried/strings.lm:1:1
-!
-!   1 | // A file named as a library module. It is reached as the module the command names, and
-!     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this runs on to line 8
-!
-! help: rename this module, so that no other part of the program has its name
+status 0
 
 $ test tests/spec/packages/colours/circle.lm
 status 0
@@ -10379,6 +10388,9 @@ $ test tests/spec/running/status.lm
 status 0
 
 $ test tests/spec/running/status_low_bits.lm
+status 0
+
+$ test tests/spec/running/strings.lm
 status 0
 
 $ test tests/spec/traits/declared.lm
@@ -13135,6 +13147,9 @@ status 0
 $ fmt tests/spec/running/status_low_bits.lm
 status 0
 
+$ fmt tests/spec/running/strings.lm
+status 0
+
 $ fmt tests/spec/traits/declared.lm
 status 0
 
@@ -15323,14 +15338,7 @@ status 1
 ! help: a module is a file beside this one, or one of a package it depends on
 
 $ build tests/spec/packages/carried/strings.lm
-status 1
-! error[L0702]: two parts of this program are both named `strings`
-!   --> tests/spec/packages/carried/strings.lm:1:1
-!
-!   1 | // A file named as a library module. It is reached as the module the command names, and
-!     | ^
-!
-! help: rename this module, so that no other part of the program has its name
+status 0
 
 $ build tests/spec/packages/colours/circle.lm
 status 0
@@ -15895,6 +15903,9 @@ $ build tests/spec/running/status.lm
 status 0
 
 $ build tests/spec/running/status_low_bits.lm
+status 0
+
+$ build tests/spec/running/strings.lm
 status 0
 
 $ build tests/spec/traits/declared.lm

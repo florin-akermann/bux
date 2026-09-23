@@ -1,0 +1,24 @@
+// expect-run
+// > 4
+// > true
+// A program may name a module as the library names one. This file is the module `strings`, and
+// the command runs it as the program. The library's `strings` is the module it imports.
+// The two are two classes, so the call of `strings.length` reaches the library's.
+// `list.has_value` over a `Word` reaches the class of this module for the `Eq` of a `Word`.
+import io
+
+import list
+
+import strings
+
+fn main(arguments: List<String>) -> Int {
+    io.println(shown(strings.length("four")))
+    io.println(shown(list.has_value([Word { text: "a" }, Word { text: "b" }], Word { text: "b" })))
+    0
+}
+
+derive Eq for Word
+
+type Word = {
+    text: String
+}

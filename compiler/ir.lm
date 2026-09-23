@@ -67,9 +67,10 @@ fn checked_lowered(checked: Result<List<infer.Inference>, String>, library: Libr
 /// lowered after each module that imports it, and the prelude is lowered after all of them.
 // example: list.length(passes_lowered([], little_library())) == 1
 fn passes_lowered(typed: List<infer.Inference>, library: Library) -> List<Lowered> {
+    classes := module_classes(typed)
     var asked = no_asks()
     for {
-        pass := pass_over(typed, library, asked)
+        pass := pass_over(typed, library, classes, asked)
         if !is_asking_more(pass) {
             return reversed(pass.lowered)
         }
@@ -79,13 +80,90 @@ fn passes_lowered(typed: List<infer.Inference>, library: Library) -> List<Lowere
 }
 
 /// One pass: each module lowered with what the pass knows is asked of it, and the prelude last.
-// example: list.length(pass_over([], little_library(), no_asks()).knew) == 1
-fn pass_over(typed: List<infer.Inference>, library: Library, asked: Asked) -> Pass {
+///
+/// `classes` holds the class of each module whose class is not its name.
+// example: list.length(pass_over([], little_library(), only_the_prelude(), no_asks()).knew) == 1
+fn pass_over(typed: List<infer.Inference>, library: Library, classes: map.Map<String, String>, asked: Asked) -> Pass {
     var pass = Pass { lowered: [], asked: asked, knew: [] }
     for module in reversed(typed) {
-        pass = pass_added(pass, module.resolved.module, lowered_module(module, library, pass.asked))
+        naming := naming_in(pass, classes, module.resolved.module)
+        pass = pass_added(pass, naming.module, lowered_module(module, library, naming, pass.asked))
     }
-    pass_added(pass, "prelude", lowered_prelude(library, pass.asked))
+    pass_added(pass, "prelude", lowered_prelude(library, classes, pass.asked))
+}
+
+/// How the module `name` is named in `pass`, where `classes` holds the class of each module whose
+/// class is not its name.
+///
+/// The first module a pass lowers is the one the command names, and its class is its name.
+/// The other modules spell it as `root_spelled` spells it, and each other one by its name.
+// example: naming_in(Pass { lowered: [], asked: no_asks(), knew: [] }, only_the_prelude(), "prelude").class == "prelude"
+// example: naming_in(Pass { lowered: [], asked: no_asks(), knew: [] }, only_the_prelude(), "prelude").module == "prelude$"
+// example: naming_in(Pass { lowered: [no_lowered()], asked: no_asks(), knew: [] }, only_the_prelude(), "prelude").class == "lumen/library/prelude"
+fn naming_in(pass: Pass, classes: map.Map<String, String>, name: String) -> Naming {
+    if list.length(pass.lowered) == 0 {
+        return Naming { module: root_spelled(classes, name), class: name, classes: classes }
+    }
+    Naming { module: name, class: module_named(classes, name), classes: classes }
+}
+
+/// The class of each module whose class is not its name, among the modules `typed` and the prelude.
+///
+/// The last module is the one the command names, and it is the program's whatever its name is.
+/// Each other module whose name the library carries is the library's, because an import of that
+/// name reaches the library before it reaches a file.
+/// The last module is spelled as `root_spelled` spells it, and that spelling names its class.
+// example: module_named(module_classes([]), "prelude") == "lumen/library/prelude"
+// example: module_named(module_classes([types.checked_of("")]), "main") == "main"
+fn module_classes(typed: List<infer.Inference>) -> map.Map<String, String> {
+    var classes = only_the_prelude()
+    last := list.length(typed) - 1
+    var index = 0
+    for module in typed {
+        name := module.resolved.module
+        if index < last && is_carried(name) {
+            classes = library_class_added(classes, name)
+        }
+        index += 1
+    }
+    match list.at(typed, last) {
+        Some(root) => root_class_added(classes, root.resolved.module)
+        None => classes
+    }
+}
+
+/// `classes`, with the class of the module `name` that the command names, where a module of the
+/// library has that name too, so that its spelling is not its class.
+// example: module_named(root_class_added(only_the_prelude(), "prelude"), "prelude$") == "prelude"
+// example: module_named(root_class_added(only_the_prelude(), "main"), "main") == "main"
+fn root_class_added(classes: map.Map<String, String>, name: String) -> map.Map<String, String> {
+    spelled := root_spelled(classes, name)
+    if spelled == name {
+        return classes
+    }
+    map.insert(classes, spelled, name)
+}
+
+/// Whether the library carries a module named `name`.
+// example: !is_carried("lexer")
+fn is_carried(name: String) -> Bool {
+    match modules.carried(name) {
+        Some(_) => true
+        None => false
+    }
+}
+
+/// How the other modules spell the module `name` that the command names.
+///
+/// A type of a module is spelled with the name of its module in what one module asks of another.
+/// So where a module of the library has the name `name`, a `$` after it tells the two apart.
+// example: root_spelled(only_the_prelude(), "prelude") == "prelude$"
+// example: root_spelled(only_the_prelude(), "main") == "main"
+fn root_spelled(classes: map.Map<String, String>, name: String) -> String {
+    match map.get(classes, name) {
+        Some(_) => name + "$"
+        None => name
+    }
 }
 
 /// `pass` with `one` lowered as `module`, and what `one` asks of other modules noted.
@@ -165,17 +243,16 @@ fn library_read(source: String) -> Library {
     library_of(prelude, resolved)
 }
 
-/// One module, lowered with what the pass knows is asked of it.
-// example: list.length(lowered_module(types.checked_of("fn f() -> Int {\n    1\n}\n"), little_library(), no_asks()).classes) == 8
-fn lowered_module(typed: infer.Inference, library: Library, asked: Asked) -> Lowered {
-    module := typed.resolved.module
-    lowered(lowering_of(typed, library, module, shapes_of(typed, module, library)), asked)
+/// One module, named as `naming` names it, lowered with what the pass knows is asked of it.
+// example: list.length(lowered_module(types.checked_of("fn f() -> Int {\n    1\n}\n"), little_library(), main_naming(), no_asks()).classes) == 8
+fn lowered_module(typed: infer.Inference, library: Library, naming: Naming, asked: Asked) -> Lowered {
+    lowered(lowering_of(typed, library, naming.module, shapes_of(typed, naming, library)), asked)
 }
 
 /// The prelude, lowered with what the pass knows is asked of it.
-// example: list.length(lowered_prelude(little_library(), no_asks()).classes) == 8
-fn lowered_prelude(library: Library, asked: Asked) -> Lowered {
-    lowered(lowering_of(library.typed, library, "prelude", prelude_shapes(library)), asked)
+// example: list.length(lowered_prelude(little_library(), only_the_prelude(), no_asks()).classes) == 8
+fn lowered_prelude(library: Library, classes: map.Map<String, String>, asked: Asked) -> Lowered {
+    lowered(lowering_of(library.typed, library, "prelude", prelude_shapes(library, classes)), asked)
 }
 
 /// The module class, then one class for each type the module reaches, then the class of a list.
@@ -213,8 +290,8 @@ fn process_classes(lowering: Lowering) -> List<Class> {
 fn process_class(lowering: Lowering, declaration: ast.ProcessDeclaration) -> Class {
     started := signature_of_process(lowering, declaration, 0)
     received := signature_of_process(lowering, declaration, 1)
-    shape := process_shape(process_class_name(module: lowering.shapes.module, named: declaration.name.text), started)
-    ran := Ran { module: lowering.shapes.module, named: declaration.name.text, started: started, received: received }
+    shape := process_shape(process_class_name(module: lowering.shapes.class, named: declaration.name.text), started)
+    ran := Ran { module: lowering.shapes.class, named: declaration.name.text, started: started, received: received }
     methods := [constructor_method(shape, object_class()), spawned_method(shape, started), run_method(lowering.shapes, shape, ran)]
     Class { name: shape.class, extends: object_class(), extending: Never, implements: ["java/lang/Runnable"], fields: held_fields(shape), methods: methods }
 }
@@ -400,7 +477,7 @@ fn module_class(lowering: Lowering, asked: Asked) -> Classed {
     owing := every_asked_owed(every_plain_owed(lowering), asked)
     written := methods_owed(owing)
     methods := concatenated(first: written.methods, second: entry_point(written.lowering))
-    Classed { lowering: written.lowering, class: Class { name: owing.shapes.module, extends: object_class(), extending: Never, implements: [], fields: [], methods: methods } }
+    Classed { lowering: written.lowering, class: Class { name: owing.shapes.class, extends: object_class(), extending: Never, implements: [], fields: [], methods: methods } }
 }
 
 /// `lowering` owing each method a module writes whatever is asked of it.
@@ -585,7 +662,7 @@ fn entry_of(lowering: Lowering, function: ast.FunctionDeclaration) -> List<Metho
     }
     started := descriptor_of(signature_of(lowering, function.name.span, whole()))
     taken := arguments_descriptor()
-    instructions := [Load { slot: 0, of: taken }, InvokeStatic(list_built()), InvokeStatic(MethodRef { class: lowering.shapes.module, name: "main", descriptor: started }), LowEightBits, InvokeStatic(MethodRef { class: "java/lang/System", name: "exit", descriptor: MethodDescriptor { parameters: [Integer], result: None } }), Return(None)]
+    instructions := [Load { slot: 0, of: taken }, InvokeStatic(list_built()), InvokeStatic(MethodRef { class: lowering.shapes.class, name: "main", descriptor: started }), LowEightBits, InvokeStatic(MethodRef { class: "java/lang/System", name: "exit", descriptor: MethodDescriptor { parameters: [Integer], result: None } }), Return(None)]
     [Method { name: "main", descriptor: MethodDescriptor { parameters: [taken], result: None }, reached: ThroughTheClass, body: Body { instructions: instructions, locals: 0, guards: [] } }]
 }
 
@@ -949,10 +1026,11 @@ fn let_go_of(lowering: Lowering, walk: Escape, name: ast.Name) -> Escape {
     }
 }
 
-/// The shapes of the prelude, whose class is `lumen/prelude`.
-// example: prelude_shapes(little_library()).module == "lumen/prelude"
-fn prelude_shapes(library: Library) -> Shapes {
-    prelude_declared(empty_shapes("lumen/prelude", library), library)
+/// The shapes of the prelude, whose class is `lumen/library/prelude`.
+// example: prelude_shapes(little_library(), only_the_prelude()).class == "lumen/library/prelude"
+fn prelude_shapes(library: Library, classes: map.Map<String, String>) -> Shapes {
+    naming := Naming { module: "prelude", class: module_named(classes, "prelude"), classes: classes }
+    prelude_declared(empty_shapes(naming, library), library)
 }
 
 /// `shapes` with each Java class another module asked this one for a method at.
@@ -996,7 +1074,7 @@ fn is_undotted(found: Option<Home>) -> Bool {
 }
 
 /// Every class the shapes lay out: each record, and each base with its variants.
-// example: list.length(shape_classes(prelude_shapes(little_library()))) == 6
+// example: list.length(shape_classes(prelude_shapes(little_library(), only_the_prelude()))) == 6
 fn shape_classes(shapes: Shapes) -> List<Class> {
     var classes = []
     for declaration in shapes.declarations {
@@ -1212,7 +1290,7 @@ fn no_writing() -> Writing {
 fn little_lowering(source: String) -> Lowering {
     typed := types.checked_of(source)
     library := little_library()
-    lowering_of(typed, library, "main", shapes_of(typed, "main", library))
+    lowering_of(typed, library, "main", shapes_of(typed, main_naming(), library))
 }
 
 /// The small prelude of the examples, which declares `Option`, `Result`, `Eq`, `Add`, and literals.
@@ -1432,9 +1510,9 @@ fn each_derive_name(deriving: ast.DeriveDeclaration) -> List<DerivedName> {
 }
 
 /// The shapes of a module: each type it declares, each type it reaches, and each prelude type.
-// example: set.has_value(shapes_of(types.checked_of("type Box = Box\n"), "main", little_library()).own, "Box")
-fn shapes_of(typed: infer.Inference, module: String, library: Library) -> Shapes {
-    var shapes = empty_shapes(module, library)
+// example: set.has_value(shapes_of(types.checked_of("type Box = Box\n"), main_naming(), little_library()).own, "Box")
+fn shapes_of(typed: infer.Inference, naming: Naming, library: Library) -> Shapes {
+    var shapes = empty_shapes(naming, library)
     for item in typed.resolved.program.items {
         shapes = match item {
             ast.Type(declaration) => own_declared(shapes, typed.resolved, declaration)
@@ -1447,10 +1525,10 @@ fn shapes_of(typed: infer.Inference, module: String, library: Library) -> Shapes
     prelude_declared(shapes, library)
 }
 
-/// Shapes of nothing, for the class `module`.
-// example: list.length(empty_shapes("main", little_library()).declarations) == 0
-fn empty_shapes(module: String, library: Library) -> Shapes {
-    Shapes { module: module, declarations: [], built_by: map.empty(), records: map.empty(), record_builders: set.empty(), own: set.empty(), foreign: map.empty(), prelude_types: library.types }
+/// Shapes of nothing, for the module `naming` names.
+// example: list.length(empty_shapes(main_naming(), little_library()).declarations) == 0
+fn empty_shapes(naming: Naming, library: Library) -> Shapes {
+    Shapes { module: naming.module, class: naming.class, classes: naming.classes, declarations: [], built_by: map.empty(), records: map.empty(), record_builders: set.empty(), own: set.empty(), foreign: map.empty(), prelude_types: library.types }
 }
 
 /// `shapes` with the type the module declares as `declaration`, in the module's own package.
@@ -2071,7 +2149,7 @@ fn spawn_built(builder: Builder, started: ast.Expr) -> Left {
     signature := signature_of_process(builder.lowering, declaration, 0)
     handing := each_handed(builder, requested.passed, signature.parameters)
     taken := descriptor_of(Signature { parameters: signature.parameters, result: None }).parameters
-    spawned := MethodRef { class: process_class_name(module: builder.lowering.shapes.module, named: declaration.name.text), name: "spawned", descriptor: MethodDescriptor { parameters: taken, result: Some(handle_descriptor()) } }
+    spawned := MethodRef { class: process_class_name(module: builder.lowering.shapes.class, named: declaration.name.text), name: "spawned", descriptor: MethodDescriptor { parameters: taken, result: Some(handle_descriptor()) } }
     Left { builder: emit(handing, InvokeStatic(spawned)), held: Some(handle_descriptor()) }
 }
 
@@ -2253,7 +2331,7 @@ fn each_handed(builder: Builder, arguments: List<ast.Expr>, parameters: List<Opt
 fn statically(builder: Builder, use: Use, arguments: List<ast.Expr>) -> Left {
     reached := use_reached(builder.lowering, use)
     handing := each_handed(builder { lowering: reached.lowering }, arguments, reached.reaching.signature.parameters)
-    invoking := InvokeStatic(MethodRef { class: handing.lowering.shapes.module, name: reached.reaching.named, descriptor: descriptor_of(reached.reaching.signature) })
+    invoking := InvokeStatic(MethodRef { class: handing.lowering.shapes.class, name: reached.reaching.named, descriptor: descriptor_of(reached.reaching.signature) })
     Left { builder: emit(handing, invoking), held: reached.reaching.signature.result }
 }
 
@@ -2770,7 +2848,7 @@ fn compiled_or_called(builder: Builder, through: Through, arguments: List<ast.Ex
 fn in_another_module(builder: Builder, through: Through, arguments: List<ast.Expr>) -> Left {
     reached := reached_method(builder, through)
     handing := each_handed(reached.builder, arguments, reached.reaching.signature.parameters)
-    invoking := InvokeStatic(MethodRef { class: through.module.text, name: reached.reaching.named, descriptor: descriptor_of(reached.reaching.signature) })
+    invoking := InvokeStatic(MethodRef { class: module_named(builder.lowering.shapes.classes, through.module.text), name: reached.reaching.named, descriptor: descriptor_of(reached.reaching.signature) })
     Left { builder: emit(handing, invoking), held: reached.reaching.signature.result }
 }
 
@@ -4020,23 +4098,13 @@ fn answered_elsewhere(lowering: Lowering, asking: Asking) -> Answered {
     }
     signature := written_as(lowering, instance_signature(library: lowering.library, of: of, method: asking.method, at: asking.at))
     reaching := Reaching { named: names_wholly(answerer, asked.written), signature: signature }
-    Answered { lowering: asked.lowering, answered_by: Some(Instance { class: module_named(asking.home.module), reaching: reaching }) }
+    Answered { lowering: asked.lowering, answered_by: Some(Instance { class: module_named(asked.lowering.shapes.classes, asking.home.module), reaching: reaching }) }
 }
 
 /// The type the prelude gives the method `method` of the trait `of` at `at`.
 // example: unify.text_of(instance_signature(library: little_library(), of: "Eq", method: "is_equal", at: unify.int())) == "(Int, Int) -> Bool"
 fn instance_signature(library: Library, of: String, method: String, at: unify.Type) -> unify.Type {
     or(declared.method_at(library.prelude.declared, of, method, at), unify.Unit)
-}
-
-/// The class of the module `module`, which is `lumen/prelude` for the prelude.
-// example: module_named("prelude") == "lumen/prelude"
-// example: module_named("lexer") == "lexer"
-fn module_named(module: String) -> String {
-    if module == "prelude" {
-        return "lumen/prelude"
-    }
-    module
 }
 
 /// `settled`, noted as asked of `module` for `function`, and as that module writes each type.
@@ -4070,7 +4138,7 @@ fn written_here(lowering: Lowering, method: String, named: String, arguments: Li
 // example: answered_here(little_lowering(""), Answers { method: "f", for_type: "Box", arguments: [], declared: infer.no_name().span }, []).lowering.module == "main"
 fn answered_here(lowering: Lowering, answers: Answers, arguments: List<unify.Type>) -> Answered {
     reached := instance_method(lowering, answers, arguments)
-    Answered { lowering: reached.lowering, answered_by: Some(Instance { class: lowering.shapes.module, reaching: reached.reaching }) }
+    Answered { lowering: reached.lowering, answered_by: Some(Instance { class: lowering.shapes.class, reaching: reached.reaching }) }
 }
 
 /// The method of the instance `answers` names, owed settled on `arguments` where it is generic.
@@ -4763,9 +4831,16 @@ fn handle_class_name() -> String {
 // example: declared_class(no_shapes(), "lexer.Span") == "lexer/Span"
 fn declared_class(shapes: Shapes, written_at: String) -> String {
     match split_at_dot(written_at) {
-        Some(home) => home.module + "/" + home.name
-        None => shapes.module + "/" + written_at
+        Some(home) => module_named(shapes.classes, home.module) + "/" + home.name
+        None => shapes.class + "/" + written_at
     }
+}
+
+/// The class of the module `module`, where `classes` holds each class that is not a module's name.
+// example: module_named(only_the_prelude(), "prelude") == "lumen/library/prelude"
+// example: module_named(only_the_prelude(), "lexer") == "lexer"
+fn module_named(classes: map.Map<String, String>, module: String) -> String {
+    or(map.get(classes, module), module)
 }
 
 /// `named` split at its first dot, where it has one.
@@ -4938,13 +5013,35 @@ fn built_shape(shapes: Shapes, constructor: String) -> Shape {
 // example: main_shapes().module == "main"
 fn main_shapes() -> Shapes {
     shapes := no_shapes()
-    shapes { module: "main", own: set.insert(set.empty(), "Box") }
+    shapes { module: "main", class: "main", own: set.insert(set.empty(), "Box") }
+}
+
+/// How the module `main` of the examples is named, in a program that reaches only the prelude.
+// example: main_naming().class == "main"
+fn main_naming() -> Naming {
+    Naming { module: "main", class: "main", classes: only_the_prelude() }
 }
 
 /// Shapes of nothing, for no module and no prelude.
 // example: no_shapes().module == ""
 fn no_shapes() -> Shapes {
-    Shapes { module: "", declarations: [], built_by: map.empty(), records: map.empty(), record_builders: set.empty(), own: set.empty(), foreign: map.empty(), prelude_types: set.empty() }
+    Shapes { module: "", class: "", classes: only_the_prelude(), declarations: [], built_by: map.empty(), records: map.empty(), record_builders: set.empty(), own: set.empty(), foreign: map.empty(), prelude_types: set.empty() }
+}
+
+/// The classes of a program that reaches no module of the library but the prelude.
+// example: module_named(only_the_prelude(), "prelude") == "lumen/library/prelude"
+fn only_the_prelude() -> map.Map<String, String> {
+    library_class_added(map.empty(), "prelude")
+}
+
+/// `classes`, with the class of the module of the library named `name`.
+///
+/// A module of the library is a class of the package `lumen/library`, and a module of the program
+/// is a class of no package. So a module name and a type name, which the package `lumen` holds,
+/// never meet, and a program may name a module as the library names one.
+// example: module_named(library_class_added(map.empty(), "strings"), "strings") == "lumen/library/strings"
+fn library_class_added(classes: map.Map<String, String>, name: String) -> map.Map<String, String> {
+    map.insert(classes, name, "lumen/library/" + name)
 }
 
 /// The shape of the second variant `C` of the type `a.B`.
@@ -5642,8 +5739,13 @@ type Settled = {
 }
 
 /// The shape of each type a module reaches: its class, its tag, and what it carries.
+///
+/// `module` is how other modules spell the module, `class` is its class, and `classes` holds the
+/// class of each module of its program whose class is not its name.
 type Shapes = {
     module: String
+    class: String
+    classes: map.Map<String, String>
     declarations: List<ShapeDeclared>
     built_by: map.Map<String, Shape>
     records: map.Map<String, String>
@@ -5651,6 +5753,14 @@ type Shapes = {
     own: set.Set<String>
     foreign: map.Map<String, JavaClass>
     prelude_types: set.Set<String>
+}
+
+/// How one module is named: how other modules spell it, its class, and the class of each module
+/// of its program whose class is not its name.
+type Naming = {
+    module: String
+    class: String
+    classes: map.Map<String, String>
 }
 
 /// A Java class a type stands for, and how the class is called.

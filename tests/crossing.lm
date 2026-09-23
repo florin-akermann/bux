@@ -112,7 +112,7 @@ fn into_the_library(draw: drawn.Draw, library: ir.Library) -> Drawing {
     lowered := compiled.lowered_alone(source, library)
     var why = refused(lowered)
     for reached in compiled.reached_in(compiled.instructions_of(lowered, "go")) {
-        if !list.has_value(["environment", "files", "io"], reached) {
+        if !list.has_value(["lumen/library/environment", "lumen/library/files", "lumen/library/io"], reached) {
             why = "it reaches " + reached + ", which is no library module"
         }
     }
@@ -135,7 +135,7 @@ fn spec_named(draw: drawn.Draw, library: ir.Library) -> Drawing {
     module := or(list.at(["environment", "files", "io"], at), "")
     call := or(list.at(["_ = environment.read(text)", "_ = files.read(text)", "io.println(text)"], at), "")
     source := "import " + module + "\n\nfn go(text: String) -> () {\n    " + call + "\n}\n"
-    classes := compiled.module_classes(compiled.lowered_alone(source, library), module)
+    classes := compiled.module_classes(compiled.lowered_alone(source, library), "lumen/library/" + module)
     var why = ""
     if list.length(classes) == 0 {
         why = "it writes no class of " + module
@@ -149,7 +149,7 @@ fn spec_named(draw: drawn.Draw, library: ir.Library) -> Drawing {
 }
 
 /// `why`, or what is wrong where one of `reached` is a JVM class the spec does not name.
-// example: unnamed_why(["java/lang/String", "files"], "") == ""
+// example: unnamed_why(["java/lang/String", "lumen/library/files"], "") == ""
 // example: unnamed_why(["java/net/Socket"], "") == "it reaches java/net/Socket, which the spec does not name"
 fn unnamed_why(reached: List<String>, why: String) -> String {
     for class in reached {
