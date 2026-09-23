@@ -6,7 +6,7 @@
 
 ## Open
 
-## 🟡 Item 066: The lexer is written in Bux
+## 🟢 Item 066: The lexer is written in Bux
 **Depends on:** Item 059, Item 076 — a lexer builds a token list from the code units of a string.
 Self-hosting starts with the smallest phase, and the lexer is 286 lines of Rust.
 The Rust `bux` compiles the Bux lexer, and `tests/spec/lexer` holds both to one answer.
