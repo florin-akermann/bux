@@ -445,7 +445,7 @@ x: Int
 name: String
 ```
 
-The language should aim for Haskell/ML-level inference while maintaining Go-like readability.
+The language should aim for Haskell/ML-level inference.
 
 ---
 
@@ -884,7 +884,7 @@ example over it can compile.
 
 ## 12. Control flow
 
-Everyday code is imperative and reads like Go: basically a bunch of `for` loops.
+Everyday code is imperative: basically a bunch of `for` loops.
 
 ```text
 fn active_names(users: List<User>) -> List<String> {

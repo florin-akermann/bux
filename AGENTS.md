@@ -21,7 +21,7 @@ An example of the second half: `17 / 0` is `None`, because a panic is simpler an
 ## What Bux is
 
 - **Goal**: Go's simplicity, Haskell's types, Erlang's messages, Valhalla's values, a Bux compiler.
-- Everyday Bux code reads like Go: mostly `for` loops, plus algebraic data types and `match`.
+- Everyday Bux code is mostly `for` loops, plus algebraic data types and `match`.
 - Plain loops are the default idiom; higher-order functions are library, not a second paradigm.
 - **Concurrency is Erlang's**: all messages, one mailbox per process, one enforced `process` shape.
 - **Self-hosting comes first.** Version 0.3 is what the Bux compiler needs, in the order needed.
