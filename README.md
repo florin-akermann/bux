@@ -1,27 +1,103 @@
-# Lumen
+# Bux
 
 > Go's simplicity.
 > Haskell's types.
 > Valhalla's values.
-> A compiler written in Rust, until Lumen compiles itself.
+> A compiler written in Rust, until Bux compiles itself.
 
-Lumen is a small, statically typed language for practical software, built on Valhalla.
-Its compiler emits JVM bytecode and is written in Rust until a compiler in Lumen replaces it.
+Bux is a small, statically typed language for practical software, built on Valhalla.
+Its compiler emits JVM bytecode and is written in Rust until a compiler in Bux replaces it.
 
-Four things set the everyday code apart:
+This is an experiment and a fun project, not a product.
+Nothing is stable, nobody supports it, and the language changes whenever a better answer appears.
+It exists to find out how much a language gets from very little.
 
-- Source that is not in canonical form does not compile; `lumen fmt` produces that form.
-- There are no anonymous functions; every function has a name, and names are first-class values.
-- Control flow is Go's: `if`, `for`, `match`, `break`, `continue`, `return`.
-- Values, not objects: no type you declare has identity, and `Int` is no more special than one.
+## The name
 
-The JVM is a target, not a model: none of its constraints is kept, its object model least of all.
-Every type is a Valhalla value class from day one: identity-free, null-free, equal by state.
+The language is Bux.
+Lumen is the old name, and the rename moves through the tree one task at a time.
+The binary is still `lumen`, a source file still ends in `.lm`, and the crates are still `lumen-*`.
+Every command below is written as it runs today.
 
-The language is specified in `docs/design.md`.
-The compiler and roadmap are in `docs/implementation.md`; the principles in `docs/principles.md`.
-JDK 28 or later is targeted, early access until it ships; that is where value classes live.
-Agent and contributor guidelines are in `AGENTS.md`; the backlog is `TODOS.md`.
+## Philosophy
+
+The goal is not the most powerful language.
+The goal is the most useful guarantees for each unit of language complexity.
+`docs/principles.md` holds the twelve questions that a proposed feature must answer before it lands.
+
+### One way to write a thing
+
+Sugar is a second spelling, and a second spelling is a cost with no guarantee behind it.
+A reader learns both, a formatter chooses between them, and each later feature answers to two forms.
+`++`, `--`, `-=`, `*=`, `/=`, `%=`, and a ternary `?:` are refused, and they stay refused.
+`+=` is the one shorthand there is, and it is the ceiling rather than the first of a set.
+
+### One way to run work at the same time
+
+Concurrency is Go's: spawn, channels, and calls that block.
+There is no `async`, no `await`, and no second colour of function.
+Concurrency is version 0.4, so none of it runs today.
+
+### Nothing panics, ever
+
+No operation is partial, so `17 / 0` is `None`, and there is no `unwrap`.
+An operation with no answer for some of its input says so in its type, never at run time.
+The compiler answers to the same rule: a program it cannot compile gets a diagnostic, not a crash.
+
+### No special cases
+
+A rule holds for every type, function, and operator alike, or it is no rule.
+`Int` is a type like any other, and a library could declare everything the prelude supplies.
+An operator is a function with other syntax, and `main` is a function like any other.
+
+### Values, not objects
+
+No type a program declares has identity, a `hashCode`, or a `toString`.
+Equality is opt-in: `==` needs `Eq`, a type derives `Eq`, and it compares what the value holds.
+Every type is a Valhalla value class from the first day: identity-free, null-free, equal by state.
+
+### The JVM is a target, not a model
+
+Boxing and the primitive/reference split stay inside the compiler, where no program can see them.
+Java's object model, null, checked exceptions, and inheritance stay out.
+
+### A small library, and a `for` loop
+
+The fewer methods a type has, the better.
+A method lands only where a plain loop cannot write it, which is why a map has no iterator.
+Higher-order functions are a library, never a second way to write a program.
+
+### Canonical form, or it does not compile
+
+Source that is not in canonical form is a compile error, and `lumen fmt` writes that form.
+There is no style option, and a review has nothing about layout to argue about.
+
+### Every function has a name
+
+There are no anonymous functions, and a function is a first-class value by its name.
+
+## Status
+
+Version 0.1 and version 0.2 are in: types, records, ADTs, `match`, generics, and inference.
+Traits, `derive`, operators as trait methods, collections, modules, and packages are in with them.
+Version 0.3 is self-hosting, and it is the work in progress.
+The language now holds what its own compiler needs.
+`compiler/lexer.lm` is the first phase written in Bux, and each further phase follows it.
+A phase is held to the Rust one on the same examples, until Bux builds Bux.
+Then the Rust crates are deleted.
+Version 0.4 adds concurrency, a native binary, HTTP, and JSON.
+`TODOS.md` is the backlog, and it is the only task tracker this repository has.
+
+## Documents
+
+- `docs/design.md` is the language specification; a language change is a change there first.
+- `docs/implementation.md` says how the compiler is built and what ships in which version.
+- `docs/principles.md` holds the questions that every proposed feature must answer.
+- `docs/specs/` holds a behaviour spec for each feature, written before the feature lands.
+- `tests/spec/` holds executable examples, and they are the specification a reader can run.
+- `AGENTS.md` holds the rules that each contributor, human or agent, works to.
+
+Most of the code is written by AI agents that work to `AGENTS.md`, which is why that file is strict.
 
 ## Prerequisites
 
@@ -47,7 +123,7 @@ export PATH="$PWD/target/debug:$PATH"
 
 ## The example program
 
-`example/main.lm` is everyday Lumen in one screen: a record, an ADT, a `match`, and a list walked.
+`example/main.lm` is everyday Bux in one screen: a record, an ADT, a `match`, and a list walked.
 
 ```sh
 lumen run example/main.lm
@@ -68,3 +144,5 @@ Its public surface is one page, which is what a reader consults to learn a signa
 ```sh
 lumen api example/main.lm
 ```
+
+`lumen --help` lists every command: `fmt`, `check`, `build`, `run`, `test`, `api`, and `explain`.
