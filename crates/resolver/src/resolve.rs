@@ -17,7 +17,10 @@ use crate::prelude;
 use crate::scope::Scope;
 
 mod pattern;
+mod program;
 mod traits;
+
+pub use program::ResolvedProgram;
 
 /// Resolves every name of `program`, or reports the first one that has no definition.
 ///
@@ -34,11 +37,11 @@ pub fn resolve(program: Program, module: &str) -> Result<ResolvedProgram, Resolv
     if let Some(error) = order::out_of_order(&program, &definitions) {
         return Err(error);
     }
-    Ok(ResolvedProgram {
-        module: module.to_owned(),
+    Ok(ResolvedProgram::new(
+        module.to_owned(),
         program,
         definitions,
-    })
+    ))
 }
 
 /// The prelude, resolved, which every other module's scope is seeded from.
@@ -53,60 +56,9 @@ pub fn prelude_resolved() -> &'static ResolvedProgram {
         resolver
             .module(&program)
             .expect("every name of the library the compiler carries resolves");
-        ResolvedProgram {
-            module: PRELUDE.to_owned(),
-            program,
-            definitions: resolver.definitions,
-        }
+        ResolvedProgram::new(PRELUDE.to_owned(), program, resolver.definitions)
     });
     &RESOLVED
-}
-
-/// A program whose every name points at the definition it means.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct ResolvedProgram {
-    /// The name this module is reached by, which says what the compiler holds for it.
-    module: String,
-    program: Program,
-    definitions: Definitions,
-}
-
-impl ResolvedProgram {
-    /// The tree this was resolved from.
-    #[must_use]
-    pub const fn program(&self) -> &Program {
-        &self.program
-    }
-
-    /// The name of the module this is, which is the name a file or the library gives it.
-    #[must_use]
-    pub fn module(&self) -> &str {
-        &self.module
-    }
-
-    /// The module a `.` reaches inside, where the name written before the dot names one.
-    ///
-    /// The name before the dot says what the dot does, which `docs/specs/calls.md` states, and
-    /// every phase after this one has to read it the same way: a module is reached inside, and
-    /// anything else is passed in front of the name or read as a field. One answer here is what
-    /// keeps them agreeing, because two that drift call a different function and say nothing.
-    #[must_use]
-    pub fn module_reached<'w>(&self, receiver: &'w Expr) -> Option<&'w Name> {
-        let ExprKind::Name(module) = &receiver.kind else {
-            return None;
-        };
-        let definition = self.definition(Namespace::Value, module)?;
-        (definition.kind == DefinitionKind::Module).then_some(module)
-    }
-
-    /// What `name` means where it is written, which is in one namespace or the other.
-    ///
-    /// A field label and a name reached through a `.` have none, because neither is a name in
-    /// scope; `docs/specs/modules.md` says why.
-    #[must_use]
-    pub fn definition(&self, namespace: Namespace, name: &Name) -> Option<Definition> {
-        self.definitions.get(&(namespace, name.span)).copied()
-    }
 }
 
 /// What resolving one thing amounts to: it worked, or it is the one error of the run.
