@@ -1027,7 +1027,7 @@ A resource-typed value may be passed as an argument to an ordinary call, and not
 It may not be returned, stored in a field, sent in a message, or given to a process.
 It therefore cannot outlive the block that opened it.
 A foreign reference is held to the same four clauses, and the reason is the object behind it.
-A Java object has identity and mutates, so one a process holds is shared state again.
+That object has identity and mutates, so one a process holds is shared state again.
 That is the escape check doing one job rather than a second rule written for the boundary.
 An effect is a capability passed the same way, so effects and resources are one mechanism, not two.
 Elsewhere most of the cost of such a check is closures, which capture capabilities silently.
@@ -1053,7 +1053,7 @@ A process owns its state, a message is the only way to that state, and a process
 There is no **`async`/`await`** and no function colouring.
 A function that blocks is an ordinary function, called like any other.
 There is one kind of function, and no caller ever has to ask which kind it holds.
-The JVM's virtual threads make blocking cheap, so the language never needs a second kind.
+A target must make blocking cheap, as the JVM's virtual threads do, so no second kind is needed.
 
 Conceptually:
 
@@ -1154,7 +1154,7 @@ Erlang lets a mailbox grow without a bound, and one slow process then exhausts t
 Lumen refuses that, because the type system cannot see it and the program cannot recover from it.
 A shared counter, cache, or pool is a process that owns the state and receives requests.
 That is slower than a lock on a hot path, and the trade is accepted.
-A lock-free structure is a JVM library reached through interop, never something Lumen writes.
+A lock-free structure is a platform library reached through `extern`, never something Bux writes.
 
 **A message that cannot arrive is a typed result, never a silent drop**.
 A process ends when `receive` gives `Done`, and its mailbox ends with it.
@@ -1195,7 +1195,7 @@ That is why the process is underneath and the bus on top.
 
 A bus that crosses a network is a different thing, and the paragraph below says where it lives.
 
-Distributed messaging is a JVM library a program consumes, never part of the language or runtime.
+Distributed messaging is a platform library, never part of the language or its runtime.
 Erlang makes a remote process look like a local one, and Lumen does not.
 A network call fails where a local `send` does not, and one name for both hides that difference.
 A transport that shares the mailbox's receive shape gets a library wrapper once a program needs one.
@@ -1288,81 +1288,56 @@ Two dependencies holding a module of one name are refused, because one name has 
 
 ---
 
-## 17. Reaching Java
+## 17. Reaching the platform
 
-The JVM ecosystem is worth reaching, and the object model that comes with it is not.
-An `extern` declaration is the one place a Java member is named, and it names exactly one.
-It gives that member a Lumen signature, and from there it is a function like any other.
+A platform has libraries that are worth reaching, and the model that comes with them is not.
+A boundary lets a program use those libraries, and it keeps their model out of the language.
+An `extern` declaration is the one place a member of the platform is named.
+It names exactly one member, and it gives that member a Bux signature.
+From there it is a function like any other.
+
+Each target has its own `extern` form, and a spec states that form.
+The form says which kinds of member a declaration names, and how the declaration names each kind.
+The compiler reads nothing of the platform, so the form also says which facts a declaration writes.
+`docs/specs/interop.md` states the form of the JVM, which is the first target.
+The rest of this section holds for every target, so a second target adds a spec and nothing here.
+This example is the JVM form, as that spec states it:
 
 ```text
-extern type Path = "java.nio.file.Path"
-
 extern static read_string(path: Path) -> Result<String, String> = "java.nio.file.Files.readString"
 ```
 
-There is one form per kind of member the JVM has, and no sixth kind to learn.
-`type` names a class a value is held as, `field` a static field, `static` a static method,
-`method` an instance method whose receiver is the first parameter, and `new` a constructor.
-A declaration says which it is, so nothing about a call is inferred from the shape of its
-signature.
-
-Every parameter and every result is a Lumen type, and the JVM class it compiles to is the one the
-member's own descriptor names.
-There is no subtyping and no implicit conversion: a member taking `java.lang.Object` is not
-reachable, and the answer is to name one that takes what the caller holds.
+Every parameter and every result is a Bux type.
+There is no subtyping and no implicit conversion.
+So a member that takes a wider type than the caller holds is not reachable.
+The answer is to name a member that takes what the caller holds.
 That is what keeps the boundary a signature rather than a second type system.
 
-One width is the exception, and the declaration is what states it.
-`Int` compiles to a `long`, and a great many Java members give back an `int` instead, `hashCode`
-and `length` among them.
-Which of the two a member gives is written in that member's own class file, and the compiler
-reads none, so the author says it by writing `int` after the kind:
-
-```text
-extern method int length(text: String) -> Int = "length"
-```
-
-The member is called for its `int` and the answer is widened to the `Int` the signature declares.
-Nothing else changes: `int` is no Lumen type, no program can write one, and section 2 is not
-suspended to let one out.
-It is a fact about the member, written where every other fact about the member is written, and
-the only thing refused is writing it where the result is not an `Int` to widen to.
-
-One kind of class is stated the same way, and for the same reason.
-The JVM calls a method of an interface its own way.
-Which of the two a Java name is is written in that name's own class file.
-The compiler reads none, so the author says it by writing `interface` after `type`:
-
-```text
-extern type interface Path = "java.nio.file.Path"
-```
-
-A `method` whose receiver is one is then called the way the JVM calls an interface's method.
-A `field` is written on an interface as it is on a class, because the JVM names a field the same.
-A `new` is refused, because a constructor is the member an interface has none of.
-A `static` of an interface waits, because an `extern static` names its class in the string alone.
+A fact about a member that no Bux type states is written in the declaration, if the form has it.
+The width of a number that a member gives back is one example.
+Such a fact is no Bux type, no program can write a value of it, and section 2 stays in force.
+It is written where every other fact about the member is written.
 
 Three things cross, and nothing else does.
-A value of a Lumen type crosses as itself.
-A `null` given back becomes `None`, which is what an `Option` result declares.
-Anything thrown becomes `Err`, holding what the throwable says of itself, which is what a `Result`
-result declares.
+A value of a Bux type crosses as itself.
+An absent value that the platform gives back becomes `None`, where the result is an `Option`.
+A failure that the platform reports becomes `Err`, where the result is a `Result`.
+That `Err` holds what the platform says of the failure.
 
 An extern type has no identity a program can reach, as every type a program declares has none.
-A Java object is held, handed on, and given back, and it is compared, hashed, or shown only where
-a trait instance written over `extern` declarations says how.
-There is no `equals`, no `hashCode`, and no `toString` reaching it, and no class hierarchy above
-it: section 2 is not suspended inside the boundary.
+A foreign value is held, handed on, and given back.
+It is compared, hashed, or shown only where a trait instance over `extern` declarations says how.
+There is no `equals`, no `hashCode`, and no `toString` reaching it, and no hierarchy above it.
+Section 2 is not suspended inside the boundary.
 
-What a program cannot reach, the object still has: a Java object has identity, and it mutates.
+What a program cannot reach, the foreign value still has: it has identity, and it mutates.
 That is why section 14 names a foreign reference among what its escape check refuses.
 One a process holds is shared mutable state, which section 15 has no answer for.
 The clause already written is that answer, rather than a rule of the boundary's own.
 An `extern` declaration is where a foreign reference comes from, and the check is what it goes to.
 
-An `extern` declares what it can fail with, and that claim is the author's rather than the
-compiler's.
-It is the one claim in the language nothing checks, which is why the boundary is narrow and lives
-in the library: `io` and `files` are Lumen modules over `extern` declarations, and a program
-reaches Java through them rather than through `extern` of its own.
-`docs/specs/interop.md` states the declaration, the two mappings, and the errors.
+An `extern` declares what it can fail with, and that claim is the author's, not the compiler's.
+It is the one claim in the language that nothing checks.
+That is why the boundary is narrow and lives in the library.
+`io` and `files` are Bux modules over `extern` declarations.
+A program reaches the platform through them, rather than through an `extern` of its own.
