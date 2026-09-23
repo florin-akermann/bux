@@ -644,15 +644,11 @@ fn receiver_walked(lowering: Lowering, walk: Escape, receiver: ast.Expr) -> Esca
     }
 }
 
-/// `walk` after what a call is made on: the receiver of a method, unless it is a module.
+/// `walk` after what a call is made on, which lets nothing go where it is a function of a module.
 // example: list.length(callee_walked(little_lowering(""), Escape { built: [], escaped: set.empty() }, no_expr()).built) == 0
 fn callee_walked(lowering: Lowering, walk: Escape, callee: ast.Expr) -> Escape {
     match callee.kind {
-        ast.Field { receiver, name } => if is_a_module(lowering, receiver) {
-            walk
-        } else {
-            expr_walked(lowering, walk, receiver)
-        }
+        ast.Field { receiver, name } => walk
         _ => expr_walked(lowering, walk, callee)
     }
 }
@@ -725,15 +721,6 @@ fn is_constructor(lowering: Lowering, base: ast.Path) -> Bool {
         return true
     }
     declared.definition_of(lowering.typed.resolved, resolver.ValueNamespace, base.name).kind == resolver.Constructor
-}
-
-/// Whether `receiver` names a module.
-// example: !is_a_module(little_lowering(""), no_expr())
-fn is_a_module(lowering: Lowering, receiver: ast.Expr) -> Bool {
-    match receiver.kind {
-        ast.NameExpr(module) => declared.definition_of(lowering.typed.resolved, resolver.ValueNamespace, module).kind == resolver.Module
-        _ => false
-    }
 }
 
 /// `walk` after the base of a record literal, which escapes where it is a binding updated.
@@ -2630,12 +2617,11 @@ fn through_module(builder: Builder, receiver: ast.Expr, name: ast.Name, used: le
     }
 }
 
-/// The name a call reaches, and what it passes: the receiver first, where a method is called.
+/// The name a call reaches, and what it passes.
 // example: list.length(callee_of(no_expr(), [no_expr()]).passed) == 1
 fn callee_of(callee: ast.Expr, arguments: List<ast.Expr>) -> Callee {
     match callee.kind {
         ast.NameExpr(name) => Callee { name: name, passed: arguments }
-        ast.Field { receiver, name } => Callee { name: name, passed: concatenated(first: [receiver], second: arguments) }
         _ => Callee { name: infer.no_name(), passed: arguments }
     }
 }

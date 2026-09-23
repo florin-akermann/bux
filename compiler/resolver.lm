@@ -681,43 +681,15 @@ fn match_expression(resolver: Resolver, matched: ast.MatchExpr) -> Result<Resolv
 }
 
 /// An expression where more than a value may be written, when it is a bare name or a dotted call.
+///
+/// The name after a dot is a field, or a function of the module before it, and neither is a
+/// name of this module, so inference looks it up.
 // example: printed("import io\n\nfn f() -> Int {\n    io.count()\n}\n", prelude_of(ast.Program { items: [] })) == "resolved\n7..9 value module declared 7..9\n14..15 value function declared 14..15\n21..24 type type prelude\n31..33 value module declared 7..9\n"
 fn in_position(resolver: Resolver, walked: ast.Expr, position: Position) -> Result<Resolver, ResolveError> {
     match walked.kind {
         ast.NameExpr(name) => named(resolver: resolver, name: name, position: position)
-        ast.Field { receiver, name } => dotted(resolver: resolver, receiver: receiver, name: name, position: position)
+        ast.Field { receiver, name } => in_position(resolver: resolver, walked: receiver, position: Receiver)
         _ => expression(resolver: resolver, walked: walked)
-    }
-}
-
-/// A name after a `.`: the name of a call, when what is called is dotted, and a field otherwise.
-// example: printed("fn f(held: Int) -> Int {\n    held.size\n}\n", prelude_of(ast.Program { items: [] })) == "resolved\n3..4 value function declared 3..4\n5..9 value parameter declared 5..9\n11..14 type type prelude\n19..22 type type prelude\n29..33 value parameter declared 5..9\n"
-fn dotted(resolver: Resolver, receiver: ast.Expr, name: ast.Name, position: Position) -> Result<Resolver, ResolveError> {
-    if position == Callee {
-        return calls(resolver: resolver, receiver: receiver, name: name)
-    }
-    in_position(resolver: resolver, walked: receiver, position: Receiver)
-}
-
-/// The name a call writes after a `.`, which the name before the dot says the meaning of.
-///
-/// `io.println(…)` reaches a function of the module `io`, which only that module can answer.
-/// `maybe.or(0)` is the call `or(maybe, 0)`, so `or` is a name of this module.
-// example: printed("fn f(held: Int) -> Int {\n    held.missing()\n}\n", prelude_of(ast.Program { items: [] })) == "refused\nL0300 34..41 there is nothing named `missing`\nhelp: a name is declared in this file, imported, or supplied by the prelude\n"
-fn calls(resolver: Resolver, receiver: ast.Expr, name: ast.Name) -> Result<Resolver, ResolveError> {
-    walked := in_position(resolver: resolver, walked: receiver, position: Receiver)?
-    if is_module_before_dot(walked, receiver) {
-        return Ok(walked)
-    }
-    named(resolver: walked, name: name, position: Callee)
-}
-
-/// Whether the name before the dot is a module, which is what a name is reached through.
-// example: printed("import io\n\nfn f() -> Int {\n    io.count()\n}\n", prelude_of(ast.Program { items: [] })) == "resolved\n7..9 value module declared 7..9\n14..15 value function declared 14..15\n21..24 type type prelude\n31..33 value module declared 7..9\n"
-fn is_module_before_dot(resolver: Resolver, receiver: ast.Expr) -> Bool {
-    match receiver.kind {
-        ast.NameExpr(module) => is_kind(look_up(resolver.values, module.text), Module)
-        _ => false
     }
 }
 

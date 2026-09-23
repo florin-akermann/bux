@@ -5,8 +5,6 @@
 // Every hole is found, in the order the module writes them, because a build names every one.
 import ast
 
-import exhaustiveness
-
 import infer
 
 import lexer
@@ -20,41 +18,6 @@ import modules
 import resolver
 
 import types
-
-/// What the listing says of the program at `path`, in the form the harness compares.
-///
-/// A program that every phase before a build accepts is `checked`, then one refusal for each
-/// hole, module by module in the order they load. A refusal is the module, then the code, the
-/// span, and the message, then the help. A program that a phase before this one refuses is
-/// `skipped`.
-// example: printed("no-such-directory/main.lm", types.little_prelude()) == "skipped\n"
-fn printed(path: String, prelude: types.Prelude) -> String {
-    match modules.load(path) {
-        Ok(loaded) => listed(exhaustiveness.modules_checked(loaded, prelude))
-        Err(_) => "skipped\n"
-    }
-}
-
-/// The holes of every checked module, and `skipped` where a phase before this one refused.
-// example: listed(Err("refused main\n")) == "skipped\n"
-fn listed(checked: Result<List<infer.Inference>, String>) -> String {
-    match checked {
-        Ok(inferred) => every_module_listed(inferred)
-        Err(_) => "skipped\n"
-    }
-}
-
-/// `checked`, then each hole of each module, in the order the modules load.
-// example: every_module_listed([types.checked_of("fn f() -> Int {\n    todo(\"x\")\n}\n")]) == "checked\nmain L0600 20..29 this hole is not compiled\nhelp: `lumen check` accepts a hole; fill it in, or build a module that holds none\n"
-fn every_module_listed(inferred: List<infer.Inference>) -> String {
-    var written = "checked\n"
-    for one in inferred {
-        for hole in of_module(one.resolved) {
-            written += one.resolved.module + " " + hole_printed(hole)
-        }
-    }
-    written
-}
 
 /// The spans of the holes `source` holds, one after another.
 // example: holes_of("fn f() -> Int {\n    todo(todo(\"x\"))\n}\n") == "20..35 25..34 "
@@ -234,12 +197,6 @@ fn match_holes(resolved: resolver.Resolved, found: List<Hole>, matched: ast.Matc
         gathered = expression_holes(resolved, gathered, arm.body)
     }
     gathered
-}
-
-/// One hole as a build refuses it: the code, the span, and the message, then the help.
-// example: hole_printed(Hole { span: lexer.Span { start: 2, length: 9 } }) == "L0600 2..11 this hole is not compiled\nhelp: `lumen check` accepts a hole; fill it in, or build a module that holds none\n"
-fn hole_printed(hole: Hole) -> String {
-    "L0600 " + shown(hole.span) + " this hole is not compiled\nhelp: `lumen check` accepts a hole; fill it in, or build a module that holds none\n"
 }
 
 /// A `todo(…)` written where a value belongs.

@@ -55,7 +55,7 @@ Each of those is a disagreement that cannot be written rather than one that is r
 
 Everything else about an `extern` function is an ordinary function of the module that declares it.
 It is reached through that module's name, it is part of the module's surface, and a call of it is
-a call, which `docs/specs/calls.md` states.
+a call like any other.
 
 ## What crosses
 

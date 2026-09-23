@@ -116,13 +116,6 @@ Each other table of the phase is a `List` of the library.
 `exhaustiveness.check(inferred)` checks one inferred module against the types that it reaches.
 It stops at the first refusal, which has a code, a span, a message, and a help line.
 
-`exhaustiveness.printed(path, prelude)` gives the answer for a program.
-The program is the module at `path` and each module that it reaches, loaded in order.
-A program that does not load, does not resolve, or does not infer is `skipped`.
-A refusal is `refused` and the module name, then the code, the span, and the message.
-Then the refusal gives `help:` and the help.
-A program whose every `match` is accepted is `exhaustive`.
-
 `tests/covered.lm` holds the check to the properties below, on modules with a `match` of drawn arms.
 
 ## Properties

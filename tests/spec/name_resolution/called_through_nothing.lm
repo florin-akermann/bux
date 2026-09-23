@@ -1,6 +1,0 @@
-// expect-error: L0300
-// The name after the dot is a name in scope, and nothing declares `missing`.
-fn go() -> Int {
-    count := 1
-    count.missing(2)
-}

@@ -43,6 +43,27 @@ fn rename(from: String, to: String) -> String {
 A call whose parameters all have different types may be written either way.
 The types already hold the arguments apart, so naming them is the author's to choose.
 
+## One way to write a call
+
+A call writes the name of what it calls, then every argument inside the parentheses.
+There is no second spelling: a dot never moves an argument in front of the name.
+
+A dot does one of two things, and the name before it says which.
+After a module, it reaches a name inside the module, as `io.println("hi")` does.
+After a value, it reads a field, as `user.name` does.
+A binding is never a module, which `docs/specs/modules.md` states, so no type is looked up to tell
+the two apart.
+
+`maybe.or(0)` is therefore `L0433`, and `or(maybe, 0)` is how it is written.
+`user.name(0)` is `L0433` too, because a dot after a value reads a field and calls nothing.
+The name after that dot is not looked up, so `count.missing(2)` is `L0433` and not `L0300`.
+
+The `help:` of `L0433` is the plain call, written from the source with the value first.
+Where the call names its arguments and this module declares the function at the top level, the
+value is named for the first parameter: `old.rename(to: new)` helps with
+`rename(from: old, to: new)`.
+Anything else has no parameter names to write, so its help passes every argument in order.
+
 ## Which types count as one
 
 The types compared are the ones inference settled for the declaration, so a signature the author
@@ -104,13 +125,7 @@ call of either is ever asked to name one.
 Neither is declared here, so neither has parameter names to hold a call to, and naming the
 arguments of one is `L0411` as well.
 
-A call written with its first argument in front is the third.
-The receiver is an argument and a dot is no place to write a name, so naming the rest would name
-some of the arguments and not others, which is `L0423`.
-`docs/specs/calls.md` states the form, and a call that has to name its arguments is written
-plainly.
-
-A name reached through a module is the fourth, and it is one for the same reason as the prelude.
+A name reached through a module is the third, and it is one for the same reason as the prelude.
 What a module offers is the type of each function and of each constructor it declares.
 A type holds no parameter name, so `demo.hello(name: "world")` is `L0411`.
 A constructor of another module is no different, and `demo.Sent(how: "post")` is refused too.
@@ -154,12 +169,25 @@ error[L0411]: `Span` is a constructor, so it carries its values in order and nam
 help: a variant whose values want names declares them as fields and is built as a record
 ```
 
-All three are raised in `compiler/infer.lm`.
+`L0433` is a call written with a value in front of the name:
+
+```text
+error[L0433]: a dot after a value reads a field, so this call of `or` is written plainly
+  --> demo.lm:2:5
+
+  2 |     maybe.or(0)
+    |     ^^^^^^^^^^^
+
+help: write `or(maybe, 0)`
+```
+
+All four are raised in `compiler/infer.lm`.
+`L0433` is raised as inference reaches the call, before anything else about it is counted or met.
 `L0410` and `L0411` are raised as inference reaches the call.
 `L0409` is raised once inference has walked every function of the module.
 A function declared above its caller is walked after the caller, so its types settle later.
 
-Three refusals come before them, because each settles something they take for granted.
+Two refusals come before `L0409`, `L0410`, and `L0411`, because each settles what those three use.
 A call with the wrong number of arguments is `L0401`: how many there are is settled before which
 of them is which.
 An argument of the wrong type is `L0400`: what the arguments are is settled before whether the

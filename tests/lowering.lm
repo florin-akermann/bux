@@ -17,15 +17,9 @@ import list
 import strings
 
 /// Every property of the lowering, each checked over `cases` drawn modules, in a fixed order.
-// example: list.length(every_property(0, ir.little_library())) == 9
+// example: list.length(every_property(0, ir.little_library())) == 8
 fn every_property(cases: Int, library: ir.Library) -> List<held.Held> {
-    [a_call_written_in_front_of_the_name_lowers_as_the_plain_call_does(cases, library), lowering_one_module_twice_gives_the_same_classes(cases, library), every_class_a_module_writes_is_named_once(cases, library), every_method_ends_by_leaving_it(cases, library), a_module_has_an_entry_point_exactly_when_it_declares_main(cases, library), no_class_declares_a_method_the_object_model_gives_it(cases, library), the_one_equality_a_module_calls_is_the_one_string_declares(cases, library), a_written_list_stores_each_element_and_builds_one_list(cases, library), as_many_values_stand_for_nothing_as_a_list_writes_units(cases, library)]
-}
-
-/// `docs/specs/calls.md`: the two spellings of one call are one call, and lower as one.
-// example: held.is_held(a_call_written_in_front_of_the_name_lowers_as_the_plain_call_does(0, ir.little_library()))
-fn a_call_written_in_front_of_the_name_lowers_as_the_plain_call_does(cases: Int, library: ir.Library) -> held.Held {
-    checked(property: InFront, cases: cases, library: library)
+    [lowering_one_module_twice_gives_the_same_classes(cases, library), every_class_a_module_writes_is_named_once(cases, library), every_method_ends_by_leaving_it(cases, library), a_module_has_an_entry_point_exactly_when_it_declares_main(cases, library), no_class_declares_a_method_the_object_model_gives_it(cases, library), the_one_equality_a_module_calls_is_the_one_string_declares(cases, library), a_written_list_stores_each_element_and_builds_one_list(cases, library), as_many_values_stand_for_nothing_as_a_list_writes_units(cases, library)]
 }
 
 /// The same module, lowered twice, gives the same classes, which are written as the same bytes.
@@ -94,7 +88,6 @@ fn checked(property: Property, cases: Int, library: ir.Library) -> held.Held {
 // example: drawing(property: Units, draw: drawn.seeded(1), library: ir.little_library()).why == ""
 fn drawing(property: Property, draw: drawn.Draw, library: ir.Library) -> Drawing {
     match property {
-        InFront => in_front(draw, library)
         Twice => twice(draw, library)
         NamedOnce => named_once(draw, library)
         Leaving => leaving(draw, library)
@@ -110,7 +103,6 @@ fn drawing(property: Property, draw: drawn.Draw, library: ir.Library) -> Drawing
 // example: name_of(Twice) == "lowering_one_module_twice_gives_the_same_classes"
 fn name_of(property: Property) -> String {
     match property {
-        InFront => "a_call_written_in_front_of_the_name_lowers_as_the_plain_call_does"
         Twice => "lowering_one_module_twice_gives_the_same_classes"
         NamedOnce => "every_class_a_module_writes_is_named_once"
         Leaving => "every_method_ends_by_leaving_it"
@@ -120,22 +112,6 @@ fn name_of(property: Property) -> String {
         ListWritten => "a_written_list_stores_each_element_and_builds_one_list"
         Units => "as_many_values_stand_for_nothing_as_a_list_writes_units"
     }
-}
-
-/// A call drawn in front of the name and the same call written plainly, which must write one class.
-// example: in_front(drawn.seeded(1), ir.little_library()).why == ""
-fn in_front(draw: drawn.Draw, library: ir.Library) -> Drawing {
-    first := drawn.picked(draw, ["count", "1", "twice(count)"], "")
-    rest := drawn.picked(drawn.next(draw), ["said", "\"hi\""], "")
-    before := calling(first + ".held(" + rest + ")")
-    plainly := calling("held(" + first + ", " + rest + ")")
-    Drawing { source: before, why: compiled.differing(compiled.written_alone(before, library), compiled.written_alone(plainly, library)) }
-}
-
-/// A module whose `go` makes `call`, with what it calls declared below it.
-// example: calling("held(1, said)") != ""
-fn calling(call: String) -> String {
-    "fn go(count: Int, said: String) -> String {\n    " + call + "\n}\n\nfn held(count: Int, said: String) -> String {\n    said\n}\n\nfn twice(count: Int) -> Int {\n    count + count\n}\n"
 }
 
 /// One module lowered twice, which must be written as the same bytes both times.
@@ -389,7 +365,6 @@ type Drawing = {
 
 /// Each property of the lowering, which names the module it draws and the invariant it holds.
 type Property =
-    | InFront
     | Twice
     | NamedOnce
     | Leaving

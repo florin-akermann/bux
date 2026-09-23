@@ -177,7 +177,7 @@ A `-` before a number is part of that number, so the smallest whole number can b
 before anything else is the prefix operator.
 Blanks make no difference: `- 5` and `-5` are the same number, which is what lets the formatter
 write the one canonical spelling of it without changing what the source says.
-A postfix operator applies to the literal, so `-5.abs()` calls `abs` with `-5` in front of it.
+A postfix operator applies to the literal, so `-5.size` reads the field `size` of `-5`.
 A leading zero decodes fine and is not canonical form, so Item 003's gate is what rejects it.
 
 A string literal decodes its escapes: `\"`, `\\`, `\n`, `\t`, and `\r`.

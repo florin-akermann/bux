@@ -74,7 +74,7 @@ fn later_code(kind: TypeErrorKind) -> String {
         LiteralDoesNotFit { value, at, least, most } => "L0420"
         BoundIsNotAWholeNumber { bound, of } => "L0421"
         HeldTypeHasNoInstance { of, deriving, held, held_as } => "L0422"
-        NamedInFront(_) => "L0423"
+        CalledOnAValue { function, plain } => "L0433"
         UnitInOption => "L0432"
         _ => boundary_code(kind)
     }
@@ -131,7 +131,7 @@ fn how_it_is_written(kind: TypeErrorKind) -> String {
         FlagParameter(function) => "this parameter is a `Bool`, so a call of `" + function + "` passes `true` and says no more"
         NotAPredicate(function) => "`" + function + "` gives back a `Bool`, so its name asks the question it answers"
         NotInModule { module, name } => "`" + module + "` declares no `" + name + "`"
-        NamedInFront(called) => "`" + called + "` is written with its first argument in front, so this call names none of them"
+        CalledOnAValue { function, plain } => "a dot after a value reads a field, so this call of `" + function + "` is written plainly"
         NotCalled { module, name } => "`" + module + "." + name + "` is a function, so it is written as a call"
         TraitStaysInItsModule { module, name, of } => "`" + module + "." + name + "` requires `" + of + "`, which `" + module + "` declares and nothing here names"
         _ => what_is_declared(kind)
@@ -294,7 +294,7 @@ fn stated_of_a_use(kind: TypeErrorKind) -> String {
         NotInModule { module, name } => "a module offers the functions and the types it declares, and nothing else"
         HoldsItself(_) => "hold an `Option` of it, which is how a type holds another of its own kind"
         SignatureWithoutType(_) => "a signature has no body to read a type off, so it writes each one out"
-        NamedInFront(_) => "a call that names its arguments is written plainly, with every argument inside the brackets"
+        CalledOnAValue { function, plain } => "write `" + plain + "`"
         NotCalled { module, name } => "version 0.1 reaches a function by calling it; write the call"
         UnitInOption => "use `Bool` for a flag, and `Result<(), E>` for a failure with a reason"
         _ => the_rule_of_java(kind)
@@ -390,7 +390,10 @@ type TypeErrorKind =
         held: unify.Type
         held_as: String
     }
-    | NamedInFront(String)
+    | CalledOnAValue {
+        function: String
+        plain: String
+    }
     | NotCalled {
         module: String
         name: String
