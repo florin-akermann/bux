@@ -1,0 +1,313 @@
+// What a module offers the modules that import it, and what they offer back.
+//
+// `docs/specs/modules.md` states what that is, and `crates/types/src/surface.rs` does it in Rust.
+// A module offers every function and every type it declares, and the instances of the prelude's
+// traits that it gives those types. A module that imports it reaches each of them through the
+// module's name, so each type the surface holds is written as `module.Name` once it is offered.
+import ast
+
+import list
+
+import map
+
+import set
+
+import unify
+
+/// What `scheme` amounts to for a module that imports it: generic where it is polymorphic.
+// example: !is_generic(offered_of(unify.monomorphic(unify.int())))
+fn offered_of(scheme: unify.Scheme) -> Offered {
+    if list.length(scheme.quantified) == 0 {
+        return Plain(scheme)
+    }
+    Generic(scheme)
+}
+
+/// Whether a function is written once per set of types it is used at.
+// example: is_generic(Generic(unify.monomorphic(unify.int())))
+fn is_generic(offered: Offered) -> Bool {
+    match offered {
+        Plain(_) => false
+        Generic(_) => true
+    }
+}
+
+/// The type an offered function has, whichever way it is written.
+// example: scheme_offered(Plain(unify.monomorphic(unify.int()))).body == unify.int()
+fn scheme_offered(offered: Offered) -> unify.Scheme {
+    match offered {
+        Plain(scheme) => scheme
+        Generic(scheme) => scheme
+    }
+}
+
+/// The renaming a module called `demo` that declares `User` gives its surface.
+// example: renaming_of_user().module == "demo"
+fn renaming_of_user() -> unify.Renaming {
+    unify.Renaming { module: "demo", own: set.insert(set.empty(), "User") }
+}
+
+/// The record `User`, built by one constructor that carries one `Int` labelled `id`.
+// example: arity(record_of_user()) == 0
+fn record_of_user() -> OfferedType {
+    OfferedType { name: "User", over: [], declared: user(), built_by: Record(OfferedConstructor { name: "User", labels: ["id"], carries: [unify.int()] }) }
+}
+
+/// The type `User`, which the examples of this module rename.
+// example: user() == unify.Named { name: "User", arguments: [] }
+fn user() -> unify.Type {
+    unify.Named { name: "User", arguments: [] }
+}
+
+/// Every constructor a type has, in the order it declares them, which is none for a Java class.
+// example: list.length(constructors(record_of_user())) == 1
+fn constructors(offered: OfferedType) -> List<OfferedConstructor> {
+    match offered.built_by {
+        Record(one) => [one]
+        Variants(variants) => variants
+        ForeignClass { class, called } => []
+    }
+}
+
+/// How many type arguments a type is written with.
+// example: arity(record_of_user()) == 0
+fn arity(offered: OfferedType) -> Int {
+    list.length(offered.over)
+}
+
+/// The type one constructor has, which is a function of what it carries where it carries any.
+// example: scheme_of(record_of_user(), OfferedConstructor { name: "User", labels: [], carries: [] }).body == user()
+fn scheme_of(offered: OfferedType, built: OfferedConstructor) -> unify.Scheme {
+    if list.length(built.carries) == 0 {
+        return unify.Scheme { quantified: offered.over, body: offered.declared, required: [] }
+    }
+    unify.Scheme { quantified: offered.over, body: unify.Function { parameters: built.carries, result: offered.declared }, required: [] }
+}
+
+/// What the modules loaded so far offer, where none is loaded yet.
+// example: list.length(every_type(nothing_imported())) == 0
+fn nothing_imported() -> Imported {
+    Imported { surfaces: map.empty(), modules: [] }
+}
+
+/// The same, with `module` now offering `surface` to whatever imports it.
+///
+/// Each type of the module is written through its name, and `list` also offers what the compiler
+/// holds for it, which `docs/specs/library.md` names.
+// example: list.length(every_type(offering(nothing_imported(), "demo", Surface { functions: [], types: [record_of_user()], instances: [] }))) == 1
+fn offering(imported: Imported, module: String, surface: Surface) -> Imported {
+    var own = set.empty()
+    for offered in surface.types {
+        own = set.insert(own, offered.name)
+    }
+    rename := unify.Renaming { module: module, own: own }
+    var functions = map.empty()
+    for one in surface.functions {
+        functions = map.insert(functions, one.name, offered_renamed(one.offered, rename))
+    }
+    for held in held_for(module) {
+        functions = map.insert(functions, held.name, held.offered)
+    }
+    var types = []
+    for offered in surface.types {
+        types = list.push(types, type_renamed(offered, rename))
+    }
+    var instances = []
+    for given in surface.instances {
+        instances = list.push(instances, instance_renamed(given, module))
+    }
+    reached := Reached { functions: functions, types: types, instances: instances }
+    Imported { surfaces: map.insert(imported.surfaces, module, reached), modules: list.push(imported.modules, module) }
+}
+
+/// `offered`, with every type it names written as a module importing it writes it.
+// example: scheme_offered(offered_renamed(Plain(unify.monomorphic(user())), renaming_of_user())).body == unify.Named { name: "demo.User", arguments: [] }
+fn offered_renamed(offered: Offered, rename: unify.Renaming) -> Offered {
+    match offered {
+        Plain(scheme) => Plain(unify.renamed_scheme(scheme, rename))
+        Generic(scheme) => Generic(unify.renamed_scheme(scheme, rename))
+    }
+}
+
+/// A type the module offers, with its name and every type it names reached through the module.
+// example: type_renamed(record_of_user(), renaming_of_user()).name == "demo.User"
+fn type_renamed(offered: OfferedType, rename: unify.Renaming) -> OfferedType {
+    OfferedType { name: rename.module + "." + offered.name, over: offered.over, declared: unify.renamed(offered.declared, rename), built_by: built_by_renamed(offered.built_by, rename) }
+}
+
+/// What builds a type, renamed; a Java class is named the same from anywhere.
+// example: list.length(constructors(type_renamed(record_of_user(), renaming_of_user()))) == 1
+fn built_by_renamed(built_by: BuiltBy, rename: unify.Renaming) -> BuiltBy {
+    match built_by {
+        Record(one) => Record(constructor_renamed(one, rename))
+        Variants(variants) => Variants(each_constructor_renamed(variants, rename))
+        ForeignClass { class, called } => built_by
+    }
+}
+
+/// Each of `variants`, renamed.
+// example: list.length(each_constructor_renamed([], renaming_of_user())) == 0
+fn each_constructor_renamed(variants: List<OfferedConstructor>, rename: unify.Renaming) -> List<OfferedConstructor> {
+    var renamed = []
+    for one in variants {
+        renamed = list.push(renamed, constructor_renamed(one, rename))
+    }
+    renamed
+}
+
+/// One constructor, with its name and what it carries reached through the module.
+// example: constructor_renamed(OfferedConstructor { name: "Made", labels: [], carries: [user()] }, renaming_of_user()).name == "demo.Made"
+fn constructor_renamed(one: OfferedConstructor, rename: unify.Renaming) -> OfferedConstructor {
+    var carries = []
+    for carried in one.carries {
+        carries = list.push(carries, unify.renamed(carried, rename))
+    }
+    OfferedConstructor { name: rename.module + "." + one.name, labels: one.labels, carries: carries }
+}
+
+/// An instance, for its type as a module importing it writes that type.
+// example: instance_renamed(OfferedInstance { of: "Eq", for_type: "User", asks: [], holds: None }, "demo").for_type == "demo.User"
+fn instance_renamed(one: OfferedInstance, module: String) -> OfferedInstance {
+    one { for_type: module + "." + one.for_type }
+}
+
+/// What the loaded module called `module` offers, where it is one of them.
+// example: !is_loaded(surface_of(nothing_imported(), "demo"))
+fn surface_of(imported: Imported, module: String) -> Option<Reached> {
+    map.get(imported.surfaces, module)
+}
+
+/// Whether a module is loaded.
+// example: !is_loaded(None)
+fn is_loaded(found: Option<Reached>) -> Bool {
+    match found {
+        Some(_) => true
+        None => false
+    }
+}
+
+/// Every type every module loaded so far offers, under the name it is written by.
+///
+/// A module this one does not import is no less reachable, because a function of one it does
+/// import gives back what it gives back.
+// example: list.length(every_type(nothing_imported())) == 0
+fn every_type(imported: Imported) -> List<OfferedType> {
+    var every = []
+    for module in imported.modules {
+        for offered in or(map.get(imported.surfaces, module), no_surface()).types {
+            every = list.push(every, offered)
+        }
+    }
+    every
+}
+
+/// Every instance every module loaded so far gives a type it declares.
+// example: list.length(every_instance(nothing_imported())) == 0
+fn every_instance(imported: Imported) -> List<OfferedInstance> {
+    var every = []
+    for module in imported.modules {
+        for given in or(map.get(imported.surfaces, module), no_surface()).instances {
+            every = list.push(every, given)
+        }
+    }
+    every
+}
+
+/// A surface that offers nothing.
+// example: list.length(no_surface().types) == 0
+fn no_surface() -> Reached {
+    Reached { functions: map.empty(), types: [], instances: [] }
+}
+
+/// What the compiler holds for `module`, which is `push` and `at` for `list` and nothing else.
+// example: list.length(held_for("list")) == 2
+// example: list.length(held_for("demo")) == 0
+fn held_for(module: String) -> List<OfferedFunction> {
+    if module != "list" {
+        return []
+    }
+    [OfferedFunction { name: "push", offered: Generic(push_scheme()) }, OfferedFunction { name: "at", offered: Generic(at_scheme()) }]
+}
+
+/// `push<T>(values: List<T>, value: T) -> List<T>`, which the compiler holds.
+// example: unify.text_of(push_scheme().body) == "(List<T>, T) -> List<T>"
+fn push_scheme() -> unify.Scheme {
+    element := unify.Parameter(unify.prelude_parameter("T"))
+    unify.Scheme { quantified: [unify.Written(unify.prelude_parameter("T"))], body: unify.Function { parameters: [unify.list_of(element), element], result: unify.list_of(element) }, required: [] }
+}
+
+/// `at<T>(values: List<T>, index: Int) -> Option<T>`, which the compiler holds.
+// example: unify.text_of(at_scheme().body) == "(List<T>, Int) -> Option<T>"
+fn at_scheme() -> unify.Scheme {
+    element := unify.Parameter(unify.prelude_parameter("T"))
+    unify.Scheme { quantified: [unify.Written(unify.prelude_parameter("T"))], body: unify.Function { parameters: [unify.list_of(element), unify.int()], result: unify.option_of(element) }, required: [] }
+}
+
+/// Every function and every type a module declares, and the instances it gives those types.
+type Surface = {
+    functions: List<OfferedFunction>
+    types: List<OfferedType>
+    instances: List<OfferedInstance>
+}
+
+/// One function a module offers, under the name it declares it by.
+type OfferedFunction = {
+    name: String
+    offered: Offered
+}
+
+/// What the modules loaded so far offer, by name, and the order they were loaded in.
+type Imported = {
+    surfaces: map.Map<String, Reached>
+    modules: List<String>
+}
+
+/// A surface as a module importing it reaches it, with each function found by its name.
+type Reached = {
+    functions: map.Map<String, Offered>
+    types: List<OfferedType>
+    instances: List<OfferedInstance>
+}
+
+/// What one function of a module amounts to for a module that imports it.
+type Offered =
+    | Plain(unify.Scheme)
+    | Generic(unify.Scheme)
+
+/// One type a module offers: the name it is written by, and what builds a value of it.
+type OfferedType = {
+    name: String
+    over: List<unify.Quantified>
+    declared: unify.Type
+    built_by: BuiltBy
+}
+
+/// What a type is built with: one constructor, one for each variant, or a Java class.
+type BuiltBy =
+    | Record(OfferedConstructor)
+    | Variants(List<OfferedConstructor>)
+    | ForeignClass {
+        class: String
+        called: ast.Called
+    }
+
+/// One constructor, what each value it carries is named, and the type of each.
+type OfferedConstructor = {
+    name: String
+    labels: List<String>
+    carries: List<unify.Type>
+}
+
+/// One instance a module gives a type it declares, which travels with that type.
+type OfferedInstance = {
+    of: String
+    for_type: String
+    asks: List<List<String>>
+    holds: Option<Bounds>
+}
+
+/// The whole numbers one type holds, which is what a literal written at it is held to.
+type Bounds = {
+    least: Int
+    most: Int
+}

@@ -1,0 +1,216 @@
+// Type inference for a whole program: each module checked in order, and what it offers passed on.
+//
+// `docs/specs/types.md` states the rules, and `crates/types/src/lib.rs` checks a module in Rust.
+// A module is checked against the prelude and against what every module loaded before it offers.
+// A module that types gives its API page, which `docs/specs/api-surface.md` states.
+import ast
+
+import declared
+
+import format
+
+import infer
+
+import lexer
+
+import list
+
+import map
+
+import modules
+
+import parser
+
+import refusal
+
+import resolver
+
+import strings
+
+import surface
+
+import unify
+
+/// What the type inference says of the program at `path`, in the form the harness compares.
+///
+/// A program that types is `typed` and the API page of its last module. A refusal is `refused`
+/// and the module, then the code, the span, and the message, then the help. A program that does
+/// not load or resolve is `skipped`, because that is a phase before this one.
+// example: printed("no-such-directory/main.lm", little_prelude()) == "skipped\n"
+fn printed(path: String, prelude: Prelude) -> String {
+    match modules.load(path) {
+        Ok(loaded) => modules_printed(loaded, prelude)
+        Err(_) => "skipped\n"
+    }
+}
+
+/// The page of the last module, or the answer of the first module that does not type.
+// example: modules_printed([], little_prelude()) == "typed\n"
+fn modules_printed(loaded: List<modules.Module>, prelude: Prelude) -> String {
+    match modules_typed(loaded, prelude) {
+        Ok(page) => "typed\n" + page
+        Err(answer) => answer
+    }
+}
+
+/// Each module checked in the order it was loaded, which puts a dependency before its dependents.
+// example: ok_or(modules_typed([], little_prelude()), "refused") == ""
+fn modules_typed(loaded: List<modules.Module>, prelude: Prelude) -> Result<String, String> {
+    var imported = surface.nothing_imported()
+    var page = ""
+    for module in loaded {
+        checked := module_checked(module, imported, prelude)?
+        page = page_of(checked)
+        imported = surface.offering(imported, module.name, surface_of(checked))
+    }
+    Ok(page)
+}
+
+/// One module, resolved and checked, or the answer the program gives where it is not.
+// example: !is_refused(module_checked(modules.Module { name: "main", path: "main.lm", source: "", program: ast.Program { items: [] } }, surface.nothing_imported(), little_prelude()))
+fn module_checked(module: modules.Module, imported: surface.Imported, prelude: Prelude) -> Result<infer.Inference, String> {
+    match resolver.resolve(module.program, module.name, prelude.names) {
+        Ok(resolved) => refused_in(module.name, check(resolved, imported, prelude))
+        Err(_) => Err("skipped\n")
+    }
+}
+
+/// `answer`, with a refusal printed as the answer of the module called `module`.
+// example: is_refused(refused_in("main", Err(refusal.TypeError { kind: refusal.DivisorIsZero, span: lexer.Span { start: 1, length: 1 } })))
+fn refused_in(module: String, answer: Result<infer.Inference, refusal.TypeError>) -> Result<infer.Inference, String> {
+    match answer {
+        Ok(checked) => Ok(checked)
+        Err(refused) => Err("refused " + module + "\n" + refusal.printed(refused))
+    }
+}
+
+/// Whether a module was refused.
+// example: !is_refused(Ok(checked_of("")))
+fn is_refused(answer: Result<infer.Inference, String>) -> Bool {
+    match answer {
+        Ok(_) => false
+        Err(_) => true
+    }
+}
+
+/// The prelude a program is checked against, read out of the prelude's own `source`.
+// example: !has_names(prelude_read("fn ("))
+fn prelude_read(source: String) -> Prelude {
+    program := ok_or(parser.parse(source), ast.Program { items: [] })
+    names := resolver.prelude_of(program)
+    match resolver.prelude_resolved(program) {
+        Ok(resolved) => Prelude { names: names, declared: declared.prelude_environment(resolved) }
+        Err(_) => Prelude { names: names, declared: declared.prelude_environment(resolver.Resolved { module: "prelude", program: program, found: map.empty() }) }
+    }
+}
+
+/// What a checked module offers the modules that import it.
+// example: list.length(surface_of(checked_of("fn count() -> Int {\n    1\n}\n")).functions) == 1
+fn surface_of(checked: infer.Inference) -> surface.Surface {
+    environment := checked.environment
+    program := checked.resolved.program
+    surface.Surface { functions: declared.offered_functions(environment, program), types: declared.offered_types(environment, program), instances: declared.given_instances(environment, checked.resolved) }
+}
+
+/// The API page of a checked module: every item but an import, with one blank line between two.
+// example: page_of(checked_of("fn count() -> Int {\n    1\n}\n\ntype Box = Box\n")) == "fn count() -> Int\n\ntype Box = Box\n"
+fn page_of(checked: infer.Inference) -> String {
+    var page = ""
+    for item in checked.resolved.program.items {
+        stanza := stanza_of(checked, item)
+        if stanza != "" && page != "" {
+            page += "\n"
+        }
+        page += stanza
+    }
+    page
+}
+
+/// What one item puts on the page, which is nothing at all for an import.
+// example: stanza_of(checked_of(""), declared.first_item("derive Eq, Ord for Box\n")) == "instance Eq<Box>\ninstance Ord<Box>\n"
+fn stanza_of(checked: infer.Inference, item: ast.Item) -> String {
+    match item {
+        ast.Import(_) => ""
+        ast.Type(declaration) => format.type_declaration(format.printer_of(""), declaration).text
+        ast.Trait(declaration) => format.trait_declaration(format.printer_of(""), declaration).text
+        ast.Instance(declaration) => format.instance_head(declaration) + "\n"
+        ast.Derive(declaration) => derived_heads(declaration)
+        ast.Function(declaration) => signature_of(checked, declaration)
+        ast.Extern(declaration) => format.extern_text(declaration) + "\n"
+    }
+}
+
+/// `instance Eq<User>`, one line for each trait a derive names.
+// example: derived_heads(ast.DeriveDeclaration { traits: [], for_type: ast.Name { text: "Box", span: lexer.Span { start: 0, length: 3 } }, span: lexer.Span { start: 0, length: 3 } }) == ""
+fn derived_heads(declaration: ast.DeriveDeclaration) -> String {
+    var page = ""
+    for trait_name in declaration.traits {
+        page += "instance " + trait_name.text + "<" + declaration.for_type.text + ">\n"
+    }
+    page
+}
+
+/// `fn shared(total: Int, people: Int) -> Int`, with the types inference settled on.
+// example: page_of(checked_of("fn pick<T>(first: T, second) -> T {\n    first\n}\n")) == "fn pick<T>(first: T, second: _) -> T\n"
+fn signature_of(checked: infer.Inference, function: ast.FunctionDeclaration) -> String {
+    whole := unify.solved(checked.table, or(map.get(checked.named, function.name.span.start), unify.Unit))
+    taken := unify.parameters_of(whole)
+    var takes = []
+    var index = 0
+    for parameter in function.parameters {
+        takes = list.push(takes, parameter.name.text + ": " + unify.text_of(or(list.at(taken, index), unify.Unit)))
+        index += 1
+    }
+    "fn " + function.name.text + format.constrained_text(function.type_parameters) + "(" + strings.join(takes, ", ") + ") -> " + unify.text_of(unify.result_of(whole)) + "\n"
+}
+
+/// Whether a prelude declares any value, which one read out of a source it cannot parse does not.
+// example: !has_names(Prelude { names: resolver.prelude_of(ast.Program { items: [] }), declared: declared.little_environment() })
+fn has_names(prelude: Prelude) -> Bool {
+    has_value_named(prelude.names, "Some")
+}
+
+/// Whether `names` holds a value called `named`.
+// example: has_value_named(little_prelude().names, "or")
+fn has_value_named(names: resolver.Prelude, named: String) -> Bool {
+    match map.get(names.values, named) {
+        Some(_) => true
+        None => false
+    }
+}
+
+/// `source`, checked as one module against the small prelude, and nothing where it is refused.
+// example: list.length(checked_of("fn count() -> Int {\n    1\n}\n").functions) == 1
+fn checked_of(source: String) -> infer.Inference {
+    resolved := declared.resolved_of(source)
+    empty := infer.inference_of(resolved, surface.nothing_imported(), infer.no_declaring())
+    ok_or(check(resolved, surface.nothing_imported(), little_prelude()), empty)
+}
+
+/// The code and span of the refusal `source` earns against the small prelude, or `""`.
+// example: page_code("fn count() -> Int {\n    1\n}\n") == ""
+fn page_code(source: String) -> String {
+    refusal.code_given(check(declared.resolved_of(source), surface.nothing_imported(), little_prelude()))
+}
+
+/// Every expression of `resolved` given its type, or the first refusal.
+///
+/// A record that holds itself is refused first, then a declaration, then a body.
+// example: page_code("fn count() -> Int {\n    \"one\"\n}\n") == "L0400 18..31"
+fn check(resolved: resolver.Resolved, imported: surface.Imported, prelude: Prelude) -> Result<infer.Inference, refusal.TypeError> {
+    _ = declared.nothing_holds_itself(resolved)?
+    declaring := declared.environment_of(prelude.declared, resolved, surface.every_type(imported), surface.every_instance(imported), unify.empty_table())?
+    infer.module_inferred(resolved, imported, declaring)
+}
+
+/// The small prelude of the examples of the type inference.
+// example: has_names(little_prelude())
+fn little_prelude() -> Prelude {
+    Prelude { names: resolver.prelude_of(declared.little_prelude()), declared: declared.little_environment() }
+}
+
+/// What a program is checked against: the names in scope everywhere, and what they declare.
+type Prelude = {
+    names: resolver.Prelude
+    declared: declared.Environment
+}

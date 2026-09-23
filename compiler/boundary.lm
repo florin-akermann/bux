@@ -1,0 +1,494 @@
+// What an `extern` declaration may name, held to the rules of the Java boundary.
+//
+// `docs/specs/interop.md` states the rules, and `crates/types/src/boundary.rs` holds the Rust
+// phase to the same ones. The boundary is a signature and a Java name beside it and nothing more,
+// so each check reads the types the signature names and the words the declaration writes.
+import ast
+
+import lexer
+
+import list
+
+import map
+
+import parser
+
+import refusal
+
+import strings
+
+import unify
+
+/// Where the result of `declaration` crosses: a field holds it, and a call gives it back.
+///
+/// A call that narrows a parameter gives back what is `None` where an argument does not fit.
+// example: crossing_of(extern_of("extern field out() -> Int = \"a.B.c\"")) == refusal.Held
+fn crossing_of(declaration: ast.ExternDeclaration) -> refusal.Crossing {
+    match declaration.reaches {
+        ast.StaticField(_) => refusal.Held
+        _ => crossing_of_a_call(declaration)
+    }
+}
+
+/// Where the result of a call crosses, which is narrowed where the call narrows a parameter.
+// example: crossing_of_a_call(extern_of("extern static f(int at: Int) -> Option<Int> = \"a.B.c\"")) == refusal.Narrowed
+fn crossing_of_a_call(declaration: ast.ExternDeclaration) -> refusal.Crossing {
+    if is_narrowing(declaration) {
+        return refusal.Narrowed
+    }
+    refusal.GivenBack
+}
+
+/// `held` where it crosses as `crossing`, refused where the boundary does not carry it.
+// example: refusal.code_given(crosses(held: unify.int(), crossing: refusal.Taken, foreign: map.empty(), span: lexer.Span { start: 0, length: 1 })) == ""
+fn crosses(held: unify.Type, crossing: refusal.Crossing, foreign: map.Map<String, ast.Called>, span: lexer.Span) -> Result<(), refusal.TypeError> {
+    if can_carry(Boundary { crossing: crossing, foreign: foreign }, held) {
+        return Ok(())
+    }
+    Err(refusal.TypeError { kind: refusal.DoesNotCross { written: held, crossing: crossing }, span: span })
+}
+
+/// Whether the boundary carries `held` where it crosses.
+///
+/// `Bool`, `Int`, `String`, and an extern type cross anywhere, and a `List` crosses into a call.
+// example: can_carry(Boundary { crossing: refusal.Taken, foreign: map.empty() }, unify.list_of(unify.int()))
+// example: !can_carry(Boundary { crossing: refusal.GivenBack, foreign: map.empty() }, unify.list_of(unify.int()))
+fn can_carry(boundary: Boundary, held: unify.Type) -> Bool {
+    match held {
+        unify.Named { name, arguments } => can_carry_named(boundary, held)
+        unify.Unit => is_of_a_call(boundary.crossing)
+        _ => false
+    }
+}
+
+/// Whether the boundary carries the named type `held`.
+// example: can_carry_named(Boundary { crossing: refusal.Held, foreign: map.empty() }, unify.text_type())
+fn can_carry_named(boundary: Boundary, held: unify.Type) -> Bool {
+    name := name_of(held)
+    arguments := arguments_of(held)
+    count := list.length(arguments)
+    if count == 0 && list.has_value(["Bool", "Int", "String"], name) {
+        return true
+    }
+    if name == "List" && count == 1 {
+        return is_taken(boundary.crossing) && can_carry(Boundary { crossing: refusal.Taken, foreign: boundary.foreign }, or(list.at(arguments, 0), unify.Unit))
+    }
+    if count == 0 {
+        return is_foreign(boundary.foreign, name)
+    }
+    is_an_answer(boundary, held)
+}
+
+/// Whether `held` is an `Option` or a `Result` a call gives back to say it had no answer.
+// example: is_an_answer(Boundary { crossing: refusal.GivenBack, foreign: map.empty() }, unify.result_type(unify.int(), unify.text_type()))
+fn is_an_answer(boundary: Boundary, held: unify.Type) -> Bool {
+    if is_taken(boundary.crossing) {
+        return false
+    }
+    arguments := arguments_of(held)
+    first := or(list.at(arguments, 0), unify.Unit)
+    if name_of(held) == "Option" && list.length(arguments) == 1 {
+        return is_a_reference(held: first, foreign: boundary.foreign) || boundary.crossing == refusal.Narrowed && is_a_number(first)
+    }
+    if name_of(held) == "Result" && list.length(arguments) == 2 && name_of(or(list.at(arguments, 1), unify.Unit)) == "String" {
+        return first != unify.Unit && can_carry(boundary, first)
+    }
+    false
+}
+
+/// Whether a type crossing as `crossing` is one a call takes.
+// example: is_taken(refusal.Taken)
+fn is_taken(crossing: refusal.Crossing) -> Bool {
+    crossing == refusal.Taken
+}
+
+/// Whether a type crossing as `crossing` is one a call gives back.
+// example: is_of_a_call(refusal.Narrowed)
+// example: !is_of_a_call(refusal.Held)
+fn is_of_a_call(crossing: refusal.Crossing) -> Bool {
+    crossing == refusal.GivenBack || crossing == refusal.Narrowed
+}
+
+/// A parameter taken as an `int`, refused where what it takes is no `Int`.
+// example: refusal.code_given(narrowed(ast.ExternParameter { declared: parameter_of("at"), takes: ast.TakesInt }, unify.int())) == ""
+fn narrowed(parameter: ast.ExternParameter, held: unify.Type) -> Result<(), refusal.TypeError> {
+    if !is_taken_as_an_int(parameter.takes) || is_an_int(held) {
+        return Ok(())
+    }
+    Err(refusal.TypeError { kind: refusal.NarrowsNoInt(held), span: parameter.declared.name.span })
+}
+
+/// What an `extern` gives back, held to the rules of the class it reaches and the width it states.
+///
+/// The checks run in the order the Rust phase runs them, so the first refusal is the same one.
+// example: refusal.code_given(gives_back_checked(extern_of("extern new now() -> Int"), [], unify.int(), map.empty())) == "L0428 20..23"
+fn gives_back_checked(declaration: ast.ExternDeclaration, taken: List<unify.Type>, result: unify.Type, foreign: map.Map<String, ast.Called>) -> Result<(), refusal.TypeError> {
+    _ = reaches_a_class(declaration, taken, result, foreign)?
+    _ = builds_a_class(declaration, result, foreign)?
+    _ = widens(declaration, result)?
+    _ = narrows(declaration, result)?
+    stated_by(declaration)
+}
+
+/// An `extern` whose kind reaches a class, refused where its signature names none.
+///
+/// A method reaches the class of its first parameter, and a `new` the class it gives back.
+// example: refusal.code_given(reaches_a_class(extern_of("extern static f() -> Int = \"a.B.c\""), [], unify.int(), map.empty())) == ""
+fn reaches_a_class(declaration: ast.ExternDeclaration, taken: List<unify.Type>, result: unify.Type, foreign: map.Map<String, ast.Called>) -> Result<(), refusal.TypeError> {
+    match declaration.reaches {
+        ast.InstanceMethod(_) => reached_class(declaration: declaration, reached: list.at(taken, 0), span: receiver_of(declaration), foreign: foreign)
+        ast.Constructor => reached_class(declaration: declaration, reached: Some(given_back(result)), span: declaration.result.span, foreign: foreign)
+        _ => Ok(())
+    }
+}
+
+/// The class `reached` names, refused where it names none.
+// example: refusal.code_given(reached_class(declaration: extern_of("extern new now() -> Int"), reached: None, span: lexer.Span { start: 0, length: 1 }, foreign: map.empty())) == "L0428 0..1"
+fn reached_class(declaration: ast.ExternDeclaration, reached: Option<unify.Type>, span: lexer.Span, foreign: map.Map<String, ast.Called>) -> Result<(), refusal.TypeError> {
+    if is_a_reference(held: or(reached, unify.Unit), foreign: foreign) {
+        return Ok(())
+    }
+    Err(refusal.TypeError { kind: refusal.ReachesNoClass(ast.reaches_word(declaration.reaches)), span: span })
+}
+
+/// Whether `held` is a class the JVM holds by reference: `String`, or an extern type.
+// example: is_a_reference(held: unify.text_type(), foreign: map.empty())
+fn is_a_reference(held: unify.Type, foreign: map.Map<String, ast.Called>) -> Bool {
+    list.length(arguments_of(held)) == 0 && (name_of(held) == "String" || is_foreign(foreign, name_of(held)))
+}
+
+/// Whether an `extern type` declares a type called `name`.
+// example: !is_foreign(map.empty(), "Clock")
+fn is_foreign(foreign: map.Map<String, ast.Called>, name: String) -> Bool {
+    match map.get(foreign, name) {
+        Some(_) => true
+        None => false
+    }
+}
+
+/// Where the receiver of a method is written, which is its first parameter.
+// example: shown(receiver_of(extern_of("extern method f(text: String) -> Int = \"f\""))) == "16..28"
+fn receiver_of(declaration: ast.ExternDeclaration) -> lexer.Span {
+    for parameter in declaration.parameters {
+        return parameter.declared.span
+    }
+    declaration.span
+}
+
+/// A `new` builds a class, so one that gives back an interface is refused.
+// example: refusal.code_given(builds_a_class(extern_of("extern new now() -> Int"), unify.int(), map.empty())) == ""
+fn builds_a_class(declaration: ast.ExternDeclaration, result: unify.Type, foreign: map.Map<String, ast.Called>) -> Result<(), refusal.TypeError> {
+    built := given_back(result)
+    if !is_constructor(declaration.reaches) || !is_an_interface(built, foreign) {
+        return Ok(())
+    }
+    Err(refusal.TypeError { kind: refusal.BuildsAnInterface(built), span: declaration.result.span })
+}
+
+/// Whether an `extern` reaches a constructor.
+// example: is_constructor(ast.Constructor)
+fn is_constructor(reaches: ast.Reaches) -> Bool {
+    match reaches {
+        ast.Constructor => true
+        _ => false
+    }
+}
+
+/// Whether `held` is an extern type declared as an interface.
+// example: !is_an_interface(unify.int(), map.empty())
+fn is_an_interface(held: unify.Type, foreign: map.Map<String, ast.Called>) -> Bool {
+    match map.get(foreign, name_of(held)) {
+        Some(called) => is_an_interface_called(called)
+        None => false
+    }
+}
+
+/// Whether a class is called as an interface.
+// example: is_an_interface_called(ast.AsAnInterface)
+fn is_an_interface_called(called: ast.Called) -> Bool {
+    match called {
+        ast.AsAClass => false
+        ast.AsAnInterface => true
+    }
+}
+
+/// An `extern` that states a width, refused where what it gives back is no `Int`.
+// example: refusal.code_given(widens(extern_of("extern static f() -> Int = \"a.B.c\""), unify.text_type())) == ""
+fn widens(declaration: ast.ExternDeclaration, result: unify.Type) -> Result<(), refusal.TypeError> {
+    width := ast.gives_word(declaration.gives)
+    given := given_back(result)
+    if width == "" || is_an_int(given) {
+        return Ok(())
+    }
+    Err(refusal.TypeError { kind: refusal.WidensNoInt { width: width, written: given }, span: declaration.result.span })
+}
+
+/// Whether `held` is `Int`.
+// example: is_an_int(unify.int())
+// example: !is_an_int(unify.option_of(unify.int()))
+fn is_an_int(held: unify.Type) -> Bool {
+    held == unify.int()
+}
+
+/// An `extern` that narrows a parameter, refused where it gives back no `Option` to say `None`.
+// example: refusal.code_given(narrows(extern_of("extern static f(int at: Int) -> Int = \"a.B.c\""), unify.int())) == "L0431 32..35"
+fn narrows(declaration: ast.ExternDeclaration, result: unify.Type) -> Result<(), refusal.TypeError> {
+    given := inside("Result", result)
+    if !is_narrowing(declaration) || name_of(given) == "Option" && list.length(arguments_of(given)) == 1 {
+        return Ok(())
+    }
+    Err(refusal.TypeError { kind: refusal.NarrowsWithoutOption(given), span: declaration.result.span })
+}
+
+/// Whether `declaration` narrows one of its parameters to an `int`.
+// example: !is_narrowing(extern_of("extern static f(at: Int) -> Int = \"a.B.c\""))
+fn is_narrowing(declaration: ast.ExternDeclaration) -> Bool {
+    for parameter in declaration.parameters {
+        if is_taken_as_an_int(parameter.takes) {
+            return true
+        }
+    }
+    false
+}
+
+/// Whether a parameter is taken as an `int`.
+// example: is_taken_as_an_int(ast.TakesInt)
+fn is_taken_as_an_int(takes: ast.Takes) -> Bool {
+    match takes {
+        ast.TakesAsDeclared => false
+        ast.TakesInt => true
+    }
+}
+
+/// What a call gives back once the `Result` and the `Option` around it are taken off.
+// example: given_back(unify.result_type(unify.option_of(unify.int()), unify.text_type())) == unify.int()
+fn given_back(result: unify.Type) -> unify.Type {
+    inside("Option", inside("Result", result))
+}
+
+/// The first argument of `held` where it is the type called `wrapper`, and `held` otherwise.
+// example: inside("Option", unify.int()) == unify.int()
+fn inside(wrapper: String, held: unify.Type) -> unify.Type {
+    if name_of(held) == wrapper {
+        return or(list.at(arguments_of(held), 0), held)
+    }
+    held
+}
+
+/// The Java name an `extern` states, held to the segments its kind of member needs.
+///
+/// A field and a static member name their class too, and an instance method names itself alone.
+// example: refusal.code_given(stated_by(extern_of("extern static f() -> Int = \"f\""))) == "L0426 27..30"
+fn stated_by(declaration: ast.ExternDeclaration) -> Result<(), refusal.TypeError> {
+    match declaration.reaches {
+        ast.StaticField(named) => java_name(named, AtLeast(2))
+        ast.StaticMethod(named) => java_name(named, AtLeast(2))
+        ast.InstanceMethod(named) => java_name(named, Exactly(1))
+        ast.Constructor => Ok(())
+    }
+}
+
+/// The Java class an `extern type` names, which is one segment or more.
+// example: refusal.code_given(class(ast.JavaName { text: "java.io.File", span: lexer.Span { start: 0, length: 14 } })) == ""
+fn class(named: ast.JavaName) -> Result<(), refusal.TypeError> {
+    java_name(named, AtLeast(1))
+}
+
+/// `named`, refused where it is not as many segments as `wanted` says, each a name.
+// example: refusal.code_given(java_name(ast.JavaName { text: "a..b", span: lexer.Span { start: 0, length: 6 } }, AtLeast(1))) == "L0426 0..6"
+fn java_name(named: ast.JavaName, wanted: Segments) -> Result<(), refusal.TypeError> {
+    segments := segments_of(named.text)
+    if is_enough(wanted, list.length(segments)) && is_each_a_segment(segments) {
+        return Ok(())
+    }
+    Err(refusal.TypeError { kind: refusal.NotAJavaName(named.text), span: named.span })
+}
+
+/// Whether `count` segments are what `wanted` asks for.
+// example: is_enough(AtLeast(2), 3)
+// example: !is_enough(Exactly(1), 2)
+fn is_enough(wanted: Segments, count: Int) -> Bool {
+    match wanted {
+        AtLeast(least) => count >= least
+        Exactly(exactly) => count == exactly
+    }
+}
+
+/// The parts of `text` between its dots, each one empty where two dots meet.
+// example: segments_of("a..b") == ["a", "", "b"]
+// example: segments_of("") == [""]
+fn segments_of(text: String) -> List<String> {
+    var segments = []
+    var from = 0
+    var index = 0
+    for index < strings.length(text) {
+        if or(strings.at(text, index), 0) == 46 {
+            segments = list.push(segments, or(strings.cut(text, from, index), ""))
+            from = index + 1
+        }
+        index += 1
+    }
+    list.push(segments, or(strings.cut(text, from, strings.length(text)), ""))
+}
+
+/// Whether each of `segments` is a Java name.
+// example: is_each_a_segment(["java", "io"])
+fn is_each_a_segment(segments: List<String>) -> Bool {
+    for segment in segments {
+        if !is_a_segment(segment) {
+            return false
+        }
+    }
+    true
+}
+
+/// Whether `held` is `Bool` or `Int`, which a narrowed call gives back in an `Option`.
+// example: is_a_number(unify.truth())
+fn is_a_number(held: unify.Type) -> Bool {
+    list.length(arguments_of(held)) == 0 && (name_of(held) == "Bool" || name_of(held) == "Int")
+}
+
+/// The name of a named type, and nothing for any other type.
+// example: name_of(unify.int()) == "Int"
+fn name_of(held: unify.Type) -> String {
+    match held {
+        unify.Named { name, arguments } => name
+        _ => ""
+    }
+}
+
+/// The arguments of a named type, and none for any other type.
+// example: arguments_of(unify.list_of(unify.int())) == [unify.int()]
+fn arguments_of(held: unify.Type) -> List<unify.Type> {
+    match held {
+        unify.Named { name, arguments } => arguments
+        _ => []
+    }
+}
+
+/// Whether `segment` is a Java name: a letter, `_`, or `$`, then those or a number.
+///
+/// Java decides what a letter and a number are, which is the Unicode property the Rust phase reads.
+// example: is_a_segment("$a1")
+// example: is_a_segment("café")
+// example: !is_a_segment("a→b")
+// example: !is_a_segment("1a")
+// example: !is_a_segment("")
+fn is_a_segment(segment: String) -> Bool {
+    points := code_points(segment)
+    if list.length(points) == 0 {
+        return false
+    }
+    var index = 0
+    for point in points {
+        if index == 0 && !is_opening(point) || index > 0 && !is_continuing(point) {
+            return false
+        }
+        index += 1
+    }
+    true
+}
+
+/// Each character of `text` as its Unicode code point, a surrogate pair read as the one it writes.
+// example: code_points("a𝐀") == [97, 119808]
+// example: code_points("") == []
+fn code_points(text: String) -> List<Int> {
+    var points = []
+    var index = 0
+    for index < strings.length(text) {
+        unit := or(strings.at(text, index), 0)
+        low := or(strings.at(text, index + 1), 0)
+        if is_a_pair(high: unit, low: low) {
+            points = list.push(points, 65536 + (unit - 55296) * 1024 + (low - 56320))
+            index += 2
+        } else {
+            points = list.push(points, unit)
+            index += 1
+        }
+    }
+    points
+}
+
+/// Whether two code units are the high and the low half of one surrogate pair.
+// example: is_a_pair(high: 55349, low: 56320)
+// example: !is_a_pair(high: 97, low: 56320)
+fn is_a_pair(high: Int, low: Int) -> Bool {
+    high >= 55296 && high <= 56319 && low >= 56320 && low <= 57343
+}
+
+/// Whether a Java name may go on with `point`: what may begin one, or a number.
+// example: is_continuing(48)
+// example: !is_continuing(8594)
+fn is_continuing(point: Int) -> Bool {
+    is_opening(point) || is_numeric(point)
+}
+
+/// Whether a Java name may begin with `point`: a letter, `_`, or `$`, and never a number.
+// example: is_opening(95)
+// example: !is_opening(48)
+fn is_opening(point: Int) -> Bool {
+    point == 95 || point == 36 || or(is_alphabetic(point), false)
+}
+
+/// Whether `point` is a number: a decimal digit, a letter number, or another number.
+///
+/// These are the general categories 9, 10, and 11 that `Character.getType` gives.
+// example: is_numeric(1637)
+// example: !is_numeric(97)
+fn is_numeric(point: Int) -> Bool {
+    category := or(general_category(point), 0)
+    category == 9 || category == 10 || category == 11
+}
+
+/// The first `extern` of `source`, which the examples read declarations from.
+// example: extern_of("extern new now() -> Int").name.text == "now"
+fn extern_of(source: String) -> ast.ExternDeclaration {
+    match parser.parse(source) {
+        Ok(program) => first_extern(program)
+        Err(_) => first_extern(ast.Program { items: [] })
+    }
+}
+
+/// The last `extern` of `program`, or an empty one where it has none.
+// example: first_extern(ast.Program { items: [] }).name.text == ""
+fn first_extern(program: ast.Program) -> ast.ExternDeclaration {
+    nowhere := lexer.Span { start: 0, length: 0 }
+    var found = ast.ExternDeclaration { name: ast.Name { text: "", span: nowhere }, reaches: ast.Constructor, gives: ast.GivesAsDeclared, parameters: [], result: ast.TypeRef { kind: ast.UnitType, span: nowhere }, span: nowhere }
+    for item in program.items {
+        found = extern_or(item, found)
+    }
+    found
+}
+
+/// The `extern` `item` declares, and `fallback` where it declares none.
+// example: extern_or(ast.Import(ast.ImportDeclaration { module: parameter_of("io").name, span: lexer.Span { start: 0, length: 0 } }), extern_of("")).name.text == ""
+fn extern_or(item: ast.Item, fallback: ast.ExternDeclaration) -> ast.ExternDeclaration {
+    match item {
+        ast.Extern(declaration) => declaration
+        _ => fallback
+    }
+}
+
+/// A parameter called `name` that takes an `Int`, which the examples narrow.
+// example: parameter_of("at").name.text == "at"
+fn parameter_of(name: String) -> ast.Parameter {
+    nowhere := lexer.Span { start: 0, length: 0 }
+    ast.Parameter { name: ast.Name { text: name, span: nowhere }, type_ref: Some(ast.TypeRef { kind: ast.UnitType, span: nowhere }), span: nowhere }
+}
+
+/// The boundary a type crosses: where it sits, and the extern types that may cross it.
+type Boundary = {
+    crossing: refusal.Crossing
+    foreign: map.Map<String, ast.Called>
+}
+
+/// How many segments a Java name needs.
+type Segments =
+    | AtLeast(Int)
+    | Exactly(Int)
+
+/// Whether Java takes `code` for a letter, which is `None` for a number no `int` holds.
+extern static is_alphabetic(int code: Int) -> Option<Bool> = "java.lang.Character.isAlphabetic"
+
+/// The general category Java gives `code`, which is `None` for a number no `int` holds.
+extern static int general_category(int code: Int) -> Option<Int> = "java.lang.Character.getType"

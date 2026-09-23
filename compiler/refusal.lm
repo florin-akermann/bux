@@ -1,0 +1,420 @@
+// What type inference refuses a module with, and the words each refusal is written in.
+//
+// `docs/specs/types.md` and `docs/specs/diagnostics.md` state the codes and the wording.
+// `crates/types` writes the same words in Rust, and a harness holds the two to one answer.
+// A refusal carries the types it names, so this module reads types and knows no program.
+import lexer
+
+import list
+
+import strings
+
+import unify
+
+/// A refusal as the harness compares it: the code, the span, and the message, then the help.
+// example: printed(TypeError { kind: DivisorIsZero, span: lexer.Span { start: 4, length: 1 } }) == "L0407 4..5 this divisor is zero, so there is no answer\nhelp: a zero written here is never anything else; drop the division\n"
+fn printed(refused: TypeError) -> String {
+    code_of(refused.kind) + " " + shown(refused.span) + " " + message(refused.kind) + "\nhelp: " + help_of(refused.kind) + "\n"
+}
+
+/// The code and the span of what `answer` was refused with, and nothing where it holds.
+// example: code_given(Ok(1)) == ""
+// example: code_given(Err(TypeError { kind: InfiniteType, span: lexer.Span { start: 2, length: 3 } })) == "L0403 2..5"
+fn code_given<T>(answer: Result<T, TypeError>) -> String {
+    match answer {
+        Ok(_) => ""
+        Err(refused) => code_of(refused.kind) + " " + shown(refused.span)
+    }
+}
+
+/// The code a refusal of this kind is refused with, which `docs/specs/diagnostics.md` lists.
+// example: code_of(InfiniteType) == "L0403"
+// example: code_of(NarrowsWithoutOption(unify.Unit)) == "L0431"
+fn code_of(kind: TypeErrorKind) -> String {
+    match kind {
+        Mismatched { expected, found } => "L0400"
+        WrongArgumentCount(_) => "L0401"
+        WrongTypeArgumentCount(_) => "L0401"
+        UnknownField { of, field } => "L0402"
+        UnknownReceiver(_) => "L0402"
+        InfiniteType => "L0403"
+        MissingField { of, field } => "L0404"
+        FieldWrittenTwice { of, field } => "L0405"
+        NoOperator { written_as, of, at } => "L0406"
+        DivisorIsZero => "L0407"
+        Discarded(_) => "L0408"
+        Unnamed { function, repeated } => "L0409"
+        Misnamed { written, parameter } => "L0410"
+        _ => later_code(kind)
+    }
+}
+
+/// The code of a refusal numbered after `L0410`, which [`code_of`] leaves to this.
+// example: later_code(HoldsItself(["A"])) == "L0415"
+fn later_code(kind: TypeErrorKind) -> String {
+    match kind {
+        NamedConstructor(_) => "L0411"
+        NamedPrelude(_) => "L0411"
+        NamedThroughModule(_) => "L0411"
+        FlagParameter(_) => "L0412"
+        NotAPredicate(_) => "L0413"
+        NotInModule { module, name } => "L0414"
+        HoldsItself(_) => "L0415"
+        NoInstance { of, at } => "L0418"
+        SignatureWithoutType(_) => "L0419"
+        LiteralDoesNotFit { value, at, least, most } => "L0420"
+        BoundIsNotAWholeNumber { bound, of } => "L0421"
+        HeldTypeHasNoInstance { of, deriving, held, held_as } => "L0422"
+        NamedInFront(_) => "L0423"
+        _ => boundary_code(kind)
+    }
+}
+
+/// The code of a refusal about a module reached or an `extern` boundary.
+// example: boundary_code(NotCalled { module: "io", name: "print" }) == "L0304"
+fn boundary_code(kind: TypeErrorKind) -> String {
+    match kind {
+        NotCalled { module, name } => "L0304"
+        TraitStaysInItsModule { module, name, of } => "L0424"
+        DoesNotCross { written, crossing } => "L0425"
+        NotAJavaName(_) => "L0426"
+        DerivesAForeignType(_) => "L0427"
+        ReachesNoClass(_) => "L0428"
+        WidensNoInt { width, written } => "L0429"
+        NarrowsNoInt(_) => "L0429"
+        BuildsAnInterface(_) => "L0430"
+        _ => "L0431"
+    }
+}
+
+/// The `error:` line, without its prefix.
+// example: message(Mismatched { expected: unify.int(), found: unify.text_type() }) == "expected `Int`, found `String`"
+// example: message(WrongArgumentCount(Count { name: "f", takes: 1, given: 2 })) == "`f` takes 1 argument but 2 were given"
+fn message(kind: TypeErrorKind) -> String {
+    match kind {
+        Mismatched { expected, found } => "expected `" + unify.text_of(expected) + "`, found `" + unify.text_of(found) + "`"
+        WrongArgumentCount(count) => count_text(count, "argument")
+        WrongTypeArgumentCount(count) => count_text(count, "type argument")
+        UnknownField { of, field } => "`" + unify.text_of(of) + "` has no field named `" + field + "`"
+        UnknownReceiver(field) => "the type here is not known, so `" + field + "` cannot be found"
+        InfiniteType => "this would have a type that contains itself"
+        MissingField { of, field } => "`" + of + "` needs a field named `" + field + "`"
+        FieldWrittenTwice { of, field } => "`" + of + "` is given `" + field + "` twice"
+        NoOperator { written_as, of, at } => "`" + unify.text_of(at) + "` has no `" + of + "`, so `" + written_as + "` is not written over it"
+        DivisorIsZero => "this divisor is zero, so there is no answer"
+        Discarded(left) => "`" + unify.text_of(left) + "` is left here and nothing takes it"
+        HoldsItself(ring) => ring_text(ring)
+        _ => how_it_is_written(kind)
+    }
+}
+
+/// The message of a refusal about how a call, a declaration, or a module reach is written.
+// example: how_it_is_written(NotAPredicate("full")) == "`full` gives back a `Bool`, so its name asks the question it answers"
+fn how_it_is_written(kind: TypeErrorKind) -> String {
+    match kind {
+        Unnamed { function, repeated } => "`" + function + "` gives two parameters the type `" + unify.text_of(repeated) + "`, so this call names its arguments"
+        Misnamed { written, parameter } => "this argument is named `" + written + "`, and the parameter here is `" + parameter + "`"
+        NamedConstructor(called) => "`" + called + "` is a constructor, so it carries its values in order and names none"
+        NamedPrelude(called) => "`" + called + "` comes from the prelude, which declares no parameter names to write"
+        NamedThroughModule(called) => "`" + called + "` is reached through a module, so it carries its values in order and names none"
+        FlagParameter(function) => "this parameter is a `Bool`, so a call of `" + function + "` passes `true` and says no more"
+        NotAPredicate(function) => "`" + function + "` gives back a `Bool`, so its name asks the question it answers"
+        NotInModule { module, name } => "`" + module + "` declares no `" + name + "`"
+        NamedInFront(called) => "`" + called + "` is written with its first argument in front, so this call names none of them"
+        NotCalled { module, name } => "`" + module + "." + name + "` is a function, so it is written as a call"
+        TraitStaysInItsModule { module, name, of } => "`" + module + "." + name + "` requires `" + of + "`, which `" + module + "` declares and nothing here names"
+        _ => what_is_declared(kind)
+    }
+}
+
+/// The message of a refusal about a declaration: a trait, a derive, a bound, or an instance.
+// example: what_is_declared(SignatureWithoutType("value")) == "`value` states no type, and a signature is never inferred"
+fn what_is_declared(kind: TypeErrorKind) -> String {
+    match kind {
+        NoInstance { of, at } => "`" + unify.text_of(at) + "` has no instance of `" + of + "`"
+        SignatureWithoutType(name) => "`" + name + "` states no type, and a signature is never inferred"
+        LiteralDoesNotFit { value, at, least, most } => "`" + shown(value) + "` does not fit `" + unify.text_of(at) + "`, which holds `" + shown(least) + "` to `" + shown(most) + "`"
+        BoundIsNotAWholeNumber { bound, of } => "`" + bound + "` of `" + of + "` is read rather than run, so it is one whole number"
+        HeldTypeHasNoInstance { of, deriving, held, held_as } => "`" + deriving + "` derives `" + of + "`, and the `" + unify.text_of(held) + "` it holds as `" + held_as + "` has none"
+        _ => what_java_is_not(kind)
+    }
+}
+
+/// The message of a refusal about an `extern`, which `docs/specs/interop.md` states.
+// example: what_java_is_not(NotAJavaName("a..b")) == "`a..b` is no Java name"
+fn what_java_is_not(kind: TypeErrorKind) -> String {
+    match kind {
+        DoesNotCross { written, crossing } => "`" + unify.text_of(written) + "` is no type a Java member " + crossing_word(crossing)
+        NotAJavaName(written) => "`" + written + "` is no Java name"
+        DerivesAForeignType(named) => "`" + named + "` is an extern type, and a derive reads what a type holds"
+        ReachesNoClass(reaches) => "a `" + reaches + "` reaches a class, and this signature names none"
+        WidensNoInt { width, written } => "`" + width + "` widens to an `Int`, and this signature gives back `" + unify.text_of(written) + "`"
+        NarrowsNoInt(written) => "`int` narrows an `Int`, and this parameter takes `" + unify.text_of(written) + "`"
+        BuildsAnInterface(built) => "a `new` builds a class, and `" + unify.text_of(built) + "` is an interface"
+        NarrowsWithoutOption(written) => "an `int` parameter narrows an `Int`, and this signature gives back `" + unify.text_of(written) + "`"
+        _ => ""
+    }
+}
+
+/// What a member does with a type where it sits in the signature.
+// example: crossing_word(Narrowed) == "gives back"
+fn crossing_word(crossing: Crossing) -> String {
+    match crossing {
+        Taken => "takes"
+        GivenBack => "gives back"
+        Narrowed => "gives back"
+        Held => "holds"
+    }
+}
+
+/// `` `f` takes 2 arguments but 1 was given ``, with `what` as the word for what is counted.
+// example: count_text(Count { name: "Box", takes: 1, given: 0 }, "type argument") == "`Box` takes 1 type argument but 0 were given"
+fn count_text(count: Count, what: String) -> String {
+    plural := if count.takes == 1 {
+        ""
+    } else {
+        "s"
+    }
+    was_or_were := if count.given == 1 {
+        "was"
+    } else {
+        "were"
+    }
+    "`" + count.name + "` takes " + shown(count.takes) + " " + what + plural + " but " + shown(count.given) + " " + was_or_were + " given"
+}
+
+/// `` `A` holds `B`, which holds `A` ``: the ring a type holds itself around.
+// example: ring_text(["A", "B"]) == "`A` holds `B`, which holds `A`"
+// example: ring_text(["A"]) == "`A` holds `A`"
+fn ring_text(ring: List<String>) -> String {
+    first := or(list.at(ring, 0), "")
+    var written = "`" + first + "` holds "
+    var position = 0
+    for held in ring {
+        if position > 0 {
+            written += "`" + held + "`, which holds "
+        }
+        position += 1
+    }
+    written + "`" + first + "`"
+}
+
+/// The `help:` line, which every refusal has.
+///
+/// An operator over a type of this module with no instance of a derivable trait names the derive.
+// example: help_of(NoOperator { written_as: "==", of: "Eq", at: unify.Named { name: "Point", arguments: [] } }) == "`Point` gets one by deriving it: write `derive Eq for Point`"
+// example: help_of(InfiniteType) == "one of these two is being used where the other was meant"
+fn help_of(kind: TypeErrorKind) -> String {
+    match kind {
+        NoOperator { written_as, of, at } => operator_help(of, at)
+        _ => stated(kind)
+    }
+}
+
+/// The help of a refused operator, which names the derive where one would give the instance.
+// example: operator_help("Eq", unify.Named { name: "demo.Point", arguments: [] }) == "an operator is a trait method, so a type gets one by writing that trait's instance"
+// example: operator_help("Add", unify.Named { name: "Point", arguments: [] }) == "an operator is a trait method, so a type gets one by writing that trait's instance"
+fn operator_help(of: String, at: unify.Type) -> String {
+    if list.has_value(["Eq", "Ord", "Hash", "Show"], of) && is_derivable_here(at) {
+        written := unify.text_of(at)
+        return "`" + written + "` gets one by deriving it: write `derive " + of + " for " + written + "`"
+    }
+    "an operator is a trait method, so a type gets one by writing that trait's instance"
+}
+
+/// Whether a derive here could name `at`: a type with no arguments that no other module declares.
+// example: is_derivable_here(unify.Named { name: "Point", arguments: [] })
+// example: !is_derivable_here(unify.list_of(unify.int()))
+fn is_derivable_here(at: unify.Type) -> Bool {
+    match at {
+        unify.Named { name, arguments } => list.length(arguments) == 0 && !has_dot(name)
+        _ => false
+    }
+}
+
+/// Whether `name` holds a dot, which the name of a type another module declares does.
+// example: has_dot("demo.Point")
+// example: !has_dot("Point")
+fn has_dot(name: String) -> Bool {
+    var index = 0
+    for index < strings.length(name) {
+        if or(strings.at(name, index), 0) == 46 {
+            return true
+        }
+        index += 1
+    }
+    false
+}
+
+/// The rule a refusal is said against, which is its `help:` line.
+// example: stated(DivisorIsZero) == "a zero written here is never anything else; drop the division"
+fn stated(kind: TypeErrorKind) -> String {
+    match kind {
+        Mismatched { expected, found } => "one type is not another, however alike they are held"
+        WrongArgumentCount(_) => "a call passes one argument for each the declaration lists"
+        WrongTypeArgumentCount(_) => "a type is written with one argument for each the declaration lists"
+        UnknownField { of, field } => "a field is looked up in the record its type declares"
+        UnknownReceiver(_) => "declare the type of a parameter or a result so the field can be found"
+        InfiniteType => "one of these two is being used where the other was meant"
+        MissingField { of, field } => "building a record gives every field a value; update one to change only some"
+        FieldWrittenTwice { of, field } => "a record gives each of its fields one value"
+        NoInstance { of, at } => "write the instance, or constrain the type parameter the call is made at"
+        LiteralDoesNotFit { value, at, least, most } => "write a whole number the type holds, or widen what its instance says it holds"
+        BoundIsNotAWholeNumber { bound, of } => "a bound is read rather than run, so write it as one whole number and nothing else"
+        HeldTypeHasNoInstance { of, deriving, held, held_as } => "a derived instance reads what it holds by that type's own; give the held one"
+        TraitStaysInItsModule { module, name, of } => "a trait has no name outside its module, so write the loop here instead"
+        _ => stated_of_a_use(kind)
+    }
+}
+
+/// The rule of a refusal about how a value, a call, or a name is written.
+// example: stated_of_a_use(FlagParameter("go")) == "declare a two-variant type and take that instead, so the call says which of the two"
+fn stated_of_a_use(kind: TypeErrorKind) -> String {
+    match kind {
+        DivisorIsZero => "a zero written here is never anything else; drop the division"
+        Discarded(_) => "write `_ = ` in front of it to throw the value away on purpose"
+        Unnamed { function, repeated } => "a call names its arguments when the declaration gives two parameters one type"
+        Misnamed { written, parameter } => "arguments are named in the order the declaration lists its parameters"
+        NamedConstructor(_) => "a variant whose values want names declares them as fields and is built as a record"
+        NamedPrelude(_) => "only a call of a function this module declares names its arguments"
+        NamedThroughModule(_) => "only a call of a function this module declares names its arguments"
+        FlagParameter(_) => "declare a two-variant type and take that instead, so the call says which of the two"
+        NotAPredicate(_) => "begin the name with `is_`, `has_`, `can_`, or `should_`"
+        NotInModule { module, name } => "a module offers the functions and the types it declares, and nothing else"
+        HoldsItself(_) => "hold an `Option` of it, which is how a type holds another of its own kind"
+        SignatureWithoutType(_) => "a signature has no body to read a type off, so it writes each one out"
+        NamedInFront(_) => "a call that names its arguments is written plainly, with every argument inside the brackets"
+        NotCalled { module, name } => "version 0.1 reaches a function by calling it; write the call"
+        _ => the_rule_of_java(kind)
+    }
+}
+
+/// The rule of a refusal about an `extern`, which `docs/specs/interop.md` states.
+// example: the_rule_of_java(NotAJavaName("")) == "a Java name is its segments, each a name, with a dot between two of them"
+fn the_rule_of_java(kind: TypeErrorKind) -> String {
+    match kind {
+        DoesNotCross { written, crossing } => "a boundary carries `Bool`, `Int`, `String`, a `List`, and a type an `extern` names"
+        NotAJavaName(_) => "a Java name is its segments, each a name, with a dot between two of them"
+        DerivesAForeignType(_) => "write an `instance` over `extern` declarations instead"
+        ReachesNoClass(_) => "a class is `String`, or a type an `extern type` declares"
+        WidensNoInt { width, written } => "a width widens to an `Int`; drop the word, or give an `Int` back"
+        NarrowsNoInt(_) => "an `int` narrows an `Int`; drop the word, or take an `Int`"
+        BuildsAnInterface(_) => "a `new` builds a class; reach one through a member of a class instead"
+        _ => "give back an `Option`, which is `None` where an argument does not fit"
+    }
+}
+
+/// Why inference refused a module, and where.
+type TypeError = {
+    kind: TypeErrorKind
+    span: lexer.Span
+}
+
+/// What went wrong, in the words the reader sees.
+type TypeErrorKind =
+    | Mismatched {
+        expected: unify.Type
+        found: unify.Type
+    }
+    | WrongArgumentCount(Count)
+    | WrongTypeArgumentCount(Count)
+    | UnknownField {
+        of: unify.Type
+        field: String
+    }
+    | UnknownReceiver(String)
+    | InfiniteType
+    | MissingField {
+        of: String
+        field: String
+    }
+    | FieldWrittenTwice {
+        of: String
+        field: String
+    }
+    | NoOperator {
+        written_as: String
+        of: String
+        at: unify.Type
+    }
+    | DivisorIsZero
+    | Discarded(unify.Type)
+    | Unnamed {
+        function: String
+        repeated: unify.Type
+    }
+    | Misnamed {
+        written: String
+        parameter: String
+    }
+    | NamedConstructor(String)
+    | NamedPrelude(String)
+    | NamedThroughModule(String)
+    | FlagParameter(String)
+    | NotAPredicate(String)
+    | NotInModule {
+        module: String
+        name: String
+    }
+    | HoldsItself(List<String>)
+    | NoInstance {
+        of: String
+        at: unify.Type
+    }
+    | SignatureWithoutType(String)
+    | LiteralDoesNotFit {
+        value: Int
+        at: unify.Type
+        least: Int
+        most: Int
+    }
+    | BoundIsNotAWholeNumber {
+        bound: String
+        of: String
+    }
+    | HeldTypeHasNoInstance {
+        of: String
+        deriving: String
+        held: unify.Type
+        held_as: String
+    }
+    | NamedInFront(String)
+    | NotCalled {
+        module: String
+        name: String
+    }
+    | TraitStaysInItsModule {
+        module: String
+        name: String
+        of: String
+    }
+    | DoesNotCross {
+        written: unify.Type
+        crossing: Crossing
+    }
+    | NotAJavaName(String)
+    | DerivesAForeignType(String)
+    | ReachesNoClass(String)
+    | WidensNoInt {
+        width: String
+        written: unify.Type
+    }
+    | NarrowsNoInt(unify.Type)
+    | BuildsAnInterface(unify.Type)
+    | NarrowsWithoutOption(unify.Type)
+
+/// What a declaration takes and what a use of it gave, for the two counts that can be wrong.
+type Count = {
+    name: String
+    takes: Int
+    given: Int
+}
+
+derive Eq for Crossing
+
+/// Where a type sits in an `extern` signature, which decides whether it may be there.
+type Crossing =
+    | Taken
+    | GivenBack
+    | Narrowed
+    | Held
