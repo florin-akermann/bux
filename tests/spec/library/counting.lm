@@ -2,9 +2,9 @@
 // > 3
 // > 2
 // > 0
-// `list` is a module of the library the compiler carries, and its functions are generic.
-// A generic is written by the module that declares it, once per set of types a use settles it
-// at, so these three uses ask `list` for three methods and this module writes none of them.
+// `list` is a module of the library the compiler carries, and `list.length` is the compiler's.
+// A call of it is written out where it stands as a read of the length the list holds, whatever
+// the type of the values, so these three uses ask `list` for no method at all.
 import io
 
 import list

@@ -7181,8 +7181,6 @@ status 0
 
 $ api library/list.lm
 status 0
-> fn length<T>(values: List<T>) -> Int
->
 > fn has_value<T: Eq<T>>(values: List<T>, value: T) -> Bool
 >
 > fn index_of<T: Eq<T>>(values: List<T>, value: T) -> Option<Int>

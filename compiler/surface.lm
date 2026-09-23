@@ -219,14 +219,21 @@ fn no_surface() -> Reached {
     Reached { functions: map.empty(), types: [], instances: [] }
 }
 
-/// What the compiler holds for `module`, which is `push` and `at` for `list` and nothing else.
-// example: list.length(held_for("list")) == 2
+/// What the compiler holds for `module`: `length`, `push`, and `at` for `list`, and nothing else.
+// example: list.length(held_for("list")) == 3
 // example: list.length(held_for("demo")) == 0
 fn held_for(module: String) -> List<OfferedFunction> {
     if module != "list" {
         return []
     }
-    [OfferedFunction { name: "push", offered: Generic(push_scheme()) }, OfferedFunction { name: "at", offered: Generic(at_scheme()) }]
+    [OfferedFunction { name: "length", offered: Generic(length_scheme()) }, OfferedFunction { name: "push", offered: Generic(push_scheme()) }, OfferedFunction { name: "at", offered: Generic(at_scheme()) }]
+}
+
+/// `length<T>(values: List<T>) -> Int`, which the compiler holds.
+// example: unify.text_of(length_scheme().body) == "(List<T>) -> Int"
+fn length_scheme() -> unify.Scheme {
+    element := unify.Parameter(unify.prelude_parameter("T"))
+    unify.Scheme { quantified: [unify.Written(unify.prelude_parameter("T"))], body: unify.Function { parameters: [unify.list_of(element)], result: unify.int() }, required: [] }
 }
 
 /// `push<T>(values: List<T>, value: T) -> List<T>`, which the compiler holds.

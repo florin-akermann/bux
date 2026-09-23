@@ -2341,7 +2341,8 @@ fn set_aside_as(builder: Builder, fallback: ast.Expr, wanted: Option<Descriptor>
     }
 }
 
-/// The builder after a call of `push` or `at` of the module `list`, which the compiler writes.
+/// The builder after a call of `length`, `push`, or `at` of the module `list`, which the compiler
+/// writes.
 // example: is_unwritten(held_by_the_compiler(little_builder(""), Through { module: infer.no_name(), name: infer.no_name(), used: infer.no_name().span }, []))
 fn held_by_the_compiler(builder: Builder, through: Through, arguments: List<ast.Expr>) -> Option<Left> {
     if through.module.text != "list" {
@@ -2350,13 +2351,18 @@ fn held_by_the_compiler(builder: Builder, through: Through, arguments: List<ast.
     held_named(builder, through.name.text, arguments)
 }
 
-/// The builder after `push` or `at` over two arguments, where `name` is one of them.
+/// The builder after `length` over one argument, or `push` or `at` over two, where `name` is one
+/// of them.
 // example: is_unwritten(held_named(little_builder(""), "push", []))
+// example: !is_unwritten(held_named(little_builder(""), "length", [no_expr()]))
 fn held_named(builder: Builder, name: String, arguments: List<ast.Expr>) -> Option<Left> {
+    values := or(list.at(arguments, 0), no_expr())
+    if name == "length" && list.length(arguments) == 1 {
+        return Some(read_length(builder: builder, values: values))
+    }
     if list.length(arguments) != 2 {
         return None
     }
-    values := or(list.at(arguments, 0), no_expr())
     second := or(list.at(arguments, 1), no_expr())
     if name == "push" {
         return Some(list_push_built(builder: builder, values: values, value: second))
@@ -2365,6 +2371,13 @@ fn held_named(builder: Builder, name: String, arguments: List<ast.Expr>) -> Opti
         return Some(read_at(builder: builder, values: values, index: second))
     }
     None
+}
+
+/// The builder after the length `values` holds is read, and widened to the `long` an `Int` is.
+// example: held_text(read_length(builder: little_builder(""), values: no_expr()).held) == "J"
+fn read_length(builder: Builder, values: ast.Expr) -> Left {
+    listed := handed(builder, values, Some(list_descriptor()))
+    Left { builder: emits(listed, [GetField(list_length()), Widen]), held: Some(Long) }
 }
 
 /// The builder after `value` is pushed onto `values`.
