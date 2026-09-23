@@ -113,7 +113,7 @@ pub fn answers_of_one_run(program: &Example, sources: &[String]) -> Vec<String> 
 mod stage;
 
 pub use stage::{
-    BUX, Case, DRIVEN, FIXTURES, Home, LAUNCHED, RUST, SHARDS, Stage, fixture_cases,
+    BUX, Case, DRIVEN, FIXTURES, Home, LAUNCHED, RUST, SHARDS, Stage, copied, fixture_cases,
     the_same_from_the_driver, the_same_from_the_launcher,
 };
 

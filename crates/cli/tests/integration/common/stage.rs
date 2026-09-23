@@ -387,9 +387,9 @@ pub fn fixture_cases(commands: &[&str], directories: &[&str]) -> Vec<Case> {
         .collect()
 }
 
-/// A copy of the directory `from` at `to`, leaving out class files and hidden entries.
-fn copied(from: &Path, to: &Path) {
-    fs::create_dir_all(to).expect("a directory of the stage is creatable");
+/// A copy of the directory `from` at `copy`, leaving out class files and hidden entries.
+pub fn copied(from: &Path, copy: &Path) {
+    fs::create_dir_all(copy).expect("a directory of the stage is creatable");
     for entry in fs::read_dir(from).expect("a directory of the repository is readable") {
         let path = entry.expect("a directory entry is readable").path();
         let name = path.file_name().expect("an entry has a name");
@@ -402,9 +402,9 @@ fn copied(from: &Path, to: &Path) {
             continue;
         }
         if path.is_dir() {
-            copied(&path, &to.join(name));
+            copied(&path, &copy.join(name));
         } else {
-            fs::copy(&path, to.join(name)).expect("a file of the repository is copyable");
+            fs::copy(&path, copy.join(name)).expect("a file of the repository is copyable");
         }
     }
 }

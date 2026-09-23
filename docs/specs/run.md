@@ -118,7 +118,7 @@ It finds the JDK as this page says: `JAVA_HOME` names it, and nothing else is se
 It refuses with status `2` when the compiler is not built, and when `JAVA_HOME` names no JDK.
 
 ```text
-error: <root>/compiler/main.class: the compiler is not built; lumen build compiler/main.lm builds it
+error: <root>/compiler/main.class: the compiler is not built; bin/bootstrap builds it
 error: JAVA_HOME is not set, and the bux compiler runs on the JDK it names
 error: /opt/nothing/bin/java: JAVA_HOME names no JDK
 ```
@@ -140,25 +140,26 @@ With no JDK, the harness skips each test that starts a JVM and says why.
 
 ## The bootstrap
 
-The Bux compiler builds itself, in two stages that `docs/implementation.md` section 6 names.
-Stage 1 is the compiler that `lumen build compiler/main.lm` writes.
-Stage 2 is the compiler that stage 1 writes when `bin/bux build compiler/main.lm` starts it.
-Both stages are built from the same `compiler/` source.
+The Bux compiler builds itself from a seed, and `bin/bootstrap` does it.
+The seed `bin/seed.jar` holds the classes of a Bux compiler that an earlier compiler built.
+It is the one archive that the repository keeps, and `docs/implementation.md` section 6 says why.
 
-`bux build` writes the class files beside the source, as `lumen build` does.
-So each stage is built from a copy of its own of `compiler/`, made outside the repository.
-The two stages then never write over each other, and the working tree stays clean.
-Each copy also holds `library/` and `bin/bux`, and `compiler/` holds the help text and explanations.
-So each stage has a launcher of its own, and each launcher starts its own stage.
+`bin/bootstrap` is a POSIX `sh` script, and it needs only `JAVA_HOME` and the checkout.
+It deletes every class file under `compiler/`, so no class of an old build is left.
+The seed then builds stage 1, the classes beside the sources in `compiler/`, which `bin/bux` starts.
+Stage 1 then builds stage 2 from a copy of `compiler/` in a temporary directory.
+That directory is outside the repository, and the script deletes it when it ends.
 
 Stage 2 is stage 1 byte for byte.
 Stage 2 has the same class files as stage 1, at the same paths, with the same bytes.
+When they differ, the script names the first class that differs and ends with status 1.
 A difference is a defect in the compiler under `compiler/`, and the fix goes there.
-Both stages pass `tests/spec`: each program there runs under each launcher as under `lumen`.
+The script refuses with status `2` when `JAVA_HOME` names no JDK and when the seed is missing.
 
-The harness `crates/cli/tests/integration/bux_bootstrap.rs` builds the two stages.
-It compares the list of class-file paths and lengths first, and then the bytes of each file.
-A difference in the bytes names the file and the first offset that differs.
+The harness `crates/cli/tests/integration/bux_bootstrap.rs` holds the bootstrap.
+It copies `bin/`, `compiler/`, `library/`, and `tests/spec/` with no class file to a new directory.
+It runs `bin/bootstrap` there with `JAVA_HOME` alone set, and then `bin/bux --version`.
+It also builds stage 1 with `lumen` and stage 2 with that stage, and compares their bytes.
 It holds stage 2 to `lumen` on every program under `tests/spec`.
 `bux_launcher.rs` does the same for stage 1.
 With no JDK, the harness skips each test and says why, because stage 1 runs on a JVM.
@@ -173,3 +174,4 @@ These hold, and each is checked:
 3. A run ends with the low eight bits of the `Int` `main` gave back.
 4. Every word after the file reaches the program unchanged, `--help` among them.
 5. Stage 2 of the bootstrap is stage 1 byte for byte, and both stages pass `tests/spec`.
+6. A checkout with no class file bootstraps with `JAVA_HOME` alone, and `bin/bux` then starts.

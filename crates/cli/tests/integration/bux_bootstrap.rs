@@ -4,14 +4,16 @@
 //! stage 2 is the compiler that stage 1 writes, each in a stage of its own outside the repository.
 //! Stage 2 is stage 1 byte for byte, and both run every program under `tests/spec` as `lumen`
 //! does: this file holds stage 2 to that, and `bux_launcher.rs` holds stage 1. Stage 1 runs on a
-//! JVM, so each test is skipped with a named reason when `JAVA_HOME` names no JDK.
+//! JVM, so each test is skipped with a named reason when `JAVA_HOME` names no JDK. A checkout
+//! with no class file bootstraps from the seed `bin/seed.jar` through `bin/bootstrap`, too.
 
 use std::fmt::Write as _;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
+use std::process::{Command, Output, Stdio};
 
 use crate::common::{
-    LAUNCHED, Stage, files_ending_in, first_difference, fixture_cases, jdk,
+    LAUNCHED, Stage, copied, files_ending_in, first_difference, fixture_cases, jdk, repository,
     the_same_from_the_launcher,
 };
 
@@ -50,6 +52,72 @@ fn every_program_under_tests_spec_runs_under_stage_two_as_under_lumen() {
     };
 
     the_same_from_the_launcher(&two, &fixture_cases(&["run"], &["tests/spec"]));
+}
+
+/// `docs/specs/run.md`: a checkout with no class file bootstraps from the seed with `JAVA_HOME`
+/// alone, and the launcher then starts the compiler it built.
+#[test]
+fn a_checkout_with_no_class_file_bootstraps_from_the_seed() {
+    let Some(java) = jdk() else {
+        eprintln!("skipped: JAVA_HOME names no JDK, and the bootstrap runs on one");
+        return;
+    };
+    let home = java
+        .parent()
+        .and_then(Path::parent)
+        .expect("a JDK holds bin/java");
+    let checkout = Checkout::made();
+
+    let bootstrapped = checkout.started("bin/bootstrap", &[], home);
+    let version = checkout.started("bin/bux", &["--version"], home);
+
+    assert!(
+        bootstrapped.status.success(),
+        "{}",
+        as_text(&bootstrapped.stderr)
+    );
+    assert!(version.status.success(), "{}", as_text(&version.stderr));
+    assert_eq!(as_text(&version.stdout), "lumen 0.1.0\n");
+}
+
+/// A copy of what a checkout holds that the bootstrap reads, with no class file, outside the
+/// repository.
+struct Checkout {
+    root: PathBuf,
+}
+
+impl Checkout {
+    fn made() -> Self {
+        let root = std::env::temp_dir().join(format!("bux-checkout-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&root);
+        for directory in ["bin", "compiler", "library", "tests/spec"] {
+            copied(&repository().join(directory), &root.join(directory));
+        }
+        Self { root }
+    }
+
+    /// What the script `script` of the checkout did with `words`, with `JAVA_HOME` naming
+    /// `home` and no other variable set.
+    fn started(&self, script: &str, words: &[&str], home: &Path) -> Output {
+        Command::new(self.root.join(script))
+            .args(words)
+            .current_dir(&self.root)
+            .env_clear()
+            .env("JAVA_HOME", home)
+            .stdin(Stdio::null())
+            .output()
+            .expect("the script starts")
+    }
+}
+
+impl Drop for Checkout {
+    fn drop(&mut self) {
+        let _ = fs::remove_dir_all(&self.root);
+    }
+}
+
+fn as_text(bytes: &[u8]) -> String {
+    String::from_utf8_lossy(bytes).into_owned()
 }
 
 /// Stage 1, which `lumen` builds, and stage 2, which the launcher of stage 1 builds, or nothing

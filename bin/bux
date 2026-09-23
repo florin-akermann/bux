@@ -15,7 +15,7 @@ while [ -L "$self" ]; do
 done
 root=$(cd "$(dirname "$self")/.." && pwd)
 if [ ! -f "$root/compiler/main.class" ]; then
-    echo "error: $root/compiler/main.class: the compiler is not built; lumen build compiler/main.lm builds it" >&2
+    echo "error: $root/compiler/main.class: the compiler is not built; bin/bootstrap builds it" >&2
     exit 2
 fi
 if [ -z "$JAVA_HOME" ]; then

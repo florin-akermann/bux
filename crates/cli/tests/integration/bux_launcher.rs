@@ -38,7 +38,7 @@ fn the_launcher_refuses_a_compiler_that_is_not_built() {
     assert_eq!(said.status, 2);
     assert!(
         said.errors
-            .ends_with("the compiler is not built; lumen build compiler/main.lm builds it\n")
+            .ends_with("the compiler is not built; bin/bootstrap builds it\n")
     );
 }
 

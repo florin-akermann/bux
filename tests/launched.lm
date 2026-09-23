@@ -41,7 +41,7 @@ fn unbuilt_in(launcher: String, directory: String) -> held.Held {
     copy := modules.joined(bin, "bux")
     _ = files.made(bin)
     _ = files.write(copy, ok_or(files.read(launcher), ""))
-    expected := Expected { status: 2, output: "", errors: "the compiler is not built; lumen build compiler/main.lm builds it\n" }
+    expected := Expected { status: 2, output: "", errors: "the compiler is not built; bin/bootstrap builds it\n" }
     line := ["sh", copy, "--version"]
     found := ended_held(line, walk.ended(line, directory), expected)
     command.removed_whole(directory)
