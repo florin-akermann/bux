@@ -5,6 +5,8 @@
 // A module that types gives its API page, which `docs/specs/api-surface.md` states.
 import ast
 
+import carried
+
 import declared
 
 import format
@@ -195,12 +197,14 @@ fn page_code(source: String) -> String {
 
 /// Every expression of `resolved` given its type, or the first refusal.
 ///
-/// A record that holds itself is refused first, then a declaration, then a body.
+/// A record that holds itself is refused first, then a declaration, then a body, and then an
+/// `Option<()>` that inference reached.
 // example: page_code("fn count() -> Int {\n    \"one\"\n}\n") == "L0400 18..31"
+// example: page_code("fn is_there() -> Bool {\n    _ = Some(())\n    true\n}\n") == "L0432 32..40"
 fn check(resolved: resolver.Resolved, imported: surface.Imported, prelude: Prelude) -> Result<infer.Inference, refusal.TypeError> {
     _ = declared.nothing_holds_itself(resolved)?
     declaring := declared.environment_of(prelude.declared, resolved, surface.every_type(imported), surface.every_instance(imported), unify.empty_table())?
-    infer.module_inferred(resolved, imported, declaring)
+    carried.nothing_carried(infer.module_inferred(resolved, imported, declaring)?)
 }
 
 /// The small prelude of the examples of the type inference.

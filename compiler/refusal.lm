@@ -10,6 +10,16 @@ import strings
 
 import unify
 
+/// `found`, or the refusal at `at` where `found` is `Option<()>`, which no program may write.
+// example: code_given(unit_refused(unify.option_of(unify.Unit), lexer.Span { start: 3, length: 10 })) == "L0432 3..13"
+// example: code_given(unit_refused(unify.option_of(unify.truth()), lexer.Span { start: 3, length: 12 })) == ""
+fn unit_refused(found: unify.Type, at: lexer.Span) -> Result<unify.Type, TypeError> {
+    if found == unify.option_of(unify.Unit) {
+        return Err(TypeError { kind: UnitInOption, span: at })
+    }
+    Ok(found)
+}
+
 /// A refusal as the harness compares it: the code, the span, and the message, then the help.
 // example: printed(TypeError { kind: DivisorIsZero, span: lexer.Span { start: 4, length: 1 } }) == "L0407 4..5 this divisor is zero, so there is no answer\nhelp: a zero written here is never anything else; drop the division\n"
 fn printed(refused: TypeError) -> String {
@@ -65,6 +75,7 @@ fn later_code(kind: TypeErrorKind) -> String {
         BoundIsNotAWholeNumber { bound, of } => "L0421"
         HeldTypeHasNoInstance { of, deriving, held, held_as } => "L0422"
         NamedInFront(_) => "L0423"
+        UnitInOption => "L0432"
         _ => boundary_code(kind)
     }
 }
@@ -103,6 +114,7 @@ fn message(kind: TypeErrorKind) -> String {
         DivisorIsZero => "this divisor is zero, so there is no answer"
         Discarded(left) => "`" + unify.text_of(left) + "` is left here and nothing takes it"
         HoldsItself(ring) => ring_text(ring)
+        UnitInOption => "`Option` never carries `()`, because `Some(())` says no more than `true`"
         _ => how_it_is_written(kind)
     }
 }
@@ -284,6 +296,7 @@ fn stated_of_a_use(kind: TypeErrorKind) -> String {
         SignatureWithoutType(_) => "a signature has no body to read a type off, so it writes each one out"
         NamedInFront(_) => "a call that names its arguments is written plainly, with every argument inside the brackets"
         NotCalled { module, name } => "version 0.1 reaches a function by calling it; write the call"
+        UnitInOption => "use `Bool` for a flag, and `Result<(), E>` for a failure with a reason"
         _ => the_rule_of_java(kind)
     }
 }
@@ -401,6 +414,7 @@ type TypeErrorKind =
     | NarrowsNoInt(unify.Type)
     | BuildsAnInterface(unify.Type)
     | NarrowsWithoutOption(unify.Type)
+    | UnitInOption
 
 /// What a declaration takes and what a use of it gave, for the two counts that can be wrong.
 type Count = {

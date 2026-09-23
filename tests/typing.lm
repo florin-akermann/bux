@@ -17,6 +17,8 @@ import infer
 
 import ir
 
+import lexer
+
 import list
 
 import strings
@@ -24,9 +26,9 @@ import strings
 import types
 
 /// One `Held` for each property of the inference over whole modules, in a fixed order.
-// example: list.length(every_property(0, ir.little_library())) == 9
+// example: list.length(every_property(0, ir.little_library())) == 10
 fn every_property(cases: Int, library: ir.Library) -> List<held.Held> {
-    [inference_is_deterministic(cases, library), a_call_in_front_infers_as_the_plain_call(cases, library), a_module_of_pieces_infers(cases, library), a_refusal_points_inside_the_source(cases, library), every_expression_has_a_type(cases, library), no_expression_is_left_unsettled(cases, library), a_generic_is_general_enough_for_any_two_uses(cases, library), a_ring_of_records_is_refused_whatever_its_length(cases, library), a_chain_of_records_is_accepted(cases, library)]
+    [inference_is_deterministic(cases, library), a_call_in_front_infers_as_the_plain_call(cases, library), a_module_of_pieces_infers(cases, library), a_refusal_points_inside_the_source(cases, library), every_expression_has_a_type(cases, library), no_expression_is_left_unsettled(cases, library), a_generic_is_general_enough_for_any_two_uses(cases, library), a_ring_of_records_is_refused_whatever_its_length(cases, library), a_chain_of_records_is_accepted(cases, library), an_option_of_unit_is_refused_where_it_is_reached(cases, library)]
 }
 
 /// A drawn module is checked to one answer, however many times it is checked.
@@ -260,6 +262,58 @@ fn a_chain_of_records_is_accepted(cases: Int, library: ir.Library) -> held.Held 
         found = checking.noted(found, "a_chain_of_records_is_accepted", seed, checking.Tried { input: source, why: refusal_text(checking.checked(source, library)) })
     }
     found
+}
+
+/// `Option<()>`, written or inferred in a drawn shape, is refused with `L0432` where it is reached,
+/// and the same shape with `Option<Bool>` in its place is accepted.
+// example: held.is_held(an_option_of_unit_is_refused_where_it_is_reached(2, ir.little_library()))
+fn an_option_of_unit_is_refused_where_it_is_reached(cases: Int, library: ir.Library) -> held.Held {
+    var found = held.nothing_failed(cases)
+    for seed in checking.seeds(cases) {
+        found = checking.noted(found, "an_option_of_unit_is_refused_where_it_is_reached", seed, carrying_tried(drawn.seeded(seed), library))
+    }
+    found
+}
+
+/// A drawn shape below a drawn module of pieces, once with `()` and once with `Bool` in it.
+// example: carrying_tried(drawn.seeded(1), ir.little_library()).why == ""
+fn carrying_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
+    shape := drawn.picked(draw, carryings(), Carrying { refused: "", accepted: "", at: "" })
+    above := checking.module_of(drawn.next(draw), pieces()) + "\n\n"
+    source := above + shape.refused + "\n"
+    answer := checking.checked(source, library)
+    at := checking.occurrence(source, shape.at, 1)
+    span := refused_span(answer)
+    if checking.code_of(answer) != "L0432" || span.start != at.start || span.length != at.length {
+        return checking.Tried { input: source, why: "the refusal is " + refusal_text(answer) + " at " + shown(span) + ", not at " + shown(at) }
+    }
+    accepted := above + shape.accepted + "\n"
+    if !checking.is_accepted(accepted, library) {
+        return checking.Tried { input: accepted, why: "the shape with `Bool` is refused: " + refusal_text(checking.checked(accepted, library)) }
+    }
+    checking.Tried { input: source, why: "" }
+}
+
+/// The span of the refusal `answer` holds, and an empty span before the source where it holds none.
+// example: refused_span(Ok(1)).start == -1
+fn refused_span<T>(answer: Result<T, command.Diagnostic>) -> lexer.Span {
+    match answer {
+        Ok(_) => lexer.Span { start: -1, length: 0 }
+        Err(refused) => refused.span
+    }
+}
+
+/// The shapes an `Option<()>` is written or inferred in, each with where the refusal points.
+///
+/// Three write it in a signature or a field, and three reach it: at `Some(())`, at a `None` that
+/// meets it, and at a call of a generic over a `List<()>`.
+// example: list.length(carryings()) == 6
+fn carryings() -> List<Carrying> {
+    given := "\n\nfn is_given(given: ()) -> Bool {\n    true\n}"
+    given_flag := "\n\nfn is_given(given: Bool) -> Bool {\n    given\n}"
+    matched := " {\n        Some(inside) => is_given(inside)\n        None => false\n    }\n}"
+    first := "\n\nfn first<T>(items: List<T>) -> Option<T> {\n    for item in items {\n        return Some(item)\n    }\n    None\n}"
+    [Carrying { refused: "fn is_held(maybe: Option<()>) -> Bool {\n    true\n}", accepted: "fn is_held(maybe: Option<Bool>) -> Bool {\n    true\n}", at: "Option<()>" }, Carrying { refused: "type Held = {\n    maybe: Option<()>\n}", accepted: "type Held = {\n    maybe: Option<Bool>\n}", at: "Option<()>" }, Carrying { refused: "fn held() -> List<Option<()>> {\n    []\n}", accepted: "fn held() -> List<Option<Bool>> {\n    []\n}", at: "Option<()>" }, Carrying { refused: "fn is_there() -> Bool {\n    match Some(()) {\n        Some(_) => true\n        None => false\n    }\n}", accepted: "fn is_there() -> Bool {\n    match Some(true) {\n        Some(_) => true\n        None => false\n    }\n}", at: "Some(())" }, Carrying { refused: "fn is_there() -> Bool {\n    match None" + matched + given, accepted: "fn is_there() -> Bool {\n    match None" + matched + given_flag, at: "None" }, Carrying { refused: "fn is_first_given(all: List<()>) -> Bool {\n    match first(all)" + matched + first + given, accepted: "fn is_first_given(all: List<Bool>) -> Bool {\n    match first(all)" + matched + first + given_flag, at: "first(all)" }]
 }
 
 /// The code and the message of the refusal `answer` holds, and `""` where it holds none.
@@ -533,4 +587,12 @@ fn both(first: List<ast.Expr>, second: List<ast.Expr>) -> List<ast.Expr> {
 type Valued = {
     written: String
     of: String
+}
+
+/// One shape an `Option<()>` is written or inferred in, the same shape with `Bool` in place of
+/// `()`, and the text the refusal points at, which is its first occurrence in the module.
+type Carrying = {
+    refused: String
+    accepted: String
+    at: String
 }

@@ -175,8 +175,8 @@ of what it gave back.
 `Option<Int>` is a result of such a declaration, and so is `Option<T>` for every other `T` that
 crosses as a value, because there is now something for `None` to say.
 A declaration that narrows no parameter keeps the rule above: `Option` over a number is `L0425`.
-`()` crosses as a result and not as a value, so `Option<()>` is no result of anything, and a
-member that gives nothing back and takes an `int` is not reachable in version 0.1.
+`Option<()>` is `L0432` wherever it is written, which `docs/specs/types.md` states.
+So a member that gives nothing back and takes an `int` is not reachable in version 0.1.
 
 `Result<Option<T>, String>` composes as it always did.
 The guard is outside, so an argument that does not fit is `Ok(None)`.
@@ -241,9 +241,9 @@ That is the one place the compiler catches anything, and it catches to build the
 nothing else.
 
 Neither wraps `()`.
-`Ok` and `Some` each carry one value, and a member that gives nothing back leaves none to carry,
-so `Result<(), String>` and `Option<()>` are each `L0425` and the answer is a member that gives
-something back.
+`Ok` and `Some` each carry one value, and a member that gives nothing back leaves none to carry.
+So `Result<(), String>` is `L0425`, and the answer is a member that gives something back.
+`Option<()>` is `L0432`, because no program writes it, and that refusal comes before this check.
 A `field` is the one kind `()` is no result for at all: the JVM has no field of type `void`, so a
 field holds a value or is no field, and `L0425` says it holds none rather than gives none back.
 Guarding a member that gives nothing back waits for a requirement that has one to guard.
@@ -330,7 +330,7 @@ It is raised where a declaration narrows a parameter and the result, with a `Res
 read through, is not an `Option`, because a narrowed argument that does not fit has nothing to
 say otherwise.
 A result of `()` is refused by it too, and has no answer: the help asks for an `Option`, and
-`Option<()>` is then `L0425`.
+`Option<()>` is then `L0432`.
 
 A Java class or member that is not there is not refused, because nothing is loaded to refuse it
 against: `docs/specs/library.md` states that the library is read with no classpath and no JDK.

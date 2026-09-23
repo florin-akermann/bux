@@ -153,6 +153,7 @@ Type inference raises these, and `compiler/refusal.lm` words them:
 - `L0429` — an `extern` writes a width where there is no `Int` to widen to or to narrow from.
 - `L0430` — an `extern new` gives back a type an `extern type` named an interface.
 - `L0431` — an `extern` narrows a parameter and gives back something other than an `Option`.
+- `L0432` — a program writes `Option<()>`, or inference gives an expression a type that holds it.
 
 Exhaustiveness raises these, in `compiler/exhaustiveness.lm`:
 

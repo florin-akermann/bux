@@ -2251,11 +2251,51 @@ status 0
 $ check tests/spec/unit/listed.lm
 status 0
 
+$ check tests/spec/unit/none_of_unit.lm
+status 1
+! error[L0432]: `Option` never carries `()`, because `Some(())` says no more than `true`
+!   --> tests/spec/unit/none_of_unit.lm:4:11
+!
+!   4 |     match None {
+!     |           ^^^^
+!
+! help: use `Bool` for a flag, and `Result<(), E>` for a failure with a reason
+
 $ check tests/spec/unit/open.lm
 status 0
 
+$ check tests/spec/unit/some_of_unit.lm
+status 1
+! error[L0432]: `Option` never carries `()`, because `Some(())` says no more than `true`
+!   --> tests/spec/unit/some_of_unit.lm:4:11
+!
+!   4 |     match Some(()) {
+!     |           ^^^^^^^^
+!
+! help: use `Bool` for a flag, and `Result<(), E>` for a failure with a reason
+
+$ check tests/spec/unit/specialised_to_unit.lm
+status 1
+! error[L0432]: `Option` never carries `()`, because `Some(())` says no more than `true`
+!   --> tests/spec/unit/specialised_to_unit.lm:4:11
+!
+!   4 |     match first(all) {
+!     |           ^^^^^^^^^^
+!
+! help: use `Bool` for a flag, and `Result<(), E>` for a failure with a reason
+
 $ check tests/spec/unit/updated.lm
 status 0
+
+$ check tests/spec/unit/written_in_option.lm
+status 1
+! error[L0432]: `Option` never carries `()`, because `Some(())` says no more than `true`
+!   --> tests/spec/unit/written_in_option.lm:4:19
+!
+!   4 | fn is_read(maybe: Option<()>) -> Bool {
+!     |                   ^^^^^^^^^^
+!
+! help: use `Bool` for a flag, and `Result<(), E>` for a failure with a reason
 
 $ check library/environment.lm
 status 0
@@ -3470,11 +3510,27 @@ status 0
 $ check --json tests/spec/unit/listed.lm
 status 0
 
+$ check --json tests/spec/unit/none_of_unit.lm
+status 1
+> {"file":"tests/spec/unit/none_of_unit.lm","code":"L0432","message":"`Option` never carries `()`, because `Some(())` says no more than `true`","span":{"start":153,"len":4},"help":"use `Bool` for a flag, and `Result<(), E>` for a failure with a reason"}
+
 $ check --json tests/spec/unit/open.lm
 status 0
 
+$ check --json tests/spec/unit/some_of_unit.lm
+status 1
+> {"file":"tests/spec/unit/some_of_unit.lm","code":"L0432","message":"`Option` never carries `()`, because `Some(())` says no more than `true`","span":{"start":152,"len":8},"help":"use `Bool` for a flag, and `Result<(), E>` for a failure with a reason"}
+
+$ check --json tests/spec/unit/specialised_to_unit.lm
+status 1
+> {"file":"tests/spec/unit/specialised_to_unit.lm","code":"L0432","message":"`Option` never carries `()`, because `Some(())` says no more than `true`","span":{"start":162,"len":10},"help":"use `Bool` for a flag, and `Result<(), E>` for a failure with a reason"}
+
 $ check --json tests/spec/unit/updated.lm
 status 0
+
+$ check --json tests/spec/unit/written_in_option.lm
+status 1
+> {"file":"tests/spec/unit/written_in_option.lm","code":"L0432","message":"`Option` never carries `()`, because `Some(())` says no more than `true`","span":{"start":214,"len":10},"help":"use `Bool` for a flag, and `Result<(), E>` for a failure with a reason"}
 
 $ check --json library/environment.lm
 status 0
@@ -7030,10 +7086,6 @@ $ api tests/spec/unit/carried.lm
 status 0
 > fn main(arguments: List<String>) -> Int
 >
-> fn is_read(maybe: Option<()>) -> Bool
->
-> fn held() -> Option<()>
->
 > fn is_saved() -> Bool
 >
 > fn saved() -> Result<(), String>
@@ -7047,6 +7099,16 @@ status 0
 > fn main(arguments: List<String>) -> Int
 >
 > fn counted(all: List<()>) -> Int
+
+$ api tests/spec/unit/none_of_unit.lm
+status 1
+! error[L0432]: `Option` never carries `()`, because `Some(())` says no more than `true`
+!   --> tests/spec/unit/none_of_unit.lm:4:11
+!
+!   4 |     match None {
+!     |           ^^^^
+!
+! help: use `Bool` for a flag, and `Result<(), E>` for a failure with a reason
 
 $ api tests/spec/unit/open.lm
 status 0
@@ -7064,6 +7126,26 @@ status 0
 >
 > type Box<T> = Held(T)
 
+$ api tests/spec/unit/some_of_unit.lm
+status 1
+! error[L0432]: `Option` never carries `()`, because `Some(())` says no more than `true`
+!   --> tests/spec/unit/some_of_unit.lm:4:11
+!
+!   4 |     match Some(()) {
+!     |           ^^^^^^^^
+!
+! help: use `Bool` for a flag, and `Result<(), E>` for a failure with a reason
+
+$ api tests/spec/unit/specialised_to_unit.lm
+status 1
+! error[L0432]: `Option` never carries `()`, because `Some(())` says no more than `true`
+!   --> tests/spec/unit/specialised_to_unit.lm:4:11
+!
+!   4 |     match first(all) {
+!     |           ^^^^^^^^^^
+!
+! help: use `Bool` for a flag, and `Result<(), E>` for a failure with a reason
+
 $ api tests/spec/unit/updated.lm
 status 0
 > fn main(arguments: List<String>) -> Int
@@ -7074,6 +7156,16 @@ status 0
 >     held: ()
 >     id: Int
 > }
+
+$ api tests/spec/unit/written_in_option.lm
+status 1
+! error[L0432]: `Option` never carries `()`, because `Some(())` says no more than `true`
+!   --> tests/spec/unit/written_in_option.lm:4:19
+!
+!   4 | fn is_read(maybe: Option<()>) -> Bool {
+!     |                   ^^^^^^^^^^
+!
+! help: use `Bool` for a flag, and `Result<(), E>` for a failure with a reason
 
 $ api library/environment.lm
 status 0
@@ -10089,11 +10181,51 @@ status 0
 $ test tests/spec/unit/listed.lm
 status 0
 
+$ test tests/spec/unit/none_of_unit.lm
+status 1
+! error[L0432]: `Option` never carries `()`, because `Some(())` says no more than `true`
+!   --> tests/spec/unit/none_of_unit.lm:4:11
+!
+!   4 |     match None {
+!     |           ^^^^
+!
+! help: use `Bool` for a flag, and `Result<(), E>` for a failure with a reason
+
 $ test tests/spec/unit/open.lm
 status 0
 
+$ test tests/spec/unit/some_of_unit.lm
+status 1
+! error[L0432]: `Option` never carries `()`, because `Some(())` says no more than `true`
+!   --> tests/spec/unit/some_of_unit.lm:4:11
+!
+!   4 |     match Some(()) {
+!     |           ^^^^^^^^
+!
+! help: use `Bool` for a flag, and `Result<(), E>` for a failure with a reason
+
+$ test tests/spec/unit/specialised_to_unit.lm
+status 1
+! error[L0432]: `Option` never carries `()`, because `Some(())` says no more than `true`
+!   --> tests/spec/unit/specialised_to_unit.lm:4:11
+!
+!   4 |     match first(all) {
+!     |           ^^^^^^^^^^
+!
+! help: use `Bool` for a flag, and `Result<(), E>` for a failure with a reason
+
 $ test tests/spec/unit/updated.lm
 status 0
+
+$ test tests/spec/unit/written_in_option.lm
+status 1
+! error[L0432]: `Option` never carries `()`, because `Some(())` says no more than `true`
+!   --> tests/spec/unit/written_in_option.lm:4:19
+!
+!   4 | fn is_read(maybe: Option<()>) -> Bool {
+!     |                   ^^^^^^^^^^
+!
+! help: use `Bool` for a flag, and `Result<(), E>` for a failure with a reason
 
 $ explain L9999
 status 2
@@ -12584,10 +12716,22 @@ status 0
 $ fmt tests/spec/unit/listed.lm
 status 0
 
+$ fmt tests/spec/unit/none_of_unit.lm
+status 0
+
 $ fmt tests/spec/unit/open.lm
 status 0
 
+$ fmt tests/spec/unit/some_of_unit.lm
+status 0
+
+$ fmt tests/spec/unit/specialised_to_unit.lm
+status 0
+
 $ fmt tests/spec/unit/updated.lm
+status 0
+
+$ fmt tests/spec/unit/written_in_option.lm
 status 0
 
 $ fmt library/environment.lm
@@ -15365,11 +15509,51 @@ status 0
 $ build tests/spec/unit/listed.lm
 status 0
 
+$ build tests/spec/unit/none_of_unit.lm
+status 1
+! error[L0432]: `Option` never carries `()`, because `Some(())` says no more than `true`
+!   --> tests/spec/unit/none_of_unit.lm:4:11
+!
+!   4 |     match None {
+!     |           ^^^^
+!
+! help: use `Bool` for a flag, and `Result<(), E>` for a failure with a reason
+
 $ build tests/spec/unit/open.lm
 status 0
 
+$ build tests/spec/unit/some_of_unit.lm
+status 1
+! error[L0432]: `Option` never carries `()`, because `Some(())` says no more than `true`
+!   --> tests/spec/unit/some_of_unit.lm:4:11
+!
+!   4 |     match Some(()) {
+!     |           ^^^^^^^^
+!
+! help: use `Bool` for a flag, and `Result<(), E>` for a failure with a reason
+
+$ build tests/spec/unit/specialised_to_unit.lm
+status 1
+! error[L0432]: `Option` never carries `()`, because `Some(())` says no more than `true`
+!   --> tests/spec/unit/specialised_to_unit.lm:4:11
+!
+!   4 |     match first(all) {
+!     |           ^^^^^^^^^^
+!
+! help: use `Bool` for a flag, and `Result<(), E>` for a failure with a reason
+
 $ build tests/spec/unit/updated.lm
 status 0
+
+$ build tests/spec/unit/written_in_option.lm
+status 1
+! error[L0432]: `Option` never carries `()`, because `Some(())` says no more than `true`
+!   --> tests/spec/unit/written_in_option.lm:4:19
+!
+!   4 | fn is_read(maybe: Option<()>) -> Bool {
+!     |                   ^^^^^^^^^^
+!
+! help: use `Bool` for a flag, and `Result<(), E>` for a failure with a reason
 
 $ build library/environment.lm
 status 0

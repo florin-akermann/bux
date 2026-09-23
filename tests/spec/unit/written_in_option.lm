@@ -1,0 +1,17 @@
+// expect-error: L0432
+// An `Option` never carries `()`, so a signature that writes one is refused where it writes it.
+// `Some(())` says only that a value is there, which a `Bool` says already.
+fn is_read(maybe: Option<()>) -> Bool {
+    match maybe {
+        Some(inside) => is_given(inside)
+        None => false
+    }
+}
+
+fn held() -> Option<()> {
+    Some(())
+}
+
+fn is_given(given: ()) -> Bool {
+    true
+}

@@ -1,28 +1,13 @@
 // expect-run
-// > carried and read back
-// A `()` an `Option` and a `Result` carry, which each holds as a reference.
+// > carried through a Result
+// A `()` a `Result` carries, which it holds as a reference.
 import io
 
 fn main(arguments: List<String>) -> Int {
-    if is_read(held()) && is_saved() {
-        io.println("carried and read back")
+    if is_saved() {
+        io.println("carried through a Result")
     }
     0
-}
-
-/// Whether the nothing an `Option` carries is read back out.
-// example: is_read(Some(()))
-fn is_read(maybe: Option<()>) -> Bool {
-    match maybe {
-        Some(inside) => is_given(inside)
-        None => false
-    }
-}
-
-/// The `()` an `Option` carries.
-// example: is_read(held())
-fn held() -> Option<()> {
-    Some(())
 }
 
 /// Whether the `()` a `Result` carries survives a `?`.
