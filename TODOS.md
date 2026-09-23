@@ -15,16 +15,8 @@ Items 067 to 070 wrote named arguments at every such call, and Item 071 would wr
 [078][b] - The positional-argument rule reads the declared signature however the module is walked.
 [078][c] - No `unreachable!` or `expect` in `crates/types` rests on the order a body is walked in.
 
-## 🟡 Item 079: A match that gives variants of another module's type passes JVM verification
-**Depends on:** nothing — the defect is in the Rust lowering as it is.
-A `match` whose arms give `other.Held(1)` and `other.Free` fails as `VerifyError: Bad return type`.
-At the join the stack holds `Object`, where the method returns the sum type of the other module.
-Items 067 to 070 wrote early returns or arms of one record type to avoid it.
-[079][a] - An expect-run example under `tests/spec/modules` gives both variants from a `match`.
-[079][b] - The join of a `match`, an `if`, and a block carries the sum type across modules.
-
 ## 🔴 Item 071: Type inference is written in Bux
-**Depends on:** Item 064, Item 065, Item 070, Item 078, Item 079 — unification keys a table.
+**Depends on:** Item 064, Item 065, Item 070, Item 078 — unification keys a table.
 This is the largest phase, at 5,313 lines of Rust, and mutable tables become returned values.
 [071][a] - `compiler/types.bx` infers, unifies, resolves constraints, and derives per the specs.
 [071][b] - The harness compares every diagnostic and every `api` surface with the Rust phase's.
