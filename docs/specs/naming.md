@@ -120,6 +120,13 @@ The predicate rule reads a type, so `crates/types/src/infer/predicate.rs` checks
 settles each function.
 It is reached after the body, because the type it reads is the one inference settled.
 
+## The name check written in Bux
+
+`compiler/format.lm` checks case and length with the rest of canonical form, as the Rust crate does.
+It gives `L0202` for a name in the wrong case and `L0203` for a name of one letter.
+The message, the `help:` line, and the span are the ones the Rust check gives.
+The harness `crates/cli/tests/integration/bux_command.rs` holds the two to one answer.
+
 ## Properties
 
 These hold and are checked with property-based tests:

@@ -161,7 +161,8 @@ Arm order needs the variant list, so `lumen-exhaustiveness` checks it and raises
 `compiler/format.lm` is this formatter written in Bux, and the Rust formatter is its answer.
 It prints the tree of `compiler/parser.lm`, and it reads the comments from `compiler/lexer.lm`.
 `format.format(source)` gives the canonical text, or the parse error where the source is no program.
-It writes the text of `format`, and not the checks of `lumen check`: order and names stay in Rust.
+`format.check(source)` holds a source to canonical form, as `lumen check` does.
+It gives the first refusal it finds: the parse error, then `L0200`, `L0201`, `L0202`, `L0203`.
 
 The harness `crates/cli/tests/integration/bux_format.rs` builds the Bux formatter with `lumen`.
 It runs the Bux formatter over every `.lm` file of the repository, `compiler/` included.
@@ -169,6 +170,7 @@ A file that parses must format to itself, and a file the Rust parser refuses mus
 It also runs the Bux formatter over each `tests/spec/format` example and over drawn files.
 There, the answer must be the text of the Rust formatter, byte for byte.
 A build needs no JDK, and a run needs one; with no JDK, the harness skips each run and says why.
+The harness `bux_command.rs` holds `format.check` to `lumen check` on every fixture.
 
 ## Properties
 

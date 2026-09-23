@@ -40,6 +40,18 @@ fn load(path: String) -> Result<List<Module>, NotLoaded> {
     Ok(loaded.modules)
 }
 
+/// Every module `text` reaches, as though `text` were the file at `path`, which is not read.
+///
+/// `lumen test` writes a module out of the module under test, which `docs/specs/doc-examples.md`
+/// states. That module stands where the file stands, so its imports are found where the file's
+/// are, and a refusal of it names that file.
+// example: list.length(ok_or(load_written(text: "fn one() -> Int {\n    1\n}\n", path: "no-such-directory/main.lm"), [])) == 1
+fn load_written(text: String, path: String) -> Result<List<Module>, NotLoaded> {
+    depends := reachable_from(directory_of(path))?
+    loaded := walk(loader: Loader { modules: [], read: map.empty(), following: [] }, name: stem_of(path), whence: Whence { at: route_to(path), depends: depends, source: text })?
+    Ok(loaded.modules)
+}
+
 /// Each module on a line of its own, with the path it was read from.
 // example: loaded_printed([Module { name: "main", path: "main.lm", source: "", program: ast.Program { items: [] } }]) == "loaded\nmain main.lm\n"
 fn loaded_printed(loaded: List<Module>) -> String {
@@ -67,8 +79,8 @@ fn refused_printed<T>(answer: Result<T, NotLoaded>) -> String {
 fn refusal_printed(refused: NotLoaded) -> String {
     match refused {
         Unreadable { path, why } => "unreadable " + path + "\n"
-        Unparsed { path, error } => "refused " + path + "\n" + parser.code_of(error.kind) + " " + parser.error_printed(error)
-        Refused { path, error } => "refused " + path + "\n" + error_printed(error)
+        Unparsed { path, source, error } => "refused " + path + "\n" + parser.code_of(error.kind) + " " + parser.error_printed(error)
+        Refused { path, source, error } => "refused " + path + "\n" + error_printed(error)
     }
 }
 
@@ -77,30 +89,30 @@ fn refusal_printed(refused: NotLoaded) -> String {
 fn reach(loader: Loader, name: String, route: Route) -> Result<Loader, NotLoaded> {
     source := read_whole(route.shown)?
     depends := reachable_from(directory_of(route.shown))?
-    walk(loader: loader, name: name, source: source, whence: Whence { at: route, depends: depends })
+    walk(loader: loader, name: name, whence: Whence { at: route, depends: depends, source: source })
 }
 
 /// Puts `name` below every module it reaches, having parsed the source it is written in.
 ///
 /// `name` is followed while its imports are, which is what finds a ring, and is followed no more
 /// once they are all read.
-// example: list.length(ok_or(walk(loader: Loader { modules: [], read: map.empty(), following: [] }, name: "main", source: "fn main() -> Int {\n    0\n}\n", whence: Whence { at: route_to("main.lm"), depends: [] }), Loader { modules: [], read: map.empty(), following: [] }).modules) == 1
-fn walk(loader: Loader, name: String, source: String, whence: Whence) -> Result<Loader, NotLoaded> {
-    program := parsed(source: source, whence: whence)?
+// example: list.length(ok_or(walk(loader: Loader { modules: [], read: map.empty(), following: [] }, name: "main", whence: Whence { at: route_to("main.lm"), depends: [], source: "fn main() -> Int {\n    0\n}\n" }), Loader { modules: [], read: map.empty(), following: [] }).modules) == 1
+fn walk(loader: Loader, name: String, whence: Whence) -> Result<Loader, NotLoaded> {
+    program := parsed(whence)?
     var walked = Loader { modules: loader.modules, read: loader.read, following: list.push(loader.following, name) }
     for item in program.items {
         walked = followed(walked, item, whence)?
     }
-    module := Module { name: name, path: whence.at.shown, source: source, program: program }
+    module := Module { name: name, path: whence.at.shown, source: whence.source, program: program }
     Ok(Loader { modules: list.push(walked.modules, module), read: map.insert(walked.read, name, whence.at), following: loader.following })
 }
 
-/// The tree of `source`, or the parse error, said about the file it was read from.
-// example: refused_printed(parsed(source: "fn (", whence: Whence { at: route_to("main.lm"), depends: [] })) == "refused main.lm\nL0100 3..4 expected a function name, found `(`\nhelp: every function has a name; Lumen has no anonymous functions\n"
-fn parsed(source: String, whence: Whence) -> Result<ast.Program, NotLoaded> {
-    match parser.parse(source) {
+/// The tree of the source `whence` holds, or the parse error, said about the file it was read from.
+// example: refused_printed(parsed(Whence { at: route_to("main.lm"), depends: [], source: "fn (" })) == "refused main.lm\nL0100 3..4 expected a function name, found `(`\nhelp: every function has a name; Lumen has no anonymous functions\n"
+fn parsed(whence: Whence) -> Result<ast.Program, NotLoaded> {
+    match parser.parse(whence.source) {
         Ok(program) => Ok(program)
-        Err(error) => Err(Unparsed { path: whence.at.shown, error: error })
+        Err(error) => Err(Unparsed { path: whence.at.shown, source: whence.source, error: error })
     }
 }
 
@@ -129,7 +141,7 @@ fn follow(loader: Loader, imported: ast.ImportDeclaration, whence: Whence) -> Re
 ///
 /// The prelude's name is the library's, and nothing imports it, so an import of it reaches no
 /// module a program may reach.
-// example: refused_printed(from_library(loader: Loader { modules: [], read: map.empty(), following: [] }, imported: ast.ImportDeclaration { module: ast.Name { text: "prelude", span: lexer.Span { start: 7, length: 7 } }, span: lexer.Span { start: 0, length: 14 } }, whence: Whence { at: route_to("main.lm"), depends: [] }, text: "")) == "refused main.lm\nL0306 7..14 there is no module named `prelude`\nhelp: a module is a file beside this one, or one of a package it depends on\n"
+// example: refused_printed(from_library(loader: Loader { modules: [], read: map.empty(), following: [] }, imported: ast.ImportDeclaration { module: ast.Name { text: "prelude", span: lexer.Span { start: 7, length: 7 } }, span: lexer.Span { start: 0, length: 14 } }, whence: Whence { at: route_to("main.lm"), depends: [], source: "" }, text: "")) == "refused main.lm\nL0306 7..14 there is no module named `prelude`\nhelp: a module is a file beside this one, or one of a package it depends on\n"
 fn from_library(loader: Loader, imported: ast.ImportDeclaration, whence: Whence, text: String) -> Result<Loader, NotLoaded> {
     name := imported.module.text
     if has_read(loader, name) {
@@ -138,14 +150,14 @@ fn from_library(loader: Loader, imported: ast.ImportDeclaration, whence: Whence,
     if name == "prelude" {
         return Err(missing(imported, whence))
     }
-    walk(loader: loader, name: name, source: text, whence: Whence { at: route_to(resource_of(name)), depends: [] })
+    walk(loader: loader, name: name, whence: Whence { at: route_to(resource_of(name)), depends: [], source: text })
 }
 
 /// Reads what `imported` names out of its file, which settles before anything else about it.
 ///
 /// A module already read under that name is that module only where it is that same file, so two
 /// files claiming one name are refused rather than picked between.
-// example: refused_printed(from_a_file(loader: Loader { modules: [], read: map.empty(), following: ["main"] }, imported: ast.ImportDeclaration { module: ast.Name { text: "gone", span: lexer.Span { start: 7, length: 4 } }, span: lexer.Span { start: 0, length: 11 } }, whence: Whence { at: route_to("no-such-directory/main.lm"), depends: [] })) == "refused no-such-directory/main.lm\nL0306 7..11 there is no module named `gone`\nhelp: a module is a file beside this one, or one of a package it depends on\n"
+// example: refused_printed(from_a_file(loader: Loader { modules: [], read: map.empty(), following: ["main"] }, imported: ast.ImportDeclaration { module: ast.Name { text: "gone", span: lexer.Span { start: 7, length: 4 } }, span: lexer.Span { start: 0, length: 11 } }, whence: Whence { at: route_to("no-such-directory/main.lm"), depends: [], source: "" })) == "refused no-such-directory/main.lm\nL0306 7..11 there is no module named `gone`\nhelp: a module is a file beside this one, or one of a package it depends on\n"
 fn from_a_file(loader: Loader, imported: ast.ImportDeclaration, whence: Whence) -> Result<Loader, NotLoaded> {
     name := imported.module.text
     found := file_of(imported, whence)?
@@ -156,7 +168,7 @@ fn from_a_file(loader: Loader, imported: ast.ImportDeclaration, whence: Whence) 
 }
 
 /// The module `found` holds, which is the one already read where that is the same file.
-// example: refused_printed(not_in_a_ring(loader: Loader { modules: [], read: map.insert(map.empty(), "demo", route_to("one/demo.lm")), following: [] }, imported: ast.ImportDeclaration { module: ast.Name { text: "demo", span: lexer.Span { start: 7, length: 4 } }, span: lexer.Span { start: 0, length: 11 } }, whence: Whence { at: route_to("main.lm"), depends: [] }, found: route_to("two/demo.lm"))) == "refused main.lm\nL0317 7..11 `demo` is both `one/demo.lm` and `two/demo.lm`\nhelp: one name has one definition; rename one of the two modules\n"
+// example: refused_printed(not_in_a_ring(loader: Loader { modules: [], read: map.insert(map.empty(), "demo", route_to("one/demo.lm")), following: [] }, imported: ast.ImportDeclaration { module: ast.Name { text: "demo", span: lexer.Span { start: 7, length: 4 } }, span: lexer.Span { start: 0, length: 11 } }, whence: Whence { at: route_to("main.lm"), depends: [], source: "" }, found: route_to("two/demo.lm"))) == "refused main.lm\nL0317 7..11 `demo` is both `one/demo.lm` and `two/demo.lm`\nhelp: one name has one definition; rename one of the two modules\n"
 fn not_in_a_ring(loader: Loader, imported: ast.ImportDeclaration, whence: Whence, found: Route) -> Result<Loader, NotLoaded> {
     name := imported.module.text
     match map.get(loader.read, name) {
@@ -201,7 +213,7 @@ fn from_index(following: List<String>, opened: Int) -> List<String> {
 ///
 /// Beside wins, so a package's own modules win over the ones its dependencies hold. Two
 /// dependencies holding the name is no order at all, and is refused as two files are.
-// example: refused_printed(file_of(ast.ImportDeclaration { module: ast.Name { text: "gone", span: lexer.Span { start: 7, length: 4 } }, span: lexer.Span { start: 0, length: 11 } }, Whence { at: route_to("main.lm"), depends: [] })) == "refused main.lm\nL0306 7..11 there is no module named `gone`\nhelp: a module is a file beside this one, or one of a package it depends on\n"
+// example: refused_printed(file_of(ast.ImportDeclaration { module: ast.Name { text: "gone", span: lexer.Span { start: 7, length: 4 } }, span: lexer.Span { start: 0, length: 11 } }, Whence { at: route_to("main.lm"), depends: [], source: "" })) == "refused main.lm\nL0306 7..11 there is no module named `gone`\nhelp: a module is a file beside this one, or one of a package it depends on\n"
 fn file_of(imported: ast.ImportDeclaration, whence: Whence) -> Result<Route, NotLoaded> {
     name := imported.module.text
     beside := module_in(directory: directory_of(whence.at.shown), name: name)
@@ -216,7 +228,7 @@ fn file_of(imported: ast.ImportDeclaration, whence: Whence) -> Result<Route, Not
 }
 
 /// The one file `held` names, and a refusal naming the first two where it names more than one.
-// example: refused_printed(only_one(["a/x.lm", "b/x.lm"], "a/x.lm", ast.ImportDeclaration { module: ast.Name { text: "x", span: lexer.Span { start: 7, length: 1 } }, span: lexer.Span { start: 0, length: 8 } }, Whence { at: route_to("main.lm"), depends: [] })) == "refused main.lm\nL0317 7..8 `x` is both `a/x.lm` and `b/x.lm`\nhelp: one name has one definition; rename one of the two modules\n"
+// example: refused_printed(only_one(["a/x.lm", "b/x.lm"], "a/x.lm", ast.ImportDeclaration { module: ast.Name { text: "x", span: lexer.Span { start: 7, length: 1 } }, span: lexer.Span { start: 0, length: 8 } }, Whence { at: route_to("main.lm"), depends: [], source: "" })) == "refused main.lm\nL0317 7..8 `x` is both `a/x.lm` and `b/x.lm`\nhelp: one name has one definition; rename one of the two modules\n"
 fn only_one(held: List<String>, first: String, imported: ast.ImportDeclaration, whence: Whence) -> Result<Route, NotLoaded> {
     match list.at(held, 1) {
         Some(second) => Err(refusing(whence, LoadError { kind: in_two_files(module: imported.module.text, first: route_to(first), second: route_to(second)), span: imported.module.span }))
@@ -238,15 +250,15 @@ fn holding(depends: List<Route>, name: String) -> List<String> {
 }
 
 /// An import that reaches nothing, said about the file that wrote it.
-// example: refusal_printed(missing(ast.ImportDeclaration { module: ast.Name { text: "x", span: lexer.Span { start: 7, length: 1 } }, span: lexer.Span { start: 0, length: 8 } }, Whence { at: route_to("main.lm"), depends: [] })) == "refused main.lm\nL0306 7..8 there is no module named `x`\nhelp: a module is a file beside this one, or one of a package it depends on\n"
+// example: refusal_printed(missing(ast.ImportDeclaration { module: ast.Name { text: "x", span: lexer.Span { start: 7, length: 1 } }, span: lexer.Span { start: 0, length: 8 } }, Whence { at: route_to("main.lm"), depends: [], source: "" })) == "refused main.lm\nL0306 7..8 there is no module named `x`\nhelp: a module is a file beside this one, or one of a package it depends on\n"
 fn missing(imported: ast.ImportDeclaration, whence: Whence) -> NotLoaded {
     refusing(whence, LoadError { kind: NoSuchModule(imported.module.text), span: imported.module.span })
 }
 
 /// `error` as a refusal of the module `whence` is, shown against the file that wrote the import.
-// example: refusal_printed(refusing(Whence { at: route_to("main.lm"), depends: [] }, LoadError { kind: NoSuchModule("x"), span: lexer.Span { start: 7, length: 1 } })) == "refused main.lm\nL0306 7..8 there is no module named `x`\nhelp: a module is a file beside this one, or one of a package it depends on\n"
+// example: refusal_printed(refusing(Whence { at: route_to("main.lm"), depends: [], source: "" }, LoadError { kind: NoSuchModule("x"), span: lexer.Span { start: 7, length: 1 } })) == "refused main.lm\nL0306 7..8 there is no module named `x`\nhelp: a module is a file beside this one, or one of a package it depends on\n"
 fn refusing(whence: Whence, error: LoadError) -> NotLoaded {
-    Refused { path: whence.at.shown, error: error }
+    Refused { path: whence.at.shown, source: whence.source, error: error }
 }
 
 /// One name claimed by two files, each named by the route the imports reached it along.
@@ -412,7 +424,7 @@ fn stated_by(manifest: Manifest) -> Result<List<At>, NotLoaded> {
 /// `error` as a refusal of `manifest`, shown against the file the manifest is.
 // example: refusal_printed(manifest_refusing(Manifest { path: "bux.package", source: "" }, LoadError { kind: DependsTwice("a"), span: lexer.Span { start: 0, length: 9 } })) == "refused bux.package\nL0315 0..9 `a` is depended on twice\nhelp: a manifest states one `depends` for each package it reaches\n"
 fn manifest_refusing(manifest: Manifest, error: LoadError) -> NotLoaded {
-    Refused { path: manifest.path, error: error }
+    Refused { path: manifest.path, source: manifest.source, error: error }
 }
 
 /// The same, against the text alone, which is where every refusal of a manifest is decided.
@@ -549,7 +561,16 @@ fn keyword_text(keyword: Keyword) -> String {
 /// `docs/specs/library.md` states, so nothing on disk is looked at.
 // example: or(carried("no_such_module"), "none") == "none"
 fn carried(name: String) -> Option<String> {
-    match resource(resource_of(name)) {
+    resource_text(resource_of(name))
+}
+
+/// The text of the resource at `path` on the class path, and `None` where there is no such one.
+///
+/// The compiler carries the library, the help topics, and the long form of each diagnostic code
+/// this way, each read out of the one file the Rust compiler embeds, so the two never drift.
+// example: or(resource_text("no/such/resource.md"), "none") == "none"
+fn resource_text(path: String) -> Option<String> {
+    match resource(path) {
         Some(stream) => Some(whole(stream))
         None => None
     }
@@ -741,6 +762,8 @@ type Module = {
 }
 
 /// Why a program could not be loaded: a file not read, or a refusal of a file that was.
+///
+/// A refusal carries the text of the file it is about, which is what a rendering points into.
 type NotLoaded =
     | Unreadable {
         path: String
@@ -748,17 +771,22 @@ type NotLoaded =
     }
     | Unparsed {
         path: String
+        source: String
         error: parser.ParseError
     }
     | Refused {
         path: String
+        source: String
         error: LoadError
     }
 
 /// Where one module's imports are looked for: beside its file, and in what its package depends on.
+///
+/// `source` is the text of that module, which a refusal of one of its imports points into.
 type Whence = {
     at: Route
     depends: List<Route>
+    source: String
 }
 
 /// A path as the imports reached it, and as the JVM's canonical path of it.

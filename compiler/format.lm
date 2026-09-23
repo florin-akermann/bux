@@ -22,6 +22,599 @@ fn format(source: String) -> Result<String, parser.ParseError> {
     Ok(program(printer_of(source), parsed).text)
 }
 
+/// Nothing where `source` is in canonical form, and the first thing about it that is not otherwise.
+///
+/// The parse error comes first, then the first line that departs from the canonical text, then the
+/// first import out of place, then the first declared name canonical form spells otherwise.
+// example: is_canonical(check("import io\n"))
+// example: check_code(check("fn (")) == "L0100"
+// example: check_code(check("import io\nimport files\n")) == "L0200"
+// example: check_code(check("import io\n\nimport files\n")) == "L0201"
+// example: check_code(check("type point = {\n    at: Int\n}\n")) == "L0202"
+// example: check_code(check("type Box = {\n    x: Int\n}\n")) == "L0203"
+fn check(source: String) -> Result<(), CheckError> {
+    match parser.parse(source) {
+        Ok(parsed) => parsed_checked(source, parsed)
+        Err(error) => Err(Unparsed(error))
+    }
+}
+
+/// Nothing where the program `parsed` out of `source` is written as canonical form writes it.
+// example: is_canonical(parsed_checked("", ast.Program { items: [] }))
+fn parsed_checked(source: String, parsed: ast.Program) -> Result<(), CheckError> {
+    canonical := program(printer_of(source), parsed).text
+    if canonical != source {
+        return Err(NotCanonical { deviation: first_deviation(source: source, canonical: canonical), canonical: canonical })
+    }
+    match out_of_order(parsed) {
+        Some(out) => Err(OutOfPlace(out))
+        None => spelled_as_canonical_form_spells(parsed)
+    }
+}
+
+/// Whether a check found nothing to refuse.
+// example: !is_canonical(check("fn ("))
+fn is_canonical(answer: Result<(), CheckError>) -> Bool {
+    match answer {
+        Ok(_) => true
+        Err(_) => false
+    }
+}
+
+/// The code of what `answer` refuses, and `""` where it refuses nothing.
+// example: check_code(Ok(())) == ""
+fn check_code(answer: Result<(), CheckError>) -> String {
+    match answer {
+        Ok(_) => ""
+        Err(refused) => code_of(refused)
+    }
+}
+
+/// The code a refusal of the check carries, which `docs/specs/diagnostics.md` lists.
+// example: code_of(OutOfPlace(OutOfOrder { module: "io", against: AfterADeclaration, span: lexer.Span { start: 0, length: 9 } })) == "L0201"
+fn code_of(refused: CheckError) -> String {
+    match refused {
+        Unparsed(error) => parser.code_of(error.kind)
+        NotCanonical { deviation, canonical } => "L0200"
+        OutOfPlace(out) => "L0201"
+        Misspelled(misspelled) => misspelling_code(misspelled)
+    }
+}
+
+/// The code of a misspelled name, which says which of the two rules it breaks.
+// example: misspelling_code(Initial(ast.Name { text: "x", span: lexer.Span { start: 0, length: 1 } })) == "L0203"
+fn misspelling_code(misspelled: Misspelling) -> String {
+    match misspelled {
+        Miscased { written, kind, canonical } => "L0202"
+        Initial(written) => "L0203"
+    }
+}
+
+/// The `error:` line of a refusal of the check, without its prefix.
+// example: message_of(NotCanonical { deviation: ExtraLine(lexer.Span { start: 0, length: 0 }), canonical: "" }) == "canonical form does not write this line"
+fn message_of(refused: CheckError) -> String {
+    match refused {
+        Unparsed(error) => parser.message(error.kind)
+        NotCanonical { deviation, canonical } => deviation_message(deviation)
+        OutOfPlace(out) => order_message(out)
+        Misspelled(misspelled) => name_message(misspelled)
+    }
+}
+
+/// The `error:` line of a deviation, without its prefix.
+// example: deviation_message(Ending(lexer.Span { start: 0, length: 0 })) == "this file does not end the way canonical form ends it"
+fn deviation_message(deviation: Deviation) -> String {
+    match deviation {
+        LineDiffers { span, canonical } => "this line is not in canonical form"
+        ExtraLine(_) => "canonical form does not write this line"
+        Ending(_) => "this file does not end the way canonical form ends it"
+    }
+}
+
+/// The `help:` line of a refusal of the check, and `""` where a parse error has none.
+// example: help_of(OutOfPlace(OutOfOrder { module: "io", against: AfterADeclaration, span: lexer.Span { start: 0, length: 9 } })) == "imports come first, before every declaration"
+fn help_of(refused: CheckError) -> String {
+    match refused {
+        Unparsed(error) => parser.help_of(error.kind)
+        NotCanonical { deviation, canonical } => deviation_help(deviation)
+        OutOfPlace(out) => order_help(out)
+        Misspelled(misspelled) => name_help(misspelled)
+    }
+}
+
+/// The `help:` line of a deviation, which for a line canonical form rewrites is the text it writes.
+// example: deviation_help(LineDiffers { span: lexer.Span { start: 0, length: 1 }, canonical: "}" }) == "canonical form writes `}`"
+fn deviation_help(deviation: Deviation) -> String {
+    match deviation {
+        LineDiffers { span, canonical } => "canonical form writes `" + canonical + "`"
+        ExtraLine(_) => "run `lumen fmt` to take this line out"
+        Ending(_) => "end the file with a newline"
+    }
+}
+
+/// The source a refusal of the check points at.
+// example: shown(span_of(OutOfPlace(OutOfOrder { module: "io", against: AfterADeclaration, span: lexer.Span { start: 2, length: 9 } }))) == "2..11"
+fn span_of(refused: CheckError) -> lexer.Span {
+    match refused {
+        Unparsed(error) => error.span
+        NotCanonical { deviation, canonical } => deviation_span(deviation)
+        OutOfPlace(out) => out.span
+        Misspelled(misspelled) => name_span(misspelled)
+    }
+}
+
+/// The line a deviation is about.
+// example: shown(deviation_span(ExtraLine(lexer.Span { start: 1, length: 0 }))) == "1..1"
+fn deviation_span(deviation: Deviation) -> lexer.Span {
+    match deviation {
+        LineDiffers { span, canonical } => span
+        ExtraLine(span) => span
+        Ending(span) => span
+    }
+}
+
+/// The first line the two texts disagree on, and the way the file ends where every line agrees.
+///
+/// There is no fourth case: every line canonical form writes is made of text the source holds, so
+/// the source runs out of lines before canonical form does only where it ends in some other way.
+// example: shown_deviation(first_deviation(source: "a\nb\n", canonical: "a\nc\n")) == "2..3 c"
+// example: shown_deviation(first_deviation(source: "a\n\n", canonical: "a\n")) == "2..2"
+// example: shown_deviation(first_deviation(source: "a", canonical: "a\n")) == "0..1"
+fn first_deviation(source: String, canonical: String) -> Deviation {
+    wanted := lines_written(canonical)
+    var last = WrittenLine { text: "", span: lexer.Span { start: 0, length: 0 } }
+    var index = 0
+    for written in lines_written(source) {
+        last = written
+        if index >= list.length(wanted) {
+            return ExtraLine(written.span)
+        }
+        text := or(list.at(wanted, index), written).text
+        if text != written.text {
+            return LineDiffers { span: written.span, canonical: text }
+        }
+        index += 1
+    }
+    Ending(last.span)
+}
+
+/// A deviation as an example reads it: the span, then the canonical line where there is one.
+// example: shown_deviation(Ending(lexer.Span { start: 1, length: 2 })) == "1..3"
+fn shown_deviation(deviation: Deviation) -> String {
+    match deviation {
+        LineDiffers { span, canonical } => shown(span) + " " + canonical
+        ExtraLine(span) => shown(span)
+        Ending(span) => shown(span)
+    }
+}
+
+/// Every line of `text`, each without its line break and with the byte span it covers.
+///
+/// A carriage return stays part of its line, because canonical form writes none, so a file with
+/// Windows line endings departs from canonical form at its first line rather than at its end.
+// example: list.length(lines_written("")) == 0
+// example: shown(or(list.at(lines_written("é\r\nb"), 1), WrittenLine { text: "", span: lexer.Span { start: 0, length: 0 } }).span) == "4..5"
+// example: or(list.at(lines_written("a\r\n"), 0), WrittenLine { text: "", span: lexer.Span { start: 0, length: 0 } }).text == "a\r"
+fn lines_written(text: String) -> List<WrittenLine> {
+    var lines = []
+    var start = 0
+    var at = 0
+    var index = 0
+    for index < strings.length(text) {
+        if or(strings.at(text, index), 0) == 10 {
+            lines = list.push(lines, line_from(text: text, start: start, end: index, at: at))
+            at += lexer.byte_length(lexer.Rest { source: text, start: start }, index + 1 - start)
+            start = index + 1
+        }
+        index += 1
+    }
+    if start < strings.length(text) {
+        lines = list.push(lines, line_from(text: text, start: start, end: strings.length(text), at: at))
+    }
+    lines
+}
+
+/// The line from code unit `start` up to `end` of `text`, which starts at byte `at`.
+// example: line_from(text: "ab", start: 1, end: 2, at: 1).text == "b"
+fn line_from(text: String, start: Int, end: Int, at: Int) -> WrittenLine {
+    cut := or(strings.cut(text, start, end), "")
+    WrittenLine { text: cut, span: lexer.Span { start: at, length: lexer.byte_length(lexer.Rest { source: cut, start: 0 }, strings.length(cut)) } }
+}
+
+/// The first import of `parsed` that is out of place, where one is.
+///
+/// Imports come first, sorted by the module they name. The rule is checked and never rewritten:
+/// the compiler says where an import belongs, and the author moves it.
+// example: !is_misplaced(out_of_order(ok_or(parser.parse("import files\n\nimport io\n"), ast.Program { items: [] })))
+// example: is_misplaced(out_of_order(ok_or(parser.parse("fn f() {\n}\n\nimport io\n"), ast.Program { items: [] })))
+fn out_of_order(parsed: ast.Program) -> Option<OutOfOrder> {
+    var above = Above { declared: false, last: "" }
+    for written in parsed.items {
+        found := misplaced(written, above)
+        if is_misplaced(found) {
+            return found
+        }
+        above = after_item(written, above)
+    }
+    None
+}
+
+/// Whether an import was found out of place.
+// example: !is_misplaced(None)
+fn is_misplaced(found: Option<OutOfOrder>) -> Bool {
+    match found {
+        Some(_) => true
+        None => false
+    }
+}
+
+/// Why `written` is out of place below what `above` says is written above it, where it is.
+// example: !is_misplaced(misplaced(ast.Derive(ast.DeriveDeclaration { traits: [], for_type: ast.Name { text: "Box", span: lexer.Span { start: 0, length: 3 } }, span: lexer.Span { start: 0, length: 3 } }), Above { declared: true, last: "" }))
+fn misplaced(written: ast.Item, above: Above) -> Option<OutOfOrder> {
+    match written {
+        ast.Import(imported) => import_misplaced(imported, above)
+        _ => None
+    }
+}
+
+/// Why `imported` is out of place, where it is: a declaration above it, or an import sorting after.
+// example: order_message(or(import_misplaced(ast.ImportDeclaration { module: ast.Name { text: "io", span: lexer.Span { start: 7, length: 2 } }, span: lexer.Span { start: 0, length: 9 } }, Above { declared: false, last: "list" }), OutOfOrder { module: "", against: AfterADeclaration, span: lexer.Span { start: 0, length: 0 } })) == "`import io` is written after `import list`"
+fn import_misplaced(imported: ast.ImportDeclaration, above: Above) -> Option<OutOfOrder> {
+    named := imported.module.text
+    if above.declared {
+        return Some(OutOfOrder { module: named, against: AfterADeclaration, span: imported.span })
+    }
+    if above.last > named {
+        return Some(OutOfOrder { module: named, against: AfterAnImport(above.last), span: imported.span })
+    }
+    None
+}
+
+/// What is written above the item after `written`, once `written` is.
+// example: after_item(ast.Derive(ast.DeriveDeclaration { traits: [], for_type: ast.Name { text: "Box", span: lexer.Span { start: 0, length: 3 } }, span: lexer.Span { start: 0, length: 3 } }), Above { declared: false, last: "io" }).declared
+fn after_item(written: ast.Item, above: Above) -> Above {
+    match written {
+        ast.Import(imported) => above { last: imported.module.text }
+        _ => above { declared: true }
+    }
+}
+
+/// The `error:` line of an import out of place, without its prefix.
+// example: order_message(OutOfOrder { module: "io", against: AfterADeclaration, span: lexer.Span { start: 0, length: 9 } }) == "`import io` is written after a declaration"
+fn order_message(out: OutOfOrder) -> String {
+    match out.against {
+        AfterADeclaration => "`import " + out.module + "` is written after a declaration"
+        AfterAnImport(before) => "`import " + out.module + "` is written after `import " + before + "`"
+    }
+}
+
+/// The `help:` line of an import out of place, which says where it belongs.
+// example: order_help(OutOfOrder { module: "io", against: AfterAnImport("list"), span: lexer.Span { start: 0, length: 9 } }) == "`io` sorts before `list`"
+fn order_help(out: OutOfOrder) -> String {
+    match out.against {
+        AfterADeclaration => "imports come first, before every declaration"
+        AfterAnImport(before) => "`" + out.module + "` sorts before `" + before + "`"
+    }
+}
+
+/// Nothing where every name `parsed` declares is spelled as canonical form spells it, else the first.
+///
+/// `docs/specs/naming.md` states the rules. They are checked and never rewritten: what a thing is
+/// called is the author's decision, so the compiler says the spelling rather than writing it.
+// example: is_canonical(spelled_as_canonical_form_spells(ok_or(parser.parse("fn count_all<T>(values: List<T>) -> Int {\n    0\n}\n"), ast.Program { items: [] })))
+// example: check_code(spelled_as_canonical_form_spells(ok_or(parser.parse("fn countAll() -> Int {\n    0\n}\n"), ast.Program { items: [] }))) == "L0202"
+fn spelled_as_canonical_form_spells(parsed: ast.Program) -> Result<(), CheckError> {
+    for named in declared_names(parsed) {
+        if !is_spelled_canonically(named) {
+            return Err(Misspelled(misspelling_of(named)))
+        }
+    }
+    Ok(())
+}
+
+/// Whether `named` is spelled as canonical form spells a name of its kind.
+///
+/// A type parameter names no domain concept and may be one letter, so it is never looked at. The
+/// rule is about the word a name names, so its canonical spelling is what is measured: `_a` is
+/// one word of one letter, and reporting its case would advise a spelling that is an initial.
+// example: is_spelled_canonically(Declared { name: ast.Name { text: "T", span: lexer.Span { start: 0, length: 1 } }, kind: TypeParameterName })
+// example: !is_spelled_canonically(Declared { name: ast.Name { text: "_a", span: lexer.Span { start: 0, length: 2 } }, kind: FunctionName })
+fn is_spelled_canonically(named: Declared) -> Bool {
+    if named.kind == TypeParameterName {
+        return true
+    }
+    canonical := spelling(written: named.name.text, kind: named.kind)
+    strings.length(canonical) >= 2 && canonical == named.name.text
+}
+
+/// How `named` departs from canonical form: it is an initial, or it is in the other case.
+// example: name_message(misspelling_of(Declared { name: ast.Name { text: "x", span: lexer.Span { start: 0, length: 1 } }, kind: ParameterName })) == "`x` is an initial, which names nothing a reader can look for"
+fn misspelling_of(named: Declared) -> Misspelling {
+    canonical := spelling(written: named.name.text, kind: named.kind)
+    if strings.length(canonical) < 2 {
+        return Initial(named.name)
+    }
+    Miscased { written: named.name, kind: named.kind, canonical: canonical }
+}
+
+/// The `error:` line of a misspelled name, without its prefix.
+// example: name_message(Miscased { written: ast.Name { text: "countAll", span: lexer.Span { start: 3, length: 8 } }, kind: FunctionName, canonical: "count_all" }) == "`countAll` is a function, so canonical form writes it in `snake_case`"
+fn name_message(misspelled: Misspelling) -> String {
+    match misspelled {
+        Miscased { written, kind, canonical } => "`" + written.text + "` is " + label_of(kind) + ", so canonical form writes it in `" + convention_of(kind) + "`"
+        Initial(written) => "`" + written.text + "` is an initial, which names nothing a reader can look for"
+    }
+}
+
+/// The `help:` line of a misspelled name, which for a miscased one is the spelling it is given.
+// example: name_help(Initial(ast.Name { text: "x", span: lexer.Span { start: 0, length: 1 } })) == "a declared name is a word, so write the one this names"
+fn name_help(misspelled: Misspelling) -> String {
+    match misspelled {
+        Miscased { written, kind, canonical } => "canonical form spells this name `" + canonical + "`"
+        Initial(written) => "a declared name is a word, so write the one this names"
+    }
+}
+
+/// The name a misspelling points at.
+// example: shown(name_span(Initial(ast.Name { text: "x", span: lexer.Span { start: 4, length: 1 } }))) == "4..5"
+fn name_span(misspelled: Misspelling) -> lexer.Span {
+    match misspelled {
+        Miscased { written, kind, canonical } => written.span
+        Initial(written) => written.span
+    }
+}
+
+/// How the message names a kind of name, which is what the reader is looking at.
+// example: label_of(FieldName) == "a record field"
+fn label_of(kind: NameKind) -> String {
+    match kind {
+        FunctionName => "a function"
+        ParameterName => "a parameter"
+        FieldName => "a record field"
+        ModuleName => "a module"
+        TypeName => "a type"
+        VariantName => "a variant"
+        TypeParameterName => "a type parameter"
+    }
+}
+
+/// The case canonical form writes a kind of name in, as the message names it.
+// example: convention_of(VariantName) == "PascalCase"
+fn convention_of(kind: NameKind) -> String {
+    if is_pascal_case(kind) {
+        return "PascalCase"
+    }
+    "snake_case"
+}
+
+/// The canonical spelling of `written` for a name of `kind`.
+// example: spelling(written: "HTTPServer", kind: FunctionName) == "http_server"
+// example: spelling(written: "user_id", kind: TypeName) == "UserId"
+fn spelling(written: String, kind: NameKind) -> String {
+    parts := words_of(written)
+    if !is_pascal_case(kind) {
+        return strings.join(parts, "_")
+    }
+    var joined = ""
+    for part in parts {
+        joined += capitalized(part)
+    }
+    joined
+}
+
+/// Whether a kind of name is a type rather than a value, which is what the two cases divide on.
+// example: !is_pascal_case(ModuleName)
+fn is_pascal_case(kind: NameKind) -> Bool {
+    kind == TypeName || kind == VariantName || kind == TypeParameterName
+}
+
+/// The words `written` is made of, each in lowercase, split on `_` and where the case turns.
+///
+/// An acronym is one word: `HTTPServer` is `http` and `server`, because the uppercase run ends
+/// where the word after it begins. A digit continues the word it is written in, so `Int32` is one
+/// word. A name is ASCII, which `docs/specs/lexer.md` states, so a case is one code unit's.
+// example: strings.join(words_of("userService"), " ") == "user service"
+// example: strings.join(words_of("__Int32_x"), " ") == "int32 x"
+fn words_of(written: String) -> List<String> {
+    var parts = []
+    var current = ""
+    var at = 0
+    for at < strings.length(written) {
+        unit := or(strings.at(written, at), 0)
+        if unit == 95 || is_a_word_start(written, at) {
+            parts = kept(parts, current)
+            current = ""
+        }
+        if unit != 95 {
+            current += lowercase(or(strings.cut(written, at, at + 1), ""), unit)
+        }
+        at += 1
+    }
+    kept(parts, current)
+}
+
+/// `parts` with `part` after them, where `part` holds anything.
+// example: list.length(kept(["a"], "")) == 1
+fn kept(parts: List<String>, part: String) -> List<String> {
+    if part == "" {
+        return parts
+    }
+    list.push(parts, part)
+}
+
+/// Whether the letter at `at` of `written` begins a word, which is where the case turns.
+///
+/// An uppercase letter after a lowercase one or a digit begins a word, as the `S` of `userService`
+/// does. So does an uppercase letter a lowercase one follows inside an uppercase run, as the `S`
+/// of `HTTPServer` does, because the run before it is the word that ended.
+// example: is_a_word_start("userService", 4)
+// example: !is_a_word_start("HTTP", 1)
+fn is_a_word_start(written: String, at: Int) -> Bool {
+    if at == 0 || !is_uppercase(or(strings.at(written, at), 0)) {
+        return false
+    }
+    before := or(strings.at(written, at - 1), 0)
+    !is_uppercase(before) && before != 95 || is_lowercase(or(strings.at(written, at + 1), 0))
+}
+
+/// `letter`, whose code unit is `unit`, in lowercase.
+// example: lowercase("Q", 81) == "q"
+fn lowercase(letter: String, unit: Int) -> String {
+    if !is_uppercase(unit) {
+        return letter
+    }
+    or(one_letter(unit + 32), letter)
+}
+
+/// `lowered` with its first letter in uppercase, which is how `PascalCase` writes a word.
+// example: capitalized("server") == "Server"
+fn capitalized(lowered: String) -> String {
+    first := or(strings.at(lowered, 0), 0)
+    if !is_lowercase(first) {
+        return lowered
+    }
+    or(one_letter(first - 32), "") + or(strings.cut(lowered, 1, strings.length(lowered)), "")
+}
+
+/// Whether `unit` is an ASCII uppercase letter.
+// example: is_uppercase(65)
+fn is_uppercase(unit: Int) -> Bool {
+    unit >= 65 && unit <= 90
+}
+
+/// Whether `unit` is an ASCII lowercase letter.
+// example: !is_lowercase(65)
+fn is_lowercase(unit: Int) -> Bool {
+    unit >= 97 && unit <= 122
+}
+
+/// Every name `parsed` declares, with what it names, in the order the file writes them.
+// example: list.length(declared_names(ok_or(parser.parse("import io\n\nfn f(a: Int) -> Int {\n    a\n}\n"), ast.Program { items: [] }))) == 3
+fn declared_names(parsed: ast.Program) -> List<Declared> {
+    var names = []
+    for written in parsed.items {
+        names = item_names(names, written)
+    }
+    names
+}
+
+/// `names`, with every name `written` declares after them.
+///
+/// A derive declares no name: it names a trait and a type both declared elsewhere.
+// example: list.length(item_names([], ast.Derive(ast.DeriveDeclaration { traits: [], for_type: ast.Name { text: "Box", span: lexer.Span { start: 0, length: 3 } }, span: lexer.Span { start: 0, length: 3 } }))) == 0
+fn item_names(names: List<Declared>, written: ast.Item) -> List<Declared> {
+    match written {
+        ast.Import(imported) => list.push(names, Declared { name: imported.module, kind: ModuleName })
+        ast.Type(declaration) => definition_names(each_named(list.push(names, Declared { name: declaration.name, kind: TypeName }), declaration.parameters, TypeParameterName), declaration.definition)
+        ast.Trait(declaration) => trait_names(names, declaration)
+        ast.Instance(declaration) => methods_names(names, declaration.methods)
+        ast.Derive(_) => names
+        ast.Function(declaration) => function_names(names, declaration)
+        ast.Extern(declaration) => extern_names(names, declaration)
+    }
+}
+
+/// `names`, with each of `written` after them as a name of `kind`.
+// example: list.length(each_named([], [ast.Name { text: "T", span: lexer.Span { start: 0, length: 1 } }], TypeParameterName)) == 1
+fn each_named(names: List<Declared>, written: List<ast.Name>, kind: NameKind) -> List<Declared> {
+    var every = names
+    for one in written {
+        every = list.push(every, Declared { name: one, kind: kind })
+    }
+    every
+}
+
+/// `names`, with what a trait declares: itself, its parameter, and each method's signature.
+// example: list.length(declared_names(ok_or(parser.parse("trait Named<T> {\n    fn name(value: T) -> String\n}\n"), ast.Program { items: [] }))) == 4
+fn trait_names(names: List<Declared>, declaration: ast.TraitDeclaration) -> List<Declared> {
+    var every = list.push(list.push(names, Declared { name: declaration.name, kind: TypeName }), Declared { name: declaration.parameter, kind: TypeParameterName })
+    for method in declaration.methods {
+        every = parameters_named(list.push(every, Declared { name: method.name, kind: FunctionName }), method.parameters)
+    }
+    every
+}
+
+/// `names`, with what each method of an instance declares.
+// example: list.length(methods_names([], [])) == 0
+fn methods_names(names: List<Declared>, methods: List<ast.FunctionDeclaration>) -> List<Declared> {
+    var every = names
+    for method in methods {
+        every = function_names(every, method)
+    }
+    every
+}
+
+/// `names`, with what one function declares: itself, the types it is written over, its parameters.
+// example: list.length(declared_names(ok_or(parser.parse("fn pick<T>(held: T) -> T {\n    held\n}\n"), ast.Program { items: [] }))) == 3
+fn function_names(names: List<Declared>, declaration: ast.FunctionDeclaration) -> List<Declared> {
+    var every = list.push(names, Declared { name: declaration.name, kind: FunctionName })
+    for over in declaration.type_parameters {
+        every = list.push(every, Declared { name: over.name, kind: TypeParameterName })
+    }
+    parameters_named(every, declaration.parameters)
+}
+
+/// `names`, with each of `parameters` after them as a parameter.
+// example: list.length(parameters_named([], [])) == 0
+fn parameters_named(names: List<Declared>, parameters: List<ast.Parameter>) -> List<Declared> {
+    var every = names
+    for taken in parameters {
+        every = list.push(every, Declared { name: taken.name, kind: ParameterName })
+    }
+    every
+}
+
+/// `names`, with what an `extern` declares: itself and its parameters.
+// example: list.length(declared_names(ok_or(parser.parse("extern static read(name: String) -> Option<String> = \"java.lang.System.getenv\"\n"), ast.Program { items: [] }))) == 2
+fn extern_names(names: List<Declared>, declaration: ast.ExternDeclaration) -> List<Declared> {
+    var every = list.push(names, Declared { name: declaration.name, kind: FunctionName })
+    for taken in declaration.parameters {
+        every = list.push(every, Declared { name: taken.declared.name, kind: ParameterName })
+    }
+    every
+}
+
+/// `names`, with the names a type definition declares below its own: its variants and fields.
+///
+/// A Java class declares nothing below its Bux name, because what it holds is the JVM's.
+// example: list.length(declared_names(ok_or(parser.parse("type Shape =\n    | Dot\n    | Box {\n        side: Int\n    }\n"), ast.Program { items: [] }))) == 4
+fn definition_names(names: List<Declared>, definition: ast.TypeDefinition) -> List<Declared> {
+    match definition {
+        ast.RecordType(fields) => fields_named(names, fields)
+        ast.Variants(variants) => variants_named(names, variants)
+        ast.Foreign { class, called } => names
+    }
+}
+
+/// `names`, with each variant and the fields of each variant that carries a record.
+// example: list.length(variants_named([], [])) == 0
+fn variants_named(names: List<Declared>, variants: List<ast.Variant>) -> List<Declared> {
+    var every = names
+    for one in variants {
+        every = payload_named(list.push(every, Declared { name: one.name, kind: VariantName }), one.payload)
+    }
+    every
+}
+
+/// `names`, with the fields a variant carries where it carries a record.
+// example: list.length(payload_named([], ast.NoPayload)) == 0
+fn payload_named(names: List<Declared>, payload: ast.VariantPayload) -> List<Declared> {
+    match payload {
+        ast.RecordPayload(fields) => fields_named(names, fields)
+        _ => names
+    }
+}
+
+/// `names`, with each of `fields` after them as a record field.
+// example: list.length(fields_named([], [])) == 0
+fn fields_named(names: List<Declared>, fields: List<ast.RecordField>) -> List<Declared> {
+    var every = names
+    for one in fields {
+        every = list.push(every, Declared { name: one.name, kind: FieldName })
+    }
+    every
+}
+
 /// Every item of the file, with one blank line between two of them, then the last comments.
 ///
 /// A comment after the last item goes at the left margin, below one blank line.
@@ -944,6 +1537,9 @@ fn type_of(source: String) -> ast.TypeRef {
     }
 }
 
+/// The one-letter text of the code point `code`, and `None` where `code` is no code point.
+extern static one_letter(int code: Int) -> Option<String> = "java.lang.Character.toString"
+
 /// The state the printer carries while it writes: the text so far, and what it still has to write.
 ///
 /// `comments` holds where each comment of the source starts and `texts` holds what it says, in
@@ -991,3 +1587,73 @@ type Records =
 type Closing =
     | Closed
     | LeftOpen
+
+/// Why a check refused a file: it does not parse, or it is not written the way canonical form is.
+type CheckError =
+    | Unparsed(parser.ParseError)
+    | NotCanonical {
+        deviation: Deviation
+        canonical: String
+    }
+    | OutOfPlace(OutOfOrder)
+    | Misspelled(Misspelling)
+
+/// Where a file first departs from canonical form.
+type Deviation =
+    | LineDiffers {
+        span: lexer.Span
+        canonical: String
+    }
+    | ExtraLine(lexer.Span)
+    | Ending(lexer.Span)
+
+/// One line of a text, without its line break, and the bytes it covers.
+type WrittenLine = {
+    text: String
+    span: lexer.Span
+}
+
+/// What is written above an item: a declaration or not, and the module the last import names.
+type Above = {
+    declared: Bool
+    last: String
+}
+
+/// An import written somewhere canonical form does not put it, and what it is out of place with.
+type OutOfOrder = {
+    module: String
+    against: Against
+    span: lexer.Span
+}
+
+/// What an import is out of place with: a declaration above it, or an import that sorts after it.
+type Against =
+    | AfterADeclaration
+    | AfterAnImport(String)
+
+/// A declared name spelled some way other than the one canonical form spells it.
+type Misspelling =
+    | Miscased {
+        written: ast.Name
+        kind: NameKind
+        canonical: String
+    }
+    | Initial(ast.Name)
+
+/// One name a file declares, and what it names.
+type Declared = {
+    name: ast.Name
+    kind: NameKind
+}
+
+derive Eq for NameKind
+
+/// What a declared name names, which settles the case canonical form writes it in.
+type NameKind =
+    | FunctionName
+    | ParameterName
+    | FieldName
+    | ModuleName
+    | TypeName
+    | VariantName
+    | TypeParameterName

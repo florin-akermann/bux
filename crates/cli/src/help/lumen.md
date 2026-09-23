@@ -20,4 +20,7 @@ looks.
 
 Every error carries a code on its first line; `lumen explain <code>` says more about it.
 
+The same command line is written in Bux, in `compiler/`. Build it with
+`lumen build compiler/main.lm`, then start it with `bin/bux`, on the JDK that JAVA_HOME names.
+
 Further commands land one at a time; each is documented here in the change that adds it.

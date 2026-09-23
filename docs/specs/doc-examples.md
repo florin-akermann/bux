@@ -211,6 +211,17 @@ and `L0604` says so the same way.
 `lumen check` or `lumen fmt`.
 `L0603` is raised by `lumen test` alone, because it is the only command that runs an example.
 
+## The examples written in Bux
+
+`compiler/command.lm` finds the examples of a module in Bux, as the Rust `stated_by` does.
+A `build`, a `run`, and a `test` refuse `L0601` and `L0602` with it, before the module is lowered.
+`test` writes the run as this page says, byte for byte as the Rust run writes it.
+It puts a refusal of the run back into the file the author wrote.
+It reads the marked lines back, and it gives `L0603` for each example that did not hold.
+
+The harness `crates/cli/tests/integration/bux_command.rs` holds `test` to `lumen test`.
+It runs `test` on every `.lm` file under `tests/spec`, `library`, and `compiler`.
+
 ## Properties
 
 These hold and are checked with property-based tests:

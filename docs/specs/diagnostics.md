@@ -255,6 +255,20 @@ Once the program it was given runs, the run ends with the status that program en
 `docs/specs/run.md` states.
 Both `1` and `2` are given before a program runs, so neither is ever a status a program chose.
 
+## The diagnostics written in Bux
+
+`compiler/command.lm` renders a diagnostic in Bux, and the Rust renderer is its answer.
+It writes the layout above: the `error[` line, the location, the source line, and the carets.
+It counts the column in characters and keeps a tab before the span as a tab.
+A span that runs on to a later line gets the note that names the line it ends on.
+The data form is the same one line of JSON, with the same escapes, and `fix` where there is one.
+The one edit is the edit above: the whole file, replaced by the text `lumen fmt` writes.
+`explain` reads the long form of a code as a class-path resource.
+That resource is the file the Rust binary embeds, so the two never drift.
+
+The harness `crates/cli/tests/integration/bux_command.rs` holds the Bux renderer to `lumen`.
+It compares every stream of `check`, `check --json`, and `explain`, byte for byte.
+
 ## Properties
 
 These hold and are checked with property-based tests:

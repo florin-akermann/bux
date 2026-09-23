@@ -5,7 +5,9 @@
 mod building;
 mod bux_checks;
 mod bux_classes;
+mod bux_command;
 mod bux_format;
+mod bux_launcher;
 mod bux_lexer;
 mod bux_modules;
 mod bux_parser;

@@ -1,0 +1,51 @@
+// The driver of the harness in `bux_command.rs`: one JVM answers every case the harness wrote.
+//
+// Each argument is the path of a case, which holds the words of one command line, one a line. What
+// the Bux command line says to them is written beside the case, so one run answers them all.
+import command
+
+import files
+
+import ir
+
+import list
+
+import modules
+
+import process
+
+fn main(arguments: List<String>) -> Int {
+    library := ir.library_read(or(modules.carried("prelude"), ""))
+    for path in arguments {
+        words := command.lines_of(ok_or(files.read(path), ""))
+        said := said_of(command.answered_within(words, library))
+        _ = files.write(path + ".out", said.output)
+        _ = files.write(path + ".err", said.errors)
+        _ = files.write(path + ".status", shown(said.status))
+    }
+    0
+}
+
+/// What `answer` says, with what a program it starts writes on each stream kept.
+// example: said_of(command.Spoken(command.Said { output: "", errors: "", status: 3 })).status == 3
+fn said_of(answer: command.Answer) -> command.Said {
+    match answer {
+        command.Spoken(said) => said
+        command.Starts(line) => ended(line)
+    }
+}
+
+/// What the program `line` starts writes on each stream, and the status it ends with.
+// example: ended(["no-such-program-at-all"]).status == 2
+fn ended(line: List<String>) -> command.Said {
+    var rest = []
+    for word in line {
+        if list.length(rest) + 1 < list.length(line) {
+            rest = list.push(rest, or(list.at(line, list.length(rest) + 1), ""))
+        }
+    }
+    match process.run(or(list.at(line, 0), ""), rest) {
+        Ok(finished) => command.Said { output: finished.output, errors: finished.errors, status: finished.code }
+        Err(why) => command.Said { output: "", errors: why, status: 2 }
+    }
+}

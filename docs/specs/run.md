@@ -100,6 +100,43 @@ Once a program runs, `lumen run` ends with the status the program ended with, wh
 A program the operating system stopped rather than let end has no status of its own, and is
 reported as 128.
 
+## The command line written in Bux
+
+`compiler/main.lm` is the command line written in Bux.
+`compiler/command.lm` holds every command, because no module can import a module named `main`.
+For every command and every word, it writes what `lumen` writes on each stream, byte for byte.
+It also ends with the status that `lumen` ends with.
+The argument parser gives the same usage lines, tips, and help text as the Rust parser.
+The help text is read as a class-path resource: the file that the Rust binary embeds.
+
+`bin/bux` is the launcher, a POSIX `sh` script.
+It starts `java --enable-preview` on the class `main`, with every word it was given.
+The class path is `compiler/` and the directory above it, where the library and help text are.
+A link to the launcher, as on `PATH`, works: the launcher follows the link to find `compiler/`.
+It finds the JDK as this page says: `JAVA_HOME` names it, and nothing else is searched.
+It refuses with status `2` when the compiler is not built, and when `JAVA_HOME` names no JDK.
+
+```text
+error: <root>/compiler/main.class: the compiler is not built; lumen build compiler/main.lm builds it
+error: JAVA_HOME is not set, and the bux compiler runs on the JDK it names
+error: /opt/nothing/bin/java: JAVA_HOME names no JDK
+```
+
+`run` starts the program with the streams of the command line, as the Rust runner does.
+The status of the command line is the status that the program ends with.
+A program that a signal stops ends with the status the JVM gives it, which is 128 and the signal.
+The Rust runner gives 128 for each signal, so these two statuses are not the same.
+
+The JVM gives an error in words of its own, so the command line looks at the path instead.
+A directory, a file that it cannot open, and a file that is not UTF-8 each get the Rust words.
+A path that ends in `/` and names a file is refused before it is read, as the Rust binary does.
+
+The harness `crates/cli/tests/integration/bux_command.rs` holds the Bux command line to `lumen`.
+One JVM, the driver `answers.lm`, answers a list of command lines, and two such JVMs share it.
+The harness compares every stream and the status of each, and the files that each side writes.
+It holds the launcher to `lumen` on every program under `tests/spec`.
+With no JDK, the harness skips each test that starts a JVM and says why.
+
 ## Properties
 
 These hold, and each is checked:

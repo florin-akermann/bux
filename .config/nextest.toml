@@ -21,6 +21,23 @@ filter = """
 """
 slow-timeout = { period = "60s", terminate-after = 1 }
 
+# The harness of the Bux command line holds every command on every fixture to `lumen`.
+# Each of its tests keeps two JVMs and two `lumen` processes busy at once.
+# All at once, its tests pushed other `bux_*` tests past their 60 s wall, measured.
+# Two at a time, they pushed a drawn `bux_classes` test past the 30 s health check of `hegeltest`.
+# One at a time, that drawn test still failed its health check once in two runs, measured.
+# So the group holds that drawn test too, and it never runs beside the harness.
+# Then the whole suite passes, and each test of the harness ends in under 20 s.
+[test-groups]
+bux-command = { max-threads = 1 }
+
+[[profile.default.overrides]]
+filter = """
+    test(/^bux_(command|launcher)::/)
+    or test(=bux_classes::the_bux_writer_writes_the_rust_bytes_on_drawn_programs)
+"""
+test-group = "bux-command"
+
 # Every other test has a wall of 10 s. A test that needs longer gets its own entry above this
 # catch-all: a name, or a prefix where a family of tests grows with the language, and the reason.
 [[profile.default.overrides]]
