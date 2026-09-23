@@ -49,6 +49,19 @@ The compiler answers to the same rule: a program it cannot compile gets a diagno
 A rule holds for every type, function, and operator alike, or it is no rule.
 `Int` is a type like any other, and a library could declare everything the prelude supplies.
 An operator is a function with other syntax, and `main` is a function like any other.
+What `Int` does, a type that a program declares does, and `Int` does nothing more than it.
+
+Java shows what the other answer costs.
+Its `int` is not an object, so a generic holds an `Integer`, and the two types are not the same.
+`List<int>` does not compile.
+`==` compares values for `int`, but it compares identity for `Integer`.
+A cache of small numbers hides that difference until a program uses a large number.
+
+The library then writes some abstractions two times.
+`Stream` has `IntStream` beside it, and `Optional` has `OptionalInt` beside it.
+A caller picks `comparing` or `comparingInt`, and each new feature answers to the two halves.
+The split starts at one type and reaches the generics, the operators, and the library alike.
+Bux keeps one half, so a user of the language declares a type that is `Int`'s equal in every way.
 
 ### Values, not objects
 
