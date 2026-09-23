@@ -166,3 +166,17 @@ The new rule: no blank line between two imports, and one blank line after the la
 [092][e] - `tests/spec/` holds a canonical import block and a refused one with a blank line.
 [092][f] - Every source under `compiler/`, `library/`, `example/`, and `tests/` is formatted again.
 [092][g] - `bux help fmt` states the rule, and `bin/runner` shows the whole tree is canonical.
+
+## 🔴 Item 096: A build writes every class file under `target/`, and no class lands beside a source
+Today a build writes each class beside its source, so `compiler/` and `tests/` hold about 2000.
+A class file among the sources hides the source tree, and each script must find and delete them.
+The new rule: every class lands in `target/`, on the same level as the sources and `tests/`.
+In `target/`, a class keeps the path its module gives it: `compiler/ir.lm` writes `target/ir/`.
+A clean build is one step: delete `target/`, and no other directory holds compiler output.
+[096][a] - `docs/specs/codegen.md`, `docs/specs/run.md`, and `docs/implementation.md` state the rule.
+[096][b] - `compiler/command.lm` writes each class under `target/`, and never beside the source.
+[096][c] - `bux run` and `bux test` put `target/` on the class path, and every example still runs.
+[096][d] - `bin/bootstrap`, `bin/bux`, and `bin/runner` read and delete classes only in `target/`.
+[096][e] - `.gitignore` names `target/`, and the `*.class` line and its comment say why.
+[096][f] - A `tests/spec/` example shows that a build leaves no class beside its source.
+[096][g] - `bux help build` states where the classes go.
