@@ -6,14 +6,6 @@
 
 ## Open
 
-## 🟢 Item 066: The lexer is written in Bux
-**Depends on:** Item 059, Item 076 — a lexer builds a token list from the code units of a string.
-Self-hosting starts with the smallest phase, and the lexer is 286 lines of Rust.
-The Rust `bux` compiles the Bux lexer, and `tests/spec/lexer` holds both to one answer.
-[066][a] - `compiler/lexer.lm` lexes a module into the tokens `docs/specs/lexer.md` states.
-[066][b] - A harness runs the Bux lexer over every `tests/spec/lexer` fixture and compares tokens.
-[066][c] - `docs/implementation.md` section 6 names `compiler/` as where the Bux compiler lives.
-
 ## 🔴 Item 067: The parser and the AST are written in Bux
 **Depends on:** Item 066, Item 077 — the parser reads the tokens the Bux lexer gives, by kind.
 [067][a] - `compiler/ast.bx` declares the tree `docs/specs/grammar.md` describes.
