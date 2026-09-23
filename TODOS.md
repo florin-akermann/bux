@@ -55,3 +55,31 @@ A bare `=` then only changes a `var`, so each operator has one job, as in Swift.
 [082][e] - The Bux lexer, parser, and formatter under `compiler/` change the same way.
 [082][f] - Every source under `compiler/`, `library/`, `example/`, and `tests/` binds with `let`.
 [082][g] - A search for `:=` in sources, docs, and help text finds only the refusal test.
+
+## 🔴 Item 083: Only a library module writes `extern`, so no program loads a Java class by name
+Today any module can write `extern static` on `java.lang.Class.forName` and load a class by name.
+The same form reaches `javax.naming.InitialContext.doLookup`, which is the Log4Shell call.
+`docs/design.md` section 17 says a program reaches Java through the library, but nothing checks it.
+[083][a] - `docs/design.md` section 17 and `docs/specs/interop.md` state the rule and its code.
+[083][b] - The Rust phases refuse an `extern` outside `library/`, with a code and an explanation.
+[083][c] - The Bux phases under `compiler/` refuse it alike, at the same span.
+[083][d] - The two `compiler/` modules that write `extern` reach Java through a library module.
+[083][e] - The fixtures in `tests/spec/interop/` and `tests/spec/parser/` keep the boundary tested.
+[083][f] - A spec example shows a program that writes `extern` and is refused.
+
+## 🔴 Item 084: Every Java class the library names is on one fixed allow list
+**Depends on:** Item 083 — the library is then the only place an `extern` can name a class.
+An allow list makes a new `extern` on `ClassLoader`, reflection, or `javax.naming` fail a test.
+A deny list is not enough, because it cannot name a class that nobody thought of.
+[084][a] - `docs/specs/library.md` states the rule and names the list.
+[084][b] - A test reads every `extern` in `library/` and fails on a class not on the list.
+[084][c] - The list holds only the `java.base` classes that the library names today.
+
+## 🔴 Item 085: `lumen run` starts a JVM that has only `java.base` and no injected options
+The JVM starts with all its modules, so `java.naming`, `java.rmi`, and `java.scripting` load.
+`JAVA_TOOL_OPTIONS`, `JDK_JAVA_OPTIONS`, and `_JAVA_OPTIONS` can add a `-javaagent` to a run.
+[085][a] - `docs/specs/run.md` states the flags, the removed variables, and the reason for each.
+[085][b] - The runner passes `--limit-modules java.base` and `-Djdk.serialFilter=!*`.
+[085][c] - The runner removes the three variables from the environment of the JVM.
+[085][d] - A run-time example shows that `Class.forName` finds no `javax.naming` class.
+[085][e] - `lumen help run` says which modules a program has.
