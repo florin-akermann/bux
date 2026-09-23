@@ -6,32 +6,7 @@
 
 ## Open
 
-## 🔴 Item 094: `bin/runner` types each module once, and every check that needs it shares it
-High priority: this is where most of the seconds of `bin/runner` go; Item 093 took it to 97 s.
-18 of 20 stack samples fell in `documented.module_held`, which checks the example lines.
-For each of about 90 modules, `command.tested` types the module and every module it imports.
-`run_lowered` then types the same modules a second time, for the run it wrote.
-`whole` reads the examples of each imported module again, once for each module that imports it.
-So the shared compiler modules are typed about 180 times, and each check starts a new JVM.
-[094][a] - The runner writes the time of each part: examples, siblings, lines, properties, commands.
-[094][b] - The runner types each module once, and the example-line check reuses that result.
-[094][c] - `whole` holds each module once, and not once for each module that imports it.
-[094][d] - The example lines of all modules run in one JVM, and a failure still names its line.
-[094][e] - Every count of the runner summary stays the same, so no check is lost or weakened.
-[094][f] - The wall time of each part after the change is recorded beside the time of [094][a].
-
-## 🔴 Item 095: `bin/runner` shows its progress, and a program that never ends cannot stop it
-High priority: a slow run looks the same as a hang, and a real hang stops every commit.
-The runner writes nothing until it ends, so a run of three minutes looked stuck.
-`walk.ended` waits for a program with no limit, so one example that never ends stops the runner.
-[095][a] - `docs/implementation.md` section 7 states the progress lines and the time limit.
-[095][b] - The runner writes one line as each part ends, with its count and its seconds.
-[095][c] - A started program has one time limit, and a program past it is stopped.
-[095][d] - A program past the limit is a failure that names its example, and the run goes on.
-[095][e] - A runner check shows an example that never ends, held as a failure within the limit.
-
 ## 🔴 Item 091: The compiler and `bin/runner` are fast because they run on Bux processes
-**Depends on:** Item 094 — processes must share work that is done once, not twice.
 Self-hosting is done, and `bin/runner` now runs so long that it looks stuck.
 Section 15 of `docs/design.md` designs the concurrency, and this item builds it and uses it first.
 The compiler and its checks are the first program that uses processes, so dogfood finds the gaps.
@@ -173,3 +148,12 @@ With the form gone, that defect goes too, and no repair is needed.
 [098][e] - `tests/spec/calls/in_front.lm` becomes a refused example, and the other file goes.
 [098][f] - The one call in the tree that uses the form is written as a plain call.
 [098][g] - `printed` has no caller, and `exhaustiveness.lm`, `holes.lm`, and `types.lm` drop it.
+
+## 🔴 Item 099: A module named as a library module runs, because its class is not the library's
+Item 094 found it: `bux test tests/spec/packages/carried/strings.lm` ends with `NoSuchMethodError`.
+The run writes a class `strings` beside the module, and the class path holds the library's `strings`.
+So a call of `strings.length` reaches the wrong class, and `bin/runner` skips that module today.
+`docs/specs/packages.md` says such a module is reached as the one the command names, so it must run.
+[099][a] - `docs/specs/codegen.md` states the class name of a library module, distinct from a program's.
+[099][b] - `bux run` and `bux test` on that module work, and the skip in `tests/documented.lm` goes.
+[099][c] - A `tests/spec/` example runs a module named as a library module and calls that library.
