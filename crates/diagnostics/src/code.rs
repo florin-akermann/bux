@@ -36,7 +36,7 @@ macro_rules! catalogue {
             #[must_use]
             pub const fn explanation(self) -> &'static str {
                 match self {
-                    $(Self::$code => include_str!(concat!("explanations/", $number, ".md")),)+
+                    $(Self::$code => include_str!(concat!("../../../compiler/explanations/", $number, ".md")),)+
                 }
             }
         }

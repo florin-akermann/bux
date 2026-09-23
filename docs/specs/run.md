@@ -107,11 +107,12 @@ reported as 128.
 For every command and every word, it writes what `lumen` writes on each stream, byte for byte.
 It also ends with the status that `lumen` ends with.
 The argument parser gives the same usage lines, tips, and help text as the Rust parser.
-The help text is read as a class-path resource: the file that the Rust binary embeds.
+The help text is read as a class-path resource: a file in `compiler/help/`.
+The Rust binary embeds the same file.
 
 `bin/bux` is the launcher, a POSIX `sh` script.
 It starts `java --enable-preview` on the class `main`, with every word it was given.
-The class path is `compiler/` and the directory above it, where the library and help text are.
+The class path is `compiler/`, with the help text, and the directory above it, with the library.
 A link to the launcher, as on `PATH`, works: the launcher follows the link to find `compiler/`.
 It finds the JDK as this page says: `JAVA_HOME` names it, and nothing else is searched.
 It refuses with status `2` when the compiler is not built, and when `JAVA_HOME` names no JDK.
@@ -147,7 +148,7 @@ Both stages are built from the same `compiler/` source.
 `bux build` writes the class files beside the source, as `lumen build` does.
 So each stage is built from a copy of its own of `compiler/`, made outside the repository.
 The two stages then never write over each other, and the working tree stays clean.
-Each copy also holds `library/`, the help text, the explanations, and `bin/bux`.
+Each copy also holds `library/` and `bin/bux`, and `compiler/` holds the help text and explanations.
 So each stage has a launcher of its own, and each launcher starts its own stage.
 
 Stage 2 is stage 1 byte for byte.

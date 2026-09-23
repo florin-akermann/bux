@@ -17,13 +17,7 @@ use super::{as_argument, files_ending_in, jdk, lumen, repository};
 pub const FIXTURES: [&str; 3] = ["tests/spec", "library", "compiler"];
 
 /// What the Bux command line is built from and reads as resources, which is copied to its stage.
-const CARRIED: [&str; 5] = [
-    "compiler",
-    "library",
-    "crates/cli/src/help",
-    "crates/diagnostics/src/explanations",
-    "bin",
-];
+const CARRIED: [&str; 3] = ["compiler", "library", "bin"];
 
 /// The program that answers every command line it is handed in one JVM.
 const DRIVER: &str = include_str!("../answers.lm");

@@ -221,12 +221,11 @@ fn compiler_half(half: Half) -> Vec<Case> {
 
 /// `explain` on every code there is an explanation of, and on words that name none.
 fn explanation_cases() -> Vec<Case> {
-    let mut codes: Vec<String> =
-        fs::read_dir(repository().join("crates/diagnostics/src/explanations"))
-            .expect("the explanations are readable")
-            .map(|entry| entry.expect("a directory entry is readable").path())
-            .filter_map(|path| Some(path.file_stem()?.to_str()?.to_owned()))
-            .collect();
+    let mut codes: Vec<String> = fs::read_dir(repository().join("compiler/explanations"))
+        .expect("the explanations are readable")
+        .map(|entry| entry.expect("a directory entry is readable").path())
+        .filter_map(|path| Some(path.file_stem()?.to_str()?.to_owned()))
+        .collect();
     codes.sort();
     codes.extend(["L9999", "l0100", "L010", "x"].map(str::to_owned));
     codes

@@ -119,7 +119,7 @@ An example of the second half: `17 / 0` is `None`, because a panic is simpler an
 - `cargo nextest run` and the built-in `/code-review` pass before every commit.
 - `TODOS.md` is the sole task tracker; there is no `gh` and no GitHub integration.
 - A user-facing feature is documented under `lumen --help` in the todo that adds it.
-- Help text lives in `crates/cli/src/help/*.md`, surfaced via `include_str!`: one source, no drift.
+- Help text lives in `compiler/help/*.md`, read as a class-path resource: one source, no drift.
 
 ## Tools and dependencies
 
@@ -140,7 +140,7 @@ An example of the second half: `17 / 0` is `None`, because a panic is simpler an
 ## Markdown Prose Style
 
 - **One sentence per line, maximum 100 characters.** mycs holds every `.md` file to both.
-- The rules are lifted only in `crates/cli/src/help/`, where terminal-wrapped help topics live.
+- The rules are lifted only in `compiler/help/`, where terminal-wrapped help topics live.
 - Never wrap a sentence across lines; shorten it, and split it only if it still will not fit.
 - This section is itself the rule: `Governance Doc Omits Prose Style` fires if it goes missing.
 

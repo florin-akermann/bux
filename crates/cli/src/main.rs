@@ -26,7 +26,7 @@ mod lowering;
 
 /// The Lumen compiler.
 #[derive(Parser)]
-#[command(version, about, long_about = include_str!("help/lumen.md"))]
+#[command(version, about, long_about = include_str!("../../../compiler/help/lumen.md"))]
 struct Cli {
     #[command(subcommand)]
     command: Command,
@@ -35,10 +35,10 @@ struct Cli {
 #[derive(Subcommand)]
 enum Command {
     /// Rewrite a source file in canonical form
-    #[command(long_about = include_str!("help/fmt.md"))]
+    #[command(long_about = include_str!("../../../compiler/help/fmt.md"))]
     Fmt { file: PathBuf },
     /// Report the first thing about a source file or a package the compiler will not have
-    #[command(long_about = concat!(include_str!("help/check.md"), include_str!("help/packages.md")))]
+    #[command(long_about = concat!(include_str!("../../../compiler/help/check.md"), include_str!("../../../compiler/help/packages.md")))]
     Check {
         path: PathBuf,
         /// Write the refusal as one line of JSON on standard output, edit included
@@ -46,13 +46,13 @@ enum Command {
         json: bool,
     },
     /// Compile a source file or a package to the class files a JVM loads
-    #[command(long_about = concat!(include_str!("help/build.md"), include_str!("help/packages.md")))]
+    #[command(long_about = concat!(include_str!("../../../compiler/help/build.md"), include_str!("../../../compiler/help/packages.md")))]
     Build { path: PathBuf },
     /// Compile a source file and run the program it holds
     ///
     /// Every word after the file belongs to the program, `--help` among them, so this command
     /// has no help flag of its own; `lumen help run` is where its topic is read.
-    #[command(long_about = include_str!("help/run.md"), disable_help_flag = true)]
+    #[command(long_about = include_str!("../../../compiler/help/run.md"), disable_help_flag = true)]
     Run {
         file: PathBuf,
         /// The words the program is run with, which reach it as the list `main` takes
@@ -60,13 +60,13 @@ enum Command {
         arguments: Vec<String>,
     },
     /// Run the examples a module states about its functions
-    #[command(long_about = include_str!("help/test.md"))]
+    #[command(long_about = include_str!("../../../compiler/help/test.md"))]
     Test { file: PathBuf },
     /// Print the public surface of a module
-    #[command(long_about = include_str!("help/api.md"))]
+    #[command(long_about = include_str!("../../../compiler/help/api.md"))]
     Api { file: PathBuf },
     /// Print the long form of one diagnostic code
-    #[command(long_about = include_str!("help/explain.md"))]
+    #[command(long_about = include_str!("../../../compiler/help/explain.md"))]
     Explain { code: String },
 }
 

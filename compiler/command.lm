@@ -649,7 +649,7 @@ fn explanation_of(code: String) -> Option<String> {
     if !is_code_shaped(code) {
         return None
     }
-    modules.resource_text("crates/diagnostics/src/explanations/" + code + ".md")
+    modules.resource_text("explanations/" + code + ".md")
 }
 
 /// Whether `code` is written as a code is: `L` and four digits.
@@ -2381,7 +2381,7 @@ fn long_help(sub: Subcommand) -> String {
 /// The text of one help topic, which the compiler carries as a resource.
 // example: topic_text("no-such-topic") == ""
 fn topic_text(topic: String) -> String {
-    or(modules.resource_text("crates/cli/src/help/" + topic + ".md"), "")
+    or(modules.resource_text("help/" + topic + ".md"), "")
 }
 
 /// Every command, in the order the help lists them.

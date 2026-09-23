@@ -60,7 +60,7 @@ Exhaustiveness writes `L05xx`, and what a build asks of a module it compiles wri
 
 Every number and every long form lives in `crates/diagnostics/src/code.rs`, which declares them
 together so that neither can be added without the other.
-The long form of a code is the file in `crates/diagnostics/src/explanations/` named after it.
+The long form of a code is the file in `compiler/explanations/` named after it.
 
 A code that stops being raised is taken out whole: the number, the long form, and the paragraph
 that stated it.

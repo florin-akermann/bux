@@ -192,7 +192,8 @@ The Bux compiler lives in `compiler/`, one module for each phase, and the lexer 
 `compiler/main.lm` is its command line, and `compiler/command.lm` holds every command.
 `lumen build compiler/main.lm` writes its classes beside the sources, in `compiler/`.
 The launcher `bin/bux` starts them with `compiler/` and the directory above it on the class path.
-The directory above holds `library/` and the help text, which the compiler reads as resources.
+`compiler/help/` and `compiler/explanations/` hold the help text and the long form of each code.
+The directory above holds `library/`, and the compiler reads all three as resources.
 No class file is kept in the repository, so a checkout builds the compiler before `bin/bux` runs.
 A module there has a `.lm` name for now, because the module loader reads no other extension.
 A harness in `crates/cli` holds each phase to the answer of the Rust phase it replaces.
