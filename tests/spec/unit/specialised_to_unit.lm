@@ -1,0 +1,19 @@
+// expect-error: L0432
+// `first` is general, and a call of it over a `List<()>` gives back an `Option<()>`.
+fn is_first_given(all: List<()>) -> Bool {
+    match first(all) {
+        Some(inside) => is_given(inside)
+        None => false
+    }
+}
+
+fn first<T>(items: List<T>) -> Option<T> {
+    for item in items {
+        return Some(item)
+    }
+    None
+}
+
+fn is_given(given: ()) -> Bool {
+    true
+}

@@ -1,0 +1,8 @@
+// expect-error: L0432
+// No signature writes `Option<()>` here, and inference reaches it at `Some(())` all the same.
+fn is_there() -> Bool {
+    match Some(()) {
+        Some(_) => true
+        None => false
+    }
+}

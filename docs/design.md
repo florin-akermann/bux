@@ -366,7 +366,7 @@ An operator is a function with other syntax, and syntax buys no exemption from t
 There is no panic and no trap, so there is no runtime failure for a program to catch or to observe.
 Rust panics on `x / 0` and calls the panic a design; Lumen refuses the trade, and the type answers.
 
-A library module may sit on a JVM operation that throws, and gives back a `Result` where it does.
+A library module may sit on a platform operation that throws, and gives back a `Result` where it does.
 The throw is caught where the declaration that reaches the operation is written, and never reaches
 the program.
 `docs/specs/interop.md` states the catch, and `docs/specs/io.md` the one read version 0.1 has.
@@ -390,7 +390,7 @@ An error type there would carry nothing the caller is not already holding.
 
 **`Option` never carries `()`.**
 `Some(())` says only that a value is there, and `None` that it is not: `Bool` spelled a second way.
-At the boundary to Java it is worse, because `Some` there also reads a `null` that did not come.
+At the boundary to the platform it is worse, because `Some` there also reads a `null` that did not come.
 `Some(())` is then a flag for `null`, and nullability is a non-goal of section 2.
 The compiler refuses `Option<()>` wherever a program writes it or inference reaches it.
 `Result<(), E>` stays, because its `Err` carries a reason the caller could not work out.

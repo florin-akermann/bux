@@ -1,0 +1,12 @@
+// expect-error: L0432
+// This `None` becomes an `Option<()>` where the arm below gives what it carries to `is_given`.
+fn is_there() -> Bool {
+    match None {
+        Some(inside) => is_given(inside)
+        None => false
+    }
+}
+
+fn is_given(given: ()) -> Bool {
+    true
+}

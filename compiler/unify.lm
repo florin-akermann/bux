@@ -308,6 +308,33 @@ fn list_of(item: Type) -> Type {
     Named { name: "List", arguments: [item] }
 }
 
+/// Whether `found` is `Option<()>`, or holds one among its arguments.
+///
+/// A function's type holds none, because a call of it gives the type that holds one.
+// example: has_unit_in_option(list_of(option_of(Unit)))
+// example: !has_unit_in_option(option_of(truth()))
+// example: !has_unit_in_option(Function { parameters: [], result: option_of(Unit) })
+fn has_unit_in_option(found: Type) -> Bool {
+    if found == option_of(Unit) {
+        return true
+    }
+    match found {
+        Named { name, arguments } => is_any_holding_unit(arguments)
+        _ => false
+    }
+}
+
+/// Whether one of `types` is `Option<()>`, or holds one among its arguments.
+// example: !is_any_holding_unit([int(), Unit])
+fn is_any_holding_unit(types: List<Type>) -> Bool {
+    for one in types {
+        if has_unit_in_option(one) {
+            return true
+        }
+    }
+    false
+}
+
 /// `Option<value>`.
 // example: text_of(option_of(int())) == "Option<Int>"
 fn option_of(value: Type) -> Type {

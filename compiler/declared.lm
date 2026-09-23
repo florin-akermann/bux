@@ -1147,12 +1147,16 @@ fn counting(environment: Environment, resolved: resolver.Resolved, for_type: ast
 }
 
 /// `written` as a type, with each name it holds pointed at what it was resolved to.
+///
+/// `Option<()>` is refused where it is written, and the innermost one where one holds another.
 // example: declared_code("fn f(held: Option<Int, Int>) -> Int {\n    1\n}\n") == "L0401 11..17"
+// example: declared_code("fn f(held: List<Option<()>>) -> Int {\n    1\n}\n") == "L0432 16..26"
 fn type_written(environment: Environment, resolved: resolver.Resolved, written: ast.TypeRef) -> Result<unify.Type, refusal.TypeError> {
-    match written.kind {
+    found := match written.kind {
         ast.NamedType { path, arguments } => named_written(environment, resolved, path, arguments)
         ast.UnitType => Ok(unify.Unit)
     }
+    refusal.unit_refused(found?, written.span)
 }
 
 /// A written type that has a name, which is this module's, the prelude's, or another module's.

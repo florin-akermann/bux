@@ -147,6 +147,36 @@ by the time a call reads it.
 the value it was given.
 `var total = 0` does not, because a mutable binding is assigned to later and must stay one type.
 
+## An `Option` never carries `()`
+
+`Some(())` says only that a value is there, and `None` says that it is not.
+That is `Bool` written a second way, and at the boundary to the platform it is a flag for `null`.
+`docs/design.md` section 5 gives the reason, and the compiler refuses `Option<()>` with `L0432`.
+
+A written `Option<()>` is refused where it is written: in a signature, a field, or an `extern`.
+The span is the written type, and in `List<Option<()>>` it is the inner `Option<()>`.
+The declarations are read before any body, so a written one comes before every inferred one.
+The refusal comes before the `extern` boundary check, so an `extern` that writes it gets `L0432`.
+
+An inferred `Option<()>` is refused at the expression whose type became one or holds one.
+The phase reads the types after inference has settled every function of the module.
+It reads the functions in the order the module writes them, and the expressions in the same order.
+It reads the expressions inside an expression first, so the refusal names the innermost one.
+The type of a function does not count, because a call of the function gives the type that holds it.
+These four are refused, each at the span that `tests/spec/unit` states for it:
+
+```text
+fn held() -> Option<()>      // the written type Option<()>
+match Some(()) { … }         // the expression Some(())
+match None { Some(inside) => is_given(inside) … }   // the None, where is_given takes ()
+match first(all) { … }       // first<T> over a List<()>, at the call first(all)
+```
+
+`Result<(), E>` is accepted, because its `Err` carries a reason the caller could not work out.
+A `Bool` is the answer for a flag, and a `Result<(), E>` for a failure with a reason.
+A declared type with a field of type `Option<T>` is accepted at `T = ()`.
+An expression whose type is that field's `Option<()>` is then refused, as every other one is.
+
 ## The errors
 
 | name              | code    | message                                          |
@@ -170,6 +200,7 @@ the value it was given.
 | literal misfit    | `L0420` | `5000000000` does not fit `Int32`, which holds `-2147483648` to `2147483647` |
 | bound is not a number | `L0421` | `lowest` of `Int32` is read rather than run, so it is one whole number |
 | trait stays in its module | `L0424` | `holder.labelled` requires `Named`, which `holder` declares and nothing here names |
+| unit in an option | `L0432` | `Option` never carries `()`, because `Some(())` says no more than `true` |
 
 `L0406` covers every operator, because every operator is a trait method and a type is written
 with one exactly where it has that trait's instance, which `docs/specs/operators.md` states.
@@ -216,6 +247,7 @@ signature, so a trait's own method is held to the rule and an instance's is not,
 `docs/specs/naming.md` states.
 It reads the same result and is reached at the same point, after `L0412` and for the same reason.
 A function whose parameters and result are all `Bool` is about `Bool`, and is the one carve-out.
+`L0432` helps with ``use `Bool` for a flag, and `Result<(), E>` for a failure with a reason``.
 
 `/` and `%` give back `Option<Int>` rather than `Int`, which `docs/specs/arithmetic.md` states.
 `L0400` is what an `Option<Int>` met where an `Int` belongs is refused with, as anything else is.
@@ -226,7 +258,7 @@ Inference stops at the first error it reaches, which is the one lowest in the fi
 
 `compiler/types.lm` is this phase, written in Bux.
 It reads each module that `compiler/resolver.lm` resolves, in the order `compiler/modules.lm` loads.
-Six more modules hold the parts of the phase, one concern each, and no two import each other.
+Seven more modules hold the parts of the phase, one concern each, and no two import each other.
 `compiler/unify.lm` holds the types, the unification table, and the schemes.
 `compiler/refusal.lm` holds each refusal, with its code, its message, and its help.
 `compiler/boundary.lm` holds the rules for a type that crosses to Java.
@@ -234,6 +266,7 @@ It asks `java.lang.Character` whether each code point of a Java name is a letter
 `compiler/surface.lm` holds what a module offers the modules that import it.
 `compiler/declared.lm` holds what a module declares, with the checks of each declaration.
 `compiler/infer.lm` walks each function and settles what the walk left open.
+`compiler/carried.lm` reads the settled types, and refuses an `Option<()>` that inference reached.
 
 The unification table is a value: each step gives back a new table, and no step changes one.
 The table is a `Map` from each type variable to the type it was settled on.
@@ -270,3 +303,4 @@ These hold and are checked by drawn properties in the runner:
 6. A generic function is general enough for any two uses of it.
 7. A ring of declarations that hold one another by value is refused, naming the ring.
 8. A chain of declarations that never comes back round is accepted.
+9. `Option<()>`, written or inferred, is refused with `L0432`, and `Option<Bool>` there is accepted.
