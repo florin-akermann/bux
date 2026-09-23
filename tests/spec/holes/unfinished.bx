@@ -1,0 +1,13 @@
+// A hole is well typed, so `bux check` accepts this file.
+// `bux build` refuses it, which the golden answers in `tests/commands/fixtures.txt` hold.
+fn total(users: List<User>) -> Int {
+    todo("count them once the walk is written")
+}
+
+fn named(user: User) -> String {
+    todo("read the name off the record")
+}
+
+type User = {
+    id: Int
+}

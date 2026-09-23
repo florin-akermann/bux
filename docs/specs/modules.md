@@ -25,7 +25,9 @@ the file.
 
 ## Loading
 
-`import demo` names the file `demo.lm`, beside the file that imports it.
+`import demo` names the file `demo.bx`, beside the file that imports it.
+A source file is named `<module>.bx`, and the loader reads no file of another name.
+A command given a file whose name does not end in `.bx` refuses it as `L0605`, before it compiles.
 `io` and `files` are library modules, so an import of either reads the source the compiler
 carries and looks for no file at all.
 A file beside the importing one is where a module is looked for, and a package is the one other
@@ -107,15 +109,15 @@ a constraint over a trait the declaring module keeps to itself is refused as `L0
 
 ## The loader written in Bux
 
-`compiler/modules.lm` is this loader, written in Bux.
+`compiler/modules.bx` is this loader, written in Bux.
 `modules.load(path)` reads the module at `path` and every module it reaches, as this section and
 `docs/specs/packages.md` state.
 It gives the modules in order, dependencies before dependents.
 Each module keeps its name, the path it was read from, its source, and the tree of
-`compiler/parser.lm`.
+`compiler/parser.bx`.
 
 It stops at the first refusal, which has a file, a code, a span, a message, and a help line.
-A span counts UTF-8 bytes, as a span of `compiler/lexer.lm` does.
+A span counts UTF-8 bytes, as a span of `compiler/lexer.bx` does.
 A library module is a resource on the class path, which `docs/specs/library.md` states.
 Whether two routes reach one file is the JVM's canonical path of each.
 
@@ -123,13 +125,13 @@ A file that the loader cannot read is refused with the path that the import name
 The loader asks whether a file is there before it looks beside a module or in a package.
 It asks through `java.io.File.isFile`, so a directory of that name is no module.
 
-`modules.printed(path)` gives the answer in the form that `tests/loading.lm` compares.
+`modules.printed(path)` gives the answer in the form that `tests/loading.bx` compares.
 A load is `loaded`, and then one line for each module: its name and its path.
 A refusal is `refused` and the path of the file it is about, then the code, span, and message,
 then `help:` and the help.
 A file that cannot be read is `unreadable` and its path.
 
-`tests/loading.lm` holds the loader to its properties, on trees of modules and manifests it draws.
+`tests/loading.bx` holds the loader to its properties, on trees of modules and manifests it draws.
 
 ## Scopes
 
@@ -169,7 +171,7 @@ methods:      add  divide  from_literal  hashed  highest  is_equal  is_less  low
               multiply  negate  remainder  shown  subtract
 ```
 
-They are read out of `library/prelude.lm` rather than tabulated in the compiler, which
+They are read out of `library/prelude.bx` rather than tabulated in the compiler, which
 `docs/specs/library.md` states.
 
 `or(maybe, fallback)` is what an `Option` holds, or the fallback when it holds nothing, and
@@ -237,12 +239,12 @@ Canonical form puts every import first and sorted, which settles where it goes w
 | assigned but no `var` | `L0305` | `x` is not a `var`, so it is never assigned to |
 | module with no file | `L0306` | there is no module named `demo`                   |
 | ring of imports   | `L0307` | `demo` imports `main`, which imports `demo`       |
-| module is two files | `L0317` | `demo` is both `../shapes/demo.lm` and `demo.lm` |
+| module is two files | `L0317` | `demo` is both `../shapes/demo.bx` and `demo.bx` |
 | reached through no module | `L0313` | `user` is a module in neither scope, and a type is reached through one |
 
 `L0300` helps with `a name is declared in this file, imported, or supplied by the prelude`.
 `L0301` helps with `one name has one definition; rename one of the two`.
-`L0302` helps with `rename the inner one; Lumen never hides a name`.
+`L0302` helps with `rename the inner one; Bux never hides a name`.
 `L0303` helps with `a file reads top down: move it below what uses it`.
 `L0304` helps with `version 0.1 reaches a function by calling it; write the call`.
 `L0304` helps a module with ``a module is what a name is reached through, as `io.println` is``.
@@ -293,9 +295,9 @@ Resolution stops at the first error, as parsing does.
 
 ## The resolver written in Bux
 
-`compiler/resolver.lm` is this resolver, written in Bux.
-It reads the name and the tree of each module that `compiler/modules.lm` loads.
-The tree is the tree of `compiler/parser.lm`, and nothing in it changes.
+`compiler/resolver.bx` is this resolver, written in Bux.
+It reads the name and the tree of each module that `compiler/modules.bx` loads.
+The tree is the tree of `compiler/parser.bx`, and nothing in it changes.
 The answer is the tree and, for each name that has a definition, the definition that it means.
 
 `resolver.prelude_of(program)` reads the names of the prelude out of its parsed tree.
@@ -305,7 +307,7 @@ The resolver reads no file and no resource, so the caller gives it the prelude.
 
 It stops at the first refusal, which has a code, a span, a message, and a help line.
 
-`resolver.printed(source, prelude)` gives the answer in the form that `tests/naming.lm` compares.
+`resolver.printed(source, prelude)` gives the answer in the form that `tests/naming.bx` compares.
 A resolved module is `resolved`, and then one line for each name that has a definition.
 A line is the span of the name, `type` or `value`, the kind of definition, and its origin.
 The kinds are `module`, `type`, `trait`, `type-parameter`, `constructor`, `function`,
@@ -315,7 +317,7 @@ The lines are in the order of their spans, and a `type` line comes before a `val
 A refusal is `refused`, then the code, span, and message, then `help:` and the help.
 A source that does not parse is `unparsed`.
 
-`tests/naming.lm` holds the resolver to the properties below, on modules drawn at random.
+`tests/naming.bx` holds the resolver to the properties below, on modules drawn at random.
 
 ## Properties
 

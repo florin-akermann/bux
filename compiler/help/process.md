@@ -23,7 +23,7 @@ process Counter {
 and one message, and gives `Continue` of the next state or `Done`, which ends the process. Every
 type is written, and neither function is generic. The body of `receive` is one `match` on the
 message, and each arm is one call or one name; other work goes in a function the arm calls.
-Each break of the shape has its own code, `L0802` to `L0810`, and `lumen explain` says more.
+Each break of the shape has its own code, `L0802` to `L0810`, and `bux explain` says more.
 
 `spawn Counter(10)` starts a process on a JVM virtual thread and gives its handle, a
 `Process<Counted, Int>`: what it accepts, then its state. A handle has no `Eq` and crosses no

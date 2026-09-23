@@ -1,7 +1,7 @@
 #!/bin/sh
 # The `bux` command line written in Bux, started on the JDK that JAVA_HOME names.
 #
-# The classes are the ones `lumen build compiler/main.lm` writes in compiler/target/, and that
+# The classes are the ones `bux build compiler/main.bx` writes in compiler/target/, and that
 # directory is the one on the class path that holds classes. compiler/ is on the class path only for
 # resources, the help topics and the explanations, and the directory above it only for the library.
 # A link to this script, as on PATH, is followed to the script itself, which sits in bin/.

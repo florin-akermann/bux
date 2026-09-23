@@ -174,12 +174,12 @@ No program can see a thread, a queue, or a future, and a program names none of t
 
 The class of a process is `<module>/process$<Name>`, which no type of a program can be named.
 `start` and `receive` are the static methods `<Name>$start` and `<Name>$receive` of the module.
-The handle is the class `lumen/Process`, and each module that declares a process writes it.
+The handle is the class `bux/Process`, and each module that declares a process writes it.
 Each writes the same bytes, as each module writes the same class of a list.
 
 ## Properties
 
-`tests/spawned.lm` holds these properties over drawn programs and drawn messages.
+`tests/spawned.bx` holds these properties over drawn programs and drawn messages.
 
 1. A mailbox never holds more than 64 messages.
 2. The messages one sender sends before the message that ends a process arrive in order.

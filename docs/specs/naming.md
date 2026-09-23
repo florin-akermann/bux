@@ -78,7 +78,7 @@ signature the author left unwritten counts exactly as one they wrote out.
 
 ```text
 error[L0202]: `UserID` is a type, so canonical form writes it in `PascalCase`
-  --> demo.lm:1:6
+  --> demo.bx:1:6
 
   1 | type UserID = UserID(Int)
     |      ^^^^^^
@@ -90,7 +90,7 @@ help: canonical form spells this name `UserId`
 
 ```text
 error[L0203]: `f` is an initial, which names nothing a reader can look for
-  --> demo.lm:1:4
+  --> demo.bx:1:4
 
   1 | fn f(count: Int) -> Int {
     |    ^
@@ -102,7 +102,7 @@ help: a declared name is a word, so write the one this names
 
 ```text
 error[L0413]: `active` gives back a `Bool`, so its name asks the question it answers
-  --> demo.lm:1:4
+  --> demo.bx:1:4
 
   1 | fn active(user: User) -> Bool {
     |    ^^^^^^
@@ -112,19 +112,19 @@ help: begin the name with `is_`, `has_`, `can_`, or `should_`
 
 ## Where each rule is checked
 
-Case and length are about the text, so `compiler/format.lm` checks them with the rest of
+Case and length are about the text, so `compiler/format.bx` checks them with the rest of
 canonical form, before a name is resolved or a type is settled.
 The first name a file writes out of form is the one reported, in the order the file writes them.
 
-The predicate rule reads a type, so `compiler/infer.lm` checks it as inference
+The predicate rule reads a type, so `compiler/infer.bx` checks it as inference
 settles each function.
 It is reached after the body, because the type it reads is the one inference settled.
 
 ## The name check written in Bux
 
-`compiler/format.lm` checks case and length with the rest of canonical form.
+`compiler/format.bx` checks case and length with the rest of canonical form.
 It gives `L0202` for a name in the wrong case and `L0203` for a name of one letter.
-`tests/conventions.lm` holds the name check to the properties below, on drawn modules.
+`tests/conventions.bx` holds the name check to the properties below, on drawn modules.
 
 ## Properties
 

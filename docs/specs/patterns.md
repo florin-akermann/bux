@@ -122,7 +122,7 @@ for another, so there is nothing to rewrite and nothing to prefer.
 
 ```text
 error[L0314]: `reason` binds inside an or-pattern, which binds nothing
-  --> demo.lm:3:12
+  --> demo.bx:3:12
 
   3 |     Failed(reason) | Cancelled(reason) => reason
     |            ^^^^^^

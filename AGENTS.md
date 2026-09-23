@@ -101,8 +101,8 @@ An example of the second half: `17 / 0` is `None`, because a panic is simpler an
 - One module per phase under `compiler/`, per `docs/implementation.md` section 6.
 - Each phase consumes one typed representation and produces the next, never one mutable AST.
 - A module is created by the todo that gives it real content, never ahead of it.
-- `compiler/main.lm` is the command line only; `compiler/command.lm` holds every command.
-- `tests/spec/<area>/*.lm` are executable examples that are the language specification.
+- `compiler/main.bx` is the command line only; `compiler/command.bx` holds every command.
+- `tests/spec/<area>/*.bx` are executable examples that are the language specification.
 - `docs/specs/` holds behaviour specs written before a feature lands, updated in place.
 - `bin/bootstrap` builds the compiler from the seed `bin/seed.jar`, and `bin/bux` starts it.
 
@@ -111,15 +111,15 @@ An example of the second half: `17 / 0` is `None`, because a panic is simpler an
 - Behaviour first: a `docs/specs/` spec states in prose what the change must observably do.
 - Tests come early: plain test code that reads as the behaviour, then code to pass it.
 - No Gherkin and no red/green micro-cycle; a behaviour, its tests, and its code land together.
-- Every phase gets drawn properties (`tests/drawn.lm`) for its invariants; examples are not enough.
+- Every phase gets drawn properties (`tests/drawn.bx`) for its invariants; examples are not enough.
 - Round trips are the first properties: print-then-parse, format idempotence, spans covering input.
-- The runner `tests/runner.lm` holds every check, one module under `tests/` for each part.
-- Shared checks go in `tests/held.lm` and `tests/walk.lm`, reached with `import`.
+- The runner `tests/runner.bx` holds every check, one module under `tests/` for each part.
+- Shared checks go in `tests/held.bx` and `tests/walk.bx`, reached with `import`.
 - **Tests never run git**, even in a temp dir; a subprocess git can corrupt the repo state.
 - A check that starts a second JVM is skipped with a named reason when `JAVA_HOME` names none.
 - `bin/bootstrap`, `bin/runner`, and the built-in `/code-review` pass before every commit.
 - `TODOS.md` is the sole task tracker; there is no `gh` and no GitHub integration.
-- A user-facing feature is documented under `lumen --help` in the todo that adds it.
+- A user-facing feature is documented under `bux --help` in the todo that adds it.
 - Help text lives in `compiler/help/*.md`, read as a class-path resource: one source, no drift.
 
 ## Tools and dependencies
@@ -132,9 +132,8 @@ An example of the second half: `17 / 0` is `None`, because a panic is simpler an
 
 ## Name
 
-- **The language is Bux.** Lumen is the old name, and it survives only where nothing has moved yet.
-- Every new name is the new one: a `bux` binary, `bux-*` packages, `.bx` sources, "Bux" in prose.
-- There is no big-bang rename; a task moves what it touches and stops there.
+- **The language is Bux**: a `bux` command, `.bx` sources, and the JVM package `bux/`.
+- "Bux" is the name in prose, in help text, in comments, and in every name a program sees.
 - A tree-wide rename (a package, the binary, the extension) is one `TODOS.md` item, landed whole.
 
 ## Markdown Prose Style

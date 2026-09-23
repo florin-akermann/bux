@@ -1,6 +1,6 @@
 Compile a source file and run the program it holds.
 
-`lumen run` does what `lumen build` does and then hands the result to a JVM. The class files are
+`bux run` does what `bux build` does and then hands the result to a JVM. The class files are
 written under `target/` exactly as a build writes them, so a run leaves the same files behind and
 nothing more. That includes the class of every module the program imports, because the program
 reaches them while it runs. That one `target/` directory is the whole class path of the program.
@@ -22,7 +22,7 @@ fn main(arguments: List<String>) -> Int {
 A module that declares `main` at that shape is a program; every other module is a library, and
 running one is refused rather than guessed at. The whole signature is read: the one parameter is
 `List<String>`, and the result is `Int`. The entry point a JVM starts at is written with the
-module. The JVM gets `--enable-preview` because every class Lumen writes is a value class, which
+module. The JVM gets `--enable-preview` because every class Bux writes is a value class, which
 JDK 28 holds in preview.
 
 A program reaches its library and the `java.base` module of the JDK, and nothing more of the JDK.
@@ -30,20 +30,20 @@ The JVM gets `--limit-modules java.base`, so no class of `java.naming`, `java.rm
 `java.scripting` loads. It also gets `-Djdk.serialFilter=!*`, so it makes no object from
 serialized bytes. `JAVA_TOOL_OPTIONS`, `JDK_JAVA_OPTIONS`, and `_JAVA_OPTIONS` are removed from
 the environment of the program, because each can add an option such as `-javaagent` to its JVM.
-`lumen test` starts the JVM of its examples in the same way.
+`bux test` starts the JVM of its examples in the same way.
 
 Every word written after the file goes to the program, in that order and unchanged, and nothing
 else does:
 
 ```sh
-lumen run report.lm --wide notes.txt
+bux run report.bx --wide notes.txt
 ```
 
 `--wide` and `notes.txt` are what the program reads out of `arguments`. The name of the program
 is not among them, and a command that writes no word after the file runs it with an empty list.
 
-`--help` is one of those words too, so `lumen run` has no help flag of its own: a word cannot
-mean one thing to the program and another to the runner. Read this topic with `lumen help run`.
+`--help` is one of those words too, so `bux run` has no help flag of its own: a word cannot
+mean one thing to the program and another to the runner. Read this topic with `bux help run`.
 
 The status the run ends with is the `Int` `main` gave back. A program with nothing to say gives
 back `0`. A status is eight bits wide wherever the JDK runs, so a program is ended with the low
@@ -80,8 +80,8 @@ The JDK comes from `JAVA_HOME` and from nowhere else. Searching `PATH` would run
 happened to be first on it, and a build that is reproducible deserves a run that is too. An unset
 `JAVA_HOME`, or one holding no `bin/java`, is reported as such.
 
-What the program writes to standard output and to standard error, `lumen run` passes through
-untouched, and the status the program ends with is the status `lumen run` ends with.
+What the program writes to standard output and to standard error, `bux run` passes through
+untouched, and the status the program ends with is the status `bux run` ends with.
 
 Exit codes before a program runs: 1 when the compiler refuses the program, and 2 when a file
 cannot be read or written, the JDK is not found, or the module declares no `main` at that shape.

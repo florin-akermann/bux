@@ -12,7 +12,7 @@ A later phase produces a new representation rather than annotating this one.
 
 Parsing is fallible, and it stops at the first error.
 The parser reports one error with a span and, where a fix is obvious, a `help:` line.
-Error recovery is not part of version 0.1; one error at a time is what `lumen check` needs.
+Error recovery is not part of version 0.1; one error at a time is what `bux check` needs.
 
 The parser decides nothing a later phase can decide better.
 It does not know which names exist, which are types, or which are variants.
@@ -237,10 +237,10 @@ the grammar expected an expression and the source wrote an operator.
 
 ## Executable examples
 
-`tests/spec/parser/<name>.lm` files are parsed and compared with a sibling expectation file.
+`tests/spec/parser/<name>.bx` files are parsed and compared with a sibling expectation file.
 A `<name>.ast` file holds the parse tree, one node per line, `<indent><node> <start>..<end>`.
 A `<name>.error` file holds `<start>..<end> <message>`, then a `help: <text>` line if there is one.
-A `.lm` file has exactly one of the two, and `tests/siblings.lm` names the failing file.
+A `.bx` file has exactly one of the two, and `tests/siblings.bx` names the failing file.
 An example is a whole program held to `docs/specs/executable-examples.md`, not a fragment.
 
 The two files are the printed form of the parser's answer, and each line of it ends in `\n`.
@@ -252,8 +252,8 @@ Every other character is written as it is, so the printed form of a string has o
 
 ## The parser written in Bux
 
-`compiler/parser.lm` is this parser, written in Bux.
-It reads the tokens of `compiler/lexer.lm` by kind and builds the tree `compiler/ast.lm` declares.
+`compiler/parser.bx` is this parser, written in Bux.
+It reads the tokens of `compiler/lexer.bx` by kind and builds the tree `compiler/ast.bx` declares.
 It is the second phase of the Bux compiler, which `docs/implementation.md` section 6 states.
 
 `parser.printed(source)` gives the printed form: the tree, or the error that stops the parse.
@@ -261,8 +261,8 @@ It is the second phase of the Bux compiler, which `docs/implementation.md` secti
 
 The parser stops at the first error, and the error has a span, a message, and a help line.
 
-`tests/parsing.lm` holds the parser to the properties below, on drawn text and drawn programs.
-`tests/siblings.lm` holds it to every `.ast` and `.error` file under `tests/spec`, line for line.
+`tests/parsing.bx` holds the parser to the properties below, on drawn text and drawn programs.
+`tests/siblings.bx` holds it to every `.ast` and `.error` file under `tests/spec`, line for line.
 
 ## Properties
 

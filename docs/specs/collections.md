@@ -198,7 +198,7 @@ What the map costs is what it holds, and not what was ever put into it.
 
 ## What the language writes it with
 
-Everything here is written in plain Bux, in `library/map.lm` and `library/set.lm`.
+Everything here is written in plain Bux, in `library/map.bx` and `library/set.bx`.
 The whole of it is `List`, `list.at`, `list.push`, declared types, `match`, `if`, `var`, and `for`
 loops, which is what `docs/specs/library.md` holds every library function to.
 

@@ -1,4 +1,4 @@
-# Lumen: Language Design
+# Bux: Language Design
 
 > Go's simplicity.
 > Haskell's type system.
@@ -6,7 +6,7 @@
 > A compiler written in itself.
 
 A small, statically typed language for building practical software.
-It is built on Valhalla, the JVM's value classes, and every Lumen value is a value.
+It is built on Valhalla, the JVM's value classes, and every Bux value is a value.
 No type a program declares has identity, and equality is by state, only where a type asks for it.
 No built-in type is special: a type a library declares can do everything `Int` can.
 It inherits neither Java's object model, Rust's ownership model, nor Haskell's complexity.
@@ -45,8 +45,8 @@ Take one idea from Erlang, and take it whole:
 * a message is the only way one process reaches another
 * a process is cheap, so a program writes as many as the work has parts
 
-That idea is the whole of what Lumen takes.
-Section 15 lists what Erlang does beside it, and Lumen refuses each one.
+That idea is the whole of what Bux takes.
+Section 15 lists what Erlang does beside it, and Bux refuses each one.
 
 ### Haskell / ML
 
@@ -89,7 +89,7 @@ Build every type on the JVM's value classes, so that:
 * a built-in type and a declared type are the same kind of thing
 * boxing is the compiler's business and never a program's
 
-Valhalla's data model is the one part of the JVM Lumen adopts whole, because it is Lumen's own.
+Valhalla's data model is the one part of the JVM Bux adopts whole, because it is Bux's own.
 Every class the compiler writes is a value class, from the first release on.
 
 ### Rust
@@ -134,7 +134,7 @@ In particular, the language should initially avoid:
 * syntactic sugar: `++`, `--`, `-=`, `*=`, `/=`, `%=`, a ternary `?:`
 * anonymous functions
 * async/await, or any other function colouring
-* a crash, a supervisor, or a restart; section 15 says why Lumen needs none of them
+* a crash, a supervisor, or a restart; section 15 says why Bux needs none of them
 * a link, a monitor, a process registry, or hot code loading
 * a mailbox that grows without a bound, or a receive that searches one
 * a channel, or any other message queue that belongs to no process
@@ -145,13 +145,13 @@ In particular, the language should initially avoid:
 
 ### The JVM is a target, not a model
 
-The JVM is where Lumen compiles first, and that is the whole of its authority over the language.
+The JVM is where Bux compiles first, and that is the whole of its authority over the language.
 None of its constraints is inherited.
 Not the object model: no identity, no `is_equal` on everything, no `hashCode`, no root class.
 Not the eight primitive types that are special against every other; `Int` is a type like `User`.
 Not boxing, which a program never observes, and not erasure, which is why a generic boxes.
-What Lumen adopts instead is value semantics, in the shape Valhalla gives a value class.
-That shape is no identity, no null, and equality by state, and every Lumen type already has it.
+What Bux adopts instead is value semantics, in the shape Valhalla gives a value class.
+That shape is no identity, no null, and equality by state, and every Bux type already has it.
 `docs/principles.md` asks of every feature whether the JVM leaks through it; this is the rule.
 
 ### Sugar is a second spelling, and a second spelling is a cost
@@ -163,7 +163,7 @@ So `++`, `--`, `-=`, `*=`, `/=`, `%=`, and a ternary `?:` are not deferred; they
 `a = a + 1` and an `if` say each of them, and say it in the one shape the rest of the language has.
 
 `+=` is the one shorthand the language keeps, because a `for` loop that totals is the everyday
-shape Lumen is built around, and section 8 makes it `Add` exactly as `+` is.
+shape Bux is built around, and section 8 makes it `Add` exactly as `+` is.
 It is the ceiling rather than the first of a set: a second shorthand lands only where it removes a
 class of mistake, never where it removes typing.
 `docs/principles.md` question 9 is what any proposal for one answers.
@@ -181,7 +181,7 @@ A feature that works only because one name is treated apart from the rest is res
 ### Nothing panics
 
 An operation with no answer for some of its input says so in its type, and never at runtime.
-Rust panics on `x / 0` and calls the panic a design; Lumen does not, because a crash is an untyped
+Rust panics on `x / 0` and calls the panic a design; Bux does not, because a crash is an untyped
 answer.
 There is no panic, no trap, no exception, and no `unwrap`: no runtime failure a program can reach.
 Section 5 states the rule, and `docs/principles.md` question 11 asks it of every proposal.
@@ -364,7 +364,7 @@ An operation without an answer for some of its input says so in its type rather 
 That holds for an operator as much as for a function.
 An operator is a function with other syntax, and syntax buys no exemption from the type.
 There is no panic and no trap, so there is no runtime failure for a program to catch or to observe.
-Rust panics on `x / 0` and calls the panic a design; Lumen refuses the trade, and the type answers.
+Rust panics on `x / 0` and calls the panic a design; Bux refuses the trade, and the type answers.
 
 A library module may sit on a platform operation that throws, and gives back a `Result` where it does.
 The throw is caught where the declaration that reaches the operation is written, and never reaches
@@ -406,7 +406,7 @@ Throwing a value away is written rather than implied: `_ = save(user)` says it a
 
 **An unfinished body says so in the language**, with `todo("a reason")` where a value belongs.
 A hole takes whatever type is expected of it, so the work around it is typed like finished work.
-`lumen check` accepts a hole and `lumen build` refuses every one it finds, naming each.
+`bux check` accepts a hole and `bux build` refuses every one it finds, naming each.
 Incompleteness is then greppable and gated, rather than filled in with plausible wrong code.
 `docs/specs/holes.md` states what the two commands do.
 
@@ -854,15 +854,15 @@ fn shared(total: Int, people: Int) -> Option<Int> {
 }
 ```
 
-An example is a line of the comment above the function, and it is Lumen rather than prose.
-It is an expression of type `Bool`, and `lumen test` runs every one a module states.
+An example is a line of the comment above the function, and it is Bux rather than prose.
+It is an expression of type `Bool`, and `bux test` runs every one a module states.
 
 A signature says what a function takes and gives back, and says nothing about what it does.
 Prose says that and drifts, because nothing runs prose.
 An example says it so the compiler can hold the function to it, and a stale one is a failing test.
 
 `main` is exempt: it is reached by running the module, so running the module is its example.
-`lumen check` accepts a function that states none, because a function is written before the
+`bux check` accepts a function that states none, because a function is written before the
 example over it can compile.
 `docs/specs/doc-examples.md` is the specification.
 
@@ -909,7 +909,7 @@ There is exactly one canonical formatting of every program.
 
 **Source that is not in canonical form does not compile**.
 The compiler reports the first deviation as an error, in the same voice as any other diagnostic.
-`lumen fmt` rewrites a file into canonical form; `lumen build` refuses a file that is not in it.
+`bux fmt` rewrites a file into canonical form; `bux build` refuses a file that is not in it.
 
 The formatter is therefore part of the compiler front end, and the pretty-printer is its definition.
 Compilation requires `format(source) == source`, byte for byte.
@@ -958,7 +958,7 @@ Two declarations that use each other are written either way, because no order un
 A new variant then has exactly one place to be handled, and no diff is ever reorder-only.
 
 Order is checked and never rewritten.
-`lumen fmt` repairs whitespace, which is nobody's decision.
+`bux fmt` repairs whitespace, which is nobody's decision.
 Where a declaration belongs is the author's, so the compiler says where rather than moving it.
 
 ---
@@ -1018,7 +1018,7 @@ That object has identity and mutates, so one a process holds is shared state aga
 That is the escape check doing one job rather than a second rule written for the boundary.
 An effect is a capability passed the same way, so effects and resources are one mechanism, not two.
 Elsewhere most of the cost of such a check is closures, which capture capabilities silently.
-Lumen has no anonymous functions, and a named function cannot capture a local.
+Bux has no anonymous functions, and a named function cannot capture a local.
 The escape routes are therefore enumerable, and the rule stays one paragraph.
 That is a standing reason to keep the no-closures rule when it feels inconvenient.
 No syntax is committed.
@@ -1035,7 +1035,7 @@ The escape check above holds two of the three, and a process handle is the one i
 
 ## 15. Concurrency
 
-Lumen adopts Erlang's concurrency model.
+Bux adopts Erlang's concurrency model.
 A process owns its state, a message is the only way to that state, and a process is cheap.
 There is no **`async`/`await`** and no function colouring.
 A function that blocks is an ordinary function, called like any other.
@@ -1091,7 +1091,7 @@ Each arm of that `match` is one call or one name, and never a block, an `if`, or
 That last rule is what keeps a process readable as it grows.
 A branch cannot hold the work, so the author must lift the work out and give it a name.
 The compiler holds the shape, and it does not judge the name it forced the author to write.
-A rule about a good name is not a rule a compiler can hold, and Lumen does not pretend otherwise.
+A rule about a good name is not a rule a compiler can hold, and Bux does not pretend otherwise.
 
 The shape is a declaration rather than a check over a loop a program writes.
 Question 7 of `docs/principles.md` is why: elegance leaves the invalid case unwriteable.
@@ -1118,7 +1118,7 @@ There is no mutable global state, which section 14 lists as an effect for the sa
 A foreign reference is no value a program declared either.
 Section 14 refuses one given to a process, which is the clause that keeps it out.
 
-**A queue belongs to a process, and Lumen has no channel**.
+**A queue belongs to a process, and Bux has no channel**.
 Go gives a queue an identity of its own, and any process may hold it.
 Such a queue is shared mutable state with a name, which the value model refuses everywhere else.
 It also needs rules that a mailbox does not need.
@@ -1139,7 +1139,7 @@ Section 10 states the rule all three stand outside, and a program has no type of
 A mailbox holds a bounded number of messages, and `send` blocks while the mailbox is full.
 That is the whole of backpressure, and every mailbox gives the same answer.
 Erlang lets a mailbox grow without a bound, and one slow process then exhausts the memory.
-Lumen refuses that, because the type system cannot see it and the program cannot recover from it.
+Bux refuses that, because the type system cannot see it and the program cannot recover from it.
 A shared counter, cache, or pool is a process that owns the state and receives requests.
 That is slower than a lock on a hot path, and the trade is accepted.
 A lock-free structure is a platform library reached through `extern`, never something Bux writes.
@@ -1147,16 +1147,16 @@ A lock-free structure is a platform library reached through `extern`, never some
 **A message that cannot arrive is a typed result, never a silent drop**.
 A process ends when `receive` gives `Done`, and its mailbox ends with it.
 Erlang drops a message sent to a process that has ended, and it never tells the sender.
-Lumen says so in the type of `send`, because section 5 gives every operation an answer.
-The same rule refuses Erlang's crash: no Lumen process fails, so none needs a restart.
-A supervisor, a link, and a monitor each answer a failure that Lumen's types answer first.
+Bux says so in the type of `send`, because section 5 gives every operation an answer.
+The same rule refuses Erlang's crash: no Bux process fails, so none needs a restart.
+A supervisor, a link, and a monitor each answer a failure that Bux's types answer first.
 A process reports an end the sender must know about through a message, as every result travels.
 Cancellation is a message, and the spec names the idiom rather than adding a primitive.
 
 **A mailbox is read in order, and nothing searches it**.
 Erlang's selective receive walks the mailbox for a message that matches and leaves the rest behind.
 It reads well, and it costs one scan for each receive, which a full mailbox makes slow.
-Lumen gives `receive` the next message, and a process that must wait holds that in its own state.
+Bux gives `receive` the next message, and a process that must wait holds that in its own state.
 A `send` says how long it waits for room: not at all, some milliseconds, or with no limit.
 That is what a bus that drops the oldest message needs, and no other primitive answers it.
 A process never calls `receive` itself, so a deadline on the receiving side is not a value it holds.
@@ -1164,7 +1164,7 @@ A process never wakes without a message, and a tick is a message that another pr
 
 **An in-application message bus is a library type, not a primitive**.
 A `send` names the process it reaches, and a program often has a message that whoever cares reads.
-A bus is the process that closes that gap, and it is written in Lumen the day a program needs one.
+A bus is the process that closes that gap, and it is written in Bux the day a program needs one.
 It carries messages between the processes of one program, and it never leaves that program.
 It holds the handles of its subscribers, and it gives every message to every one of them.
 A subscriber joins by sending the bus one message.
@@ -1184,7 +1184,7 @@ That is why the process is underneath and the bus on top.
 A bus that crosses a network is a different thing, and the paragraph below says where it lives.
 
 Distributed messaging is a platform library, never part of the language or its runtime.
-Erlang makes a remote process look like a local one, and Lumen does not.
+Erlang makes a remote process look like a local one, and Bux does not.
 A network call fails where a local `send` does not, and one name for both hides that difference.
 A transport that shares the mailbox's receive shape gets a library wrapper once a program needs one.
 
@@ -1214,7 +1214,7 @@ fn greet(name: String) {
 ```
 
 A reader who meets `io.print` knows where to look without knowing what else the file imports.
-An unqualified import would take that away, so Lumen has none.
+An unqualified import would take that away, so Bux has none.
 
 **One name has one definition**.
 No two declarations of a module share a name, and no binding hides a name already in scope.
@@ -1251,7 +1251,7 @@ A dot after anything else reads a field, so `maybe.or(0)` is refused and `or(may
 Section 11 states why a function is called one way.
 
 An import names the file the module is written in, beside the file that writes the import.
-`import greeting` therefore reads `greeting.lm` from the same directory, and nowhere else but
+`import greeting` therefore reads `greeting.bx` from the same directory, and nowhere else but
 a package this one depends on.
 A ring of imports is refused: a module is compiled after what it imports, and a ring has no such
 order.

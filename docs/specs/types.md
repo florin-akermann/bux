@@ -67,7 +67,7 @@ Every element is evaluated once, left to right, in the order it is written.
 Version 0.1 has no way to add to a list it has already built, so a list is written whole.
 
 Every operator is a trait method, which `docs/design.md` section 8 states.
-`library/prelude.lm` writes the instances of each over the types the JVM holds, which is what a
+`library/prelude.bx` writes the instances of each over the types the JVM holds, which is what a
 program gets without writing one of its own:
 
 ```text
@@ -259,17 +259,17 @@ Inference stops at the first error it reaches, which is the one lowest in the fi
 
 ## The type inference written in Bux
 
-`compiler/types.lm` is this phase, written in Bux.
-It reads each module that `compiler/resolver.lm` resolves, in the order `compiler/modules.lm` loads.
+`compiler/types.bx` is this phase, written in Bux.
+It reads each module that `compiler/resolver.bx` resolves, in the order `compiler/modules.bx` loads.
 Seven more modules hold the parts of the phase, one concern each, and no two import each other.
-`compiler/unify.lm` holds the types, the unification table, and the schemes.
-`compiler/refusal.lm` holds each refusal, with its code, its message, and its help.
-`compiler/boundary.lm` holds the rules for a type that crosses to Java.
+`compiler/unify.bx` holds the types, the unification table, and the schemes.
+`compiler/refusal.bx` holds each refusal, with its code, its message, and its help.
+`compiler/boundary.bx` holds the rules for a type that crosses to Java.
 It asks `java.lang.Character` whether each code point of a Java name is a letter or a number.
-`compiler/surface.lm` holds what a module offers the modules that import it.
-`compiler/declared.lm` holds what a module declares, with the checks of each declaration.
-`compiler/infer.lm` walks each function and settles what the walk left open.
-`compiler/carried.lm` reads the settled types, and refuses an `Option<()>` that inference reached.
+`compiler/surface.bx` holds what a module offers the modules that import it.
+`compiler/declared.bx` holds what a module declares, with the checks of each declaration.
+`compiler/infer.bx` walks each function and settles what the walk left open.
+`compiler/carried.bx` reads the settled types, and refuses an `Option<()>` that inference reached.
 
 The unification table is a value: each step gives back a new table, and no step changes one.
 The table is a `Map` from each type variable to the type it was settled on.
@@ -282,10 +282,10 @@ The phase reads no file for the prelude, so the caller gives it the prelude.
 `types.surface_of` gives what an inferred module offers, and `surface.offering` adds it.
 
 It stops at the first refusal, which has a code, a span, a message, and a help line.
-A module that the phase infers has the `lumen api` page of `docs/specs/api-surface.md`.
+A module that the phase infers has the `bux api` page of `docs/specs/api-surface.md`.
 
-`tests/typing.lm` and `tests/conventions.lm` hold the phase to its properties, on drawn modules.
-`tests/siblings.lm` holds the page of each example to its `.api` file.
+`tests/typing.bx` and `tests/conventions.bx` hold the phase to its properties, on drawn modules.
+`tests/siblings.bx` holds the page of each example to its `.api` file.
 
 ## Properties
 

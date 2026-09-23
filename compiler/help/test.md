@@ -1,7 +1,7 @@
 Run the examples a module states about its functions.
 
-Every function a module declares at the top level states at least one example, and `lumen test`
-runs them. An example is a line of the comment above the function, and it is Lumen rather than
+Every function a module declares at the top level states at least one example, and `bux test`
+runs them. An example is a line of the comment above the function, and it is Bux rather than
 prose:
 
 ```text
@@ -25,26 +25,26 @@ running the module is its example. An example written anywhere else — inside a
 above `main`, or above nothing at all — is refused rather than skipped, because a marker the run
 would silently pass over is a claim nobody would ever check.
 
-The examples are run as a module, because a module is the only thing there is to run. `lumen test`
+The examples are run as a module, because a module is the only thing there is to run. `bux test`
 writes one out of what it was given: the module's imports, a `main` that tries each example in
 turn, and every declaration the module makes other than its own `main`. That module is compiled
 and started the way any other is, its class files go into a directory made for that run alone so
-nothing `lumen build` wrote is touched, and a refusal of it is reported against the line in the
+nothing `bux build` wrote is touched, and a refusal of it is reported against the line in the
 original file. Every module it imports is compiled into that directory too, so an example reaching
 a name through an import runs exactly as the module does.
 
 The run says which example did not hold by writing a line, and every line it writes opens with a
 mark of its own, so a line the program writes for itself is never read as a report. Writing a line
 is what `io.println` is for, so the module the run writes reaches `io`; a module that declares `io`
-of its own leaves the run no room, and `L0604` says so. Only `lumen test` is affected, because only
-`lumen test` writes a module.
+of its own leaves the run no room, and `L0604` says so. Only `bux test` is affected, because only
+`bux test` writes a module.
 
 A run in which every example held prints nothing, as every command that found nothing to report
 prints nothing. An example that did not hold is reported as `L0603`, where it is written, and
 every one that did not hold is reported rather than the first. A module that states no example has
 nothing to run, and a module of types alone is such a module.
 
-Running needs a JDK, which comes from `JAVA_HOME` and from nowhere else, exactly as `lumen run`
+Running needs a JDK, which comes from `JAVA_HOME` and from nowhere else, exactly as `bux run`
 takes it.
 
 Exit codes: 0 when every example the module states held, 1 when the compiler refuses the module or

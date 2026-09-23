@@ -1,0 +1,474 @@
+// The runner: every example under `tests/spec`, every sibling file, every `// example:` line, every
+// drawn property, and the command line, held in one JVM.
+//
+// `docs/implementation.md` section 7 states the runner, and `bin/runner` starts it from the root
+// of the repository. It splits the parts into jobs, and a pool hands each job to a worker, one
+// worker for each processor. When the pool ends, the runner writes a line for each part, then a
+// line for each check it skipped and for each failure, then a line that counts what it held. It
+// ends with status 0 only where nothing failed. With the word `golden`, it writes the golden files
+// under `tests/commands` again and holds nothing.
+import boundaries
+import branching
+import collected
+import command
+import commanded
+import conventions
+import covered
+import crossing
+import deriving
+import documented
+import enacted
+import escaping
+import exampled
+import exemplified
+import held
+import instances
+import io
+import ir
+import launched
+import layout
+import lexing
+import list
+import loading
+import lowering
+import map
+import modules
+import naming
+import operating
+import paged
+import parsing
+import rendering
+import siblings
+import spawned
+import started
+import typing
+import unfinished
+import walk
+import written
+
+fn main(arguments: List<String>) -> Int {
+    library := ir.library_read(or(modules.carried("prelude"), ""))
+    if or(list.at(arguments, 0), "") == "golden" {
+        commanded.every_golden_written(library, start_limit())
+        return 0
+    }
+    counted := every_part_held(Setting { library: library, limit: start_limit() })
+    for line in counted.told {
+        io.println(line)
+    }
+    for skipped in counted.all.skipped {
+        io.println("skipped: " + skipped)
+    }
+    for failure in counted.all.failures {
+        io.println(failure)
+    }
+    io.println(summary(counted))
+    status_of(counted.all)
+}
+
+/// Every part of the runner, its jobs held by a pool of one worker for each processor.
+///
+/// The parts are counted from the last state of the pool in the order of the jobs, so no line
+/// depends on which worker ends first.
+// example: processors() > 0
+fn every_part_held(setting: Setting) -> Counted {
+    workers := processors()
+    jobs := every_job(chunks: workers, root: ok_or(modules.canonical_path(modules.file_at(".")), "."))
+    counted_of(jobs, pooled(jobs, setting, workers).answers)
+}
+
+/// Every job of the runner, those that took longest on 2026-09-24 first, so that no long job
+/// starts after the short ones.
+///
+/// The example lines and the examples are each split into `chunks` jobs at most.
+// example: list.length(every_job(chunks: 1, root: "no-such-directory")) == 10
+fn every_job(chunks: Int, root: String) -> List<Job> {
+    var jobs = []
+    for paths in chunks_of(values: documented.modules_of("tests/spec", ["library", "compiler", "tests"]), count: chunks) {
+        jobs = list.push(jobs, LinesOf(paths))
+    }
+    for path in commanded.golden_files() {
+        jobs = list.push(jobs, GoldenOf(path))
+    }
+    jobs = command.all_of(jobs, [PropertiesOf, Explanations, Scenes, StartedRuns, LauncherOf(root)])
+    for paths in chunks_of(values: walk.every_file("tests/spec", ".bx"), count: chunks) {
+        jobs = list.push(jobs, ExamplesOf(paths))
+    }
+    list.push(jobs, SiblingsOf)
+}
+
+/// `values` split into at most `count` pieces of one size, in order, and one empty piece where
+/// there are no values.
+///
+/// Neighbours stay together, so the modules of one directory, which import each other, are typed
+/// once in one job. Pieces dealt in turn were tried on 2026-09-24, and they cost more time.
+// example: chunks_of(values: ["a", "b", "c"], count: 2) == [["a", "b"], ["c"]]
+// example: chunks_of(values: [], count: 2) == [[]]
+fn chunks_of(values: List<String>, count: Int) -> List<List<String>> {
+    size := or((list.length(values) + count - 1) / count, list.length(values))
+    var pieces = []
+    var piece = []
+    for value in values {
+        piece = list.push(piece, value)
+        if list.length(piece) == size {
+            pieces = list.push(pieces, piece)
+            piece = []
+        }
+    }
+    if list.length(piece) > 0 || list.length(pieces) == 0 {
+        pieces = list.push(pieces, piece)
+    }
+    pieces
+}
+
+/// The last state of a pool that held `jobs` with `workers` workers, each given `setting`.
+///
+/// The pool holds each answer until every worker has left, and then it ends. Each worker is
+/// waited for before the pool, so a worker that a JVM error stops, such as a stack overflow,
+/// stops the runner with that error, and the runner does not wait for an answer that never comes.
+// example: pooled([], Setting { library: ir.little_library(), limit: 1 }, 2).workers == 1
+fn pooled(jobs: List<Job>, setting: Setting, workers: Int) -> Pooling {
+    pooling := spawn Pool(jobs, workers)
+    var working = []
+    for list.length(working) < workers {
+        worker := spawn Worker(pooling, setting)
+        _ = send(pooling, Joined(worker), NoLimit)
+        working = list.push(working, worker)
+    }
+    for worker in working {
+        _ = ended(worker)
+    }
+    ended(pooling)
+}
+
+/// The pool: it hands each job to a worker that asks, and holds each answer by the number of its
+/// job. It ends when every worker it was given has left.
+process Pool {
+    fn start(jobs: List<Job>, workers: Int) -> Pooling {
+        Pooling { jobs: jobs, handed: 0, answers: map.empty(), workers: workers }
+    }
+
+    fn receive(pooling: Pooling, message: Pooled) -> Next<Pooling> {
+        match message {
+            Joined(worker) => Continue(handed_to(pooling, worker))
+            Finished(answer, worker) => Continue(answer_kept(pooling, answer, worker))
+            Left => worker_left(pooling)
+        }
+    }
+}
+
+/// `pooling` with `answer` held by the number of its job, and `worker` handed the next job.
+// example: or(map.get(pooled([ExamplesOf([])], Setting { library: ir.little_library(), limit: 1 }, 1).answers, 0), unanswered(5)).number == 0
+fn answer_kept(pooling: Pooling, answer: Answer, worker: Process<Work, Working>) -> Pooling {
+    handed_to(pooling { answers: map.insert(pooling.answers, answer.number, answer) }, worker)
+}
+
+/// `pooling` after `worker` is sent the next job, or told to stop where no job is left.
+// example: pooled([ExamplesOf([])], Setting { library: ir.little_library(), limit: 1 }, 2).handed == 1
+fn handed_to(pooling: Pooling, worker: Process<Work, Working>) -> Pooling {
+    match list.at(pooling.jobs, pooling.handed) {
+        Some(job) => handed_job(pooling, Given { number: pooling.handed, job: job, worker: worker })
+        None => stopped(pooling, worker)
+    }
+}
+
+/// `pooling` once the job of `given` is sent to its worker, with one more job handed.
+// example: pooled([ExamplesOf([]), ExamplesOf([])], Setting { library: ir.little_library(), limit: 1 }, 1).handed == 2
+fn handed_job(pooling: Pooling, given: Given) -> Pooling {
+    _ = send(given.worker, Give(given), NoLimit)
+    pooling { handed: pooling.handed + 1 }
+}
+
+/// `pooling` once `worker` is told to stop.
+// example: pooled([], Setting { library: ir.little_library(), limit: 1 }, 3).handed == 0
+fn stopped(pooling: Pooling, worker: Process<Work, Working>) -> Pooling {
+    _ = send(worker, Stop, NoLimit)
+    pooling
+}
+
+/// The pool with one worker fewer, which has ended where that worker was the last.
+// example: pooled([], Setting { library: ir.little_library(), limit: 1 }, 3).workers == 1
+fn worker_left(pooling: Pooling) -> Next<Pooling> {
+    if pooling.workers == 1 {
+        return Done
+    }
+    Continue(pooling { workers: pooling.workers - 1 })
+}
+
+/// A worker holds each job it is given, sends the answer to the pool, and leaves when told to stop.
+process Worker {
+    fn start(pool: Process<Pooled, Pooling>, setting: Setting) -> Working {
+        Working { pool: pool, setting: setting }
+    }
+
+    fn receive(working: Working, message: Work) -> Next<Working> {
+        match message {
+            Give(given) => Continue(worked(working, given))
+            Stop => quit(working)
+        }
+    }
+}
+
+/// `working` once the job of `given` is held and its answer is sent to the pool.
+// example: list.length(or(map.get(pooled([ExamplesOf([])], Setting { library: ir.little_library(), limit: 1 }, 1).answers, 0), unanswered(0)).found) == 1
+fn worked(working: Working, given: Given) -> Working {
+    mark := command.nanoseconds()
+    found := job_held(given.job, working.setting)
+    answer := Answer { number: given.number, found: found, nanoseconds: command.nanoseconds() - mark }
+    _ = send(working.pool, Finished(answer, given.worker), NoLimit)
+    working
+}
+
+/// The end of a worker, once it tells the pool that it has left.
+// example: pooled([], Setting { library: ir.little_library(), limit: 1 }, 1).workers == 1
+fn quit(working: Working) -> Next<Working> {
+    _ = send(working.pool, Left, NoLimit)
+    Done
+}
+
+/// What `job` held: one `Held` for each part it is, and one for each property where it is those.
+// example: list.length(job_held(ExamplesOf([]), Setting { library: ir.little_library(), limit: 1 })) == 1
+fn job_held(job: Job, setting: Setting) -> List<held.Held> {
+    match job {
+        LinesOf(paths) => [documented.every_line_held(paths, setting.library, command.no_memo(), setting.limit)]
+        GoldenOf(path) => [commanded.golden_held(path, setting.library, setting.limit)]
+        Explanations => [commanded.every_explanation_held(setting.library)]
+        Scenes => [enacted.every_scene_held(setting.library, setting.limit)]
+        StartedRuns => [started.every_run_held(setting.library, setting.limit)]
+        LauncherOf(root) => [launched.every_start_held(root, setting.limit)]
+        ExamplesOf(paths) => [exemplified.every_example_held("tests/spec", paths, setting.library, setting.limit)]
+        PropertiesOf => every_property_held(setting.library)
+        SiblingsOf => [siblings.every_sibling_held(setting.library, "tests/spec")]
+    }
+}
+
+/// The processors the JVM may use, which is how many workers the pool has.
+// example: processors() > 0
+fn processors() -> Int {
+    processors_of(machine())
+}
+
+/// What each part held, counted from the `answers` of the pool in the order of `jobs`.
+// example: list.length(counted_of([], map.empty()).told) == 5
+fn counted_of(jobs: List<Job>, answers: map.Map<Int, Answer>) -> Counted {
+    examples := part_tally(Examples, jobs, answers)
+    beside := part_tally(Siblings, jobs, answers)
+    lines := part_tally(Lines, jobs, answers)
+    properties := part_tally(Properties, jobs, answers)
+    commands := part_tally(Commands, jobs, answers)
+    each := [every_of(examples.found), every_of(beside.found), every_of(lines.found), every_of(properties.found), every_of(commands.found)]
+    told := [told_line("examples", examples), told_line("siblings", beside), told_line("example lines", lines), progress_line(part: "properties", cases: list.length(properties.found), nanoseconds: properties.nanoseconds), told_line("command lines", commands)]
+    Counted { examples: every_of(examples.found), siblings: every_of(beside.found), lines: every_of(lines.found), properties: properties.found, commands: every_of(commands.found), all: every_of(each), told: told }
+}
+
+/// Every answer of the jobs of `part`, in the order of `jobs`, and the time the workers spent on
+/// them. A job with no answer is a failure, which a pool that ends only when its workers leave
+/// never gives.
+// example: list.length(part_tally(Siblings, [SiblingsOf], map.empty()).found) == 1
+fn part_tally(part: Part, jobs: List<Job>, answers: map.Map<Int, Answer>) -> Tally {
+    var tally = Tally { found: [], nanoseconds: 0 }
+    var number = 0
+    for job in jobs {
+        if part_of(job) == part {
+            answer := or(map.get(answers, number), unanswered(number))
+            tally = Tally { found: command.all_of(tally.found, answer.found), nanoseconds: tally.nanoseconds + answer.nanoseconds }
+        }
+        number += 1
+    }
+    tally
+}
+
+/// The answer of the job numbered `number` where the pool holds none.
+// example: every_of(unanswered(3).found).failures == ["job 3: no worker gave an answer"]
+fn unanswered(number: Int) -> Answer {
+    Answer { number: number, found: [held.with_failure(held.nothing_failed(0), "job " + shown(number) + ": no worker gave an answer")], nanoseconds: 0 }
+}
+
+/// The part of the runner that `job` is a piece of.
+// example: part_of(LauncherOf(".")) == Commands
+fn part_of(job: Job) -> Part {
+    match job {
+        LinesOf(_) => Lines
+        GoldenOf(_) => Commands
+        Explanations => Commands
+        Scenes => Commands
+        StartedRuns => Commands
+        LauncherOf(_) => Commands
+        ExamplesOf(_) => Examples
+        PropertiesOf => Properties
+        SiblingsOf => Siblings
+    }
+}
+
+/// The line of a part: its name, how many cases it held, and the seconds its workers spent on it.
+// example: told_line("siblings", Tally { found: [held.nothing_failed(58)], nanoseconds: 0 }) == "siblings: 58 held in 0 s"
+fn told_line(part: String, tally: Tally) -> String {
+    progress_line(part: part, cases: every_of(tally.found).cases, nanoseconds: tally.nanoseconds)
+}
+
+/// The seconds every program the runner starts has to end in, after which it is stopped.
+///
+/// `docs/implementation.md` section 7 states why it is this number.
+// example: start_limit() == 60
+fn start_limit() -> Int {
+    60
+}
+
+/// The line written for a part: its name, how many cases it held, and its whole seconds.
+// example: progress_line(part: "examples", cases: 332, nanoseconds: 41400000000) == "examples: 332 held in 41 s"
+fn progress_line(part: String, cases: Int, nanoseconds: Int) -> String {
+    seconds := or((nanoseconds + 500000000) / 1000000000, 0)
+    part + ": " + shown(cases) + " held in " + shown(seconds) + " s"
+}
+
+/// Every drawn property, each tried on the same number of drawn cases, in a fixed order.
+// example: list.length(command.all_of([held.nothing_failed(1)], [held.nothing_failed(2)])) == 2
+fn every_property_held(library: ir.Library) -> List<held.Held> {
+    cases := 100
+    var found = lexing.every_property(cases, library)
+    found = command.all_of(found, parsing.every_property(cases, library))
+    found = command.all_of(found, layout.every_property(cases, library))
+    found = command.all_of(found, collected.every_property(cases, library))
+    found = command.all_of(found, rendering.every_property(cases, library))
+    found = command.all_of(found, exampled.every_property(cases, library))
+    found = command.all_of(found, covered.every_property(cases, library))
+    found = command.all_of(found, unfinished.every_property(cases, library))
+    found = command.all_of(found, paged.every_property(cases, library))
+    found = command.all_of(found, naming.every_property(cases, library))
+    found = command.all_of(found, loading.every_property(cases, library))
+    found = command.all_of(found, typing.every_property(cases, library))
+    found = command.all_of(found, conventions.every_property(cases, library))
+    found = command.all_of(found, boundaries.every_property(cases, library))
+    found = command.all_of(found, operating.every_property(cases, library))
+    found = command.all_of(found, deriving.every_property(cases, library))
+    found = command.all_of(found, lowering.every_property(cases, library))
+    found = command.all_of(found, branching.every_property(cases, library))
+    found = command.all_of(found, crossing.every_property(cases, library))
+    found = command.all_of(found, instances.every_property(cases, library))
+    found = command.all_of(found, escaping.every_property(cases, library))
+    found = command.all_of(found, written.every_property(cases, library))
+    command.all_of(found, spawned.every_property(cases, library))
+}
+
+/// The line that counts what the runner held, what it could not try, and what failed.
+// example: summary(Counted { examples: held.nothing_failed(2), siblings: held.nothing_failed(1), lines: held.nothing_failed(3), properties: [held.nothing_failed(100)], commands: held.nothing_failed(4), all: held.nothing_failed(110), told: [] }) == "runner: 2 examples, 1 siblings, 3 example lines, 1 properties of 100 drawn cases, 4 command lines; 0 failed, 0 skipped"
+fn summary(counted: Counted) -> String {
+    drawn := shown(list.length(counted.properties)) + " properties of " + shown(every_of(counted.properties).cases) + " drawn cases"
+    held_part := shown(counted.examples.cases) + " examples, " + shown(counted.siblings.cases) + " siblings, " + shown(counted.lines.cases) + " example lines, " + drawn + ", " + shown(counted.commands.cases) + " command lines"
+    "runner: " + held_part + "; " + shown(list.length(counted.all.failures)) + " failed, " + shown(list.length(counted.all.skipped)) + " skipped"
+}
+
+/// The status the runner ends with: 0 where nothing failed, and 1 where anything did.
+// example: status_of(held.nothing_failed(1)) == 0
+// example: status_of(held.with_failure(held.nothing_failed(1), "a.bx: gone")) == 1
+fn status_of(all: held.Held) -> Int {
+    if held.is_held(all) {
+        return 0
+    }
+    1
+}
+
+/// Everything each of `parts` held, together.
+// example: every_of([held.nothing_failed(2), held.nothing_failed(3)]).cases == 5
+fn every_of(parts: List<held.Held>) -> held.Held {
+    var found = held.nothing_failed(0)
+    for part in parts {
+        found = held.added(found, part)
+    }
+    found
+}
+
+/// The JVM this program runs on, which says how many processors it may use.
+extern static machine() -> Machine = "java.lang.Runtime.getRuntime"
+
+/// How many processors the JVM may use, which is never fewer than one.
+extern method int processors_of(running: Machine) -> Int = "availableProcessors"
+
+/// The JVM this program runs on.
+extern type Machine = "java.lang.Runtime"
+
+/// What each part of the runner held, all of it together, and the line written for each part.
+type Counted = {
+    examples: held.Held
+    siblings: held.Held
+    lines: held.Held
+    properties: List<held.Held>
+    commands: held.Held
+    all: held.Held
+    told: List<String>
+}
+
+derive Eq for Part
+
+/// A part of the runner, which the runner writes one line for.
+type Part =
+    | Examples
+    | Siblings
+    | Lines
+    | Properties
+    | Commands
+
+/// Every answer of one part, and the nanoseconds the workers spent on them.
+type Tally = {
+    found: List<held.Held>
+    nanoseconds: Int
+}
+
+/// What the pool is sent: a worker that asks for a job, an answer and its worker, or a worker
+/// that has left.
+type Pooled =
+    | Joined(Process<Work, Working>)
+    | Finished(Answer, Process<Work, Working>)
+    | Left
+
+/// What a worker is sent: a job, or the word to stop.
+type Work =
+    | Give(Given)
+    | Stop
+
+/// A job, the number it has in the list of jobs, and the worker it is handed to.
+type Given = {
+    number: Int
+    job: Job
+    worker: Process<Work, Working>
+}
+
+/// The state of a worker: the pool it answers to, and what every job needs.
+type Working = {
+    pool: Process<Pooled, Pooling>
+    setting: Setting
+}
+
+/// The state of the pool: every job, how many are handed, each answer by its job, and how many
+/// workers have not left.
+type Pooling = {
+    jobs: List<Job>
+    handed: Int
+    answers: map.Map<Int, Answer>
+    workers: Int
+}
+
+/// One piece of the work of the runner, which one worker holds.
+type Job =
+    | LinesOf(List<String>)
+    | GoldenOf(String)
+    | Explanations
+    | Scenes
+    | StartedRuns
+    | LauncherOf(String)
+    | ExamplesOf(List<String>)
+    | PropertiesOf
+    | SiblingsOf
+
+/// What one job held, the number of that job, and the nanoseconds it took.
+type Answer = {
+    number: Int
+    found: List<held.Held>
+    nanoseconds: Int
+}
+
+/// What every job needs: the library the compiler reads, and the limit of each started program.
+type Setting = {
+    library: ir.Library
+    limit: Int
+}

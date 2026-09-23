@@ -107,8 +107,8 @@ adding the missing arm is what settles where the arms go.
 
 ## The exhaustiveness check written in Bux
 
-`compiler/exhaustiveness.lm` is this phase written in Bux.
-It reads each module that `compiler/types.lm` infers, in the order `compiler/modules.lm` loads.
+`compiler/exhaustiveness.bx` is this phase written in Bux.
+It reads each module that `compiler/types.bx` infers, in the order `compiler/modules.bx` loads.
 The algorithm costs one row for each arm, and it reads one column at a time.
 The constructors of each type are a `List` for each type and a `Map` from each name to its type.
 Each other table of the phase is a `List` of the library.
@@ -116,7 +116,7 @@ Each other table of the phase is a `List` of the library.
 `exhaustiveness.check(inferred)` checks one inferred module against the types that it reaches.
 It stops at the first refusal, which has a code, a span, a message, and a help line.
 
-`tests/covered.lm` holds the check to the properties below, on modules with a `match` of drawn arms.
+`tests/covered.bx` holds the check to the properties below, on modules with a `match` of drawn arms.
 
 ## Properties
 

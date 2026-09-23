@@ -6,7 +6,7 @@ A program that can work something out and show nobody is not much of a program.
 Version 0.1 has no way to write a line and none to read a file, and `io` and `files` give it one.
 `docs/design.md` section 16 states how a module is reached; this spec states what these two hold.
 
-They are library modules: the compiler carries the Lumen source of each and loads it as it loads
+They are library modules: the compiler carries the Bux source of each and loads it as it loads
 `list` and `strings`, which `docs/specs/library.md` states.
 What they hold is a call of the JVM's own, and `docs/specs/interop.md` states the declaration that
 names one.
@@ -29,7 +29,7 @@ Both go to the standard output a JVM starts with, and neither gives anything bac
 `io.eprintln` writes `text` and then a line break, on standard error rather than standard output.
 Standard error is where a program says what went wrong, so what it says there stays apart from
 the answer it writes on standard output, and a reader of either channel reads one thing.
-`docs/specs/run.md` has `lumen run` pass both through unchanged.
+`docs/specs/run.md` has `bux run` pass both through unchanged.
 
 `files.read` reads the whole file at `path` and gives back its text.
 Reading can fail, so it gives back a `Result`, as `docs/design.md` section 5 requires of one.
@@ -42,7 +42,7 @@ one of them names.
 `docs/specs/api-surface.md` makes every top-level name public, and neither module is exempt, so
 `io.out`, `io.err`, `io.put`, `io.put_line`, `io.PrintStream`, `files.read_whole`,
 `files.as_a_path`, `files.named`, `files.File`, and `files.Path` are each reachable by name.
-That is what writing these two in Lumen costs, and it is the price of their being modules rather
+That is what writing these two in Bux costs, and it is the price of their being modules rather
 than a table inside the compiler.
 A program that wants a line written writes `io.println`, and the rest is how that is built.
 
@@ -155,7 +155,7 @@ A class file is built of three more that no declaration here writes.
 `java.lang.Throwable` and `java.lang.AssertionError` are what a guard and an unreachable arm are
 made of.
 `docs/specs/codegen.md` states each of the three.
-A `List` is held as `lumen.List`, which the build writes, so it is no JVM class that these reach.
+A `List` is held as `bux.List`, which the build writes, so it is no JVM class that these reach.
 `java.util.stream.Stream`, `java.util.List`, and `java.util.Iterator` are each an interface, which
 the declaration says with the word `docs/specs/interop.md` gives it.
 `java.lang.Object` is what an entry of a listing is held as, because `java.util.Iterator.next`
@@ -200,7 +200,7 @@ The writer is closed and asked `checkError`, as `files.write` asks it.
 So `files` reaches two more JVM classes: `java.lang.Character`, and `java.lang.Long`.
 The refusal of a value shows that value, and `java.lang.Long.toString` shows a number.
 
-`tests/spec/io/bytes_written.lm` writes bytes, reads them back as text, and shows them.
+`tests/spec/io/bytes_written.bx` writes bytes, reads them back as text, and shows them.
 `docs/specs/codegen.md` states the one caller in the compiler, which writes each class file.
 
 ## The errors
@@ -213,7 +213,7 @@ Every module is held to that rule, which `docs/specs/modules.md` states.
 
 ## What the bytes look like
 
-Nothing here is visible from Lumen, and `docs/specs/codegen.md` states the rest of it.
+Nothing here is visible from Bux, and `docs/specs/codegen.md` states the rest of it.
 
 Each module is a class of its own, and a call of `io.println` is a static call of that class, the
 way a call of `strings.join` is.
@@ -231,7 +231,7 @@ The two steps that can throw are each declared with a `Result`, so each is a gua
 own, which every `extern` already is.
 Those are the only places the compiler catches anything, and each catches only to build the
 `Result` its declaration promises.
-A Lumen value is never asked what it is, and the one thing asked here is not a Lumen value.
+A Bux value is never asked what it is, and the one thing asked here is not a Bux value.
 
 ## Starting a program
 

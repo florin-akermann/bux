@@ -6,27 +6,27 @@ A checked module becomes class files a JVM can load.
 The phase consumes the typed tree, lowers it to a JVM intermediate representation, and writes the
 class files that representation describes.
 `docs/implementation.md` section 1 sets the target: JDK 28 or later, and no older JVM.
-Every class written is a Valhalla value class, which is how a Lumen value stays a value on a JVM.
+Every class written is a Valhalla value class, which is how a Bux value stays a value on a JVM.
 
-Nothing in this spec is visible from Lumen.
-A reader of a Lumen program never needs it, and no diagnostic mentions a class, a descriptor, or a
+Nothing in this spec is visible from Bux.
+A reader of a Bux program never needs it, and no diagnostic mentions a class, a descriptor, or a
 stack frame.
 It is written down because the output is a contract with the JVM, and because two compilations of
 one source must produce the same bytes.
 
 ## What is written
 
-`lumen build <file>` writes every class of a build into one `target/`, in that file's directory.
+`bux build <file>` writes every class of a build into one `target/`, in that file's directory.
 That `target/` is the whole class path for classes, and `docs/specs/run.md` states the rest.
-A module is one source file, so `demo.lm` yields these under `target/`, and none beside a source:
+A module is one source file, so `demo.bx` yields these under `target/`, and none beside a source:
 
 ```text
 demo.class                   the module: one static method per function
 demo/User.class              one class per type the module declares
 demo/Payment$Failed.class    one class per variant of an algebraic data type
-lumen/Option.class           the prelude types, which every module may reach
-lumen/List.class             what carries a list: a buffer and a length
-lumen/library/prelude.class  the prelude's instances over a list, at each set of types asked
+bux/Option.class           the prelude types, which every module may reach
+bux/List.class             what carries a list: a buffer and a length
+bux/library/prelude.class  the prelude's instances over a list, at each set of types asked
 ```
 
 The module class is named after the file, so a file whose name is not one a class may have is
@@ -36,33 +36,33 @@ A type declared in the module is a class in a package named after the module.
 A variant of an algebraic data type is a class of that package, named for its type, then itself.
 A type and a variant may share a name, so the name of each variant starts with the type's name.
 
-The prelude types are written on every build, in the package `lumen`.
+The prelude types are written on every build, in the package `bux`.
 They are `Option`, `Result`, `Next`, `Sent`, and `Waiting`, and each of their variants.
-`lumen/List` is written with them, and "How a list is carried" below states it.
+`bux/List` is written with them, and "How a list is carried" below states it.
 Writing them with the module keeps a build self-contained: there is no runtime jar to install and
 no version of one to agree with.
 
 A program of several modules is one set for each module, and that one `target/` holds them all.
-Each module is its own class in its own package, so `greeting.lm` yields `greeting.class` too.
+Each module is its own class in its own package, so `greeting.bx` yields `greeting.class` too.
 A module that nothing imports is not read and not written, as `docs/specs/modules.md` states.
 
-A module of the library is a class of the package `lumen/library`, as `lumen/library/strings`.
-A module of the program is a class of no package, so a program file `strings.lm` is `strings`.
+A module of the library is a class of the package `bux/library`, as `bux/library/strings`.
+A module of the program is a class of no package, so a program file `strings.bx` is `strings`.
 So a program may name a module as the library names one, and the two classes never clash.
-The package also keeps each module name apart from each type name of `lumen` on any file system.
+The package also keeps each module name apart from each type name of `bux` on any file system.
 
 ## What a value is
 
-A Lumen type is carried by a JVM type:
+A Bux type is carried by a JVM type:
 
 ```text
 Int             long
 Bool            boolean
 String          java.lang.String
 a declared type the class written for it
-Option<T>       lumen.Option
-Result<T, E>    lumen.Result
-List<T>         lumen.List
+Option<T>       bux.Option
+Result<T, E>    bux.Result
+List<T>         bux.List
 ```
 
 A type parameter written in a function signature is carried by nothing, because no method written
@@ -85,7 +85,7 @@ word is wanted: a field, a variant's value, or a list element a type parameter l
 reference, and a `()` leaves none behind.
 There a fresh `java.lang.Object` is built and stands for it.
 What stands for `()` holds nothing, because `()` holds nothing, and every `()` is the same value:
-a Lumen value has no identity, and `()` has no `Eq`, so nothing tells two of them apart.
+a Bux value has no identity, and `()` has no `Eq`, so nothing tells two of them apart.
 Reading one back out reads a value carried by nothing, so what stood there is dropped unread.
 A field typed `()` is carried by nothing wherever it appears: building a record leaves none,
 and building one again from another neither reads that field nor hands it over.
@@ -132,18 +132,18 @@ A module that declares `main` at the shape a program starts at is written with o
 the entry point is written: the one parameter is `List<String>`, and the result is `Int`.
 
 The body of the entry point is four steps.
-It hands the array a JVM gave it to `lumen.List.of`, which is how a written list is built
+It hands the array a JVM gave it to `bux.List.of`, which is how a written list is built
 too, and calls the `main` the module declares with the list that comes out.
 It takes the low eight bits of the whole number `main` gave back, because a status is that wide,
 and it hands those to `java.lang.System.exit`.
 It is the one method of a module class no function wrote, and the one name a module class carries
 twice, which the JVM tells apart by descriptor.
 Writing the entry point with the module is what makes running the module class the same thing as
-running the program, so `lumen run` supplies nothing of its own; `docs/specs/run.md` says how.
+running the program, so `bux run` supplies nothing of its own; `docs/specs/run.md` says how.
 
 ## How a list is carried
 
-A list is carried by `lumen.List`, a value class that every build writes with the prelude types.
+A list is carried by `bux.List`, a value class that every build writes with the prelude types.
 It holds two fields: a buffer, which is a `java.lang.Object[]`, and a length, which is an `int`.
 The list holds the first `length` elements of the buffer, and nothing past them.
 Two lists can share one buffer, and each of them reads only its own first `length` slots.
@@ -159,12 +159,12 @@ No Bux program can observe them.
 Equality, the order, the hash, and the text of a list each read only its first `length` elements.
 `docs/specs/library.md` states that each of the four reads a list with `at` and nothing else.
 
-`lumen.List` declares its constructor and three static methods: `of`, `push`, and `listed`.
+`bux.List` declares its constructor and three static methods: `of`, `push`, and `listed`.
 It declares no method that a JVM class inherits, as no class that a module writes does.
 
 ## How a list is built
 
-A written list is gathered into a `java.lang.Object[]` and handed to `lumen.List.of`.
+A written list is gathered into a `java.lang.Object[]` and handed to `bux.List.of`.
 The array is as long as the list has elements, and it is filled left to right, so each element
 is evaluated once and in the order it is written.
 An empty list is the same three steps with nothing between the array and the call.
@@ -179,9 +179,9 @@ The array is full, so the first push onto a written list copies it, as the next 
 ## How a list is grown and read at an index
 
 `list.length`, `list.push`, and `list.at` are the compiler's, which `docs/specs/library.md` states.
-So no one of the three is a method that the class `lumen/library/list` declares.
+So no one of the three is a method that the class `bux/library/list` declares.
 A call of `length` or of `at` is written out where it stands, the way an operator over `Int` is.
-A call of `push` is a call of `lumen.List.push`, because a push branches and copies.
+A call of `push` is a call of `bux.List.push`, because a push branches and copies.
 
 A push onto a list whose length equals the filled count of its buffer claims the next slot.
 It writes the element into that slot, and gives back a new list with the same buffer and one more.
@@ -219,11 +219,11 @@ A `for … in` over a list reads the same two fields.
 It counts from zero up to the length, and reads the slot of the buffer at each count.
 
 A list that crosses into a Java member is a `java.util.List`, which `docs/specs/interop.md` states.
-`lumen.List.listed` copies the first `length` elements into a new array, and hands that to
+`bux.List.listed` copies the first `length` elements into a new array, and hands that to
 `java.util.List.of`.
 The member gets a list that it cannot change, and that holds nothing the Bux list does not hold.
 An element that is a list crosses the same way, so each inner list is a `java.util.List` too.
-`tests/spec/interop/a_list_of_lists_is_taken.lm` holds a member to that.
+`tests/spec/interop/a_list_of_lists_is_taken.bx` holds a member to that.
 `List.of` is declared on an interface, so the call names it as one; that is the only place a
 class that a build writes reaches a static method of an interface.
 
@@ -267,7 +267,7 @@ the other: `has_value$List$Int` and `has_value$List$Bool` are two methods.
 A type of another module is written `demo.User` and named `demo$User`, because a JVM method name
 holds no dot.
 `()` is written `$Unit` and a use that settles nothing is written `$Any`.
-`$` is legal in a JVM method name and Lumen has no operator for it, so a name written this way is
+`$` is legal in a JVM method name and Bux has no operator for it, so a name written this way is
 one no source can collide with.
 
 Two methods may still be written under one name, because a declared type may be called `Unit` or
@@ -304,7 +304,7 @@ A type of a third module, and a type of the prelude, are written the same way in
 unchanged.
 An extern type is a Java class that only the module that declares it names.
 So the ask carries the class of each extern type in the set, and the module being asked uses it.
-`tests/spec/interop/listed.lm` asks the prelude and `list` for methods at `main.File`.
+`tests/spec/interop/listed.bx` asks the prelude and `list` for methods at `main.File`.
 
 ## How a constrained generic reaches an instance
 
@@ -315,7 +315,7 @@ method of that generic is written.
 The instance it calls is a static method of the class of the module that declares the type, which
 is where every instance is written.
 So `list.has_value` at a `Kept` that `main` declares is `has_value$main$Kept` on the class
-`lumen/library/list`, and the body of it calls `Eq$Kept$is_equal` on the `main` class.
+`bux/library/list`, and the body of it calls `Eq$Kept$is_equal` on the `main` class.
 
 The name of that call is read off the type and nothing else.
 A type of the module writing the method is named plainly, and its instance is a method of that
@@ -372,13 +372,13 @@ The prelude writes `Eq`, `Ord`, `Hash`, and `Show` over `List<T>`, which `docs/s
 states, and each of the four declares one type parameter.
 
 `List` is the compiler's type, so no module declares it, and the prelude declares the instances.
-The prelude is written as a class of its own, `lumen/library/prelude`, which holds those methods.
-Each method is lowered from the `for` loop that `library/prelude.lm` writes, as any body is.
+The prelude is written as a class of its own, `bux/library/prelude`, which holds those methods.
+Each method is lowered from the `for` loop that `library/prelude.bx` writes, as any body is.
 Nothing in the compiler writes the walk a second time in another form.
 
 A use of one of the four is a use of a generic instance of another module.
 The module that writes the use asks the prelude for the method at the types that the use settled.
-So `Eq$List$is_equal$Int` is one method of `lumen/library/prelude`, whichever module uses it.
+So `Eq$List$is_equal$Int` is one method of `bux/library/prelude`, whichever module uses it.
 The prelude is lowered after every module of the program, because every module can ask it.
 
 The set of methods stays finite because the element of a list is written with fewer arguments than
@@ -397,7 +397,7 @@ nothing new.
 
 Every class written is a value class: its identity bit is clear, so the JVM may flatten a value
 of it and never asks which object it is.
-A Lumen value has no identity to begin with, which `docs/design.md` section 2 states, so nothing
+A Bux value has no identity to begin with, which `docs/design.md` section 2 states, so nothing
 is lost and the JVM is free to lay the value out flat wherever it can.
 Every field of a value class is `final` and strict: the constructor writes each field before it
 hands itself up to its base, and the value is whole by the time anything above it runs.
@@ -421,7 +421,7 @@ of the old one.
 A record a function builds and never lets go of is not built at all.
 `point := Point { across: 1, down: 2 }` puts each field in a local of its own, and `point.across`
 reads that local: no `new` is emitted, no constructor is called, and no `getfield` is read.
-A Lumen value has no identity, which `docs/design.md` section 2 states, so a value split across
+A Bux value has no identity, which `docs/design.md` section 2 states, so a value split across
 locals is the same value as one laid out on the heap and nothing a program can ask tells them apart.
 This is what Valhalla calls scalarization, and the language meets its precondition today.
 
@@ -460,7 +460,7 @@ arm cannot happen, and the method throws there rather than running on into the n
 A class written for a type declares its constructor and nothing else.
 No class a module writes, that one or the module class, declares a method a JVM class inherits:
 not `equals`, not `hashCode`, not `getClass`, not `toString`, and none of the rest of them.
-Declaring one would put the object model back inside a Lumen value, and `docs/design.md`
+Declaring one would put the object model back inside a Bux value, and `docs/design.md`
 section 2 declines the object model outright.
 `==` is `Eq`, and a record or a variant has one only where the module writes or derives it, which
 `docs/specs/traits.md` and `docs/specs/derive.md` state; the method that answers is a static
@@ -479,7 +479,7 @@ declares, and `Object.equals`, which answers by identity, is never reached.
 The class-file version is 72, which is JDK 28's, and the minor version is 65535.
 The minor marks a preview class file, which is what a class file holding a value class is on
 JDK 28, and a JVM loads one only when started with `--enable-preview`.
-`lumen run` passes that flag, so a program is run without its author knowing any of this.
+`bux run` passes that flag, so a program is run without its author knowing any of this.
 Every method carries a `Code` attribute, and every `Code` attribute that branches carries a
 `StackMapTable`, which the verifier requires.
 Where two branches meet, a frame names the class both values are: one of them where the other
@@ -516,11 +516,11 @@ The constant pool is built in the order entries are first asked for, which the l
 
 ## The lowering and the class-file writer written in Bux
 
-`compiler/ir.lm` lowers, `compiler/jvm.lm` writes each class, and `compiler/bytes.lm` its bytes.
+`compiler/ir.bx` lowers, `compiler/jvm.bx` writes each class, and `compiler/bytes.bx` its bytes.
 
 `ir.program_lowered(path, library)` lowers the module at `path` and each module that it reaches.
 It gives `skipped` when a phase before the lowering refuses the program, or a module holds a hole.
-It does not check the examples of a function, which `lumen build` checks before the lowering.
+It does not check the examples of a function, which `bux build` checks before the lowering.
 
 The Bux lowering runs in passes.
 Each pass lowers the modules last first, and then the prelude.
@@ -550,16 +550,16 @@ Each step of the writer gives back the pool, the code, and the frames that it ma
 The steps ask the pool for their entries in a fixed order, so an entry has one index in each build.
 A label that the assembler makes is 4294967294 minus the number of labels made before it.
 
-The runner holds the two phases in `tests/lowering.lm`, `branching.lm`, and `instances.lm`.
-It also holds them in `tests/escaping.lm` and `tests/written.lm`.
+The runner holds the two phases in `tests/lowering.bx`, `branching.bx`, and `instances.bx`.
+It also holds them in `tests/escaping.bx` and `tests/written.bx`.
 Each holds some of the properties below, on modules that it draws.
-`tests/reader.lm` reads the written bytes back.
+`tests/reader.bx` reads the written bytes back.
 The JVM verifier reads each class that an `expect-run` example loads.
 
 ## The errors
 
 The lowering raises no diagnostic, and the writer raises the four codes that the rules above name.
-Only `lumen build`, `lumen run`, and `lumen test` raise them, because `lumen check` writes no class.
+Only `bux build`, `bux run`, and `bux test` raise them, because `bux check` writes no class.
 A refusal points at the function of the method, and at the start of its module otherwise.
 The message of `L0703` names the defect and the method, which a report of the defect needs.
 
@@ -582,8 +582,8 @@ These hold and are checked by drawn properties in the runner:
 13. Every descriptor a class asks to load first names another class the same build writes.
 14. A written list of `n` elements gathers them into an array of `n` and builds one list.
 15. As many values stand for nothing as there are `()`s written where a reference is wanted.
-16. A call of `list.length`, `list.push`, or `list.at` asks `lumen/library/list` for no method.
-    A push is a call of `lumen.List.push`, and `at` calls nothing but a constructor of `Option`.
+16. A call of `list.length`, `list.push`, or `list.at` asks `bux/library/list` for no method.
+    A push is a call of `bux.List.push`, and `at` calls nothing but a constructor of `Option`.
     `length` calls nothing.
 17. A method written for a set of types calls the instance each type in that set has.
 18. A branch or a text past its limit is `L0700` or `L0701`, and one within its limit is written.
@@ -591,10 +591,10 @@ These hold and are checked by drawn properties in the runner:
 20. The deepest stack a method declares is the stack it needs, with two words for each `long`.
 
 That a constrained type parameter settled on two types with one head is written as two methods is
-a claim about a running program, so it is held to by `tests/spec/traits/over_a_list.lm` and
-`tests/spec/traits/over_a_generic_type.lm` rather than by a property.
+a claim about a running program, so it is held to by `tests/spec/traits/over_a_list.bx` and
+`tests/spec/traits/over_a_generic_type.bx` rather than by a property.
 
 What a push does to a buffer is a claim about a running program too.
-`tests/collected.lm` holds that two pushes onto one list leave three lists, in the runner's JVM.
+`tests/collected.bx` holds that two pushes onto one list leave three lists, in the runner's JVM.
 Each of the three holds what it held when it was made.
-`tests/spec/library/growing_long.lm` pushes a million elements, which a copy on each push cannot.
+`tests/spec/library/growing_long.bx` pushes a million elements, which a copy on each push cannot.
