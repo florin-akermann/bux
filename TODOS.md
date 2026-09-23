@@ -180,3 +180,15 @@ A clean build is one step: delete `target/`, and no other directory holds compil
 [096][e] - `.gitignore` names `target/`, and the `*.class` line and its comment say why.
 [096][f] - A `tests/spec/` example shows that a build leaves no class beside its source.
 [096][g] - `bux help build` states where the classes go.
+
+## 🔴 Item 097: `or` is a method of `Option<T>`, and `maybe.or(fallback)` is its one spelling
+**Depends on:** Item 090 — every call of `or` moves to the dot form, which Item 090 repairs.
+Today `or` is a free function in `library/prelude.lm`, and a call can put `maybe` first or inside.
+So a program has two spellings for one call, and about 120 calls use `or(maybe, fallback)`.
+The new rule: `or` belongs to `Option<T>`, and `maybe.or(fallback)` is the one way to write it.
+A free `or` no longer takes the name in scope, so a program can declare its own `or`.
+[097][a] - `docs/design.md` section 11 states how a type owns a method, and section 5 uses it.
+[097][b] - `docs/specs/` states the rule, and says what a call `or(maybe, fallback)` reports.
+[097][c] - `library/prelude.lm` declares `or` on `Option<T>`, and the free function is gone.
+[097][d] - `tests/spec/calls/` holds a method call on `Option` and a refused free call of `or`.
+[097][e] - Every call under `compiler/`, `library/`, `example/`, and `tests/` uses the dot form.
