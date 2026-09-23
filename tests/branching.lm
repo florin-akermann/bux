@@ -3,13 +3,9 @@
 // A division tests its divisor, an `or` works its fallback out, and a `?` hands a `None` back:
 // each writes two paths, and `docs/specs/codegen.md` states what each path holds.
 import compiled
-
 import drawn
-
 import held
-
 import ir
-
 import list
 
 /// Every property of the paths a body takes, each checked over `cases` drawn modules, in order.

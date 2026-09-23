@@ -5,7 +5,6 @@
 // only `relaying`. The instances of the type travel with it all the same, so it is compared and
 // shown here by the instances `tally` gives it.
 import io
-
 import relaying
 
 fn main(arguments: List<String>) -> Int {

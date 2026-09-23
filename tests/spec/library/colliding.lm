@@ -6,7 +6,6 @@
 // whose whole hashes are equal share one leaf of the trie, and `Eq` tells them apart there:
 // `[0, 31]` and `[1, 0]` hash alike and are two keys all the same.
 import io
-
 import map
 
 fn main(arguments: List<String>) -> Int {

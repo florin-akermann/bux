@@ -1,19 +1,12 @@
 // The drawn properties of traits, their instances, and what a derive gives a type, which
 // `docs/specs/traits.md`, `docs/specs/derive.md`, and `docs/specs/library.md` state.
 import ast
-
 import checking
-
 import drawn
-
 import held
-
 import ir
-
 import lexer
-
 import list
-
 import strings
 
 /// One `Held` for each property of traits and derives, in a fixed order.

@@ -1,0 +1,10 @@
+// expect-error: L0200
+// A blank line between two imports is not canonical form, and `bux fmt` takes it out.
+import io
+
+import strings
+
+fn main(arguments: List<String>) -> Int {
+    io.print(strings.join(arguments, " "))
+    0
+}

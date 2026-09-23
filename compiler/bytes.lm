@@ -4,7 +4,6 @@
 // A run of bytes is a list of whole numbers, each from 0 to 255, which `files` writes as bytes.
 // Each width takes the value modulo its range, so a negative value is written as its complement.
 import list
-
 import strings
 
 /// `bytes` with `value` after them as eight bytes, the highest one first, as a `long` is held.

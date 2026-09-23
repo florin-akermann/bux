@@ -4,7 +4,6 @@
 // A message carries the handle of the collector, which is the address a worker answers to.
 // The answers arrive in any order, so the program shows their total, which has one value.
 import io
-
 import list
 
 fn main(arguments: List<String>) -> Int {

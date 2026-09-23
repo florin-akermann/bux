@@ -5,7 +5,6 @@
 // `strings.length` says how far to walk, and `at` reads one unit at a time.
 // A space is code unit 32, and an index past either end is `None` rather than a failure.
 import io
-
 import strings
 
 fn main(arguments: List<String>) -> Int {

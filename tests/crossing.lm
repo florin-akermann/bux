@@ -3,15 +3,10 @@
 // `docs/specs/interop.md` states what an `extern` may say and what each spelling reaches,
 // and `docs/specs/io.md` names every class the library modules reach.
 import compiled
-
 import drawn
-
 import held
-
 import ir
-
 import list
-
 import strings
 
 /// Every property of a declaration that reaches the JVM, each over `cases` drawn modules, in order.
@@ -108,7 +103,7 @@ fn name_of(property: Property) -> String {
 // example: into_the_library(drawn.seeded(1), ir.little_library()).source != ""
 fn into_the_library(draw: drawn.Draw, library: ir.Library) -> Drawing {
     call := drawn.picked(draw, ["io.print(text)", "io.println(text)", "_ = files.read(text)", "_ = files.write(text, text)", "_ = files.listed(text)", "_ = files.made(text)", "_ = files.removed(text)", "_ = environment.read(text)"], "")
-    source := "import environment\n\nimport files\n\nimport io\n\nfn go(text: String) -> () {\n    " + call + "\n}\n"
+    source := "import environment\nimport files\nimport io\n\nfn go(text: String) -> () {\n    " + call + "\n}\n"
     lowered := compiled.lowered_alone(source, library)
     var why = refused(lowered)
     for reached in compiled.reached_in(compiled.instructions_of(lowered, "go")) {

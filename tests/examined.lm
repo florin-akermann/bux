@@ -9,9 +9,7 @@
 // Before each run, this program writes a line that names the run by its number. A run that stops
 // with an error is followed by one more line, which says what stopped it.
 import io
-
 import list
-
 import strings
 
 /// Runs the examples of each run that `arguments` names: a directory, then the class in it.

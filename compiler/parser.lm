@@ -5,11 +5,8 @@
 // Parsing stops at the first error, which carries the span of the token that failed.
 // The parser knows no definitions, so it never asks whether a name exists or what it names.
 import ast
-
 import lexer
-
 import list
-
 import strings
 
 /// The tree `source` parses to, or the error it is refused with, in the form a fixture holds.

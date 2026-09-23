@@ -5,15 +5,10 @@
 // own, so what it writes lands there, and `env` sets or clears `JAVA_HOME` for that start alone.
 // `docs/implementation.md` section 7 states the limit.
 import command
-
 import files
-
 import held
-
 import modules
-
 import strings
-
 import walk
 
 /// Every check of the launcher at `root`, one case each: the compiler starts where it can, and the

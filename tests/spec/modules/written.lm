@@ -6,7 +6,6 @@
 // It is written in the module that declares it, once per set of types a use settles it at, so
 // these four uses ask `holder` for four methods and `written` writes none of them.
 import holder
-
 import io
 
 fn main(arguments: List<String>) -> Int {

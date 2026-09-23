@@ -5,21 +5,13 @@
 // its files into a scene, a directory made for it alone, so nothing is written into the tree. It
 // names each fact it holds, and a fact that does not hold is one failure of the check.
 import command
-
 import files
-
 import header
-
 import held
-
 import ir
-
 import list
-
 import modules
-
 import strings
-
 import walk
 
 /// Every check of this module, each done in a scene of its own.
@@ -566,7 +558,7 @@ fn program_files() -> List<Written> {
 /// A program reaching a function of the module `greeting`.
 // example: first_line_of(program_text()) == "import greeting"
 fn program_text() -> String {
-    "import greeting\n\nimport io\n\nfn main(arguments: List<String>) -> Int {\n    io.println(greeting.greeting(\"world\"))\n    0\n}\n"
+    "import greeting\nimport io\n\nfn main(arguments: List<String>) -> Int {\n    io.println(greeting.greeting(\"world\"))\n    0\n}\n"
 }
 
 /// The module a program imports, offering one function.

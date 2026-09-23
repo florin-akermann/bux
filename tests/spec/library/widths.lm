@@ -6,9 +6,7 @@
 // `list.index_of` is a `for` loop over a `var` and reaches no member at all.
 // `docs/specs/library.md` states which of the two each function of the library is.
 import io
-
 import list
-
 import strings
 
 fn main(arguments: List<String>) -> Int {

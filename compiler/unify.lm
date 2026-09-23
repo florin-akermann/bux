@@ -4,11 +4,8 @@
 // Nothing here knows a program: this is the part of the phase that reads types and nothing else.
 // The table is a value, so each step that settles a variable gives back the table it made.
 import list
-
 import map
-
 import set
-
 import strings
 
 /// `expected` and `found` made one type, with the table that says so, or how the two fail to meet.

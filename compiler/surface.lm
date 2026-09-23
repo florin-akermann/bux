@@ -5,13 +5,9 @@
 // traits that it gives those types. A module that imports it reaches each of them through the
 // module's name, so each type the surface holds is written as `module.Name` once it is offered.
 import ast
-
 import list
-
 import map
-
 import set
-
 import unify
 
 /// What `scheme` amounts to for a module that imports it: generic where it is polymorphic.

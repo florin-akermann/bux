@@ -3,7 +3,6 @@
 // `docs/implementation.md` section 7 states the runner. A check is an example, a sibling file, a
 // command line, or a drawn property, and each gives back a `Held` for the runner to add up.
 import list
-
 import strings
 
 /// A check that tried `cases` cases, every one of which held.

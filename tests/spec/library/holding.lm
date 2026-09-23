@@ -5,7 +5,6 @@
 // A generic a constraint is written over is reached through an import like any other, and the
 // trait its type parameter promises is asked of whatever each use settles that parameter on.
 import io
-
 import list
 
 fn main(arguments: List<String>) -> Int {

@@ -4,7 +4,6 @@
 // What the failure says of itself is the JDK's wording, so the program states its own instead.
 // It still reads what it was handed: a failure that said nothing writes the other line.
 import files
-
 import io
 
 fn main(arguments: List<String>) -> Int {

@@ -5,23 +5,14 @@
 // Coverage is the usefulness algorithm over a matrix of one row for each arm, one column at a time.
 // The order of the arms is the order the type declares its constructors, read outermost first.
 import ast
-
 import infer
-
 import lexer
-
 import list
-
 import map
-
 import modules
-
 import resolver
-
 import strings
-
 import surface
-
 import types
 
 /// Each module typed and checked in the order it was loaded, or the answer where one is not.

@@ -5,45 +5,25 @@
 // with a print, so the runner runs many commands in one JVM and holds each to its golden answer.
 // `main.lm` prints the answer; it is a module of its own because no module imports `main`.
 import ast
-
 import environment
-
 import exhaustiveness
-
 import files
-
 import format
-
 import holes
-
 import infer
-
 import ir
-
 import jvm
-
 import lexer
-
 import list
-
 import map
-
 import modules
-
 import parser
-
 import programs
-
 import refusal
-
 import resolver
-
 import set
-
 import strings
-
 import surface
-
 import types
 
 /// What the command line says to `arguments`, with the library the compiler carries.
@@ -945,7 +925,7 @@ fn code_refused<T>(answer: Result<T, Diagnostic>) -> String {
 }
 
 /// Nothing where `source` is in canonical form, and the first thing about it that is not otherwise.
-// example: code_refused(in_canonical_form("import io\nimport files\n")) == "L0200"
+// example: code_refused(in_canonical_form("import files\n\nimport io\n")) == "L0200"
 fn in_canonical_form(source: String) -> Result<(), Diagnostic> {
     match format.check(source) {
         Ok(_) => Ok(())
@@ -1507,8 +1487,8 @@ fn byte_count(text: String) -> Int {
     lexer.byte_length(lexer.Rest { source: text, start: 0 }, strings.length(text))
 }
 
-/// Every module `program` imports, and `io`, each once and in order, as the run imports them.
-// example: imports_of(ok_or(parser.parse("import list\n"), ast.Program { items: [] })) == "import io\n\nimport list\n\n"
+/// Every module `program` imports, and `io`, each once and in order, in one block, as the run imports them.
+// example: imports_of(ok_or(parser.parse("import list\n"), ast.Program { items: [] })) == "import io\nimport list\n\n"
 fn imports_of(program: ast.Program) -> String {
     var named = ["io"]
     for item in program.items {
@@ -1521,11 +1501,11 @@ fn imports_of(program: ast.Program) -> String {
     var last = ""
     for module in sorted(named) {
         if module != last {
-            written += "import " + module + "\n\n"
+            written += "import " + module + "\n"
         }
         last = module
     }
-    written
+    written + "\n"
 }
 
 /// `values`, from the one that sorts first to the one that sorts last.

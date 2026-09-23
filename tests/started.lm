@@ -5,25 +5,15 @@
 // the command line says where `JAVA_HOME` names no JDK starts the command line in a JVM of its
 // own, with `JAVA_HOME` taken away or changed, because this JVM reads the one it was given.
 import command
-
 import enacted
-
 import environment
-
 import exemplified
-
 import files
-
 import held
-
 import ir
-
 import list
-
 import modules
-
 import strings
-
 import walk
 
 /// Every check of this module, or one skip where `JAVA_HOME` names no JDK.
@@ -279,7 +269,7 @@ fn picked_up_line() -> String {
 /// A program that says whether it sees `JAVA_TOOL_OPTIONS`.
 // example: strings.length(options_seen_text()) > 0
 fn options_seen_text() -> String {
-    "import environment\n\nimport io\n\nfn main(arguments: List<String>) -> Int {\n    match environment.read(\"JAVA_TOOL_OPTIONS\") {\n        Some(options) => io.println(\"options: \" + options)\n        None => io.println(\"no options\")\n    }\n    0\n}\n"
+    "import environment\nimport io\n\nfn main(arguments: List<String>) -> Int {\n    match environment.read(\"JAVA_TOOL_OPTIONS\") {\n        Some(options) => io.println(\"options: \" + options)\n        None => io.println(\"no options\")\n    }\n    0\n}\n"
 }
 
 /// A module whose example holds only where `JAVA_TOOL_OPTIONS` is not set.

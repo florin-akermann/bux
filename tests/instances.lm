@@ -4,21 +4,13 @@
 // its `from_literal`, a derive reads every field, and a generic asked for by another module is
 // written as it was asked for. `docs/specs/operators.md` and `docs/specs/codegen.md` state these.
 import command
-
 import compiled
-
 import drawn
-
 import files
-
 import held
-
 import ir
-
 import list
-
 import modules
-
 import strings
 
 /// Every property of what an instance becomes, each over `cases` drawn modules, in a fixed order.

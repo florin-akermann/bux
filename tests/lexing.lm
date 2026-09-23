@@ -4,15 +4,10 @@
 // starts one, or takes two bytes or four in UTF-8. A span counts UTF-8 bytes and a text counts
 // UTF-16 code units, so each property walks the source in both at once.
 import drawn
-
 import held
-
 import ir
-
 import lexer
-
 import list
-
 import strings
 
 /// Every property of the lexer, each tried on `cases` drawn cases, in a fixed order.

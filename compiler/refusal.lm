@@ -3,11 +3,8 @@
 // `docs/specs/types.md` and `docs/specs/diagnostics.md` state the codes and the wording.
 // A refusal carries the types it names, so this module reads types and knows no program.
 import lexer
-
 import list
-
 import strings
-
 import unify
 
 /// `found`, or the refusal at `at` where `found` is `Option<()>`, which no program may write.

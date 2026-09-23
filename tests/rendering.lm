@@ -4,21 +4,13 @@
 // not only the ones a lexer gives, so a drawn span may run past the source or end inside a
 // character. A drawn message holds every character JSON cannot write as it is.
 import command
-
 import drawn
-
 import files
-
 import held
-
 import ir
-
 import lexer
-
 import list
-
 import strings
-
 import walk
 
 /// Every property of the rendering and the data form over `cases` drawn cases each, in order.

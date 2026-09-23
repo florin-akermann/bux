@@ -9,6 +9,10 @@ The formatter has no options. Indentation, spacing, line breaks, and the placeme
 are fixed by the language, so no two people and no two tools can disagree about them, and no
 diff is ever a formatting diff.
 
+Imports form one block: no blank line goes between two imports, and one blank line follows
+the last of them. A blank line between two imports does not compile, and `bux fmt` takes it
+out.
+
 Every comment survives. A comment written at the end of a line moves to a line of its own
 directly above it; a comment already alone on its line stays where it is.
 

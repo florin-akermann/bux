@@ -113,7 +113,8 @@ compile.
 
 A refused example must be refused with exactly the code its header names.
 The first diagnostic decides, because the compiler stops at it.
-A refused example that parses is still in canonical form, so `L0200` is never what stops one.
+A refused example that parses is still in canonical form, unless its header names `L0200`.
+An example headed `// expect-error: L0200` departs from canonical form, and that is what it shows.
 
 ## Running an example
 

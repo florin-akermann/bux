@@ -5,25 +5,15 @@
 // the temporary directory, and loads it with `compiler/modules.lm`. The directory is removed whole
 // when every property has run, and nothing is written into the repository.
 import ast
-
 import command
-
 import drawn
-
 import files
-
 import held
-
 import ir
-
 import lexer
-
 import list
-
 import modules
-
 import strings
-
 import walk
 
 /// One `Held` for each property of loading, in a fixed order.

@@ -4,23 +4,14 @@
 // function declarations, types it against the prelude, and prints its page with the compiler's own
 // `types.page_of`, which is what `bux surface` prints, in the runner's JVM.
 import ast
-
 import drawn
-
 import held
-
 import ir
-
 import lexer
-
 import list
-
 import parser
-
 import strings
-
 import typed
-
 import types
 
 /// Every property of the page over `cases` drawn cases each, in a fixed order.

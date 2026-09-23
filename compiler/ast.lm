@@ -6,9 +6,7 @@
 // The tree knows no types and no definitions, so `User { id: id }` and `user { name: "Bob" }`
 // are the same node until name resolution tells them apart.
 import lexer
-
 import list
-
 import strings
 
 /// The tree of `program`, one line for each node, as a `tests/spec/parser` `.ast` file holds it.

@@ -5,17 +5,11 @@
 // inference. An expression is read after the expressions inside it, so the refusal points at the
 // innermost expression whose type holds `Option<()>`.
 import ast
-
 import declared
-
 import infer
-
 import lexer
-
 import refusal
-
 import surface
-
 import unify
 
 /// The code and span of the refusal `source` earns against the small prelude, or `""`.

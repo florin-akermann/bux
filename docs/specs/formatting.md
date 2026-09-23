@@ -36,6 +36,8 @@ No line ends with a blank, and every line ends with a `\n`, the last one include
 An empty file is empty: it has no lines at all.
 
 **Exactly one blank line separates two top-level items**, and two functions of one item.
+Two imports are the one exception: the imports form one block, with no blank line between them.
+One blank line follows the last import, as one follows every other item.
 An instance and a process each hold functions, and no blank line appears anywhere else.
 The file neither begins nor ends with a blank line.
 
@@ -63,7 +65,7 @@ A record literal with fields is spaced inside its braces, as `User { id: id }`; 
 
 ## The constructs
 
-An **import** is `import name`.
+An **import** is `import name`, and the imports of a file are one block of lines with no blank.
 
 A **record type** opens with `{` at the end of the `type` line, writes one `name: Type` per line
 one level in, and closes with `}` alone at the level of the line that opened it.
@@ -131,6 +133,8 @@ A deviation points at the line it is about, and its `help:` names the text canon
 there.
 A line canonical form does not write at all is named as such, and a file whose lines all match is
 reported for the way it ends, which is how a missing final newline reads.
+A blank line where canonical form writes text is such a line, as a blank between two imports is.
+Its `help:` says to run `bux fmt`, which takes the line out.
 
 ## Executable examples
 

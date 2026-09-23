@@ -4,25 +4,15 @@
 // Each case draws a module from a fixed seed and checks it in-process with `compiler/types.lm`
 // against the prelude the runner reads. A failure names the seed and the module it drew.
 import ast
-
 import checking
-
 import command
-
 import drawn
-
 import held
-
 import infer
-
 import ir
-
 import lexer
-
 import list
-
 import strings
-
 import types
 
 /// One `Held` for each property of the inference over whole modules, in a fixed order.

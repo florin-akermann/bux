@@ -6,7 +6,6 @@
 // A call of it is written out where it stands as a read of the length the list holds, whatever
 // the type of the values, so these three uses ask `list` for no method at all.
 import io
-
 import list
 
 fn main(arguments: List<String>) -> Int {

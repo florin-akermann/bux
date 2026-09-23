@@ -4,17 +4,11 @@
 // what goes in, puts it into the map, the set, or the list of the library in the runner's JVM, and
 // reads it all back out. What a read must give is worked out again from the draw, not from a map.
 import drawn
-
 import held
-
 import ir
-
 import list
-
 import map
-
 import set
-
 import strings
 
 /// Every property of the collections over `cases` drawn cases each, in a fixed order.

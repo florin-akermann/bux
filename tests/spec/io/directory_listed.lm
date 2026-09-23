@@ -5,9 +5,7 @@
 // A listing is a `List<String>`, which a `for` loop reads, and the names come back in order, so a
 // listing reads the same however a file system holds them.
 import files
-
 import io
-
 import list
 
 fn main(arguments: List<String>) -> Int {

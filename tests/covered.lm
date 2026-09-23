@@ -4,25 +4,15 @@
 // out of drawn arms, types it against the prelude, and checks it with the compiler's own check in
 // the runner's JVM. The drawn `match` of many patterns is the one the Rust comparison drew.
 import command
-
 import drawn
-
 import exhaustiveness
-
 import held
-
 import infer
-
 import ir
-
 import lexer
-
 import list
-
 import strings
-
 import typed
-
 import types
 
 /// Every property of the exhaustiveness check over `cases` drawn cases each, in a fixed order.

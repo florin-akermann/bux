@@ -4,19 +4,12 @@
 // A hole is a call of the prelude's `todo`, and resolution says which calls are of that one.
 // Every hole is found, in the order the module writes them, because a build names every one.
 import ast
-
 import infer
-
 import lexer
-
 import list
-
 import map
-
 import modules
-
 import resolver
-
 import types
 
 /// The spans of the holes `source` holds, one after another.

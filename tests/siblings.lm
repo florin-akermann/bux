@@ -5,21 +5,13 @@
 // `.unformatted` file formats to the example. `docs/specs/lexer.md`, `grammar.md`, `api-surface.md`,
 // and `formatting.md` each state the form of theirs.
 import command
-
 import files
-
 import format
-
 import held
-
 import ir
-
 import lexer
-
 import list
-
 import parser
-
 import walk
 
 /// Every sibling under `spec`, each held to what its phase makes of the example beside it.

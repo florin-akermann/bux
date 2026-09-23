@@ -3,17 +3,11 @@
 // The drawn properties of the lowering and of the class-file writer read what those phases give
 // back through these. A drawn source is checked as the module `demo`, so its own class is `demo`.
 import command
-
 import held
-
 import infer
-
 import ir
-
 import jvm
-
 import list
-
 import strings
 
 /// Every class file of `source`, written as a build writes them, or none where it is refused.

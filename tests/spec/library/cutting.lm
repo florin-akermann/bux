@@ -5,7 +5,6 @@
 // It gives `None` where the part asked for is not inside the text, which is what the second line
 // shows: nothing about an index outside the text fails, and nothing about it panics.
 import io
-
 import strings
 
 fn main(arguments: List<String>) -> Int {

@@ -4,15 +4,10 @@
 // Nothing here knows the language: it knows classes, descriptors, opcodes, and the verifier.
 // Each step takes the state it writes to and gives back the state it made, which is a value.
 import bytes
-
 import ir
-
 import list
-
 import map
-
 import set
-
 import strings
 
 /// Every class file of the program at `path`, in the order a build writes them, or `skipped`.

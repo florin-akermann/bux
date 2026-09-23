@@ -4,19 +4,12 @@
 // types, and statements, types it against the prelude, and lists its holes with the compiler's own
 // walk in the runner's JVM. The drawn body of holes is the one the Rust comparison drew.
 import drawn
-
 import held
-
 import holes
-
 import ir
-
 import list
-
 import strings
-
 import typed
-
 import types
 
 /// Every property of the holes over `cases` drawn cases each, in a fixed order.

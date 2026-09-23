@@ -8,7 +8,6 @@
 // > a box holding [1, 2]
 // An instance for a type written with type parameters is written once per type it is used at.
 import io
-
 import list
 
 fn main(arguments: List<String>) -> Int {

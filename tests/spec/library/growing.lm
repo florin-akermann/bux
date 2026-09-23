@@ -8,7 +8,6 @@
 // `list.push` and `list.at` are the compiler's, which `docs/specs/library.md` states, so neither
 // is a method the `list` class declares and a use of either is written where it stands.
 import io
-
 import list
 
 fn main(arguments: List<String>) -> Int {

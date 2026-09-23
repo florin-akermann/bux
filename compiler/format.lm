@@ -5,13 +5,9 @@
 // The tree drops comments and parentheses, so the printer reads the comments from the tokens and
 // puts back only the parentheses the shape of the tree needs.
 import ast
-
 import lexer
-
 import list
-
 import parser
-
 import strings
 
 /// The canonical text of `source`, or the error the parser refuses it with.
@@ -28,8 +24,8 @@ fn format(source: String) -> Result<String, parser.ParseError> {
 /// first import out of place, then the first declared name canonical form spells otherwise.
 // example: is_canonical(check("import io\n"))
 // example: check_code(check("fn (")) == "L0100"
-// example: check_code(check("import io\nimport files\n")) == "L0200"
-// example: check_code(check("import io\n\nimport files\n")) == "L0201"
+// example: check_code(check("import files\n\nimport io\n")) == "L0200"
+// example: check_code(check("import io\nimport files\n")) == "L0201"
 // example: check_code(check("type point = {\n    at: Int\n}\n")) == "L0202"
 // example: check_code(check("type Box = {\n    x: Int\n}\n")) == "L0203"
 fn check(source: String) -> Result<(), CheckError> {
@@ -127,7 +123,7 @@ fn help_of(refused: CheckError) -> String {
 fn deviation_help(deviation: Deviation) -> String {
     match deviation {
         LineDiffers { span, canonical } => "canonical form writes `" + canonical + "`"
-        ExtraLine(_) => "run `lumen fmt` to take this line out"
+        ExtraLine(_) => "run `bux fmt` to take this line out"
         Ending(_) => "end the file with a newline"
     }
 }
@@ -155,10 +151,12 @@ fn deviation_span(deviation: Deviation) -> lexer.Span {
 
 /// The first line the two texts disagree on, and the way the file ends where every line agrees.
 ///
+/// A blank line where canonical form writes text is a line canonical form does not write.
 /// There is no fourth case: every line canonical form writes is made of text the source holds, so
 /// the source runs out of lines before canonical form does only where it ends in some other way.
 // example: shown_deviation(first_deviation(source: "a\nb\n", canonical: "a\nc\n")) == "2..3 c"
 // example: shown_deviation(first_deviation(source: "a\n\n", canonical: "a\n")) == "2..2"
+// example: shown_deviation(first_deviation(source: "a\n\nb\n", canonical: "a\nb\n")) == "2..2"
 // example: shown_deviation(first_deviation(source: "a", canonical: "a\n")) == "0..1"
 fn first_deviation(source: String, canonical: String) -> Deviation {
     wanted := lines_written(canonical)
@@ -170,6 +168,9 @@ fn first_deviation(source: String, canonical: String) -> Deviation {
             return ExtraLine(written.span)
         }
         text := or(list.at(wanted, index), written).text
+        if written.text == "" && text != "" {
+            return ExtraLine(written.span)
+        }
         if text != written.text {
             return LineDiffers { span: written.span, canonical: text }
         }
@@ -619,23 +620,37 @@ fn fields_named(names: List<Declared>, fields: List<ast.RecordField>) -> List<De
 
 /// Every item of the file, with one blank line between two of them, then the last comments.
 ///
+/// Two imports are the one exception: they form one block, with no blank line between them.
 /// A comment after the last item goes at the left margin, below one blank line.
-// example: program(printer_of("import io\nimport list"), ok_or(parser.parse("import io\nimport list"), ast.Program { items: [] })).text == "import io\n\nimport list\n"
+// example: program(printer_of("import io\n\nimport list"), ok_or(parser.parse("import io\n\nimport list"), ast.Program { items: [] })).text == "import io\nimport list\n"
+// example: program(printer_of("import io\nfn go() {}"), ok_or(parser.parse("import io\nfn go() {}"), ast.Program { items: [] })).text == "import io\n\nfn go() {\n}\n"
 // example: program(printer_of("// only"), ast.Program { items: [] }).text == "// only\n"
 fn program(printer: Printer, parsed: ast.Program) -> Printer {
     var printed = printer
     var position = 0
+    var after_an_import = false
     for declared in parsed.items {
-        if position > 0 {
+        if position > 0 && !(after_an_import && is_import(declared)) {
             printed = end_line(printed)
         }
         printed = appended(outer: printed, inner: item(fresh(printed), declared))
+        after_an_import = is_import(declared)
         position += 1
     }
     if has_comments(printed) && position > 0 {
         printed = end_line(printed)
     }
     comments_before(printed, printed.ending)
+}
+
+/// Whether `declared` is an import, which the printer writes in one block with the other imports.
+// example: is_import(ast.Import(ast.ImportDeclaration { module: ast.Name { text: "io", span: lexer.Span { start: 7, length: 2 } }, span: lexer.Span { start: 0, length: 9 } }))
+// example: !is_import(ast.Derive(ast.DeriveDeclaration { traits: [], for_type: ast.Name { text: "Box", span: lexer.Span { start: 0, length: 3 } }, span: lexer.Span { start: 0, length: 3 } }))
+fn is_import(declared: ast.Item) -> Bool {
+    match declared {
+        ast.Import(_) => true
+        _ => false
+    }
 }
 
 /// One top-level declaration, with the comments that belong above it.

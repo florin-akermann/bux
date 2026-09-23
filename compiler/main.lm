@@ -3,7 +3,6 @@
 // `compiler/command.lm` holds every command, because a module named `main` cannot be imported.
 // This file only writes the answer out.
 import command
-
 import io
 
 /// The `bux` command line: the words it is given are answered, and the answer is written out.

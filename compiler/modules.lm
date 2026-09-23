@@ -5,17 +5,11 @@
 // `tests/loading.lm` holds the loader to both on drawn trees of modules.
 // A library module is a resource on the class path, which `docs/specs/library.md` states.
 import ast
-
 import files
-
 import lexer
-
 import list
-
 import map
-
 import parser
-
 import strings
 
 /// What `load` says of `path`, in the form the harness compares.

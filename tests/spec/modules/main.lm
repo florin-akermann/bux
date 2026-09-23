@@ -3,7 +3,6 @@
 // > 6
 // A program reaches a module of its own the way it reaches one the library carries.
 import greeting
-
 import io
 
 fn main(arguments: List<String>) -> Int {

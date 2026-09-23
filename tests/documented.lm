@@ -7,25 +7,15 @@
 // `docs/implementation.md` section 7 states how the runs share one memo of typed modules, and how
 // `examined.lm` starts each run in turn.
 import command
-
 import files
-
 import header
-
 import held
-
 import ir
-
 import jvm
-
 import list
-
 import modules
-
 import programs
-
 import strings
-
 import walk
 
 /// Every example line of every module `paths` names, each module typed once, in one JVM.

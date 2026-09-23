@@ -1,7 +1,6 @@
 // expect-error: L0201
 // Imports come first, before every declaration, sorted by the module they name.
 import io
-
 import files
 
 fn greet() {

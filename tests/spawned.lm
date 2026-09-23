@@ -5,29 +5,17 @@
 // as `lumen check` tries it. The two programs draw their cases themselves, with `tests/drawn.lm`
 // beside them, so one JVM tries every case, and each line the program writes is one case.
 import checking
-
 import command
-
 import drawn
-
 import enacted
-
 import exemplified
-
 import files
-
 import held
-
 import ir
-
 import list
-
 import modules
-
 import started
-
 import strings
-
 import walk
 
 /// The properties of processes, each tried on `cases` drawn cases.
@@ -316,7 +304,7 @@ fn ordered_program(cases: Int) -> String {
     entry := "fn main(arguments: List<String>) -> Int {\n    var case = 0\n    for case < " + shown(cases) + " {\n        io.println(recorded(drawn.seed_of(case)))\n        case += 1\n    }\n    0\n}\n"
     recorded := "// example: recorded(1) == \"1 held\"\nfn recorded(seed: Int) -> String {\n    draw := drawn.seeded(seed)\n    sent := drawn.numbers(draw, drawn.number(drawn.next(draw), 150), 1000)\n    recording := spawn Recorder()\n    for value in sent {\n        _ = send(recording, Record(value), NoLimit)\n    }\n    _ = send(recording, Stop, NoLimit)\n    for value in sent {\n        _ = send(recording, Record(value), NoWait)\n    }\n    found := ended(recording)\n    if found == sent {\n        return shown(seed) + \" held\"\n    }\n    shown(seed) + \" gave \" + shown(found)\n}\n"
     recorder := "process Recorder {\n    fn start() -> List<Int> {\n        []\n    }\n\n    fn receive(values: List<Int>, message: Recorded) -> Next<List<Int>> {\n        match message {\n            Record(value) => Continue(list.push(values, value))\n            Stop => Done\n        }\n    }\n}\n"
-    "import drawn\n\nimport io\n\nimport list\n\n" + entry + "\n" + recorded + "\n" + recorder + "\ntype Recorded =\n    | Record(Int)\n    | Stop\n"
+    "import drawn\nimport io\nimport list\n\n" + entry + "\n" + recorded + "\n" + recorder + "\ntype Recorded =\n    | Record(Int)\n    | Stop\n"
 }
 
 /// The program that sends each case a drawn number of messages to a process that takes none.
@@ -329,7 +317,7 @@ fn bounded_program(cases: Int) -> String {
     helpers := "// example: expected(70) == 64\nfn expected(count: Int) -> Int {\n    if count < 64 {\n        return count\n    }\n    64\n}\n\n// example: taken(Delivered) == 1\nfn taken(sent: Sent) -> Int {\n    match sent {\n        Delivered => 1\n        MailboxFull => 0\n        ProcessEnded => 0\n    }\n}\n"
     holder := "process Holder {\n    fn start(idle: Process<Stopped, Int>) -> Int {\n        ended(idle)\n    }\n\n    fn receive(held: Int, message: Woken) -> Next<Int> {\n        match message {\n            Wake => Done\n        }\n    }\n}\n"
     idle := "process Idle {\n    fn start() -> Int {\n        0\n    }\n\n    fn receive(held: Int, message: Stopped) -> Next<Int> {\n        match message {\n            Stop => Done\n        }\n    }\n}\n"
-    "import drawn\n\nimport io\n\nimport strings\n\n" + entry + "\n" + bounded + "\n" + helpers + "\n" + holder + "\n" + idle + "\ntype Woken = Wake\n\ntype Stopped = Stop\n"
+    "import drawn\nimport io\nimport strings\n\n" + entry + "\n" + bounded + "\n" + helpers + "\n" + holder + "\n" + idle + "\ntype Woken = Wake\n\ntype Stopped = Stop\n"
 }
 
 /// A drawn process: its name, the type of its state, and the kinds of message it takes.

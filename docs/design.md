@@ -948,6 +948,7 @@ author's decision, so the compiler says what canonical form spells it rather tha
 Canonical form covers sequence, not only whitespace.
 
 **Imports come first**, before every declaration, sorted by the module they name.
+The imports form one block, with no blank line between two of them and one blank line after it.
 
 **A declaration is written above what it uses**, so a helper sits below the thing it helps.
 A file reads top down: the reader meets the intent before the detail.
