@@ -6,7 +6,7 @@
 
 ## Open
 
-## 🔴 Item 071: Type inference is written in Bux
+## 🟡 Item 071: Type inference is written in Bux
 **Depends on:** Item 064, Item 065, Item 070 — unification keys a table.
 This is the largest phase, at 5,313 lines of Rust, and mutable tables become returned values.
 [071][a] - `compiler/types.bx` infers, unifies, resolves constraints, and derives per the specs.
