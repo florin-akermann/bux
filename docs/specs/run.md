@@ -16,14 +16,50 @@ The class files are written beside the source, exactly as `lumen build` writes t
 leaves the same artefacts a build does and nothing more.
 
 The JVM is started on the module class, in the directory the classes were written to.
-Running the module class directly with `java --enable-preview` does the same thing, because the
-entry point is part of what is written and not something the runner supplies.
-The flag is the one thing the runner adds: every class written is a value class, which JDK 28
-holds in preview, and `docs/specs/codegen.md` says what that makes the bytes look like.
+The entry point is part of what is written and not something the runner supplies.
+The runner adds `--enable-preview`, because every class written is a value class.
+JDK 28 holds value classes in preview, and `docs/specs/codegen.md` says how the bytes look.
+The runner also limits what the program can reach, and the next section states how.
 
 The program's own output is the runner's output: what it writes to standard output and to
 standard error, the runner passes through unchanged, and the status it ends with is the status
 `lumen run` ends with.
+
+## What the program can reach
+
+A program reaches its library and the `java.base` module of the JDK, and nothing more.
+An `extern` declaration can name any class, so the JVM itself must refuse the classes outside.
+The runner starts every compiled program with this command line, in this order:
+
+```text
+java --enable-preview --limit-modules java.base -Djdk.serialFilter=!* -cp <dir> <module> <word...>
+```
+
+`--limit-modules java.base` gives the JVM the `java.base` module and no other module.
+A JVM without the flag has all the modules of the JDK, for example `java.naming`.
+Each of `java.naming`, `java.rmi`, and `java.scripting` can load or run code from elsewhere.
+With the flag, the JVM finds no such class, and a call of one fails with `NoClassDefFoundError`.
+The library uses only `java.base`: `java.lang`, `java.io`, `java.nio.file`, and `java.util`.
+
+`-Djdk.serialFilter=!*` refuses every class in a stream of serialized bytes.
+Serialized bytes can make an object of any class that the JVM can load, and run its code.
+A Bux value is never serialized, so the filter refuses nothing that a program needs.
+
+The runner removes three variables from the environment of the program:
+
+- `JAVA_TOOL_OPTIONS`, which the JVM reads.
+- `JDK_JAVA_OPTIONS`, which the `java` launcher reads.
+- `_JAVA_OPTIONS`, which the JVM of HotSpot reads.
+
+Each variable adds options to the JVM, and an option such as `-javaagent` can change each class.
+No other variable of the environment changes, so a program still reads its environment.
+The JVM of the compiler still reads the three variables, because `bin/bux` starts it unchanged.
+
+`run` and `test` build the command line with one function, `program_line`.
+Both remove the variables with one function, `cleared`, in `compiler/command.lm`.
+`tests/spec/interop/outside_java_base.lm` shows that no class of `java.naming` loads.
+`tests/started.lm` starts `run` and `test` with `JAVA_TOOL_OPTIONS` set.
+It shows that the program sees no such variable and that its JVM writes nothing about one.
 
 ## The arguments
 
@@ -168,3 +204,4 @@ These hold, and each is checked:
 4. Every word after the file reaches the program unchanged, `--help` among them.
 5. Stage 2 of the bootstrap is stage 1 byte for byte, and both stages pass `tests/spec`.
 6. A checkout with no class file bootstraps with `JAVA_HOME` alone, and `bin/bux` then starts.
+7. A program loads no class outside `java.base`, and its JVM reads none of the three variables.

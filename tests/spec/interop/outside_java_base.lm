@@ -1,0 +1,18 @@
+// expect-run
+// > java.lang.NoClassDefFoundError: javax/naming/InitialContext
+// A program reaches `java.base` and no other module of the JDK, and `docs/specs/run.md` says why.
+// `javax.naming.InitialContext` is in `java.naming`, so the JVM finds no such class. The guard of
+// the `Result` catches the error, and the `Err` holds what the error says of itself.
+import io
+
+fn main(arguments: List<String>) -> Int {
+    match context() {
+        Ok(_) => io.println("a naming context")
+        Err(why) => io.println(why)
+    }
+    0
+}
+
+extern new context() -> Result<Context, String>
+
+extern type Context = "javax.naming.InitialContext"
