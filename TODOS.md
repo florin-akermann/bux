@@ -96,3 +96,19 @@ Item 073 copied seven defects of the Rust writer so that the bytes match; the sp
 [088][d] - A branch to a label that never lands, or past the i16 range, is refused, not patched.
 [088][e] - A Utf8 pool entry over 65535 bytes is refused, not capped.
 [088][f] - The operand swap in the lowering adapts a unit operand, and the spec says so.
+
+## 🔴 Item 089: A `test` block states a test, and `bux test` runs every test and example in a package
+**Depends on:** Item 081 — the command is `bux test`, and the tests are in `.bx` files.
+Today `lumen test` takes one file and runs only the `// example:` lines of that module.
+One example line cannot hold a test that needs setup over several statements or needs `io`.
+A `test "name" { … }` block at the top level of a module holds such a test, and its body is `Bool`.
+A block is not a function, so it has no signature, no example, and no caller but the runner.
+[089][a] - `docs/design.md` states the block and why an example line is not enough for it.
+[089][b] - `docs/specs/testing.md` states the block, the run order, the report, and the exit codes.
+[089][c] - The Rust and the Bux lexer, parser, and formatter accept the block alike.
+[089][d] - `bux build` and `bux run` leave every block out, so a test never ships in a program.
+[089][e] - `bux test` with no argument runs the package in the current directory.
+[089][f] - `bux test` on a directory runs every example and every block of every module in it.
+[089][g] - The run reports every test that did not hold, with its module, its name, and its line.
+[089][h] - `tests/spec/testing/` shows a block that holds, one that does not, and a refused one.
+[089][i] - `bux help test` states the block and the package run, and `packages.md` agrees.
