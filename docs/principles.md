@@ -168,7 +168,7 @@ The goal is:
 
 ## 3. One-sentence description
 
-> A small ML-inspired language with Go-like syntax and tooling, compiled to the JVM by a Rust compiler.
+> A small ML-inspired language with Go-like syntax and tooling, compiled to the JVM by a Bux compiler.
 
 Or more succinctly:
 
@@ -176,4 +176,4 @@ Or more succinctly:
 > Haskell's types.
 > Erlang's messages.
 > The JVM's runtime.
-> A Rust compiler.
+> A compiler written in itself.

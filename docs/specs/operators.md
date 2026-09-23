@@ -160,7 +160,7 @@ same question: does this type have the trait this operator is?
 
 ## Properties
 
-These hold and are checked with property-based tests:
+These hold and are checked by drawn properties in the runner:
 
 1. Each operator over `Int` gives the type and the answer it gave before it was a trait.
 2. An operator over a type with an instance calls that instance and no other.

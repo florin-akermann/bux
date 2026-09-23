@@ -1,7 +1,7 @@
 // The parser: the tokens of a source file to the tree `compiler/ast.lm` declares.
 //
-// `docs/specs/grammar.md` states what it does, and the Rust parser in `crates/parser` does the same.
-// A harness holds the two to one printed answer on every example under `tests/spec/parser`.
+// `docs/specs/grammar.md` states what it does, and `tests/parsing.lm` holds it on drawn input.
+// `tests/siblings.lm` holds it to every `.ast` and `.error` file under `tests/spec`.
 // Parsing stops at the first error, which carries the span of the token that failed.
 // The parser knows no definitions, so it never asks whether a name exists or what it names.
 import ast

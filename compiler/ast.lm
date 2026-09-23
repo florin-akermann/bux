@@ -1,6 +1,6 @@
 // The untyped abstract syntax tree of a source file, and the one printed form of it.
 //
-// `docs/specs/grammar.md` states the shape, and the Rust tree in `crates/ast` has the same one.
+// `docs/specs/grammar.md` states the shape.
 // Every node carries the span of the source it was parsed from, and nothing here is ever changed:
 // a later phase builds a new representation rather than writing into this one.
 // The tree knows no types and no definitions, so `User { id: id }` and `user { name: "Bob" }`
@@ -504,7 +504,7 @@ fn binary_word(operator: BinaryOperator) -> String {
 
 /// `text` between quotes, with each quote, backslash, and control character escaped.
 ///
-/// The Rust printer writes a string the same way: the escapes a string literal has, `\0`, and each
+/// It writes the escapes a string literal has, `\0`, and each
 /// other ASCII control character as `\u{…}` in hexadecimal. Every other character stays as it is.
 // example: quoted("say \"hi\"\n") == "\"say \\\"hi\\\"\\n\""
 // example: quoted("é") == "\"é\""

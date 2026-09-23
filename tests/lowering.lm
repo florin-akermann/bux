@@ -1,7 +1,7 @@
 // The invariants of `docs/specs/codegen.md` that the lowering holds, checked on drawn modules.
 //
 // Each property draws a module out of a fixed set of constructs, lowers it as a build lowers it,
-// and holds what the lowering gives back to one invariant. `crates/ir` held the same properties.
+// and holds what the lowering gives back to one invariant.
 import compiled
 
 import drawn

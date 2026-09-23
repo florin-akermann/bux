@@ -1,9 +1,8 @@
-// The `lumen` command line, written in Bux: every command `lumen --help` lists, answered byte for
-// byte as the Rust binary answers it.
+// The `lumen` command line, written in Bux: every command `lumen --help` lists, and its answer.
 //
 // `docs/specs/run.md` states the command line and the launcher that starts it, and
 // `docs/specs/diagnostics.md` states how a refusal reads. A command answers with text rather than
-// with a print, so a harness runs many commands in one JVM and holds each to the Rust answer.
+// with a print, so the runner runs many commands in one JVM and holds each to its golden answer.
 // `main.lm` prints the answer; it is a module of its own because no module imports `main`.
 import ast
 
@@ -68,8 +67,8 @@ fn answered_within(arguments: List<String>, library: ir.Library) -> Answer {
 
 /// What one command other than `run` says, or the refusal of a file named as though a directory.
 ///
-/// The JVM reads `main.lm/` as `main.lm`, where the Rust compiler is told the path is not a
-/// directory, so the path is looked at before it is read.
+/// The JVM reads `main.lm/` as `main.lm`, but the answer is that the path is not a directory,
+/// so the path is looked at before it is read.
 // example: path_said(Fmt("/"), ir.little_library()).status == 2
 fn path_said(command: Command, library: ir.Library) -> Said {
     path := path_of(command)
@@ -793,7 +792,7 @@ fn loaded_or_refused(answer: Result<List<modules.Module>, modules.NotLoaded>) ->
 
 /// What a load that stopped says: the file it could not read, or the refusal of one it read.
 ///
-/// The reason a file could not be read is the one the Rust compiler gives, found by looking at
+/// The reason a file could not be read is the one the Rust compiler gave, found by looking at
 /// the path, because the JVM says it in words of its own.
 // example: not_compiled_said(not_loaded(modules.Unreadable { path: "no-such-directory/a.lm", why: "" }), AsPage).errors == "error: no-such-directory/a.lm: No such file or directory (os error 2)\n"
 fn not_loaded(not: modules.NotLoaded) -> NotCompiled {
@@ -1807,7 +1806,7 @@ fn hex_digit(value: Int) -> String {
 ///
 /// The surface is the one `docs/specs/run.md` states: a word names a command, `-h` and `--help`
 /// ask for help, `-V` and `--version` for the version, and `--` ends the flags. Every refusal of
-/// the words reads as the Rust binary writes it, tip and usage line alike.
+/// the words reads as the Rust binary wrote it, tip and usage line alike.
 // example: is_told(asked_by(["-V"]))
 // example: !is_told(asked_by(["check", "a.lm"]))
 fn asked_by(arguments: List<String>) -> Parsed {
@@ -2096,7 +2095,7 @@ fn json_noted(sub: Subcommand, used: List<String>) -> Result<List<String>, Said>
 
 /// The usage line of a flag given a value, which names that flag.
 ///
-/// Where `--json` was written before, the Rust binary's usage line joins the argument and the flag
+/// Where `--json` was written before, the Rust binary's usage line joined the argument and the flag
 /// as `<PATH|--json>`, and this one writes the same.
 // example: value_usage(or(subcommand_named("check"), help_subcommand()), Held { long: Long { name: "help", value: None }, used: ["json"] }) == "lumen check --help <PATH|--json>"
 fn value_usage(sub: Subcommand, held: Held) -> String {
@@ -2292,7 +2291,7 @@ fn help_of_command(sub: Subcommand, more: List<String>) -> Said {
     }
 }
 
-/// A refusal of the words, in the layout the Rust binary writes: message, tip, usage, pointer.
+/// A refusal of the words, in the layout the Rust binary wrote: message, tip, usage, pointer.
 // example: complained(Complaint { message: "m", tip: Some("t"), usage: "u", offers_help: false }).errors == "error: m\n\n  tip: t\n\nUsage: u\n"
 fn complained(complaint: Complaint) -> Said {
     var written = "error: " + complaint.message + "\n"
@@ -2406,7 +2405,7 @@ fn most_similar(written: String, known: List<String>) -> Option<String> {
 /// Every one of `known` similar enough to `written`, the least similar first.
 ///
 /// Two names are similar when their Jaro similarity is above 0.7, which is the measure and the
-/// bound the Rust binary's argument parser uses. Of two equally similar names the one listed
+/// bound the Rust binary's argument parser used. Of two equally similar names the one listed
 /// later in `known` comes later.
 // example: all_similar("tst", ["fmt", "test"]) == ["test"]
 fn all_similar(written: String, known: List<String>) -> List<String> {
@@ -2539,7 +2538,7 @@ fn transpositions(compared: Compared, matched: Matched) -> Int {
     count
 }
 
-/// Why the file at `path` could not be read, in the words the Rust compiler gives.
+/// Why the file at `path` could not be read, in the words the Rust compiler gave.
 ///
 /// The JVM names a failure in words of its own, so the reason is found by looking at the path: a
 /// directory, a file that cannot be opened, a file that is not UTF-8, or no file at all.
@@ -2561,7 +2560,7 @@ fn read_refusal(path: String) -> String {
     "No such file or directory (os error 2)"
 }
 
-/// Why the file at `path` could not be written, in the words the Rust compiler gives.
+/// Why the file at `path` could not be written, in the words the Rust compiler gave.
 // example: write_refusal("no-such-directory/a.lm") == "No such file or directory (os error 2)"
 fn write_refusal(path: String) -> String {
     if is_folder(place_at(path)) {
@@ -2576,7 +2575,7 @@ fn write_refusal(path: String) -> String {
     "Permission denied (os error 13)"
 }
 
-/// Why the directory at `path` could not be made, in the words the Rust compiler gives.
+/// Why the directory at `path` could not be made, in the words the Rust compiler gave.
 // example: making_refusal("/") == "File exists (os error 17)"
 fn making_refusal(path: String) -> String {
     if is_there(place_at(path)) {

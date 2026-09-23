@@ -234,7 +234,7 @@ the grammar expected an expression and the source wrote an operator.
 `tests/spec/parser/<name>.lm` files are parsed and compared with a sibling expectation file.
 A `<name>.ast` file holds the parse tree, one node per line, `<indent><node> <start>..<end>`.
 A `<name>.error` file holds `<start>..<end> <message>`, then a `help: <text>` line if there is one.
-A `.lm` file has exactly one of the two, and the parser crate's tests name the failing example.
+A `.lm` file has exactly one of the two, and `tests/siblings.lm` names the failing file.
 An example is a whole program held to `docs/specs/executable-examples.md`, not a fragment.
 
 The two files are the printed form of the parser's answer, and each line of it ends in `\n`.
@@ -246,27 +246,21 @@ Every other character is written as it is, so the printed form of a string has o
 
 ## The parser written in Bux
 
-`compiler/parser.lm` is this parser written in Bux, and the Rust parser is the answer it must give.
+`compiler/parser.lm` is this parser, written in Bux.
 It reads the tokens of `compiler/lexer.lm` by kind and builds the tree `compiler/ast.lm` declares.
 It is the second phase of the Bux compiler, which `docs/implementation.md` section 6 states.
 
 `parser.printed(source)` gives the printed form: the tree, or the error that stops the parse.
-`ast.printed(program)` writes the tree, and the Rust printer of the parser's tests is its twin.
-That Rust printer is `crates/parser/tests/integration/printed.rs`.
+`ast.printed(program)` writes the tree, in the form of a `.ast` file.
 
-The Bux parser keeps the rules of the Rust parser that a reader can see.
-It stops at the first error, and it gives the same span, message, and help as the Rust parser.
-It spends one level of the budget of 32 where the Rust parser spends one.
-It decodes a literal where the Rust parser decodes it, so a bad number or escape fails at one place.
+The parser stops at the first error, and the error has a span, a message, and a help line.
 
-The harness `crates/cli/tests/integration/bux_parser.rs` builds the Bux parser with `lumen`.
-It runs the Bux parser over every `tests/spec/parser` example and over drawn text.
-It compares each answer with the printed answer of the Rust parser, line for line.
-A build needs no JDK, and a run needs one; with no JDK, the harness skips each run and says why.
+`tests/parsing.lm` holds the parser to the properties below, on drawn text and drawn programs.
+`tests/siblings.lm` holds it to every `.ast` and `.error` file under `tests/spec`, line for line.
 
 ## Properties
 
-These hold and are checked with property-based tests:
+These hold and are checked by drawn properties in the runner:
 
 1. Parsing never panics, on any input.
 2. Parsing is deterministic.

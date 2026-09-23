@@ -1,7 +1,7 @@
 // Name resolution: every name of a module pointed at the definition it means.
 //
-// `docs/specs/modules.md` states the scopes, the prelude, and the errors, and the Rust resolver in
-// `crates/resolver` does the same. A harness holds the two to one printed answer on every fixture.
+// `docs/specs/modules.md` states the scopes, the prelude, and the errors, and `tests/naming.lm`
+// holds the resolver to them on drawn modules.
 // Nothing here changes the tree: each answer sits beside it, under the place its name is written.
 // No name ever hides another, so a scope is one map, and a name leaves it when its block ends.
 import ast

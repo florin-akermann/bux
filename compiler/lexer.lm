@@ -1,7 +1,7 @@
 // The lexer: source text to tokens, each with the byte span of the text it covers.
 //
-// `docs/specs/lexer.md` states what it does, and the Rust lexer in `crates/lexer` does the same.
-// A harness holds the two to one answer on every example under `tests/spec/lexer`.
+// `docs/specs/lexer.md` states what it does, and `tests/lexing.lm` holds it on drawn text.
+// `tests/siblings.lm` holds it to every `.tokens` file under `tests/spec`.
 // Lexing is total: text the language has no use for is an `Unknown` or an `UnterminatedString`.
 // A string is read one UTF-16 code unit at a time, and a span counts the bytes of its UTF-8 form.
 import list
@@ -9,8 +9,6 @@ import list
 import strings
 
 /// The tokens of `source`, one line each: the kind, then the span as a start and an end.
-///
-/// It is what the harness compares with the Rust lexer, token for token.
 // example: listed("x := 1") == "Identifier 0..1\nPunct(:=) 2..4\nInteger 5..6\n"
 // example: listed("fn\n") == "Keyword(fn) 0..2\nNewline 2..3\n"
 fn listed(source: String) -> String {

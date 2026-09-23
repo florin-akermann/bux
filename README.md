@@ -4,10 +4,10 @@
 > Haskell's types.
 > Erlang's messages.
 > Valhalla's values.
-> A compiler written in Rust, until Bux compiles itself.
+> A compiler written in Bux, which compiles itself.
 
 Bux is a small, statically typed language for practical software, built on Valhalla.
-Its compiler emits JVM bytecode and is written in Rust until a compiler in Bux replaces it.
+Its compiler emits JVM bytecode, and it is written in Bux.
 
 This is an experiment and a fun project, not a product.
 Nothing is stable, nobody supports it, and the language changes whenever a better answer appears.
@@ -17,8 +17,8 @@ It exists to find out how much a language gets from very little.
 
 The language is Bux.
 Lumen is the old name, and the rename moves through the tree one task at a time.
-The binary is still `lumen`, a source file still ends in `.lm`, and the crates are still `lumen-*`.
-Every command below is written as it runs today.
+The command still calls itself `lumen`, and a source file still ends in `.lm`.
+`bin/bux` starts it, and every command below is written as it runs today.
 
 ## Philosophy
 
@@ -95,7 +95,7 @@ Higher-order functions are a library, never a second way to write a program.
 
 ### Canonical form, or it does not compile
 
-Source that is not in canonical form is a compile error, and `lumen fmt` writes that form.
+Source that is not in canonical form is a compile error, and `bin/bux fmt` writes that form.
 There is no style option, and a review has nothing about layout to argue about.
 
 ### Every function has a name
@@ -106,11 +106,10 @@ There are no anonymous functions, and a function is a first-class value by its n
 
 Version 0.1 and version 0.2 are in: types, records, ADTs, `match`, generics, and inference.
 Traits, `derive`, operators as trait methods, collections, modules, and packages are in with them.
-Version 0.3 is self-hosting, and it is the work in progress.
-The language now holds what its own compiler needs.
-`compiler/lexer.lm` is the first phase written in Bux, and each further phase follows it.
-A phase is held to the Rust one on the same examples, until Bux builds Bux.
-Then the Rust crates are deleted.
+Version 0.3 is self-hosting, and Item 075 completed it: the compiler in `compiler/` builds itself.
+Item 087 then deleted the Rust compiler that was the bootstrap.
+A seed, `bin/seed.jar`, builds the compiler now, and the compiler then builds itself again.
+The runner under `tests/` holds the compiler to every example and every drawn property.
 Version 0.4 adds concurrency, a native binary, HTTP, and JSON.
 `TODOS.md` is the backlog, and it is the only task tracker this repository has.
 
@@ -127,32 +126,31 @@ Most of the code is written by AI agents that work to `AGENTS.md`, which is why 
 
 ## Prerequisites
 
-- Rust stable, with `cargo-nextest` and `cargo-audit` installed
-- `mycs` on the `PATH` for the pre-commit sweep
-- JDK 28 or later, only to run compiled programs; every compiler phase is tested without one
+- JDK 28 or later, which runs the compiler and every program it compiles
 - Until JDK 28 ships, an early-access build of it; export `JAVA_HOME` as its `Contents/Home`
+- `mycs` on the `PATH` for the pre-commit sweep
+
+No Cargo and no other build tool is needed.
 
 ## Build
 
 ```sh
-cargo build
-cargo nextest run
+bin/bootstrap
+bin/runner
 git config core.hooksPath .githooks
 ```
 
-The build puts the `lumen` binary in `target/debug`.
-Put that directory on the `PATH` to use `lumen` like any other installed compiler:
-
-```sh
-export PATH="$PWD/target/debug:$PATH"
-```
+`bin/bootstrap` builds the compiler from the seed, and then the compiler builds itself again.
+The two builds must be the same, byte for byte.
+`bin/runner` holds the compiler to every example, every example line, and every drawn property.
+`bin/bux` starts the compiler; a link to it on the `PATH` works like any other installed compiler.
 
 ## The example program
 
 `example/main.lm` is everyday Bux in one screen: a record, an ADT, a `match`, and a list walked.
 
 ```sh
-lumen run example/main.lm
+bin/bux run example/main.lm
 ```
 
 It writes each answer it works out and exits `0`:
@@ -168,7 +166,7 @@ most: 6
 Its public surface is one page, which is what a reader consults to learn a signature:
 
 ```sh
-lumen api example/main.lm
+bin/bux api example/main.lm
 ```
 
-`lumen --help` lists every command: `fmt`, `check`, `build`, `run`, `test`, `api`, and `explain`.
+`bin/bux --help` lists every command: `fmt`, `check`, `build`, `run`, `test`, `api`, and `explain`.

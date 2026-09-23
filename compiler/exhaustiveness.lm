@@ -1,6 +1,6 @@
 // Exhaustiveness: every `match` of a module answers for every value it may meet, in order.
 //
-// `docs/specs/exhaustiveness.md` states the rules, and `crates/exhaustiveness` checks them in Rust.
+// `docs/specs/exhaustiveness.md` states the rules, and `tests/covered.lm` holds them on drawn arms.
 // The check reads the typed module and adds nothing to it: it has nothing to say, or it refuses.
 // Coverage is the usefulness algorithm over a matrix of one row for each arm, one column at a time.
 // The order of the arms is the order the type declares its constructors, read outermost first.

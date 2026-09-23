@@ -1,7 +1,7 @@
 // What a module declares, gathered before any body is inferred.
 //
-// `docs/specs/types.md` states the declarations, and `crates/types/src/environment.rs` reads them
-// in Rust. A name is filed under where it is declared, or under its spelling for the prelude, so
+// `docs/specs/types.md` states the declarations.
+// A name is filed under where it is declared, or under its spelling for the prelude, so
 // one flat table holds a whole module. The table is a value: each declaration gives back the one
 // it made, and the variables a signature leaves open come out of the inference table beside it.
 import ast
@@ -214,7 +214,7 @@ fn bare_text(path: ast.Path) -> String {
 /// Every instance of the prelude's traits this module gives a type it declares.
 ///
 /// One of a trait the module declares stays here, and so does one that asks such a trait. They
-/// come back in the order of the type's name and then the trait's, as the Rust phase sorts them.
+/// come back in the order of the type's name and then the trait's, as the Rust phase sorted them.
 // example: list.length(given_instances(little_environment(), little_resolved())) == 0
 fn given_instances(environment: Environment, resolved: resolver.Resolved) -> List<surface.OfferedInstance> {
     var given = []

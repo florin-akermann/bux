@@ -180,52 +180,48 @@ for normal language development.
 
 ## 6. Compiler implementation
 
-The compiler is written in Bux, and the Rust compiler is the bootstrap that gets it there.
-Self-hosting comes before every feature the self-hosted compiler does not need.
-Section 11 is the ladder of items it needs, and an item on the ladder is picked before one off it.
+The compiler is written in Bux, and it compiles itself.
+Self-hosting came before every feature the self-hosted compiler did not need.
+Section 11 is the ladder of items it needed, and Item 075 completed it.
 
-The self-hosted compiler runs on the JVM under `--enable-preview`, started by a `bux` launcher.
+The compiler runs on the JVM under `--enable-preview`, started by the `bux` launcher.
 No native binary is needed to compile the compiler with itself.
 GraalVM native-image waits until GraalVM tracks JDK 28 and Valhalla, and section 12 holds it.
 
-The Bux compiler lives in `compiler/`, one module for each phase, and the lexer is the first.
+The compiler lives in `compiler/`, one module for each phase, and the lexer is the first.
 `compiler/main.lm` is its command line, and `compiler/command.lm` holds every command.
-`lumen build compiler/main.lm` writes its classes beside the sources, in `compiler/`.
+A build writes the classes beside the sources, in `compiler/`.
 The launcher `bin/bux` starts them with `compiler/` and the directory above it on the class path.
 `compiler/help/` and `compiler/explanations/` hold the help text and the long form of each code.
 The directory above holds `library/`, and the compiler reads all three as resources.
-No class file is kept in the repository, so a checkout builds the compiler before `bin/bux` runs.
 A module there has a `.lm` name for now, because the module loader reads no other extension.
-A harness in `crates/cli` holds each phase to the answer of the Rust phase it replaces.
 
-The bootstrap has three stages.
-Stage 0 is the Rust `bux`, which compiles the Bux-written compiler to stage 1.
-Stage 1 compiles the same source to stage 2.
-A build writes beside the source, so each stage is built from a copy of `compiler/` of its own.
-`crates/cli/tests/integration/bux_bootstrap.rs` holds stage 2 equal to stage 1 byte for byte.
-The Rust crates are deleted when stage 2 equals stage 1 byte for byte and both pass `tests/spec`.
-Until then, the Rust compiler is the one that ships, and the crate structure below is its shape.
-
-Crate structure:
+What remains of the repository is small, and a JDK is the one tool it needs:
 
 ```text
-crates/
-    lexer/
-    parser/
-    ast/
-    format/
-    modules/
-    resolver/
-    types/
-    exhaustiveness/
-    holes/
-    hir/
-    ir/
-    jvm/
-    api/
-    diagnostics/
-    cli/
+bin/        bootstrap, bux, runner, and the seed seed.jar
+compiler/   the compiler, its help text, and its explanations
+library/    the standard library, read by the compiler as a resource
+tests/      the runner, and tests/spec, the executable examples
+example/    the example program
+docs/       the specification, this document, and the behaviour specs
 ```
+
+### The bootstrap
+
+The bootstrap has a seed and two stages, and `bin/bootstrap` runs them.
+The seed `bin/seed.jar` holds the classes of a compiler that an earlier compiler built.
+The seed builds stage 1, the classes beside the sources in `compiler/`.
+Stage 1 builds stage 2 from a copy of `compiler/` outside the repository.
+Stage 2 must be stage 1 byte for byte, and `docs/specs/run.md` states the script.
+No class file other than the seed is kept in the repository, so a checkout bootstraps first.
+
+The first seed is the compiler that the Rust compiler built, before Item 087 deleted the Rust.
+A change to the compiler changes stage 1, and stage 2 still equals it, because stage 1 built it.
+So the seed is replaced only when the compiler needs a feature that the seed cannot compile.
+The item that needs it builds stage 1 with the old seed, and it packs stage 1 as the new seed.
+Then `bin/bootstrap` must still hold stage 2 equal to stage 1.
+That item says so, and it replaces the seed in its own commit.
 
 The compiler should itself use strong typed representations for compiler phases.
 
@@ -282,7 +278,7 @@ Round trips come first: print then parse, a format that is idempotent, spans tha
 
 ### What the Rust tests held that the runner does not
 
-Item 087 moved every Rust test to the runner or states its loss here.
+Item 087 moved every Rust test to the runner, and it states each loss here.
 
 - Shrinking: a failure shows the whole drawn input, not the smallest input that fails.
 - A property that compared a Bux phase with the Rust phase, because no second phase is left.
@@ -297,9 +293,11 @@ Item 087 moved every Rust test to the runner or states its loss here.
 - L0601 and the placements of L0602, which only `bux test` gives, and an example states `check`.
 - `check` and `api` on the modules of `compiler/`, which change with each compiler edit.
 - An empty file as an example, because an empty example teaches nothing.
+- Every program under `tests/spec` run under stage 2 and under the launcher, beside the Rust run.
+- The runner runs each `expect-run` example on stage 1, and `bin/bootstrap` compares stage 2.
+- A check that each code a phase raises has an explanation file.
 
-Until the Rust crates go, `crates/cli/tests/integration/bux_runner.rs` starts the runner.
-It asserts that the runner ends with status 0.
+The pre-commit hook runs `bin/bootstrap` and then `bin/runner`, and both must end with status 0.
 
 ---
 

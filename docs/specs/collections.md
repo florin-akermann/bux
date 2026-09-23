@@ -242,7 +242,7 @@ with no instance are refused here exactly as they are refused anywhere.
 
 ## Properties
 
-These hold and are checked with property-based tests:
+These hold and are checked by drawn properties in the runner:
 
 1. `get` after `insert` gives back the value that went in, at whatever key it went in at.
 2. `insert` at a key already there replaces its value and leaves every other key readable.

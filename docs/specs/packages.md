@@ -156,7 +156,7 @@ come from.
 
 ## Properties
 
-These hold and are checked with property-based tests:
+These hold and are checked by drawn properties in the runner:
 
 1. A package whose modules import only downwards loads, dependencies before dependents.
 2. A module beside the importing file is the one an import reaches, however many dependencies

@@ -1,6 +1,6 @@
 // Type inference for a whole program: each module checked in order, and what it offers passed on.
 //
-// `docs/specs/types.md` states the rules, and `crates/types/src/lib.rs` checks a module in Rust.
+// `docs/specs/types.md` states the rules, and `tests/typing.lm` holds them on drawn modules.
 // A module is checked against the prelude and against what every module loaded before it offers.
 // A module that types gives its API page, which `docs/specs/api-surface.md` states.
 import ast

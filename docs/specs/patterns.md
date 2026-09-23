@@ -132,7 +132,7 @@ help: write one arm for each alternative where one of them binds
 
 ## Properties
 
-These hold and are checked with property-based tests:
+These hold and are checked by drawn properties in the runner:
 
 1. A `match` whose arms the check accepts is one every value of the type reaches an arm of.
 2. `A | B` in one arm covers exactly what `A` and `B` cover in two arms.

@@ -4,8 +4,8 @@ The prelude and the standard library are Lumen source the compiler carries, not 
 
 ## Intent
 
-`crates/resolver/src/prelude.rs` says the prelude becomes Lumen source once a module can be
-loaded, and a module has loaded since the loader landed.
+The prelude can be Lumen source once a module can be loaded.
+A module has loaded since the loader landed.
 `docs/implementation.md` section 10 asks for the `Int` and `String` instances of the operator
 traits to move into the library.
 This spec says where that source lives, how the compiler reaches it, and what is in it.
@@ -23,14 +23,15 @@ It is ordinary Lumen source: canonical form, one name one definition, examples w
 states one.
 
 The compiler carries it rather than looking for it.
-The Rust compiler reads each file into its binary at build time, so a compiler that runs at all
+The compiler reads each file as a class-path resource, and `bin/bux` names the class path.
+So a compiler that runs at all
 has its library: there is no install layout, no search path, no environment variable, and no
 directory a command has to be run from.
 That is also what makes every build and every test work with no network and no fixture.
 
 ## How the Bux compiler carries it
 
-The Bux compiler carries the same files, in the one copy `library/` holds, as class-path resources.
+The Bux compiler carries the files, in the one copy `library/` holds, as class-path resources.
 A resource is a file the JVM reads through its class loader, and the compiler's classes are read
 the same way.
 `library/<name>.lm` sits on the class path of the compiled compiler: in a directory now, and in
@@ -52,9 +53,9 @@ The name of the resource is the name of the module: an import of `list` asks for
 `library/list.lm`.
 A name the class path holds no resource for is no library module, and the import looks for a file.
 There is no list of library names in Bux, so one more file in `library/` is one more module.
-A refusal about a library module names the resource, `library/list.lm`, as the Rust compiler does.
+A refusal about a library module names the resource, `library/list.lm`.
 
-A harness that runs the Bux compiler puts the repository on its class path, beside the classes.
+`bin/bux` and `bin/runner` put the repository on the class path, beside the classes.
 That is the directory that holds `library/`, so the resource names above reach the one copy.
 
 ## How it is found
@@ -308,7 +309,7 @@ compile fails the compiler's own tests before it reaches anyone.
 
 ## Properties
 
-These hold and are checked with property-based tests:
+These hold and are checked by drawn properties in the runner:
 
 1. Every library module is in canonical form, and every one a program may import compiles.
 2. A program that writes no import sees every prelude name and no library module's name.

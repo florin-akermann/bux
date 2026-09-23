@@ -1,8 +1,8 @@
 // The loader: the file a command names, and every module it reaches, read and parsed.
 //
 // `docs/specs/modules.md` states where an import finds its file and why a ring has no order, and
-// `docs/specs/packages.md` states the manifest and the one other place an import looks. The Rust
-// loader in `crates/modules` does the same, and a harness holds the two to one printed answer.
+// `docs/specs/packages.md` states the manifest and the one other place an import looks.
+// `tests/loading.lm` holds the loader to both on drawn trees of modules.
 // A library module is a resource on the class path, which `docs/specs/library.md` states.
 import ast
 
@@ -478,7 +478,7 @@ fn word_of(line: Line, keyword: Keyword) -> Result<At, LoadError> {
     Ok(At { word: word, span: line.span })
 }
 
-/// Whether `word` holds a code unit Rust counts as white space.
+/// Whether `word` holds a code unit that is white space.
 // example: has_blank("a\tb")
 // example: !has_blank("../geometry")
 fn has_blank(word: String) -> Bool {
@@ -567,7 +567,7 @@ fn carried(name: String) -> Option<String> {
 /// The text of the resource at `path` on the class path, and `None` where there is no such one.
 ///
 /// The compiler carries the library, the help topics, and the long form of each diagnostic code
-/// this way, each read out of the one file the Rust compiler embeds, so the two never drift.
+/// this way, each read out of the one file of the repository that holds it, so nothing drifts.
 // example: or(resource_text("no/such/resource.md"), "none") == "none"
 fn resource_text(path: String) -> Option<String> {
     match resource(path) {

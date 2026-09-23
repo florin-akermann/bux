@@ -1,5 +1,5 @@
 // A hole is well typed, so `lumen check` accepts this file.
-// `lumen build` refuses it, which `crates/cli/tests/integration/building.rs` holds it to.
+// `lumen build` refuses it, which the golden answers in `tests/commands/fixtures.txt` hold.
 fn total(users: List<User>) -> Int {
     todo("count them once the walk is written")
 }

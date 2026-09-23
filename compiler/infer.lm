@@ -1,6 +1,6 @@
 // The walk: every expression of a module given the type it has.
 //
-// `docs/specs/types.md` states the rules, and `crates/types/src/infer.rs` walks them in Rust. The
+// `docs/specs/types.md` states the rules. The
 // walk holds one `Inference`, which each step takes and gives back changed, so the table, the
 // names in scope, and what still waits on a type are values rather than places that change.
 import ast
@@ -265,7 +265,7 @@ fn introduced_at(inference: Inference, named: ast.Name, declared_one: Option<uni
     }
 }
 
-/// What one function waits on, settled in the order the Rust phase settles it.
+/// What one function waits on, settled in the order the Rust phase settled it.
 // example: typed_code("fn count() -> Int {\n    1 + 1\n}\n") == ""
 fn function_settled(inference: Inference, function: ast.FunctionDeclaration, taken: List<unify.Type>) -> Result<Inference, refusal.TypeError> {
     propagated_all := settle_propagations(inference)?
@@ -1730,7 +1730,7 @@ fn propagating(inference: Inference, waiting: Propagation) -> Inference {
 
 /// Makes `expected` and `found` one type, or says which of the two the source wrote.
 ///
-/// A mismatch is read through the table as far as unification got, as the Rust phase reads it.
+/// A mismatch is read through the table as far as unification got, as the Rust phase read it.
 // example: refusal.code_given(expect(inference: nothing_inferred(), expected: unify.int(), found: unify.truth(), at: lexer.Span { start: 1, length: 2 })) == "L0400 1..3"
 fn expect(inference: Inference, expected: unify.Type, found: unify.Type, at: lexer.Span) -> Result<Inference, refusal.TypeError> {
     match unify.unify(inference.table, expected, found) {

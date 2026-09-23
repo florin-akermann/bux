@@ -332,7 +332,7 @@ is the author's claim failing rather than a program's.
 
 ## Properties
 
-These hold and are checked with property-based tests:
+These hold and are checked by drawn properties in the runner:
 
 1. Every `extern` declaration round trips: printed and parsed again, it is the same declaration.
 2. A signature holding a type that does not cross is `L0425`, whichever position it is in.

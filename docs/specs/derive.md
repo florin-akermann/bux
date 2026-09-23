@@ -164,8 +164,8 @@ of `Failed(String, List<Int>)` is `Failed.1` and the `tags` of a `Sent { tags: L
 `Sent.tags`.
 
 `L0300`, `L0303`, `L0308`, `L0310`, `L0311`, and `L0312` are raised by name resolution, which
-`crates/resolver/src/error.rs` words.
-`L0401` and `L0422` are raised by type inference, which `crates/types/src/error.rs` words.
+`compiler/resolver.lm` words.
+`L0401` and `L0422` are raised by type inference, which `compiler/refusal.lm` words.
 
 ## Executable examples
 
@@ -180,7 +180,7 @@ is where the claim that a derive reaches through a list is held to a running pro
 
 ## Properties
 
-These hold and are checked with property-based tests:
+These hold and are checked by drawn properties in the runner:
 
 1. A derive survives printing and parsing unchanged, and canonical form is idempotent over one.
 2. A record of any shape whose every field has the trait derives it, whichever of the four it is,

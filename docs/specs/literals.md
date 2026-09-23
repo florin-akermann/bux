@@ -189,7 +189,7 @@ error[L0421]: `lowest` of `Int32` is read rather than run, so it is one whole nu
 
 ## Properties
 
-These hold and are checked with property-based tests:
+These hold and are checked by drawn properties in the runner:
 
 1. A literal nothing settles is an `Int`, whatever the module around it is.
 2. A literal inside the range of the instance its type has is accepted, and one outside is refused.

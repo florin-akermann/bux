@@ -98,17 +98,13 @@ told what to write instead of sent looking for what is already there.
 Both are given before a program runs, so neither is ever a status a program chose.
 Once a program runs, `lumen run` ends with the status the program ended with, whatever it is.
 A program the operating system stopped rather than let end has no status of its own, and is
-reported as 128.
+reported as 128 plus the number of the signal.
 
 ## The command line written in Bux
 
 `compiler/main.lm` is the command line written in Bux.
 `compiler/command.lm` holds every command, because no module can import a module named `main`.
-For every command and every word, it writes what `lumen` writes on each stream, byte for byte.
-It also ends with the status that `lumen` ends with.
-The argument parser gives the same usage lines, tips, and help text as the Rust parser.
 The help text is read as a class-path resource: a file in `compiler/help/`.
-The Rust binary embeds the same file.
 
 `bin/bux` is the launcher, a POSIX `sh` script.
 It starts `java --enable-preview` on the class `main`, with every word it was given.
@@ -123,20 +119,22 @@ error: JAVA_HOME is not set, and the bux compiler runs on the JDK it names
 error: /opt/nothing/bin/java: JAVA_HOME names no JDK
 ```
 
-`run` starts the program with the streams of the command line, as the Rust runner does.
+`run` starts the program with the streams of the command line.
 The status of the command line is the status that the program ends with.
 A program that a signal stops ends with the status the JVM gives it, which is 128 and the signal.
-The Rust runner gives 128 for each signal, so these two statuses are not the same.
 
 The JVM gives an error in words of its own, so the command line looks at the path instead.
-A directory, a file that it cannot open, and a file that is not UTF-8 each get the Rust words.
-A path that ends in `/` and names a file is refused before it is read, as the Rust binary does.
+A directory, a file that it cannot open, and a file that is not UTF-8 each get fixed words.
+An example is `Is a directory (os error 21)`.
+A path that ends in `/` and names a file is refused before it is read.
 
-The harness `crates/cli/tests/integration/bux_command.rs` holds the Bux command line to `lumen`.
-One JVM, the driver `answers.lm`, answers a list of command lines, and two such JVMs share it.
-The harness compares every stream and the status of each, and the files that each side writes.
-It holds the launcher to `lumen` on every program under `tests/spec`.
-With no JDK, the harness skips each test that starts a JVM and says why.
+`tests/commanded.lm` holds the command line to golden answers under `tests/commands/`.
+`lines.txt` holds the argument parser, and `fixtures.txt` holds each command on each example.
+A golden answer is the status and every line of each stream.
+`tests/enacted.lm` holds the files that each command writes, and what each command says.
+`tests/started.lm` holds each command that starts a JVM.
+`tests/launched.lm` holds the launcher where it starts the compiler and where it cannot.
+With no JDK, the runner skips each check that starts a JVM and says why.
 
 ## The bootstrap
 
@@ -156,13 +154,8 @@ When they differ, the script names the first class that differs and ends with st
 A difference is a defect in the compiler under `compiler/`, and the fix goes there.
 The script refuses with status `2` when `JAVA_HOME` names no JDK and when the seed is missing.
 
-The harness `crates/cli/tests/integration/bux_bootstrap.rs` holds the bootstrap.
-It copies `bin/`, `compiler/`, `library/`, and `tests/spec/` with no class file to a new directory.
-It runs `bin/bootstrap` there with `JAVA_HOME` alone set, and then `bin/bux --version`.
-It also builds stage 1 with `lumen` and stage 2 with that stage, and compares their bytes.
-It holds stage 2 to `lumen` on every program under `tests/spec`.
-`bux_launcher.rs` does the same for stage 1.
-With no JDK, the harness skips each test and says why, because stage 1 runs on a JVM.
+The script is the check of the bootstrap, because it compares the two stages itself.
+The runner runs on stage 1, so each check of the runner is a check of stage 1.
 
 ## Properties
 
