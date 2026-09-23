@@ -78,6 +78,8 @@ The lexer accepts any string, including empty input, which lexes to no tokens.
 
 `tests/spec/lexer/<name>.lm` files are lexed and compared with the sibling `<name>.tokens` file.
 Each line of the `.tokens` file is `<kind> <start>..<end> <text>`, one per token, in source order.
+A keyword and a punctuation are named by the text that spells them, as in `Punct(:=)`.
+The text is quoted, and a quote, a backslash, a line break, a tab, and a return are escaped.
 The lexer crate's integration tests walk that directory and name the failing example.
 An example is a whole program held to `docs/specs/executable-examples.md`, not a fragment.
 

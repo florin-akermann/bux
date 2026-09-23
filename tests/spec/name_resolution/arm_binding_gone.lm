@@ -1,0 +1,12 @@
+// expect-error: L0300
+// A name a pattern binds is in scope in its own arm only, so another arm cannot read it.
+fn describe(payment: Payment) -> String {
+    match payment {
+        Pending => reason
+        Failed(reason) => reason
+    }
+}
+
+type Payment =
+    | Pending
+    | Failed(String)

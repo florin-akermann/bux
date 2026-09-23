@@ -1,0 +1,4 @@
+package both
+version 0.2.0
+depends ../layered
+depends ../geometry

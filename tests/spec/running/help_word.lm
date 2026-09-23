@@ -1,0 +1,11 @@
+// expect-run --help
+// > --help
+// A run has no flag of its own after the file, so a word such as `--help` goes to the program.
+import io
+
+fn main(arguments: List<String>) -> Int {
+    for argument in arguments {
+        io.println(argument)
+    }
+    0
+}

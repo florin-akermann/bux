@@ -1,6 +1,14 @@
 [profile.default]
 test-threads = "num-cpus"
 
+# The runner under `tests/` holds every example, every example line, and every drawn property in
+# one JVM, and it starts a JVM for each example that is run. It is one test that does the work of
+# the whole Rust suite, so it has a wall of its own, and it runs in the group below.
+[[profile.default.overrides]]
+filter = "test(=bux_runner::the_runner_holds_the_bux_compiler_to_everything_under_tests)"
+slow-timeout = { period = "600s", terminate-after = 1 }
+test-group = "bux-command"
+
 # Each of these tests starts a JVM for every example it walks or every case it draws, so what it
 # costs is what a JVM start costs rather than what it checks.
 # The `bux_*` modules hold a compiler phase written in Bux against the Rust phase it replaces, and

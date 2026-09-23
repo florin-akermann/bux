@@ -1,0 +1,7 @@
+// expect-error: L0100
+// Each item stands on a line of its own, so a second import on the same line is refused.
+import io import list
+
+fn main(arguments: List<String>) -> Int {
+    0
+}

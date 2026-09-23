@@ -1,0 +1,75 @@
+// Drawn input for a property: numbers, picks, and texts, each worked out from one fixed seed.
+//
+// `docs/implementation.md` section 7 states the drawn tests. The generator is linear congruential,
+// with Knuth's MMIX constants, and a sum that does not fit wraps, which `docs/specs/arithmetic.md`
+// states. A property draws a fixed number of cases, each from a seed of its own, and a failure
+// names the seed, so the same case is drawn again whenever the runner runs. Nothing shrinks.
+import list
+
+/// The seed of the case numbered `case`, which is the same on every run.
+// example: seed_of(0) == 1
+// example: seed_of(4) == 5
+fn seed_of(case: Int) -> Int {
+    case + 1
+}
+
+/// The draw that `seed` starts, stepped twice so that two seeds close together draw apart.
+// example: seeded(1).state != seeded(2).state
+fn seeded(seed: Int) -> Draw {
+    next(next(Draw { state: seed }))
+}
+
+/// A text of `count` pieces, each one of `pieces`, drawn one after the other from `draw`.
+// example: text_of(draw: seeded(1), pieces: ["a"], count: 3) == "aaa"
+fn text_of(draw: Draw, pieces: List<String>, count: Int) -> String {
+    var at = draw
+    var text = ""
+    var drawn = 0
+    for drawn < count {
+        text += picked(draw: at, values: pieces, fallback: "")
+        at = next(at)
+        drawn += 1
+    }
+    text
+}
+
+/// A list of `count` whole numbers, each from 0 up to `bound` and below it.
+// example: list.length(numbers(draw: seeded(1), count: 4, bound: 9)) == 4
+fn numbers(draw: Draw, count: Int, bound: Int) -> List<Int> {
+    var at = draw
+    var values = []
+    for list.length(values) < count {
+        values = list.push(values, number(at, bound))
+        at = next(at)
+    }
+    values
+}
+
+/// One of `values`, and `fallback` where there are none.
+// example: picked(draw: seeded(1), values: ["a"], fallback: "") == "a"
+// example: picked(draw: seeded(1), values: [], fallback: "none") == "none"
+fn picked<T>(draw: Draw, values: List<T>, fallback: T) -> T {
+    or(list.at(values, number(draw, list.length(values))), fallback)
+}
+
+/// A whole number from 0 up to `bound`, and below it, which is 0 where `bound` holds no number.
+///
+/// The high half of the state is read, because the low bits of a linear congruential generator
+/// repeat after a short run.
+// example: number(seeded(1), 10) < 10
+// example: number(seeded(1), 0) == 0
+fn number(draw: Draw, bound: Int) -> Int {
+    high := or(draw.state / 4294967296, 0) + 2147483648
+    or(high % bound, 0)
+}
+
+/// The draw after `draw`.
+// example: next(Draw { state: 0 }).state == 1442695040888963407
+fn next(draw: Draw) -> Draw {
+    Draw { state: draw.state * 6364136223846793005 + 1442695040888963407 }
+}
+
+/// Where a generator stands: each value it draws is worked out from this one number.
+type Draw = {
+    state: Int
+}

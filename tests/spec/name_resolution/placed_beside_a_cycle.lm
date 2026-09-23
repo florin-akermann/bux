@@ -1,0 +1,14 @@
+// expect-error: L0303
+// `is_odd` and `is_even` call each other, so either order suits them, but `helper` is used by
+// `is_odd` alone and is still written below it.
+fn helper() -> Int {
+    1
+}
+
+fn is_odd(count: Int) -> Bool {
+    is_even(count - helper())
+}
+
+fn is_even(count: Int) -> Bool {
+    is_odd(count - 1)
+}

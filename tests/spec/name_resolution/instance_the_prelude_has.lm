@@ -1,0 +1,7 @@
+// expect-error: L0308
+// The prelude already has an instance of `Eq` for `Int`, and one trait and one type have one.
+instance Eq<Int> {
+    fn is_equal(one: Int, other: Int) -> Bool {
+        true
+    }
+}

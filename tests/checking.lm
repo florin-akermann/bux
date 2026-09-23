@@ -1,0 +1,243 @@
+// What the drawn properties of the type inference share: a module checked in-process through
+// every phase up to inference, the type inference gave what is written at a place, and the loop
+// that tries a property on each drawn case.
+//
+// `docs/specs/types.md` states the inference. A module is checked as `lumen check` checks it,
+// but in the runner's own JVM, against the prelude the runner reads.
+import ast
+
+import command
+
+import drawn
+
+import held
+
+import infer
+
+import ir
+
+import lexer
+
+import list
+
+import modules
+
+import parser
+
+import resolver
+
+import strings
+
+import surface
+
+import types
+
+import unify
+
+/// The seed of each case of a property that tries `cases` of them, in order.
+// example: seeds(3) == [1, 2, 3]
+fn seeds(cases: Int) -> List<Int> {
+    var found = []
+    for list.length(found) < cases {
+        found = list.push(found, drawn.seed_of(list.length(found)))
+    }
+    found
+}
+
+/// `found`, with the failure of `tried` where it failed, reported under `property` and `seed`.
+// example: held.is_held(noted(found: held.nothing_failed(1), property: "p", seed: 1, tried: Tried { input: "", why: "" }))
+// example: !held.is_held(noted(found: held.nothing_failed(1), property: "p", seed: 1, tried: Tried { input: "", why: "gone" }))
+fn noted(found: held.Held, property: String, seed: Int, tried: Tried) -> held.Held {
+    if tried.why == "" {
+        return found
+    }
+    held.with_failure(found, held.drawn_failure(property, seed, tried.input, tried.why))
+}
+
+/// Whether `source` is a module the phases up to inference accept.
+// example: is_accepted("fn one() -> Int {\n    1\n}\n", ir.little_library())
+// example: !is_accepted("fn one() -> Int {\n    \"one\"\n}\n", ir.little_library())
+fn is_accepted(source: String, library: ir.Library) -> Bool {
+    code_of(checked(source, library)) == ""
+}
+
+/// The type inference gave the `count`th `written` of `source`, counting from one.
+///
+/// A module that is refused gives `refused` and the message, and a place inference gave no type
+/// gives `no type`, so a comparison with a type fails and says why.
+// example: type_written(source: "fn one() -> Int {\n    1\n}\n", written: "1", count: 1, library: ir.little_library()) == "Int"
+fn type_written(source: String, written: String, count: Int, library: ir.Library) -> String {
+    type_in(checked(source, library), occurrence(source: source, written: written, count: count))
+}
+
+/// `source`, parsed, resolved, and inferred as one module, or the first refusal of it.
+// example: code_of(checked("fn one() -> Int {\n    1\n}\n", ir.little_library())) == ""
+// example: code_of(checked("fn one() -> Int {\n    \"one\"\n}\n", ir.little_library())) == "L0400"
+fn checked(source: String, library: ir.Library) -> Result<infer.Inference, command.Diagnostic> {
+    program := parsed(source)?
+    resolved := command.resolved_of(resolver.resolve(program, "demo", library.prelude.names))?
+    command.inferred_of(types.check(resolved, surface.nothing_imported(), library.prelude))
+}
+
+/// The program `source` is, or the refusal of parsing it.
+// example: code_of(parsed("fn (")) == "L0100"
+fn parsed(source: String) -> Result<ast.Program, command.Diagnostic> {
+    match parser.parse(source) {
+        Ok(program) => Ok(program)
+        Err(error) => Err(command.parse_diagnostic(error))
+    }
+}
+
+/// `source`, checked as the file `demo.lm` in `directory` is, with every module it imports.
+///
+/// The library modules it imports are read from the class path, as the runner reads them.
+// example: code_of(reaching(source: "fn one() -> Int {\n    1\n}\n", directory: "no-such-directory", library: ir.little_library())) == ""
+fn reaching(source: String, directory: String, library: ir.Library) -> Result<infer.Inference, command.Diagnostic> {
+    match command.checked_as_written(command.Page { source: source, path: modules.joined(directory, "demo.lm") }, library) {
+        Ok(done) => Ok(done.root.inferred)
+        Err(not) => Err(first_diagnostic(not))
+    }
+}
+
+/// The first diagnostic of `not`, or one that holds what it says where it holds none.
+// example: first_diagnostic(command.Unusable("error: gone\n")).message == "error: gone\n"
+fn first_diagnostic(not: command.NotCompiled) -> command.Diagnostic {
+    match not {
+        command.Unusable(said) => said_as_diagnostic(said)
+        command.Refused(refusal) => or(list.at(refusal.diagnostics, 0), said_as_diagnostic("refused"))
+    }
+}
+
+/// A diagnostic of no code that says `said`.
+// example: said_as_diagnostic("gone").code == ""
+fn said_as_diagnostic(said: String) -> command.Diagnostic {
+    command.Diagnostic { code: "", message: said, span: lexer.Span { start: 0, length: 0 }, help: None, fix: None }
+}
+
+/// The code of the refusal `answer` holds, and `""` where it holds none.
+// example: code_of(Ok(1)) == ""
+fn code_of<T>(answer: Result<T, command.Diagnostic>) -> String {
+    match answer {
+        Ok(_) => ""
+        Err(refused) => refused.code
+    }
+}
+
+/// The message of the refusal `answer` holds, and `accepted` where it holds none.
+// example: message_of(Ok(1)) == "accepted"
+fn message_of<T>(answer: Result<T, command.Diagnostic>) -> String {
+    match answer {
+        Ok(_) => "accepted"
+        Err(refused) => refused.message
+    }
+}
+
+/// The help of the refusal `answer` holds, and `accepted` where it holds none.
+// example: help_of(Ok(1)) == "accepted"
+fn help_of<T>(answer: Result<T, command.Diagnostic>) -> String {
+    match answer {
+        Ok(_) => "accepted"
+        Err(refused) => or(refused.help, "")
+    }
+}
+
+/// The type the inference `answer` holds gave the stretch `at`.
+// example: type_in(Err(said_as_diagnostic("gone")), lexer.Span { start: 0, length: 1 }) == "refused: gone"
+fn type_in(answer: Result<infer.Inference, command.Diagnostic>, at: lexer.Span) -> String {
+    match answer {
+        Ok(inference) => type_text(infer.type_at(inference, at))
+        Err(refused) => "refused: " + refused.message
+    }
+}
+
+/// The type the call of a trait method at `at` asked its trait of, which names the instance.
+// example: instance_in(Err(said_as_diagnostic("gone")), lexer.Span { start: 0, length: 1 }) == "refused: gone"
+fn instance_in(answer: Result<infer.Inference, command.Diagnostic>, at: lexer.Span) -> String {
+    match answer {
+        Ok(inference) => type_text(infer.method_type_at(inference, at))
+        Err(refused) => "refused: " + refused.message
+    }
+}
+
+/// A type as a message writes it, and `no type` where there is none.
+// example: type_text(None) == "no type"
+// example: type_text(Some(unify.int())) == "Int"
+fn type_text(found: Option<unify.Type>) -> String {
+    match found {
+        Some(one) => unify.text_of(one)
+        None => "no type"
+    }
+}
+
+/// The stretch of the `count`th `written` in `source`, counting from one, which starts at `-1`
+/// where `source` does not write it that often.
+// example: occurrence(source: "a b a", written: "a", count: 2).start == 4
+// example: occurrence(source: "a b a", written: "a", count: 3).start == -1
+fn occurrence(source: String, written: String, count: Int) -> lexer.Span {
+    length := strings.length(written)
+    var seen = 0
+    var index = 0
+    for index + length <= strings.length(source) {
+        if or(strings.cut(source, index, index + length), "") == written {
+            seen += 1
+            if seen == count {
+                return lexer.Span { start: index, length: length }
+            }
+        }
+        index += 1
+    }
+    lexer.Span { start: -1, length: length }
+}
+
+/// Why the stretch `at` is not at least one byte inside `source`, and `""` where it is.
+// example: outside(at: lexer.Span { start: 1, length: 2 }, source: "abc") == ""
+// example: outside(at: lexer.Span { start: 1, length: 0 }, source: "abc") == "the refusal points at 1..1"
+fn outside(at: lexer.Span, source: String) -> String {
+    if at.length > 0 && at.start >= 0 && at.start + at.length <= strings.length(source) {
+        return ""
+    }
+    "the refusal points at " + shown(at.start) + ".." + shown(at.start + at.length)
+}
+
+/// A module of the distinct pieces drawn from `among`; a piece drawn twice is written once.
+// example: list.has_value(["a", ""], module_of(drawn.seeded(1), ["a"]))
+fn module_of(draw: drawn.Draw, among: List<String>) -> String {
+    count := drawn.number(draw, list.length(among) + 2)
+    var at = drawn.next(draw)
+    var chosen = []
+    for index in numbers_below(count) {
+        piece := drawn.picked(at, among, "")
+        if !list.has_value(chosen, piece) {
+            chosen = list.push(chosen, piece)
+        }
+        at = drawn.next(at)
+    }
+    strings.join(chosen, "\n\n")
+}
+
+/// The draw `steps` draws after `draw`.
+// example: after(drawn.seeded(1), 2).state == drawn.next(drawn.next(drawn.seeded(1))).state
+fn after(draw: drawn.Draw, steps: Int) -> drawn.Draw {
+    var at = draw
+    for step in numbers_below(steps) {
+        at = drawn.next(at)
+    }
+    at
+}
+
+/// The whole numbers from 0 up to `count`, and below it.
+// example: numbers_below(3) == [0, 1, 2]
+fn numbers_below(count: Int) -> List<Int> {
+    var found = []
+    for list.length(found) < count {
+        found = list.push(found, list.length(found))
+    }
+    found
+}
+
+/// One case of a property: the input it drew, as text, and why it failed, which is `""` where
+/// it held.
+type Tried = {
+    input: String
+    why: String
+}

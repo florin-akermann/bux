@@ -1,0 +1,8 @@
+// expect-error: L0501
+// `Option` is written the way the prelude declares it: `Some` before `None`.
+fn or_else(value: Option<Int>, fallback: Int) -> Int {
+    match value {
+        None => fallback
+        Some(inner) => inner
+    }
+}

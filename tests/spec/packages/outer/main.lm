@@ -1,0 +1,6 @@
+// `square` imports `point` out of `geometry`, which `layered` depends on and this package does not.
+import square
+
+fn edge() -> Int {
+    square.corner()
+}

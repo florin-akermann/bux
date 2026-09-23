@@ -1,0 +1,311 @@
+// Each command of the command line that starts a JVM, done on files written for it.
+//
+// `docs/specs/run.md` states `run`, and `docs/specs/doc-examples.md` states `test`. A check here
+// needs the JDK `JAVA_HOME` names, and every check is skipped where it names none. A check of what
+// the command line says where `JAVA_HOME` names no JDK starts the command line in a JVM of its
+// own, with `JAVA_HOME` taken away or changed, because this JVM reads the one it was given.
+import command
+
+import enacted
+
+import environment
+
+import exemplified
+
+import files
+
+import held
+
+import ir
+
+import list
+
+import modules
+
+import strings
+
+import walk
+
+/// Every check of this module, or one skip where `JAVA_HOME` names no JDK.
+// example: dotted("a/b") == "a.b"
+fn every_run_held(library: ir.Library) -> held.Held {
+    if !exemplified.is_a_jdk_named() {
+        return held.with_skip(held.nothing_failed(0), "tests/started.lm: JAVA_HOME names no JDK, and each check starts a JVM")
+    }
+    var found = classes_verified(library)
+    found = held.added(found, every_test_held(library))
+    found = held.added(found, example_program_run(library))
+    found = held.added(found, example_program_tested(library))
+    held.added(found, every_missing_jdk_held())
+}
+
+/// Every class `build` writes is one a JVM loads and verifies.
+// example: class_named("lumen/Result$Ok.class") == "lumen.Result$Ok"
+fn classes_verified(library: ir.Library) -> held.Held {
+    scene := enacted.scene_of([enacted.Written { at: "example.lm", text: everything_text() }])
+    said := enacted.said_to(["build", modules.joined(scene, "example.lm")], library)
+    var facts = [enacted.status_fact(said, 0)]
+    for class in enacted.relative_files(scene) {
+        if walk.is_ending_in(class, ".class") {
+            facts = list.push(facts, class_loaded(scene: scene, class: class))
+        }
+    }
+    command.removed_whole(scene)
+    enacted.facts_held("every class build writes is one a JVM loads and verifies", facts)
+}
+
+/// The fact that a JVM loads the class written at `class` under `scene`, which it does where it
+/// says nothing but that the class declares no `main`.
+// example: is_loaded("Error: Main method not found in class a")
+fn class_loaded(scene: String, class: String) -> enacted.Fact {
+    line := [java(), "--enable-preview", "-cp", scene, class_named(class)]
+    errors := errors_of(walk.ended(line, scene))
+    if is_loaded(errors) {
+        return enacted.Fact { what: class, expected: "loaded", found: "loaded" }
+    }
+    enacted.Fact { what: class, expected: "loaded", found: errors }
+}
+
+/// What a program wrote on standard error, or why it could not be started.
+// example: errors_of(None) == "Error: the JVM could not be started"
+fn errors_of(ended: Option<walk.Ended>) -> String {
+    match ended {
+        Some(done) => done.errors
+        None => "Error: the JVM could not be started"
+    }
+}
+
+/// Whether what a JVM said of a class it was asked to start says the class loaded.
+// example: is_loaded("")
+// example: !is_loaded("Error: Unable to initialize main class a")
+fn is_loaded(errors: String) -> Bool {
+    !enacted.is_within(errors, "Error") || enacted.is_within(errors, "Main method not found")
+}
+
+/// The name a JVM is asked for a class by, from the path of its file.
+// example: class_named("example.class") == "example"
+fn class_named(path: String) -> String {
+    dotted(enacted.without(path, ".class"))
+}
+
+/// `path` with each slash written as a dot.
+// example: dotted("a") == "a"
+fn dotted(path: String) -> String {
+    var written = ""
+    var index = 0
+    for index < strings.length(path) {
+        unit := or(strings.cut(path, index, index + 1), "")
+        if unit == "/" {
+            written += "."
+        } else {
+            written += unit
+        }
+        index += 1
+    }
+    written
+}
+
+/// The checks of `test`, which runs the examples of a module in a JVM of their own.
+// example: strings.length(does_not_hold_text()) > 0
+fn every_test_held(library: ir.Library) -> held.Held {
+    var found = examples_tested(library)
+    found = held.added(found, example_not_held(library))
+    found = held.added(found, line_written_by_the_program(library))
+    held.added(found, imported_examples_tested(library))
+}
+
+/// `test` says nothing and ends with 0 where every example held.
+// example: strings.length(enacted.holds_text()) > 0
+fn examples_tested(library: ir.Library) -> held.Held {
+    scene := enacted.scene_of([enacted.Written { at: "example.lm", text: enacted.holds_text() }])
+    said := enacted.said_to(["test", modules.joined(scene, "example.lm")], library)
+    command.removed_whole(scene)
+    enacted.facts_held("test says nothing where every example held", enacted.said_facts("test", said))
+}
+
+/// `test` reports the example that did not hold, where it is written.
+// example: enacted.first_line_of(does_not_hold_text()) == "// example: shared(total: 7) == 8"
+fn example_not_held(library: ir.Library) -> held.Held {
+    scene := enacted.scene_of([enacted.Written { at: "example.lm", text: does_not_hold_text() }])
+    said := enacted.said_to(["test", modules.joined(scene, "example.lm")], library)
+    command.removed_whole(scene)
+    facts := [enacted.status_fact(said, 1), enacted.within_fact("errors", said.errors, "error[L0603]: the example of `shared` does not hold"), enacted.within_fact("errors", said.errors, "// example: shared(total: 7) == 8")]
+    enacted.facts_held("test reports the example that did not hold", facts)
+}
+
+/// A line a program writes itself is not read as an example that did not hold.
+// example: enacted.first_line_of(writes_a_line_text()) == "import io"
+fn line_written_by_the_program(library: ir.Library) -> held.Held {
+    scene := enacted.scene_of([enacted.Written { at: "example.lm", text: writes_a_line_text() }])
+    said := enacted.said_to(["test", modules.joined(scene, "example.lm")], library)
+    command.removed_whole(scene)
+    facts := [enacted.status_fact(said, 0), enacted.Fact { what: "errors", expected: "", found: said.errors }]
+    enacted.facts_held("a line the program writes itself is not a failed example", facts)
+}
+
+/// `test` runs the examples of a module that imports another.
+// example: enacted.first_line_of(twice_text()) == "import greeting"
+fn imported_examples_tested(library: ir.Library) -> held.Held {
+    scene := enacted.scene_of([enacted.Written { at: "example.lm", text: twice_text() }, enacted.Written { at: "greeting.lm", text: enacted.greeting_text() }])
+    said := enacted.said_to(["test", modules.joined(scene, "example.lm")], library)
+    command.removed_whole(scene)
+    enacted.facts_held("test runs the examples of a module that imports another", [enacted.status_fact(said, 0)])
+}
+
+/// `example/main.lm` runs to the end and writes every answer it works out, which
+/// `docs/specs/example-program.md` states.
+// example: strings.length(java()) >= 0
+fn example_program_run(library: ir.Library) -> held.Held {
+    scene := enacted.scene_of([enacted.Written { at: "main.lm", text: ok_or(files.read("example/main.lm"), "") }])
+    answer := command.answered_within(["run", modules.joined(scene, "main.lm")], library)
+    said := ended_said(answer, scene)
+    command.removed_whole(scene)
+    facts := [enacted.status_fact(said, 0), enacted.Fact { what: "output", expected: "held: 7\neach: 3\nmost: 6\n", found: said.output }]
+    enacted.facts_held("example/main.lm writes every answer it works out", facts)
+}
+
+/// Every example of `example/main.lm` holds.
+// example: ended_said(command.Spoken(command.nothing_said()), "no-such-directory").status == 0
+fn example_program_tested(library: ir.Library) -> held.Held {
+    scene := enacted.scene_of([enacted.Written { at: "main.lm", text: ok_or(files.read("example/main.lm"), "") }])
+    said := enacted.said_to(["test", modules.joined(scene, "main.lm")], library)
+    command.removed_whole(scene)
+    enacted.facts_held("every example of example/main.lm holds", enacted.said_facts("test", said))
+}
+
+/// What `answer` says, where a program to start is started in `directory` and ends.
+// example: ended_said(command.Spoken(command.unusable("a")), "no-such-directory").status == 2
+fn ended_said(answer: command.Answer, directory: String) -> command.Said {
+    match answer {
+        command.Spoken(said) => said
+        command.Starts(line) => program_said(walk.ended(line, directory))
+    }
+}
+
+/// The checks of what `run` and `test` say where `JAVA_HOME` names no JDK.
+// example: strings.length(no_jdk_line()) > 0
+fn every_missing_jdk_held() -> held.Held {
+    var found = run_without_a_jdk()
+    found = held.added(found, refused_without_a_jdk())
+    found = held.added(found, run_where_no_jdk_is())
+    held.added(found, test_without_a_jdk())
+}
+
+/// `run` says which variable names the JDK where nothing does, having compiled the program first.
+// example: no_jdk_line() == "error: JAVA_HOME is not set, and running a program needs the JDK it names\n"
+fn run_without_a_jdk() -> held.Held {
+    scene := enacted.scene_of([enacted.Written { at: "example.lm", text: enacted.counting_program_text() }])
+    said := without_a_jdk(["run", modules.joined(scene, "example.lm")], scene)
+    facts := [enacted.status_fact(said, 2), enacted.Fact { what: "errors", expected: no_jdk_line(), found: said.errors }, enacted.Fact { what: "example.class", expected: "written", found: enacted.presence(scene, "example.class") }]
+    command.removed_whole(scene)
+    enacted.facts_held("run says which variable names the JDK where nothing does", facts)
+}
+
+/// `run` reports a program that does not compile, even where no JDK could run it.
+// example: strings.length(enacted.refused_program_text()) > 0
+fn refused_without_a_jdk() -> held.Held {
+    scene := enacted.scene_of([enacted.Written { at: "example.lm", text: enacted.refused_program_text() }])
+    said := without_a_jdk(["run", modules.joined(scene, "example.lm")], scene)
+    command.removed_whole(scene)
+    facts := [enacted.status_fact(said, 1), enacted.opening_fact("errors", said.errors, "error[L03")]
+    enacted.facts_held("run reports a program that does not compile where no JDK is", facts)
+}
+
+/// `run` says where it looked where `JAVA_HOME` names no JDK.
+// example: java_of("/a") == "/a/bin/java"
+fn run_where_no_jdk_is() -> held.Held {
+    scene := enacted.scene_of([enacted.Written { at: "example.lm", text: enacted.counting_program_text() }])
+    home := modules.joined(scene, "nowhere")
+    said := command_line_said(command.all_of(["/usr/bin/env", "JAVA_HOME=" + home], command_line(["run", modules.joined(scene, "example.lm")])), scene)
+    command.removed_whole(scene)
+    facts := [enacted.status_fact(said, 2), enacted.Fact { what: "errors", expected: "error: " + java_of(home) + ": JAVA_HOME names no JDK\n", found: said.errors }]
+    enacted.facts_held("run says where it looked where JAVA_HOME names no JDK", facts)
+}
+
+/// `test` says which variable names the JDK where nothing does.
+// example: strings.length(enacted.holds_text()) > 0
+fn test_without_a_jdk() -> held.Held {
+    scene := enacted.scene_of([enacted.Written { at: "example.lm", text: enacted.holds_text() }])
+    said := without_a_jdk(["test", modules.joined(scene, "example.lm")], scene)
+    command.removed_whole(scene)
+    facts := [enacted.status_fact(said, 2), enacted.within_fact("errors", said.errors, "JAVA_HOME is not set")]
+    enacted.facts_held("test says which variable names the JDK where nothing does", facts)
+}
+
+/// What the command line says to `words` in a JVM of its own, started in `directory` with
+/// `JAVA_HOME` taken away.
+// example: list.length(command_line(["a"])) == 6
+fn without_a_jdk(words: List<String>, directory: String) -> command.Said {
+    command_line_said(command.all_of(["/usr/bin/env", "-u", "JAVA_HOME"], command_line(words)), directory)
+}
+
+/// What the program `line` starts in `directory` wrote and ended with.
+// example: command_line_said(["no-such-program-at-all"], "no-such-directory").status == -1
+fn command_line_said(line: List<String>, directory: String) -> command.Said {
+    program_said(walk.ended(line, directory))
+}
+
+/// What a started program wrote and ended with, or why it could not be started.
+// example: program_said(None).status == -1
+fn program_said(ended: Option<walk.Ended>) -> command.Said {
+    match ended {
+        Some(done) => command.Said { output: done.output, errors: done.errors, status: done.status }
+        None => command.Said { output: "", errors: "the program could not be started\n", status: -1 }
+    }
+}
+
+/// The line that starts the command line in a JVM of its own, given `words`.
+///
+/// The class path names the compiler and the directory above it by their whole paths, because the
+/// command line reads its help, its explanations, and the library there as resources.
+// example: or(list.at(command_line(["a"]), 5), "") == "a"
+fn command_line(words: List<String>) -> List<String> {
+    root := or(property("user.dir"), ".")
+    command.all_of([java(), "--enable-preview", "-cp", modules.joined(root, "compiler") + ":" + root, "main"], words)
+}
+
+/// The line every refusal of a run where `JAVA_HOME` is not set reads.
+// example: strings.length(no_jdk_line()) == 74
+fn no_jdk_line() -> String {
+    "error: JAVA_HOME is not set, and running a program needs the JDK it names\n"
+}
+
+/// The `java` of the JDK `JAVA_HOME` names.
+// example: strings.length(java()) >= 0
+fn java() -> String {
+    java_of(or(environment.read("JAVA_HOME"), ""))
+}
+
+/// The `java` of the JDK at `home`.
+// example: java_of("") == "bin/java"
+fn java_of(home: String) -> String {
+    modules.joined(modules.joined(home, "bin"), "java")
+}
+
+/// A module reaching every construct whose lowering the verifier has something to say about.
+// example: strings.length(everything_text()) > 0
+fn everything_text() -> String {
+    "// example: walked([1, 2]) == 3\nfn walked(counts: List<Int>) -> Int {\n    var total = 0\n    for count in counts {\n        total += identity(count)\n    }\n    total\n}\n\n// example: joined(word: \"ha\") == \"ha!\"\nfn joined(word: String) -> String {\n    identity(word) + \"!\"\n}\n\n// example: is_compared(1)\nfn is_compared(count: Int) -> Bool {\n    identity(count) < 2\n}\n\n// example: is_negated(false)\nfn is_negated(flag: Bool) -> Bool {\n    !identity(flag)\n}\n\n// example: picked(2) == 1\nfn picked(count: Int) -> Int {\n    if identity(count > 1) {\n        1\n    } else {\n        2\n    }\n}\n\n// example: identity(7) == 7\nfn identity<T>(value: T) -> T {\n    value\n}\n"
+}
+
+/// The module of `holds_text`, with the one example stating what the function does not work out.
+// example: strings.length(does_not_hold_text()) > 0
+fn does_not_hold_text() -> String {
+    "// example: shared(total: 7) == 8\nfn shared(total: Int) -> Int {\n    total\n}\n"
+}
+
+/// A module that writes a line of its own, which reads as a run's report of the first example,
+/// from inside the example that tries it, and the example holds.
+// example: strings.length(writes_a_line_text()) > 0
+fn writes_a_line_text() -> String {
+    "import io\n\n// example: is_ready()\nfn is_ready() -> Bool {\n    io.println(\"0\")\n    true\n}\n"
+}
+
+/// A module whose example reaches a function of the module `greeting` beside it.
+// example: strings.length(twice_text()) > 0
+fn twice_text() -> String {
+    "import greeting\n\n// example: twice() == \"hello, world\"\nfn twice() -> String {\n    greeting.greeting(\"world\")\n}\n"
+}
+
+/// The value of the system property `name`, where there is one.
+extern static property(name: String) -> Option<String> = "java.lang.System.getProperty"

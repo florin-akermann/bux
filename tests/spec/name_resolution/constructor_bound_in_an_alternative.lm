@@ -1,0 +1,13 @@
+// expect-error: L0314
+// A name bound inside a constructor of an alternative binds inside the or-pattern too.
+fn describe(payment: Payment) -> String {
+    match payment {
+        Pending | Failed(reason) => "waiting"
+        Running => "running"
+    }
+}
+
+type Payment =
+    | Pending
+    | Running
+    | Failed(String)

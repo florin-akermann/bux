@@ -1,0 +1,256 @@
+// The holes of a module: every `todo(…)` it writes, found wherever and in whatever type it is.
+//
+// `docs/specs/holes.md` states the properties. Each case writes a module out of drawn places,
+// types, and statements, types it against the prelude, and lists its holes with the compiler's own
+// walk in the runner's JVM. The drawn body of holes is the one the Rust comparison drew.
+import drawn
+
+import held
+
+import holes
+
+import ir
+
+import list
+
+import strings
+
+import typed
+
+import types
+
+/// Every property of the holes over `cases` drawn cases each, in a fixed order.
+// example: list.length(every_property(0, ir.little_library())) == 4
+fn every_property(cases: Int, library: ir.Library) -> List<held.Held> {
+    var found = []
+    for property in [AnyType, AnyPlace, NoneUnfinished, DrawnBody] {
+        found = list.push(found, held_over(property: property, cases: cases, prelude: library.prelude))
+    }
+    found
+}
+
+/// `property` tried on `cases` cases, each drawn from a seed of its own.
+// example: held.is_held(held_over(property: NoneUnfinished, cases: 2, prelude: types.little_prelude()))
+fn held_over(property: Property, cases: Int, prelude: types.Prelude) -> held.Held {
+    var found = held.nothing_failed(cases)
+    var index = 0
+    for index < cases {
+        seed := drawn.seed_of(index)
+        tried := tried_by(property: property, draw: drawn.seeded(seed), prelude: prelude)
+        if tried.why != "" {
+            found = held.with_failure(found, held.drawn_failure(name_of(property), seed, tried.case, tried.why))
+        }
+        index += 1
+    }
+    found
+}
+
+/// One case of `property`, drawn from `draw`, typed against `prelude`.
+// example: tried_by(property: NoneUnfinished, draw: drawn.seeded(1), prelude: types.little_prelude()).why == ""
+fn tried_by(property: Property, draw: drawn.Draw, prelude: types.Prelude) -> Tried {
+    match property {
+        AnyType => a_hole_is_a_hole_whatever_type_it_is_written_in(draw, prelude)
+        AnyPlace => every_hole_a_module_holds_is_found_wherever_it_is_written(draw, prelude)
+        NoneUnfinished => a_module_with_nothing_unfinished_holds_no_hole_to_refuse(draw, prelude)
+        DrawnBody => every_hole_of_a_drawn_body_is_found_in_the_order_it_is_written(draw, prelude)
+    }
+}
+
+/// The name a failure of `property` is reported with.
+// example: name_of(AnyType) == "a_hole_is_a_hole_whatever_type_it_is_written_in"
+fn name_of(property: Property) -> String {
+    match property {
+        AnyType => "a_hole_is_a_hole_whatever_type_it_is_written_in"
+        AnyPlace => "every_hole_a_module_holds_is_found_wherever_it_is_written"
+        NoneUnfinished => "a_module_with_nothing_unfinished_holds_no_hole_to_refuse"
+        DrawnBody => "every_hole_of_a_drawn_body_is_found_in_the_order_it_is_written"
+    }
+}
+
+/// A hole written as the body of a function is found, and its span covers the whole call.
+// example: a_hole_is_a_hole_whatever_type_it_is_written_in(drawn.seeded(1), types.little_prelude()).case != ""
+fn a_hole_is_a_hole_whatever_type_it_is_written_in(draw: drawn.Draw, prelude: types.Prelude) -> Tried {
+    source := placed(place: 0, result: result_of(draw))
+    written := written_of(source, prelude)
+    var why = ""
+    if written != ["todo(\"why\")"] {
+        why = "the holes are written " + shown(written)
+    }
+    Tried { case: source, why: why }
+}
+
+/// Every hole a module holds is found, wherever in a function it is written.
+// example: every_hole_a_module_holds_is_found_wherever_it_is_written(drawn.seeded(1), types.little_prelude()).case != ""
+fn every_hole_a_module_holds_is_found_wherever_it_is_written(draw: drawn.Draw, prelude: types.Prelude) -> Tried {
+    place := drawn.number(drawn.next(draw), 4)
+    source := placed(place: place, result: result_of(draw))
+    written := written_of(source, prelude)
+    var why = ""
+    if list.length(written) != or(list.at([1, 1, 2, 2], place), 0) {
+        why = "the holes are written " + shown(written)
+    }
+    Tried { case: source, why: why }
+}
+
+/// One of the types a hole is written in, which between them cover every shape a type has.
+// example: result_of(drawn.seeded(1)) != ""
+fn result_of(draw: drawn.Draw) -> String {
+    drawn.picked(draw, ["Int", "String", "Bool", "Option<Int>", "List<Int>"], "Int")
+}
+
+/// A function that writes a hole at the place numbered `place`, and gives back a `result`.
+///
+/// The function asks a question in its name, because a function that gives back a `Bool` has a
+/// name that asks one, and `result` is sometimes `Bool`.
+// example: placed(place: 0, result: "Int") == "fn is_reached() -> Int {\n    todo(\"why\")\n}\n"
+fn placed(place: Int, result: String) -> String {
+    hole := "todo(\"why\")"
+    match place {
+        0 => "fn is_reached() -> " + result + " {\n    " + hole + "\n}\n"
+        1 => "fn is_reached() -> " + result + " {\n    held := " + hole + "\n    held\n}\n"
+        2 => "fn is_reached(count: Int) -> " + result + " {\n    if count > 1 {\n        return " + hole + "\n    }\n    " + hole + "\n}\n"
+        _ => "fn is_reached(count: Int) -> " + result + " {\n    match count > 1 {\n        true => " + hole + "\n        false => " + hole + "\n    }\n}\n"
+    }
+}
+
+/// A module holding no hole, which a property finds none in.
+// example: a_module_with_nothing_unfinished_holds_no_hole_to_refuse(drawn.seeded(1), types.little_prelude()).why == ""
+fn a_module_with_nothing_unfinished_holds_no_hole_to_refuse(draw: drawn.Draw, prelude: types.Prelude) -> Tried {
+    finished := ["fn answer() -> Int {\n    7\n}\n", "fn told(word: String) -> String {\n    word + \"!\"\n}\n", "fn walked(counts: List<Int>) -> Int {\n    var total = 0\n    for count in counts {\n        total += count\n    }\n    total\n}\n", "fn held(maybe: Option<Int>) -> Int {\n    or(maybe, 0)\n}\n"]
+    source := drawn.picked(draw, finished, "")
+    written := written_of(source, prelude)
+    var why = ""
+    if written != [] {
+        why = "the holes are written " + shown(written)
+    }
+    Tried { case: source, why: why }
+}
+
+/// Every hole of a drawn body of statements is found once, in the order it is written.
+///
+/// A hole may hold a hole, so the holes are counted as the calls of `todo` the body writes. Each
+/// span covers one call, and none starts before the one found before it.
+// example: every_hole_of_a_drawn_body_is_found_in_the_order_it_is_written(drawn.seeded(1), types.little_prelude()).case != ""
+fn every_hole_of_a_drawn_body_is_found_in_the_order_it_is_written(draw: drawn.Draw, prelude: types.Prelude) -> Tried {
+    source := drawn_holes(draw)
+    written := written_of(source, prelude)
+    starts := starts_of(source, prelude)
+    var why = ""
+    if list.length(written) != calls_of_todo(source) || !is_each_a_call(written) || !is_ascending(starts) {
+        why = "the holes are written " + shown(written) + " at " + shown(starts)
+    }
+    Tried { case: source, why: why }
+}
+
+/// A module whose first function writes up to three drawn statements and a drawn last expression.
+///
+/// The truth is a field of a record, because a `Bool` parameter is refused before the holes.
+// example: calls_of_todo(drawn_holes(drawn.seeded(1))) > 0
+fn drawn_holes(draw: drawn.Draw) -> String {
+    statements := ["_ = todo(\"a\")", "_ = count + todo(\"b\")", "_ = [todo(\"c\"), count]", "_ = todo(todo(\"d\"))", "for todo(\"e\") {\n        break\n    }", "_ = pick(first: count, second: todo(\"f\"))"]
+    last := ["todo(\"z\")", "count", "pick(first: todo(\"x\"), second: todo(\"y\"))", "if given.flag {\n        todo(\"i\")\n    } else {\n        count\n    }", "match count {\n        1 => todo(\"m\")\n        _ => count\n    }", "Box { held: todo(\"r\") }.held"]
+    var body = ""
+    var at = drawn.next(draw)
+    var written = 0
+    for written < drawn.number(draw, 4) {
+        body += "    " + drawn.picked(at, statements, "") + "\n"
+        at = drawn.next(at)
+        written += 1
+    }
+    body += "    " + drawn.picked(at, last, "count") + "\n"
+    "fn check(given: Given, count: Int) -> Int {\n" + body + "}\n\nfn pick(first: Int, second: Int) -> Int {\n    first\n}\n\ntype Box = {\n    held: Int\n}\n\ntype Given = {\n    flag: Bool\n}\n"
+}
+
+/// How many calls of `todo` `source` writes.
+// example: calls_of_todo("todo(todo(\"x\"))") == 2
+fn calls_of_todo(source: String) -> Int {
+    var count = 0
+    var at = 0
+    for at + 5 <= strings.length(source) {
+        if or(strings.cut(source, at, at + 5), "") == "todo(" {
+            count += 1
+        }
+        at += 1
+    }
+    count
+}
+
+/// Whether each text opens as a call of `todo` and closes it.
+// example: is_each_a_call(["todo(\"a\")"])
+// example: !is_each_a_call(["todo(\"a\""])
+fn is_each_a_call(written: List<String>) -> Bool {
+    for text in written {
+        closes := or(strings.cut(text, strings.length(text) - 1, strings.length(text)), "")
+        if or(strings.cut(text, 0, 5), "") != "todo(" || closes != ")" {
+            return false
+        }
+    }
+    true
+}
+
+/// Whether no number of `values` is smaller than the one before it.
+// example: is_ascending([1, 1, 2])
+// example: !is_ascending([2, 1])
+fn is_ascending(values: List<Int>) -> Bool {
+    var before = -1
+    for value in values {
+        if value < before {
+            return false
+        }
+        before = value
+    }
+    true
+}
+
+/// What each hole of `source` is written as, which is the text its span covers, in order.
+///
+/// A module that does not type holds one text that says so, which no hole is written as.
+// example: written_of("fn f() -> Int {\n    1\n}\n", types.little_prelude()) == []
+fn written_of(source: String, prelude: types.Prelude) -> List<String> {
+    match typed.inferred(source, prelude) {
+        Some(inferred) => texts_of(source: source, found: holes.of_module(inferred.resolved))
+        None => ["the module does not type"]
+    }
+}
+
+/// Where each hole of `source` starts, and nothing where `source` does not type.
+// example: starts_of("fn f() -> Int {\n    1\n}\n", types.little_prelude()) == []
+fn starts_of(source: String, prelude: types.Prelude) -> List<Int> {
+    match typed.inferred(source, prelude) {
+        Some(inferred) => spans_started(holes.of_module(inferred.resolved))
+        None => []
+    }
+}
+
+/// Where each of `found` starts.
+// example: spans_started([]) == []
+fn spans_started(found: List<holes.Hole>) -> List<Int> {
+    var starts = []
+    for hole in found {
+        starts = list.push(starts, hole.span.start)
+    }
+    starts
+}
+
+/// The text of `source` each of `found` covers.
+// example: texts_of(source: "", found: []) == []
+fn texts_of(source: String, found: List<holes.Hole>) -> List<String> {
+    var texts = []
+    for hole in found {
+        texts = list.push(texts, or(strings.cut(source, hole.span.start, hole.span.start + hole.span.length), ""))
+    }
+    texts
+}
+
+/// One case of a property: the drawn input as text, and why it failed, which is `""` where it held.
+type Tried = {
+    case: String
+    why: String
+}
+
+/// Each property of the holes.
+type Property =
+    | AnyType
+    | AnyPlace
+    | NoneUnfinished
+    | DrawnBody

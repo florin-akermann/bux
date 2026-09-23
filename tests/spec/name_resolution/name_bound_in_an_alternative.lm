@@ -1,0 +1,11 @@
+// expect-error: L0314
+// A bare name in an alternative binds, so it is refused where it is written.
+fn describe(payment: Payment) -> String {
+    match payment {
+        Pending | anything => "waiting"
+    }
+}
+
+type Payment =
+    | Pending
+    | Failed(String)

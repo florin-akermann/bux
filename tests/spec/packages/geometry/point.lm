@@ -1,0 +1,5 @@
+// A module of the package at the end of a chain of dependencies.
+// example: origin() == 0
+fn origin() -> Int {
+    0
+}

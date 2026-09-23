@@ -1,0 +1,7 @@
+// expect-error: L0303
+// A type is written below the type that holds it.
+type UserId = UserId(Int)
+
+type User = {
+    id: UserId
+}

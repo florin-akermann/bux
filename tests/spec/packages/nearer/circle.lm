@@ -1,0 +1,5 @@
+// The module beside the importer, which hides the one of the same name in a dependency.
+// example: nearest() == 1
+fn nearest() -> Int {
+    1
+}

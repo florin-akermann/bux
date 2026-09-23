@@ -1,0 +1,284 @@
+// A record kept in locals works out what the same record built on the heap works out.
+//
+// `docs/specs/codegen.md` keeps a record that never leaves the function it is built in as one
+// local for each field, and builds it only where a second name lets it go. The property runs both
+// bodies on a small stack machine, which knows only the instructions such a body is made of.
+import compiled
+
+import drawn
+
+import held
+
+import ir
+
+import list
+
+import map
+
+import strings
+
+/// The one property of a record kept in locals, checked over `cases` drawn records.
+// example: list.length(every_property(0, ir.little_library())) == 1
+fn every_property(cases: Int, library: ir.Library) -> List<held.Held> {
+    [a_record_kept_in_locals_computes_what_the_same_record_built_on_the_heap_computes(cases, library)]
+}
+
+/// A record read only through the name it was built for is never built, and works out the same.
+// example: held.is_held(a_record_kept_in_locals_computes_what_the_same_record_built_on_the_heap_computes(0, ir.little_library()))
+fn a_record_kept_in_locals_computes_what_the_same_record_built_on_the_heap_computes(cases: Int, library: ir.Library) -> held.Held {
+    var found = held.nothing_failed(cases)
+    var case = 0
+    for case < cases {
+        seed := drawn.seed_of(case)
+        one := drawing(drawn.seeded(seed), library)
+        found = compiled.noted(found, one.why, held.drawn_failure("a_record_kept_in_locals_computes_what_the_same_record_built_on_the_heap_computes", seed, one.source, one.why))
+        case += 1
+    }
+    found
+}
+
+/// A drawn record, read through the name it was built for and through a second name.
+// example: drawing(drawn.seeded(1), ir.little_library()).source != ""
+fn drawing(draw: drawn.Draw, library: ir.Library) -> Drawing {
+    many := drawn.number(draw, 3) + 1
+    given := drawn.numbers(drawn.next(draw), many, 5)
+    count := drawn.number(drawn.next(drawn.next(draw)), 2001) - 1000
+    kept := module(given: given, through: "point")
+    whole := module(given: given, through: "other")
+    kept_lowered := compiled.lowered_alone(kept, library)
+    whole_lowered := compiled.lowered_alone(whole, library)
+    var why = ""
+    if has_new(kept_lowered) || !has_new(whole_lowered) {
+        why = "the record is built where it is kept: " + shown(has_new(kept_lowered)) + ", and where it lets go: " + shown(has_new(whole_lowered))
+    }
+    kept_answer := answer_text(computed(lowered: kept_lowered, count: count))
+    whole_answer := answer_text(computed(lowered: whole_lowered, count: count))
+    if why == "" && kept_answer != whole_answer {
+        why = "at " + shown(count) + " the kept record works out " + kept_answer + ", and the built one " + whole_answer
+    }
+    Drawing { source: kept, why: why }
+}
+
+/// A module whose `held` builds a record of the fields `given` values and reads each field back.
+///
+/// `through` is the name the fields are read through: the name the record is built for keeps it
+/// in locals, and a second name bound to it lets it go.
+// example: module(given: [1], through: "point") == "fn held(count: Int) -> Int {\n    point := Point { across: 7 }\n    point.across\n}\n\ntype Point = {\n    across: Int\n}\n"
+fn module(given: List<Int>, through: String) -> String {
+    var literal = []
+    var reads = []
+    var declared = ""
+    var at = 0
+    for value in given {
+        field := or(list.at(["across", "down", "along"], at), "")
+        literal = list.push(literal, field + ": " + or(list.at(["count", "7", "count * 2", "count + -1", "3 - count"], value), ""))
+        reads = list.push(reads, through + "." + field)
+        declared += "    " + field + ": Int\n"
+        at += 1
+    }
+    var second = ""
+    if through != "point" {
+        second = "    " + through + " := point\n"
+    }
+    "fn held(count: Int) -> Int {\n    point := Point { " + strings.join(literal, ", ") + " }\n" + second + "    " + strings.join(reads, " + ") + "\n}\n\ntype Point = {\n" + declared + "}\n"
+}
+
+/// Whether the body of `held` builds an instance of anything at all.
+// example: !has_new([])
+fn has_new(lowered: List<ir.Lowered>) -> Bool {
+    for instruction in compiled.instructions_of(lowered, "held") {
+        if is_new(instruction) {
+            return true
+        }
+    }
+    false
+}
+
+/// Whether `instruction` makes a new instance.
+// example: is_new(ir.New("a/B"))
+// example: !is_new(ir.Copy)
+fn is_new(instruction: ir.Instruction) -> Bool {
+    match instruction {
+        ir.New(_) => true
+        _ => false
+    }
+}
+
+/// `answer` as text: the number it works out, or why the machine could not work it out.
+// example: answer_text(Ok(3)) == "3"
+// example: answer_text(Err("gone")) == "nothing, because gone"
+fn answer_text(answer: Result<Int, String>) -> String {
+    match answer {
+        Ok(value) => shown(value)
+        Err(why) => "nothing, because " + why
+    }
+}
+
+/// What the function `held` of `lowered` gives back when it is handed `count`, run on the machine.
+// example: answer_text(computed(lowered: [], count: 1)) == "nothing, because the body gives nothing back"
+fn computed(lowered: List<ir.Lowered>, count: Int) -> Result<Int, String> {
+    classes := compiled.demo_classes(lowered)
+    var machine = Machine { stack: [], locals: map.insert(map.empty(), 0, Number(count)), broken: "" }
+    for instruction in compiled.instructions_of(lowered, "held") {
+        if is_return(instruction) {
+            return answer_of(machine)
+        }
+        machine = stepped(machine: machine, instruction: instruction, classes: classes)
+        if machine.broken != "" {
+            return Err(machine.broken)
+        }
+    }
+    Err("the body gives nothing back")
+}
+
+/// Whether `instruction` gives back from the method.
+// example: is_return(ir.Return(None))
+// example: !is_return(ir.Copy)
+fn is_return(instruction: ir.Instruction) -> Bool {
+    match instruction {
+        ir.Return(_) => true
+        _ => false
+    }
+}
+
+/// The number on top of the stack of `machine`, which is what the body gives back.
+// example: answer_text(answer_of(Machine { stack: [Number(2)], locals: map.empty(), broken: "" })) == "2"
+fn answer_of(machine: Machine) -> Result<Int, String> {
+    match top(machine) {
+        Number(value) => Ok(value)
+        _ => Err("the body gives back no whole number")
+    }
+}
+
+/// `machine` after it runs `instruction`, with the fields each of `classes` holds known.
+// example: stepped(machine: Machine { stack: [], locals: map.empty(), broken: "" }, instruction: ir.LongOf(4), classes: []).stack == [Number(4)]
+fn stepped(machine: Machine, instruction: ir.Instruction, classes: List<ir.Class>) -> Machine {
+    match instruction {
+        ir.LongOf(value) => pushed(machine, Number(value))
+        ir.Load { slot, of } => loaded(machine, slot)
+        ir.Store { slot, of } => stored(machine, slot)
+        ir.Copy => pushed(machine, top(machine))
+        ir.Arithmetic(how) => worked_out(machine, how)
+        ir.New(_) => pushed(machine, Fresh)
+        ir.Construct(reference) => constructed(machine, list.length(fields_of(classes, reference.class)))
+        ir.GetField(field) => read(machine, or(list.index_of(fields_of(classes, field.class), field.name), -1))
+        _ => machine { broken: "a drawn body holds an instruction the machine does not know" }
+    }
+}
+
+/// `machine` with the value of `slot` on top of its stack, or broken where the slot holds none.
+// example: loaded(Machine { stack: [], locals: map.empty(), broken: "" }, 3).broken != ""
+fn loaded(machine: Machine, slot: Int) -> Machine {
+    match map.get(machine.locals, slot) {
+        Some(value) => pushed(machine, value)
+        None => machine { broken: "a drawn body loads slot " + shown(slot) + ", which holds nothing" }
+    }
+}
+
+/// `machine` with the value on top of its stack taken off and kept in `slot`.
+// example: stored(Machine { stack: [Number(1)], locals: map.empty(), broken: "" }, 3).stack == []
+fn stored(machine: Machine, slot: Int) -> Machine {
+    kept := popped(machine)
+    kept { locals: map.insert(kept.locals, slot, top(machine)) }
+}
+
+/// `machine` with the two numbers on top of its stack joined the way `how` joins them.
+// example: worked_out(Machine { stack: [Number(5), Number(3)], locals: map.empty(), broken: "" }, ir.Subtract).stack == [Number(2)]
+fn worked_out(machine: Machine, how: ir.Arithmetic) -> Machine {
+    right := number_of(top(machine))
+    left := number_of(top(popped(machine)))
+    rest := popped(popped(machine))
+    match how {
+        ir.Add => pushed(rest, Number(left + right))
+        ir.Subtract => pushed(rest, Number(left - right))
+        ir.Multiply => pushed(rest, Number(left * right))
+        _ => machine { broken: "a drawn body works out what the machine does not know" }
+    }
+}
+
+/// `machine` with the `carried` numbers on top of its stack made the fields of the record below.
+///
+/// A constructor takes the values it carries and the copy that `new` left, and makes the instance
+/// below them the record.
+// example: constructed(Machine { stack: [Fresh, Fresh, Number(4)], locals: map.empty(), broken: "" }, 1).stack == [Instance([4])]
+fn constructed(machine: Machine, carried: Int) -> Machine {
+    at := list.length(machine.stack) - carried
+    var fields = []
+    for value in compiled.part(machine.stack, at, list.length(machine.stack)) {
+        fields = list.push(fields, number_of(value))
+    }
+    below := machine { stack: compiled.part(machine.stack, 0, at - 2) }
+    pushed(below, Instance(fields))
+}
+
+/// The whole number `value` holds, which is 0 where it holds none.
+// example: number_of(Number(3)) == 3
+// example: number_of(Fresh) == 0
+fn number_of(value: Value) -> Int {
+    match value {
+        Number(whole) => whole
+        _ => 0
+    }
+}
+
+/// `machine` with the record on top of its stack replaced by its field at `at`.
+// example: read(Machine { stack: [Instance([4, 5])], locals: map.empty(), broken: "" }, 1).stack == [Number(5)]
+fn read(machine: Machine, at: Int) -> Machine {
+    match top(machine) {
+        Instance(fields) => pushed(popped(machine), Number(or(list.at(fields, at), 0)))
+        _ => machine { broken: "a drawn body reads a field off what is no record" }
+    }
+}
+
+/// `machine` with `value` on top of its stack.
+// example: pushed(Machine { stack: [], locals: map.empty(), broken: "" }, Fresh).stack == [Fresh]
+fn pushed(machine: Machine, value: Value) -> Machine {
+    machine { stack: list.push(machine.stack, value) }
+}
+
+/// The value on top of the stack of `machine`, which is `Fresh` where the stack is empty.
+// example: top(Machine { stack: [Number(1), Number(2)], locals: map.empty(), broken: "" }) == Number(2)
+fn top(machine: Machine) -> Value {
+    or(list.at(machine.stack, list.length(machine.stack) - 1), Fresh)
+}
+
+/// `machine` without the value on top of its stack.
+// example: popped(Machine { stack: [Number(1), Number(2)], locals: map.empty(), broken: "" }).stack == [Number(1)]
+fn popped(machine: Machine) -> Machine {
+    machine { stack: compiled.part(machine.stack, 0, list.length(machine.stack) - 1) }
+}
+
+/// The names of the fields the class named `class` among `classes` holds, in the order it declares.
+// example: fields_of([], "demo/Point") == []
+fn fields_of(classes: List<ir.Class>, class: String) -> List<String> {
+    var names = []
+    for one in classes {
+        if one.name == class {
+            for field in one.fields {
+                names = list.push(names, field.name)
+            }
+        }
+    }
+    names
+}
+
+derive Eq for Value
+
+/// One drawn record, the module that keeps it, and what went wrong, which is empty if nothing.
+type Drawing = {
+    source: String
+    why: String
+}
+
+/// The stack machine a drawn body runs on: its stack, its locals, and why it stopped, if it did.
+type Machine = {
+    stack: List<Value>
+    locals: map.Map<Int, Value>
+    broken: String
+}
+
+/// One value on the stack of the machine.
+type Value =
+    | Number(Int)
+    | Instance(List<Int>)
+    | Fresh

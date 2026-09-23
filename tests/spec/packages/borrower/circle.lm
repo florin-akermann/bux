@@ -1,0 +1,5 @@
+// The module of this package that `lender` holds a module of the same name as.
+// example: kept() == 2
+fn kept() -> Int {
+    2
+}

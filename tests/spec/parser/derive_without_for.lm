@@ -1,0 +1,7 @@
+// expect-error: L0100
+// A derive names its traits, then `for`, then the type the compiler writes them for.
+derive Eq User
+
+type User = {
+    id: Int
+}

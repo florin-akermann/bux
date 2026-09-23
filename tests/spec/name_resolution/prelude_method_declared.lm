@@ -1,0 +1,5 @@
+// expect-error: L0302
+// The prelude gives `Add` its method `add`, so a module never declares a function of that name.
+fn add(value: Int) -> Int {
+    value
+}

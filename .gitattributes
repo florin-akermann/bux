@@ -1,3 +1,8 @@
 # Executable examples carry byte offsets into their source; line endings must not shift them.
 *.lm text eol=lf
 *.tokens text eol=lf
+
+# These files hold a carriage return on purpose: the example of a CRLF line ending, and the
+# golden answers that quote it. Git keeps their bytes as they are.
+tests/spec/lexer/carriage_return.lm -text
+tests/commands/*.txt -text

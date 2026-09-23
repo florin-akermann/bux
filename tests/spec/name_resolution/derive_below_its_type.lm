@@ -1,0 +1,7 @@
+// expect-error: L0303
+// A derive uses the type it names, so the type is written below the derive.
+type User = {
+    id: Int
+}
+
+derive Eq for User

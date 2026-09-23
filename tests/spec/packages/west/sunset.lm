@@ -1,0 +1,7 @@
+// expect-error: L0307
+// The other half of the ring across two packages.
+import sunrise
+
+fn late() -> Int {
+    sunrise.early()
+}

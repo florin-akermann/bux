@@ -1,0 +1,6 @@
+// A package that depends on nothing reaches what a directory with no manifest reaches.
+import lonely
+
+fn edge() -> Int {
+    lonely.held()
+}

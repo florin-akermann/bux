@@ -1,0 +1,52 @@
+// expect-run
+// > five
+// > another number
+// > five inside
+// A whole number written as a pattern takes the type it is matched against.
+// At `Int32` it is built by the instance of `IntegerLiteral`, and compared by the one of `Eq`.
+// A whole number inside what a variant carries is built at the type that variant carries.
+import io
+
+fn main(arguments: List<String>) -> Int {
+    io.println(named(Int32(5)))
+    io.println(named(Int32(6)))
+    io.println(unwrapped(Kept(Int32(5))))
+    0
+}
+
+// example: named(Int32(5)) == "five"
+// example: named(Int32(6)) == "another number"
+fn named(count: Int32) -> String {
+    match count {
+        5 => "five"
+        _ => "another number"
+    }
+}
+
+// example: unwrapped(Kept(Int32(5))) == "five inside"
+fn unwrapped(held: Held) -> String {
+    match held {
+        Kept(5) => "five inside"
+        Kept(_) => "another number inside"
+    }
+}
+
+instance IntegerLiteral<Int32> {
+    fn lowest() -> Int {
+        -2147483648
+    }
+
+    fn highest() -> Int {
+        2147483647
+    }
+
+    fn from_literal(literal: Int) -> Int32 {
+        Int32(literal)
+    }
+}
+
+type Held = Kept(Int32)
+
+derive Eq for Int32
+
+type Int32 = Int32(Int)

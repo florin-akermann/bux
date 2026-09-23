@@ -1,0 +1,7 @@
+// A module of a dependency reaches the dependencies of its own package.
+import point
+
+// example: corner() == 0
+fn corner() -> Int {
+    point.origin()
+}

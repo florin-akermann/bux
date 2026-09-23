@@ -1,0 +1,5 @@
+// expect-error: L0202
+// A variant is `PascalCase`, so canonical form spells this one `Pending`.
+type Payment =
+    | pending
+    | Failed(String)

@@ -1,0 +1,272 @@
+// A class-file reader, which is how a drawn property reads back what the writer wrote.
+//
+// It reads only what the properties ask about, and it is not the writer run backwards: a reader
+// that shares the mistakes of the writer proves nothing. A byte past the end reads as 0, and a
+// constant of a tag the writer never writes stops the pool, so `is_whole` is false for it.
+import list
+
+import strings
+
+/// The contents of the class file `bytes`, read from the start.
+// example: read([202, 254, 186, 190, 255, 255, 0, 72]).major == 72
+// example: read([202, 254, 186, 190, 255, 255, 0, 72]).magic == 3405691582
+fn read(bytes: List<Int>) -> Contents {
+    pool := pool_at(bytes, 8)
+    at := pool.next
+    fields := members_at(bytes: bytes, at: at + 8 + 2 * u2(bytes, at + 6), pool: pool.value)
+    methods := members_at(bytes: bytes, at: fields.next, pool: pool.value)
+    loadable := loadable_at(bytes: bytes, at: methods.next, pool: pool.value)
+    Contents { magic: u4(bytes, 0), minor: u2(bytes, 4), major: u2(bytes, 6), pool: pool.value, access: u2(bytes, at), this: u2(bytes, at + 2), extends: u2(bytes, at + 4), interfaces: u2(bytes, at + 6), fields: fields.value, methods: methods.value, loadable: loadable.value, end: loadable.next }
+}
+
+/// Whether `contents` were read out of every byte of `bytes`, and out of no byte more.
+// example: !is_whole(contents: read([202]), bytes: [202])
+fn is_whole(contents: Contents, bytes: List<Int>) -> Bool {
+    for constant in contents.pool {
+        if is_unknown(constant) {
+            return false
+        }
+    }
+    contents.end == list.length(bytes)
+}
+
+/// Every text the pool of `contents` holds, which names every class and member it can reach.
+// example: texts(read([])) == []
+fn texts(contents: Contents) -> List<String> {
+    var found = []
+    for constant in contents.pool {
+        for text in text_in(constant) {
+            found = list.push(found, text)
+        }
+    }
+    found
+}
+
+/// The text `constant` holds, where it is text.
+// example: text_in(Utf8("a")) == ["a"]
+// example: text_in(Other) == []
+fn text_in(constant: Constant) -> List<String> {
+    match constant {
+        Utf8(text) => [text]
+        _ => []
+    }
+}
+
+/// The constant pool of `bytes` that starts with its count at `at`, and the place after it.
+///
+/// A whole number takes two places in the pool, so an unusable one follows it.
+// example: pool_at([0, 2, 1, 0, 1, 65], 0).value == [Utf8("A")]
+// example: pool_at([0, 2, 1, 0, 1, 65], 0).next == 6
+fn pool_at(bytes: List<Int>, at: Int) -> Placed<List<Constant>> {
+    count := u2(bytes, at)
+    var pool = []
+    var next = at + 2
+    var held = 0
+    for held + 1 < count {
+        one := constant_at(bytes, next)
+        wide := is_wide(bytes, next)
+        pool = list.push(pool, one.value)
+        next = one.next
+        held += 1
+        if wide {
+            pool = list.push(pool, Unusable)
+            held += 1
+        }
+        if is_unknown(one.value) {
+            return Placed { value: pool, next: next }
+        }
+    }
+    Placed { value: pool, next: next }
+}
+
+/// Whether `constant` is of a tag the writer never writes.
+// example: is_unknown(Unknown(2))
+// example: !is_unknown(Other)
+fn is_unknown(constant: Constant) -> Bool {
+    match constant {
+        Unknown(_) => true
+        _ => false
+    }
+}
+
+/// Whether the tag at `at` of `bytes` is that of a constant that takes two places in the pool.
+// example: is_wide([5], 0)
+// example: !is_wide([1], 0)
+fn is_wide(bytes: List<Int>, at: Int) -> Bool {
+    tag := u1(bytes, at)
+    tag == 5 || tag == 6
+}
+
+/// The constant whose tag is at `at` of `bytes`, and the place after it.
+// example: constant_at([7, 0, 3], 0).next == 3
+// example: is_unknown(constant_at([2], 0).value)
+fn constant_at(bytes: List<Int>, at: Int) -> Placed<Constant> {
+    tag := u1(bytes, at)
+    if tag == 1 {
+        many := u2(bytes, at + 1)
+        return Placed { value: Utf8(text_of(bytes: bytes, from: at + 3, to: at + 3 + many)), next: at + 3 + many }
+    }
+    match tag {
+        3 => Placed { value: Other, next: at + 5 }
+        4 => Placed { value: Other, next: at + 5 }
+        5 => Placed { value: Other, next: at + 9 }
+        6 => Placed { value: Other, next: at + 9 }
+        7 => Placed { value: Other, next: at + 3 }
+        8 => Placed { value: Other, next: at + 3 }
+        16 => Placed { value: Other, next: at + 3 }
+        _ => placed_wider(tag: tag, at: at)
+    }
+}
+
+/// The constant of `tag` at `at` that names two places of the pool, and the place after it.
+// example: placed_wider(tag: 12, at: 0).next == 5
+// example: is_unknown(placed_wider(tag: 2, at: 0).value)
+fn placed_wider(tag: Int, at: Int) -> Placed<Constant> {
+    if tag >= 9 && tag <= 12 {
+        return Placed { value: Other, next: at + 5 }
+    }
+    Placed { value: Unknown(tag), next: at + 1 }
+}
+
+/// The bytes of `bytes` from `from` up to `to` as text, with a `?` for each byte past ASCII.
+// example: text_of(bytes: [67, 111, 100, 101], from: 0, to: 4) == "Code"
+fn text_of(bytes: List<Int>, from: Int, to: Int) -> String {
+    printable := " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~"
+    var text = ""
+    var at = from
+    for at < to {
+        code := u1(bytes, at)
+        text += or(strings.cut(printable, code - 32, code - 31), "?")
+        at += 1
+    }
+    text
+}
+
+/// The fields or the methods of `bytes` that start with their count at `at`, and the place after.
+// example: members_at(bytes: [0, 1, 0, 1, 0, 1, 0, 1, 0, 0], at: 0, pool: [Utf8("go")]).value == [Member { access: 1, name: "go", descriptor: "go" }]
+fn members_at(bytes: List<Int>, at: Int, pool: List<Constant>) -> Placed<List<Member>> {
+    count := u2(bytes, at)
+    var members = []
+    var next = at + 2
+    var passed = 0
+    for passed < count {
+        passed += 1
+        members = list.push(members, Member { access: u2(bytes, next), name: named(pool, u2(bytes, next + 2)), descriptor: named(pool, u2(bytes, next + 4)) })
+        next = past_attributes(bytes, next + 6)
+    }
+    Placed { value: members, next: next }
+}
+
+/// The place after the attributes of `bytes` that start with their count at `at`.
+// example: past_attributes([0, 1, 0, 9, 0, 0, 0, 2, 7, 7], 0) == 10
+fn past_attributes(bytes: List<Int>, at: Int) -> Int {
+    count := u2(bytes, at)
+    var next = at + 2
+    var passed = 0
+    for passed < count {
+        next += 6 + u4(bytes, next + 2)
+        passed += 1
+    }
+    next
+}
+
+/// The descriptors the attributes at `at` ask a JVM to load first, and the place after them.
+///
+/// A class that asks for none carries no `LoadableDescriptors` attribute, so they are then none.
+// example: loadable_at(bytes: [0, 0], at: 0, pool: []).next == 2
+fn loadable_at(bytes: List<Int>, at: Int, pool: List<Constant>) -> Placed<List<String>> {
+    count := u2(bytes, at)
+    var wanted = []
+    var next = at + 2
+    var passed = 0
+    for passed < count {
+        if named(pool, u2(bytes, next)) == "LoadableDescriptors" {
+            wanted = descriptors_at(bytes: bytes, at: next + 6, pool: pool)
+        }
+        next += 6 + u4(bytes, next + 2)
+        passed += 1
+    }
+    Placed { value: wanted, next: next }
+}
+
+/// The descriptors a `LoadableDescriptors` attribute names, whose count is at `at`.
+// example: descriptors_at(bytes: [0, 1, 0, 1], at: 0, pool: [Utf8("LBox;")]) == ["LBox;"]
+fn descriptors_at(bytes: List<Int>, at: Int, pool: List<Constant>) -> List<String> {
+    count := u2(bytes, at)
+    var wanted = []
+    var passed = 0
+    for passed < count {
+        wanted = list.push(wanted, named(pool, u2(bytes, at + 2 + 2 * passed)))
+        passed += 1
+    }
+    wanted
+}
+
+/// The text the pool holds at the place `held`, counted from 1, or nothing where it holds none.
+// example: named([Utf8("a")], 1) == "a"
+// example: named([Other], 1) == ""
+fn named(pool: List<Constant>, held: Int) -> String {
+    match or(list.at(pool, held - 1), Other) {
+        Utf8(text) => text
+        _ => ""
+    }
+}
+
+/// The four bytes of `bytes` at `at`, read as one number with the first byte the highest.
+// example: u4([0, 0, 1, 2], 0) == 258
+fn u4(bytes: List<Int>, at: Int) -> Int {
+    u2(bytes, at) * 65536 + u2(bytes, at + 2)
+}
+
+/// The two bytes of `bytes` at `at`, read as one number with the first byte the higher.
+// example: u2([1, 2], 0) == 258
+fn u2(bytes: List<Int>, at: Int) -> Int {
+    u1(bytes, at) * 256 + u1(bytes, at + 1)
+}
+
+/// The byte of `bytes` at `at`, which is 0 past the end.
+// example: u1([7], 0) == 7
+// example: u1([7], 1) == 0
+fn u1(bytes: List<Int>, at: Int) -> Int {
+    or(list.at(bytes, at), 0)
+}
+
+derive Eq for Constant
+
+derive Eq for Member
+
+/// A class file, as much of it as a property asks about, and the place where the reader stopped.
+type Contents = {
+    magic: Int
+    minor: Int
+    major: Int
+    pool: List<Constant>
+    access: Int
+    this: Int
+    extends: Int
+    interfaces: Int
+    fields: List<Member>
+    methods: List<Member>
+    loadable: List<String>
+    end: Int
+}
+
+/// One constant pool entry, as far as a property looks into it.
+type Constant =
+    | Utf8(String)
+    | Other
+    | Unusable
+    | Unknown(Int)
+
+/// One field or one method: its access, its name, and its descriptor.
+type Member = {
+    access: Int
+    name: String
+    descriptor: String
+}
+
+/// A value read out of the bytes, and the place just after it.
+type Placed<T> = {
+    value: T
+    next: Int
+}

@@ -1,0 +1,6 @@
+// expect-error: L0305
+// A parameter is a binding that never changes, so an assignment cannot name it.
+fn count(total: Int) -> Int {
+    total = 2
+    total
+}

@@ -1,0 +1,21 @@
+// expect-error: L0300
+// Canonical form keeps each bracket that the shape needs, so formatting changes no meaning.
+fn kept() {
+    first := (-a).b
+    second := -(a + b)
+    third := !(a && b)
+    fourth := (a + b).f(c)
+    fifth := -(7?)
+    sixth := -(7).abs()
+    seventh := !!a
+    eighth := f((a + b), c)
+    ninth := -(-(7))
+    tenth := ((a))
+    for (user { active: true }).active {
+    }
+    match (user { active: true }).active {
+        A => 1
+    }
+    a = (b + c) * d
+    return (a + b) * c
+}

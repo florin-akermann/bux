@@ -1,0 +1,309 @@
+// The drawn properties of the lexer, which `docs/specs/lexer.md` states, checked on drawn text.
+//
+// A drawn text is made of pieces of every token class, and of each character that ends a token,
+// starts one, or takes two bytes or four in UTF-8. A span counts UTF-8 bytes and a text counts
+// UTF-16 code units, so each property walks the source in both at once.
+import drawn
+
+import held
+
+import ir
+
+import lexer
+
+import list
+
+import strings
+
+/// Every property of the lexer, each tried on `cases` drawn cases, in a fixed order.
+// example: list.length(every_property(1, ir.little_library())) == 4
+fn every_property(cases: Int, library: ir.Library) -> List<held.Held> {
+    [lexing_is_deterministic(cases), spans_are_ordered_and_on_character_boundaries(cases), every_code_unit_outside_a_token_is_a_blank(cases), token_texts_joined_by_spaces_lex_back_to_their_kinds(cases)]
+}
+
+/// Lexing a drawn text twice gives the same tokens, and lexing never stops the program.
+// example: held.is_held(lexing_is_deterministic(3))
+fn lexing_is_deterministic(cases: Int) -> held.Held {
+    var found = held.nothing_failed(cases)
+    var case = 0
+    for case < cases {
+        source := drawn_text(drawn.seed_of(case))
+        if lexer.listed(source) != lexer.listed(source) {
+            found = held.with_failure(found, held.drawn_failure("lexing_is_deterministic", drawn.seed_of(case), source, "two lexings disagree"))
+        }
+        case += 1
+    }
+    found
+}
+
+/// Each span starts at or after the end of the span before it, holds at least one byte, ends
+/// inside the text, and starts and ends on a character boundary.
+// example: held.is_held(spans_are_ordered_and_on_character_boundaries(3))
+fn spans_are_ordered_and_on_character_boundaries(cases: Int) -> held.Held {
+    var found = held.nothing_failed(cases)
+    var case = 0
+    for case < cases {
+        source := drawn_text(drawn.seed_of(case))
+        why := misordered(source)
+        if why != "" {
+            found = held.with_failure(found, held.drawn_failure("spans_are_ordered_and_on_character_boundaries", drawn.seed_of(case), source, why))
+        }
+        case += 1
+    }
+    found
+}
+
+/// Why the spans of the tokens of `source` are out of order or off a boundary, and `""` where not.
+// example: misordered("fn é😀 x") == ""
+fn misordered(source: String) -> String {
+    boundaries := character_boundaries(source)
+    var previous_end = 0
+    for token in lexer.lex(source) {
+        why := span_fault(token: token, previous_end: previous_end, boundaries: boundaries)
+        if why != "" {
+            return why
+        }
+        previous_end = token.span.start + token.span.length
+    }
+    ""
+}
+
+/// Why the span of `token` does not follow `previous_end` or is off a boundary, and `""` where not.
+// example: misordered("ab \n") == ""
+fn span_fault(token: lexer.Token, previous_end: Int, boundaries: List<Int>) -> String {
+    end := token.span.start + token.span.length
+    if token.span.start < previous_end {
+        return "the span " + shown(token.span) + " starts before " + shown(previous_end)
+    }
+    if token.span.length <= 0 {
+        return "the span " + shown(token.span) + " is empty"
+    }
+    if !list.has_value(boundaries, token.span.start) || !list.has_value(boundaries, end) {
+        return "the span " + shown(token.span) + " is not on character boundaries"
+    }
+    ""
+}
+
+/// The byte offset of each character of `text`, then the byte length of the whole text.
+// example: character_boundaries("aé😀") == [0, 1, 3, 7]
+fn character_boundaries(text: String) -> List<Int> {
+    var boundaries = []
+    var byte = 0
+    var index = 0
+    for index < strings.length(text) {
+        unit := or(strings.at(text, index), 0)
+        if !is_low_surrogate(unit) {
+            boundaries = list.push(boundaries, byte)
+        }
+        byte += unit_width(unit)
+        index += 1
+    }
+    list.push(boundaries, byte)
+}
+
+/// Each code unit outside every token is a blank, the text of each token is the source it spans,
+/// and no token holds a carriage return.
+// example: held.is_held(every_code_unit_outside_a_token_is_a_blank(3))
+fn every_code_unit_outside_a_token_is_a_blank(cases: Int) -> held.Held {
+    var found = held.nothing_failed(cases)
+    var case = 0
+    for case < cases {
+        source := drawn_text(drawn.seed_of(case))
+        why := uncovered(source)
+        if why != "" {
+            found = held.with_failure(found, held.drawn_failure("every_code_unit_outside_a_token_is_a_blank", drawn.seed_of(case), source, why))
+        }
+        case += 1
+    }
+    found
+}
+
+/// Why the tokens of `source` do not cover it up to blanks, and `""` where they do.
+// example: uncovered(" fn\t\r\n x\r") == ""
+fn uncovered(source: String) -> String {
+    var at = Place { unit: 0, byte: 0 }
+    for token in lexer.lex(source) {
+        at = past_blanks(source, at)
+        why := misplaced(source, at, token)
+        if why != "" {
+            return why
+        }
+        at = Place { unit: at.unit + strings.length(token.text), byte: at.byte + token.span.length }
+    }
+    after := past_blanks(source, at)
+    if after.unit < strings.length(source) {
+        return "code unit " + shown(after.unit) + " is neither lexed nor a blank"
+    }
+    ""
+}
+
+/// Why `token` is not the token that starts at `at` in `source`, and `""` where it is.
+// example: uncovered("ab") == ""
+fn misplaced(source: String, at: Place, token: lexer.Token) -> String {
+    length := strings.length(token.text)
+    if token.span.start != at.byte {
+        return "the span " + shown(token.span) + " does not start at byte " + shown(at.byte)
+    }
+    if or(strings.cut(source, at.unit, at.unit + length), "") != token.text {
+        return "the text of the token at " + shown(token.span) + " is not the source"
+    }
+    if byte_length(token.text) != token.span.length {
+        return "the span " + shown(token.span) + " does not measure the text of its token"
+    }
+    if has_unit(token.text, 13) {
+        return "the span " + shown(token.span) + " holds a carriage return"
+    }
+    ""
+}
+
+/// The place after every blank that starts at `from` in `source`.
+// example: past_blanks(" \t\rx", Place { unit: 0, byte: 0 }).unit == 3
+fn past_blanks(source: String, from: Place) -> Place {
+    var at = from
+    for is_blank(or(strings.at(source, at.unit), 0)) {
+        at = Place { unit: at.unit + 1, byte: at.byte + 1 }
+    }
+    at
+}
+
+/// Whether `unit` is a space, a tab, or a carriage return, which separate tokens and give none.
+// example: is_blank(9)
+// example: !is_blank(10)
+fn is_blank(unit: Int) -> Bool {
+    unit == 32 || unit == 9 || unit == 13
+}
+
+/// Whether `text` holds the code unit `unit`.
+// example: has_unit("a\rb", 13)
+fn has_unit(text: String, unit: Int) -> Bool {
+    var index = 0
+    for index < strings.length(text) {
+        if or(strings.at(text, index), 0) == unit {
+            return true
+        }
+        index += 1
+    }
+    false
+}
+
+/// How many bytes `text` takes in UTF-8.
+// example: byte_length("aé€😀") == 10
+fn byte_length(text: String) -> Int {
+    var bytes = 0
+    var index = 0
+    for index < strings.length(text) {
+        bytes += unit_width(or(strings.at(text, index), 0))
+        index += 1
+    }
+    bytes
+}
+
+/// How many UTF-8 bytes one code unit adds, a surrogate being half of a four-byte character.
+// example: unit_width(97) == 1
+// example: unit_width(233) == 2
+// example: unit_width(8364) == 3
+// example: unit_width(55357) == 2
+fn unit_width(unit: Int) -> Int {
+    if unit < 128 {
+        return 1
+    }
+    if unit < 2048 {
+        return 2
+    }
+    if unit >= 55296 && unit < 57344 {
+        return 2
+    }
+    3
+}
+
+/// Whether `unit` is the second half of a surrogate pair.
+// example: is_low_surrogate(56832)
+// example: !is_low_surrogate(55357)
+fn is_low_surrogate(unit: Int) -> Bool {
+    unit >= 56320 && unit < 57344
+}
+
+/// The texts of tokens that one space keeps apart, joined by spaces, lex to the kinds they spell.
+// example: held.is_held(token_texts_joined_by_spaces_lex_back_to_their_kinds(3))
+fn token_texts_joined_by_spaces_lex_back_to_their_kinds(cases: Int) -> held.Held {
+    var found = held.nothing_failed(cases)
+    var case = 0
+    for case < cases {
+        chosen := chosen_tokens(drawn.seed_of(case))
+        source := strings.join(separable_texts(chosen), " ")
+        if kinds_of(source) != separable_kinds(chosen) {
+            found = held.with_failure(found, held.drawn_failure("token_texts_joined_by_spaces_lex_back_to_their_kinds", drawn.seed_of(case), source, "the lexer gives " + shown(kinds_of(source))))
+        }
+        case += 1
+    }
+    found
+}
+
+/// Which of the separable tokens the case of `seed` writes, as indexes, up to 16 of them.
+// example: list.length(chosen_tokens(1)) < 17
+fn chosen_tokens(seed: Int) -> List<Int> {
+    draw := drawn.seeded(seed)
+    drawn.numbers(drawn.next(draw), drawn.number(draw, 17), list.length(every_separable_kind()))
+}
+
+/// The texts of the separable tokens at `chosen`.
+// example: separable_texts([0, 4]) == ["user", "42"]
+fn separable_texts(chosen: List<Int>) -> List<String> {
+    var texts = []
+    for index in chosen {
+        texts = list.push(texts, or(list.at(every_separable_text(), index), ""))
+    }
+    texts
+}
+
+/// The kinds of the separable tokens at `chosen`.
+// example: separable_kinds([4]) == [lexer.Integer]
+fn separable_kinds(chosen: List<Int>) -> List<lexer.TokenKind> {
+    var kinds = []
+    for index in chosen {
+        kinds = list.push(kinds, or(list.at(every_separable_kind(), index), lexer.Unknown))
+    }
+    kinds
+}
+
+/// The kinds of the tokens `source` lexes to, in order.
+// example: kinds_of("fn x") == [lexer.Keyword(lexer.Fn), lexer.Identifier]
+fn kinds_of(source: String) -> List<lexer.TokenKind> {
+    var kinds = []
+    for token in lexer.lex(source) {
+        kinds = list.push(kinds, token.kind)
+    }
+    kinds
+}
+
+/// A text of up to 64 drawn pieces, drawn from `seed`.
+// example: strings.length(drawn_text(1)) >= 0
+fn drawn_text(seed: Int) -> String {
+    draw := drawn.seeded(seed)
+    drawn.text_of(drawn.next(draw), pieces(), drawn.number(draw, 65))
+}
+
+/// What a drawn text is made of: a piece of every token class, and each character that ends
+/// one, starts one, or takes two bytes or four in UTF-8.
+// example: list.length(pieces()) == 22
+fn pieces() -> List<String> {
+    ["fn", "fnord", "_", "x1", "123", "\"", "\\", "//", ":=", ":", "=", "-", ">", "&", "@", " ", "\t", "\r", "\n", "é", "€", "😀"]
+}
+
+/// The text of each token class but comments and newlines, which one space cannot keep apart.
+// example: list.length(every_separable_text()) == list.length(every_separable_kind())
+fn every_separable_text() -> List<String> {
+    ["user", "x1", "fn", "match", "42", "\"a b\"", "\"\\\"\"", ":=", "->", "@"]
+}
+
+/// The kind of each text of `every_separable_text`, in the same order.
+// example: list.length(every_separable_kind()) == 10
+fn every_separable_kind() -> List<lexer.TokenKind> {
+    [lexer.Identifier, lexer.Identifier, lexer.Keyword(lexer.Fn), lexer.Keyword(lexer.Match), lexer.Integer, lexer.String, lexer.String, lexer.Punct(lexer.Walrus), lexer.Punct(lexer.Arrow), lexer.Unknown]
+}
+
+/// Where a walk over a source stands, in UTF-16 code units and in UTF-8 bytes.
+type Place = {
+    unit: Int
+    byte: Int
+}

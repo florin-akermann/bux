@@ -1,0 +1,17 @@
+// expect-run
+// > Tally(42)
+// > two payments of 42 are one value
+// A value arrives through `relaying` at a type that `tally` declares, and this module imports
+// only `relaying`. The instances of the type travel with it all the same, so it is compared and
+// shown here by the instances `tally` gives it.
+import io
+
+import relaying
+
+fn main(arguments: List<String>) -> Int {
+    io.println(shown(relaying.paid()))
+    if relaying.paid() == relaying.paid() {
+        io.println("two payments of 42 are one value")
+    }
+    0
+}

@@ -1,0 +1,5 @@
+// A file named `prelude`, which no import reaches.
+// example: mine() == 1
+fn mine() -> Int {
+    1
+}

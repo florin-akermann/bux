@@ -1,0 +1,18 @@
+// Each of the four traits a type derives, all in one derive and each in one of its own.
+derive Eq, Ord, Hash, Show for User
+
+derive Eq for Point
+
+derive Ord for Point
+
+derive Hash for Point
+
+derive Show for Point
+
+type User = {
+    id: Int
+}
+
+type Point = {
+    across: Int
+}

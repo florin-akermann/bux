@@ -1,0 +1,6 @@
+// expect-error: L0300
+// A binding is in scope after the statement that makes it, so its own value cannot read it.
+fn total() -> Int {
+    count := count + 1
+    count
+}

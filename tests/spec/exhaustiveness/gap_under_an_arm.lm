@@ -1,0 +1,12 @@
+// expect-error: L0500
+// A value left out under an arm is named with the variants that have no arm: `Wrapping(None)`,
+// `Empty`.
+fn described(held: Held) -> Int {
+    match held {
+        Wrapping(Some(value)) => value
+    }
+}
+
+type Held =
+    | Wrapping(Option<Int>)
+    | Empty

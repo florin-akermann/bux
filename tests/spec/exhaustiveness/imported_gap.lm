@@ -1,0 +1,11 @@
+// expect-error: L0500
+// A match over a type of another module covers the variants that module declares.
+// This one leaves `ledger.Authorized(_)`.
+import ledger
+
+fn described(payment: ledger.Payment) -> String {
+    match payment {
+        ledger.Pending => "pending"
+        ledger.Failed(reason) => reason
+    }
+}

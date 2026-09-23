@@ -1,0 +1,5 @@
+// expect-error: L0301
+// Two parameters of one function are two names, so they never share one.
+fn sum(part: Int, part: Int) -> Int {
+    1
+}

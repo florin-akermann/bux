@@ -1,0 +1,5 @@
+// expect-error: L0202
+// A name that leads with, doubles, or ends with an underscore is spelled without it: `the_word`.
+fn __the_word_(word: String) -> String {
+    word
+}

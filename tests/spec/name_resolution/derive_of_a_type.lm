@@ -1,0 +1,7 @@
+// expect-error: L0310
+// A derive names a trait, as an instance does, and `User` is a type.
+derive User for User
+
+type User = {
+    id: Int
+}

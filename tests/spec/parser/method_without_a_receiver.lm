@@ -1,0 +1,3 @@
+// expect-error: L0100
+// An extern method is called on its first parameter, so it takes at least one.
+extern method worded() -> String = "toString"

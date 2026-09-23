@@ -1,0 +1,8 @@
+// expect-error: L0300
+// The name a `for` binds is in scope in its body only, so it is gone when the loop ends.
+fn last(users: List<Int>) -> Int {
+    for user in users {
+        _ = user
+    }
+    user
+}

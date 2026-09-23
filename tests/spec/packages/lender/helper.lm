@@ -1,0 +1,7 @@
+// A module of a dependency that imports its own package's `circle`.
+import circle
+
+// example: helped() == 1
+fn helped() -> Int {
+    circle.lent()
+}

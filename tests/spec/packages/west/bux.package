@@ -1,0 +1,3 @@
+package west
+version 0.2.0
+depends ../east

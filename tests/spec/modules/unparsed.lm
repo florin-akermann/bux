@@ -1,0 +1,4 @@
+// expect-error: L0100
+// A module the grammar refuses, which a module that imports it is refused for too.
+fn hello( -> Int {
+}

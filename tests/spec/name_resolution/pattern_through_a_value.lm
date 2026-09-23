@@ -1,0 +1,7 @@
+// expect-error: L0313
+// A variant of another module is reached through the import, and `payment` is a parameter.
+fn held(payment: Int) -> Int {
+    match payment {
+        payment.Pending => 1
+    }
+}

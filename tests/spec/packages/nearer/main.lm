@@ -1,0 +1,7 @@
+// `shapes` holds a module called `circle` too, but the file beside this one is reached first.
+// Only the `circle` beside this file declares `nearest`.
+import circle
+
+fn edge() -> Int {
+    circle.nearest()
+}

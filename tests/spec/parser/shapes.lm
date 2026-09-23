@@ -1,0 +1,106 @@
+// The shapes the other examples leave out: how operators group, how a string is decoded, and
+// where a record literal needs brackets. A comment is not part of the tree.
+// A parameter may be left to inference, and a parameter of an extern may be named `int`.
+import list
+
+// example: grouped(total: 7, part: 3, share: 2) == 31
+fn grouped(total: Int, part: Int, share: Int) -> Int {
+    left := total - part - share
+    divided := or(total * part / share, 0)
+    added := total + part * share
+    bracketed := (total + part) * share
+    negated := -total + part
+    if total == part + share || total > part && part == share || !(total < share) && -share < 0 {
+        return left + divided + added + bracketed + negated - 10
+    }
+    0
+}
+
+// example: decoded() == 10
+fn decoded() -> Int {
+    words := ["hello", "a\"b", "a\nb", "a\\b", "tab\there", "return\r"]
+    empty := []
+    list.length(words) + list.length(empty) + list.length([list.length(words) + 1, 2]) + 2
+}
+
+// example: is_active(Account { id: 1, active: true })
+fn is_active(account: Account) -> Bool {
+    if (account { active: false }).active {
+        return false
+    }
+    for (account { id: 2 }).active {
+        return true
+    }
+    var seen = 0
+    for n in [account] {
+        seen = n.id
+        seen += 1
+    }
+    seen == 2
+}
+
+// example: kept(Some(Failed(Reason("late")))) == "late"
+fn kept(payment: Option<Payment>) -> String {
+    match payment {
+        Some(Pending | Captured | Settled) => "moving"
+        Some(Failed(Reason(text))) => text
+        None => ""
+    }
+}
+
+// example: kept(Some(Captured)) == "moving"
+fn ended() -> Result<(), String> {
+    Ok(())
+}
+
+fn nothing() -> () {
+    for {
+        return
+    }
+}
+
+trait Weighed<T> {
+    fn weight(item: T) -> Int
+    fn is_heavy(item: T) -> Bool
+}
+
+derive Eq for Account
+
+type Account = {
+    id: Int
+    active: Bool
+}
+
+type Payment =
+    | Pending
+    | Captured
+    | Settled
+    | Failed(Reason)
+
+type Reason = Reason(String)
+
+// example: identity(1) == 1
+fn identity(value) {
+    value
+}
+
+extern method char held(text: String, int int: Int) -> Option<Int> = "charAt"
+
+// example: rows_counted(Ok([])) == 1
+fn rows_counted(stored: Result<List<Rows>, String>) -> Int {
+    rows := Rows { cells: [[1]], count: 1 }
+    shelf := Stocked([[rows]])
+    match shelf {
+        Stocked(_) => rows.count
+        Bare => list.length(ok_or(stored, []))
+    }
+}
+
+type Rows = {
+    cells: List<List<Int>>
+    count: Int
+}
+
+type Shelf<T> =
+    | Stocked(List<List<T>>)
+    | Bare

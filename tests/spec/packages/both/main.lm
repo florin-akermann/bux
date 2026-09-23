@@ -1,0 +1,8 @@
+// `geometry` is reached directly and through `layered`, and it is one package all the same.
+import point
+
+import square
+
+fn edge() -> Int {
+    square.corner() + point.origin()
+}

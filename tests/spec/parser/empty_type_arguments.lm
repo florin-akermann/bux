@@ -1,0 +1,5 @@
+// expect-error: L0100
+// A type argument list holds at least one type.
+type Team = {
+    ids: List<>
+}

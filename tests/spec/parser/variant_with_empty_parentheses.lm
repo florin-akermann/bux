@@ -1,0 +1,5 @@
+// expect-error: L0100
+// A variant that carries nothing is written without parentheses.
+type Payment =
+    | Pending
+    | Failed()

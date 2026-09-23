@@ -1,0 +1,6 @@
+// expect-error: L0300
+// A type is declared in this file, imported, or supplied by the prelude, and nothing declares
+// `Money`.
+fn total() -> Money {
+    1
+}

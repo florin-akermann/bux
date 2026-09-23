@@ -1,0 +1,4 @@
+package doubled
+version 0.2.0
+depends ../shapes
+depends ../shapes

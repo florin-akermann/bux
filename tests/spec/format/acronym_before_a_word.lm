@@ -1,0 +1,3 @@
+// expect-error: L0202
+// An acronym that runs into the next word is split where that word begins: `HttpServer`.
+type HTTPServer = HTTPServer(Int)

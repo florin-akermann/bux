@@ -1,0 +1,5 @@
+// expect-error: L0203
+// A name whose one word is one letter is an initial, however it is punctuated.
+fn _a(count: Int) -> Int {
+    count
+}

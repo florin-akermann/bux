@@ -1,0 +1,456 @@
+// The invariants of a lowered body that takes one path or another, checked on drawn modules.
+//
+// A division tests its divisor, an `or` works its fallback out, and a `?` hands a `None` back:
+// each writes two paths, and `docs/specs/codegen.md` states what each path holds.
+import compiled
+
+import drawn
+
+import held
+
+import ir
+
+import list
+
+/// Every property of the paths a body takes, each checked over `cases` drawn modules, in order.
+// example: list.length(every_property(0, ir.little_library())) == 5
+fn every_property(cases: Int, library: ir.Library) -> List<held.Held> {
+    [every_division_tests_its_divisor_before_it_divides(cases, library), every_division_builds_both_answers_a_divisor_can_have(cases, library), or_is_written_out_where_it_is_used_rather_than_called(cases, library), or_works_out_its_fallback_before_it_asks_which_variant_it_was_handed(cases, library), every_question_mark_on_an_option_gives_the_none_it_was_handed_back_unchanged(cases, library)]
+}
+
+/// Each division loads its divisor, and before that asks whether the same slot holds zero.
+// example: held.is_held(every_division_tests_its_divisor_before_it_divides(0, ir.little_library()))
+fn every_division_tests_its_divisor_before_it_divides(cases: Int, library: ir.Library) -> held.Held {
+    checked(property: Tested, cases: cases, library: library)
+}
+
+/// A module that divides builds a `Some` for one divisor and a `None` for the other.
+// example: held.is_held(every_division_builds_both_answers_a_divisor_can_have(0, ir.little_library()))
+fn every_division_builds_both_answers_a_divisor_can_have(cases: Int, library: ir.Library) -> held.Held {
+    checked(property: BothAnswers, cases: cases, library: library)
+}
+
+/// An `or` calls no method: it asks which variant it has and reads what a `Some` holds.
+// example: held.is_held(or_is_written_out_where_it_is_used_rather_than_called(0, ir.little_library()))
+fn or_is_written_out_where_it_is_used_rather_than_called(cases: Int, library: ir.Library) -> held.Held {
+    checked(property: WrittenOut, cases: cases, library: library)
+}
+
+/// An `or` is a call, so it works out its fallback before it asks which variant it has.
+// example: held.is_held(or_works_out_its_fallback_before_it_asks_which_variant_it_was_handed(0, ir.little_library()))
+fn or_works_out_its_fallback_before_it_asks_which_variant_it_was_handed(cases: Int, library: ir.Library) -> held.Held {
+    checked(property: FallbackFirst, cases: cases, library: library)
+}
+
+/// A `?` on an `Option` gives back the `None` it was handed, and builds no new one.
+// example: held.is_held(every_question_mark_on_an_option_gives_the_none_it_was_handed_back_unchanged(0, ir.little_library()))
+fn every_question_mark_on_an_option_gives_the_none_it_was_handed_back_unchanged(cases: Int, library: ir.Library) -> held.Held {
+    checked(property: HandedBack, cases: cases, library: library)
+}
+
+/// `property` checked over `cases` drawn modules, each drawn from a seed of its own.
+// example: checked(property: Tested, cases: 0, library: ir.little_library()).cases == 0
+fn checked(property: Property, cases: Int, library: ir.Library) -> held.Held {
+    var found = held.nothing_failed(cases)
+    var case = 0
+    for case < cases {
+        seed := drawn.seed_of(case)
+        one := drawing(property: property, draw: drawn.seeded(seed), library: library)
+        found = compiled.noted(found, one.why, held.drawn_failure(name_of(property), seed, one.source, one.why))
+        case += 1
+    }
+    found
+}
+
+/// The module `property` draws with `draw`, and what went wrong with it, which is empty if nothing.
+// example: drawing(property: Tested, draw: drawn.seeded(1), library: ir.little_library()).source != ""
+fn drawing(property: Property, draw: drawn.Draw, library: ir.Library) -> Drawing {
+    match property {
+        Tested => tested(draw, library)
+        BothAnswers => both_answers(draw, library)
+        WrittenOut => written_out(draw, library)
+        FallbackFirst => fallback_first(draw, library)
+        HandedBack => handed_back(draw, library)
+    }
+}
+
+/// The name a failure of `property` is reported with.
+// example: name_of(Tested) == "every_division_tests_its_divisor_before_it_divides"
+fn name_of(property: Property) -> String {
+    match property {
+        Tested => "every_division_tests_its_divisor_before_it_divides"
+        BothAnswers => "every_division_builds_both_answers_a_divisor_can_have"
+        WrittenOut => "or_is_written_out_where_it_is_used_rather_than_called"
+        FallbackFirst => "or_works_out_its_fallback_before_it_asks_which_variant_it_was_handed"
+        HandedBack => "every_question_mark_on_an_option_gives_the_none_it_was_handed_back_unchanged"
+    }
+}
+
+/// Every division of a drawn module tested against zero before it divides.
+// example: tested(drawn.seeded(1), ir.little_library()).source != ""
+fn tested(draw: drawn.Draw, library: ir.Library) -> Drawing {
+    source := dividing(draw)
+    lowered := compiled.lowered_alone(source, library)
+    var why = refused(lowered)
+    for body in compiled.demo_bodies(lowered) {
+        why = untested(body, why)
+    }
+    Drawing { source: source, why: why }
+}
+
+/// `why`, or what is wrong where a division of `body` divides by a slot it did not test for zero.
+// example: untested([ir.Load { slot: 2, of: ir.Long }, ir.Arithmetic(ir.Divide)], "") == "it divides by slot 2 untested"
+// example: untested([ir.Load { slot: 2, of: ir.Long }, ir.LongOf(0), ir.CompareLongs(ir.Equal), ir.Load { slot: 2, of: ir.Long }, ir.Arithmetic(ir.Divide)], "") == ""
+fn untested(body: List<ir.Instruction>, why: String) -> String {
+    var at = 0
+    var said = why
+    for instruction in body {
+        if is_dividing(instruction) {
+            divisor := slot_loaded(or(list.at(body, at - 1), ir.Copy))
+            if divisor < 0 || !is_tested_before(body: body, at: at, divisor: divisor) {
+                said = "it divides by slot " + shown(divisor) + " untested"
+            }
+        }
+        at += 1
+    }
+    said
+}
+
+/// Whether `instruction` divides or takes a remainder, which is what has no answer for zero.
+// example: is_dividing(ir.Arithmetic(ir.Remainder))
+// example: !is_dividing(ir.Arithmetic(ir.Add))
+fn is_dividing(instruction: ir.Instruction) -> Bool {
+    match instruction {
+        ir.Arithmetic(ir.Divide) => true
+        ir.Arithmetic(ir.Remainder) => true
+        _ => false
+    }
+}
+
+/// Whether, before `at`, `body` loads `divisor` as a `long`, pushes zero, and compares them.
+// example: !is_tested_before(body: [], at: 0, divisor: 1)
+fn is_tested_before(body: List<ir.Instruction>, at: Int, divisor: Int) -> Bool {
+    var from = 0
+    for from + 2 < at {
+        loaded := is_long_loaded(or(list.at(body, from), ir.Copy), divisor)
+        if loaded && is_long_zero(or(list.at(body, from + 1), ir.Copy)) && is_long_equality(or(list.at(body, from + 2), ir.Copy)) {
+            return true
+        }
+        from += 1
+    }
+    false
+}
+
+/// Whether `instruction` loads `wanted` as a `long`.
+// example: is_long_loaded(ir.Load { slot: 1, of: ir.Long }, 1)
+// example: !is_long_loaded(ir.Load { slot: 1, of: ir.Integer }, 1)
+fn is_long_loaded(instruction: ir.Instruction, wanted: Int) -> Bool {
+    match instruction {
+        ir.Load { slot, of } => slot == wanted && of == ir.Long
+        _ => false
+    }
+}
+
+/// Whether `instruction` pushes the `long` zero.
+// example: is_long_zero(ir.LongOf(0))
+// example: !is_long_zero(ir.LongOf(1))
+fn is_long_zero(instruction: ir.Instruction) -> Bool {
+    match instruction {
+        ir.LongOf(value) => value == 0
+        _ => false
+    }
+}
+
+/// Whether `instruction` asks whether two `long` values are equal.
+// example: is_long_equality(ir.CompareLongs(ir.Equal))
+// example: !is_long_equality(ir.CompareLongs(ir.Less))
+fn is_long_equality(instruction: ir.Instruction) -> Bool {
+    match instruction {
+        ir.CompareLongs(how) => how == ir.Equal
+        _ => false
+    }
+}
+
+/// A module that divides building both a `Some` and a `None`.
+// example: both_answers(drawn.seeded(1), ir.little_library()).source != ""
+fn both_answers(draw: drawn.Draw, library: ir.Library) -> Drawing {
+    source := dividing(draw)
+    lowered := compiled.lowered_alone(source, library)
+    var built = []
+    for body in compiled.demo_bodies(lowered) {
+        built = compiled.both(built, compiled.reached_in(body))
+    }
+    var why = refused(lowered)
+    for variant in ["lumen/Option$Some", "lumen/Option$None"] {
+        if !list.has_value(built, variant) {
+            why = "it builds no " + variant
+        }
+    }
+    Drawing { source: source, why: why }
+}
+
+/// A module that divides, drawn from the operators, the operands, and where the division is.
+// example: dividing(drawn.seeded(1)) != ""
+fn dividing(draw: drawn.Draw) -> String {
+    operator := drawn.picked(draw, ["/", "%"], "")
+    dividend := drawn.picked(drawn.next(draw), operands(), "")
+    divisor := drawn.picked(drawn.next(drawn.next(draw)), operands(), "")
+    context := drawn.picked(drawn.next(drawn.next(drawn.next(draw))), contexts(), "")
+    compiled.replaced(context, "{}", dividend + " " + operator + " " + divisor)
+}
+
+/// The ways a division is written, each holding it where `{}` is.
+// example: list.length(contexts()) == 4
+fn contexts() -> List<String> {
+    ["fn go(a: Int, b: Int) -> Option<Int> {\n    {}\n}\n", "fn go(a: Int, b: Int) -> Int {\n    or({}, 0)\n}\n", "fn go(a: Int, b: Int) -> Option<Int> {\n    held := {}\n    held\n}\n", "fn is_same(a: Int, b: Int) -> Bool {\n    or({}, 0) == a\n}\n"]
+}
+
+/// An `or` over a division, with a drawn fallback, written out in place.
+// example: written_out(drawn.seeded(1), ir.little_library()).source != ""
+fn written_out(draw: drawn.Draw, library: ir.Library) -> Drawing {
+    fallback := drawn.picked(draw, operands(), "")
+    source := "fn go(a: Int, b: Int) -> Int {\n    or(a / b, " + fallback + ")\n}\n"
+    body := compiled.instructions_of(compiled.lowered_alone(source, library), "go")
+    Drawing { source: source, why: called_or_why(body) }
+}
+
+/// What is wrong with `body` as an `or` written out in place, which is empty where nothing is.
+// example: called_or_why([]) == "it never asks which variant it was handed"
+fn called_or_why(body: List<ir.Instruction>) -> String {
+    if list.has_value(compiled.calls_named(body), "or") {
+        return "it calls `or`, which has no class to be called on"
+    }
+    if position_of_equality(body) < 0 {
+        return "it never asks which variant it was handed"
+    }
+    for instruction in body {
+        if field_read(instruction) == "value0" {
+            return ""
+        }
+    }
+    "it never reads what a `Some` holds"
+}
+
+/// The name of the field `instruction` reads off an instance, and nothing where it reads none.
+// example: field_read(ir.Copy) == ""
+fn field_read(instruction: ir.Instruction) -> String {
+    match instruction {
+        ir.GetField(field) => field.name
+        _ => ""
+    }
+}
+
+/// An `or` whose fallback is drawn arithmetic, worked out before the variant is asked for.
+// example: fallback_first(drawn.seeded(1), ir.little_library()).source != ""
+fn fallback_first(draw: drawn.Draw, library: ir.Library) -> Drawing {
+    operator := drawn.picked(draw, ["+", "-", "*"], "")
+    source := "fn go(a: Int, b: Int) -> Int {\n    or(a / b, a " + operator + " b)\n}\n"
+    body := compiled.instructions_of(compiled.lowered_alone(source, library), "go")
+    worked_out := position_of_arithmetic(body, operator)
+    asked := position_of_equality(body)
+    var why = ""
+    if worked_out < 0 || asked < 0 || worked_out > asked {
+        why = "the fallback is worked out at " + shown(worked_out) + ", and the variant asked for at " + shown(asked)
+    }
+    Drawing { source: source, why: why }
+}
+
+/// Where `body` first asks whether two `int` values are equal, and -1 where it never does.
+// example: position_of_equality([ir.Copy, ir.CompareIntegers(ir.Equal)]) == 1
+// example: position_of_equality([]) == -1
+fn position_of_equality(body: List<ir.Instruction>) -> Int {
+    var at = 0
+    for instruction in body {
+        if is_integer_equality(instruction) {
+            return at
+        }
+        at += 1
+    }
+    -1
+}
+
+/// Where `body` first does the arithmetic `operator` is written as, and -1 where it never does.
+// example: position_of_arithmetic([ir.Arithmetic(ir.Multiply)], "*") == 0
+// example: position_of_arithmetic([ir.Arithmetic(ir.Multiply)], "+") == -1
+fn position_of_arithmetic(body: List<ir.Instruction>, operator: String) -> Int {
+    var at = 0
+    for instruction in body {
+        if arithmetic_written(instruction) == operator {
+            return at
+        }
+        at += 1
+    }
+    -1
+}
+
+/// The operator `instruction` is written as where it adds, subtracts, or multiplies, else nothing.
+// example: arithmetic_written(ir.Arithmetic(ir.Subtract)) == "-"
+// example: arithmetic_written(ir.Copy) == ""
+fn arithmetic_written(instruction: ir.Instruction) -> String {
+    match instruction {
+        ir.Arithmetic(ir.Add) => "+"
+        ir.Arithmetic(ir.Subtract) => "-"
+        ir.Arithmetic(ir.Multiply) => "*"
+        _ => ""
+    }
+}
+
+/// Every `?` on an `Option` in a drawn module, each loading what it tested and giving it back.
+// example: handed_back(drawn.seeded(1), ir.little_library()).source != ""
+fn handed_back(draw: drawn.Draw, library: ir.Library) -> Drawing {
+    dividend := drawn.picked(draw, operands(), "")
+    divisor := drawn.picked(drawn.next(draw), operands(), "")
+    context := drawn.picked(drawn.next(drawn.next(draw)), propagating(), "")
+    source := compiled.replaced(context, "{}", dividend + " / " + divisor)
+    lowered := compiled.lowered_alone(source, library)
+    var why = refused(lowered)
+    var propagated = 0
+    for body in compiled.demo_bodies(lowered) {
+        for at in none_tests(body) {
+            propagated += 1
+            why = propagation_why(body: body, at: at, why: why)
+        }
+    }
+    if why == "" && propagated == 0 {
+        why = "it writes no `?` on an `Option`"
+    }
+    Drawing { source: source, why: why }
+}
+
+/// What a division is written over, none of which says at compile time what the divisor is.
+// example: list.length(operands()) == 3
+fn operands() -> List<String> {
+    ["a", "b", "17"]
+}
+
+/// `the compiler refused it` where nothing was lowered, and nothing where something was.
+// example: refused([]) == "the compiler refused it"
+fn refused(lowered: List<ir.Lowered>) -> String {
+    if list.length(lowered) == 0 {
+        return "the compiler refused it"
+    }
+    ""
+}
+
+/// The ways a `?` on an `Option` is written, each holding a division where `{}` is.
+// example: list.length(propagating()) == 5
+fn propagating() -> List<String> {
+    ["fn go(a: Int, b: Int) -> Option<Int> {\n    Some(({})?)\n}\n", "fn go(a: Int, b: Int) -> Option<Int> {\n    held := ({})?\n    Some(held)\n}\n", "fn go(a: Int, b: Int) -> Option<Int> {\n    Some((({})? / 2)? + 2 * 5)\n}\n", "fn is_same(a: Int, b: Int) -> Option<Bool> {\n    Some(({})? == a)\n}\n", "fn go(a: Int, b: Int) -> Option<Int> {\n    if a == b {\n        return Some(({})?)\n    }\n    Some(0)\n}\n"]
+}
+
+/// Where each test of `body` for the `None` a `?` hands back begins.
+///
+/// The test reads the tag of an `Option`, pushes the tag of `None`, compares, and jumps past.
+// example: none_tests([ir.GetField(ir.FieldRef { class: "lumen/Option", name: "tag", of: ir.Integer }), ir.IntegerOf(1), ir.CompareIntegers(ir.Equal), ir.JumpIfFalse(2)]) == [0]
+fn none_tests(body: List<ir.Instruction>) -> List<Int> {
+    var found = []
+    var at = 0
+    for at + 3 < list.length(body) {
+        tag := is_option_tag(or(list.at(body, at), ir.Copy)) && is_none_tag(or(list.at(body, at + 1), ir.Copy))
+        if tag && is_integer_equality(or(list.at(body, at + 2), ir.Copy)) && is_jump_if_false(or(list.at(body, at + 3), ir.Copy)) {
+            found = list.push(found, at)
+        }
+        at += 1
+    }
+    found
+}
+
+/// Whether `instruction` asks whether two `int` values are equal.
+// example: is_integer_equality(ir.CompareIntegers(ir.Equal))
+// example: !is_integer_equality(ir.CompareLongs(ir.Equal))
+fn is_integer_equality(instruction: ir.Instruction) -> Bool {
+    match instruction {
+        ir.CompareIntegers(how) => how == ir.Equal
+        _ => false
+    }
+}
+
+/// Whether `instruction` reads the tag of an `Option`.
+// example: !is_option_tag(ir.Copy)
+fn is_option_tag(instruction: ir.Instruction) -> Bool {
+    match instruction {
+        ir.GetField(field) => field.class == "lumen/Option" && field.name == "tag"
+        _ => false
+    }
+}
+
+/// Whether `instruction` pushes the tag of `None`, its place in the declaration of `Option`.
+// example: is_none_tag(ir.IntegerOf(1))
+// example: !is_none_tag(ir.IntegerOf(0))
+fn is_none_tag(instruction: ir.Instruction) -> Bool {
+    match instruction {
+        ir.IntegerOf(value) => value == 1
+        _ => false
+    }
+}
+
+/// Whether `instruction` jumps where the value on the stack is false.
+// example: is_jump_if_false(ir.JumpIfFalse(0))
+// example: !is_jump_if_false(ir.Jump(0))
+fn is_jump_if_false(instruction: ir.Instruction) -> Bool {
+    match instruction {
+        ir.JumpIfFalse(_) => true
+        _ => false
+    }
+}
+
+/// `why`, or what is wrong where the `?` whose test begins at `at` does not give back what it read.
+///
+/// What the test read was loaded from a slot just before it, and the case that hands it back
+/// loads the same slot and gives it back as an `Option`.
+// example: propagation_why(body: [], at: 0, why: "") == "a `?` reads the tag of what it did not load"
+fn propagation_why(body: List<ir.Instruction>, at: Int, why: String) -> String {
+    slot := slot_loaded(or(list.at(body, at - 1), ir.Copy))
+    if slot < 0 {
+        return "a `?` reads the tag of what it did not load"
+    }
+    loaded := is_option_loaded(or(list.at(body, at + 4), ir.Copy), slot)
+    if !loaded || !is_option_returned(or(list.at(body, at + 5), ir.Copy)) {
+        return "a `?` builds a `None` rather than give back the one in slot " + shown(slot)
+    }
+    why
+}
+
+/// The slot `instruction` loads, and -1 where it loads none.
+// example: slot_loaded(ir.Load { slot: 3, of: ir.Long }) == 3
+// example: slot_loaded(ir.Copy) == -1
+fn slot_loaded(instruction: ir.Instruction) -> Int {
+    match instruction {
+        ir.Load { slot, of } => slot
+        _ => -1
+    }
+}
+
+/// Whether `instruction` loads `wanted` as an `Option`.
+// example: is_option_loaded(ir.Load { slot: 2, of: ir.Reference("lumen/Option") }, 2)
+// example: !is_option_loaded(ir.Load { slot: 2, of: ir.Long }, 2)
+fn is_option_loaded(instruction: ir.Instruction, wanted: Int) -> Bool {
+    match instruction {
+        ir.Load { slot, of } => slot == wanted && of == ir.Reference("lumen/Option")
+        _ => false
+    }
+}
+
+/// Whether `instruction` gives back an `Option`.
+// example: is_option_returned(ir.Return(Some(ir.Reference("lumen/Option"))))
+// example: !is_option_returned(ir.Return(None))
+fn is_option_returned(instruction: ir.Instruction) -> Bool {
+    match instruction {
+        ir.Return(Some(of)) => of == ir.Reference("lumen/Option")
+        _ => false
+    }
+}
+
+/// One drawn module, and what went wrong with it, which is empty where the property held.
+type Drawing = {
+    source: String
+    why: String
+}
+
+/// Each property of the paths a body takes.
+type Property =
+    | Tested
+    | BothAnswers
+    | WrittenOut
+    | FallbackFirst
+    | HandedBack

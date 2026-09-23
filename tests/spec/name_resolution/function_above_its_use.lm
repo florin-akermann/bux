@@ -1,0 +1,9 @@
+// expect-error: L0303
+// A file reads top down, so a function is written below the function that calls it.
+fn one() -> Int {
+    1
+}
+
+fn two() -> Int {
+    one()
+}

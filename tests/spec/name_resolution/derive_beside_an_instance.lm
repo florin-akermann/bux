@@ -1,0 +1,13 @@
+// expect-error: L0308
+// A derive writes an instance, so one beside an instance of the same trait is a second one.
+derive Eq for User
+
+instance Eq<User> {
+    fn is_equal(one: User, other: User) -> Bool {
+        true
+    }
+}
+
+type User = {
+    id: Int
+}

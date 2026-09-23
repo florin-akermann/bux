@@ -1,0 +1,80 @@
+// expect-run
+// > a condition that came through a generic
+// > a negation of what came through a generic
+// > 8
+// > 3 and three
+// > three and 3
+// > 3 came back through three calls of itself
+// > nothing came back
+// > 10
+// > 10 cents
+// A value that crosses a generic comes back as the type the use settled, and works as one.
+// A generic is written once for each set of types a use settles it at, and each works alone.
+import io
+
+fn main(arguments: List<String>) -> Int {
+    if identity(true) {
+        io.println("a condition that came through a generic")
+    }
+    if !identity(false) {
+        io.println("a negation of what came through a generic")
+    }
+    io.println(shown(identity(3) + 5))
+    io.println(paired(first: 3, second: "three"))
+    io.println(paired(first: "three", second: 3))
+    io.println(shown(down(3)) + " came back through three calls of itself")
+    if is_unit(identity(())) {
+        io.println("nothing came back")
+    }
+    io.println(shown(joined(one: 3, other: 7)))
+    match joined(one: Money { cents: 3 }, other: Money { cents: 7 }) {
+        Money { cents } => io.println(shown(cents) + " cents")
+    }
+    0
+}
+
+// example: identity(1) == 1
+fn identity<T>(value: T) -> T {
+    value
+}
+
+// Two type parameters are two types, whichever order a use settles them in.
+// example: paired(first: 1, second: "one") == "1 and one"
+fn paired<T: Show<T>, U: Show<U>>(first: T, second: U) -> String {
+    shown(first) + " and " + shown(second)
+}
+
+// A generic that calls itself is written once for each set of types, and the writing ends.
+// example: down(2) == 2
+fn down<T>(value: T) -> T {
+    counted_down(value, 3)
+}
+
+// example: counted_down(0, 1) == 0
+fn counted_down<T>(value: T, left: Int) -> T {
+    if left == 0 {
+        return value
+    }
+    counted_down(value, left - 1)
+}
+
+// example: is_unit(())
+fn is_unit(value: ()) -> Bool {
+    true
+}
+
+// A constraint promises `+`, and each use reaches the instance of the type it settled.
+// example: joined(one: 1, other: 2) == 3
+fn joined<T: Add<T>>(one: T, other: T) -> T {
+    one + other
+}
+
+instance Add<Money> {
+    fn add(one: Money, other: Money) -> Money {
+        Money { cents: one.cents + other.cents }
+    }
+}
+
+type Money = {
+    cents: Int
+}

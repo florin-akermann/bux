@@ -1,0 +1,7 @@
+// expect-error: L0306
+// A dependency of a dependency is not reached through the package between them.
+import point
+
+fn edge() -> Int {
+    point.origin()
+}

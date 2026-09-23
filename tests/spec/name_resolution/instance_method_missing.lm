@@ -1,0 +1,16 @@
+// expect-error: L0309
+// `Area` declares `covered` and `around`, so an instance that writes `around` alone is refused.
+instance Area<Square> {
+    fn around(shape: Square) -> Int {
+        4 * shape.side
+    }
+}
+
+trait Area<T> {
+    fn covered(shape: T) -> Int
+    fn around(shape: T) -> Int
+}
+
+type Square = {
+    side: Int
+}

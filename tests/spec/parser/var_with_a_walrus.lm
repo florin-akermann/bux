@@ -1,0 +1,6 @@
+// expect-error: L0100
+// A `var` is joined to its first value by `=`; `:=` binds a name that never changes.
+fn counted() -> Int {
+    var total := 0
+    total
+}

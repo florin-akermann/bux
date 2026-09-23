@@ -1,0 +1,7 @@
+// expect-error: L0307
+// A ring of imports is refused across two packages as it is inside one.
+import sunset
+
+fn early() -> Int {
+    sunset.late()
+}

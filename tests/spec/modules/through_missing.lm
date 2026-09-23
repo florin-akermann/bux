@@ -1,0 +1,7 @@
+// expect-error: L0306
+// `missing` imports a module that is nowhere, so the refusal stops a module that imports it too.
+import missing
+
+fn held() -> Int {
+    1
+}

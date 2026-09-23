@@ -1,0 +1,5 @@
+// expect-error: L0304
+// A method of a trait is a function, so it is called and never read as a value.
+fn read() -> Int {
+    is_equal
+}

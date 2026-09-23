@@ -1,0 +1,7 @@
+// expect-error: L0500
+// A string has more values than a match can write down, so a literal never covers the type.
+fn agreed(word: String) -> String {
+    match word {
+        "yes" => "agreed"
+    }
+}

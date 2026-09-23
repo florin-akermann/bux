@@ -1,0 +1,65 @@
+// A word is a keyword only where it is the whole word, and `_` alone is the discard.
+// A word that starts with a keyword, such as `format`, `derived`, or `fnord`, is an identifier.
+// The names of the prelude's types are ordinary identifiers, and a bracket is punctuation.
+import list
+
+// example: format(fnord: [1, 2, 3]) == 3
+fn format(fnord: List<Int>) -> Int {
+    _ = list.length(fnord)
+    list.length(fnord)
+}
+
+// example: shape_of(x1: 1, y_2: 2) == "the same"
+fn shape_of(x1: Int, y_2: Int) -> String {
+    derived := x1 + 1 == y_2
+    match derived {
+        true => "the same"
+        false => "other"
+    }
+}
+
+// example: total_paid(Ok(3)) == 3
+fn total_paid(paid: Result<Int, String>) -> Int {
+    var total = 0
+    for amount in [or_zero(paid), 7] {
+        if amount < 0 {
+            return total
+        } else if amount == 7 {
+            break
+        }
+        total += amount
+        continue
+    }
+    total
+}
+
+// example: or_zero(Err("none")) == 0
+fn or_zero(paid: Result<Int, String>) -> Int {
+    match paid {
+        Ok(amount) => amount
+        Err(_) => 0
+    }
+}
+
+// example: quoted() == "\"a\\\"b\"\\"
+fn quoted() -> String {
+    "\"" + "a\\\"b" + "" + "\"" + "\\"
+}
+
+instance Sized<Box> {
+    fn size(box: Box) -> Int {
+        box.width
+    }
+}
+
+trait Sized<T> {
+    fn size(item: T) -> Int
+}
+
+derive Eq for Box
+
+type Box = {
+    width: Int
+}
+
+extern static int bits(value: Int) -> Int = "java.lang.Long.bitCount"

@@ -1,0 +1,5 @@
+// expect-error: L0302
+// A declaration never hides a name that the prelude supplies, so `or` is not declared again.
+fn or(value: Int) -> Int {
+    value
+}

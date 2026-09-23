@@ -1,7 +1,15 @@
 // A module builds what it likes, and offers what the modules importing it can name.
-// example: wrapped(name: "world") == Held("world")
+// example: name_of(wrapped(name: "world")) == "world"
 fn wrapped(name: String) -> Held {
     Held(name)
+}
+
+// `Held` derives no `Eq`, so an example reads the name back out of it.
+// example: name_of(Held("world")) == "world"
+fn name_of(wrapping: Held) -> String {
+    match wrapping {
+        Held(name) => name
+    }
 }
 
 // example: held(value: 1) == 1

@@ -16,6 +16,9 @@ pub fn texts(source: &str) -> Vec<&str> {
 }
 
 /// One `<kind> <start>..<end> <text>` line per token, the format of a `.tokens` example file.
+///
+/// A keyword and a punctuation are each named by the text that spells them, as the Bux lexer
+/// names them, so the runner under `tests/` reads the same file.
 pub fn render(source: &str) -> String {
     lex(source)
         .into_iter()
@@ -24,11 +27,31 @@ pub fn render(source: &str) -> String {
 }
 
 fn render_token(source: &str, token: Token) -> String {
+    let text = token.span.text(source);
+    let kind = match token.kind {
+        TokenKind::Keyword(_) => format!("Keyword({text})"),
+        TokenKind::Punct(_) => format!("Punct({text})"),
+        other => format!("{other:?}"),
+    };
     format!(
-        "{:?} {}..{} {:?}\n",
-        token.kind,
+        "{kind} {}..{} \"{}\"\n",
         token.span.start(),
         token.span.end(),
-        token.span.text(source)
+        escaped(text)
     )
+}
+
+/// `text` with a quote, a backslash, a line break, a tab, and a carriage return escaped, and
+/// every other character as it is, which is how the runner quotes the text of a token.
+fn escaped(text: &str) -> String {
+    text.chars()
+        .map(|character| match character {
+            '"' => "\\\"".to_owned(),
+            '\\' => "\\\\".to_owned(),
+            '\n' => "\\n".to_owned(),
+            '\t' => "\\t".to_owned(),
+            '\r' => "\\r".to_owned(),
+            other => other.to_string(),
+        })
+        .collect()
 }

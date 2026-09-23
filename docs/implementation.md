@@ -249,59 +249,57 @@ rather than one mutable AST that means different things at different stages.
 
 ## 7. Testing strategy
 
-Compiler development should be heavily specification-driven.
-
+Compiler development is specification-driven, and the executable examples are the specification.
 `docs/specs/executable-examples.md` says what an example file is and what it expects.
+An example is a `.lm` file under `tests/spec/<area>/`, and an area exists when an example needs it.
 
-Tests should cover:
+### The runner
 
-```text
-tests/spec/
-    lexer/
-    parser/
-    format/
-    name_resolution/
-    type_inference/
-    generics/
-    typeclasses/
-    pattern_matching/
-    exhaustiveness/
-    errors/
-    codegen/
-    runtime/
-    java_interop/
-```
+`tests/runner.lm` is the runner, a Bux program, and `bin/runner` builds it and starts it.
+It starts from the root of the repository and holds the compiler in one JVM.
+It calls the functions of the compiler, so it starts no compiler process for each file.
+It holds these parts, each in a module of its own under `tests/`:
 
-Use executable examples as language specifications.
+- `exemplified.lm`: every example under `tests/spec`, to its header and to canonical form.
+- `siblings.lm`: every sibling file, to the view of its phase: tokens, tree, surface, format.
+- `documented.lm`: every `// example:` line of `tests/spec`, `library/`, `compiler/`, and `tests/`.
+- The property modules that `every_property_held` in `runner.lm` names, one for each phase.
+- `commanded.lm`: the command line, held to the golden answers under `tests/commands/`.
+- `launched.lm`: the launcher `bin/bux`, where it starts the compiler and where it cannot.
 
-For example:
+The runner starts a JVM only for an example headed `expect-run` and for a command that runs one.
+It writes one line for each check it skipped and for each failure, then one line of counts.
+It ends with status 0 only when nothing failed.
+`bin/runner golden` writes each golden file again, for an answer that changes on purpose.
 
-```text
-// identity.lm
+### Drawn properties
 
-fn identity(x) {
-    x
-}
+A property is a Bux function that tries one invariant on drawn input.
+`tests/drawn.lm` is the generator, a linear congruential generator seeded by the case number.
+The runner tries each property on 100 cases, so two runs draw the same input.
+A failure names the property, the seed, and the drawn input, so a reader can try that case again.
+Round trips come first: print then parse, a format that is idempotent, spans that cover the input.
 
-assert(identity(42) == 42)
-assert(identity("hello") == "hello")
-```
+### What the Rust tests held that the runner does not
 
-And compile-fail tests:
+Item 087 moved every Rust test to the runner or states its loss here.
 
-```text
-// mismatched_types.lm
+- Shrinking: a failure shows the whole drawn input, not the smallest input that fails.
+- A property that compared a Bux phase with the Rust phase, because no second phase is left.
+- That comparison covered the lexer, parser, format, loader, resolver, types, checks, and classes.
+- Each of their generators now drives a Bux property that holds an invariant of its own.
+- The files that `build` and `fmt` write, compared byte for byte with the files Rust wrote.
+- The span of a refusal, which an example does not state, except in a `.error` sibling.
+- The shape of a Rust-internal value: the IR, a descriptor, and a resolved kind of definition.
+- The class file as the Rust reader read it: flags, stack maps, and exception tables.
+- The JVM verifier still reads each class that an `expect-run` example loads.
+- The load order of modules, and the checks of the Rust catalogue of diagnostic codes.
+- L0601 and the placements of L0602, which only `bux test` gives, and an example states `check`.
+- `check` and `api` on the modules of `compiler/`, which change with each compiler edit.
+- An empty file as an example, because an empty example teaches nothing.
 
-type UserId = UserId(Int)
-
-fn load(id: UserId) {
-    ...
-}
-
-load(42)
-```
-
-The compiler must say that `Int` cannot be used where `UserId` is expected.
+Until the Rust crates go, `crates/cli/tests/integration/bux_runner.rs` starts the runner.
+It asserts that the runner ends with status 0.
 
 ---
 

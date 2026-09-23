@@ -1,0 +1,5 @@
+// expect-error: L0100
+// A type parameter list names at least one type parameter.
+fn kept<>(value: Int) -> Int {
+    value
+}

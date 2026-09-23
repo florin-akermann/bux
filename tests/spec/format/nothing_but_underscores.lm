@@ -1,0 +1,5 @@
+// expect-error: L0203
+// A name of nothing but underscores names no word at all.
+fn __(count: Int) -> Int {
+    count
+}

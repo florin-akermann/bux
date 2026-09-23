@@ -1,0 +1,15 @@
+// expect-error: L0429
+// A width says that the member gives back an `int` or a `char`, which the call widens to an `Int`.
+// `toPath` gives back a `Path`, so there is no `Int` for the word to widen to.
+fn main(arguments: List<String>) -> Int {
+    _ = as_a_path(opened("notes.txt"))
+    0
+}
+
+extern method int as_a_path(file: File) -> Path = "toPath"
+
+extern new opened(path: String) -> File
+
+extern type File = "java.io.File"
+
+extern type Path = "java.nio.file.Path"

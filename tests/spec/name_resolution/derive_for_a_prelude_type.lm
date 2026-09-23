@@ -1,0 +1,7 @@
+// expect-error: L0312
+// A derive reads the declaration it names, so it names a type this module declares.
+derive Eq for Int
+
+type User = {
+    id: Int
+}

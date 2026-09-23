@@ -1,0 +1,422 @@
+// The invariants of a written class file, checked on drawn modules and read back byte by byte.
+//
+// `docs/specs/codegen.md` states what the writer writes. Some properties compile a drawn source,
+// some write a module built here out of drawn bodies, and `reader` reads the bytes back.
+import compiled
+
+import drawn
+
+import held
+
+import ir
+
+import jvm
+
+import list
+
+import reader
+
+import strings
+
+/// Every property of the class-file writer, each checked over `cases` drawn modules, in order.
+// example: list.length(every_property(0, ir.little_library())) == 11
+fn every_property(cases: Int, library: ir.Library) -> List<held.Held> {
+    [compiling_one_source_twice_gives_byte_identical_class_files(cases, library), every_class_a_module_compiles_to_begins_with_the_magic_and_the_current_version(cases, library), every_constant_a_compiled_class_names_is_one_its_own_pool_holds(cases, library), every_descriptor_a_class_asks_to_load_first_names_another_class_the_build_writes(cases, library), writing_a_class_twice_gives_the_same_bytes(cases, library), every_class_written_begins_with_the_magic_and_the_current_version(cases, library), no_method_written_for_a_function_a_module_declares_names_object(cases, library), a_generic_used_at_a_whole_number_is_written_taking_and_giving_back_a_long(cases, library), every_method_a_module_declares_is_written_as_a_method_of_it(cases, library), every_constant_a_class_names_is_one_the_pool_holds(cases, library), every_class_a_drawn_program_compiles_to_reads_back_whole(cases, library)]
+}
+
+/// One source compiled twice gives the same class files, as the same bytes, in the same order.
+// example: held.is_held(compiling_one_source_twice_gives_byte_identical_class_files(0, ir.little_library()))
+fn compiling_one_source_twice_gives_byte_identical_class_files(cases: Int, library: ir.Library) -> held.Held {
+    checked(property: CompiledTwice, cases: cases, library: library)
+}
+
+/// Every class file of a compiled source begins with the magic, then the JDK 28 preview version.
+// example: held.is_held(every_class_a_module_compiles_to_begins_with_the_magic_and_the_current_version(0, ir.little_library()))
+fn every_class_a_module_compiles_to_begins_with_the_magic_and_the_current_version(cases: Int, library: ir.Library) -> held.Held {
+    checked(property: CompiledVersion, cases: cases, library: library)
+}
+
+/// The class and the base a compiled class file names are both places its own pool holds.
+// example: held.is_held(every_constant_a_compiled_class_names_is_one_its_own_pool_holds(0, ir.little_library()))
+fn every_constant_a_compiled_class_names_is_one_its_own_pool_holds(cases: Int, library: ir.Library) -> held.Held {
+    checked(property: CompiledPool, cases: cases, library: library)
+}
+
+/// A class asks a JVM to load first only a class the same build writes, and never itself.
+// example: held.is_held(every_descriptor_a_class_asks_to_load_first_names_another_class_the_build_writes(0, ir.little_library()))
+fn every_descriptor_a_class_asks_to_load_first_names_another_class_the_build_writes(cases: Int, library: ir.Library) -> held.Held {
+    checked(property: Loadable, cases: cases, library: library)
+}
+
+/// One drawn module written twice is written as the same bytes both times.
+// example: held.is_held(writing_a_class_twice_gives_the_same_bytes(0, ir.little_library()))
+fn writing_a_class_twice_gives_the_same_bytes(cases: Int, library: ir.Library) -> held.Held {
+    checked(property: WrittenTwice, cases: cases, library: library)
+}
+
+/// Every class file of a drawn module begins with the magic, then the JDK 28 preview version.
+// example: held.is_held(every_class_written_begins_with_the_magic_and_the_current_version(0, ir.little_library()))
+fn every_class_written_begins_with_the_magic_and_the_current_version(cases: Int, library: ir.Library) -> held.Held {
+    checked(property: WrittenVersion, cases: cases, library: library)
+}
+
+/// A method the class of a module writes for one of its functions takes and gives back no object.
+// example: held.is_held(no_method_written_for_a_function_a_module_declares_names_object(0, ir.little_library()))
+fn no_method_written_for_a_function_a_module_declares_names_object(cases: Int, library: ir.Library) -> held.Held {
+    checked(property: NoObject, cases: cases, library: library)
+}
+
+/// A generic used at `Int` is written as a method from a `long` to a `long`, and boxes nothing.
+// example: held.is_held(a_generic_used_at_a_whole_number_is_written_taking_and_giving_back_a_long(0, ir.little_library()))
+fn a_generic_used_at_a_whole_number_is_written_taking_and_giving_back_a_long(cases: Int, library: ir.Library) -> held.Held {
+    checked(property: Specialised, cases: cases, library: library)
+}
+
+/// The class file of a drawn module writes each method it declares, by name, in the same order.
+// example: held.is_held(every_method_a_module_declares_is_written_as_a_method_of_it(0, ir.little_library()))
+fn every_method_a_module_declares_is_written_as_a_method_of_it(cases: Int, library: ir.Library) -> held.Held {
+    checked(property: Declared, cases: cases, library: library)
+}
+
+/// The class and the base of a drawn module are places its pool holds, and each method has a name.
+// example: held.is_held(every_constant_a_class_names_is_one_the_pool_holds(0, ir.little_library()))
+fn every_constant_a_class_names_is_one_the_pool_holds(cases: Int, library: ir.Library) -> held.Held {
+    checked(property: WrittenPool, cases: cases, library: library)
+}
+
+/// Every class file of a drawn program reads back whole, from the magic to the last byte.
+// example: held.is_held(every_class_a_drawn_program_compiles_to_reads_back_whole(0, ir.little_library()))
+fn every_class_a_drawn_program_compiles_to_reads_back_whole(cases: Int, library: ir.Library) -> held.Held {
+    checked(property: ReadsWhole, cases: cases, library: library)
+}
+
+/// `property` checked over `cases` drawn modules, each drawn from a seed of its own.
+// example: checked(property: CompiledTwice, cases: 0, library: ir.little_library()).cases == 0
+fn checked(property: Property, cases: Int, library: ir.Library) -> held.Held {
+    var found = held.nothing_failed(cases)
+    var case = 0
+    for case < cases {
+        seed := drawn.seed_of(case)
+        one := drawing(property: property, draw: drawn.seeded(seed), library: library)
+        found = compiled.noted(found, one.why, held.drawn_failure(name_of(property), seed, one.source, one.why))
+        case += 1
+    }
+    found
+}
+
+/// The module `property` draws with `draw`, and what went wrong with it, which is empty if nothing.
+// example: drawing(property: WrittenTwice, draw: drawn.seeded(1), library: ir.little_library()).why == ""
+fn drawing(property: Property, draw: drawn.Draw, library: ir.Library) -> Drawing {
+    match property {
+        CompiledTwice => compiled_twice(draw, library)
+        CompiledVersion => compiled_version(draw, library)
+        CompiledPool => compiled_pool(draw, library)
+        Loadable => loadable(draw, library)
+        WrittenTwice => written_twice(draw)
+        WrittenVersion => written_version(draw)
+        NoObject => no_object(draw, library)
+        Specialised => specialised(draw, library)
+        Declared => declared(draw)
+        WrittenPool => written_pool(draw)
+        ReadsWhole => reads_whole(draw, library)
+    }
+}
+
+/// The name a failure of `property` is reported with.
+// example: name_of(Declared) == "every_method_a_module_declares_is_written_as_a_method_of_it"
+fn name_of(property: Property) -> String {
+    match property {
+        CompiledTwice => "compiling_one_source_twice_gives_byte_identical_class_files"
+        CompiledVersion => "every_class_a_module_compiles_to_begins_with_the_magic_and_the_current_version"
+        CompiledPool => "every_constant_a_compiled_class_names_is_one_its_own_pool_holds"
+        Loadable => "every_descriptor_a_class_asks_to_load_first_names_another_class_the_build_writes"
+        WrittenTwice => "writing_a_class_twice_gives_the_same_bytes"
+        WrittenVersion => "every_class_written_begins_with_the_magic_and_the_current_version"
+        NoObject => "no_method_written_for_a_function_a_module_declares_names_object"
+        Specialised => "a_generic_used_at_a_whole_number_is_written_taking_and_giving_back_a_long"
+        Declared => "every_method_a_module_declares_is_written_as_a_method_of_it"
+        WrittenPool => "every_constant_a_class_names_is_one_the_pool_holds"
+        ReadsWhole => "every_class_a_drawn_program_compiles_to_reads_back_whole"
+    }
+}
+
+/// One drawn source compiled twice, which must be written as the same bytes both times.
+// example: compiled_twice(drawn.seeded(1), ir.little_library()).source != ""
+fn compiled_twice(draw: drawn.Draw, library: ir.Library) -> Drawing {
+    source := drawn.picked(draw, sources(), "")
+    Drawing { source: source, why: compiled.differing(compiled.written_alone(source, library), compiled.written_alone(source, library)) }
+}
+
+/// One drawn source, each of whose class files must begin with the magic and the version.
+// example: compiled_version(drawn.seeded(1), ir.little_library()).source != ""
+fn compiled_version(draw: drawn.Draw, library: ir.Library) -> Drawing {
+    source := drawn.picked(draw, sources(), "")
+    Drawing { source: source, why: version_why(compiled.written_alone(source, library)) }
+}
+
+/// One drawn source, each of whose class files must name a class and a base its pool holds.
+// example: compiled_pool(drawn.seeded(1), ir.little_library()).source != ""
+fn compiled_pool(draw: drawn.Draw, library: ir.Library) -> Drawing {
+    source := drawn.picked(draw, sources(), "")
+    Drawing { source: source, why: pool_why(compiled.written_alone(source, library)) }
+}
+
+/// One drawn source, whose classes must ask to load first only other classes of the build.
+// example: loadable(drawn.seeded(1), ir.little_library()).source != ""
+fn loadable(draw: drawn.Draw, library: ir.Library) -> Drawing {
+    source := drawn.picked(draw, sources(), "")
+    Drawing { source: source, why: loadable_why(compiled.written_alone(source, library)) }
+}
+
+/// One drawn module written twice, which must be written as the same bytes both times.
+// example: written_twice(drawn.seeded(1)).why == ""
+fn written_twice(draw: drawn.Draw) -> Drawing {
+    module := a_module(draw)
+    Drawing { source: shown_module(module), why: compiled.differing(jvm.program_written([module]), jvm.program_written([module])) }
+}
+
+/// One drawn module, whose class file must begin with the magic and the version.
+// example: written_version(drawn.seeded(1)).why == ""
+fn written_version(draw: drawn.Draw) -> Drawing {
+    module := a_module(draw)
+    Drawing { source: shown_module(module), why: version_why(jvm.program_written([module])) }
+}
+
+/// One drawn source, no method of whose own class may take or give back an object.
+// example: no_object(drawn.seeded(1), ir.little_library()).source != ""
+fn no_object(draw: drawn.Draw, library: ir.Library) -> Drawing {
+    source := drawn.picked(draw, sources(), "")
+    var why = compiled_why(compiled.written_alone(source, library))
+    for method in reader.read(module_bytes(compiled.written_alone(source, library))).methods {
+        if compiled.is_holding(method.descriptor, "java/lang/Object") {
+            why = method.name + " is written " + method.descriptor
+        }
+    }
+    Drawing { source: source, why: why }
+}
+
+/// A drawn generic used at `Int`, which must be written from a `long` to a `long`, with no box.
+// example: specialised(drawn.seeded(1), ir.little_library()).source != ""
+fn specialised(draw: drawn.Draw, library: ir.Library) -> Drawing {
+    through := drawn.picked(draw, ["identity", "through"], "")
+    source := "fn kept(count: Int) -> Int {\n    " + through + "(count)\n}\n\nfn through<T>(value: T) -> T {\n    identity(value)\n}\n\nfn identity<T>(value: T) -> T {\n    value\n}\n"
+    contents := reader.read(module_bytes(compiled.written_alone(source, library)))
+    var why = through + " is not written at `Int`"
+    for method in contents.methods {
+        if method.name == through + "$Int" {
+            why = descriptor_why(method.descriptor)
+        }
+    }
+    if why == "" && list.has_value(reader.texts(contents), "java/lang/Long") {
+        why = "a whole number that crosses a generic is boxed as a java/lang/Long"
+    }
+    Drawing { source: source, why: why }
+}
+
+/// Why `descriptor` is not that of a method from a `long` to a `long`, which is empty where it is.
+// example: descriptor_why("(J)J") == ""
+fn descriptor_why(descriptor: String) -> String {
+    if descriptor == "(J)J" {
+        return ""
+    }
+    "the use at `Int` is written " + descriptor
+}
+
+/// One drawn module, whose class file must write the methods it declares, by name, in order.
+// example: declared(drawn.seeded(1)).why == ""
+fn declared(draw: drawn.Draw) -> Drawing {
+    module := a_module(draw)
+    var names = []
+    for method in reader.read(module_bytes(jvm.program_written([module]))).methods {
+        names = list.push(names, method.name)
+    }
+    var why = ""
+    if names != method_names(module) {
+        why = "the class file writes the methods " + strings.join(names, ", ")
+    }
+    Drawing { source: shown_module(module), why: why }
+}
+
+/// One drawn module, whose class file must name places its pool holds and name every method.
+// example: written_pool(drawn.seeded(1)).why == ""
+fn written_pool(draw: drawn.Draw) -> Drawing {
+    module := a_module(draw)
+    files := jvm.program_written([module])
+    var why = pool_why(files)
+    for method in reader.read(module_bytes(files)).methods {
+        if method.name == "" {
+            why = "a method is written with no name"
+        }
+    }
+    Drawing { source: shown_module(module), why: why }
+}
+
+/// A drawn program, each of whose class files must read back whole and begin as a class file does.
+// example: reads_whole(drawn.seeded(1), ir.little_library()).source != ""
+fn reads_whole(draw: drawn.Draw, library: ir.Library) -> Drawing {
+    source := drawn_program(draw)
+    files := compiled.written_alone(source, library)
+    var why = version_why(files)
+    for file in files {
+        if !reader.is_whole(reader.read(file.bytes), file.bytes) {
+            why = file.path + " does not read back whole"
+        }
+    }
+    Drawing { source: source, why: why }
+}
+
+/// A program whose `main` runs up to four drawn statements over a total.
+// example: drawn_program(drawn.seeded(1)) != ""
+fn drawn_program(draw: drawn.Draw) -> String {
+    many := drawn.number(draw, 5)
+    var body = ""
+    for which in drawn.numbers(drawn.next(draw), many, 9) {
+        body += "    " + or(list.at(statements(), which), "") + "\n"
+    }
+    "import list\n\nimport strings\n\nfn main(arguments: List<String>) -> Int {\n    count := list.length(arguments)\n    var total = 0\n" + body + "    total\n}\n\n/// Whether `total` is even.\n// example: is_even(2)\nfn is_even(total: Int) -> Bool {\n    or(total % 2, 1) == 0\n}\n\ntype Box = {\n    held: Int\n}\n"
+}
+
+/// The statements a drawn program writes before it gives back its total.
+// example: list.length(statements()) == 9
+fn statements() -> List<String> {
+    ["total += count", "total = total * 3 - count", "total = or(total / count, 7)", "if is_even(total) {\n        total += 1\n    }", "for index in [1, 2, 3] {\n        total += index\n    }", "total = match total {\n        0 => 1\n        other => other\n    }", "total = Box { held: total }.held", "total = total + strings.length(\"é€\" + shown(count))", "total = or(list.at([total, 2147483648, -40000], count), 128)"]
+}
+
+/// Why a class file of `files` does not begin with the magic and the version, or nothing.
+// example: version_why([]) == "the compiler refused it"
+fn version_why(files: List<jvm.ClassFile>) -> String {
+    var why = compiled_why(files)
+    for file in files {
+        contents := reader.read(file.bytes)
+        if contents.magic != 3405691582 || contents.major != 72 || contents.minor != 65535 {
+            why = file.path + " begins " + shown(contents.magic) + ", version " + shown(contents.major) + "." + shown(contents.minor)
+        }
+    }
+    why
+}
+
+/// Why a class file of `files` names a class or a base past the end of its pool, or nothing.
+// example: pool_why([]) == "the compiler refused it"
+fn pool_why(files: List<jvm.ClassFile>) -> String {
+    var why = compiled_why(files)
+    for file in files {
+        contents := reader.read(file.bytes)
+        size := list.length(contents.pool)
+        if contents.this > size || contents.extends > size {
+            why = file.path + " names " + shown(contents.this) + " and " + shown(contents.extends) + " of a pool of " + shown(size)
+        }
+    }
+    why
+}
+
+/// Why a class of `files` asks to load first a class the build does not write, or itself.
+// example: loadable_why([]) == "the compiler refused it"
+fn loadable_why(files: List<jvm.ClassFile>) -> String {
+    var written = []
+    for file in files {
+        written = list.push(written, descriptor_of(file.path))
+    }
+    var why = compiled_why(files)
+    for file in files {
+        for wanted in reader.read(file.bytes).loadable {
+            if !list.has_value(written, wanted) || wanted == descriptor_of(file.path) {
+                why = file.path + " asks for " + wanted
+            }
+        }
+    }
+    why
+}
+
+/// The descriptor of the class written at `path`.
+// example: descriptor_of("demo/Box.class") == "Ldemo/Box;"
+fn descriptor_of(path: String) -> String {
+    "L" + compiled.replaced(path, ".class", "") + ";"
+}
+
+/// `the compiler refused it` where `files` are none, and nothing where there are some.
+// example: compiled_why([]) == "the compiler refused it"
+fn compiled_why(files: List<jvm.ClassFile>) -> String {
+    if list.length(files) == 0 {
+        return "the compiler refused it"
+    }
+    ""
+}
+
+/// The bytes of the class file of the module `demo` among `files`, which are none where it is not.
+// example: module_bytes([jvm.ClassFile { path: "demo.class", bytes: [1] }]) == [1]
+fn module_bytes(files: List<jvm.ClassFile>) -> List<Int> {
+    for file in files {
+        if file.path == "demo.class" {
+            return file.bytes
+        }
+    }
+    []
+}
+
+/// A module of one to five methods, each of which gives back a whole number from a drawn body.
+// example: list.length(method_names(a_module(drawn.seeded(1)))) >= 1
+fn a_module(draw: drawn.Draw) -> ir.Lowered {
+    many := drawn.number(draw, 5)
+    chosen := list.push(drawn.numbers(drawn.next(draw), many, 4), 0)
+    var methods = []
+    for which in chosen {
+        body := ir.Body { instructions: list.push(body_of_kind(which), ir.Return(Some(ir.Long))), locals: 0, guards: [] }
+        methods = list.push(methods, ir.Method { name: "answer" + shown(list.length(methods)), descriptor: ir.MethodDescriptor { parameters: [], result: Some(ir.Long) }, reached: ir.ThroughTheClass, body: body })
+    }
+    ir.Lowered { classes: [ir.Class { name: "demo", extends: "java/lang/Object", extending: ir.Never, fields: [], methods: methods }], asks: ir.no_asks() }
+}
+
+/// The body of the kind `which`, each of which leaves one whole number on the stack.
+// example: list.length(body_of_kind(2)) == 3
+fn body_of_kind(which: Int) -> List<ir.Instruction> {
+    match which {
+        0 => [ir.LongOf(0)]
+        1 => [ir.LongOf(-9000000000)]
+        2 => [ir.LongOf(2), ir.LongOf(3), ir.Arithmetic(ir.Add)]
+        _ => [ir.BooleanOf(true), ir.JumpIfFalse(0), ir.LongOf(1), ir.Return(Some(ir.Long)), ir.Label(0), ir.LongOf(2)]
+    }
+}
+
+/// A drawn module as a failure reports it: the names of the methods it declares.
+// example: shown_module(ir.no_lowered()) == "a module that declares "
+fn shown_module(module: ir.Lowered) -> String {
+    "a module that declares " + strings.join(method_names(module), ", ")
+}
+
+/// The names of the methods the one class of `module` declares, in order.
+// example: method_names(ir.no_lowered()) == []
+fn method_names(module: ir.Lowered) -> List<String> {
+    var names = []
+    for class in module.classes {
+        for method in class.methods {
+            names = list.push(names, method.name)
+        }
+    }
+    names
+}
+
+/// The eight modules the properties that compile a source draw from.
+// example: list.length(sources()) == 8
+fn sources() -> List<String> {
+    ["fn answer() -> Int {\n    7\n}\n", "fn held(user: User) -> Int {\n    user.id\n}\n\ntype User = {\n    id: Int\n}\n", "fn told(payment: Payment) -> String {\n    match payment {\n        Pending => \"waiting\"\n        Failed(reason) => reason\n    }\n}\n\ntype Payment =\n    | Pending\n    | Failed(String)\n", "fn walked(counts: List<Int>) -> Int {\n    var total = 0\n    for count in counts {\n        total += count\n    }\n    total\n}\n", "fn used() -> Result<Int, String> {\n    value := held()?\n    Ok(value + 1)\n}\n\nfn held() -> Result<Int, String> {\n    Ok(1)\n}\n", "fn number(user: User) -> Int {\n    user.home.number\n}\n\ntype User = {\n    id: Int\n    home: Address\n}\n\ntype Address = {\n    number: Int\n}\n", "fn kept(count: Int) -> Int {\n    identity(count)\n}\n\nfn is_kept(flag: Bool) -> Bool {\n    identity(flag)\n}\n\nfn identity<T>(value: T) -> T {\n    value\n}\n", "fn kept(count: Int) -> Int {\n    through(count)\n}\n\nfn through<T>(value: T) -> T {\n    identity(value)\n}\n\nfn identity<T>(value: T) -> T {\n    value\n}\n"]
+}
+
+/// One drawn module, and what went wrong with it, which is empty where the property held.
+type Drawing = {
+    source: String
+    why: String
+}
+
+/// Which property a drawn module is checked against.
+type Property =
+    | CompiledTwice
+    | CompiledVersion
+    | CompiledPool
+    | Loadable
+    | WrittenTwice
+    | WrittenVersion
+    | NoObject
+    | Specialised
+    | Declared
+    | WrittenPool
+    | ReadsWhole

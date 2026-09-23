@@ -1,0 +1,200 @@
+// Every example under `tests/spec`, held to what its header says.
+//
+// `docs/specs/executable-examples.md` states what an example is and what its header means. Checking
+// goes through the compiler's own functions in the runner's JVM, and a JVM is started only to run
+// an example headed `// expect-run`, from the line `lumen run` would start it with.
+import command
+
+import environment
+
+import files
+
+import format
+
+import header
+
+import held
+
+import ir
+
+import list
+
+import modules
+
+import walk
+
+/// Every example under `tests/spec`, each held to its header and to canonical form.
+///
+/// An empty `tests/spec` is a failure, because the specification is never allowed to be nothing.
+// example: every_example_held(ir.little_library(), "no-such-directory").failures == ["no-such-directory: holds no example"]
+fn every_example_held(library: ir.Library, directory: String) -> held.Held {
+    paths := walk.every_file(directory, ".lm")
+    if list.length(paths) == 0 {
+        return held.with_failure(held.nothing_failed(0), directory + ": holds no example")
+    }
+    var found = held.nothing_failed(0)
+    for path in paths {
+        found = held.added(found, example_held(path, library))
+    }
+    found
+}
+
+/// The example at `path`, held to its header and, where it parses, to canonical form.
+// example: example_held("no-such-directory/a.lm", ir.little_library()).failures == ["no-such-directory/a.lm: expected \"accepted\", found \"error: no-such-directory/a.lm: No such file or directory (os error 2)\""]
+fn example_held(path: String, library: ir.Library) -> held.Held {
+    source := ok_or(files.read(path), "")
+    found := stated_held(Opened { path: path, source: source }, library)
+    if is_departing(source) {
+        return held.with_failure(found, path + ": not in canonical form, which `lumen fmt` writes")
+    }
+    found
+}
+
+/// Whether `source` parses and is not in the canonical form `lumen fmt` would write it in.
+// example: is_departing("fn f() {\n  1\n}\n")
+// example: !is_departing("fn (")
+fn is_departing(source: String) -> Bool {
+    match format.format(source) {
+        Ok(canonical) => canonical != source
+        Err(_) => false
+    }
+}
+
+/// The example `opened`, held to what its header says.
+// example: stated_held(Opened { path: "a.lm", source: "// > one\n" }, ir.little_library()).failures == ["a.lm: only an example that is run states what it writes"]
+fn stated_held(opened: Opened, library: ir.Library) -> held.Held {
+    match header.expectation_of(opened.source) {
+        header.Compiles => compiled(opened.path, library)
+        header.Refused(code) => refused(opened: opened, code: code, library: library)
+        header.Runs(ran) => run(opened: opened, ran: ran, library: library)
+        header.Misstated(why) => held.with_failure(held.nothing_failed(1), opened.path + ": " + why)
+    }
+}
+
+/// The example at `path`, which the compiler must accept.
+// example: list.length(compiled("no-such-directory/a.lm", ir.little_library()).failures) == 1
+fn compiled(path: String, library: ir.Library) -> held.Held {
+    match command.checked(path, library) {
+        Ok(_) => held.nothing_failed(1)
+        Err(not) => held.with_failure(held.nothing_failed(1), held.failure(path, "accepted", first_line(command.not_compiled_said(not, command.AsPage).errors)))
+    }
+}
+
+/// The example `opened`, which the compiler must refuse with `code` and with no other code.
+// example: list.length(refused(opened: Opened { path: "no-such-directory/a.lm", source: "" }, code: "L0100", library: ir.little_library()).failures) == 1
+fn refused(opened: Opened, code: String, library: ir.Library) -> held.Held {
+    expected := "error[" + code + "] and no other"
+    match command.checked(opened.path, library) {
+        Ok(_) => held.with_failure(held.nothing_failed(1), held.failure(opened.path, expected, "accepted"))
+        Err(command.Unusable(errors)) => held.with_failure(held.nothing_failed(1), held.failure(opened.path, expected, first_line(errors)))
+        Err(command.Refused(refusal)) => refused_with(opened: opened, code: code, refusal: refusal)
+    }
+}
+
+/// `refusal` held to `code`: every diagnostic it holds has that code, and it holds at least one.
+// example: refused_with(opened: Opened { path: "a.lm", source: "" }, code: "L0100", refusal: command.Refusal { diagnostics: [], page: command.Page { source: "", path: "a.lm" } }).failures == ["a.lm: expected \"error[L0100] and no other\", found \"\""]
+fn refused_with(opened: Opened, code: String, refusal: command.Refusal) -> held.Held {
+    var codes = ""
+    var is_other = list.length(refusal.diagnostics) == 0
+    for diagnostic in refusal.diagnostics {
+        if codes != "" {
+            codes += ", "
+        }
+        codes += "error[" + diagnostic.code + "]"
+        is_other = is_other || diagnostic.code != code
+    }
+    if !is_other {
+        return held.nothing_failed(1)
+    }
+    held.with_failure(held.nothing_failed(1), held.failure(opened.path, "error[" + code + "] and no other", codes))
+}
+
+/// The example `opened`, run from a copy of its own as its header says, where a JDK is named.
+///
+/// The copy is the example and every module beside it, so a run writes nothing into the tree. It
+/// is started in that copy, so a file it names with a path of its own is written there.
+// example: list.length(run(opened: Opened { path: "no-such-directory/a.lm", source: "" }, ran: header.Ran { arguments: [], output: "", errors: "", status: 0 }, library: ir.little_library()).failures) == 1
+fn run(opened: Opened, ran: header.Ran, library: ir.Library) -> held.Held {
+    if !is_a_jdk_named() {
+        return held.with_skip(held.nothing_failed(0), opened.path + ": JAVA_HOME names no JDK, and an example that is run needs one")
+    }
+    match command.somewhere_of_its_own() {
+        Ok(copy) => run_in(Copied { opened: opened, copy: copy }, ran, library)
+        Err(said) => held.with_failure(held.nothing_failed(1), opened.path + ": " + first_line(said.errors))
+    }
+}
+
+/// The example run from `copied`, which is taken away again once it has run.
+// example: list.length(run_in(Copied { opened: Opened { path: "no-such-directory/a.lm", source: "" }, copy: "no-such-directory" }, header.Ran { arguments: [], output: "", errors: "", status: 0 }, ir.little_library()).failures) == 1
+fn run_in(copied: Copied, ran: header.Ran, library: ir.Library) -> held.Held {
+    example := modules.joined(copied.copy, "example.lm")
+    _ = files.write(example, copied.opened.source)
+    for beside in walk.files_in(modules.directory_of(copied.opened.path), ".lm") {
+        if beside != copied.opened.path {
+            _ = files.write(modules.joined(copied.copy, modules.stem_of(beside) + ".lm"), ok_or(files.read(beside), ""))
+        }
+    }
+    found := started(copied, ran, command.answered_within(command.all_of(["run", example], ran.arguments), library))
+    command.removed_whole(copied.copy)
+    found
+}
+
+/// What the run of the example found, held to what its header states.
+// example: list.length(started(Copied { opened: Opened { path: "a.lm", source: "" }, copy: "no-such-directory" }, header.Ran { arguments: [], output: "", errors: "", status: 0 }, command.Spoken(command.nothing_said())).failures) == 1
+fn started(copied: Copied, ran: header.Ran, answer: command.Answer) -> held.Held {
+    match answer {
+        command.Spoken(said) => held.with_failure(held.nothing_failed(1), held.failure(copied.opened.path, "a program to run", first_line(said.errors)))
+        command.Starts(line) => ended_held(copied.opened.path, ran, walk.ended(line, copied.copy))
+    }
+}
+
+/// What the program wrote and ended with, held to what the header states, or why it never ran.
+// example: ended_held("a.lm", header.Ran { arguments: [], output: "", errors: "", status: 0 }, None).failures == ["a.lm: the program could not be started"]
+fn ended_held(path: String, ran: header.Ran, ended: Option<walk.Ended>) -> held.Held {
+    match ended {
+        Some(done) => compared(path, ran, done)
+        None => held.with_failure(held.nothing_failed(1), path + ": the program could not be started")
+    }
+}
+
+/// The status and both streams of `done`, each held to what `ran` states for it.
+// example: compared("a.lm", header.Ran { arguments: [], output: "x\n", errors: "", status: 0 }, walk.Ended { output: "y\n", errors: "", status: 0 }).failures == ["a.lm: standard output: expected \"x\\n\", found \"y\\n\""]
+fn compared(path: String, ran: header.Ran, done: walk.Ended) -> held.Held {
+    var found = held.nothing_failed(1)
+    if done.status != ran.status {
+        found = held.with_failure(found, held.failure(path + ": status", shown(ran.status), shown(done.status)))
+    }
+    if done.output != ran.output {
+        found = held.with_failure(found, held.failure(path + ": standard output", ran.output, done.output))
+    }
+    if done.errors != ran.errors {
+        found = held.with_failure(found, held.failure(path + ": standard error", ran.errors, done.errors))
+    }
+    found
+}
+
+/// The first line of `text`, without its line break.
+// example: first_line("a\nb\n") == "a"
+// example: first_line("") == ""
+fn first_line(text: String) -> String {
+    or(list.at(walk.lines_of(text), 0), "")
+}
+
+/// Whether `JAVA_HOME` names a JDK, which a run needs.
+// example: is_a_jdk_named() || !is_a_jdk_named()
+fn is_a_jdk_named() -> Bool {
+    home := or(environment.read("JAVA_HOME"), "")
+    home != "" && modules.is_file(modules.file_at(modules.joined(modules.joined(home, "bin"), "java")))
+}
+
+/// An example, and the directory of its own it is copied into to be run.
+type Copied = {
+    opened: Opened
+    copy: String
+}
+
+/// What the example is.
+type Opened = {
+    path: String
+    source: String
+}

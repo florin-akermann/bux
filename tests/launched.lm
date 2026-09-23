@@ -1,0 +1,100 @@
+// The launcher `bin/bux`, held to what it says when it starts the compiler and when it cannot.
+//
+// `docs/specs/run.md` states the launcher. Each check starts it through `sh` in a directory of its
+// own, so what it writes lands there, and `env` sets or clears `JAVA_HOME` for that start alone.
+import command
+
+import files
+
+import held
+
+import modules
+
+import strings
+
+import walk
+
+/// Every check of the launcher at `root`, one case each: the compiler starts where it can, and the
+/// launcher names what is missing where it cannot.
+// example: every_start_held("no-such-directory").cases == 4
+fn every_start_held(root: String) -> held.Held {
+    launcher := modules.joined(modules.joined(root, "bin"), "bux")
+    var found = start_held(["sh", launcher, "--version"], Expected { status: 0, output: "lumen 0.1.0\n", errors: "" })
+    found = held.added(found, start_held(["env", "-u", "JAVA_HOME", "sh", launcher, "--version"], Expected { status: 2, output: "", errors: "error: JAVA_HOME is not set, and the bux compiler runs on the JDK it names\n" }))
+    found = held.added(found, start_held(["env", "JAVA_HOME=/no/such/jdk", "sh", launcher, "--version"], Expected { status: 2, output: "", errors: "error: /no/such/jdk/bin/java: JAVA_HOME names no JDK\n" }))
+    held.added(found, unbuilt_held(launcher))
+}
+
+/// The launcher copied alone into a directory of its own, where no compiler is built beside it.
+// example: unbuilt_held("no-such-directory/bux").cases == 1
+fn unbuilt_held(launcher: String) -> held.Held {
+    match command.somewhere_of_its_own() {
+        Ok(directory) => unbuilt_in(launcher: launcher, directory: directory)
+        Err(said) => held.with_failure(held.nothing_failed(1), launcher + ": " + said.errors)
+    }
+}
+
+/// The launcher copied into `directory`, started there, and `directory` taken away again.
+// example: unbuilt_in(launcher: "no-such-directory/bux", directory: "no-such-directory").cases == 1
+fn unbuilt_in(launcher: String, directory: String) -> held.Held {
+    bin := modules.joined(directory, "bin")
+    copy := modules.joined(bin, "bux")
+    _ = files.made(bin)
+    _ = files.write(copy, ok_or(files.read(launcher), ""))
+    expected := Expected { status: 2, output: "", errors: "the compiler is not built; lumen build compiler/main.lm builds it\n" }
+    line := ["sh", copy, "--version"]
+    found := ended_held(line, walk.ended(line, directory), expected)
+    command.removed_whole(directory)
+    found
+}
+
+/// The launcher started with `line` in a directory of its own, held to `expected`.
+// example: start_held(["no-such-program-at-all"], Expected { status: 0, output: "", errors: "" }).cases == 1
+fn start_held(line: List<String>, expected: Expected) -> held.Held {
+    match command.somewhere_of_its_own() {
+        Ok(directory) => started_in(line, directory, expected)
+        Err(said) => held.with_failure(held.nothing_failed(1), strings.join(line, " ") + ": " + said.errors)
+    }
+}
+
+/// The launcher started with `line` in `directory`, which is taken away again once it has ended.
+// example: started_in(["no-such-program-at-all"], "no-such-directory", Expected { status: 0, output: "", errors: "" }).cases == 1
+fn started_in(line: List<String>, directory: String, expected: Expected) -> held.Held {
+    ended := walk.ended(line, directory)
+    command.removed_whole(directory)
+    ended_held(line, ended, expected)
+}
+
+/// What the start of `line` ended with, held to `expected`, or why it never started.
+// example: ended_held(["x"], None, Expected { status: 0, output: "", errors: "" }).failures == ["x: the launcher could not be started"]
+fn ended_held(line: List<String>, ended: Option<walk.Ended>, expected: Expected) -> held.Held {
+    name := strings.join(line, " ")
+    match ended {
+        Some(done) => compared(name, done, expected)
+        None => held.with_failure(held.nothing_failed(1), name + ": the launcher could not be started")
+    }
+}
+
+/// The status and the output of `done`, each the one expected, and its errors ending as expected.
+// example: compared("x", walk.Ended { output: "", errors: "error: a\n", status: 2 }, Expected { status: 2, output: "", errors: "a\n" }).failures == []
+// example: compared("x", walk.Ended { output: "", errors: "", status: 1 }, Expected { status: 2, output: "", errors: "" }).failures == ["x: status: expected \"2\", found \"1\""]
+fn compared(name: String, done: walk.Ended, expected: Expected) -> held.Held {
+    var found = held.nothing_failed(1)
+    if done.status != expected.status {
+        found = held.with_failure(found, held.failure(name + ": status", shown(expected.status), shown(done.status)))
+    }
+    if done.output != expected.output {
+        found = held.with_failure(found, held.failure(name + ": standard output", expected.output, done.output))
+    }
+    if !walk.is_ending_in(done.errors, expected.errors) {
+        found = held.with_failure(found, held.failure(name + ": the end of standard error", expected.errors, done.errors))
+    }
+    found
+}
+
+/// What a start of the launcher ends with: its status, its whole output, and how its errors end.
+type Expected = {
+    status: Int
+    output: String
+    errors: String
+}

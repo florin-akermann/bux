@@ -1,0 +1,26 @@
+// A type holds another of its own kind through an `Option`, a `List`, or a variant of a sum type.
+// Each of them holds a reference, so none of them is a ring of values held by value.
+// A chain of records that never comes back to where it started is no ring either.
+fn counted(node: Node) -> Int {
+    node.count
+}
+
+type Node = {
+    count: Int
+    next: Option<Node>
+    children: List<Node>
+    shape: Shape
+    wing: Wing
+}
+
+type Shape =
+    | Round(Node)
+    | Flat
+
+type Wing = {
+    room: Room
+}
+
+type Room = {
+    count: Int
+}

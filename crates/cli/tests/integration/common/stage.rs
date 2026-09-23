@@ -1,5 +1,5 @@
 //! The stage of the Bux command line, which `bux_command`, `bux_launcher`, and `bux_bootstrap`
-//! hold to `lumen`.
+//! hold to `lumen`, and in which `bux_runner` starts the runner.
 //!
 //! `docs/specs/run.md` states the behaviour. One JVM answers a whole list of command lines through
 //! the driver `answers.lm`, and two such JVMs share a list. The Rust side answers the same list, and
@@ -16,8 +16,9 @@ use super::{as_argument, files_ending_in, jdk, lumen, repository};
 /// The directories whose every `.lm` file is a fixture, the Bux compiler's own modules among them.
 pub const FIXTURES: [&str; 3] = ["tests/spec", "library", "compiler"];
 
-/// What the Bux command line is built from and reads as resources, which is copied to its stage.
-const CARRIED: [&str; 3] = ["compiler", "library", "bin"];
+/// What the Bux command line is built from and reads as resources, and the runner under `tests/`
+/// with the example program it holds, which are copied to its stage.
+const CARRIED: [&str; 5] = ["compiler", "library", "bin", "tests", "example"];
 
 /// The program that answers every command line it is handed in one JVM.
 const DRIVER: &str = include_str!("../answers.lm");

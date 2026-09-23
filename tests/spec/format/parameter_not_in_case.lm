@@ -1,0 +1,5 @@
+// expect-error: L0202
+// A parameter is `snake_case`, because a call writes its name, so canonical form wants `the_word`.
+fn shout(theWord: String) -> String {
+    theWord
+}

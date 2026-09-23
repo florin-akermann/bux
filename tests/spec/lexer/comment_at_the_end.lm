@@ -1,0 +1,6 @@
+// expect-error: L0100
+// A comment runs to the end of its line, and the end of the file ends one too.
+// The parser refuses the function, which the file ends inside of.
+fn answer() -> Int {
+    42 // the answer
+// the end

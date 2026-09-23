@@ -1,0 +1,13 @@
+// expect-error: L0314
+// A record pattern binds every field it names, so it is never one alternative of an or-pattern.
+fn described(outcome: Outcome) -> String {
+    match outcome {
+        Ready | Held { held } => "there"
+    }
+}
+
+type Outcome =
+    | Ready
+    | Held {
+        held: String
+    }

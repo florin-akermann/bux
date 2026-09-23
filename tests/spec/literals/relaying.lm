@@ -1,0 +1,7 @@
+import tally
+
+// A whole number takes a type another module declares, through the instance that module wrote.
+// example: paid() == tally.tallied(42)
+fn paid() -> tally.Tally {
+    42
+}

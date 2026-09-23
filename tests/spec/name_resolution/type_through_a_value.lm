@@ -1,0 +1,5 @@
+// expect-error: L0313
+// A type of another module is reached through the import, and `user` is a parameter.
+fn held(user: Int, value: user.Thing) -> Int {
+    1
+}

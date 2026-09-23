@@ -1,0 +1,11 @@
+// expect-error: L0311
+// An instance names the type it is for, and `Area` is a trait.
+instance Eq<Area> {
+    fn is_equal(one: Area, other: Area) -> Bool {
+        true
+    }
+}
+
+trait Area<T> {
+    fn covered(shape: T) -> Int
+}
