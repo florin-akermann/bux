@@ -112,9 +112,9 @@ fn every_part_held(library: ir.Library) -> Counted {
 /// The seconds every program the runner starts has to end in, after which it is stopped.
 ///
 /// `docs/implementation.md` section 7 states why it is this number.
-// example: start_limit() == 12
+// example: start_limit() == 60
 fn start_limit() -> Int {
-    12
+    60
 }
 
 /// Writes the line of a part that began at `mark` and has ended now, and gives back now.

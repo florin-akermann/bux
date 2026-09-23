@@ -296,8 +296,10 @@ A module whose run cannot be built is reported as `lumen test` reports it, and t
 `start_limit` in `runner.lm` is the one limit, in seconds, and every started program gets it.
 A program that is still running at the limit is stopped, and it is a failure that names its check.
 The runner then continues with the next check, so one program that never ends cannot stop it.
-The limit is 12 s, which is three times the longest program that the runner starts, rounded.
-That program is `examined.lm`, which took 3.9 s on 2026-09-23 for 146 runs.
+The limit is 60 s, because it guards against a hang, and not against a slow program.
+The longest program is `examined.lm`, which took 3.9 s on 2026-09-23 for 146 runs.
+It runs the examples of all modules, so its time grows with the modules and with machine load.
+Two runners often run at the same time, so a limit near 3.9 s would stop a correct run.
 Before Item 094, the longest program took 0.14 s, and the limit was 1 s.
 `launched.lm` holds the mechanism: a program that never ends is stopped at a limit of 1 s.
 `bin/runner golden` writes each golden file again, for an answer that changes on purpose.
