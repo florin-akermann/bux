@@ -1016,10 +1016,10 @@ Go's `defer` and Java's try-with-resources give only the first; a closed handle 
 The second needs the type system; the classic answer is linear types, which are ownership's family.
 The intended answer is instead an escape check.
 A resource-typed value may be passed as an argument to an ordinary call, and nothing else.
-It may not be returned, stored in a field, sent in a message, or passed to a spawned function.
+It may not be returned, stored in a field, sent in a message, or given to a process.
 It therefore cannot outlive the block that opened it.
 A foreign reference is held to the same four clauses, and the reason is the object behind it.
-A Java object has identity and mutates, so one a spawned function holds is shared state again.
+A Java object has identity and mutates, so one a process holds is shared state again.
 That is the escape check doing one job rather than a second rule written for the boundary.
 An effect is a capability passed the same way, so effects and resources are one mechanism, not two.
 Elsewhere most of the cost of such a check is closures, which capture capabilities silently.
@@ -1054,27 +1054,61 @@ type Request =
     | Add(Int)
     | Stop
 
-fn counter(inbox: Mailbox<Request>, start: Int) {
-    var total = start
-    for request in inbox {
-        match request {
-            Add(amount) => total = total + amount
-            Stop => return
+process Counter {
+    fn start(initial: Int) -> Int {
+        initial
+    }
+
+    fn receive(total: Int, message: Request) -> Next<Int> {
+        match message {
+            Add(amount) => added(total, amount)
+            Stop => Done
         }
     }
 }
 
-counting := spawn counter(0)
+fn added(total: Int, amount: Int) -> Next<Int> {
+    Continue(total + amount)
+}
+
+counting := spawn Counter(0)
 
 _ = counting.send(Add(3))
 ```
 
-`spawn` takes a named function call, never an anonymous block.
+`spawn` takes a `process`, never a function and never an anonymous block.
 It gives back a handle, and that handle is the one name the rest of the program has for the process.
-`Mailbox<Request>` is the receiving end of one queue, and `Process<Request>` is the sending end.
-`spawn` supplies the mailbox, and the caller supplies every other argument by value.
+`Process<Request>` is that handle, and a program never names the queue behind it.
+`spawn` runs `start` with the arguments the caller passes by value, and that result is the state.
 A process accepts one type, which is why `Request` is an ADT and not a list of message kinds.
 `match` on that ADT is how a process tells one message from another.
+
+**Every process has one shape, and the compiler gives it no second one**.
+Seen one process, seen them all: a reader knows where the state starts and where each message goes.
+A `process` declares `start` and `receive`, in that order, and declares nothing else.
+`start` builds the first state, and `receive` takes the state and one message and gives the next.
+The prelude declares `Next<T>` as `Continue(T)` or `Done`, and a library could have declared it.
+`Done` is how a process ends itself, and question 8 is answered because the type is an ordinary ADT.
+The body of `receive` is one `match` on its message parameter, and nothing else.
+Each arm of that `match` is one call or one name, and never a block, an `if`, or a second `match`.
+
+That last rule is what keeps a process readable as it grows.
+A branch cannot hold the work, so the author must lift the work out and give it a name.
+The compiler holds the shape, and it does not judge the name it forced the author to write.
+A rule about a good name is not a rule a compiler can hold, and Lumen does not pretend otherwise.
+
+The shape is a declaration rather than a check over a loop a program writes.
+Question 7 of `docs/principles.md` is why: elegance leaves the invalid case unwriteable.
+A hand-written loop lets every author write a slightly different process.
+A linter over that loop rejects each one after the fact, which question 7 calls adequacy.
+There is no loop here to write differently, and no `var` to hold state beside the state.
+There is no early `return` either, so no path leaves the process without a next state.
+
+Question 12 holds a library method to a `for` loop, and a `process` declaration is no method.
+Read broadly, the question still lands: a `for` loop could write this, and that is the problem.
+A process is the one place where a second shape costs a reader the whole program.
+A process is therefore written one way, and `spawn` takes no other.
+A second form would be the second spelling that question 9 refuses.
 
 **It is all messages**.
 There is no mutex, no atomic, and no condition variable.
@@ -1086,7 +1120,7 @@ A named function cannot capture a local, and `spawn` passes its arguments by val
 The one mutable thing, a `var` binding, is therefore never visible from another process.
 There is no mutable global state, which section 14 lists as an effect for the same reason.
 A foreign reference is no value a program declared either.
-Section 14 refuses one passed to a spawned function, which is the clause that keeps it out.
+Section 14 refuses one given to a process, which is the clause that keeps it out.
 
 **A queue belongs to a process, and Lumen has no channel**.
 Go gives a queue an identity of its own, and any process may hold it.
@@ -1115,7 +1149,7 @@ That is slower than a lock on a hot path, and the trade is accepted.
 A lock-free structure is a JVM library reached through interop, never something Lumen writes.
 
 **A message that cannot arrive is a typed result, never a silent drop**.
-A process ends when its function returns, and its mailbox ends with it.
+A process ends when `receive` gives `Done`, and its mailbox ends with it.
 Erlang drops a message sent to a process that has ended, and it never tells the sender.
 Lumen says so in the type of `send`, because section 5 gives every operation an answer.
 The same rule refuses Erlang's crash: no Lumen process fails, so none needs a restart.
@@ -1126,10 +1160,11 @@ Cancellation is a message, and the spec names the idiom rather than adding a pri
 **A mailbox is read in order, and nothing searches it**.
 Erlang's selective receive walks the mailbox for a message that matches and leaves the rest behind.
 It reads well, and it costs one scan for each receive, which a full mailbox makes slow.
-Lumen takes the next message and matches it, and a process that must wait holds its own state.
-A receive with a deadline gives `Option`, so a timeout is a value and not a second mechanism.
-A send takes a deadline the same way, and a deadline of none is the send that never waits.
+Lumen gives `receive` the next message, and a process that must wait holds that in its own state.
+A `send` takes a deadline, and a deadline of none is the send that never waits.
 That is what a bus that drops the oldest message needs, and no other primitive answers it.
+A process never calls `receive` itself, so a deadline on the receiving side is not a value it holds.
+How a process wakes when no message comes is the second open question below.
 
 **An in-application message bus is a library type, not a primitive**.
 A `send` names the process it reaches, and a program often has a message that whoever cares reads.
@@ -1157,10 +1192,12 @@ Erlang makes a remote process look like a local one, and Lumen does not.
 A network call fails where a local `send` does not, and one name for both hides that difference.
 A transport that shares the mailbox's receive shape gets a library wrapper once a program needs one.
 
-`spawn`, the mailbox, the handle, the two deadlines, and cancellation are 0.4 work.
+`process`, `spawn`, the handle, the send deadline, and cancellation are 0.4 work.
 Each gets a spec under `docs/specs/` before it lands.
-One question stays open for that spec: how a request carries the address to answer on.
+Two questions stay open for that spec.
+The first is how a request carries the address to answer on.
 A reply is a message, so the reply address is a handle, and a handle accepts one type.
+The second is how a process wakes when no message comes, which a deadline on `receive` once gave.
 The underlying implementation can use JVM threads and, where appropriate, virtual threads.
 The language should hide most JVM concurrency boilerplate.
 
@@ -1311,7 +1348,7 @@ it: section 2 is not suspended inside the boundary.
 
 What a program cannot reach, the object still has: a Java object has identity, and it mutates.
 That is why section 14 names a foreign reference among what its escape check refuses.
-One a spawned function holds is shared mutable state, which section 15 has no answer for.
+One a process holds is shared mutable state, which section 15 has no answer for.
 The clause already written is that answer, rather than a rule of the boundary's own.
 An `extern` declaration is where a foreign reference comes from, and the check is what it goes to.
 

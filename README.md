@@ -37,8 +37,12 @@ A reader learns both, a formatter chooses between them, and each later feature a
 
 Concurrency is Erlang's: a process owns its state, and a message is the only way to that state.
 Bux takes that one idea, and it takes nothing else Erlang has.
-A process is spawned by name, and it reads one typed mailbox that `match` takes apart.
 There is no `async`, no `await`, and no second colour of function.
+
+Every process is written the same way, and the compiler gives it no second shape.
+A `process` declares `start`, which builds the first state, and `receive`, which takes one message.
+The body of `receive` is one `match`, and each arm is one call, so a branch must name what it does.
+Seen one process, seen them all.
 
 Bux has no channel, because a queue that belongs to no process is shared state with a name.
 An in-application message bus is a process that holds the handles of whoever cares.

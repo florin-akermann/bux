@@ -409,7 +409,7 @@ Then the bootstrap of section 6, and the deletion of the Rust crates.
 
 Add, once the compiler is Bux:
 
-* concurrency: `spawn`, a typed mailbox, a process handle, a send and receive deadline, cancellation
+* concurrency: `process` with its enforced shape, `spawn`, a handle, a send deadline, cancellation
 * JVM virtual-thread integration
 * HTTP
 * JSON
