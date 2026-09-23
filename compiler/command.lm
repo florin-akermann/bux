@@ -293,8 +293,9 @@ fn built(path: String, library: ir.Library) -> Result<Built, Said> {
     program := page_said(checked(path, library))?
     module := named_module(program.root.module.path)?
     lowered := page_said(lowered_of(program, library))?
+    classes := page_said(written_of(lowered, program))?
     beside := modules.directory_of(path)
-    _ = classes_written(jvm.program_written(lowered), beside)?
+    _ = classes_written(classes, beside)?
     Ok(Built { module: module, beside: beside, starts: is_a_program(lowered) })
 }
 
@@ -420,10 +421,10 @@ fn is_none_run(found: Result<Option<Run>, List<Diagnostic>>) -> Bool {
 // example: is_refused(examples_held(Run { source: "", stretches: [], examples: [], module: lexer.Span { start: 0, length: 0 } }, Typed { module: modules.Module { name: "main", path: "a.b.lm", source: "", program: ast.Program { items: [] } }, inferred: types.checked_of("") }, ir.little_library()))
 fn examples_held(run: Run, root: Typed, library: ir.Library) -> Result<Said, Said> {
     module := named_module(root.module.path)?
-    lowered := refusing(run_lowered(run, root, library), run, root)?
+    classes := refusing(run_classes(run, root, library), run, root)?
     java := java_found()?
     beside := somewhere_of_its_own()?
-    said := ran_in(Beside { java: java, module: module, beside: beside }, jvm.program_written(lowered), run, root)
+    said := ran_in(Beside { java: java, module: module, beside: beside }, classes, run, root)
     removed_whole(beside)
     Ok(said)
 }
@@ -469,21 +470,22 @@ fn has_unit_of(text: String, units: List<Int>) -> Bool {
     false
 }
 
-/// The modules of the run, checked as the run wrote them and lowered.
-// example: !is_refused(page_said(run_lowered(Run { source: "", stretches: [], examples: [], module: lexer.Span { start: 0, length: 0 } }, Typed { module: modules.Module { name: "main", path: "no-such-directory/main.lm", source: "", program: ast.Program { items: [] } }, inferred: types.checked_of("") }, ir.little_library())))
-fn run_lowered(run: Run, root: Typed, library: ir.Library) -> Result<List<ir.Lowered>, NotCompiled> {
-    run_lowered_once(run, root, library, no_memo()).found
+/// The class files of the modules of the run, checked as the run wrote them, lowered, and written.
+// example: !is_refused(page_said(run_classes(Run { source: "", stretches: [], examples: [], module: lexer.Span { start: 0, length: 0 } }, Typed { module: modules.Module { name: "main", path: "no-such-directory/main.lm", source: "", program: ast.Program { items: [] } }, inferred: types.checked_of("") }, ir.little_library())))
+fn run_classes(run: Run, root: Typed, library: ir.Library) -> Result<List<jvm.ClassFile>, NotCompiled> {
+    run_classes_once(run, root, library, no_memo()).found
 }
 
-/// The modules of the run, checked as the run wrote them and lowered, each module typed once.
+/// The class files of the modules of the run, checked as the run wrote them, lowered, and
+/// written, each module typed once.
 ///
 /// The run stands where the module under test stands, and it is typed anew, because its text is
 /// not the text of that module. Every module it imports is taken from `memo` where it is there.
-// example: !is_refused(page_said(run_lowered_once(Run { source: "", stretches: [], examples: [], module: lexer.Span { start: 0, length: 0 } }, Typed { module: modules.Module { name: "main", path: "no-such-directory/main.lm", source: "", program: ast.Program { items: [] } }, inferred: types.checked_of("") }, ir.little_library(), no_memo()).found))
-fn run_lowered_once(run: Run, root: Typed, library: ir.Library, memo: Memo) -> Memoed<List<ir.Lowered>> {
+// example: !is_refused(page_said(run_classes_once(Run { source: "", stretches: [], examples: [], module: lexer.Span { start: 0, length: 0 } }, Typed { module: modules.Module { name: "main", path: "no-such-directory/main.lm", source: "", program: ast.Program { items: [] } }, inferred: types.checked_of("") }, ir.little_library(), no_memo()).found))
+fn run_classes_once(run: Run, root: Typed, library: ir.Library, memo: Memo) -> Memoed<List<jvm.ClassFile>> {
     written := written_once(Page { source: run.source, path: root.module.path }, library, memo)
     match written.found {
-        Ok(program) => lowered_once(program, library, written.memo)
+        Ok(program) => classes_once(program, library, written.memo)
         Err(not) => Memoed { found: Err(not), memo: written.memo }
     }
 }
@@ -1016,6 +1018,16 @@ fn help_written(help: String) -> Option<String> {
     Some(help)
 }
 
+/// Every module of `program` lowered as `lowered_once` lowers it, then written as class files.
+// example: list.length(ok_or(classes_once(Checked { modules: [], root: Typed { module: modules.Module { name: "main", path: "main.lm", source: "", program: ast.Program { items: [] } }, inferred: types.checked_of("") } }, ir.little_library(), no_memo()).found, [])) > 0
+fn classes_once(program: Checked, library: ir.Library, memo: Memo) -> Memoed<List<jvm.ClassFile>> {
+    lowered := lowered_once(program, library, memo)
+    match lowered.found {
+        Ok(passes) => Memoed { found: written_of(passes, program), memo: lowered.memo }
+        Err(not) => Memoed { found: Err(not), memo: lowered.memo }
+    }
+}
+
 /// Every module of `program` checked for holes and examples, root first, then lowered.
 ///
 /// A build refuses a hole, and it refuses a function that states no example and an example that
@@ -1126,6 +1138,58 @@ fn is_typed(memo: Memo, path: String) -> Bool {
         Some(_) => true
         None => false
     }
+}
+
+/// The class files of `lowered`, or the refusal of the writer, shown in the module it is about.
+// example: !is_refused(page_said(written_of([], Checked { modules: [], root: Typed { module: modules.Module { name: "main", path: "main.lm", source: "", program: ast.Program { items: [] } }, inferred: types.checked_of("") } })))
+fn written_of(lowered: List<ir.Lowered>, program: Checked) -> Result<List<jvm.ClassFile>, NotCompiled> {
+    match jvm.program_written(lowered) {
+        Ok(classes) => Ok(classes)
+        Err(unwritten) => Err(Refused(unwritten_refused(unwritten, program)))
+    }
+}
+
+/// A class the writer did not write, as a refusal of the module whose class it is.
+///
+/// It points at the function the method is written for, where the module declares one of that
+/// name, and at the start of the module otherwise. A class of the prelude is shown in the root.
+// example: first_of(unwritten_refused(jvm.Unwritten { class: "main", method: Some("f"), why: jvm.TooLarge }, Checked { modules: [], root: Typed { module: modules.Module { name: "main", path: "main.lm", source: "", program: ast.Program { items: [] } }, inferred: types.checked_of("") } })).code == "L0700"
+fn unwritten_refused(unwritten: jvm.Unwritten, program: Checked) -> Refusal {
+    one := owning(program, unwritten.class)
+    diagnostic := Diagnostic { code: jvm.code_of(unwritten.why), message: jvm.message(unwritten), span: declared_span(one, jvm.named_in(unwritten)), help: Some(jvm.help_of(unwritten.why)), fix: None }
+    Refusal { diagnostics: [diagnostic], page: page_of(one) }
+}
+
+/// The module of `program` whose class `class` is, which is the root where no module is.
+///
+/// Where two modules have that name, it is the one loaded last, which is the program's own
+/// where the other is a module the library carries.
+// example: owning(Checked { modules: [], root: Typed { module: modules.Module { name: "main", path: "main.lm", source: "", program: ast.Program { items: [] } }, inferred: types.checked_of("") } }, "demo/Box").module.name == "main"
+fn owning(program: Checked, class: String) -> Typed {
+    var owner = program.root
+    for one in program.modules {
+        if jvm.module_of(class) == one.module.name {
+            owner = one
+        }
+    }
+    owner
+}
+
+/// The span of the name of the function `named` that `one` declares, or the start of the module.
+// example: declared_span(Typed { module: modules.Module { name: "main", path: "main.lm", source: "", program: ast.Program { items: [] } }, inferred: types.checked_of("") }, "f").length == 0
+fn declared_span(one: Typed, named: String) -> lexer.Span {
+    for function in infer.functions_of(one.module.program) {
+        if function.name.text == named {
+            return function.name.span
+        }
+    }
+    lexer.Span { start: 0, length: 0 }
+}
+
+/// The first diagnostic of `refused`, which a refusal of the writer holds one of.
+// example: first_of(Refusal { diagnostics: [], page: Page { source: "", path: "a.lm" } }).code == ""
+fn first_of(refused: Refusal) -> Diagnostic {
+    or(list.at(refused.diagnostics, 0), Diagnostic { code: "", message: "", span: lexer.Span { start: 0, length: 0 }, help: None, fix: None })
 }
 
 /// Nothing where `one` holds no hole and states an example for each function, else every refusal.

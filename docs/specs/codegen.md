@@ -519,10 +519,8 @@ The constant pool is built in the order entries are first asked for, which the l
 `compiler/bytes.lm` writes the bytes of a class file.
 
 `ir.program_lowered(path, library)` lowers the module at `path` and each module that it reaches.
-It gives `skipped` when a phase before the lowering refuses the program.
-It also gives `skipped` when a module of the program holds a hole.
-It does not check the examples of a function, which `lumen build` does.
-The examples are a check before the lowering.
+It gives `skipped` when a phase before the lowering refuses the program, or a module holds a hole.
+It does not check the examples of a function, which `lumen build` checks before the lowering.
 
 The Bux lowering runs in passes.
 Each pass lowers the modules last first, and then the prelude.
@@ -530,27 +528,26 @@ A pass that asks a module for more than that module knew starts one more pass.
 The pass that asks for nothing new gives the classes, the prelude first.
 `ir.library_read(source)` reads the prelude and types its bodies.
 
-`jvm.program_written(program)` gives a `ClassFile` for each class of each lowered module.
-A `ClassFile` is the path of the class and its bytes.
+`jvm.program_written(program)` gives a `ClassFile`, a path and bytes, for each class, or why not.
 The bytes are a `List<Int>`, and each value is from 0 to 255.
 `bytes.u1`, `bytes.u2`, `bytes.u4`, and `bytes.u8` write a value in 1, 2, 4, or 8 bytes.
 The high byte comes first, and a negative value is written as its complement.
 `files.write_bytes` writes such a list as a file, which `docs/specs/io.md` states.
 
-Some behaviours of the Bux writer are not correct.
-These are the behaviours:
+The writer patches nothing and cuts nothing, and these are its rules:
 
-- A class name that two modules write is written twice, and the hierarchy keeps the last one.
-- A frame merge compares the locals and the stack only as far as the shorter of the two.
-- A call and a constructor pop one stack entry for each parameter, also for a `long`.
-- A branch to a label that never lands is written with the offset from zero.
-- A branch that is farther than a two-byte offset holds is written with the offset 32767.
-- The length of a text in the constant pool is 65535 at most, and all of its bytes are written.
+- Two modules that write one class write it once; two different classes of one name are `L0702`.
+- A call takes one value off the stack for each parameter, and a `long` counts as two words.
+- A method holds 65535 bytes of code, and a branch reaches 32767 bytes; past either is `L0700`.
+- A text in the constant pool holds 65535 bytes, because two bytes write its length, or is `L0701`.
+- A branch to no label, or two paths into one place with two lengths, is a writer defect, `L0703`.
 
-A value of the Bux writer is its state, so each step gives back the state that it makes.
-The constant pool, the code, and the frames are values that go from one step to the next.
-The steps ask the pool for their entries in a fixed order.
-So each entry has the same index in each build of one program.
+An operand of `>`, `<=`, and each operator that swaps its operands is adapted as a call adapts it.
+So a `()` that a type parameter stands for is put aside as a new `Object`.
+An operand whose parameter is `()` is written, and what it leaves is dropped.
+
+Each step of the writer gives back the pool, the code, and the frames that it makes, as values.
+The steps ask the pool for their entries in a fixed order, so an entry has one index in each build.
 A label that the assembler makes is 4294967294 minus the number of labels made before it.
 
 The runner holds the two phases in `tests/lowering.lm`, `branching.lm`, and `instances.lm`.
@@ -561,9 +558,10 @@ The JVM verifier reads each class that an `expect-run` example loads.
 
 ## The errors
 
-Code generation raises no diagnostic.
-Every way a program can be wrong has been refused by an earlier phase, and a module that reaches
-this phase is written out.
+The lowering raises no diagnostic, and the writer raises the four codes that the rules above name.
+Only `lumen build`, `lumen run`, and `lumen test` raise them, because `lumen check` writes no class.
+A refusal points at the function of the method, and at the start of its module otherwise.
+The message of `L0703` names the defect and the method, which a report of the defect needs.
 
 ## Properties
 
@@ -588,6 +586,9 @@ These hold and are checked by drawn properties in the runner:
     A push is a call of `lumen.List.push`, and `at` calls nothing but a constructor of `Option`.
     `length` calls nothing.
 17. A method written for a set of types calls the instance each type in that set has.
+18. A branch or a text past its limit is `L0700` or `L0701`, and one within its limit is written.
+19. Two modules that write one class name write it once, or are refused as `L0702` if they differ.
+20. The deepest stack a method declares is the stack it needs, with two words for each `long`.
 
 That a constrained type parameter settled on two types with one head is written as two methods is
 a claim about a running program, so it is held to by `tests/spec/traits/over_a_list.lm` and

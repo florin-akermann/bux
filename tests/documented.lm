@@ -102,7 +102,7 @@ fn why_skipped(path: String) -> String {
         return "the run of its examples declares `or` beside the prelude's own, which `lumen test` refuses as L0302"
     }
     if path == "tests/spec/packages/carried/strings.lm" {
-        return "the run of its examples writes the class `strings` over the library's, so `helper` reaches a method that is not there"
+        return "the run of its examples holds two modules named `strings`, this one and the library's, which `lumen test` refuses as L0702"
     }
     ""
 }
@@ -141,15 +141,15 @@ fn class_readied(staged: Staged, typing: Typing) -> Readied {
 /// The run `staged` holds, lowered with the modules `typing.memo` holds, and its classes written.
 // example: failed_as(command.Said { output: "", errors: "error: a\nerror: b\n", status: 1 }, "a.lm") == ["a.lm: error: a", "a.lm: error: b"]
 fn lowered_readied(staged: Staged, typing: Typing) -> Readied {
-    lowered := command.run_lowered_once(staged.run, staged.root, typing.library, typing.memo)
-    Readied { found: written_staged(lowered.found, staged), memo: lowered.memo }
+    classes := command.run_classes_once(staged.run, staged.root, typing.library, typing.memo)
+    Readied { found: written_staged(classes.found, staged), memo: classes.memo }
 }
 
 /// `staged`, once the classes `found` holds are written into its directory, or its failures.
 // example: failed_as(command.Said { output: "", errors: "error: gone\n", status: 2 }, "b.lm") == ["b.lm: error: gone"]
-fn written_staged(found: Result<List<ir.Lowered>, command.NotCompiled>, staged: Staged) -> Result<Staged, List<String>> {
+fn written_staged(found: Result<List<jvm.ClassFile>, command.NotCompiled>, staged: Staged) -> Result<Staged, List<String>> {
     match found {
-        Ok(lowered) => written_as(command.classes_written(jvm.program_written(lowered), staged.beside), staged)
+        Ok(classes) => written_as(command.classes_written(classes, staged.beside), staged)
         Err(not) => Err(failed_as(command.run_refused(not, staged.run, staged.root), staged.path))
     }
 }
@@ -184,8 +184,8 @@ fn entry_line(memo: command.Memo, setting: Setting) -> Result<List<String>, List
     beside := modules.joined(setting.directory, "entry")
     checked := command.checked_once(entry_path(), setting.library, memo)
     program := refused_as(checked.found, entry_path())?
-    lowered := refused_as(command.lowered_once(program, setting.library, checked.memo).found, entry_path())?
-    _ = failing(command.classes_written(jvm.program_written(lowered), beside), entry_path())?
+    classes := refused_as(command.classes_once(program, setting.library, checked.memo).found, entry_path())?
+    _ = failing(command.classes_written(classes, beside), entry_path())?
     Ok([java, "--enable-preview", "-cp", beside, "examined"])
 }
 

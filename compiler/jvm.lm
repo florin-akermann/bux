@@ -19,15 +19,22 @@ import strings
 // example: list.length(ok_or(classes_of("no-such-directory/main.lm", ir.little_library()), [])) == 0
 fn classes_of(path: String, library: ir.Library) -> Result<List<ClassFile>, String> {
     lowered := ir.program_lowered(path, library)?
-    Ok(program_written(lowered))
+    match program_written(lowered) {
+        Ok(files) => Ok(files)
+        Err(unwritten) => Err(message(unwritten))
+    }
 }
 
-/// Every class of every module of `program`, in the order the modules name them.
+/// Every class of every module of `program`, each once, in the order the modules name them.
 ///
 /// The modules are written together, because a frame names the class two branches share, and a
-/// variant one module gives back may extend a base that another module declares.
-// example: list.length(program_written([])) == 0
-fn program_written(program: List<ir.Lowered>) -> List<ClassFile> {
+/// variant one module gives back may extend a base that another module declares. Two modules
+/// that write one class, such as the class of a list, write the same bytes, and the file is
+/// written once. Two different classes of one name are refused: two parts of the program have one name.
+// example: list.length(ok_or(program_written([]), [ClassFile { path: "", bytes: [] }])) == 0
+// example: list.length(ok_or(program_written([one_class(record_class()), one_class(record_class())]), [])) == 1
+// example: refused_code(program_written([one_class(record_class()), one_class(base_class())])) == "L0702"
+fn program_written(program: List<ir.Lowered>) -> Result<List<ClassFile>, Unwritten> {
     var every = []
     for module in program {
         for class in module.classes {
@@ -36,24 +43,44 @@ fn program_written(program: List<ir.Lowered>) -> List<ClassFile> {
     }
     hierarchy := hierarchy_of(every)
     var files = []
+    var written = map.empty()
     for class in every {
-        files = list.push(files, ClassFile { path: class.name + ".class", bytes: class_written(class, hierarchy) })
+        file := ClassFile { path: class.name + ".class", bytes: class_written(class, hierarchy)? }
+        earlier := map.get(written, file.path)
+        if is_other_than(earlier, file.bytes) {
+            return Err(Unwritten { class: class.name, method: None, why: NamedTwice })
+        }
+        if !is_held(earlier) {
+            files = list.push(files, file)
+            written = map.insert(written, file.path, file.bytes)
+        }
     }
-    files
+    Ok(files)
 }
 
-/// `class` as the bytes a JVM loads.
+/// Whether `earlier` holds bytes, and they are not `written`.
+// example: is_other_than(Some([1]), [2])
+// example: !is_other_than(None, [2])
+fn is_other_than(earlier: Option<List<Int>>, written: List<Int>) -> Bool {
+    match earlier {
+        Some(held) => held != written
+        None => false
+    }
+}
+
+/// `class` as the bytes a JVM loads, or why it is not written.
 ///
 /// The class file is JDK 28 marked preview, and the class is a value class: its identity bit is
 /// clear. A class that waits on the layout of no other class carries no attribute for it.
-// example: list.length(class_written(record_class(), hierarchy_of([record_class()]))) > 10
-fn class_written(class: ir.Class, hierarchy: Hierarchy) -> List<Int> {
+// example: list.length(ok_or(class_written(record_class(), hierarchy_of([record_class()])), [])) > 10
+fn class_written(class: ir.Class, hierarchy: Hierarchy) -> Result<List<Int>, Unwritten> {
     named := pooled_class(no_pool(), class.name)
     extends := pooled_class(named.pool, class.extends)
     fields := fields_written(extends.pool, class)
-    methods := methods_written(Writer { pool: fields.pool, hierarchy: hierarchy }, class)
+    methods := methods_written(Writer { pool: fields.pool, hierarchy: hierarchy }, class)?
     wanted := loadable_written(methods.pool, class, hierarchy)
     pool := wanted.pool
+    _ = texts_held(pool: pool, from: 0, class: class.name, method: None)?
     var written = bytes.u4([], 3405691582)
     written = bytes.u2(bytes.u2(written, 65535), 72)
     written = bytes.all(bytes.u2(written, pool.next), pool_written(pool))
@@ -62,9 +89,9 @@ fn class_written(class: ir.Class, hierarchy: Hierarchy) -> List<Int> {
     written = bytes.all(bytes.u2(written, 0), fields.bytes)
     written = bytes.all(written, methods.bytes)
     if list.length(wanted.bytes) == 0 {
-        return bytes.u2(written, 0)
+        return Ok(bytes.u2(written, 0))
     }
-    bytes.all(bytes.u2(written, 1), wanted.bytes)
+    Ok(bytes.all(bytes.u2(written, 1), wanted.bytes))
 }
 
 /// The access a class is written with beside `ACC_PUBLIC`: final, or abstract for a base.
@@ -89,24 +116,63 @@ fn fields_written(pool: Pool, class: ir.Class) -> Written {
     writing
 }
 
-/// The methods of `class`, each with its code.
-// example: list.length(methods_written(Writer { pool: no_pool(), hierarchy: hierarchy_of([]) }, base_class()).bytes) == 2
-fn methods_written(writer: Writer, class: ir.Class) -> Written {
+/// The methods of `class`, each with its code, or why one of them is not written.
+// example: list.length(written_or_none(methods_written(Writer { pool: no_pool(), hierarchy: hierarchy_of([]) }, base_class())).bytes) == 2
+fn methods_written(writer: Writer, class: ir.Class) -> Result<Written, Unwritten> {
     var writing = Written { pool: writer.pool, bytes: bytes.u2([], list.length(class.methods)) }
     for method in class.methods {
-        writing = method_written(Writer { pool: writing.pool, hierarchy: writer.hierarchy }, method, class, writing.bytes)
+        writing = method_written(Writer { pool: writing.pool, hierarchy: writer.hierarchy }, method, class, writing.bytes)?
     }
-    writing
+    Ok(writing)
 }
 
 /// `into`, with one method after it: its access, its name, its descriptor, and its code.
-// example: list.length(method_written(Writer { pool: no_pool(), hierarchy: hierarchy_of([]) }, returning_method(), record_class(), []).bytes) > 10
-fn method_written(writer: Writer, method: ir.Method, class: ir.Class, into: List<Int>) -> Written {
+///
+/// A text the method asks the pool for is held to the length a class file can write here, so a
+/// refusal names the method whose text it is.
+// example: list.length(written_or_none(method_written(Writer { pool: no_pool(), hierarchy: hierarchy_of([]) }, returning_method(), record_class(), [])).bytes) > 10
+fn method_written(writer: Writer, method: ir.Method, class: ir.Class, into: List<Int>) -> Result<Written, Unwritten> {
     name := pooled_utf8(writer.pool, method.name)
     descriptor := pooled_utf8(name.pool, ir.method_descriptor_text(method.descriptor))
-    code := code_written(Writer { pool: descriptor.pool, hierarchy: writer.hierarchy }, method, class)
+    code := code_written(Writer { pool: descriptor.pool, hierarchy: writer.hierarchy }, method, class)?
+    _ = texts_held(pool: code.pool, from: list.length(writer.pool.entries), class: class.name, method: Some(method.name))?
     written := bytes.u2(bytes.u2(into, 1 + static_access(method.reached)), name.index)
-    Written { pool: code.pool, bytes: bytes.all(bytes.u2(bytes.u2(written, descriptor.index), 1), code.bytes) }
+    Ok(Written { pool: code.pool, bytes: bytes.all(bytes.u2(bytes.u2(written, descriptor.index), 1), code.bytes) })
+}
+
+/// What `answer` wrote, and nothing written where it was refused.
+// example: written_or_none(Ok(Written { pool: no_pool(), bytes: [1] })).bytes == [1]
+fn written_or_none(answer: Result<Written, Unwritten>) -> Written {
+    ok_or(answer, Written { pool: no_pool(), bytes: [] })
+}
+
+/// Nothing where each text `pool` holds from its entry `from` on fits, and why not where one does not.
+///
+/// A class file writes the length of a text in two bytes, so a text of more is refused, not cut.
+/// Only a text of more than a third of that many units can take more bytes than that.
+// example: refused_code(texts_held(pool: pooled_utf8(no_pool(), "a").pool, from: 0, class: "a/B", method: None)) == ""
+fn texts_held(pool: Pool, from: Int, class: String, method: Option<String>) -> Result<(), Unwritten> {
+    var at = 0
+    for entry in pool.entries {
+        if at >= from {
+            _ = text_held(entry: entry, class: class, method: method)?
+        }
+        at += 1
+    }
+    Ok(())
+}
+
+/// Nothing where `entry` is no text or a text that fits, and why not where it is one that does not.
+// example: refused_code(text_held(entry: Utf8Entry("a"), class: "a/B", method: None)) == ""
+fn text_held(entry: Entry, class: String, method: Option<String>) -> Result<(), Unwritten> {
+    match entry {
+        Utf8Entry(text) => if strings.length(text) > 21845 && list.length(bytes.modified_utf8(text)) > 65535 {
+            Err(Unwritten { class: class, method: method, why: TooLong(list.length(bytes.modified_utf8(text))) })
+        } else {
+            Ok(())
+        }
+        _ => Ok(())
+    }
 }
 
 /// The access a method is written with beside `ACC_PUBLIC`: static where the class reaches it.
@@ -119,13 +185,13 @@ fn static_access(reached: ir.Reached) -> Int {
 }
 
 /// The `Code` attribute of one method, with the exception table and the stack map it needs.
-// example: list.length(code_written(Writer { pool: no_pool(), hierarchy: hierarchy_of([]) }, returning_method(), record_class()).bytes) == 22
-fn code_written(writer: Writer, method: ir.Method, class: ir.Class) -> Written {
+// example: list.length(written_or_none(code_written(Writer { pool: no_pool(), hierarchy: hierarchy_of([]) }, returning_method(), record_class())).bytes) == 22
+fn code_written(writer: Writer, method: ir.Method, class: ir.Class) -> Result<Written, Unwritten> {
     receiver := match method.reached {
         ir.ThroughTheClass => None
         ir.ThroughAnInstance => Some(class.name)
     }
-    assembled := assembled_of(method.body, method.descriptor, receiver, writer)
+    assembled := placed_in(answer: assembled_of(method.body, method.descriptor, receiver, writer), class: class.name, method: method.name)?
     caught := handlers_written(assembled.pool, assembled.handlers)
     mapped := map_written(caught.pool, assembled.frames)
     named := pooled_utf8(mapped.pool, "Code")
@@ -133,7 +199,16 @@ fn code_written(writer: Writer, method: ir.Method, class: ir.Class) -> Written {
     body = bytes.all(bytes.u4(body, list.length(assembled.code)), assembled.code)
     body = bytes.all(body, caught.bytes)
     body = bytes.all(bytes.u2(body, has_any(mapped.bytes)), mapped.bytes)
-    Written { pool: named.pool, bytes: bytes.all(bytes.u4(bytes.u2([], named.index), list.length(body)), body) }
+    Ok(Written { pool: named.pool, bytes: bytes.all(bytes.u4(bytes.u2([], named.index), list.length(body)), body) })
+}
+
+/// `answer`, where a refusal is one of the method `method` of the class `class`.
+// example: refused_code(placed_in(answer: Err(TooLarge), class: "a/B", method: "of")) == "L0700"
+fn placed_in<T>(answer: Result<T, Why>, class: String, method: String) -> Result<T, Unwritten> {
+    match answer {
+        Ok(value) => Ok(value)
+        Err(why) => Err(Unwritten { class: class, method: Some(method), why: why })
+    }
 }
 
 /// One where `written` holds anything, and zero where it holds nothing.
@@ -223,10 +298,10 @@ fn is_written_here(hierarchy: Hierarchy, class: String) -> Bool {
 }
 
 /// `body` assembled into the bytes a method of `descriptor` runs, with its frames and handlers.
-// example: assembled_of(returning_method().body, returning_method().descriptor, None, Writer { pool: no_pool(), hierarchy: hierarchy_of([]) }).max_stack == 2
-fn assembled_of(body: ir.Body, descriptor: ir.MethodDescriptor, receiver: Option<String>, writer: Writer) -> Assembled {
+// example: why_code(assembled_of(returning_method().body, returning_method().descriptor, None, Writer { pool: no_pool(), hierarchy: hierarchy_of([]) })) == ""
+fn assembled_of(body: ir.Body, descriptor: ir.MethodDescriptor, receiver: Option<String>, writer: Writer) -> Result<Assembled, Why> {
     slots := ir.parameters_width(descriptor) + body.locals + receiver_width(receiver)
-    var assembling = Assembling { code: [], frame: entering(descriptor.parameters, receiver, slots), is_reachable: true, landings: map.empty(), landed: [], expected: map.empty(), pending: [], deepest: 0, next: 4294967295, guards: body.guards, pool: writer.pool, hierarchy: writer.hierarchy }
+    var assembling = Assembling { code: [], frame: entering(descriptor.parameters, receiver, slots), is_reachable: true, landings: map.empty(), landed: [], expected: map.empty(), pending: [], deepest: 0, next: 4294967295, guards: body.guards, pool: writer.pool, hierarchy: writer.hierarchy, defect: None }
     for instruction in body.instructions {
         assembling = one_written(assembling, instruction)
     }
@@ -235,21 +310,51 @@ fn assembled_of(body: ir.Body, descriptor: ir.MethodDescriptor, receiver: Option
 
 /// The assembled body: each branch patched, each frame and each handler read off where they land.
 ///
-/// A branch too far to reach is written out of range on purpose, as the largest offset there is,
-/// so the JVM refuses the class and says so, where a cut offset would not.
-// example: finished(assembling_of([]), 0).max_locals == 0
-fn finished(assembling: Assembling, slots: Int) -> Assembled {
+/// A body longer than a method holds, or with a branch farther than two bytes of offset reach, is
+/// refused as too large. A defect found while it was assembled is refused as one.
+// example: why_code(finished(assembling_of([]), 0)) == ""
+// example: why_code(finished(branched(assembling: assembling_of([]), opcode: 167, label: 3), 0)) == "L0703"
+// example: why_code(finished(too_large(), 0)) == "L0700"
+fn finished(assembling: Assembling, slots: Int) -> Result<Assembled, Why> {
+    _ = sound(assembling.defect)?
+    if list.length(assembling.code) > 65535 {
+        return Err(TooLarge)
+    }
     var patches = map.empty()
     for patch in assembling.pending {
-        away := landed_at(assembling, patch.label) - patch.from
-        reach := if away > 32767 || away < -32768 {
-            32767
-        } else {
-            away
-        }
-        patches = map.insert(patches, patch.at, reach)
+        patches = map.insert(patches, patch.at, reach_of(assembling, patch)?)
     }
-    Assembled { code: patched(assembling.code, patches), max_stack: capped(assembling.deepest), max_locals: slots, frames: frames_written(assembling), handlers: caught_of(assembling), pool: assembling.pool }
+    handlers := caught_of(assembling)?
+    Ok(Assembled { code: patched(assembling.code, patches), max_stack: capped(assembling.deepest), max_locals: slots, frames: frames_written(assembling), handlers: handlers, pool: assembling.pool })
+}
+
+/// Nothing where no defect was found, and the defect where one was.
+// example: why_code(sound(Some("a defect"))) == "L0703"
+fn sound(defect: Option<String>) -> Result<(), Why> {
+    match defect {
+        Some(what) => Err(Defect(what))
+        None => Ok(())
+    }
+}
+
+/// The offset `patch` branches by, or why it has none that two bytes hold.
+// example: ok_or(reach_of(landed_with(assembling_of([]), 3, Frame { locals: [], stack: [] }), Patch { at: 0, label: 3, from: 0 }), 1) == 0
+fn reach_of(assembling: Assembling, patch: Patch) -> Result<Int, Why> {
+    away := landing_of(assembling, patch.label)? - patch.from
+    if away > 32767 || away < -32768 {
+        return Err(TooLarge)
+    }
+    Ok(away)
+}
+
+/// A body one byte longer than a method may be, with nothing else assembled.
+// example: list.length(too_large().code) == 65536
+fn too_large() -> Assembling {
+    var code = []
+    for list.length(code) < 65536 {
+        code = list.push(code, 0)
+    }
+    Assembling { code: code, frame: Frame { locals: [], stack: [] }, is_reachable: true, landings: map.empty(), landed: [], expected: map.empty(), pending: [], deepest: 0, next: 4294967295, guards: [], pool: no_pool(), hierarchy: hierarchy_of([]), defect: None }
 }
 
 /// `code`, with the two bytes at each place `patches` names replaced by what it holds there.
@@ -271,13 +376,22 @@ fn patched(code: List<Int>, patches: map.Map<Int, Int>) -> List<Int> {
 }
 
 /// Each guard as the offsets the exception table names, in the order they were stated.
-// example: list.length(caught_of(assembling_of([]))) == 0
-fn caught_of(assembling: Assembling) -> List<Caught> {
+// example: list.length(ok_or(caught_of(assembling_of([])), [])) == 0
+fn caught_of(assembling: Assembling) -> Result<List<Caught>, Why> {
     var caught = []
     for guard in assembling.guards {
-        caught = list.push(caught, Caught { from: landed_at(assembling, guard.from), to: landed_at(assembling, guard.to), handler: landed_at(assembling, guard.handler), catching: guard.catching })
+        caught = list.push(caught, Caught { from: landing_of(assembling, guard.from)?, to: landing_of(assembling, guard.to)?, handler: landing_of(assembling, guard.handler)?, catching: guard.catching })
     }
-    caught
+    Ok(caught)
+}
+
+/// Where `label` lands, or the defect of a label that never does.
+// example: why_code(landing_of(assembling_of([]), 3)) == "L0703"
+fn landing_of(assembling: Assembling, label: Int) -> Result<Int, Why> {
+    match map.get(assembling.landings, label) {
+        Some(at) => Ok(at)
+        None => Err(Defect("a jump goes to a place that is never written"))
+    }
 }
 
 /// Each place a jump lands, in the order they are written, with no offset named twice.
@@ -340,8 +454,8 @@ fn is_before(assembling: Assembling, label: Int, other: Int) -> Bool {
     at < there || at == there && label < other
 }
 
-/// Where `label` lands, and zero where it never does.
-// example: landed_at(assembling_of([]), 3) == 0
+/// Where `label`, which has landed, lands.
+// example: landed_at(landed_with(assembling_of([]), 3, Frame { locals: [], stack: [] }), 3) == 0
 fn landed_at(assembling: Assembling, label: Int) -> Int {
     or(map.get(assembling.landings, label), 0)
 }
@@ -349,15 +463,20 @@ fn landed_at(assembling: Assembling, label: Int) -> Int {
 /// An empty body part-way through being assembled, with no slots and no guards.
 // example: assembling_of([]).is_reachable
 fn assembling_of(guards: List<ir.Guard>) -> Assembling {
-    Assembling { code: [], frame: Frame { locals: [], stack: [] }, is_reachable: true, landings: map.empty(), landed: [], expected: map.empty(), pending: [], deepest: 0, next: 4294967295, guards: guards, pool: no_pool(), hierarchy: hierarchy_of([]) }
+    Assembling { code: [], frame: Frame { locals: [], stack: [] }, is_reachable: true, landings: map.empty(), landed: [], expected: map.empty(), pending: [], deepest: 0, next: 4294967295, guards: guards, pool: no_pool(), hierarchy: hierarchy_of([]), defect: None }
 }
 
-/// What each class extends, where a later class of one name stands over an earlier one.
+/// What each class extends, each class named once, by the first class of its name.
+///
+/// A later class of one name is the same class, or `program_written` refuses it as named twice.
 // example: set.has_value(hierarchy_of([base_class()]).extends_it, "java/lang/Object")
+// example: or(map.get(hierarchy_of([variant_class(), ir.Class { name: "a/B$C", extends: "a/D", extending: ir.Never, fields: [], methods: [] }]).extends, "a/B$C"), "") == "a/B"
 fn hierarchy_of(classes: List<ir.Class>) -> Hierarchy {
     var extends = map.empty()
     for class in classes {
-        extends = map.insert(extends, class.name, class.extends)
+        if !is_held(map.get(extends, class.name)) {
+            extends = map.insert(extends, class.name, class.extends)
+        }
     }
     var bases = set.empty()
     for class in classes {
@@ -513,12 +632,25 @@ fn branched(assembling: Assembling, opcode: Int, label: Int) -> Assembling {
 
 /// `assembling`, having said that control may reach `label` holding what `frame` holds.
 // example: is_expecting(reaching(assembling_of([]), 3, Frame { locals: [], stack: [] }), 3)
+// example: is_held(reaching(reaching(assembling_of([]), 3, Frame { locals: [], stack: [] }), 3, Frame { locals: [], stack: [HeldLong] }).defect)
 fn reaching(assembling: Assembling, label: Int, frame: Frame) -> Assembling {
     merged := match map.get(assembling.expected, label) {
         Some(known) => merged_with(frame: known, other: frame, hierarchy: assembling.hierarchy)
-        None => frame
+        None => Ok(frame)
     }
-    assembling { expected: map.insert(assembling.expected, label, merged) }
+    match merged {
+        Ok(expected) => assembling { expected: map.insert(assembling.expected, label, expected) }
+        Err(defect) => defective(assembling, defect)
+    }
+}
+
+/// `assembling`, having found `defect`, where it found none before; the first one found is kept.
+// example: or(defective(defective(assembling_of([]), "one"), "two").defect, "") == "one"
+fn defective(assembling: Assembling, defect: String) -> Assembling {
+    if is_held(assembling.defect) {
+        return assembling
+    }
+    assembling { defect: Some(defect) }
 }
 
 /// `assembling` with a label of the assembler's own taken, counting down from the largest.
@@ -947,10 +1079,14 @@ fn held_width(held: Held) -> Int {
 /// What holds on both paths into one place, which is what the verifier is told.
 ///
 /// A slot that holds one thing on one path and another on the other holds nothing, and a value
-/// that is one class on one path and another on the other is the class they share. Each list is
-/// taken as far as the shorter of the two goes.
-// example: merged_with(frame: Frame { locals: [Holding(HeldLong)], stack: [] }, other: Frame { locals: [Nothing], stack: [] }, hierarchy: hierarchy_of([])).locals == [Nothing]
-fn merged_with(frame: Frame, other: Frame, hierarchy: Hierarchy) -> Frame {
+/// that is one class on one path and another on the other is the class they share. Two paths
+/// with locals or a stack of two lengths are a defect, which is refused, not cut to the shorter.
+// example: ok_or(merged_with(frame: Frame { locals: [Holding(HeldLong)], stack: [] }, other: Frame { locals: [Nothing], stack: [] }, hierarchy: hierarchy_of([])), Frame { locals: [], stack: [] }).locals == [Nothing]
+// example: ok_or(merged_with(frame: Frame { locals: [], stack: [HeldLong] }, other: Frame { locals: [], stack: [] }, hierarchy: hierarchy_of([])), Frame { locals: [], stack: [HeldLong] }).stack == [HeldLong]
+fn merged_with(frame: Frame, other: Frame, hierarchy: Hierarchy) -> Result<Frame, String> {
+    if list.length(frame.locals) != list.length(other.locals) || list.length(frame.stack) != list.length(other.stack) {
+        return Err("two paths into one place hold a different number of values")
+    }
     var locals = []
     var at = 0
     for mine in frame.locals {
@@ -973,7 +1109,7 @@ fn merged_with(frame: Frame, other: Frame, hierarchy: Hierarchy) -> Frame {
         }
         at += 1
     }
-    Frame { locals: locals, stack: stack }
+    Ok(Frame { locals: locals, stack: stack })
 }
 
 /// The class both are: one of them, the one they extend, or `java.lang.Object`.
@@ -1190,8 +1326,6 @@ fn pool_written(pool: Pool) -> List<Int> {
 }
 
 /// `into`, with one entry of the pool after it.
-///
-/// The length of a text is capped at the largest two bytes hold, and every byte is written.
 // example: entry_written([], IntegerEntry(-1)) == [3, 255, 255, 255, 255]
 fn entry_written(into: List<Int>, entry: Entry) -> List<Int> {
     match entry {
@@ -1207,11 +1341,11 @@ fn entry_written(into: List<Int>, entry: Entry) -> List<Int> {
     }
 }
 
-/// `into`, with a text entry after it.
+/// `into`, with a text entry after it, whose length `texts_held` has held to two bytes already.
 // example: utf8_written([], "a") == [1, 0, 1, 97]
 fn utf8_written(into: List<Int>, text: String) -> List<Int> {
     encoded := bytes.modified_utf8(text)
-    bytes.all(bytes.u2(bytes.u1(into, 1), capped(list.length(encoded))), encoded)
+    bytes.all(bytes.u2(bytes.u1(into, 1), list.length(encoded)), encoded)
 }
 
 /// `value`, or the largest two bytes hold where it is larger.
@@ -1227,6 +1361,113 @@ fn capped(value: Int) -> Int {
 // example: pair_written(into: [], tag: 12, first: 1, second: 2) == [12, 0, 1, 0, 2]
 fn pair_written(into: List<Int>, tag: Int, first: Int, second: Int) -> List<Int> {
     bytes.u2(bytes.u2(bytes.u1(into, tag), first), second)
+}
+
+/// Whether `maybe` holds a value.
+// example: !is_held(None)
+fn is_held<T>(maybe: Option<T>) -> Bool {
+    match maybe {
+        Some(_) => true
+        None => false
+    }
+}
+
+/// The code of the refusal `answer` holds, and nothing where it holds none.
+// example: refused_code(Ok(1)) == ""
+// example: refused_code(Err(Unwritten { class: "a/B", method: None, why: TooLarge })) == "L0700"
+fn refused_code<T>(answer: Result<T, Unwritten>) -> String {
+    match answer {
+        Ok(_) => ""
+        Err(unwritten) => code_of(unwritten.why)
+    }
+}
+
+/// The code of the reason `answer` holds, and nothing where it holds none.
+// example: why_code(Err(Defect("a defect"))) == "L0703"
+fn why_code<T>(answer: Result<T, Why>) -> String {
+    match answer {
+        Ok(_) => ""
+        Err(why) => code_of(why)
+    }
+}
+
+/// The code a refusal of the writer is refused with, which `docs/specs/diagnostics.md` lists.
+// example: code_of(TooLong(65536)) == "L0701"
+fn code_of(why: Why) -> String {
+    match why {
+        TooLarge => "L0700"
+        TooLong(_) => "L0701"
+        NamedTwice => "L0702"
+        Defect(_) => "L0703"
+    }
+}
+
+/// The line a refusal of the writer opens with, which names the function or the type it is in.
+// example: message(Unwritten { class: "demo", method: Some("total$Int"), why: TooLarge }) == "`total` is too large to compile as one function"
+// example: message(Unwritten { class: "demo/Box", method: None, why: TooLong(65536) }) == "a text or a name in `demo/Box` takes 65536 bytes, and one takes 65535 at most"
+fn message(unwritten: Unwritten) -> String {
+    named := named_in(unwritten)
+    match unwritten.why {
+        TooLarge => "`" + named + "` is too large to compile as one function"
+        TooLong(length) => "a text or a name in `" + named + "` takes " + shown(length) + " bytes, and one takes 65535 at most"
+        NamedTwice => "two parts of this program are both named `" + module_of(unwritten.class) + "`"
+        Defect(what) => "the compiler did not write `" + named + "`: " + what
+    }
+}
+
+/// What a reader does about a refusal of the writer.
+// example: help_of(TooLarge) == "split the function into smaller functions"
+fn help_of(why: Why) -> String {
+    match why {
+        TooLarge => "split the function into smaller functions"
+        TooLong(_) => "split the text into parts joined with `+`, or give the name fewer characters"
+        NamedTwice => "rename this module, so that no other part of the program has its name"
+        Defect(_) => "this is a defect of the compiler; report it with the program that shows it"
+    }
+}
+
+/// The module a class belongs to, which is its name up to the first `/`.
+// example: module_of("demo/Box") == "demo"
+// example: module_of("strings") == "strings"
+fn module_of(class: String) -> String {
+    var at = 0
+    for at < strings.length(class) {
+        if or(strings.at(class, at), 0) == 47 {
+            return or(strings.cut(class, 0, at), class)
+        }
+        at += 1
+    }
+    class
+}
+
+/// The function a refusal is in, which is the method up to its first `$`, or else the class.
+// example: named_in(Unwritten { class: "demo", method: Some("total$Int"), why: TooLarge }) == "total"
+// example: named_in(Unwritten { class: "demo", method: None, why: TooLarge }) == "demo"
+fn named_in(unwritten: Unwritten) -> String {
+    match unwritten.method {
+        Some(method) => before_dollar(method)
+        None => unwritten.class
+    }
+}
+
+/// `name` up to its first `$`, which is the function a specialised or derived method was written for.
+// example: before_dollar("Eq$Box$is_equal") == "Eq"
+// example: before_dollar("total") == "total"
+fn before_dollar(name: String) -> String {
+    var at = 0
+    for at < strings.length(name) {
+        if or(strings.at(name, at), 0) == 36 {
+            return or(strings.cut(name, 0, at), name)
+        }
+        at += 1
+    }
+    name
+}
+
+/// A lowered module of the one class `class`.
+// example: list.length(one_class(record_class()).classes) == 1
+fn one_class(class: ir.Class) -> ir.Lowered {
+    ir.Lowered { classes: [class], asks: ir.no_asks() }
 }
 
 /// The record `a/B`, which holds one whole number, `at`.
@@ -1265,6 +1506,24 @@ fn boxed_at() -> ir.FieldRef {
 fn box_made() -> ir.MethodRef {
     ir.MethodRef { class: "a/B", name: "<init>", descriptor: ir.MethodDescriptor { parameters: [ir.Long], result: None } }
 }
+
+/// A class the writer did not write, the method of it at fault where one is, and why.
+type Unwritten = {
+    class: String
+    method: Option<String>
+    why: Why
+}
+
+/// Why a class was not written: past a limit a program can reach, or a defect of the compiler.
+///
+/// A method holds 65535 bytes of code, and a branch reaches 32767 bytes either way, and a body
+/// past either is too large. A text of the pool holds 65535 bytes, and one of more is too long.
+/// Two modules of one name write two different classes of one name, and one file holds one.
+type Why =
+    | TooLarge
+    | TooLong(Int)
+    | NamedTwice
+    | Defect(String)
 
 /// One class, and the path a build writes it to, such as `demo/User.class`.
 type ClassFile = {
@@ -1322,6 +1581,7 @@ type Assembling = {
     guards: List<ir.Guard>
     pool: Pool
     hierarchy: Hierarchy
+    defect: Option<String>
 }
 
 /// What extends what, which is how two classes are found to share one, and each class extended.

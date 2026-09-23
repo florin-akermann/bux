@@ -57,6 +57,7 @@ A code is `L` and four digits, grouped by the phase that raises it.
 The grammar writes `L01xx`, canonical form `L02xx`, loading and name resolution `L03xx`, and
 inference `L04xx`.
 Exhaustiveness writes `L05xx`, and what a build asks of a module it compiles writes `L06xx`.
+Code generation writes `L07xx`.
 
 The long form of a code is the file in `compiler/explanations/` named after it.
 `command.explanation_of` reads that file as a class-path resource, so there is one copy of it.
@@ -176,6 +177,14 @@ Exhaustiveness raises these, in `compiler/exhaustiveness.lm`:
 
 All three are reported together rather than one at a time, unlike every code above them.
 A reader answering them is answering a list, and a list of one would not be that list.
+
+`lumen build`, `lumen run`, and `lumen test` raise these, in `compiler/jvm.lm`, for the first
+class that the writer cannot write:
+
+- `L0700` — a function is too large to compile as one function.
+- `L0701` — a text or a name takes more than 65535 bytes.
+- `L0702` — two parts of one program, a module or the library, have one name.
+- `L0703` — the compiler did not write a function, which is a defect of the compiler.
 
 ## As data
 

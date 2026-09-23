@@ -9359,12 +9359,14 @@ status 1
 ! help: a module is a file beside this one, or one of a package it depends on
 
 $ test tests/spec/packages/carried/strings.lm
-status 2
-! Exception in thread "main" java.lang.NoSuchMethodError: 'long strings.length(java.lang.String)'
-! 	at helper.measured(Unknown Source)
-! 	at strings.counted(Unknown Source)
-! 	at strings.main(Unknown Source)
-! 	at strings.main(Unknown Source)
+status 1
+! error[L0702]: two parts of this program are both named `strings`
+!   --> tests/spec/packages/carried/strings.lm:1:1
+!
+!   1 | // A file named as a library module. It is reached as the module the command names, and
+!     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this runs on to line 8
+!
+! help: rename this module, so that no other part of the program has its name
 
 $ test tests/spec/packages/colours/circle.lm
 status 0
@@ -14692,7 +14694,14 @@ status 1
 ! help: a module is a file beside this one, or one of a package it depends on
 
 $ build tests/spec/packages/carried/strings.lm
-status 0
+status 1
+! error[L0702]: two parts of this program are both named `strings`
+!   --> tests/spec/packages/carried/strings.lm:1:1
+!
+!   1 | // A file named as a library module. It is reached as the module the command names, and
+!     | ^
+!
+! help: rename this module, so that no other part of the program has its name
 
 $ build tests/spec/packages/colours/circle.lm
 status 0
