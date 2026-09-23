@@ -284,6 +284,23 @@ type Result<T, E> =
     | Ok(T)
     | Err(E)
 
+/// What `receive` gives back: the next state of a process, or the end of it.
+type Next<T> =
+    | Continue(T)
+    | Done
+
+/// What became of one message that `send` put toward a process.
+type Sent =
+    | Delivered
+    | MailboxFull
+    | ProcessEnded
+
+/// How long `send` waits while the mailbox is full.
+type Waiting =
+    | NoWait
+    | Milliseconds(Int)
+    | NoLimit
+
 /// `value` as the text a JVM writes a truth value as, which is `true` or `false`.
 extern static shown_truth(value: Bool) -> String = "java.lang.String.valueOf"
 

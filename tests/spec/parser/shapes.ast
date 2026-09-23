@@ -181,112 +181,112 @@ function kept 1363..1553
       arm 1535..1545
         pattern None 1535..1539
         string "" 1543..1545
-function ended 1600..1647
+function stopped 1600..1649
   result
-    named-type Result 1614..1632
-      unit-type 1621..1623
-      named-type String 1625..1631
-  block 1633..1647
-    call 1639..1645
-      name Ok 1639..1641
-      unit 1642..1644
-function nothing 1649..1702
+    named-type Result 1616..1634
+      unit-type 1623..1625
+      named-type String 1627..1633
+  block 1635..1649
+    call 1641..1647
+      name Ok 1641..1643
+      unit 1644..1646
+function nothing 1651..1704
   result
-    unit-type 1665..1667
-  block 1668..1702
-    for 1674..1700
-      block 1678..1700
-        return 1688..1694
-trait Weighed 1704..1787
-  type-parameter T 1718..1719
-  signature weight 1727..1752
-    parameter item 1737..1744
-      named-type T 1743..1744
+    unit-type 1667..1669
+  block 1670..1704
+    for 1676..1702
+      block 1680..1702
+        return 1690..1696
+trait Weighed 1706..1789
+  type-parameter T 1720..1721
+  signature weight 1729..1754
+    parameter item 1739..1746
+      named-type T 1745..1746
     result
-      named-type Int 1749..1752
-  signature is_heavy 1757..1785
-    parameter item 1769..1776
-      named-type T 1775..1776
+      named-type Int 1751..1754
+  signature is_heavy 1759..1787
+    parameter item 1771..1778
+      named-type T 1777..1778
     result
-      named-type Bool 1781..1785
-derive Eq for Account 1789..1810
-type Account 1812..1859
-  field id 1833..1840
-    named-type Int 1837..1840
-  field active 1845..1857
-    named-type Bool 1853..1857
-type Payment 1861..1939
-  variant Pending 1882..1889
-  variant Captured 1896..1904
-  variant Settled 1911..1918
-  variant Failed 1925..1939
-    named-type Reason 1932..1938
-type Reason 1941..1969
-  variant Reason 1955..1969
-    named-type String 1962..1968
-function identity 2000..2032
-  parameter value 2012..2017
-  block 2019..2032
-    name value 2025..2030
-extern method char held 2034..2111
-  java charAt 2103..2111
-  parameter text 2058..2070
-    named-type String 2064..2070
-  parameter int int 2076..2084
-    named-type Int 2081..2084
+      named-type Bool 1783..1787
+derive Eq for Account 1791..1812
+type Account 1814..1861
+  field id 1835..1842
+    named-type Int 1839..1842
+  field active 1847..1859
+    named-type Bool 1855..1859
+type Payment 1863..1941
+  variant Pending 1884..1891
+  variant Captured 1898..1906
+  variant Settled 1913..1920
+  variant Failed 1927..1941
+    named-type Reason 1934..1940
+type Reason 1943..1971
+  variant Reason 1957..1971
+    named-type String 1964..1970
+function identity 2002..2034
+  parameter value 2014..2019
+  block 2021..2034
+    name value 2027..2032
+extern method char held 2036..2113
+  java charAt 2105..2113
+  parameter text 2060..2072
+    named-type String 2066..2072
+  parameter int int 2078..2086
+    named-type Int 2083..2086
   result
-    named-type Option 2089..2100
-      named-type Int 2096..2099
-function rows_counted 2151..2392
-  parameter stored 2167..2201
-    named-type Result 2175..2201
-      named-type List 2182..2192
-        named-type Rows 2187..2191
-      named-type String 2194..2200
+    named-type Option 2091..2102
+      named-type Int 2098..2101
+function rows_counted 2153..2394
+  parameter stored 2169..2203
+    named-type Result 2177..2203
+      named-type List 2184..2194
+        named-type Rows 2189..2193
+      named-type String 2196..2202
   result
-    named-type Int 2206..2209
-  block 2210..2392
-    binding Immutable rows 2216..2255
-      record Rows 2224..2255
-        field-value cells 2231..2243
-          list 2238..2243
-            list 2239..2242
-              integer 1 2240..2241
-        field-value count 2245..2253
-          integer 1 2252..2253
-    binding Immutable shelf 2260..2286
-      call 2269..2286
-        name Stocked 2269..2276
-        list 2277..2285
-          list 2278..2284
-            name rows 2279..2283
-    match 2291..2390
-      name shelf 2297..2302
-      arm 2313..2337
-        pattern-tuple Stocked 2313..2323
-          pattern-wildcard 2321..2322
-        field count 2327..2337
-          name rows 2327..2331
-      arm 2346..2384
-        pattern Bare 2346..2350
-        call 2354..2384
-          field length 2354..2365
-            name list 2354..2358
-          call 2366..2383
-            name ok_or 2366..2371
-            name stored 2372..2378
-            list 2380..2382
-type Rows 2394..2451
-  field cells 2412..2434
-    named-type List 2419..2434
-      named-type List 2424..2433
-        named-type Int 2429..2432
-  field count 2439..2449
-    named-type Int 2446..2449
-type Shelf 2453..2508
-  type-parameter T 2464..2465
-  variant Stocked 2475..2497
-    named-type List 2483..2496
-      named-type List 2488..2495
-        named-type T 2493..2494
-  variant Bare 2504..2508
+    named-type Int 2208..2211
+  block 2212..2394
+    binding Immutable rows 2218..2257
+      record Rows 2226..2257
+        field-value cells 2233..2245
+          list 2240..2245
+            list 2241..2244
+              integer 1 2242..2243
+        field-value count 2247..2255
+          integer 1 2254..2255
+    binding Immutable shelf 2262..2288
+      call 2271..2288
+        name Stocked 2271..2278
+        list 2279..2287
+          list 2280..2286
+            name rows 2281..2285
+    match 2293..2392
+      name shelf 2299..2304
+      arm 2315..2339
+        pattern-tuple Stocked 2315..2325
+          pattern-wildcard 2323..2324
+        field count 2329..2339
+          name rows 2329..2333
+      arm 2348..2386
+        pattern Bare 2348..2352
+        call 2356..2386
+          field length 2356..2367
+            name list 2356..2360
+          call 2368..2385
+            name ok_or 2368..2373
+            name stored 2374..2380
+            list 2382..2384
+type Rows 2396..2453
+  field cells 2414..2436
+    named-type List 2421..2436
+      named-type List 2426..2435
+        named-type Int 2431..2434
+  field count 2441..2451
+    named-type Int 2448..2451
+type Shelf 2455..2510
+  type-parameter T 2466..2467
+  variant Stocked 2477..2499
+    named-type List 2485..2498
+      named-type List 2490..2497
+        named-type T 2495..2496
+  variant Bare 2506..2510

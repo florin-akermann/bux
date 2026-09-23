@@ -107,6 +107,7 @@ fn expression_holes(resolved: resolver.Resolved, found: List<Hole>, walked: ast.
         ast.Record { base, fields } => fields_holes(resolved, found, fields)
         ast.If(chain) => if_holes(resolved, found, chain)
         ast.Match(matched) => match_holes(resolved, found, matched)
+        ast.Spawn(started) => expression_holes(resolved, found, started)
         _ => found
     }
 }

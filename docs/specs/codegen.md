@@ -38,7 +38,7 @@ A type and one of its variants may share a name, so the type's name is part of e
 name and not only of the one that would otherwise clash with its own type.
 
 The prelude types are written on every build, in the package `lumen`.
-They are `Option` with `Some` and `None`, and `Result` with `Ok` and `Err`.
+They are `Option`, `Result`, `Next`, `Sent`, and `Waiting`, and each of their variants.
 `lumen/List` is written with them, and "How a list is carried" below states it.
 Writing them with the module keeps a build self-contained: there is no runtime jar to install and
 no version of one to agree with.

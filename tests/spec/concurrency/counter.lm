@@ -1,0 +1,34 @@
+// expect-run
+// > 16
+// A process holds a total, each `Add` message grows it, and `Stop` ends the process.
+// `ended` waits for the end and gives the last state, so the program reads the total after it.
+import io
+
+fn main(arguments: List<String>) -> Int {
+    counting := spawn Counter(10)
+    for amount in [1, 2, 3] {
+        _ = send(counting, Add(amount), NoLimit)
+    }
+    _ = send(counting, Stop, NoLimit)
+    io.println(shown(ended(counting)))
+    0
+}
+
+/// A total that each `Add` grows, and that `Stop` ends.
+process Counter {
+    fn start(initial: Int) -> Int {
+        initial
+    }
+
+    fn receive(total: Int, message: Counted) -> Next<Int> {
+        match message {
+            Add(amount) => Continue(total + amount)
+            Stop => Done
+        }
+    }
+}
+
+/// What a counter is sent.
+type Counted =
+    | Add(Int)
+    | Stop

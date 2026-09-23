@@ -76,7 +76,8 @@ fn is_other_than(earlier: Option<List<Int>>, written: List<Int>) -> Bool {
 fn class_written(class: ir.Class, hierarchy: Hierarchy) -> Result<List<Int>, Unwritten> {
     named := pooled_class(no_pool(), class.name)
     extends := pooled_class(named.pool, class.extends)
-    fields := fields_written(extends.pool, class)
+    implemented := interfaces_written(extends.pool, class.implements)
+    fields := fields_written(implemented.pool, class)
     methods := methods_written(Writer { pool: fields.pool, hierarchy: hierarchy }, class)?
     wanted := loadable_written(methods.pool, class, hierarchy)
     pool := wanted.pool
@@ -86,12 +87,23 @@ fn class_written(class: ir.Class, hierarchy: Hierarchy) -> Result<List<Int>, Unw
     written = bytes.all(bytes.u2(written, pool.next), pool_written(pool))
     written = bytes.u2(written, 1 + extending_access(class.extending))
     written = bytes.u2(bytes.u2(written, named.index), extends.index)
-    written = bytes.all(bytes.u2(written, 0), fields.bytes)
+    written = bytes.all(bytes.all(written, implemented.bytes), fields.bytes)
     written = bytes.all(written, methods.bytes)
     if list.length(wanted.bytes) == 0 {
         return Ok(bytes.u2(written, 0))
     }
     Ok(bytes.all(bytes.u2(written, 1), wanted.bytes))
+}
+
+/// How many interfaces a class implements, then the pool index of each one.
+// example: interfaces_written(no_pool(), []).bytes == [0, 0]
+fn interfaces_written(pool: Pool, implements: List<String>) -> Written {
+    var writing = Written { pool: pool, bytes: bytes.u2([], list.length(implements)) }
+    for interface in implements {
+        entry := pooled_class(writing.pool, interface)
+        writing = Written { pool: entry.pool, bytes: bytes.u2(writing.bytes, entry.index) }
+    }
+    writing
 }
 
 /// The access a class is written with beside `ACC_PUBLIC`: final, or abstract for a base.
@@ -470,7 +482,7 @@ fn assembling_of(guards: List<ir.Guard>) -> Assembling {
 ///
 /// A later class of one name is the same class, or `program_written` refuses it as named twice.
 // example: set.has_value(hierarchy_of([base_class()]).extends_it, "java/lang/Object")
-// example: or(map.get(hierarchy_of([variant_class(), ir.Class { name: "a/B$C", extends: "a/D", extending: ir.Never, fields: [], methods: [] }]).extends, "a/B$C"), "") == "a/B"
+// example: or(map.get(hierarchy_of([variant_class(), ir.Class { name: "a/B$C", extends: "a/D", extending: ir.Never, implements: [], fields: [], methods: [] }]).extends, "a/B$C"), "") == "a/B"
 fn hierarchy_of(classes: List<ir.Class>) -> Hierarchy {
     var extends = map.empty()
     for class in classes {
@@ -1473,19 +1485,19 @@ fn one_class(class: ir.Class) -> ir.Lowered {
 /// The record `a/B`, which holds one whole number, `at`.
 // example: record_class().name == "a/B"
 fn record_class() -> ir.Class {
-    ir.Class { name: "a/B", extends: "java/lang/Object", extending: ir.Never, fields: [ir.Field { name: "at", of: ir.Long }], methods: [] }
+    ir.Class { name: "a/B", extends: "java/lang/Object", extending: ir.Never, implements: [], fields: [ir.Field { name: "at", of: ir.Long }], methods: [] }
 }
 
 /// The base `a/B` of a sum type, which holds the tag of its variant.
 // example: base_class().extends == "java/lang/Object"
 fn base_class() -> ir.Class {
-    ir.Class { name: "a/B", extends: "java/lang/Object", extending: ir.ByItsVariants, fields: [ir.Field { name: "tag", of: ir.Integer }], methods: [] }
+    ir.Class { name: "a/B", extends: "java/lang/Object", extending: ir.ByItsVariants, implements: [], fields: [ir.Field { name: "tag", of: ir.Integer }], methods: [] }
 }
 
 /// The variant `a/B$C`, which extends the base `a/B`.
 // example: variant_class().extends == "a/B"
 fn variant_class() -> ir.Class {
-    ir.Class { name: "a/B$C", extends: "a/B", extending: ir.Never, fields: [], methods: [] }
+    ir.Class { name: "a/B$C", extends: "a/B", extending: ir.Never, implements: [], fields: [], methods: [] }
 }
 
 /// A static method `of` that gives back the whole number one.

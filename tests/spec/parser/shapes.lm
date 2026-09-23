@@ -49,7 +49,7 @@ fn kept(payment: Option<Payment>) -> String {
 }
 
 // example: kept(Some(Captured)) == "moving"
-fn ended() -> Result<(), String> {
+fn stopped() -> Result<(), String> {
     Ok(())
 }
 

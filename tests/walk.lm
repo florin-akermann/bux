@@ -84,8 +84,8 @@ fn lines_of(text: String) -> List<String> {
 /// What the program writes goes into two files of the directory, so a program writing much on one
 /// stream never waits on a reader of the other. A program still running `limit` seconds after it
 /// started is stopped, so one program that never ends cannot stop the runner.
-// example: ok_or(ended(line: ["no-such-program-at-all"], directory: "no-such-directory", limit: 1), Ended { output: "", errors: "", status: 7 }).status == 7
-fn ended(line: List<String>, directory: String, limit: Int) -> Result<Ended, Unended> {
+// example: ok_or(completed(line: ["no-such-program-at-all"], directory: "no-such-directory", limit: 1), Ended { output: "", errors: "", status: 7 }).status == 7
+fn completed(line: List<String>, directory: String, limit: Int) -> Result<Ended, Unended> {
     output := modules.joined(directory, ".output")
     errors := modules.joined(directory, ".errors")
     starting := errors_to(output_to(input_from(within(starter(line), place(directory)), place("/dev/null")), place(output)), place(errors))

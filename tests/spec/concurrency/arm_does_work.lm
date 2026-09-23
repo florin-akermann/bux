@@ -1,0 +1,29 @@
+// expect-error: L0809
+// Each arm of `receive` is one call or one name, so the work sits in a function.
+fn main(arguments: List<String>) -> Int {
+    _ = spawn Counter()
+    0
+}
+
+/// A total that each `Add` grows.
+process Counter {
+    fn start() -> Int {
+        0
+    }
+
+    fn receive(total: Int, message: Counted) -> Next<Int> {
+        match message {
+            Add(amount) => if amount > 0 {
+                Continue(total + amount)
+            } else {
+                Done
+            }
+            Stop => Done
+        }
+    }
+}
+
+/// What a counter is sent.
+type Counted =
+    | Add(Int)
+    | Stop

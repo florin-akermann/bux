@@ -23,12 +23,12 @@ import modules
 
 import walk
 
-/// Every example under `tests/spec`, each held to its header and to canonical form.
+/// Every example of `paths`, which are under `directory`, each held to its header and to canonical
+/// form.
 ///
-/// An empty `tests/spec` is a failure, because the specification is never allowed to be nothing.
-// example: every_example_held(ir.little_library(), "no-such-directory", 1).failures == ["no-such-directory: holds no example"]
-fn every_example_held(library: ir.Library, directory: String, limit: Int) -> held.Held {
-    paths := walk.every_file(directory, ".lm")
+/// No example at all is a failure, because the specification is never allowed to be nothing.
+// example: every_example_held("no-such-directory", [], ir.little_library(), 1).failures == ["no-such-directory: holds no example"]
+fn every_example_held(directory: String, paths: List<String>, library: ir.Library, limit: Int) -> held.Held {
     if list.length(paths) == 0 {
         return held.with_failure(held.nothing_failed(0), directory + ": holds no example")
     }
@@ -144,14 +144,14 @@ fn run_in(copied: Copied, ran: header.Ran, library: ir.Library) -> held.Held {
 fn started(copied: Copied, ran: header.Ran, answer: command.Answer) -> held.Held {
     match answer {
         command.Spoken(said) => held.with_failure(held.nothing_failed(1), held.failure(copied.opened.path, "a program to run", first_line(said.errors)))
-        command.Starts(line) => ended_held(copied.opened.path, ran, walk.ended(line, copied.copy, copied.limit))
+        command.Starts(line) => ended_held(copied.opened.path, ran, walk.completed(line, copied.copy, copied.limit))
     }
 }
 
 /// What the program wrote and ended with, held to what the header states, or why it never ran.
 // example: ended_held("a.lm", header.Ran { arguments: [], output: "", errors: "", status: 0 }, Err(walk.NotStarted)).failures == ["a.lm: the program could not be started"]
-fn ended_held(path: String, ran: header.Ran, ended: Result<walk.Ended, walk.Unended>) -> held.Held {
-    match ended {
+fn ended_held(path: String, ran: header.Ran, completion: Result<walk.Ended, walk.Unended>) -> held.Held {
+    match completion {
         Ok(done) => compared(path, ran, done)
         Err(unended) => held.with_failure(held.nothing_failed(1), path + ": " + walk.unended_said(unended, "the program"))
     }

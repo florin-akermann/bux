@@ -262,6 +262,7 @@ fn item_span(declared: ast.Item) -> lexer.Span {
         ast.Derive(written) => written.span
         ast.Function(written) => written.span
         ast.Extern(written) => written.span
+        ast.Process(written) => written.span
     }
 }
 

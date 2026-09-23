@@ -478,7 +478,53 @@ fn declare_item(declaring: Declaring, resolved: resolver.Resolved, item: ast.Ite
         ast.Derive(declaration) => derive_declared(declaring, resolved, declaration)
         ast.Function(function) => function_declared(declaring, resolved, function)
         ast.Extern(declaration) => extern_declared(declaring, resolved, declaration)
+        ast.Process(declaration) => process_declared(declaring, resolved, declaration)
     }
+}
+
+/// A process: each function it declares, then its name, which `spawn` calls with what `start`
+/// takes and which gives the handle.
+///
+/// `receive` takes the state `start` gives and one message, and gives `Next` of that state.
+// example: declared_code("process Counter {\n    fn start() -> Int {\n        0\n    }\n\n    fn receive(total: Int, message: Int) -> Option<Int> {\n        match message {\n            _ => None\n        }\n    }\n}\n") == "L0810 66..73"
+fn process_declared(declaring: Declaring, resolved: resolver.Resolved, declaration: ast.ProcessDeclaration) -> Result<Declaring, refusal.TypeError> {
+    var walked = declaring
+    for function in declaration.functions {
+        walked = function_declared(walked, resolved, function)?
+    }
+    environment := walked.environment
+    started := process_function_type(environment, declaration, "start")
+    received := process_function_type(environment, declaration, "receive")
+    state := unify.result_of(started)
+    message := or(list.at(unify.parameters_of(received), 1), unify.Unit)
+    wanted := unify.Function { parameters: [state, message], result: unify.Named { name: "Next", arguments: [state] } }
+    if received != wanted {
+        return Err(refusal.TypeError { kind: refusal.ReceivesAnotherState { state: state, receive: received }, span: process_function_name(declaration, "receive").span })
+    }
+    handle := unify.Named { name: "Process", arguments: [message, state] }
+    spawned := unify.monomorphic(unify.Function { parameters: unify.parameters_of(started), result: handle })
+    Ok(walked { environment: bound(environment, declared_at(environment, declaration.name), spawned) })
+}
+
+/// The type of the function `named` that a process declares, and `()` where it declares none.
+// example: process_function_type(empty_environment(WhereWritten), ast.ProcessDeclaration { name: ast.Name { text: "P", span: lexer.Span { start: 8, length: 1 } }, functions: [], span: lexer.Span { start: 0, length: 12 } }, "start") == unify.Unit
+fn process_function_type(environment: Environment, declaration: ast.ProcessDeclaration, named: String) -> unify.Type {
+    match map.get(environment.values, declared_at(environment, process_function_name(declaration, named))) {
+        Some(scheme) => scheme.body
+        None => unify.Unit
+    }
+}
+
+/// The name of the function `named` that a process declares, and the name of the process where
+/// it declares none.
+// example: process_function_name(ast.ProcessDeclaration { name: ast.Name { text: "P", span: lexer.Span { start: 8, length: 1 } }, functions: [], span: lexer.Span { start: 0, length: 12 } }, "start").text == "P"
+fn process_function_name(declaration: ast.ProcessDeclaration, named: String) -> ast.Name {
+    for function in declaration.functions {
+        if function.name.text == named {
+            return function.name
+        }
+    }
+    declaration.name
 }
 
 /// An instance: that it exists, then each method it writes, held to its trait's signature.
@@ -743,6 +789,8 @@ fn prelude_environment(resolved: resolver.Resolved) -> Environment {
     var environment = empty_environment(ByName)
     environment = environment { arities: prelude_arities(), traits: traits_of(resolved.program) }
     environment = bound(environment, "todo", todo_scheme())
+    environment = bound(environment, "send", send_scheme())
+    environment = bound(environment, "ended", ended_scheme())
     environment = held_by_the_compiler(environment, "prelude")
     environment = note_types(environment, resolved)
     settled := ok_or(carried(environment, resolved), environment)
@@ -780,6 +828,7 @@ fn reachable_item(declaring: Declaring, resolved: resolver.Resolved, item: ast.I
         ast.Derive(declaration) => derive_declared(declaring, resolved, declaration)
         ast.Function(function) => function_declared(declaring, resolved, function)
         ast.Extern(declaration) => extern_declared(declaring, resolved, declaration)
+        ast.Process(_) => Ok(declaring)
     }
 }
 
@@ -1373,11 +1422,32 @@ fn trait_name_of(item: ast.Item) -> String {
     }
 }
 
-/// The four types the JVM holds, with how many arguments each is written with.
+/// The five types the compiler holds, with how many arguments each is written with.
 // example: or(map.get(prelude_arities(), "List"), 0) == 1
+// example: or(map.get(prelude_arities(), "Process"), 0) == 2
 fn prelude_arities() -> map.Map<String, Int> {
     held := map.insert(map.insert(map.empty(), "Bool", 0), "Int", 0)
-    map.insert(map.insert(held, "List", 1), "String", 0)
+    map.insert(map.insert(map.insert(held, "List", 1), "Process", 2), "String", 0)
+}
+
+/// `send(to, message, waiting)`: one message put in the mailbox of a process, and what became of
+/// it.
+// example: unify.text_of(send_scheme().body) == "(Process<M, S>, M, Waiting) -> Sent"
+fn send_scheme() -> unify.Scheme {
+    message := unify.prelude_parameter("M")
+    state := unify.prelude_parameter("S")
+    handle := unify.Named { name: "Process", arguments: [unify.Parameter(message), unify.Parameter(state)] }
+    taken := [handle, unify.Parameter(message), unify.Named { name: "Waiting", arguments: [] }]
+    unify.Scheme { quantified: [unify.Written(message), unify.Written(state)], body: unify.Function { parameters: taken, result: unify.Named { name: "Sent", arguments: [] } }, required: [] }
+}
+
+/// `ended(handle)`: the state a process held when `receive` gave `Done`, once it has.
+// example: unify.text_of(ended_scheme().body) == "(Process<M, S>) -> S"
+fn ended_scheme() -> unify.Scheme {
+    message := unify.prelude_parameter("M")
+    state := unify.prelude_parameter("S")
+    handle := unify.Named { name: "Process", arguments: [unify.Parameter(message), unify.Parameter(state)] }
+    unify.Scheme { quantified: [unify.Written(message), unify.Written(state)], body: unify.Function { parameters: [handle], result: unify.Parameter(state) }, required: [] }
 }
 
 /// `todo(reason)`: a hole, which is whatever type the place it is written in expects.

@@ -160,10 +160,11 @@ A `for … in` binding is in scope in the loop body, and a pattern's bindings in
 Every module has these names in scope without importing anything:
 
 ```text
-types:        Bool  Int  List  Option  Result  String
+types:        Bool  Int  List  Next  Option  Process  Result  Sent  String  Waiting
 traits:       Add  Div  Eq  Hash  IntegerLiteral  Mul  Neg  Ord  Rem  Show  Sub
-constructors: Err  None  Ok  Some
-functions:    or  todo
+constructors: Continue  Delivered  Done  Err  MailboxFull  Milliseconds  NoLimit  NoWait
+              None  Ok  ProcessEnded  Some
+functions:    ended  or  send  todo
 methods:      add  divide  from_literal  hashed  highest  is_equal  is_less  lowest
               multiply  negate  remainder  shown  subtract
 ```

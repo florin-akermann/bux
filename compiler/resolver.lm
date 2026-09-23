@@ -72,10 +72,11 @@ fn prelude_resolved(program: ast.Program) -> Result<Resolved, ResolveError> {
 
 /// The names in scope in every module, read out of the prelude's tree.
 ///
-/// Its scope also holds what the JVM holds, the four types and `todo`, which no source declares.
+/// Its scope also holds what the compiler holds, which no source declares: five types, `todo`,
+/// `send`, and `ended`.
 // example: printed("fn f() -> Thing {\n    Made\n}\n\ntype Thing =\n    | Made\n", prelude_of(ok_or(parser.parse("type Other =\n    | Made\n"), ast.Program { items: [] }))) == "refused\nL0302 49..53 `Made` is already in scope here\nhelp: rename the inner one; Lumen never hides a name\n"
 fn prelude_of(program: ast.Program) -> Prelude {
-    var prelude = Prelude { types: held_as(names: map.empty(), texts: held_types(), kind: Type), values: held_as(names: map.empty(), texts: ["todo"], kind: Function), instances: set.empty(), traits: map.empty() }
+    var prelude = Prelude { types: held_as(names: map.empty(), texts: held_types(), kind: Type), values: held_as(names: map.empty(), texts: held_values(), kind: Function), instances: set.empty(), traits: map.empty() }
     for declared in program.items {
         prelude = with_supplied(prelude, declared)
     }
@@ -87,14 +88,21 @@ fn prelude_of(program: ast.Program) -> Prelude {
 /// `push` and `at` are the compiler's rather than a source's, and the prelude writes them bare.
 // example: prelude_printed("fn f() -> Int {\n    todo(\"x\")\n}\n") == "resolved\n3..4 value function declared 3..4\n10..13 type type prelude\n20..24 value function prelude\n"
 fn library_resolver() -> Resolver {
-    values := held_as(names: map.empty(), texts: ["todo", "push", "at"], kind: Function)
+    values := held_as(names: map.empty(), texts: list.push(list.push(held_values(), "push"), "at"), kind: Function)
     resolver_of(Prelude { types: held_as(names: map.empty(), texts: held_types(), kind: Type), values: values, instances: set.empty(), traits: map.empty() })
 }
 
-/// The types the JVM holds directly, which no Bux declaration could write.
-// example: list.length(held_types()) == 4
+/// The types the compiler holds, which no Bux declaration could write: four the JVM holds, and
+/// the handle of a process.
+// example: list.length(held_types()) == 5
 fn held_types() -> List<String> {
-    ["Bool", "Int", "List", "String"]
+    ["Bool", "Int", "List", "Process", "String"]
+}
+
+/// The functions the compiler holds in every module: `todo`, and `send` and `ended` of a process.
+// example: list.length(held_values()) == 3
+fn held_values() -> List<String> {
+    ["todo", "send", "ended"]
 }
 
 /// The prelude once `declared` is read into it: a type, a trait, an instance, or a function.
@@ -185,6 +193,7 @@ fn declare(resolver: Resolver, declared: ast.Item) -> Result<Resolver, ResolveEr
         ast.Trait(declaration) => declare_trait(resolver, declaration)
         ast.Function(declaration) => introduce_value(resolver, declaration.name, Function)
         ast.Extern(declaration) => introduce_value(resolver, declaration.name, Function)
+        ast.Process(declaration) => introduce_value(resolver, declaration.name, ProcessName)
         _ => Ok(resolver)
     }
 }
@@ -246,7 +255,20 @@ fn define(resolver: Resolver, declared: ast.Item) -> Result<Resolver, ResolveErr
         ast.Derive(declaration) => derive_declaration(resolver, declaration)
         ast.Function(declaration) => function(resolver, declaration)
         ast.Extern(declaration) => declared_extern(resolver, declaration)
+        ast.Process(declaration) => process_declaration(resolver, declaration)
     }
+}
+
+/// Each function a process declares, walked as a function is.
+///
+/// The functions of a process put no name in scope, because only the process calls them.
+// example: printed("process Counter {\n    fn start() -> Int {\n        missing\n    }\n}\n", prelude_of(ast.Program { items: [] })) == "refused\nL0300 50..57 there is nothing named `missing`\nhelp: a name is declared in this file, imported, or supplied by the prelude\n"
+fn process_declaration(resolver: Resolver, declaration: ast.ProcessDeclaration) -> Result<Resolver, ResolveError> {
+    var walked = resolver
+    for declared_one in declaration.functions {
+        walked = function(walked, declared_one)?
+    }
+    Ok(walked)
 }
 
 /// A type's parameters, then every type its definition names.
@@ -600,7 +622,62 @@ fn expression(resolver: Resolver, walked: ast.Expr) -> Result<Resolver, ResolveE
         ast.Record { base, fields } => record_literal(resolver: resolver, base: base, fields: fields)
         ast.If(chain) => if_expression(resolver: resolver, chain: chain)
         ast.Match(matched) => match_expression(resolver: resolver, matched: matched)
+        ast.Spawn(started) => spawned(resolver, started)
         _ => Ok(resolver)
+    }
+}
+
+/// `spawn Counter(0)`: the process this module declares, then each argument `start` takes.
+// example: printed("fn f() -> Int {\n    spawn f()\n}\n", prelude_of(ast.Program { items: [] })) == "refused\nL0800 26..27 `spawn` starts a process this module declares, and `f` is not one\nhelp: declare a `process` in this module and name it after `spawn`\n"
+fn spawned(resolver: Resolver, started: ast.Expr) -> Result<Resolver, ResolveError> {
+    match started.kind {
+        ast.Call { callee, arguments } => process_started(resolver, callee, arguments)
+        _ => Err(ResolveError { kind: uncalled(started), span: started.span })
+    }
+}
+
+/// Why `spawn` refuses what it is written before where that is not a call: a bare name lacks
+/// the call, and anything else is not a process.
+// example: printed("process Counter {\n    fn start() -> Int {\n        0\n    }\n}\n\nfn f() -> Int {\n    spawn Counter\n}\n", prelude_of(ast.Program { items: [] })) == "refused\nL0800 87..94 `spawn` starts a process with a call, and `Counter` is written without one\nhelp: write the values that `start` takes in parentheses after the name, as in `spawn Counter()`\n"
+fn uncalled(started: ast.Expr) -> ResolveErrorKind {
+    match started.kind {
+        ast.NameExpr(called) => NotACall(called.text)
+        _ => NotAProcess(written_text(started))
+    }
+}
+
+/// The call after `spawn`, whose callee is the bare name of a process.
+// example: printed("fn f() -> Int {\n    spawn io.f()\n}\n", prelude_of(ast.Program { items: [] })) == "refused\nL0800 26..30 `spawn` starts a process this module declares, and `io.f` is not one\nhelp: declare a `process` in this module and name it after `spawn`\n"
+fn process_started(resolver: Resolver, callee: ast.Expr, arguments: ast.Arguments) -> Result<Resolver, ResolveError> {
+    match callee.kind {
+        ast.NameExpr(called) => process_named(resolver, called, arguments)
+        _ => Err(ResolveError { kind: NotAProcess(written_text(callee)), span: callee.span })
+    }
+}
+
+/// The process `name` means, then each argument `start` takes.
+// example: printed("process Counter {\n    fn start() -> Int {\n        0\n    }\n}\n\nfn f() -> Int {\n    spawn Counter(missing)\n}\n", prelude_of(ast.Program { items: [] })) == "refused\nL0300 95..102 there is nothing named `missing`\nhelp: a name is declared in this file, imported, or supplied by the prelude\n"
+fn process_named(resolver: Resolver, name: ast.Name, arguments: ast.Arguments) -> Result<Resolver, ResolveError> {
+    found := meaning(resolver.values, name)?
+    if found.kind != ProcessName {
+        return Err(at(name, NotAProcess(name.text)))
+    }
+    walked := with_found(resolver, recorded(resolver.found, ValueNamespace, name.span, found))
+    match arguments {
+        ast.Positional(values) => each_expression(resolver: walked, values: values)
+        ast.Named(values) => named_arguments(resolver: walked, values: values)
+    }
+}
+
+/// How a refusal names what `spawn` was written before: a name as it is, and any other form as
+/// `this`.
+// example: written_text(ast.Expr { kind: ast.Unit, span: lexer.Span { start: 0, length: 2 } }) == "this"
+fn written_text(written: ast.Expr) -> String {
+    match written.kind {
+        ast.NameExpr(called) => called.text
+        ast.Call { callee, arguments } => written_text(callee)
+        ast.Field { receiver, name } => written_text(receiver) + "." + name.text
+        _ => "this"
     }
 }
 
@@ -724,6 +801,7 @@ fn in_place(resolver: Resolver, name: ast.Name, kind: DefinitionKind) -> Result<
         Module => Err(at(name, NotReachedThrough(name.text)))
         Function => Err(at(name, NotCalled(name.text)))
         TraitMethod => Err(at(name, NotCalled(name.text)))
+        ProcessName => Err(at(name, NotSpawned(name.text)))
         _ => Ok(resolver)
     }
 }
@@ -1225,6 +1303,7 @@ fn with_placed(placed: List<Placed>, declared: ast.Item) -> List<Placed> {
         ast.Derive(declaration) => list.push(placed, Placed { name: declaration.for_type, written: derive_written(declaration), extent: declaration.span })
         ast.Function(declaration) => list.push(placed, Placed { name: declaration.name, written: declaration.name.text, extent: declaration.span })
         ast.Extern(declaration) => list.push(placed, Placed { name: declaration.name, written: declaration.name.text, extent: declaration.span })
+        ast.Process(declaration) => list.push(placed, Placed { name: declaration.name, written: declaration.name.text, extent: declaration.span })
     }
 }
 
@@ -1281,6 +1360,7 @@ fn extent_of(declared: ast.Item) -> lexer.Span {
         ast.Derive(declaration) => declaration.span
         ast.Function(declaration) => declaration.span
         ast.Extern(declaration) => declaration.span
+        ast.Process(declaration) => declaration.span
     }
 }
 
@@ -1323,6 +1403,7 @@ fn kind_word(kind: DefinitionKind) -> String {
         Parameter => "parameter"
         Local => "local"
         Variable => "variable"
+        ProcessName => "process"
     }
 }
 
@@ -1373,6 +1454,9 @@ fn code_of(kind: ResolveErrorKind) -> String {
         NotAModule(_) => "L0313"
         BindsInsideOr(_) => "L0314"
         NotATypeParameter(_) => "L0318"
+        NotAProcess(_) => "L0800"
+        NotACall(_) => "L0800"
+        NotSpawned(_) => "L0801"
     }
 }
 
@@ -1399,6 +1483,9 @@ fn message(kind: ResolveErrorKind) -> String {
         NotAModule(text) => "`" + text + "` is a module in neither scope, and a type is reached through one"
         BindsInsideOr(text) => "`" + text + "` binds inside an or-pattern, which binds nothing"
         NotATypeParameter(text) => "`" + text + "` is not a type parameter this instance declares"
+        NotAProcess(text) => "`spawn` starts a process this module declares, and `" + text + "` is not one"
+        NotACall(text) => "`spawn` starts a process with a call, and `" + text + "` is written without one"
+        NotSpawned(text) => "`" + text + "` is a process, so `spawn` starts it"
     }
 }
 
@@ -1425,6 +1512,9 @@ fn help_of(kind: ResolveErrorKind) -> String {
         NotAModule(_) => "a type of another module is reached through the import: write `demo.User`"
         BindsInsideOr(_) => "write one arm for each alternative where one of them binds"
         NotATypeParameter(_) => "an instance answers for every argument of its type: write `instance<T> Eq<Box<T>>`"
+        NotAProcess(_) => "declare a `process` in this module and name it after `spawn`"
+        NotACall(text) => "write the values that `start` takes in parentheses after the name, as in `spawn " + text + "()`"
+        NotSpawned(_) => "write `spawn` before the call; a process is never called or held as a value"
     }
 }
 
@@ -1496,6 +1586,7 @@ type DefinitionKind =
     | Parameter
     | Local
     | Variable
+    | ProcessName
 
 /// Where a definition came from: the prelude, or the name that declares it in this module.
 type Origin =
@@ -1557,6 +1648,9 @@ type ResolveErrorKind =
     | NotAModule(String)
     | BindsInsideOr(String)
     | NotATypeParameter(String)
+    | NotAProcess(String)
+    | NotACall(String)
+    | NotSpawned(String)
 
 /// Which declaration uses which, each pair once, and what each declaration uses.
 type Uses = {

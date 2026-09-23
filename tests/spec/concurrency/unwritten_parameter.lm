@@ -1,0 +1,25 @@
+// expect-error: L0806
+// A process writes the type of each parameter, because nothing infers it.
+fn main(arguments: List<String>) -> Int {
+    _ = spawn Counter(0)
+    0
+}
+
+/// A total that each `Add` grows.
+process Counter {
+    fn start(initial) -> Int {
+        initial
+    }
+
+    fn receive(total: Int, message: Counted) -> Next<Int> {
+        match message {
+            Add(amount) => Continue(total + amount)
+            Stop => Done
+        }
+    }
+}
+
+/// What a counter is sent.
+type Counted =
+    | Add(Int)
+    | Stop

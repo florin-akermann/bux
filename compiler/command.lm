@@ -32,7 +32,7 @@ import modules
 
 import parser
 
-import process
+import programs
 
 import refusal
 
@@ -124,8 +124,8 @@ fn said_by(answer: Answer) -> Said {
 /// The status of the program `line` starts, with the streams of this process.
 // example: program_ended(["no-such-program-at-all"]).status == 2
 fn program_ended(line: List<String>) -> Said {
-    match process.started(inheriting(cleared(process.of_command(line)))) {
-        Ok(ran) => Said { output: "", errors: "", status: ok_or(process.ended(ran), 2) }
+    match programs.started(inheriting(cleared(programs.of_command(line)))) {
+        Ok(ran) => Said { output: "", errors: "", status: ok_or(programs.waited_for(ran), 2) }
         Err(why) => unusable(or(list.at(line, 0), "") + ": " + why)
     }
 }
@@ -536,15 +536,15 @@ fn ran_in(beside: Beside, classes: List<jvm.ClassFile>, run: Run, root: Typed) -
 
 /// What the program `line` starts wrote, and the status it ended with, or why it never started.
 ///
-/// The program reads the standard input of this process, as a program that `process.run` starts
+/// The program reads the standard input of this process, as a program that `programs.run` starts
 /// does, and it starts with the environment that `cleared` leaves.
-// example: ok_or(program_finished(["no-such-program-at-all"]), process.Finished { code: 9, output: "", errors: "" }).code == 9
-fn program_finished(line: List<String>) -> Result<process.Finished, String> {
-    ran := process.started(process.reading_from(cleared(process.of_command(line)), process.inherited()))?
-    output := process.whole(process.output_of(ran))
-    errors := process.whole(process.errors_of(ran))
-    code := process.ended(ran)?
-    Ok(process.Finished { code: code, output: output, errors: errors })
+// example: ok_or(program_finished(["no-such-program-at-all"]), programs.Finished { code: 9, output: "", errors: "" }).code == 9
+fn program_finished(line: List<String>) -> Result<programs.Finished, String> {
+    ran := programs.started(programs.reading_from(cleared(programs.of_command(line)), programs.inherited()))?
+    output := programs.whole(programs.output_of(ran))
+    errors := programs.whole(programs.errors_of(ran))
+    code := programs.waited_for(ran)?
+    Ok(programs.Finished { code: code, output: output, errors: errors })
 }
 
 /// The line that starts a JVM on the class `module` in `beside`, which `arguments` then follow.
@@ -562,7 +562,7 @@ fn program_line(java: String, beside: String, module: String, arguments: List<St
 /// Each of the three can add a `-javaagent` to the program, and `docs/specs/run.md` states why.
 /// No other variable of the environment changes.
 // example: or(list.at(injecting(), 0), "") == "JAVA_TOOL_OPTIONS"
-fn cleared(builder: process.ProcessBuilder) -> process.ProcessBuilder {
+fn cleared(builder: programs.ProcessBuilder) -> programs.ProcessBuilder {
     variables := variables_of(builder)
     for name in injecting() {
         _ = removed(variables, as_object(held_as_constant(name)))
@@ -606,16 +606,16 @@ fn is_refused_write(answer: Result<String, String>) -> Bool {
 /// A run that did not end with status 0 did not reach the end of its examples, so what it wrote
 /// on standard error is passed on and the command cannot say whether they hold.
 // example: run_ended(Err("gone"), "java", Run { source: "", stretches: [], examples: [], module: lexer.Span { start: 0, length: 0 } }, Typed { module: modules.Module { name: "main", path: "main.lm", source: "", program: ast.Program { items: [] } }, inferred: types.checked_of("") }).errors == "error: java: gone\n"
-fn run_ended(ended: Result<process.Finished, String>, java: String, run: Run, root: Typed) -> Said {
-    match ended {
+fn run_ended(completion: Result<programs.Finished, String>, java: String, run: Run, root: Typed) -> Said {
+    match completion {
         Ok(finished) => finished_read(finished, run, root)
         Err(why) => unusable(java + ": " + why)
     }
 }
 
 /// Every example the run wrote a line about, which is every one that did not hold.
-// example: finished_read(process.Finished { code: 1, output: "", errors: "boom\n" }, Run { source: "", stretches: [], examples: [], module: lexer.Span { start: 0, length: 0 } }, Typed { module: modules.Module { name: "main", path: "main.lm", source: "", program: ast.Program { items: [] } }, inferred: types.checked_of("") }).errors == "boom\n"
-fn finished_read(finished: process.Finished, run: Run, root: Typed) -> Said {
+// example: finished_read(programs.Finished { code: 1, output: "", errors: "boom\n" }, Run { source: "", stretches: [], examples: [], module: lexer.Span { start: 0, length: 0 } }, Typed { module: modules.Module { name: "main", path: "main.lm", source: "", program: ast.Program { items: [] } }, inferred: types.checked_of("") }).errors == "boom\n"
+fn finished_read(finished: programs.Finished, run: Run, root: Typed) -> Said {
     if finished.code != 0 {
         return Said { output: "", errors: finished.errors, status: 2 }
     }
@@ -1424,7 +1424,7 @@ fn has_span(declared: Option<lexer.Span>) -> Bool {
     }
 }
 
-/// Where `program` declares `named` as a type, a trait, a function, or an extern, where it does.
+/// Where `program` declares `named` as a type, a trait, a function, an extern, or a process.
 // example: has_span(declaring(ok_or(parser.parse("fn io() -> Int {\n    0\n}\n"), ast.Program { items: [] }), "io"))
 fn declaring(program: ast.Program, named: String) -> Option<lexer.Span> {
     for item in program.items {
@@ -1444,6 +1444,7 @@ fn name_declared(item: ast.Item) -> ast.Name {
         ast.Trait(declaration) => declaration.name
         ast.Function(function) => function.name
         ast.Extern(declaration) => declaration.name
+        ast.Process(declaration) => declaration.name
         _ => ast.Name { text: "", span: lexer.Span { start: 0, length: 0 } }
     }
 }
@@ -1558,6 +1559,7 @@ fn declarations_of(program: ast.Program) -> List<lexer.Span> {
             ast.Derive(declaration) => list.push(found, declaration.span)
             ast.Function(function) => with_copied(found, function)
             ast.Extern(declaration) => list.push(found, declaration.span)
+            ast.Process(declaration) => list.push(found, declaration.span)
         }
     }
     found
@@ -2534,7 +2536,22 @@ fn after<T>(values: List<T>, index: Int) -> List<T> {
 fn help_named(name: String, more: List<String>) -> Said {
     match subcommand_named(name) {
         Some(sub) => help_of_command(sub, more)
-        None => complained(Complaint { message: "unrecognized subcommand '" + name + "'", tip: None, usage: "lumen <COMMAND>", offers_help: true })
+        None => help_of_topic(name, more)
+    }
+}
+
+/// The help of the part of the language called `name`, where there is one and nothing follows it.
+///
+/// `process` is the one such topic: it names no command, and `lumen help process` prints it.
+// example: help_of_topic("process", []).status == 0
+// example: help_of_topic("proces", []).status == 2
+fn help_of_topic(name: String, more: List<String>) -> Said {
+    if name != "process" {
+        return complained(Complaint { message: "unrecognized subcommand '" + name + "'", tip: None, usage: "lumen <COMMAND>", offers_help: true })
+    }
+    match list.at(more, 0) {
+        Some(extra) => complained(Complaint { message: "unrecognized subcommand '" + extra + "'", tip: None, usage: "lumen help process", offers_help: false })
+        None => Said { output: topic_text(name), errors: "", status: 0 }
     }
 }
 
@@ -3201,10 +3218,10 @@ extern method parent_path(place: Entry) -> Option<String> = "getParent"
 extern static nanoseconds() -> Int = "java.lang.System.nanoTime"
 
 /// The builder, with the program reading and writing the streams of this process.
-extern method inheriting(builder: process.ProcessBuilder) -> process.ProcessBuilder = "inheritIO"
+extern method inheriting(builder: programs.ProcessBuilder) -> programs.ProcessBuilder = "inheritIO"
 
 /// The environment that the builder starts a program with, which a change to it changes.
-extern method variables_of(builder: process.ProcessBuilder) -> Variables = "environment"
+extern method variables_of(builder: programs.ProcessBuilder) -> Variables = "environment"
 
 /// Removes the variable `name`, and gives back its value where it held one.
 extern method removed(variables: Variables, name: VariableName) -> Option<VariableName> = "remove"

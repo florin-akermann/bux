@@ -47,19 +47,6 @@ import strings
 
 import walk
 
-/// Every check of the command line: each line of each golden file, each explanation, each command
-/// done on files written for it, and each command that starts a JVM.
-// example: list.length(cases_read("$ --version\nstatus 0\n> lumen 0.1.0\n")) == 1
-fn every_line_held(library: ir.Library, limit: Int) -> held.Held {
-    var found = held.nothing_failed(0)
-    for path in golden_files() {
-        found = held.added(found, golden_held(path, library, limit))
-    }
-    found = held.added(found, every_explanation_held(library))
-    found = held.added(found, enacted.every_scene_held(library, limit))
-    held.added(found, started.every_run_held(library, limit))
-}
-
 /// Writes each golden file again: its own command lines, each with the answer it gets now.
 ///
 /// An answer that changes on purpose, such as a message said in other words, is written down so.
@@ -165,7 +152,7 @@ fn first_part(path: String) -> String {
 fn ended_in(answer: command.Answer, stage: Stage) -> command.Said {
     match answer {
         command.Spoken(said) => said
-        command.Starts(line) => started.program_said(walk.ended(line, stage.directory, stage.limit))
+        command.Starts(line) => started.program_said(walk.completed(line, stage.directory, stage.limit))
     }
 }
 

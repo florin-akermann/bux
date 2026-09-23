@@ -1,0 +1,25 @@
+// expect-error: L0805
+// A process has one type of state and one type of message, so no function of it is generic.
+fn main(arguments: List<String>) -> Int {
+    _ = spawn Counter()
+    0
+}
+
+/// A total that each `Add` grows.
+process Counter {
+    fn start<T>() -> Int {
+        0
+    }
+
+    fn receive(total: Int, message: Counted) -> Next<Int> {
+        match message {
+            Add(amount) => Continue(total + amount)
+            Stop => Done
+        }
+    }
+}
+
+/// What a counter is sent.
+type Counted =
+    | Add(Int)
+    | Stop

@@ -18,7 +18,7 @@ fn run(command: String, arguments: List<String>) -> Result<Finished, String> {
     ran := started(reading_from(of_command(started_from), inherited()))?
     output := whole(output_of(ran))
     errors := whole(errors_of(ran))
-    code := ended(ran)?
+    code := waited_for(ran)?
     Ok(Finished { code: code, output: output, errors: errors })
 }
 
@@ -55,16 +55,16 @@ extern method reading_from(builder: ProcessBuilder, input: Redirect) -> ProcessB
 extern field inherited() -> Redirect = "java.lang.ProcessBuilder$Redirect.INHERIT"
 
 /// Starts the program the builder names, or says why the program never started.
-extern method started(builder: ProcessBuilder) -> Result<Process, String> = "start"
+extern method started(builder: ProcessBuilder) -> Result<Running, String> = "start"
 
 /// The standard output of the program, which it holds open until it ends.
-extern method output_of(ran: Process) -> InputStream = "getInputStream"
+extern method output_of(ran: Running) -> InputStream = "getInputStream"
 
 /// The standard error of the program, which it holds open until it ends.
-extern method errors_of(ran: Process) -> InputStream = "getErrorStream"
+extern method errors_of(ran: Running) -> InputStream = "getErrorStream"
 
 /// Waits for the program to end and gives the code it ended with, widened from the JVM's `int`.
-extern method int ended(ran: Process) -> Result<Int, String> = "waitFor"
+extern method int waited_for(ran: Running) -> Result<Int, String> = "waitFor"
 
 /// A scanner over `stream`, which is what reads the text a program wrote on one.
 extern new over(stream: InputStream) -> Scanner
@@ -92,7 +92,7 @@ type Finished = {
 extern type ProcessBuilder = "java.lang.ProcessBuilder"
 
 /// A program that is running, or has run, which is what a start gives back.
-extern type Process = "java.lang.Process"
+extern type Running = "java.lang.Process"
 
 /// Text a program wrote, which is read in the order the program wrote it.
 extern type InputStream = "java.io.InputStream"

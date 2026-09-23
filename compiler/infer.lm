@@ -316,7 +316,7 @@ fn statement_walked(inference: Inference, statement: ast.Statement) -> Result<Ty
         ast.Assign { target, operator, value } => assign_walked(inference, target, operator, value)
         ast.Return(given) => returned(inference, given, statement.span)
         ast.Break => Ok(fresh(inference))
-        ast.Continue => Ok(fresh(inference))
+        ast.ContinueLoop => Ok(fresh(inference))
         ast.For(walked) => nothing_left(loop_walked(inference, walked))
         ast.Discard(thrown) => nothing_left(thrown_away(inference, thrown))
         ast.Evaluated(written) => walked_expr(inference, written)
@@ -417,6 +417,7 @@ fn expr_written(inference: Inference, written: ast.Expr) -> Result<Typed, refusa
         ast.Record { base, fields } => record_walked(inference, base, fields, written.span)
         ast.If(chain) => if_walked(inference, chain)
         ast.Match(matched) => match_walked(inference, matched)
+        ast.Spawn(started) => walked_expr(inference, started)
     }
 }
 
@@ -966,15 +967,45 @@ fn declaration_of(inference: Inference, called: ast.Name) -> Option<ast.Function
     }
 }
 
-/// The function whose name is written at `start`.
+/// The function whose name is written at `start`, and `start` of the process whose name is
+/// written there, because `spawn` passes its values to that function.
 // example: !is_declared(function_written_at(ast.Program { items: [] }, 0))
+// example: is_declared(function_written_at(declared.first_program("process Counter {\n    fn start() -> Int {\n        0\n    }\n}\n"), 8))
 fn function_written_at(program: ast.Program, start: Int) -> Option<ast.FunctionDeclaration> {
     for function in functions_of(program) {
         if function.name.span.start == start {
             return Some(function)
         }
     }
+    for item in program.items {
+        for function in started_by(item, start) {
+            return Some(function)
+        }
+    }
     None
+}
+
+/// The function `start` of `item`, as a list of one, where `item` is the process whose name is
+/// written at `at`, and none otherwise.
+// example: list.length(started_by(declared.first_item("type Box = Box\n"), 5)) == 0
+fn started_by(item: ast.Item, at: Int) -> List<ast.FunctionDeclaration> {
+    match item {
+        ast.Process(declaration) => if declaration.name.span.start == at {
+            first_function(declaration)
+        } else {
+            []
+        }
+        _ => []
+    }
+}
+
+/// The first function of a process, which the shape check holds to be `start`, as a list of one.
+// example: list.length(first_function(ast.ProcessDeclaration { name: no_name(), functions: [], span: no_name().span })) == 0
+fn first_function(declaration: ast.ProcessDeclaration) -> List<ast.FunctionDeclaration> {
+    match list.at(declaration.functions, 0) {
+        Some(function) => [function]
+        None => []
+    }
 }
 
 /// Every function the module writes a body for, which is each function and each instance method.
@@ -995,6 +1026,7 @@ fn bodies_of(item: ast.Item) -> List<ast.FunctionDeclaration> {
     match item {
         ast.Instance(declaration) => declaration.methods
         ast.Function(function) => [function]
+        ast.Process(declaration) => declaration.functions
         _ => []
     }
 }

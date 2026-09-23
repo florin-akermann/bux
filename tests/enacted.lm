@@ -315,10 +315,10 @@ fn refused_package_built(library: ir.Library) -> held.Held {
 fn unlisted_package(library: ir.Library, limit: Int) -> held.Held {
     scene := scene_of([Written { at: "unlisted/bux.package", text: "" }, Written { at: "unlisted/a.lm", text: "fn main(arguments: List<String>) -> Int {\n    0\n}\n" }])
     package := modules.joined(scene, "unlisted")
-    _ = walk.ended(["chmod", "311", package], scene, limit)
+    _ = walk.completed(["chmod", "311", package], scene, limit)
     checked := said_to(["check", package], library)
     built := said_to(["build", package], library)
-    _ = walk.ended(["chmod", "755", package], scene, limit)
+    _ = walk.completed(["chmod", "755", package], scene, limit)
     refusal := "error: unlisted: Permission denied (os error 13)\n"
     facts := [status_fact(checked, 2), Fact { what: "check: errors", expected: refusal, found: unstaged(text: checked.errors, stage: scene) }, status_fact(built, 2), Fact { what: "build: errors", expected: refusal, found: unstaged(text: built.errors, stage: scene) }]
     found := facts_held("a package that cannot be listed is refused", facts)

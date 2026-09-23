@@ -1067,12 +1067,13 @@ fn added(total: Int, amount: Int) -> Next<Int> {
 
 counting := spawn Counter(0)
 
-_ = send(counting, Add(3))
+_ = send(counting, Add(3), NoLimit)
 ```
 
 `spawn` takes a `process`, never a function and never an anonymous block.
 It gives back a handle, and that handle is the one name the rest of the program has for the process.
-`Process<Request>` is that handle, and a program never names the queue behind it.
+`Process<Request, Int>` is that handle, and a program never names the queue behind it.
+The first type is what the process accepts, and the second is the state `ended` gives back.
 `spawn` runs `start` with the arguments the caller passes by value, and that result is the state.
 A process accepts one type, which is why `Request` is an ADT and not a list of message kinds.
 `match` on that ADT is how a process tells one message from another.
@@ -1155,10 +1156,10 @@ Cancellation is a message, and the spec names the idiom rather than adding a pri
 Erlang's selective receive walks the mailbox for a message that matches and leaves the rest behind.
 It reads well, and it costs one scan for each receive, which a full mailbox makes slow.
 Lumen gives `receive` the next message, and a process that must wait holds that in its own state.
-A `send` takes a deadline, and a deadline of none is the send that never waits.
+A `send` says how long it waits for room: not at all, some milliseconds, or with no limit.
 That is what a bus that drops the oldest message needs, and no other primitive answers it.
 A process never calls `receive` itself, so a deadline on the receiving side is not a value it holds.
-How a process wakes when no message comes is the second open question below.
+A process never wakes without a message, and a tick is a message that another process sends.
 
 **An in-application message bus is a library type, not a primitive**.
 A `send` names the process it reaches, and a program often has a message that whoever cares reads.
@@ -1186,14 +1187,12 @@ Erlang makes a remote process look like a local one, and Lumen does not.
 A network call fails where a local `send` does not, and one name for both hides that difference.
 A transport that shares the mailbox's receive shape gets a library wrapper once a program needs one.
 
-`process`, `spawn`, the handle, the send deadline, and cancellation are 0.4 work.
-Each gets a spec under `docs/specs/` before it lands.
-Two questions stay open for that spec.
-The first is how a request carries the address to answer on.
-A reply is a message, so the reply address is a handle, and a handle accepts one type.
-The second is how a process wakes when no message comes, which a deadline on `receive` once gave.
-The underlying implementation can use JVM threads and, where appropriate, virtual threads.
-The language should hide most JVM concurrency boilerplate.
+`docs/specs/concurrency.md` states `process`, `spawn`, the handle, the mailbox, and `send`.
+A request carries the address to answer on as a field, and that address is a handle.
+`Get(Process<Answer, Int>)` is such a request, and no primitive is added for it.
+A process never wakes without a message, so `receive` has no deadline and there is no `after`.
+No timer and no sleep is part of the language, because a tick is a message.
+Each process runs on a JVM virtual thread, and no program can see how.
 
 ---
 

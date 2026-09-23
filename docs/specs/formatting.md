@@ -35,7 +35,8 @@ the token stream.
 No line ends with a blank, and every line ends with a `\n`, the last one included.
 An empty file is empty: it has no lines at all.
 
-**Exactly one blank line separates two top-level items**, and no blank line appears anywhere else.
+**Exactly one blank line separates two top-level items**, and two functions of one item.
+An instance and a process each hold functions, and no blank line appears anywhere else.
 The file neither begins nor ends with a blank line.
 
 **Everything the grammar does not force onto several lines is written on one line.**

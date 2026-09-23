@@ -125,7 +125,7 @@ A `List` crosses a boundary as a parameter and never as a result, which `docs/sp
 states, so the names are not handed over as one.
 `files` reads them one at a time and pushes each onto a list of its own with `list.push`, which
 `docs/specs/library.md` states, so the list a caller reads is one the library built.
-`files` imports `list` for that one name, as `process` does for the same one.
+`files` imports `list` for that one name, as `programs` does for the same one.
 Loading hands `list` over below `files`, as it does for any module an import names.
 A failure anywhere in that walk is an `Err`, and a caller is never handed part of a listing.
 
@@ -236,16 +236,16 @@ A Lumen value is never asked what it is, and the one thing asked here is not a L
 ## Starting a program
 
 `bux run` and `bux test` each start a `java`, and a compiler written in Bux has to start one too.
-`process` is a library module of its own, beside `io` and `files`, and it declares one function a
+`programs` is a library module of its own, beside `io` and `files`, and it declares one function a
 program reaches for.
 
 ```text
-process.run(command: String, arguments: List<String>) -> Result<Finished, String>
+programs.run(command: String, arguments: List<String>) -> Result<Finished, String>
 ```
 
 `command` names the program, and `arguments` holds what it is given, in the order it reads them.
 `run` starts that program, reads everything the program wrote, and waits for it to end.
-`Ok` holds a `Finished`, which is a record `process` declares:
+`Ok` holds a `Finished`, which is a record `programs` declares:
 
 ```text
 type Finished = {
@@ -286,16 +286,16 @@ waits for a reader that is reading the other one, and `run` waits with it.
 Reading the two at once is what answers that, and it needs the `spawn` of version 0.4.
 Until then `run` is for a program that writes less than one such hold on its standard error.
 
-### What `process` declares
+### What `programs` declares
 
-`docs/specs/api-surface.md` makes every top-level name public, and `process` is not exempt, so
-`process.Finished`, `process.whole_command`, `process.whole`, `process.of_command`,
-`process.reading_from`, `process.inherited`, `process.started`, `process.output_of`,
-`process.errors_of`, `process.ended`, `process.over`, `process.delimited`, `process.token`,
-`process.closed`, `process.nothing_at_all`, `process.ProcessBuilder`, `process.Process`,
-`process.InputStream`, `process.Scanner`, and `process.Redirect` are each reachable by name.
+`docs/specs/api-surface.md` makes every top-level name public, and `programs` is not exempt, so
+`programs.Finished`, `programs.whole_command`, `programs.whole`, `programs.of_command`,
+`programs.reading_from`, `programs.inherited`, `programs.started`, `programs.output_of`,
+`programs.errors_of`, `programs.waited_for`, `programs.over`, `programs.delimited`, `programs.token`,
+`programs.closed`, `programs.nothing_at_all`, `programs.ProcessBuilder`, `programs.Running`,
+`programs.InputStream`, `programs.Scanner`, and `programs.Redirect` are each reachable by name.
 That is what writing the module in Bux costs, as it is for `io` and `files`.
-A program that wants a program started writes `process.run`, and the rest is how that is built.
+A program that wants a program started writes `programs.run`, and the rest is how that is built.
 
 `run` builds the one `java.util.List` a `java.lang.ProcessBuilder` is built from: it starts from
 a list holding `command` alone and pushes each value of `arguments` after it, with `list.push` in
@@ -306,7 +306,7 @@ A Bux `List<String>` crosses the boundary as a `java.util.List` of what it holds
 reads, starts it, and reads each stream with a `java.util.Scanner`.
 The scanner is given a delimiter no text holds, so the whole stream is one token, and the scanner
 is closed once that token is read.
-A stream nobody wrote on holds no token at all, and `process.nothing_at_all` is the stream that
+A stream nobody wrote on holds no token at all, and `programs.nothing_at_all` is the stream that
 states that case in an example.
 `start`, `waitFor`, and `next` each give back a `Result`, so each is a guarded method of its own,
 which every `extern` already is.

@@ -1,0 +1,26 @@
+// A process declares `start` and `receive`, and `spawn` before a call starts one.
+fn main(arguments: List<String>) -> Int {
+    counting := spawn Counter(10)
+    _ = send(counting, Add(3), NoLimit)
+    _ = send(counting, Stop, NoLimit)
+    ended(counting) - 13
+}
+
+/// A total that each `Add` grows, and that `Stop` ends.
+process Counter {
+    fn start(initial: Int) -> Int {
+        initial
+    }
+
+    fn receive(total: Int, message: Counted) -> Next<Int> {
+        match message {
+            Add(amount) => Continue(total + amount)
+            Stop => Done
+        }
+    }
+}
+
+/// What a counter is sent.
+type Counted =
+    | Add(Int)
+    | Stop

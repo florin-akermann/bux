@@ -214,6 +214,7 @@ fn names_of(item: ast.Item) -> List<Declaring> {
         ast.Trait(declaration) => trait_names(declaration)
         ast.Function(function) => [value_named(function.name)]
         ast.Extern(declaration) => [value_named(declaration.name)]
+        ast.Process(declaration) => [value_named(declaration.name)]
         _ => []
     }
 }

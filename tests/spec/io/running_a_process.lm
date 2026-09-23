@@ -5,20 +5,20 @@
 // what it says is the JDK's own wording, so the program states what it read rather than that.
 import io
 
-import process
+import programs
 
 import strings
 
 fn main(arguments: List<String>) -> Int {
-    match process.run("java", ["-version"]) {
+    match programs.run("java", ["-version"]) {
         Ok(ran) => io.println(told(ran: ran))
         Err(why) => io.println(why)
     }
     0
 }
 
-// example: told(ran: process.Finished { code: 1, output: "", errors: "" }) == "java did not run the way it does"
-fn told(ran: process.Finished) -> String {
+// example: told(ran: programs.Finished { code: 1, output: "", errors: "" }) == "java did not run the way it does"
+fn told(ran: programs.Finished) -> String {
     if has_run_as_java_does(ran: ran) {
         "java ran, said nothing on its output, and wrote its version on its errors"
     } else {
@@ -26,7 +26,7 @@ fn told(ran: process.Finished) -> String {
     }
 }
 
-// example: has_run_as_java_does(ran: process.Finished { code: 0, output: "", errors: "28" })
-fn has_run_as_java_does(ran: process.Finished) -> Bool {
+// example: has_run_as_java_does(ran: programs.Finished { code: 0, output: "", errors: "28" })
+fn has_run_as_java_does(ran: programs.Finished) -> Bool {
     ran.code == 0 && strings.length(ran.output) == 0 && strings.length(ran.errors) > 0
 }

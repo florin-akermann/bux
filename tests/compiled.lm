@@ -175,7 +175,7 @@ fn is_none<T>(maybe: Option<T>) -> Bool {
 /// A class with no name, no field, and no method, which stands where a module wrote no class.
 // example: no_class().name == ""
 fn no_class() -> ir.Class {
-    ir.Class { name: "", extends: "", extending: ir.Never, fields: [], methods: [] }
+    ir.Class { name: "", extends: "", extending: ir.Never, implements: [], fields: [], methods: [] }
 }
 
 /// The name of every method `instructions` call, in the order they call them.
