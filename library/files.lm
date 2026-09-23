@@ -34,6 +34,36 @@ fn sent(sink: Writer, text: String, to: String) -> Result<String, String> {
     Ok(to)
 }
 
+/// `bytes` written as the whole of the file at `path`, one byte for each value.
+///
+/// A value outside 0 to 255 is no byte, so the file is not opened and the `Err` names the value.
+// example: ok_or(write_bytes(path: "", bytes: [65]), "nothing written") == "nothing written"
+// example: ok_or(write_bytes(path: "unused.bin", bytes: [256]), "refused") == "refused"
+fn write_bytes(path: String, bytes: List<Int>) -> Result<String, String> {
+    for byte in bytes {
+        if byte < 0 || byte > 255 {
+            return Err(shown(byte) + " is no byte, so nothing was written to " + path)
+        }
+    }
+    match opened(path, as_latin_1()) {
+        Ok(sink) => bytes_sent(sink: sink, bytes: bytes, to: path)
+        Err(why) => Err(why)
+    }
+}
+
+/// Each of `bytes` put on `sink` as the one char of the same value, and `sink` closed.
+// example: ok_or(write_bytes(path: "", bytes: []), "nothing written") == "nothing written"
+fn bytes_sent(sink: Writer, bytes: List<Int>, to: String) -> Result<String, String> {
+    for byte in bytes {
+        put(sink, or(one_char(byte), ""))
+    }
+    closed(sink)
+    if failed(sink) {
+        return Err("the whole of the bytes did not reach " + to)
+    }
+    Ok(to)
+}
+
 /// The name of everything the directory at `path` holds, in order.
 // example: list.length(ok_or(listed("no-such-directory"), [])) == 0
 fn listed(path: String) -> Result<List<String>, String> {
@@ -104,6 +134,12 @@ extern new opened(path: String, written_as: Encoding) -> Result<Writer, String>
 
 /// UTF-8, which is the encoding a write uses because it is the one a read is read with.
 extern field as_utf_8() -> Encoding = "java.nio.charset.StandardCharsets.UTF_8"
+
+/// ISO-8859-1, which writes each char from 0 to 255 as the one byte of the same value.
+extern field as_latin_1() -> Encoding = "java.nio.charset.StandardCharsets.ISO_8859_1"
+
+/// The text of the one char `code` stands for, where `code` fits in an `int`.
+extern static one_char(int code: Int) -> Option<String> = "java.lang.Character.toString"
 
 /// Writes `text` on `sink` and nothing else.
 extern method put(sink: Writer, text: String) -> () = "print"

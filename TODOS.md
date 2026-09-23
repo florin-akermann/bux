@@ -6,13 +6,6 @@
 
 ## Open
 
-## 🔴 Item 073: Lowering and the class-file writer are written in Bux
-**Depends on:** Item 061, Item 071 — the writer puts bytes on disk, and lowering reads types.
-The writer has 172 sites of narrow integers, and a `bytes` module hides `% 256` behind names.
-[073][a] - `compiler/ir.bx` lowers the typed tree to the JVM IR `docs/specs/codegen.md` states.
-[073][b] - `compiler/jvm.bx` writes a class file, with a `bytes` module for `u1`, `u2`, and `u4`.
-[073][c] - The harness holds every class file byte for byte equal to the Rust writer's output.
-
 ## 🔴 Item 074: The `bux` command line is written in Bux
 **Depends on:** Item 060, Item 062, Item 068, Item 072, Item 073 — every command is a phase.
 [074][a] - `compiler/main.bx` parses the arguments and runs every command `bux --help` lists.

@@ -171,6 +171,38 @@ each step written beside these is reachable by name, as `files.read_whole` alrea
 That is what writing these in Bux costs, and a program that wants a file written writes
 `files.write`.
 
+## Writing bytes
+
+A class file holds bytes and not text, and a compiler written in Bux writes class files.
+So `files` writes bytes with one more function.
+
+```text
+files.write_bytes(path: String, bytes: List<Int>) -> Result<String, String>
+```
+
+`files.write_bytes` writes `bytes` as the whole of the file at `path`, one byte for each value.
+It empties whatever was there, and it gives back `path` in the `Ok`, as `files.write` does.
+Each value is a byte from 0 to 255, and a program splits a larger number into bytes itself.
+A value outside 0 to 255 is an `Err` that names the value, and the file is not opened.
+A byte is never written as a replacement for a value that does not fit.
+
+No member of the JVM that writes a byte can cross the boundary.
+A byte array crosses neither way, and `java.io.OutputStream.write` gives nothing back.
+An `Ok` needs something to carry, so no `extern` can give back `()` for that member.
+So `files.write_bytes` writes on the `java.io.PrintWriter` that `files.write` opens too.
+It opens that writer with the ISO-8859-1 encoding.
+That encoding writes each char from 0 to 255 as the one byte of the same value.
+`files.as_latin_1` names that encoding, beside `files.as_utf_8`.
+Each byte is a string of one char, which `java.lang.Character.toString(int)` gives.
+That member takes an `int`, so its declaration `files.one_char` narrows and gives an `Option`.
+The writer is closed and asked `checkError`, as `files.write` asks it.
+`files` adds `write_bytes`, `bytes_sent`, `as_latin_1`, and `one_char` for this.
+So `files` reaches two more JVM classes: `java.lang.Character`, and `java.lang.Long`.
+The refusal of a value shows that value, and `java.lang.Long.toString` shows a number.
+
+`tests/spec/io/bytes_written.lm` writes bytes, reads them back as text, and shows them.
+`docs/specs/codegen.md` states the one caller in the compiler, which writes each class file.
+
 ## The errors
 
 ```text
