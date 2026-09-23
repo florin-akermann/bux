@@ -114,3 +114,16 @@ The JVM says `VerifyError: Operand stack underflow`: the lowering drops the argu
 [090][a] - `tests/spec/calls/` holds an `expect-run` example of such a call, on `T` and on `Int`.
 [090][b] - The lowering in `compiler/` keeps the argument on the stack, and the example runs.
 [090][c] - `compiler/exhaustiveness.lm`, `holes.lm`, and `types.lm` lose `printed`, which has no caller.
+
+## 🔴 Item 092: Imports form one block with no blank line between two of them
+Today canonical form puts one blank line between two top-level items, and an import is one.
+A file with ten imports thus spends ten lines on blanks, and the block does not read as one.
+The new rule: no blank line between two imports, and one blank line after the last import.
+`bux fmt` repairs the whitespace, and a file with a blank line between imports does not compile.
+[092][a] - `docs/specs/formatting.md` and `docs/design.md` section 13 state the rule.
+[092][b] - The printer in `compiler/format.lm` writes imports with no blank line between them.
+[092][c] - A blank line between two imports is `L0200`, and its `help:` says to run `bux fmt`.
+[092][d] - The examples in `compiler/format.lm` that show two imports use the new form.
+[092][e] - `tests/spec/` holds a canonical import block and a refused one with a blank line.
+[092][f] - Every source under `compiler/`, `library/`, `example/`, and `tests/` is formatted again.
+[092][g] - `bux help fmt` states the rule, and `bin/runner` shows the whole tree is canonical.
