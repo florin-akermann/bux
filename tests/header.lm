@@ -4,11 +4,8 @@
 // `// expect-error:` is refused with the code it names, and one headed `// expect-run` runs as the
 // lines under the header state. A header the runner cannot hold an example to is itself a failure.
 import command
-
 import list
-
 import strings
-
 import walk
 
 /// What the example `source` says about itself.

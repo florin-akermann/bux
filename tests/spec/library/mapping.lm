@@ -8,9 +8,7 @@
 // generic. A key is any type with an `Eq` instance, which `Int` and `String` both are, and
 // `docs/specs/collections.md` states what each of these functions costs.
 import io
-
 import map
-
 import set
 
 fn main(arguments: List<String>) -> Int {

@@ -4,7 +4,6 @@
 // A function whose type nothing settled is generic too, and is reached exactly as one that
 // writes its type parameters out is.
 import holder
-
 import io
 
 fn main(arguments: List<String>) -> Int {

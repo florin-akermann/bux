@@ -3,7 +3,6 @@
 // Bytes are written whole and read back, which is how a compiler keeps a class file it writes.
 // Each value is one byte, so the three bytes 66, 117, and 120 read back as the text `Bux`.
 import files
-
 import io
 
 fn main(arguments: List<String>) -> Int {

@@ -3,21 +3,13 @@
 // Three kinds of input are drawn: text that mostly fails to parse, a program of well-formed items,
 // and one `extern` declaration. A span counts UTF-8 bytes, which `lexing` measures.
 import ast
-
 import drawn
-
 import held
-
 import ir
-
 import lexer
-
 import lexing
-
 import list
-
 import parser
-
 import strings
 
 /// Every property of the parser, each tried on `cases` drawn cases, in a fixed order.

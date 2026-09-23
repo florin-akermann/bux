@@ -4,7 +4,6 @@
 // A removal says whether there was anything to remove, so removing twice is no failure.
 // What a failure says of itself is the JDK's wording, so the program states its own instead.
 import files
-
 import io
 
 fn main(arguments: List<String>) -> Int {

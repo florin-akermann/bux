@@ -438,12 +438,25 @@ status 1
 !
 ! help: imports come first, before every declaration
 
+$ check tests/spec/format/import_block.lm
+status 0
+
+$ check tests/spec/format/import_block_with_a_blank.lm
+status 1
+! error[L0200]: canonical form does not write this line
+!   --> tests/spec/format/import_block_with_a_blank.lm:4:1
+!
+!   4 | 
+!     | ^
+!
+! help: run `bux fmt` to take this line out
+
 $ check tests/spec/format/import_order.lm
 status 1
 ! error[L0201]: `import files` is written after `import io`
-!   --> tests/spec/format/import_order.lm:5:1
+!   --> tests/spec/format/import_order.lm:4:1
 !
-!   5 | import files
+!   4 | import files
 !     | ^^^^^^^^^^^^
 !
 ! help: `files` sorts before `io`
@@ -2665,9 +2678,16 @@ $ check --json tests/spec/format/import_below.lm
 status 1
 > {"file":"tests/spec/format/import_below.lm","code":"L0201","message":"`import io` is written after a declaration","span":{"start":147,"len":9},"help":"imports come first, before every declaration"}
 
+$ check --json tests/spec/format/import_block.lm
+status 0
+
+$ check --json tests/spec/format/import_block_with_a_blank.lm
+status 1
+> {"file":"tests/spec/format/import_block_with_a_blank.lm","code":"L0200","message":"canonical form does not write this line","span":{"start":120,"len":0},"help":"run `bux fmt` to take this line out","fix":{"start":0,"len":230,"text":"// expect-error: L0200\n// A blank line between two imports is not canonical form, and `bux fmt` takes it out.\nimport io\nimport strings\n\nfn main(arguments: List<String>) -> Int {\n    io.print(strings.join(arguments, \" \"))\n    0\n}\n"}}
+
 $ check --json tests/spec/format/import_order.lm
 status 1
-> {"file":"tests/spec/format/import_order.lm","code":"L0201","message":"`import files` is written after `import io`","span":{"start":115,"len":12},"help":"`files` sorts before `io`"}
+> {"file":"tests/spec/format/import_order.lm","code":"L0201","message":"`import files` is written after `import io`","span":{"start":114,"len":12},"help":"`files` sorts before `io`"}
 
 $ check --json tests/spec/format/initial_behind_an_underscore.lm
 status 1
@@ -4370,12 +4390,26 @@ status 1
 !
 ! help: imports come first, before every declaration
 
+$ api tests/spec/format/import_block.lm
+status 0
+> fn main(arguments: List<String>) -> Int
+
+$ api tests/spec/format/import_block_with_a_blank.lm
+status 1
+! error[L0200]: canonical form does not write this line
+!   --> tests/spec/format/import_block_with_a_blank.lm:4:1
+!
+!   4 | 
+!     | ^
+!
+! help: run `bux fmt` to take this line out
+
 $ api tests/spec/format/import_order.lm
 status 1
 ! error[L0201]: `import files` is written after `import io`
-!   --> tests/spec/format/import_order.lm:5:1
+!   --> tests/spec/format/import_order.lm:4:1
 !
-!   5 | import files
+!   4 | import files
 !     | ^^^^^^^^^^^^
 !
 ! help: `files` sorts before `io`
@@ -8409,12 +8443,25 @@ status 1
 !
 ! help: imports come first, before every declaration
 
+$ test tests/spec/format/import_block.lm
+status 0
+
+$ test tests/spec/format/import_block_with_a_blank.lm
+status 1
+! error[L0200]: canonical form does not write this line
+!   --> tests/spec/format/import_block_with_a_blank.lm:4:1
+!
+!   4 | 
+!     | ^
+!
+! help: run `bux fmt` to take this line out
+
 $ test tests/spec/format/import_order.lm
 status 1
 ! error[L0201]: `import files` is written after `import io`
-!   --> tests/spec/format/import_order.lm:5:1
+!   --> tests/spec/format/import_order.lm:4:1
 !
-!   5 | import files
+!   4 | import files
 !     | ^^^^^^^^^^^^
 !
 ! help: `files` sorts before `io`
@@ -8442,17 +8489,17 @@ status 1
 $ test tests/spec/format/layout.lm
 status 1
 ! error[L0601]: `describe` states no example
-!   --> tests/spec/format/layout.lm:5:4
+!   --> tests/spec/format/layout.lm:4:4
 !
-!   5 | fn describe(payment: Payment) -> String {
+!   4 | fn describe(payment: Payment) -> String {
 !     |    ^^^^^^^^
 !
 ! help: write `// example: <an expression that is true>` in the comment above it
 !
 ! error[L0601]: `total` states no example
-!   --> tests/spec/format/layout.lm:20:4
+!   --> tests/spec/format/layout.lm:19:4
 !
-!   20 | fn total(users: List<User>, limit: Int, current: User) -> Int {
+!   19 | fn total(users: List<User>, limit: Int, current: User) -> Int {
 !      |    ^^^^^
 !
 ! help: write `// example: <an expression that is true>` in the comment above it
@@ -9789,9 +9836,9 @@ status 1
 $ test tests/spec/packages/both/main.lm
 status 1
 ! error[L0601]: `edge` states no example
-!   --> tests/spec/packages/both/main.lm:6:4
+!   --> tests/spec/packages/both/main.lm:5:4
 !
-!   6 | fn edge() -> Int {
+!   5 | fn edge() -> Int {
 !     |    ^^^^
 !
 ! help: write `// example: <an expression that is true>` in the comment above it
@@ -11679,9 +11726,9 @@ status 1
 $ build tests/spec/packages/both
 status 1
 ! error[L0601]: `edge` states no example
-!   --> tests/spec/packages/both/main.lm:6:4
+!   --> tests/spec/packages/both/main.lm:5:4
 !
-!   6 | fn edge() -> Int {
+!   5 | fn edge() -> Int {
 !     |    ^^^^
 !
 ! help: write `// example: <an expression that is true>` in the comment above it
@@ -12161,6 +12208,12 @@ $ fmt tests/spec/format/field_not_in_case.lm
 status 0
 
 $ fmt tests/spec/format/import_below.lm
+status 0
+
+$ fmt tests/spec/format/import_block.lm
+status 0
+
+$ fmt tests/spec/format/import_block_with_a_blank.lm
 status 0
 
 $ fmt tests/spec/format/import_order.lm
@@ -13924,12 +13977,18 @@ status 1
 !
 ! help: imports come first, before every declaration
 
+$ build tests/spec/format/import_block.lm
+status 0
+
+$ build tests/spec/format/import_block_with_a_blank.lm
+status 0
+
 $ build tests/spec/format/import_order.lm
 status 1
 ! error[L0201]: `import files` is written after `import io`
-!   --> tests/spec/format/import_order.lm:5:1
+!   --> tests/spec/format/import_order.lm:4:1
 !
-!   5 | import files
+!   4 | import files
 !     | ^^^^^^^^^^^^
 !
 ! help: `files` sorts before `io`
@@ -13957,17 +14016,17 @@ status 1
 $ build tests/spec/format/layout.lm
 status 1
 ! error[L0601]: `describe` states no example
-!   --> tests/spec/format/layout.lm:5:4
+!   --> tests/spec/format/layout.lm:4:4
 !
-!   5 | fn describe(payment: Payment) -> String {
+!   4 | fn describe(payment: Payment) -> String {
 !     |    ^^^^^^^^
 !
 ! help: write `// example: <an expression that is true>` in the comment above it
 !
 ! error[L0601]: `total` states no example
-!   --> tests/spec/format/layout.lm:20:4
+!   --> tests/spec/format/layout.lm:19:4
 !
-!   20 | fn total(users: List<User>, limit: Int, current: User) -> Int {
+!   19 | fn total(users: List<User>, limit: Int, current: User) -> Int {
 !      |    ^^^^^
 !
 ! help: write `// example: <an expression that is true>` in the comment above it
@@ -15304,9 +15363,9 @@ status 1
 $ build tests/spec/packages/both/main.lm
 status 1
 ! error[L0601]: `edge` states no example
-!   --> tests/spec/packages/both/main.lm:6:4
+!   --> tests/spec/packages/both/main.lm:5:4
 !
-!   6 | fn edge() -> Int {
+!   5 | fn edge() -> Int {
 !     |    ^^^^
 !
 ! help: write `// example: <an expression that is true>` in the comment above it

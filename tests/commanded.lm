@@ -24,27 +24,16 @@
 // `golden_written` gives the text of a golden file for a list of command lines. `bin/runner golden`
 // writes each golden file again with it, which is how an answer changed on purpose is written down.
 import command
-
 import enacted
-
 import exemplified
-
 import files
-
 import header
-
 import held
-
 import ir
-
 import list
-
 import modules
-
 import started
-
 import strings
-
 import walk
 
 /// Writes each golden file again: its own command lines, each with the answer it gets now.

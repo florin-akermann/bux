@@ -4,7 +4,6 @@
 // that source rather than a file. `docs/specs/library.md` says nothing is looked for beside the
 // importing file, which is why this example needs no second file next to it.
 import io
-
 import strings
 
 fn main(arguments: List<String>) -> Int {

@@ -4,21 +4,13 @@
 // declares, each of which states one example of itself, and reads the examples out of it with the
 // compiler's own functions in the runner's JVM.
 import ast
-
 import command
-
 import drawn
-
 import held
-
 import ir
-
 import lexer
-
 import list
-
 import parser
-
 import strings
 
 /// Every property of the example lines over `cases` drawn cases each, in a fixed order.

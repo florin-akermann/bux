@@ -4,9 +4,7 @@
 // `java -version` writes what it has to say on standard error and ends with the code 0, and
 // what it says is the JDK's own wording, so the program states what it read rather than that.
 import io
-
 import programs
-
 import strings
 
 fn main(arguments: List<String>) -> Int {

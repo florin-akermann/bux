@@ -5,33 +5,19 @@
 // `docs/specs/types.md` states the inference. A module is checked as `lumen check` checks it,
 // but in the runner's own JVM, against the prelude the runner reads.
 import ast
-
 import command
-
 import drawn
-
 import held
-
 import infer
-
 import ir
-
 import lexer
-
 import list
-
 import modules
-
 import parser
-
 import resolver
-
 import strings
-
 import surface
-
 import types
-
 import unify
 
 /// The seed of each case of a property that tries `cases` of them, in order.

@@ -4,7 +4,6 @@
 // An extern type is a Java class only the module that declares it names. The prelude and `list`
 // write their methods at it all the same, because a use asks for them with the class it names.
 import io
-
 import list
 
 fn main(arguments: List<String>) -> Int {

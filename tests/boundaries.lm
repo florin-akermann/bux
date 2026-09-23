@@ -4,17 +4,11 @@
 // A module that imports a library module is checked as the file `demo.lm` in a directory of its
 // own under the temporary directory, which is removed whole when every property has run.
 import checking
-
 import command
-
 import drawn
-
 import held
-
 import ir
-
 import list
-
 import strings
 
 /// One `Held` for each property of what crosses into a module, in a fixed order.

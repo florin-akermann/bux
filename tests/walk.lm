@@ -3,13 +3,9 @@
 // `docs/implementation.md` section 7 states the runner. A walk is in the order names sort, so two
 // runs report the same failures in the same order.
 import command
-
 import files
-
 import list
-
 import modules
-
 import strings
 
 /// Every file under `directory` whose name ends in `ending`, at any depth, in the order names sort.

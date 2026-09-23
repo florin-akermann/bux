@@ -220,7 +220,7 @@ No class file other than the seed is kept in the repository, so a checkout boots
 
 The first seed is the compiler that the Rust compiler built, before Item 087 deleted the Rust.
 A change to the compiler changes stage 1, and stage 2 still equals it, because stage 1 built it.
-So the seed is replaced for one of three reasons, and for no other.
+So the seed is replaced for one of four reasons, and for no other.
 The first reason is that the compiler needs a feature that the seed cannot compile.
 The item that needs it builds stage 1 with the old seed, and it packs stage 1 as the new seed.
 The second reason is that the lowering or the writer changed the bytes of the compiler's classes.
@@ -235,6 +235,12 @@ The old seed writes stage 1 where the new `bin/bootstrap` does not read it.
 The item builds stage 1 with the old seed, stage 2 with stage 1, and stage 3 with stage 2.
 Stage 3 must equal stage 2, and the item packs stage 2 as the new seed.
 Item 096 did this when a build moved every class from beside its source to `target/`.
+The fourth reason is that canonical form changed, so the old seed refuses the sources.
+The item changes the printer, and the old seed builds stage 1 from the sources in the old form.
+The `bux fmt` of stage 1 then writes every source in the new form.
+Stage 1 builds stage 2, stage 2 builds stage 3, and stage 3 must equal stage 2.
+The item packs stage 2 as the new seed.
+Item 092 did this when the blank line between two imports was taken out.
 In each case, `bin/bootstrap` must then hold stage 2 equal to stage 1 with the new seed.
 The item says so, and it replaces the seed in its own commit.
 

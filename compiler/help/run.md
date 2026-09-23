@@ -55,7 +55,6 @@ A program reaches the console with `io`, the file system with `files`, and anoth
 
 ```text
 import files
-
 import io
 
 fn main(arguments: List<String>) -> Int {

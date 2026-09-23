@@ -3,19 +3,12 @@
 // The properties of the exhaustiveness check, the holes, and the page each read a module of their
 // own that imports nothing. Each is compiled as `demo`, which nothing they state depends on.
 import ast
-
 import infer
-
 import lexer
-
 import parser
-
 import refusal
-
 import resolver
-
 import surface
-
 import types
 
 /// `source` typed as the module `demo` against `prelude`, and nothing where a phase refuses it.

@@ -4,23 +4,14 @@
 // goes through the compiler's own functions in the runner's JVM, and a JVM is started only to run
 // an example headed `// expect-run`, from the line `lumen run` would start it with.
 import command
-
 import environment
-
 import files
-
 import format
-
 import header
-
 import held
-
 import ir
-
 import list
-
 import modules
-
 import walk
 
 /// Every example of `paths`, which are under `directory`, each held to its header and to canonical
@@ -44,7 +35,7 @@ fn every_example_held(directory: String, paths: List<String>, library: ir.Librar
 fn example_held(path: String, library: ir.Library, limit: Int) -> held.Held {
     source := ok_or(files.read(path), "")
     found := stated_held(Opened { path: path, source: source }, library, limit)
-    if is_departing(source) {
+    if is_departing(source) && !is_stated_departing(header.expectation_of(source)) {
         return held.with_failure(found, path + ": not in canonical form, which `lumen fmt` writes")
     }
     found
@@ -57,6 +48,16 @@ fn is_departing(source: String) -> Bool {
     match format.format(source) {
         Ok(canonical) => canonical != source
         Err(_) => false
+    }
+}
+
+/// Whether a header states `L0200` as the refusal, so the example may depart from canonical form.
+// example: is_stated_departing(header.Refused("L0200"))
+// example: !is_stated_departing(header.Refused("L0201"))
+fn is_stated_departing(expected: header.Expectation) -> Bool {
+    match expected {
+        header.Refused(code) => code == "L0200"
+        _ => false
     }
 }
 

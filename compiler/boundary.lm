@@ -4,19 +4,12 @@
 // The boundary is a signature and a Java name beside it and nothing more,
 // so each check reads the types the signature names and the words the declaration writes.
 import ast
-
 import lexer
-
 import list
-
 import map
-
 import parser
-
 import refusal
-
 import strings
-
 import unify
 
 /// Where the result of `declaration` crosses: a field holds it, and a call gives it back.

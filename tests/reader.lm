@@ -4,7 +4,6 @@
 // that shares the mistakes of the writer proves nothing. A byte past the end reads as 0, and a
 // constant of a tag the writer never writes stops the pool, so `is_whole` is false for it.
 import list
-
 import strings
 
 /// The contents of the class file `bytes`, read from the start.

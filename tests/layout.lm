@@ -4,23 +4,14 @@
 // of items a person wrote out of canonical form, and one `extern` declaration. A tree is compared
 // as `ast.printed` writes it, with each span taken out, because formatting moves every offset.
 import drawn
-
 import format
-
 import held
-
 import ir
-
 import lexer
-
 import list
-
 import parser
-
 import parsing
-
 import strings
-
 import walk
 
 /// Every property of the formatter, each tried on `cases` drawn cases, in a fixed order.

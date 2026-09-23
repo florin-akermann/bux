@@ -5,7 +5,6 @@
 // `docs/specs/codegen.md` states. A million pushes therefore run at once, where a push that
 // copied the whole list each time would copy the square of a million elements.
 import io
-
 import list
 
 fn main(arguments: List<String>) -> Int {

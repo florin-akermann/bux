@@ -5,7 +5,6 @@
 // Lexing is total: text the language has no use for is an `Unknown` or an `UnterminatedString`.
 // A string is read one UTF-16 code unit at a time, and a span counts the bytes of its UTF-8 form.
 import list
-
 import strings
 
 /// The tokens of `source`, one line each: the kind, then the span as a start and an end.

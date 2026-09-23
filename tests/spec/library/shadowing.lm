@@ -4,7 +4,6 @@
 // library's all the same, because `docs/specs/library.md` says the compiler holds that source
 // and looks beside no file for it.
 import io
-
 import strings
 
 fn main(arguments: List<String>) -> Int {

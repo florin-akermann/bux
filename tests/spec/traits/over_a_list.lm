@@ -12,7 +12,6 @@
 // > a generic written over a constrained element compares two whole lists
 // The prelude writes `Eq`, `Ord`, `Hash`, and `Show` for `List<T>`, and a derive reaches them.
 import io
-
 import list
 
 fn main(arguments: List<String>) -> Int {

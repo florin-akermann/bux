@@ -4,17 +4,11 @@
 // local for each field, and builds it only where a second name lets it go. The property runs both
 // bodies on a small stack machine, which knows only the instructions such a body is made of.
 import compiled
-
 import drawn
-
 import held
-
 import ir
-
 import list
-
 import map
-
 import strings
 
 /// The one property of a record kept in locals, checked over `cases` drawn records.

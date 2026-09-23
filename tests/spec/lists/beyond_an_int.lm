@@ -6,7 +6,6 @@
 // An index past that range holds nothing, however its low 32 bits read.
 // `4294967296` is `0` in its low 32 bits, so a read that cut the index would find the `1`.
 import io
-
 import list
 
 fn main(arguments: List<String>) -> Int {

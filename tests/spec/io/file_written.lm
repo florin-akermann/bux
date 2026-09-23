@@ -3,7 +3,6 @@
 // A file is written whole and read back, so a program keeps what it works out.
 // `files.write` gives back the path it wrote to, so the read is written over what the write said.
 import files
-
 import io
 
 fn main(arguments: List<String>) -> Int {

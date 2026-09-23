@@ -4,35 +4,20 @@
 // A module is checked against the prelude and against what every module loaded before it offers.
 // A module that types gives its API page, which `docs/specs/api-surface.md` states.
 import ast
-
 import carried
-
 import declared
-
 import format
-
 import infer
-
 import lexer
-
 import list
-
 import map
-
 import modules
-
 import parser
-
 import processes
-
 import refusal
-
 import resolver
-
 import strings
-
 import surface
-
 import unify
 
 /// The prelude a program is checked against, read out of the prelude's own `source`.

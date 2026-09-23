@@ -4,13 +4,9 @@
 // Each case draws a small module from a fixed seed and asks whether the type inference accepts it,
 // in-process, against the prelude the runner reads. A failure names the seed and the module.
 import checking
-
 import drawn
-
 import held
-
 import ir
-
 import list
 
 /// One `Held` for each property of how a body and a call are written, in a fixed order.

@@ -4,27 +4,16 @@
 // walk holds one `Inference`, which each step takes and gives back changed, so the table, the
 // names in scope, and what still waits on a type are values rather than places that change.
 import ast
-
 import declared
-
 import format
-
 import lexer
-
 import list
-
 import map
-
 import refusal
-
 import resolver
-
 import set
-
 import strings
-
 import surface
-
 import unify
 
 /// One run of inference over an empty module, which is what an example starts from.

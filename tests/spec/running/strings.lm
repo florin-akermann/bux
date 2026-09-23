@@ -6,9 +6,7 @@
 // The two are two classes, so the call of `strings.length` reaches the library's.
 // `list.has_value` over a `Word` reaches the class of this module for the `Eq` of a `Word`.
 import io
-
 import list
-
 import strings
 
 fn main(arguments: List<String>) -> Int {

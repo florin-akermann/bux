@@ -4,13 +4,9 @@
 // The check reads the tree alone, so it runs before any type is declared or inferred. Each break of
 // the shape has a code of its own, and the first break the module writes is the one refused.
 import ast
-
 import lexer
-
 import list
-
 import parser
-
 import refusal
 
 /// The code and span of the first break of the shape `source` writes, or `""`.

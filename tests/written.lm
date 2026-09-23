@@ -3,19 +3,12 @@
 // `docs/specs/codegen.md` states what the writer writes. Some properties compile a drawn source,
 // some write a module built here out of drawn bodies, and `reader` reads the bytes back.
 import compiled
-
 import drawn
-
 import held
-
 import ir
-
 import jvm
-
 import list
-
 import reader
-
 import strings
 
 /// Every property of the class-file writer, each checked over `cases` drawn modules, in order.
@@ -306,7 +299,7 @@ fn drawn_program(draw: drawn.Draw) -> String {
     for which in drawn.numbers(drawn.next(draw), many, 9) {
         body += "    " + or(list.at(statements(), which), "") + "\n"
     }
-    "import list\n\nimport strings\n\nfn main(arguments: List<String>) -> Int {\n    count := list.length(arguments)\n    var total = 0\n" + body + "    total\n}\n\n/// Whether `total` is even.\n// example: is_even(2)\nfn is_even(total: Int) -> Bool {\n    or(total % 2, 1) == 0\n}\n\ntype Box = {\n    held: Int\n}\n"
+    "import list\nimport strings\n\nfn main(arguments: List<String>) -> Int {\n    count := list.length(arguments)\n    var total = 0\n" + body + "    total\n}\n\n/// Whether `total` is even.\n// example: is_even(2)\nfn is_even(total: Int) -> Bool {\n    or(total % 2, 1) == 0\n}\n\ntype Box = {\n    held: Int\n}\n"
 }
 
 /// The statements a drawn program writes before it gives back its total.

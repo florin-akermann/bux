@@ -1,0 +1,11 @@
+// Imports form one block, with no blank line between two of them.
+// One blank line follows the last import, as one follows every other item.
+import io
+import list
+import strings
+
+fn main(arguments: List<String>) -> Int {
+    words := list.push(arguments, "hi")
+    io.print(strings.join(words, " "))
+    0
+}

@@ -5,17 +5,11 @@
 // Nothing here changes the tree: each answer sits beside it, under the place its name is written.
 // No name ever hides another, so a scope is one map, and a name leaves it when its block ends.
 import ast
-
 import lexer
-
 import list
-
 import map
-
 import parser
-
 import set
-
 import strings
 
 /// What the resolver says of `source`, in the form the harness compares.

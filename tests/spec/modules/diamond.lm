@@ -4,9 +4,7 @@
 // `relay` imports `holder` and this module imports both, so `holder` is reached two ways.
 // A module two modules import is read once, and that is no ring.
 import holder
-
 import io
-
 import relay
 
 fn main(arguments: List<String>) -> Int {

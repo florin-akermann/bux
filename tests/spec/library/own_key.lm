@@ -9,11 +9,8 @@
 // has. `Kept` is this module's, and so are the `Eq` and the `Hash` this module derives for it, so
 // `map` writes `insert$main$Kept$Int` and that method calls `main.Eq$Kept$is_equal`.
 import io
-
 import list
-
 import map
-
 import set
 
 fn main(arguments: List<String>) -> Int {

@@ -5,25 +5,15 @@
 // one flat table holds a whole module. The table is a value: each declaration gives back the one
 // it made, and the variables a signature leaves open come out of the inference table beside it.
 import ast
-
 import boundary
-
 import lexer
-
 import list
-
 import map
-
 import parser
-
 import refusal
-
 import resolver
-
 import set
-
 import surface
-
 import unify
 
 /// Whether the environment gives a type to the name filed under `key`.

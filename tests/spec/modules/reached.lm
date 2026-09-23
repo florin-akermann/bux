@@ -4,7 +4,6 @@
 // > pending
 // A type another module declares is reached through the import, as a function of it is.
 import holder
-
 import io
 
 fn main(arguments: List<String>) -> Int {

@@ -3,17 +3,11 @@
 // Each property draws a module out of a fixed set of constructs, lowers it as a build lowers it,
 // and holds what the lowering gives back to one invariant.
 import compiled
-
 import drawn
-
 import held
-
 import ir
-
 import jvm
-
 import list
-
 import strings
 
 /// Every property of the lowering, each checked over `cases` drawn modules, in a fixed order.

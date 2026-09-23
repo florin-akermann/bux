@@ -3,23 +3,14 @@
 // Each property draws a module from a fixed seed and resolves it with `compiler/resolver.lm`
 // against the prelude the runner reads. A failure names the seed and the module it drew.
 import ast
-
 import drawn
-
 import held
-
 import ir
-
 import lexer
-
 import list
-
 import map
-
 import parser
-
 import resolver
-
 import strings
 
 /// One `Held` for each property of name resolution, in a fixed order.

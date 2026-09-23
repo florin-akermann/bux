@@ -8,79 +8,42 @@
 // ends with status 0 only where nothing failed. With the word `golden`, it writes the golden files
 // under `tests/commands` again and holds nothing.
 import boundaries
-
 import branching
-
 import collected
-
 import command
-
 import commanded
-
 import conventions
-
 import covered
-
 import crossing
-
 import deriving
-
 import documented
-
 import enacted
-
 import escaping
-
 import exampled
-
 import exemplified
-
 import held
-
 import instances
-
 import io
-
 import ir
-
 import launched
-
 import layout
-
 import lexing
-
 import list
-
 import loading
-
 import lowering
-
 import map
-
 import modules
-
 import naming
-
 import operating
-
 import paged
-
 import parsing
-
 import rendering
-
 import siblings
-
 import spawned
-
 import started
-
 import typing
-
 import unfinished
-
 import walk
-
 import written
 
 fn main(arguments: List<String>) -> Int {

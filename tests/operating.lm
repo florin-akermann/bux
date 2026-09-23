@@ -1,19 +1,12 @@
 // The drawn properties of whole-number literals and of operators, which `docs/specs/literals.md`
 // and `docs/specs/operators.md` state.
 import checking
-
 import command
-
 import drawn
-
 import held
-
 import infer
-
 import ir
-
 import list
-
 import strings
 
 /// One `Held` for each property of literals and operators, in a fixed order.

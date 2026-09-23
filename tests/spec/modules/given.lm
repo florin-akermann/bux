@@ -5,7 +5,6 @@
 // > pending
 // A branch gives back a variant of another module's type, and the branches meet as that type.
 import holder
-
 import io
 
 fn main(arguments: List<String>) -> Int {
