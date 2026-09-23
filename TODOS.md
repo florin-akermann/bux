@@ -6,7 +6,7 @@
 
 ## Open
 
-## 🔴 Item 072: Exhaustiveness and holes are checked in Bux
+## 🟡 Item 072: Exhaustiveness and holes are checked in Bux
 **Depends on:** nothing — Item 071 landed; both read the typed tree.
 [072][a] - `compiler/exhaustiveness.bx` reports every gap `docs/specs/exhaustiveness.md` names.
 [072][b] - `compiler/holes.bx` lists every `todo` as `docs/specs/holes.md` states.
