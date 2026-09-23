@@ -1,0 +1,617 @@
+// The types of type inference, the table of what each variable was settled on, and the schemes.
+//
+// `docs/specs/types.md` states the types and unification, and `crates/types` does the same in Rust.
+// Nothing here knows a program: this is the part of the phase that reads types and nothing else.
+// The table is a value, so each step that settles a variable gives back the table it made.
+import list
+
+import map
+
+import set
+
+import strings
+
+/// `expected` and `found` made one type, with the table that says so, or how the two fail to meet.
+///
+/// A variable settles on the other type. Two named types meet where each argument meets its own.
+// example: is_unified(unify(table: empty_table(), expected: Var(0), found: int()))
+// example: !is_unified(unify(table: empty_table(), expected: int(), found: text_type()))
+fn unify(table: Table, expected: Type, found: Type) -> Result<Table, Clash> {
+    one := shallow(table, expected)
+    other := shallow(table, found)
+    match one {
+        Var(variable) => settled_or_same(table: table, variable: variable, other: other)
+        _ => against(table: table, one: one, other: other)
+    }
+}
+
+/// `one`, which is no variable, met by `other`, which settles where it is one.
+// example: is_unified(against(table: empty_table(), one: int(), other: Var(0)))
+fn against(table: Table, one: Type, other: Type) -> Result<Table, Clash> {
+    match other {
+        Var(variable) => settle(table, variable, one)
+        _ => same_shape(table: table, one: one, other: other)
+    }
+}
+
+/// Two types that are no variable, which meet where they are the same shape over parts that meet.
+// example: is_unified(same_shape(table: empty_table(), one: list_of(Var(0)), other: list_of(int())))
+// example: !is_unified(same_shape(table: empty_table(), one: Unit, other: int()))
+fn same_shape(table: Table, one: Type, other: Type) -> Result<Table, Clash> {
+    match one {
+        Named { name, arguments } => named_against(table: table, head: name, held: arguments, other: other)
+        Function { parameters, result } => function_against(table: table, taken: parameters, given: result, other: other)
+        _ => alike(table: table, one: one, other: other)
+    }
+}
+
+/// A named type met by `other`, which meets it with the same name and as many arguments.
+// example: !is_unified(named_against(table: empty_table(), head: "Int", held: [], other: text_type()))
+fn named_against(table: Table, head: String, held: List<Type>, other: Type) -> Result<Table, Clash> {
+    match other {
+        Named { name, arguments } => named_alike(table: table, theirs: Held { name: head, arguments: held }, ours: Held { name: name, arguments: arguments })
+        _ => Err(Mismatch(table))
+    }
+}
+
+/// Two named types, which meet where the names agree and each argument meets its own.
+// example: is_unified(named_alike(table: empty_table(), theirs: Held { name: "Int", arguments: [] }, ours: Held { name: "Int", arguments: [] }))
+fn named_alike(table: Table, theirs: Held, ours: Held) -> Result<Table, Clash> {
+    if theirs.name != ours.name || list.length(theirs.arguments) != list.length(ours.arguments) {
+        return Err(Mismatch(table))
+    }
+    each_unified(table: table, theirs: theirs.arguments, ours: ours.arguments)
+}
+
+/// A function type met by `other`, which meets it where each parameter and the result meet.
+// example: is_unified(function_against(table: empty_table(), taken: [int()], given: int(), other: Function { parameters: [Var(0)], result: Var(1) }))
+fn function_against(table: Table, taken: List<Type>, given: Type, other: Type) -> Result<Table, Clash> {
+    match other {
+        Function { parameters, result } => functions_alike(table: table, theirs: Function { parameters: taken, result: given }, ours: parameters, result: result)
+        _ => Err(Mismatch(table))
+    }
+}
+
+/// Two function types, which meet where they take as many parameters and every part meets.
+// example: !is_unified(functions_alike(table: empty_table(), theirs: Function { parameters: [], result: Unit }, ours: [int()], result: Unit))
+fn functions_alike(table: Table, theirs: Type, ours: List<Type>, result: Type) -> Result<Table, Clash> {
+    taken := parameters_of(theirs)
+    if list.length(taken) != list.length(ours) {
+        return Err(Mismatch(table))
+    }
+    each := each_unified(table: table, theirs: taken, ours: ours)?
+    unify(table: each, expected: result_of(theirs), found: result)
+}
+
+/// Each of `theirs` met by the one at its place in `ours`, in order.
+// example: is_unified(each_unified(table: empty_table(), theirs: [Var(0)], ours: [int()]))
+fn each_unified(table: Table, theirs: List<Type>, ours: List<Type>) -> Result<Table, Clash> {
+    var unified = table
+    var index = 0
+    for one in theirs {
+        unified = unify(table: unified, expected: one, found: or(list.at(ours, index), Unit))?
+        index += 1
+    }
+    Ok(unified)
+}
+
+/// Whether unification made the two types one.
+// example: is_unified(Ok(empty_table()))
+fn is_unified(unified: Result<Table, Clash>) -> Bool {
+    match unified {
+        Ok(_) => true
+        Err(_) => false
+    }
+}
+
+/// A variable met by `other`, which is nothing to settle where `other` is that same variable.
+// example: is_unified(settled_or_same(table: empty_table(), variable: 0, other: Var(0)))
+fn settled_or_same(table: Table, variable: Int, other: Type) -> Result<Table, Clash> {
+    if other == Var(variable) {
+        return Ok(table)
+    }
+    settle(table, variable, other)
+}
+
+/// `()`, a type parameter, or a module, which meets exactly itself.
+// example: is_unified(alike(table: empty_table(), one: Unit, other: Unit))
+fn alike(table: Table, one: Type, other: Type) -> Result<Table, Clash> {
+    if one == other {
+        return Ok(table)
+    }
+    Err(Mismatch(table))
+}
+
+/// `variable` settled on `to`, unless `to` holds it or it is a whole number that `to` cannot be.
+///
+/// Two whole numbers that meet are one whole number, so the variable `to` is becomes one too.
+// example: !is_unified(settle(empty_table(), 0, list_of(Var(0))))
+// example: !is_unified(settle(whole_number(empty_table()).table, 0, text_type()))
+fn settle(table: Table, variable: Int, to: Type) -> Result<Table, Clash> {
+    if list.has_value(unsettled(table, to, []), variable) {
+        return Err(Infinite)
+    }
+    if !set.has_value(table.whole_numbers, variable) {
+        return Ok(table { settled: map.insert(table.settled, variable, to) })
+    }
+    match to {
+        Var(other) => Ok(table { settled: map.insert(table.settled, variable, to), whole_numbers: set.insert(table.whole_numbers, other) })
+        _ => settled_if_it_takes_one(table, variable, to)
+    }
+}
+
+/// A whole number settled on `to`, which a type may be where it has an `IntegerLiteral` instance.
+// example: !is_unified(settled_if_it_takes_one(empty_table(), 0, text_type()))
+fn settled_if_it_takes_one(table: Table, variable: Int, to: Type) -> Result<Table, Clash> {
+    if !is_written_at(table, to) {
+        return Err(Mismatch(table))
+    }
+    Ok(table { settled: map.insert(table.settled, variable, to) })
+}
+
+/// Whether a whole number may be written at `to`, which is whether `to` has the instance.
+// example: is_written_at(Table { settled: map.empty(), whole_numbers: set.empty(), written_at: set.insert(set.empty(), "Int"), made: 0 }, int())
+fn is_written_at(table: Table, to: Type) -> Bool {
+    match to {
+        Named { name, arguments } => set.has_value(table.written_at, name)
+        _ => false
+    }
+}
+
+/// The table that has made no variable and settled none.
+// example: empty_table().made == 0
+fn empty_table() -> Table {
+    Table { settled: map.empty(), whole_numbers: set.empty(), written_at: set.empty(), made: 0 }
+}
+
+/// A variable that stands for a whole number, which settles only where one may be written.
+// example: set.has_value(whole_number(empty_table()).table.whole_numbers, 0)
+fn whole_number(table: Table) -> Made {
+    counted := table { made: table.made + 1, whole_numbers: set.insert(table.whole_numbers, table.made) }
+    Made { table: counted, made: Var(table.made) }
+}
+
+/// `of` with every variable in it followed to whatever it stands for.
+// example: solved(empty_table(), list_of(Var(0))) == list_of(Var(0))
+fn solved(table: Table, of: Type) -> Type {
+    followed(table, of, AsItIs)
+}
+
+/// The same, with a whole number that nothing settled read as the `Int` it defaults to.
+///
+/// That is what a refusal owes its reader, who wrote a number rather than a variable.
+// example: read(whole_number(empty_table()).table, Var(0)) == int()
+fn read(table: Table, of: Type) -> Type {
+    followed(table, of, AsTheIntItDefaultsTo)
+}
+
+/// `of` followed to whatever it stands for, where `standing` says what a whole number is.
+// example: followed(empty_table(), Var(0), AsTheIntItDefaultsTo) == Var(0)
+fn followed(table: Table, of: Type, standing: Standing) -> Type {
+    found := shallow(table, of)
+    match found {
+        Var(variable) => whole_number_as(table, variable, standing)
+        Named { name, arguments } => Named { name: name, arguments: each_followed(table, arguments, standing) }
+        Function { parameters, result } => Function { parameters: each_followed(table, parameters, standing), result: followed(table, result, standing) }
+        _ => found
+    }
+}
+
+/// Each of `types`, followed.
+// example: each_followed(empty_table(), [Unit], AsItIs) == [Unit]
+fn each_followed(table: Table, types: List<Type>, standing: Standing) -> List<Type> {
+    var each = []
+    for one in types {
+        each = list.push(each, followed(table, one, standing))
+    }
+    each
+}
+
+/// A variable nothing settled, which reads as `Int` where it is a whole number and asked so.
+// example: whole_number_as(empty_table(), 0, AsItIs) == Var(0)
+fn whole_number_as(table: Table, variable: Int, standing: Standing) -> Type {
+    if standing == AsTheIntItDefaultsTo && set.has_value(table.whole_numbers, variable) {
+        return int()
+    }
+    Var(variable)
+}
+
+/// `into`, then every variable `of` still holds once it is solved, each named once.
+// example: unsettled(empty_table(), Function { parameters: [Var(1), Var(2)], result: Var(1) }, []) == [1, 2]
+fn unsettled(table: Table, of: Type, into: List<Int>) -> List<Int> {
+    found := shallow(table, of)
+    match found {
+        Var(variable) => with_var(into, variable)
+        Named { name, arguments } => each_unsettled(table, arguments, into)
+        Function { parameters, result } => unsettled(table, result, each_unsettled(table, parameters, into))
+        _ => into
+    }
+}
+
+/// `into`, then the unsettled variables of each of `types`.
+// example: each_unsettled(empty_table(), [Var(0), Unit], []) == [0]
+fn each_unsettled(table: Table, types: List<Type>, into: List<Int>) -> List<Int> {
+    var held = into
+    for one in types {
+        held = unsettled(table, one, held)
+    }
+    held
+}
+
+/// `of` with its outermost variable followed to whatever it was settled on.
+// example: shallow(ok_or(unify(table: empty_table(), expected: Var(0), found: int()), empty_table()), Var(0)) == int()
+fn shallow(table: Table, of: Type) -> Type {
+    var reached = of
+    for is_settled(table, reached) {
+        reached = or(map.get(table.settled, var_of(reached)), reached)
+    }
+    reached
+}
+
+/// Whether `of` is a variable that the table settled.
+// example: !is_settled(empty_table(), Var(0))
+fn is_settled(table: Table, of: Type) -> Bool {
+    match of {
+        Var(variable) => is_some_type(map.get(table.settled, variable))
+        _ => false
+    }
+}
+
+/// Whether a type is there.
+// example: is_some_type(Some(Unit))
+fn is_some_type(found: Option<Type>) -> Bool {
+    match found {
+        Some(_) => true
+        None => false
+    }
+}
+
+/// The number of the variable `of` is, which only a variable is asked for.
+// example: var_of(Var(3)) == 3
+fn var_of(of: Type) -> Int {
+    match of {
+        Var(variable) => variable
+        _ => -1
+    }
+}
+
+/// `into` with `variable` in it, which it holds once.
+// example: with_var([1], 1) == [1]
+fn with_var(into: List<Int>, variable: Int) -> List<Int> {
+    if list.has_value(into, variable) {
+        return into
+    }
+    list.push(into, variable)
+}
+
+/// `Int`, the one whole number the prelude supplies.
+// example: text_of(int()) == "Int"
+fn int() -> Type {
+    Named { name: "Int", arguments: [] }
+}
+
+/// `String`.
+// example: text_of(text_type()) == "String"
+fn text_type() -> Type {
+    Named { name: "String", arguments: [] }
+}
+
+/// `Bool`.
+// example: text_of(truth()) == "Bool"
+fn truth() -> Type {
+    Named { name: "Bool", arguments: [] }
+}
+
+/// `List<item>`.
+// example: text_of(list_of(int())) == "List<Int>"
+fn list_of(item: Type) -> Type {
+    Named { name: "List", arguments: [item] }
+}
+
+/// `Option<value>`.
+// example: text_of(option_of(int())) == "Option<Int>"
+fn option_of(value: Type) -> Type {
+    Named { name: "Option", arguments: [value] }
+}
+
+/// `Result<value, error>`.
+// example: text_of(result_type(value: int(), error: text_type())) == "Result<Int, String>"
+fn result_type(value: Type, error: Type) -> Type {
+    Named { name: "Result", arguments: [value, error] }
+}
+
+/// What a function type takes, which is nothing for any other type.
+// example: parameters_of(Function { parameters: [Unit], result: Unit }) == [Unit]
+fn parameters_of(function: Type) -> List<Type> {
+    match function {
+        Function { parameters, result } => parameters
+        _ => []
+    }
+}
+
+/// What a function type gives back, which is `()` for any other type.
+// example: result_of(Function { parameters: [], result: int() }) == int()
+fn result_of(function: Type) -> Type {
+    match function {
+        Function { parameters, result } => result
+        _ => Unit
+    }
+}
+
+/// Whether `found` is a function type.
+// example: is_function(Function { parameters: [], result: Unit })
+fn is_function(found: Type) -> Bool {
+    match found {
+        Function { parameters, result } => true
+        _ => false
+    }
+}
+
+/// Whether `found` is a variable.
+// example: is_var(Var(0))
+fn is_var(found: Type) -> Bool {
+    match found {
+        Var(_) => true
+        _ => false
+    }
+}
+
+/// A type as a message writes it, with `_` for a variable nothing settled.
+// example: text_of(Function { parameters: [int(), Var(0)], result: Unit }) == "(Int, _) -> ()"
+fn text_of(written: Type) -> String {
+    match written {
+        Var(_) => "_"
+        Parameter(parameter) => parameter.name
+        Named { name, arguments } => name + angled(arguments)
+        Function { parameters, result } => "(" + strings.join(texts_of(parameters), ", ") + ") -> " + text_of(result)
+        Module(name) => name
+        Unit => "()"
+    }
+}
+
+/// `<A, B>` around the arguments, or nothing where there are none.
+// example: angled([]) == ""
+fn angled(arguments: List<Type>) -> String {
+    if list.length(arguments) == 0 {
+        return ""
+    }
+    "<" + strings.join(texts_of(arguments), ", ") + ">"
+}
+
+/// The text of each type, in order.
+// example: texts_of([int(), Unit]) == ["Int", "()"]
+fn texts_of(types: List<Type>) -> List<String> {
+    var texts = []
+    for one in types {
+        texts = list.push(texts, text_of(one))
+    }
+    texts
+}
+
+/// A type that is the same type wherever it is used.
+// example: monomorphic(int()).body == int()
+fn monomorphic(body: Type) -> Scheme {
+    Scheme { quantified: [], body: body, required: [] }
+}
+
+/// The type parameter a declaration writes at `name`, known by where it is written.
+// example: written_parameter("T", 4) == TypeParameter { name: "T", origin: WrittenAt(4) }
+fn written_parameter(name: String, start: Int) -> TypeParameter {
+    TypeParameter { name: name, origin: WrittenAt(start) }
+}
+
+/// A type parameter the compiler writes for the prelude, known by its name alone.
+// example: prelude_parameter("T").origin == FromThePrelude
+fn prelude_parameter(name: String) -> TypeParameter {
+    TypeParameter { name: name, origin: FromThePrelude }
+}
+
+/// `scheme` at one use: each stand-in replaced by a fresh variable, and what the use asks for.
+// example: at_one_use(empty_table(), Scheme { quantified: [Written(prelude_parameter("T"))], body: Parameter(prelude_parameter("T")), required: [] }).found == Var(0)
+fn at_one_use(table: Table, scheme: Scheme) -> UseOf {
+    var made = table
+    var given = []
+    for one in scheme.quantified {
+        next := fresh(made)
+        given = list.push(given, Given { one: one, at: next.made })
+        made = next.table
+    }
+    var required = []
+    for asked in scheme.required {
+        required = list.push(required, Required { trait_name: asked.trait_name, at: replaced(asked.at, given) })
+    }
+    UseOf { table: made, found: replaced(scheme.body, given), required: required }
+}
+
+/// A variable no other place in the program has, and the table that made it.
+// example: fresh(empty_table()).made == Var(0)
+fn fresh(table: Table) -> Made {
+    Made { table: table { made: table.made + 1 }, made: Var(table.made) }
+}
+
+/// The type of `scheme` with the stand-in `one` settled on `at`, which is what an instance is.
+// example: settling(Scheme { quantified: [], body: Parameter(prelude_parameter("T")), required: [] }, Written(prelude_parameter("T")), int()) == int()
+fn settling(scheme: Scheme, one: Quantified, at: Type) -> Type {
+    replaced(scheme.body, [Given { one: one, at: at }])
+}
+
+/// `within`, with every stand-in that `given` names replaced by what it is given.
+// example: replaced(list_of(Var(1)), [Given { one: Generalised(1), at: int() }]) == list_of(int())
+fn replaced(within: Type, given: List<Given>) -> Type {
+    match within {
+        Var(variable) => stood_in_for(Generalised(variable), within, given)
+        Parameter(parameter) => stood_in_for(Written(parameter), within, given)
+        Named { name, arguments } => Named { name: name, arguments: each_replaced(arguments, given) }
+        Function { parameters, result } => Function { parameters: each_replaced(parameters, given), result: replaced(result, given) }
+        _ => within
+    }
+}
+
+/// Each of `types`, replaced.
+// example: each_replaced([Var(0)], [Given { one: Generalised(0), at: Unit }]) == [Unit]
+fn each_replaced(types: List<Type>, given: List<Given>) -> List<Type> {
+    var each = []
+    for one in types {
+        each = list.push(each, replaced(one, given))
+    }
+    each
+}
+
+/// What `given` gives `one`, and `within` itself where it gives it nothing.
+// example: stood_in_for(Generalised(0), Var(0), []) == Var(0)
+fn stood_in_for(one: Quantified, within: Type, given: List<Given>) -> Type {
+    for each in given {
+        if each.one == one {
+            return each.at
+        }
+    }
+    within
+}
+
+/// `scheme`, with every type it holds renamed.
+// example: renamed_scheme(monomorphic(Named { name: "User", arguments: [] }), Renaming { module: "demo", own: set.insert(set.empty(), "User") }).body == Named { name: "demo.User", arguments: [] }
+fn renamed_scheme(scheme: Scheme, rename: Renaming) -> Scheme {
+    var required = []
+    for asked in scheme.required {
+        required = list.push(required, Required { trait_name: asked.trait_name, at: renamed(asked.at, rename) })
+    }
+    Scheme { quantified: scheme.quantified, body: renamed(scheme.body, rename), required: required }
+}
+
+/// `written`, with each type `rename` names written through the module that declares it.
+///
+/// A module offering its surface writes each of its own types as `module.Name`.
+// example: renamed(list_of(Named { name: "User", arguments: [] }), Renaming { module: "demo", own: set.insert(set.empty(), "User") }) == list_of(Named { name: "demo.User", arguments: [] })
+fn renamed(written: Type, rename: Renaming) -> Type {
+    match written {
+        Named { name, arguments } => Named { name: reached_name(name, rename), arguments: each_renamed(arguments, rename) }
+        Function { parameters, result } => Function { parameters: each_renamed(parameters, rename), result: renamed(result, rename) }
+        _ => written
+    }
+}
+
+/// Each of `types`, renamed.
+// example: each_renamed([Unit], Renaming { module: "demo", own: set.empty() }) == [Unit]
+fn each_renamed(types: List<Type>, rename: Renaming) -> List<Type> {
+    var each = []
+    for one in types {
+        each = list.push(each, renamed(one, rename))
+    }
+    each
+}
+
+/// `name` as a module importing it writes it, which is through the module where it is its own.
+// example: reached_name("Int", Renaming { module: "demo", own: set.empty() }) == "Int"
+fn reached_name(name: String, rename: Renaming) -> String {
+    if set.has_value(rename.own, name) {
+        return rename.module + "." + name
+    }
+    name
+}
+
+/// A named type's name and arguments, which two of are met against each other.
+type Held = {
+    name: String
+    arguments: List<Type>
+}
+
+/// The two ways unification fails.
+///
+/// A mismatch keeps the table as far as it got, because what it settled before it failed is what
+/// the refusal reads its two types with, as the Rust phase reads its own table.
+type Clash =
+    | Mismatch(Table)
+    | Infinite
+
+derive Eq for Standing
+
+/// What a whole number that nothing settled stands for where a type is followed.
+type Standing =
+    | AsItIs
+    | AsTheIntItDefaultsTo
+
+/// A variable, and the table that made it.
+type Made = {
+    table: Table
+    made: Type
+}
+
+/// A type, the stand-ins it is fresh in at each use, and the traits a use must answer for.
+type Scheme = {
+    quantified: List<Quantified>
+    body: Type
+    required: List<Required>
+}
+
+/// One stand-in, and the type it stands for at one use.
+type Given = {
+    one: Quantified
+    at: Type
+}
+
+derive Eq for Quantified
+
+/// One stand-in a scheme is polymorphic over.
+type Quantified =
+    | Generalised(Int)
+    | Written(TypeParameter)
+
+/// One use of a scheme: the table, the type the use has, and the traits it must answer for.
+type UseOf = {
+    table: Table
+    found: Type
+    required: List<Required>
+}
+
+/// What each variable was settled on, which variables stand for a whole number, and where a
+/// whole number may be written.
+type Table = {
+    settled: map.Map<Int, Type>
+    whole_numbers: set.Set<Int>
+    written_at: set.Set<String>
+    made: Int
+}
+
+/// One constraint: a trait, and the type it is asked of.
+type Required = {
+    trait_name: String
+    at: Type
+}
+
+derive Eq for Type
+
+/// A type of version 0.1, as `docs/specs/types.md` lists them.
+type Type =
+    | Var(Int)
+    | Parameter(TypeParameter)
+    | Named {
+        name: String
+        arguments: List<Type>
+    }
+    | Function {
+        parameters: List<Type>
+        result: Type
+    }
+    | Module(String)
+    | Unit
+
+derive Eq for TypeParameter
+
+/// A type parameter, known by where it is written so that two of one name stay apart.
+type TypeParameter = {
+    name: String
+    origin: Origin
+}
+
+derive Eq for Origin
+
+/// Where a type parameter is written: in the prelude the compiler holds, or at a place in a file.
+type Origin =
+    | FromThePrelude
+    | WrittenAt(Int)
+
+/// The module whose types are renamed, and the names of the types it declares.
+type Renaming = {
+    module: String
+    own: set.Set<String>
+}
