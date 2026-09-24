@@ -80,7 +80,7 @@ type Payment =
 type Reason = Reason(String)
 
 // example: identity(1) == 1
-fn identity(value) {
+fn identity(value: Int) -> Int {
     value
 }
 

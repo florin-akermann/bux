@@ -379,12 +379,9 @@ fn drawn_module(draw: drawn.Draw) -> String {
     "fn check(" + one + ", " + other + ") -> " + result + " {\n" + body + "}\n\nfn pick<T>(first: T, second: T) -> T {\n    first\n}\n\ntype Box = {\n    held: Int\n}\n"
 }
 
-/// A parameter called `named`, whose type is left for inference to find where the draw says so.
+/// A parameter called `named`, of a drawn type, which the signature writes as every one does.
 // example: drawn_parameter(draw: drawn.seeded(1), named: "one") != ""
 fn drawn_parameter(draw: drawn.Draw, named: String) -> String {
-    if drawn.number(draw, 2) == 0 {
-        return named
-    }
     named + ": " + drawn.picked(drawn.next(draw), drawn_types(), "Int")
 }
 

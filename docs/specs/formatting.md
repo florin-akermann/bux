@@ -78,8 +78,8 @@ A list of two or more writes `type Name =`, then one `| Variant` per line, one l
 A variant's record payload opens on that variant's line and closes at that variant's level.
 
 A **function** is `fn name<T>(a: A, b: B) -> R`, then its block.
-A parameter whose type is left to inference is written as the bare name.
-A result type is written only when the source writes one.
+A parameter that omits its type is kept as the bare name, and an omitted result stays omitted.
+The formatter writes no type in; the type phase refuses the omission with `L0436`.
 
 A **block** opens with `{` at the end of the line that heads it, writes one statement per line one
 level in, and closes with `}` alone at that head line's level.

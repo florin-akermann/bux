@@ -99,8 +99,6 @@ fn is_odd(steps: Int, label: String) -> Bool {
 The types of `steps` and `label` differ, so both calls pass their arguments in order and compile.
 Where the two functions sit is not part of the rule.
 A call of a function above it reads the same signature as a call of a function below it.
-That holds for a signature the author left unwritten too.
-`fn is_even(steps, label)` counts the types that inference settled for its parameters.
 Nothing about the rule rests on the order in which the compiler walks the bodies of a module.
 `tests/spec/arguments/mutual_recursion.bx` is the example.
 

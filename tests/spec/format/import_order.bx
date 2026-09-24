@@ -3,6 +3,6 @@
 import io
 import files
 
-fn greet() {
+fn greet() -> () {
     io.print("hi")
 }

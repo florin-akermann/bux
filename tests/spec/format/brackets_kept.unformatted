@@ -1,6 +1,6 @@
 // expect-error: L0300
 // Canonical form keeps each bracket that the shape needs, so formatting changes no meaning.
-fn kept() {
+fn kept() -> Int {
     let first = (-a).b
     let second = -(a + b)
     let third = !(a && b)

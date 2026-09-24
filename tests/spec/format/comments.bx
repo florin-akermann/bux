@@ -1,7 +1,7 @@
 // What this file is for.
 import io
 
-fn go() {
+fn go() -> Int {
     // start at nothing
     let total = 0
     // around again

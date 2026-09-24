@@ -1,0 +1,7 @@
+// expect-error: L0436
+// A function that gives back nothing of interest writes `-> ()`, as every other result is written.
+import io
+
+fn greet(name: String) {
+    io.println("hello, " + name)
+}

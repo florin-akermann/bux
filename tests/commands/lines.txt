@@ -885,10 +885,8 @@ status 0
 > reached through it have to have types, but nothing it declares is on the page: `bux api` run
 > against that module is what prints its surface.
 >
-> Every type printed is the type inference settled on, not the text the author wrote. `fn twice(n)`
-> is printed `fn twice(n: Int) -> Int` when that is what it is, so a page says the same thing
-> whether or not a signature was written. A type nothing in the module settled prints as `_`, which
-> is how a diagnostic spells the same thing; writing the signature is what turns it into a type.
+> Every function writes its whole signature, so every type printed is a type the file writes.
+> A file that leaves a type out of a signature is refused with `L0436`, and it has no page.
 >
 > The same refusals `bux check` gives apply here, with the same diagnostics, because it is the
 > same front end. A module that holds a hole still has a page: a hole is well typed, and refusing

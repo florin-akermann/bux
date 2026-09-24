@@ -69,8 +69,7 @@ A function written `-> ()` is exempt because an example is an expression that is
 expression over a call giving nothing back is one.
 `io.println` is such a function: what it does is write a line, and there is nothing to say about
 the value it gives back, because it gives none.
-A function whose result is left to inference is not exempt, because the signature is what a
-reader of the declaration has, and it did not say.
+Every function writes its result, so a function that gives back `()` says so in its signature.
 
 ## What refuses, and when
 

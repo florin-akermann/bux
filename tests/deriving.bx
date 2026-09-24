@@ -410,7 +410,7 @@ fn called(standard: Standard, one: String, other: String) -> String {
 /// prelude's instances or by nothing at all.
 // example: strings.length(comparing("Int")) > 0
 fn comparing(of: String) -> String {
-    "fn is_same(one: " + of + ", other: " + of + ") -> Bool {\n    is_equal(one, other)\n}\n\ninstance Eq<Point> {\n    fn is_equal(one, other) -> Bool {\n        one.across == other.across\n    }\n}\n\ntype Point = {\n    across: Int\n}\n"
+    "fn is_same(one: " + of + ", other: " + of + ") -> Bool {\n    is_equal(one, other)\n}\n\ninstance Eq<Point> {\n    fn is_equal(one: Point, other: Point) -> Bool {\n        one.across == other.across\n    }\n}\n\ntype Point = {\n    across: Int\n}\n"
 }
 
 /// A record of the written fields, named `value0`, `value1`, and so on.
