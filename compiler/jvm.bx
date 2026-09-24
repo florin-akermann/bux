@@ -1,8 +1,10 @@
 // Writing class files: every lowered module of a program as the bytes a JVM loads.
 //
 // `docs/specs/codegen.md` states the class file, and `tests/written.bx` reads the bytes back.
-// Nothing here knows the language: it knows classes, descriptors, opcodes, and the verifier.
+// Nothing here knows the language: it knows classes, descriptors, slots, opcodes, and the verifier.
+// The lowering names no JVM shape, so each kind, value, local, and call of it is spelled here.
 // Each step takes the state it writes to and gives back the state it made, which is a value.
+import ast
 import bytes
 import exhaustiveness
 import ir
@@ -40,7 +42,7 @@ private fn written_or_said(answer: Result<List<ClassFile>, Unwritten>) -> Result
 // example: list.length(ok_or(program_written([]), [ClassFile { path: "", bytes: [] }])) == 0
 // example: list.length(ok_or(program_written([one_class(record_class()), one_class(record_class())]), [])) == 1
 // example: refused_code(program_written([one_class(record_class()), one_class(base_class())])) == "L0702"
-// example: refused_code(program_written([one_class(record_class()), one_class(record_class_named("a/b"))])) == "L0702"
+// example: refused_code(program_written([one_class(record_class()), one_class(record_class_named("b"))])) == "L0702"
 fn program_written(program: List<ir.Lowered>) -> Result<List<ClassFile>, Unwritten> {
     var every = []
     for module in program {
@@ -52,12 +54,13 @@ fn program_written(program: List<ir.Lowered>) -> Result<List<ClassFile>, Unwritt
     var files = []
     var written = map.empty()
     for class in every {
-        let file = ClassFile { path: class.name + ".class", bytes: class_written(class, hierarchy)? }
+        let name = class_of(class.of)
+        let file = ClassFile { path: name + ".class", bytes: class_written(class, hierarchy)? }
         let folded = case_folded(file.path)
         let earlier = map.get(written, folded)
         let clash = clash_of(earlier, file)
         if is_held(clash) {
-            return Err(Unwritten { class: class.name, method: None, why: or(clash, NamedTwice) })
+            return Err(Unwritten { class: name, method: None, why: or(clash, NamedTwice) })
         }
         if !is_held(earlier) {
             files = list.push(files, file)
@@ -120,14 +123,15 @@ fn unit_folded(path: String, at: Int) -> String {
 /// clear. A class that waits on the layout of no other class carries no attribute for it.
 // example: list.length(ok_or(class_written(record_class(), hierarchy_of([record_class()])), [])) > 10
 fn class_written(class: ir.Class, hierarchy: Hierarchy) -> Result<List<Int>, Unwritten> {
-    let named = pooled_class(no_pool(), class.name)
-    let extends = pooled_class(named.pool, class.extends)
+    let name = class_of(class.of)
+    let named = pooled_class(no_pool(), name)
+    let extends = pooled_class(named.pool, class_of(class.extends))
     let implemented = interfaces_written(extends.pool, class.implements)
     let fields = fields_written(implemented.pool, class)
     let methods = methods_written(Writer { pool: fields.pool, hierarchy: hierarchy }, class)?
     let wanted = loadable_written(methods.pool, class, hierarchy)
     let pool = wanted.pool
-    _ = texts_held(pool: pool, from: 0, class: class.name, method: None)?
+    _ = texts_held(pool: pool, from: 0, class: name, method: None)?
     var written = bytes.u4([], 3405691582)
     written = bytes.u2(bytes.u2(written, 65535), 72)
     written = bytes.all(bytes.u2(written, pool.next), pool_written(pool))
@@ -143,10 +147,10 @@ fn class_written(class: ir.Class, hierarchy: Hierarchy) -> Result<List<Int>, Unw
 
 /// How many interfaces a class implements, then the pool index of each one.
 // example: interfaces_written(no_pool(), []).bytes == [0, 0]
-fn interfaces_written(pool: Pool, implements: List<String>) -> Written {
+fn interfaces_written(pool: Pool, implements: List<ir.Kind>) -> Written {
     var writing = Written { pool: pool, bytes: bytes.u2([], list.length(implements)) }
     for interface in implements {
-        let entry = pooled_class(writing.pool, interface)
+        let entry = pooled_class(writing.pool, class_of(interface))
         writing = Written { pool: entry.pool, bytes: bytes.u2(writing.bytes, entry.index) }
     }
     writing
@@ -167,7 +171,7 @@ fn fields_written(pool: Pool, class: ir.Class) -> Written {
     var writing = Written { pool: pool, bytes: bytes.u2([], list.length(class.fields)) }
     for field in class.fields {
         let name = pooled_utf8(writing.pool, field.name)
-        let descriptor = pooled_utf8(name.pool, ir.descriptor_text(field.of))
+        let descriptor = pooled_utf8(name.pool, descriptor_text(descriptor_of(field.of)))
         let written = bytes.u2(bytes.u2(bytes.u2(writing.bytes, 2065), name.index), descriptor.index)
         writing = Written { pool: descriptor.pool, bytes: bytes.u2(written, 0) }
     }
@@ -177,25 +181,525 @@ fn fields_written(pool: Pool, class: ir.Class) -> Written {
 /// The methods of `class`, each with its code, or why one of them is not written.
 // example: list.length(written_or_none(methods_written(Writer { pool: no_pool(), hierarchy: hierarchy_of([]) }, base_class())).bytes) == 2
 fn methods_written(writer: Writer, class: ir.Class) -> Result<Written, Unwritten> {
-    var writing = Written { pool: writer.pool, bytes: bytes.u2([], list.length(class.methods)) }
-    for method in class.methods {
-        writing = method_written(Writer { pool: writing.pool, hierarchy: writer.hierarchy }, method, class, writing.bytes)?
+    let name = class_of(class.of)
+    let spelled = spelled_once(class.methods, name)?
+    var writing = Written { pool: writer.pool, bytes: bytes.u2([], list.length(spelled)) }
+    for method in spelled {
+        writing = method_written(Writer { pool: writing.pool, hierarchy: writer.hierarchy }, method, name, writing.bytes)?
     }
     Ok(writing)
 }
 
-/// `into`, with one method after it: its access, its name, its descriptor, and its code.
+/// Each of `methods` of the class `class` as a JVM runs it, the first of each name and descriptor
+/// only, or why one of them is not spelled.
+///
+/// The lowering tells two methods apart by their Bux values, and two values can have one
+/// descriptor, such as `Anything` and an extern type of `java.lang.Object`.
+// example: list.length(ok_or(spelled_once([returning_method(), returning_method()], "a/B"), [])) == 1
+fn spelled_once(methods: List<ir.Method>, class: String) -> Result<List<Spelled>, Unwritten> {
+    var seen = set.empty()
+    var spelled = []
+    for method in methods {
+        let one = placed_in(answer: method_spelled(method, class), class: class, method: name_spelled(method))?
+        let key = one.name + method_descriptor_text(one.descriptor)
+        if !set.has_value(seen, key) {
+            seen = set.insert(seen, key)
+            spelled = list.push(spelled, one)
+        }
+    }
+    Ok(spelled)
+}
+
+/// `into`, with one method of the class `class` after it: its access, its name, its descriptor,
+/// and its code.
 ///
 /// A text the method asks the pool for is held to the length a class file can write here, so a
 /// refusal names the method whose text it is.
-// example: list.length(written_or_none(method_written(Writer { pool: no_pool(), hierarchy: hierarchy_of([]) }, returning_method(), record_class(), [])).bytes) > 10
-fn method_written(writer: Writer, method: ir.Method, class: ir.Class, into: List<Int>) -> Result<Written, Unwritten> {
-    let name = pooled_utf8(writer.pool, method.name)
-    let descriptor = pooled_utf8(name.pool, ir.method_descriptor_text(method.descriptor))
-    let code = code_written(Writer { pool: descriptor.pool, hierarchy: writer.hierarchy }, method, class)?
-    _ = texts_held(pool: code.pool, from: list.length(writer.pool.entries), class: class.name, method: Some(method.name))?
-    let written = bytes.u2(bytes.u2(into, 1 + static_access(method.reached)), name.index)
+// example: list.length(written_or_none(method_written(Writer { pool: no_pool(), hierarchy: hierarchy_of([]) }, returning_spelled(), "a/B", [])).bytes) > 10
+fn method_written(writer: Writer, spelled: Spelled, class: String, into: List<Int>) -> Result<Written, Unwritten> {
+    let name = pooled_utf8(writer.pool, spelled.name)
+    let descriptor = pooled_utf8(name.pool, method_descriptor_text(spelled.descriptor))
+    let code = code_written(Writer { pool: descriptor.pool, hierarchy: writer.hierarchy }, spelled, class)?
+    _ = texts_held(pool: code.pool, from: list.length(writer.pool.entries), class: class, method: Some(spelled.name))?
+    let written = bytes.u2(bytes.u2(into, 1 + static_access(spelled.receiver)), name.index)
     Ok(Written { pool: code.pool, bytes: bytes.all(bytes.u2(bytes.u2(written, descriptor.index), 1), code.bytes) })
+}
+
+/// `method` of the class `class` as a JVM runs it, or the defect of a local that no slot holds.
+///
+/// Each local is given its slot, each value its descriptor, and each instruction is spelled as
+/// the ones a JVM runs for it.
+// example: list.length(ok_or(method_spelled(returning_method(), "a/B"), returning_spelled()).instructions) == 2
+// example: why_code(method_spelled(ir.Method { name: "of", parameters: [], result: None, reached: ir.ThroughTheClass, body: ir.Body { instructions: [ir.Load(ir.Local { name: "x", of: ir.Whole })], locals: [], guards: [] } }, "a/B")) == "L0703"
+fn method_spelled(method: ir.Method, class: String) -> Result<Spelled, Why> {
+    let receiver = receiver_of(method.reached, class)
+    let locals = locals_of(receiver: receiver, parameters: method.parameters, body: method.body.locals)
+    var instructions = []
+    for instruction in method.body.instructions {
+        let each = instruction_spelled(instruction, locals)?
+        for spelled in each {
+            instructions = list.push(instructions, spelled)
+        }
+    }
+    let descriptor = MethodDescriptor { parameters: parameters_spelled(method.parameters), result: result_of(method.result) }
+    Ok(Spelled { name: name_spelled(method), descriptor: descriptor, receiver: receiver, instructions: instructions, slots: locals.width, guards: method.body.guards })
+}
+
+/// The name a class file gives `method`: `<init>` for a constructor, and its own name otherwise.
+// example: name_spelled(returning_method()) == "of"
+fn name_spelled(method: ir.Method) -> String {
+    match method.reached {
+        ir.AsItsConstructor => "<init>"
+        _ => method.name
+    }
+}
+
+/// The class a method reached through an instance runs on, and nothing for a static method.
+// example: or(receiver_of(ir.AsItsConstructor, "a/B"), "") == "a/B"
+// example: !is_held(receiver_of(ir.ThroughTheClass, "a/B"))
+fn receiver_of(reached: ir.Reached, class: String) -> Option<String> {
+    match reached {
+        ir.ThroughTheClass => None
+        _ => Some(class)
+    }
+}
+
+/// Where each local of a method lives: the receiver as `this` in slot zero, then each parameter,
+/// then each local of the body, each as wide as what it holds.
+// example: locals_of(receiver: None, parameters: [ir.Local { name: "x", of: ir.Whole }], body: [ir.Local { name: "y", of: ir.Small }]).width == 3
+// example: ok_or(slot_of(locals_of(receiver: Some("a/B"), parameters: [], body: [ir.Local { name: "y", of: ir.Small }]), ir.Local { name: "y", of: ir.Small }), 0) == 1
+fn locals_of(receiver: Option<String>, parameters: List<ir.Local>, body: List<ir.Local>) -> Locals {
+    var every = match receiver {
+        Some(class) => local_placed(locals: Locals { slots: map.empty(), width: 0 }, name: "this", of: Reference(class))
+        None => Locals { slots: map.empty(), width: 0 }
+    }
+    for one in parameters {
+        every = local_placed(locals: every, name: one.name, of: descriptor_of(one.of))
+    }
+    for one in body {
+        every = local_placed(locals: every, name: one.name, of: descriptor_of(one.of))
+    }
+    every
+}
+
+/// `locals`, with `name` given the next slot and as many slots as `of` takes.
+///
+/// A name is one local, so a name placed already takes no second slot.
+// example: local_placed(locals: Locals { slots: map.empty(), width: 0 }, name: "x", of: Long).width == 2
+// example: local_placed(locals: local_placed(locals: Locals { slots: map.empty(), width: 0 }, name: "x", of: Long), name: "x", of: Long).width == 2
+fn local_placed(locals: Locals, name: String, of: Descriptor) -> Locals {
+    if is_held(map.get(locals.slots, name)) {
+        return locals
+    }
+    Locals { slots: map.insert(locals.slots, name, Placed { at: locals.width, width: width(of) }), width: locals.width + width(of) }
+}
+
+/// The instructions a JVM runs for `instruction`, each local read as its slot in `locals`, or the
+/// defect of a local that no slot holds.
+// example: list.length(ok_or(instruction_spelled(ir.Increment(ir.Local { name: "x", of: ir.Small }), locals_of(receiver: None, parameters: [ir.Local { name: "x", of: ir.Small }], body: [])), [])) == 1
+fn instruction_spelled(instruction: ir.Instruction, locals: Locals) -> Result<List<Instruction>, Why> {
+    match instruction {
+        ir.Load(local) => Ok([Load { slot: slot_of(locals, local)?, of: descriptor_of(local.of) }])
+        ir.Store(local) => Ok([Store { slot: slot_of(locals, local)?, of: descriptor_of(local.of) }])
+        ir.Increment(local) => Ok([Increment(slot_of(locals, local)?)])
+        ir.Reach { reaches, arguments, gives, called } => Ok(member_reached(reaches: reaches, through: called, taking: MethodDescriptor { parameters: each_reaching(arguments), result: result_of(gives) }, loaded: arguments_loaded(arguments, locals)?))
+        _ => Ok(plain_spelled(instruction))
+    }
+}
+
+/// The instructions a JVM runs for `instruction`, which names no local: a constant, the stack,
+/// arithmetic, or a jump.
+// example: list.length(plain_spelled(ir.Convert { from: ir.Of(ir.Anything), to: ir.Whole })) == 2
+fn plain_spelled(instruction: ir.Instruction) -> List<Instruction> {
+    match instruction {
+        ir.LongOf(value) => [LongOf(value)]
+        ir.BooleanOf(value) => [BooleanOf(value)]
+        ir.IntegerOf(value) => [IntegerOf(value)]
+        ir.TextOf(value) => [TextOf(value)]
+        ir.Drop(of) => [Drop(descriptor_of(of))]
+        ir.Copy => [Copy]
+        ir.Convert { from, to } => converted(held: descriptor_of(from), wanted: descriptor_of(to))
+        ir.Arithmetic(what) => [Arithmetic(what)]
+        ir.Concat => [Concat]
+        ir.CompareLongs(how) => [CompareLongs(how)]
+        ir.CompareIntegers(how) => [CompareIntegers(how)]
+        ir.Not => [Not]
+        ir.Widen => [Widen]
+        ir.Narrow => [Narrow]
+        ir.LowEightBits => [LowEightBits]
+        ir.Label(label) => [Label(label)]
+        ir.Jump(label) => [Jump(label)]
+        ir.JumpIfFalse(label) => [JumpIfFalse(label)]
+        ir.JumpIfNull(label) => [JumpIfNull(label)]
+        _ => object_spelled(instruction)
+    }
+}
+
+/// The instructions a JVM runs for `instruction`, which makes, reads, or calls a class the
+/// lowering names by its kind.
+// example: list.length(object_spelled(ir.Construct { built: ir.Anything, taken: [] })) == 1
+fn object_spelled(instruction: ir.Instruction) -> List<Instruction> {
+    match instruction {
+        ir.New(kind) => [New(class_of(kind))]
+        ir.NewArray(kind) => [NewArray(class_of(kind))]
+        ir.StoreInArray => [StoreInArray]
+        ir.LoadFromArray => [LoadFromArray]
+        ir.ArrayLength => [ArrayLength]
+        ir.Construct { built, taken } => [Construct(constructor_of(class_of(built), descriptors_of(taken)))]
+        ir.GetField(field) => [GetField(field_spelled(field))]
+        ir.PutField(field) => [PutField(field_spelled(field))]
+        ir.Call(function) => [InvokeStatic(method_of(class: class_of(function.owner), name: function.name, taken: descriptors_of(function.taken), gives: result_of(function.gives)))]
+        ir.Cast(kind) => [Cast(class_of(kind))]
+        ir.InstanceOf(kind) => [InstanceOf(class_of(kind))]
+        ir.Return(of) => [Return(result_of(of))]
+        _ => java_spelled(instruction)
+    }
+}
+
+/// The instructions a JVM runs for `instruction`, which asks the Java platform for text, a
+/// failure, the end of the program, or an array.
+// example: list.length(java_spelled(ir.Unmatched)) == 4
+fn java_spelled(instruction: ir.Instruction) -> List<Instruction> {
+    let text = "java/lang/String"
+    let system = "java/lang/System"
+    match instruction {
+        ir.TextEqual => [InvokeVirtual(method_of(class: text, name: "equals", taken: [object()], gives: Some(Boolean)))]
+        ir.TextCompared => [InvokeVirtual(method_of(class: text, name: "compareTo", taken: [text_descriptor()], gives: Some(Integer)))]
+        ir.TextHashed => [InvokeVirtual(method_of(class: text, name: "hashCode", taken: [], gives: Some(Integer)))]
+        ir.Shown(of) => shown_spelled(of)
+        ir.Unmatched => unmatched()
+        ir.Exited => [InvokeStatic(method_of(class: system, name: "exit", taken: [Integer], gives: None))]
+        ir.ArrayCopied => [InvokeStatic(method_of(class: system, name: "arraycopy", taken: [object(), Integer, object(), Integer, Integer], gives: None))]
+        ir.JavaListOf => [InvokeStaticOfInterface(method_of(class: class_of(ir.JavaList), name: "of", taken: [Array(object())], gives: Some(java_list())))]
+        _ => process_spelled(instruction)
+    }
+}
+
+/// The call that turns a value `of` holds into its text, and nothing for a value that is text.
+// example: list.length(shown_spelled(ir.Whole)) == 1
+// example: list.length(shown_spelled(ir.Of(ir.Text))) == 0
+fn shown_spelled(of: ir.Value) -> List<Instruction> {
+    match of {
+        ir.Whole => [InvokeStatic(method_of(class: "java/lang/Long", name: "toString", taken: [Long], gives: Some(text_descriptor())))]
+        ir.Truth => [InvokeStatic(method_of(class: "java/lang/Boolean", name: "toString", taken: [Boolean], gives: Some(text_descriptor())))]
+        _ => []
+    }
+}
+
+/// The throw of an `AssertionError`, which a match where no arm fits runs.
+// example: list.length(unmatched()) == 4
+fn unmatched() -> List<Instruction> {
+    let thrown = "java/lang/AssertionError"
+    [New(thrown), Copy, Construct(constructor_of(thrown, [])), Throw]
+}
+
+/// The instructions a JVM runs for `instruction`, which starts a process, or reads its mailbox,
+/// its envelope, its end, or the failure it ended with.
+// example: list.length(process_spelled(ir.Started)) == 2
+fn process_spelled(instruction: ir.Instruction) -> List<Instruction> {
+    let mailbox = class_of(ir.Mailbox)
+    let end = class_of(ir.End)
+    let failure = class_of(ir.Failure)
+    match instruction {
+        ir.Started => started()
+        ir.Taken => [InvokeVirtual(method_of(class: mailbox, name: "take", taken: [], gives: Some(object())))]
+        ir.Opened => [Cast(class_of(ir.Envelope)), InvokeVirtual(method_of(class: class_of(ir.Envelope), name: "get", taken: [], gives: Some(object())))]
+        ir.Offered => offered(mailbox)
+        ir.Removed => [InvokeVirtual(method_of(class: mailbox, name: "remove", taken: [object()], gives: Some(Boolean)))]
+        ir.IsEnded => [InvokeVirtual(method_of(class: end, name: "isDone", taken: [], gives: Some(Boolean)))]
+        ir.Awaited => [InvokeVirtual(method_of(class: end, name: "join", taken: [], gives: Some(object())))]
+        ir.Completed => [InvokeVirtual(method_of(class: end, name: "complete", taken: [object()], gives: Some(Boolean))), Drop(Boolean)]
+        ir.CompletedWithFailure => [InvokeVirtual(method_of(class: end, name: "completeExceptionally", taken: [Reference(failure)], gives: Some(Boolean))), Drop(Boolean)]
+        ir.FailureWritten => [InvokeVirtual(method_of(class: failure, name: "printStackTrace", taken: [], gives: None))]
+        ir.FailureText => [InvokeVirtual(method_of(class: failure, name: "toString", taken: [], gives: Some(text_descriptor())))]
+        _ => []
+    }
+}
+
+/// The task on the stack started on a virtual thread of its own, and the thread dropped.
+// example: list.length(started()) == 2
+fn started() -> List<Instruction> {
+    let thread = Reference("java/lang/Thread")
+    [InvokeStatic(method_of(class: "java/lang/Thread", name: "startVirtualThread", taken: [Reference(class_of(ir.Task))], gives: Some(thread))), Drop(thread)]
+}
+
+/// The offer of the envelope on the stack to the class `mailbox`, within the milliseconds on the
+/// stack, which leaves whether the mailbox took it.
+// example: list.length(offered("java/util/concurrent/ArrayBlockingQueue")) == 2
+fn offered(mailbox: String) -> List<Instruction> {
+    let unit = Reference("java/util/concurrent/TimeUnit")
+    [GetStatic(FieldRef { class: "java/util/concurrent/TimeUnit", name: "MILLISECONDS", of: unit }), InvokeVirtual(method_of(class: mailbox, name: "offer", taken: [object(), Long, unit], gives: Some(Boolean)))]
+}
+
+/// `field` as a class file names it.
+// example: field_spelled(ir.FieldRef { owner: ir.Anything, name: "at", of: ir.Whole }).of == Long
+fn field_spelled(field: ir.FieldRef) -> FieldRef {
+    FieldRef { class: class_of(field.owner), name: field.name, of: descriptor_of(field.of) }
+}
+
+/// What turns `held` into `wanted`: a box, an unbox, a cast from `Object`, or nothing.
+// example: list.length(converted(held: Long, wanted: object())) == 1
+// example: list.length(converted(held: object(), wanted: Long)) == 2
+// example: list.length(converted(held: object(), wanted: text_descriptor())) == 1
+// example: list.length(converted(held: Boolean, wanted: Integer)) == 0
+fn converted(held: Descriptor, wanted: Descriptor) -> List<Instruction> {
+    if held == wanted {
+        return []
+    }
+    let boxed = boxing_class(held)
+    let unboxed = boxing_class(wanted)
+    if boxed != "" && unboxed == "" {
+        return [InvokeStatic(method_of(class: boxed, name: "valueOf", taken: [held], gives: Some(Reference(boxed))))]
+    }
+    if boxed == "" && unboxed != "" {
+        return [Cast(unboxed), InvokeVirtual(method_of(class: unboxed, name: box_read(wanted), taken: [], gives: Some(wanted)))]
+    }
+    if boxed == "" && unboxed == "" {
+        return narrowed(held: held, wanted: wanted)
+    }
+    []
+}
+
+/// A cast from `Object` to the class `wanted` names, where both are classes.
+// example: list.length(narrowed(held: object(), wanted: text_descriptor())) == 1
+// example: list.length(narrowed(held: text_descriptor(), wanted: object())) == 0
+fn narrowed(held: Descriptor, wanted: Descriptor) -> List<Instruction> {
+    match wanted {
+        Reference(class) => if held == object() && class != "java/lang/Object" {
+            [Cast(class)]
+        } else {
+            []
+        }
+        _ => []
+    }
+}
+
+/// The method of its box that reads a value `of` holds back out.
+// example: box_read(Boolean) == "booleanValue"
+fn box_read(of: Descriptor) -> String {
+    match of {
+        Long => "longValue"
+        Boolean => "booleanValue"
+        _ => "intValue"
+    }
+}
+
+/// The class a value `of` holds is boxed in, and `""` for a value no box holds.
+// example: boxing_class(Long) == "java/lang/Long"
+// example: boxing_class(object()) == ""
+fn boxing_class(of: Descriptor) -> String {
+    match of {
+        Long => "java/lang/Long"
+        Boolean => "java/lang/Boolean"
+        Integer => "java/lang/Integer"
+        _ => ""
+    }
+}
+
+/// The member an `extern` reaches, with `loaded` put on the stack first where it takes them.
+///
+/// `taking` is what the member takes and gives back. An instance method takes its receiver
+/// first, and a constructor gives back the class it builds.
+// example: list.length(member_reached(reaches: ast.Constructor, through: ir.ThroughItsClass, taking: MethodDescriptor { parameters: [], result: Some(object()) }, loaded: [])) == 3
+fn member_reached(reaches: ast.Reaches, through: ir.CalledAs, taking: MethodDescriptor, loaded: List<Instruction>) -> List<Instruction> {
+    match reaches {
+        ast.StaticField(named) => [GetStatic(FieldRef { class: class_of_member(named.text), name: member_of(named.text), of: or(taking.result, object()) })]
+        ast.StaticMethod(named) => list.push(loaded, InvokeStatic(MethodRef { class: class_of_member(named.text), name: member_of(named.text), descriptor: taking }))
+        ast.InstanceMethod(named) => list.push(loaded, member_called(through, MethodRef { class: class_named_by(or(list.at(taking.parameters, 0), object())), name: named.text, descriptor: MethodDescriptor { parameters: after_first(taking.parameters), result: taking.result } }))
+        ast.Constructor => constructed_member(loaded, taking)
+    }
+}
+
+/// What each argument reaches the member as.
+// example: list.length(each_reaching([])) == 0
+fn each_reaching(arguments: List<ir.Argument>) -> List<Descriptor> {
+    var taken = []
+    for argument in arguments {
+        taken = list.push(taken, reaching_of(argument))
+    }
+    taken
+}
+
+/// What the member takes where `argument` arrives as its local holds it and crosses as it says.
+// example: reaching_of(ir.Argument { local: ir.Local { name: "x", of: ir.Whole }, crossing: ir.Narrowed }) == Integer
+fn reaching_of(argument: ir.Argument) -> Descriptor {
+    match argument.crossing {
+        ir.AsItIs => descriptor_of(argument.local.of)
+        ir.Narrowed => Integer
+        ir.Listed => java_list()
+    }
+}
+
+/// A class built and its constructor called with each of `loaded`.
+// example: list.length(constructed_member([], MethodDescriptor { parameters: [], result: Some(object()) })) == 3
+fn constructed_member(loaded: List<Instruction>, taking: MethodDescriptor) -> List<Instruction> {
+    let class = class_named_by(or(taking.result, object()))
+    var instructions = [New(class), Copy]
+    for one in loaded {
+        instructions = list.push(instructions, one)
+    }
+    list.push(instructions, Construct(constructor_of(class, taking.parameters)))
+}
+
+/// The constructor of the class `class`, which takes `taken`.
+// example: constructor_of("a/B", [Long]).name == "<init>"
+fn constructor_of(class: String, taken: List<Descriptor>) -> MethodRef {
+    method_of(class: class, name: "<init>", taken: taken, gives: None)
+}
+
+/// Every argument loaded from the slot it arrives in, and made what the member takes, or the
+/// defect of an argument that no slot holds.
+// example: list.length(ok_or(arguments_loaded([ir.Argument { local: ir.Local { name: "x", of: ir.Whole }, crossing: ir.Narrowed }], locals_of(receiver: None, parameters: [ir.Local { name: "x", of: ir.Whole }], body: [])), [])) == 2
+fn arguments_loaded(arguments: List<ir.Argument>, locals: Locals) -> Result<List<Instruction>, Why> {
+    var instructions = []
+    for argument in arguments {
+        instructions = list.push(instructions, Load { slot: slot_of(locals, argument.local)?, of: descriptor_of(argument.local.of) })
+        instructions = match argument.crossing {
+            ir.AsItIs => instructions
+            ir.Narrowed => list.push(instructions, Narrow)
+            ir.Listed => list.push(instructions, InvokeStatic(list_crossed()))
+        }
+    }
+    Ok(instructions)
+}
+
+/// The slot `local` lives in, or the defect of a local that no slot holds, or that holds a value
+/// wider than its slot.
+// example: why_code(slot_of(locals_of(receiver: None, parameters: [], body: []), ir.Local { name: "x", of: ir.Whole })) == "L0703"
+// example: why_code(slot_of(locals_of(receiver: None, parameters: [], body: [ir.Local { name: "x", of: ir.Small }]), ir.Local { name: "x", of: ir.Whole })) == "L0703"
+fn slot_of(locals: Locals, local: ir.Local) -> Result<Int, Why> {
+    match map.get(locals.slots, local.name) {
+        Some(slot) => slot_held(slot, local)
+        None => Err(Defect("the local `" + local.name + "` is used, and no slot holds it"))
+    }
+}
+
+/// Where `slot` is wide enough for `local`, the first of its slots, and the defect otherwise.
+// example: ok_or(slot_held(Placed { at: 3, width: 2 }, ir.Local { name: "x", of: ir.Small }), 0) == 3
+fn slot_held(slot: Placed, local: ir.Local) -> Result<Int, Why> {
+    if width(descriptor_of(local.of)) > slot.width {
+        return Err(Defect("the local `" + local.name + "` holds a value wider than its slot"))
+    }
+    Ok(slot.at)
+}
+
+/// The function of the prelude that turns a list into a `java.util.List`.
+// example: list_crossed().name == "listed"
+fn list_crossed() -> MethodRef {
+    let listed = class_of(ir.TypeOf { module: ir.ThePrelude, name: "List" })
+    method_of(class: listed, name: "listed", taken: [Reference(listed)], gives: Some(java_list()))
+}
+
+/// The method `name` of the class `class`, which takes `taken` and gives back `gives`.
+// example: method_of(class: "a/B", name: "of", taken: [], gives: None).name == "of"
+fn method_of(class: String, name: String, taken: List<Descriptor>, gives: Option<Descriptor>) -> MethodRef {
+    MethodRef { class: class, name: name, descriptor: MethodDescriptor { parameters: taken, result: gives } }
+}
+
+/// The call an instance method is reached with, which the JVM writes one way for an interface.
+// example: list.length(instruction_written(assembling_of([]), member_called(ir.ThroughItsInterface, list_crossed())).code) == 5
+fn member_called(through: ir.CalledAs, method: MethodRef) -> Instruction {
+    match through {
+        ir.ThroughItsClass => InvokeVirtual(method)
+        ir.ThroughItsInterface => InvokeInterface(method)
+    }
+}
+
+/// The class a `field` or a `static` names, which is every segment but the last.
+// example: class_of_member("java.lang.Math.abs") == "java/lang/Math"
+fn class_of_member(named: String) -> String {
+    match last_dot(named) {
+        Some(at) => ir.dots_replaced(or(strings.cut(named, 0, at), ""), "/")
+        None => ""
+    }
+}
+
+/// The member a `field` or a `static` names, which is the last segment.
+// example: member_of("java.lang.Math.abs") == "abs"
+fn member_of(named: String) -> String {
+    match last_dot(named) {
+        Some(at) => or(strings.cut(named, at + 1, strings.length(named)), "")
+        None => named
+    }
+}
+
+/// Where the last dot of `named` is, where it has one.
+// example: or(last_dot("a.b.c"), 0) == 3
+fn last_dot(named: String) -> Option<Int> {
+    var found = None
+    var at = 0
+    for at < strings.length(named) {
+        found = match strings.at(named, at) {
+            Some(46) => Some(at)
+            _ => found
+        }
+        at += 1
+    }
+    found
+}
+
+/// The class `of` is, which every descriptor an `extern` writes a class into is one of.
+// example: class_named_by(object()) == "java/lang/Object"
+fn class_named_by(of: Descriptor) -> String {
+    match of {
+        Reference(class) => class
+        _ => ""
+    }
+}
+
+/// Each of `taken` after the first.
+// example: list.length(after_first([Long, Integer])) == 1
+fn after_first(taken: List<Descriptor>) -> List<Descriptor> {
+    var rest = []
+    var position = 0
+    for one in taken {
+        if position > 0 {
+            rest = list.push(rest, one)
+        }
+        position += 1
+    }
+    rest
+}
+
+/// What each parameter holds, as a class file writes it.
+// example: parameters_spelled([ir.Local { name: "x", of: ir.Whole }]) == [Long]
+fn parameters_spelled(parameters: List<ir.Local>) -> List<Descriptor> {
+    var spelled = []
+    for one in parameters {
+        spelled = list.push(spelled, descriptor_of(one.of))
+    }
+    spelled
+}
+
+/// What each of `values` is, as a class file writes it.
+// example: descriptors_of([ir.Small]) == [Integer]
+fn descriptors_of(values: List<ir.Value>) -> List<Descriptor> {
+    var spelled = []
+    for one in values {
+        spelled = list.push(spelled, descriptor_of(one))
+    }
+    spelled
+}
+
+/// What `value` is, as a class file writes it, and nothing for a function that gives nothing.
+// example: held_text(result_of(Some(ir.Truth))) == "Z"
+fn result_of(value: Option<ir.Value>) -> Option<Descriptor> {
+    match value {
+        Some(one) => Some(descriptor_of(one))
+        None => None
+    }
+}
+
+/// What holds an object.
+// example: descriptor_text(object()) == "Ljava/lang/Object;"
+fn object() -> Descriptor {
+    Reference(class_of(ir.Anything))
+}
+
+/// What holds a `java.util.List`.
+// example: descriptor_text(java_list()) == "Ljava/util/List;"
+fn java_list() -> Descriptor {
+    Reference(class_of(ir.JavaList))
 }
 
 /// What `answer` wrote, and nothing written where it was refused.
@@ -233,23 +737,20 @@ fn text_held(entry: Entry, class: String, method: Option<String>) -> Result<(), 
     }
 }
 
-/// The access a method is written with beside `ACC_PUBLIC`: static where the class reaches it.
-// example: static_access(ir.ThroughTheClass) == 8
-fn static_access(reached: ir.Reached) -> Int {
-    match reached {
-        ir.ThroughTheClass => 8
-        ir.ThroughAnInstance => 0
+/// The access a method is written with beside `ACC_PUBLIC`: static where it has no receiver.
+// example: static_access(None) == 8
+// example: static_access(Some("a/B")) == 0
+fn static_access(receiver: Option<String>) -> Int {
+    match receiver {
+        Some(_) => 0
+        None => 8
     }
 }
 
 /// The `Code` attribute of one method, with the exception table and the stack map it needs.
-// example: list.length(written_or_none(code_written(Writer { pool: no_pool(), hierarchy: hierarchy_of([]) }, returning_method(), record_class())).bytes) == 22
-fn code_written(writer: Writer, method: ir.Method, class: ir.Class) -> Result<Written, Unwritten> {
-    let receiver = match method.reached {
-        ir.ThroughTheClass => None
-        ir.ThroughAnInstance => Some(class.name)
-    }
-    let assembled = placed_in(answer: assembled_of(method.body, method.descriptor, receiver, writer), class: class.name, method: method.name)?
+// example: list.length(written_or_none(code_written(Writer { pool: no_pool(), hierarchy: hierarchy_of([]) }, returning_spelled(), "a/B")).bytes) == 22
+fn code_written(writer: Writer, spelled: Spelled, class: String) -> Result<Written, Unwritten> {
+    let assembled = placed_in(answer: assembled_of(spelled, writer), class: class, method: spelled.name)?
     let caught = handlers_written(assembled.pool, assembled.handlers)
     let mapped = map_written(caught.pool, assembled.frames)
     let named = pooled_utf8(mapped.pool, "Code")
@@ -315,8 +816,9 @@ fn loadable_written(pool: Pool, class: ir.Class, hierarchy: Hierarchy) -> Writte
     var wanted = []
     var pooling = pool
     for field in class.fields {
-        if is_foldable(hierarchy, field.of) {
-            let descriptor = pooled_utf8(pooling, ir.descriptor_text(field.of))
+        let of = descriptor_of(field.of)
+        if is_foldable(hierarchy, of) {
+            let descriptor = pooled_utf8(pooling, descriptor_text(of))
             pooling = descriptor.pool
             if !list.has_value(wanted, descriptor.index) {
                 wanted = list.push(wanted, descriptor.index)
@@ -334,14 +836,28 @@ fn loadable_written(pool: Pool, class: ir.Class, hierarchy: Hierarchy) -> Writte
     Written { pool: named.pool, bytes: bytes.all(bytes.u4(bytes.u2([], named.index), list.length(descriptors)), descriptors) }
 }
 
+/// What holds a value of `value` on the JVM.
+// example: descriptor_of(ir.Array(ir.Small)) == Array(Integer)
+// example: descriptor_of(ir.Of(ir.Text)) == Reference("java/lang/String")
+fn descriptor_of(value: ir.Value) -> Descriptor {
+    match value {
+        ir.Whole => Long
+        ir.Truth => Boolean
+        ir.Small => Integer
+        ir.Character => Character
+        ir.Array(held) => Array(descriptor_of(held))
+        ir.Of(kind) => Reference(class_of(kind))
+    }
+}
+
 /// Whether a value of `of` is one a JVM may fold into the class that holds it.
 ///
 /// Only a class this build writes is a value class, and a base of a sum type is not folded,
 /// because a field typed as one holds whichever variant it was given.
-// example: !is_foldable(hierarchy_of([]), ir.Long)
-fn is_foldable(hierarchy: Hierarchy, of: ir.Descriptor) -> Bool {
+// example: !is_foldable(hierarchy_of([]), Long)
+fn is_foldable(hierarchy: Hierarchy, of: Descriptor) -> Bool {
     match of {
-        ir.Reference(class) => is_written_here(hierarchy, class) && !set.has_value(hierarchy.extends_it, class)
+        Reference(class) => is_written_here(hierarchy, class) && !set.has_value(hierarchy.extends_it, class)
         _ => false
     }
 }
@@ -355,15 +871,14 @@ fn is_written_here(hierarchy: Hierarchy, class: String) -> Bool {
     }
 }
 
-/// `body` assembled into the bytes a method of `descriptor` runs, with its frames and handlers.
-// example: why_code(assembled_of(returning_method().body, returning_method().descriptor, None, Writer { pool: no_pool(), hierarchy: hierarchy_of([]) })) == ""
-fn assembled_of(body: ir.Body, descriptor: ir.MethodDescriptor, receiver: Option<String>, writer: Writer) -> Result<Assembled, Why> {
-    let slots = ir.parameters_width(descriptor) + body.locals + receiver_width(receiver)
-    var assembling = Assembling { code: [], frame: entering(descriptor.parameters, receiver, slots), is_reachable: true, landings: map.empty(), landed: [], expected: map.empty(), pending: [], deepest: 0, next: 4294967295, guards: body.guards, pool: writer.pool, hierarchy: writer.hierarchy, defect: None }
-    for instruction in body.instructions {
+/// The instructions of `spelled` assembled into the bytes it runs, with its frames and handlers.
+// example: why_code(assembled_of(returning_spelled(), Writer { pool: no_pool(), hierarchy: hierarchy_of([]) })) == ""
+fn assembled_of(spelled: Spelled, writer: Writer) -> Result<Assembled, Why> {
+    var assembling = Assembling { code: [], frame: entering(spelled.descriptor.parameters, spelled.receiver, spelled.slots), is_reachable: true, landings: map.empty(), landed: [], expected: map.empty(), pending: [], deepest: 0, next: 4294967295, guards: spelled.guards, pool: writer.pool, hierarchy: writer.hierarchy, defect: None }
+    for instruction in spelled.instructions {
         assembling = one_written(assembling, instruction)
     }
-    finished(assembling, slots)
+    finished(assembling, spelled.slots)
 }
 
 /// The assembled body: each branch patched, each frame and each handler read off where they land.
@@ -438,7 +953,7 @@ fn patched(code: List<Int>, patches: map.Map<Int, Int>) -> List<Int> {
 fn caught_of(assembling: Assembling) -> Result<List<Caught>, Why> {
     var caught = []
     for guard in assembling.guards {
-        caught = list.push(caught, Caught { from: landing_of(assembling, guard.from)?, to: landing_of(assembling, guard.to)?, handler: landing_of(assembling, guard.handler)?, catching: guard.catching })
+        caught = list.push(caught, Caught { from: landing_of(assembling, guard.from)?, to: landing_of(assembling, guard.to)?, handler: landing_of(assembling, guard.handler)?, catching: class_of(guard.catching) })
     }
     Ok(caught)
 }
@@ -528,26 +1043,27 @@ private fn assembling_of(guards: List<ir.Guard>) -> Assembling {
 ///
 /// A later class of one name is the same class, or `program_written` refuses it as named twice.
 // example: set.has_value(hierarchy_of([base_class()]).extends_it, "java/lang/Object")
-// example: or(map.get(hierarchy_of([variant_class(), ir.Class { name: "a/B$C", extends: "a/D", extending: ir.Never, implements: [], fields: [], methods: [] }]).extends, "a/B$C"), "") == "a/B"
+// example: or(map.get(hierarchy_of([variant_class(), ir.Class { of: variant_class().of, extends: ir.TypeOf { module: ir.OfTheProgram("a"), name: "D" }, extending: ir.Never, implements: [], fields: [], methods: [] }]).extends, "a/B$C"), "") == "a/B"
 fn hierarchy_of(classes: List<ir.Class>) -> Hierarchy {
     var extends = map.empty()
     for class in classes {
-        if !is_held(map.get(extends, class.name)) {
-            extends = map.insert(extends, class.name, class.extends)
+        let name = class_of(class.of)
+        if !is_held(map.get(extends, name)) {
+            extends = map.insert(extends, name, class_of(class.extends))
         }
     }
     var bases = set.empty()
     for class in classes {
-        bases = set.insert(bases, or(map.get(extends, class.name), ""))
+        bases = set.insert(bases, or(map.get(extends, class_of(class.of)), ""))
     }
     Hierarchy { extends: extends, extends_it: bases }
 }
 
 /// `assembling` after one instruction: a label lands, and anything else is written where reached.
-// example: list.length(one_written(assembling_of([]), ir.Copy).code) == 0
-fn one_written(assembling: Assembling, instruction: ir.Instruction) -> Assembling {
+// example: list.length(one_written(assembling_of([]), Copy).code) == 0
+fn one_written(assembling: Assembling, instruction: Instruction) -> Assembling {
     match instruction {
-        ir.Label(label) => guarding(landing(assembling, label), label)
+        Label(label) => guarding(landing(assembling, label), label)
         _ => if assembling.is_reachable {
             instruction_written(assembling, instruction)
         } else {
@@ -568,7 +1084,7 @@ fn guarding(assembling: Assembling, label: Int) -> Assembling {
     var reached = assembling
     for guard in assembling.guards {
         if guard.from == label || guard.to == label {
-            let caught = Frame { locals: reached.frame.locals, stack: [HeldObject(guard.catching)] }
+            let caught = Frame { locals: reached.frame.locals, stack: [HeldObject(class_of(guard.catching))] }
             reached = reaching(reached, guard.handler, caught)
         }
     }
@@ -585,51 +1101,51 @@ private fn is_expecting(assembling: Assembling, label: Int) -> Bool {
 }
 
 /// `assembling` with `instruction` written, and what it does to the stack and the locals followed.
-// example: instruction_written(assembling_of([]), ir.LongOf(1)).code == [20, 0, 1]
-fn instruction_written(assembling: Assembling, instruction: ir.Instruction) -> Assembling {
+// example: instruction_written(assembling_of([]), LongOf(1)).code == [20, 0, 1]
+fn instruction_written(assembling: Assembling, instruction: Instruction) -> Assembling {
     match instruction {
-        ir.LongOf(value) => long_written(assembling, value)
-        ir.BooleanOf(value) => integer_written(assembling, if value {
+        LongOf(value) => long_written(assembling, value)
+        BooleanOf(value) => integer_written(assembling, if value {
             1
         } else {
             0
         })
-        ir.IntegerOf(value) => integer_written(assembling, value)
-        ir.TextOf(value) => text_written(assembling, value)
-        ir.Load { slot, of } => pushed(indexed(assembling: assembling, opcode: load_opcode(of), slot: slot), held_of(of))
-        ir.Store { slot, of } => stored(assembling, slot, of)
-        ir.Drop(of) => popped(byte(assembling, drop_opcode(of)))
-        ir.Copy => copied(assembling)
-        ir.Arithmetic(what) => arithmetic_written(assembling, what)
-        ir.Concat => invoked(assembling: assembling, opcode: 182, method: concat_method(), receivers: 1)
-        ir.CompareLongs(how) => truth(assembling: pushed(popped_times(byte(assembling, 148), 2), HeldInteger), opcode: 153 + step(how), consumes: 1)
-        ir.CompareIntegers(how) => truth(assembling: assembling, opcode: 159 + step(how), consumes: 2)
-        ir.Not => popped(byte(pushed(byte(assembling, 4), HeldInteger), 130))
-        ir.Widen => pushed(popped(byte(assembling, 133)), HeldLong)
-        ir.Narrow => pushed(popped(byte(assembling, 136)), HeldInteger)
-        ir.LowEightBits => popped(byte(pushed(short(byte(pushed(popped(byte(assembling, 136)), HeldInteger), 17), 255), HeldInteger), 126))
-        ir.Label(_) => assembling
-        ir.Jump(label) => unreachable(branched(assembling: assembling, opcode: 167, label: label))
-        ir.JumpIfFalse(label) => branched(assembling: popped(assembling), opcode: 153, label: label)
-        ir.JumpIfNull(label) => branched(assembling: popped(assembling), opcode: 198, label: label)
-        ir.New(class) => made(assembling, class)
-        ir.NewArray(class) => array_made(assembling, class)
-        ir.StoreInArray => popped_times(byte(assembling, 83), 3)
-        ir.LoadFromArray => pushed(popped_times(byte(assembling, 50), 2), HeldObject("java/lang/Object"))
-        ir.ArrayLength => pushed(popped(byte(assembling, 190)), HeldInteger)
-        ir.Construct(method) => constructed(assembling, method)
-        ir.GetField(field) => pushed(popped(field_written(assembling, 180, field)), held_of(field.of))
-        ir.GetStatic(field) => pushed(field_written(assembling, 178, field), held_of(field.of))
-        ir.PutField(field) => popped_times(field_written(assembling, 181, field), 2)
-        ir.InvokeStatic(method) => invoked(assembling: assembling, opcode: 184, method: method, receivers: 0)
-        ir.InvokeVirtual(method) => invoked(assembling: assembling, opcode: 182, method: method, receivers: 1)
-        ir.InvokeInterface(method) => interface_invoked(assembling, method)
-        ir.InvokeStaticOfInterface(method) => static_of_interface_invoked(assembling, method)
-        ir.Cast(class) => pushed(popped(class_named(assembling, 192, class)), HeldObject(class))
-        ir.InstanceOf(class) => pushed(popped(class_named(assembling, 193, class)), HeldInteger)
-        ir.Increment(slot) => incremented(assembling, slot)
-        ir.Return(of) => unreachable(byte(assembling, return_opcode(of)))
-        ir.Throw => unreachable(popped(byte(assembling, 191)))
+        IntegerOf(value) => integer_written(assembling, value)
+        TextOf(value) => text_written(assembling, value)
+        Load { slot, of } => pushed(indexed(assembling: assembling, opcode: load_opcode(of), slot: slot), held_of(of))
+        Store { slot, of } => stored(assembling, slot, of)
+        Drop(of) => popped(byte(assembling, drop_opcode(of)))
+        Copy => copied(assembling)
+        Arithmetic(what) => arithmetic_written(assembling, what)
+        Concat => invoked(assembling: assembling, opcode: 182, method: concat_method(), receivers: 1)
+        CompareLongs(how) => truth(assembling: pushed(popped_times(byte(assembling, 148), 2), HeldInteger), opcode: 153 + step(how), consumes: 1)
+        CompareIntegers(how) => truth(assembling: assembling, opcode: 159 + step(how), consumes: 2)
+        Not => popped(byte(pushed(byte(assembling, 4), HeldInteger), 130))
+        Widen => pushed(popped(byte(assembling, 133)), HeldLong)
+        Narrow => pushed(popped(byte(assembling, 136)), HeldInteger)
+        LowEightBits => popped(byte(pushed(short(byte(pushed(popped(byte(assembling, 136)), HeldInteger), 17), 255), HeldInteger), 126))
+        Label(_) => assembling
+        Jump(label) => unreachable(branched(assembling: assembling, opcode: 167, label: label))
+        JumpIfFalse(label) => branched(assembling: popped(assembling), opcode: 153, label: label)
+        JumpIfNull(label) => branched(assembling: popped(assembling), opcode: 198, label: label)
+        New(class) => made(assembling, class)
+        NewArray(class) => array_made(assembling, class)
+        StoreInArray => popped_times(byte(assembling, 83), 3)
+        LoadFromArray => pushed(popped_times(byte(assembling, 50), 2), HeldObject("java/lang/Object"))
+        ArrayLength => pushed(popped(byte(assembling, 190)), HeldInteger)
+        Construct(method) => constructed(assembling, method)
+        GetField(field) => pushed(popped(field_written(assembling, 180, field)), held_of(field.of))
+        GetStatic(field) => pushed(field_written(assembling, 178, field), held_of(field.of))
+        PutField(field) => popped_times(field_written(assembling, 181, field), 2)
+        InvokeStatic(method) => invoked(assembling: assembling, opcode: 184, method: method, receivers: 0)
+        InvokeVirtual(method) => invoked(assembling: assembling, opcode: 182, method: method, receivers: 1)
+        InvokeInterface(method) => interface_invoked(assembling, method)
+        InvokeStaticOfInterface(method) => static_of_interface_invoked(assembling, method)
+        Cast(class) => pushed(popped(class_named(assembling, 192, class)), HeldObject(class))
+        InstanceOf(class) => pushed(popped(class_named(assembling, 193, class)), HeldInteger)
+        Increment(slot) => incremented(assembling, slot)
+        Return(of) => unreachable(byte(assembling, return_opcode(of)))
+        Throw => unreachable(popped(byte(assembling, 191)))
     }
 }
 
@@ -766,23 +1282,23 @@ fn constant(assembling: Assembling, held: Int) -> Assembling {
 }
 
 /// The opcode that loads a value `of` holds.
-// example: load_opcode(ir.Long) == 22
-fn load_opcode(of: ir.Descriptor) -> Int {
+// example: load_opcode(Long) == 22
+fn load_opcode(of: Descriptor) -> Int {
     match of {
-        ir.Long => 22
-        ir.Reference(_) => 25
-        ir.Array(_) => 25
+        Long => 22
+        Reference(_) => 25
+        Array(_) => 25
         _ => 21
     }
 }
 
 /// `assembling` with a value stored in `slot`, which holds it from here on.
-// example: stored(assembling_of([]), 0, ir.Long).code == [55, 0]
-fn stored(assembling: Assembling, slot: Int, of: ir.Descriptor) -> Assembling {
+// example: stored(assembling_of([]), 0, Long).code == [55, 0]
+fn stored(assembling: Assembling, slot: Int, of: Descriptor) -> Assembling {
     let opcode = match of {
-        ir.Long => 55
-        ir.Reference(_) => 58
-        ir.Array(_) => 58
+        Long => 55
+        Reference(_) => 58
+        Array(_) => 58
         _ => 54
     }
     let written = popped(indexed(assembling: assembling, opcode: opcode, slot: slot))
@@ -799,10 +1315,10 @@ fn indexed(assembling: Assembling, opcode: Int, slot: Int) -> Assembling {
 }
 
 /// The opcode that drops a value `of` holds: two words for a whole number, and one otherwise.
-// example: drop_opcode(ir.Long) == 88
-fn drop_opcode(of: ir.Descriptor) -> Int {
+// example: drop_opcode(Long) == 88
+fn drop_opcode(of: Descriptor) -> Int {
     match of {
-        ir.Long => 88
+        Long => 88
         _ => 87
     }
 }
@@ -840,8 +1356,61 @@ fn arithmetic_written(assembling: Assembling, what: ir.Arithmetic) -> Assembling
 
 /// `String.concat`, which joins two texts.
 // example: concat_method().name == "concat"
-fn concat_method() -> ir.MethodRef {
-    ir.MethodRef { class: "java/lang/String", name: "concat", descriptor: ir.MethodDescriptor { parameters: [ir.text_descriptor()], result: Some(ir.text_descriptor()) } }
+fn concat_method() -> MethodRef {
+    MethodRef { class: "java/lang/String", name: "concat", descriptor: MethodDescriptor { parameters: [text_descriptor()], result: Some(text_descriptor()) } }
+}
+
+/// What holds text.
+// example: descriptor_text(text_descriptor()) == "Ljava/lang/String;"
+fn text_descriptor() -> Descriptor {
+    Reference(class_of(ir.Text))
+}
+
+/// The class a value of `kind` is, as a class file names it.
+// example: class_of(ir.Text) == "java/lang/String"
+// example: class_of(ir.TypeOf { module: ir.ThePrelude, name: "List" }) == "bux/List"
+// example: class_of(ir.VariantOf { module: ir.OfTheLibrary("lexer"), of: "Token", variant: "Word" }) == "bux/library/lexer/Token$Word"
+// example: class_of(ir.ProcessOf { module: ir.OfTheProgram("main"), name: "Counter" }) == "main/process$Counter"
+// example: class_of(ir.ForeignClass("java.lang.Thread")) == "java/lang/Thread"
+fn class_of(kind: ir.Kind) -> String {
+    match kind {
+        ir.Anything => "java/lang/Object"
+        ir.Text => "java/lang/String"
+        ir.TypeOf { module, name } => type_class(module, name)
+        ir.VariantOf { module, of, variant } => type_class(module, of) + "$" + variant
+        ir.ModuleOf(module) => module_class(module)
+        ir.ProcessOf { module, name } => module_class(module) + "/process$" + name
+        ir.ForeignClass(dotted) => ir.dots_replaced(dotted, "/")
+        ir.Mailbox => "java/util/concurrent/ArrayBlockingQueue"
+        ir.End => "java/util/concurrent/CompletableFuture"
+        ir.Envelope => "java/util/concurrent/atomic/AtomicReference"
+        ir.Task => "java/lang/Runnable"
+        ir.Failure => "java/lang/Throwable"
+        ir.JavaList => "java/util/List"
+    }
+}
+
+/// The class of the type `name` that `module` declares; the prelude's types are in `bux`.
+// example: type_class(ir.OfTheProgram("demo"), "Box") == "demo/Box"
+fn type_class(module: ir.Module, name: String) -> String {
+    match module {
+        ir.ThePrelude => "bux/" + name
+        _ => module_class(module) + "/" + name
+    }
+}
+
+/// The class of `module`, which holds its functions.
+///
+/// A module of the library is a class of the package `bux/library`, and a module of the program
+/// is a class of no package, so a program may name a module as the library names one.
+// example: module_class(ir.ThePrelude) == "bux/library/prelude"
+// example: module_class(ir.OfTheProgram("demo")) == "demo"
+fn module_class(module: ir.Module) -> String {
+    match module {
+        ir.ThePrelude => "bux/library/prelude"
+        ir.OfTheLibrary(name) => "bux/library/" + name
+        ir.OfTheProgram(name) => name
+    }
 }
 
 /// How far a comparison's opcode sits from `ifeq`, which is as far as it sits from `if_icmpeq`.
@@ -875,7 +1444,7 @@ fn offset(assembling: Assembling) -> Int {
 // example: array_made(assembling_of([]), "java/lang/Object").code == [189, 0, 2]
 fn array_made(assembling: Assembling, class: String) -> Assembling {
     let written = popped(class_named(assembling, 189, class))
-    pushed(written, held_of(ir.Array(ir.Reference(class))))
+    pushed(written, held_of(Array(Reference(class))))
 }
 
 /// `assembling` with an instruction that names `class` out of the pool.
@@ -887,14 +1456,14 @@ fn class_named(assembling: Assembling, opcode: Int, class: String) -> Assembling
 
 /// `assembling` with an instruction that names `field` out of the pool.
 // example: field_written(assembling_of([]), 180, boxed_at()).code == [180, 0, 6]
-fn field_written(assembling: Assembling, opcode: Int, field: ir.FieldRef) -> Assembling {
+fn field_written(assembling: Assembling, opcode: Int, field: FieldRef) -> Assembling {
     let named = pooled_field(assembling.pool, field)
     short(byte(assembling { pool: named.pool }, opcode), named.index)
 }
 
 /// `assembling` with a constructor run, which builds each copy of the instance it is handed.
 // example: list.length(constructed(assembling_of([]), box_made()).code) == 3
-fn constructed(assembling: Assembling, method: ir.MethodRef) -> Assembling {
+fn constructed(assembling: Assembling, method: MethodRef) -> Assembling {
     let named = pooled_method(assembling.pool, method)
     let written = popped_times(short(byte(assembling { pool: named.pool }, 183), named.index), list.length(method.descriptor.parameters))
     let top = list.at(written.frame.stack, list.length(written.frame.stack) - 1)
@@ -907,29 +1476,39 @@ fn constructed(assembling: Assembling, method: ir.MethodRef) -> Assembling {
 
 /// `assembling` with a method called: its arguments and receiver taken, and its result left.
 // example: list.length(invoked(assembling: assembling_of([]), opcode: 184, method: box_made(), receivers: 0).frame.stack) == 0
-fn invoked(assembling: Assembling, opcode: Int, method: ir.MethodRef, receivers: Int) -> Assembling {
+fn invoked(assembling: Assembling, opcode: Int, method: MethodRef, receivers: Int) -> Assembling {
     let named = pooled_method(assembling.pool, method)
-    called(short(byte(assembling { pool: named.pool }, opcode), named.index), method, receivers)
+    returned_from(short(byte(assembling { pool: named.pool }, opcode), named.index), method, receivers)
 }
 
 /// `assembling` with a method of an interface called on the receiver below its arguments.
 // example: list.length(interface_invoked(assembling_of([]), box_made()).code) == 5
-fn interface_invoked(assembling: Assembling, method: ir.MethodRef) -> Assembling {
+fn interface_invoked(assembling: Assembling, method: MethodRef) -> Assembling {
     let named = pooled_interface_method(assembling.pool, method)
-    let taken = ir.parameters_width(method.descriptor) + 1
+    let taken = parameters_width(method.descriptor) + 1
     let counted = if taken > 255 {
         255
     } else {
         taken
     }
-    called(each_byte(short(byte(assembling { pool: named.pool }, 185), named.index), [counted, 0]), method, 1)
+    returned_from(each_byte(short(byte(assembling { pool: named.pool }, 185), named.index), [counted, 0]), method, 1)
+}
+
+/// How many slots the parameters of `method` take.
+// example: parameters_width(MethodDescriptor { parameters: [Long, object()], result: None }) == 3
+fn parameters_width(method: MethodDescriptor) -> Int {
+    var slots = 0
+    for parameter in method.parameters {
+        slots += width(parameter)
+    }
+    slots
 }
 
 /// `assembling` with a static method of an interface called, which the pool names as such.
 // example: list.length(static_of_interface_invoked(assembling_of([]), box_made()).code) == 3
-fn static_of_interface_invoked(assembling: Assembling, method: ir.MethodRef) -> Assembling {
+fn static_of_interface_invoked(assembling: Assembling, method: MethodRef) -> Assembling {
     let named = pooled_interface_method(assembling.pool, method)
-    called(short(byte(assembling { pool: named.pool }, 184), named.index), method, 0)
+    returned_from(short(byte(assembling { pool: named.pool }, 184), named.index), method, 0)
 }
 
 /// `assembling` with one byte written.
@@ -939,8 +1518,8 @@ fn byte(assembling: Assembling, value: Int) -> Assembling {
 }
 
 /// What a call leaves: its arguments gone, the receiver too, and its result on top.
-// example: list.length(called(assembling_of([]), box_made(), 0).frame.stack) == 0
-fn called(assembling: Assembling, method: ir.MethodRef, receivers: Int) -> Assembling {
+// example: list.length(returned_from(assembling_of([]), box_made(), 0).frame.stack) == 0
+fn returned_from(assembling: Assembling, method: MethodRef, receivers: Int) -> Assembling {
     let taken = popped_times(assembling, list.length(method.descriptor.parameters) + receivers)
     match method.descriptor.result {
         Some(result) => pushed(taken, held_of(result))
@@ -1021,19 +1600,19 @@ fn each_byte(assembling: Assembling, values: List<Int>) -> Assembling {
 
 /// The opcode that gives back a value `of` holds, and nothing for `void`.
 // example: return_opcode(None) == 177
-fn return_opcode(of: Option<ir.Descriptor>) -> Int {
+fn return_opcode(of: Option<Descriptor>) -> Int {
     match of {
-        Some(ir.Long) => 173
-        Some(ir.Reference(_)) => 176
-        Some(ir.Array(_)) => 176
+        Some(Long) => 173
+        Some(Reference(_)) => 176
+        Some(Array(_)) => 176
         Some(_) => 172
         None => 177
     }
 }
 
 /// What a method starts with: what it is reached through, then its parameters.
-// example: list.length(entering([ir.Long], None, 3).locals) == 3
-fn entering(parameters: List<ir.Descriptor>, receiver: Option<String>, slots: Int) -> Frame {
+// example: list.length(entering([Long], None, 3).locals) == 3
+fn entering(parameters: List<Descriptor>, receiver: Option<String>, slots: Int) -> Frame {
     var locals = []
     var at = 0
     for at < slots {
@@ -1049,7 +1628,7 @@ fn entering(parameters: List<ir.Descriptor>, receiver: Option<String>, slots: In
     at = receiver_width(receiver)
     for parameter in parameters {
         frame = held_in(frame, at, parameter)
-        at += ir.width(parameter)
+        at += width(parameter)
     }
     frame
 }
@@ -1064,13 +1643,23 @@ fn receiver_width(receiver: Option<String>) -> Int {
 }
 
 /// `frame`, with `slot` holding a value `of` holds, and the slot after it where that is two wide.
-// example: held_in(Frame { locals: [Nothing, Nothing], stack: [] }, 0, ir.Long).locals == [Holding(HeldLong), Second]
-fn held_in(frame: Frame, slot: Int, of: ir.Descriptor) -> Frame {
+// example: held_in(Frame { locals: [Nothing, Nothing], stack: [] }, 0, Long).locals == [Holding(HeldLong), Second]
+fn held_in(frame: Frame, slot: Int, of: Descriptor) -> Frame {
     let holding = replaced(frame.locals, slot, Holding(held_of(of)))
-    if ir.width(of) == 2 {
+    if width(of) == 2 {
         return frame { locals: replaced(holding, slot + 1, Second) }
     }
     frame { locals: holding }
+}
+
+/// How many slots a value `of` holds takes: two for a `long`, and one for anything else.
+// example: width(Long) == 2
+// example: width(Integer) == 1
+fn width(of: Descriptor) -> Int {
+    match of {
+        Long => 2
+        _ => 1
+    }
 }
 
 /// `values`, with the one at `at` replaced by `value`.
@@ -1268,12 +1857,12 @@ fn object_written(writing: Written, class: String) -> Written {
 }
 
 /// What a value `of` holds is, to the verifier; a truth value is a small whole number there.
-// example: held_of(ir.Array(ir.Long)) == HeldObject("[J")
-fn held_of(of: ir.Descriptor) -> Held {
+// example: held_of(Array(Long)) == HeldObject("[J")
+fn held_of(of: Descriptor) -> Held {
     match of {
-        ir.Long => HeldLong
-        ir.Reference(class) => HeldObject(class)
-        ir.Array(held) => HeldObject("[" + ir.descriptor_text(held))
+        Long => HeldLong
+        Reference(class) => HeldObject(class)
+        Array(held) => HeldObject("[" + descriptor_text(held))
         _ => HeldInteger
     }
 }
@@ -1293,26 +1882,59 @@ fn pooled_text(pool: Pool, text: String) -> Pooled {
 
 /// `pool` with `field` held, and its index.
 // example: pooled_field(no_pool(), boxed_at()).index == 6
-fn pooled_field(pool: Pool, field: ir.FieldRef) -> Pooled {
+fn pooled_field(pool: Pool, field: FieldRef) -> Pooled {
     let class = pooled_class(pool, field.class)
-    let member = name_and_type(pool: class.pool, name: field.name, descriptor: ir.descriptor_text(field.of))
+    let member = name_and_type(pool: class.pool, name: field.name, descriptor: descriptor_text(field.of))
     pooled(member.pool, FieldEntry { class: class.index, member: member.index })
 }
 
 /// `pool` with `method` held as a method of a class, and its index.
 // example: pooled_method(no_pool(), box_made()).index == 6
-fn pooled_method(pool: Pool, method: ir.MethodRef) -> Pooled {
+fn pooled_method(pool: Pool, method: MethodRef) -> Pooled {
     let class = pooled_class(pool, method.class)
-    let member = name_and_type(pool: class.pool, name: method.name, descriptor: ir.method_descriptor_text(method.descriptor))
+    let member = name_and_type(pool: class.pool, name: method.name, descriptor: method_descriptor_text(method.descriptor))
     pooled(member.pool, MethodEntry { class: class.index, member: member.index })
 }
 
 /// `pool` with `method` held as a method of an interface, and its index.
 // example: pooled_interface_method(no_pool(), box_made()).index == 6
-fn pooled_interface_method(pool: Pool, method: ir.MethodRef) -> Pooled {
+fn pooled_interface_method(pool: Pool, method: MethodRef) -> Pooled {
     let class = pooled_class(pool, method.class)
-    let member = name_and_type(pool: class.pool, name: method.name, descriptor: ir.method_descriptor_text(method.descriptor))
+    let member = name_and_type(pool: class.pool, name: method.name, descriptor: method_descriptor_text(method.descriptor))
     pooled(member.pool, InterfaceMethodEntry { class: class.index, member: member.index })
+}
+
+/// `method` as a class file writes it.
+// example: method_descriptor_text(MethodDescriptor { parameters: [Long, object()], result: Some(Boolean) }) == "(JLjava/lang/Object;)Z"
+fn method_descriptor_text(method: MethodDescriptor) -> String {
+    var written = "("
+    for parameter in method.parameters {
+        written += descriptor_text(parameter)
+    }
+    written + ")" + held_text(method.result)
+}
+
+/// What a value `held` holds is written as in a descriptor, and `V` for nothing.
+// example: held_text(Some(Long)) == "J"
+// example: held_text(None) == "V"
+fn held_text(held: Option<Descriptor>) -> String {
+    match held {
+        Some(of) => descriptor_text(of)
+        None => "V"
+    }
+}
+
+/// `of` as a class file writes it.
+// example: descriptor_text(Array(Integer)) == "[I"
+fn descriptor_text(of: Descriptor) -> String {
+    match of {
+        Long => "J"
+        Boolean => "Z"
+        Integer => "I"
+        Character => "C"
+        Reference(class) => "L" + class + ";"
+        Array(held) => "[" + descriptor_text(held)
+    }
 }
 
 /// `pool` with a name and a descriptor held as one member, and its index.
@@ -1539,47 +2161,53 @@ fn one_class(class: ir.Class) -> ir.Lowered {
     ir.Lowered { classes: [class], asks: ir.no_asks() }
 }
 
-/// The record `a/B`, which holds one whole number, `at`.
-// example: record_class().name == "a/B"
+/// The record `a.B`, which holds one whole number, `at`.
+// example: class_of(record_class().of) == "a/B"
 private fn record_class() -> ir.Class {
-    record_class_named("a/B")
+    record_class_named("B")
 }
 
-/// The record `class`, which holds one whole number, `at`.
-// example: record_class_named("a/b").name == "a/b"
-private fn record_class_named(class: String) -> ir.Class {
-    ir.Class { name: class, extends: "java/lang/Object", extending: ir.Never, implements: [], fields: [ir.Field { name: "at", of: ir.Long }], methods: [] }
+/// The record `named` of the module `a`, which holds one whole number, `at`.
+// example: class_of(record_class_named("b").of) == "a/b"
+private fn record_class_named(named: String) -> ir.Class {
+    ir.Class { of: ir.TypeOf { module: ir.OfTheProgram("a"), name: named }, extends: ir.Anything, extending: ir.Never, implements: [], fields: [ir.Field { name: "at", of: ir.Whole }], methods: [] }
 }
 
-/// The base `a/B` of a sum type, which holds the tag of its variant.
-// example: base_class().extends == "java/lang/Object"
-private fn base_class() -> ir.Class {
-    ir.Class { name: "a/B", extends: "java/lang/Object", extending: ir.ByItsVariants, implements: [], fields: [ir.Field { name: "tag", of: ir.Integer }], methods: [] }
-}
-
-/// The variant `a/B$C`, which extends the base `a/B`.
-// example: variant_class().extends == "a/B"
+/// The variant `C` of `a.B`, which extends the base `a.B`.
+// example: class_of(variant_class().extends) == "a/B"
 private fn variant_class() -> ir.Class {
-    ir.Class { name: "a/B$C", extends: "a/B", extending: ir.Never, implements: [], fields: [], methods: [] }
+    ir.Class { of: ir.VariantOf { module: ir.OfTheProgram("a"), of: "B", variant: "C" }, extends: base_class().of, extending: ir.Never, implements: [], fields: [], methods: [] }
+}
+
+/// The base `a.B` of a sum type, which holds the tag of its variant.
+// example: base_class().extends == ir.Anything
+private fn base_class() -> ir.Class {
+    ir.Class { of: ir.TypeOf { module: ir.OfTheProgram("a"), name: "B" }, extends: ir.Anything, extending: ir.ByItsVariants, implements: [], fields: [ir.Field { name: "tag", of: ir.Small }], methods: [] }
 }
 
 /// A static method `of` that gives back the whole number one.
 // example: returning_method().name == "of"
 private fn returning_method() -> ir.Method {
-    let body = ir.Body { instructions: [ir.LongOf(1), ir.Return(Some(ir.Long))], locals: 0, guards: [] }
-    ir.Method { name: "of", descriptor: ir.MethodDescriptor { parameters: [], result: Some(ir.Long) }, reached: ir.ThroughTheClass, body: body }
+    let body = ir.Body { instructions: [ir.LongOf(1), ir.Return(Some(ir.Whole))], locals: [], guards: [] }
+    ir.Method { name: "of", parameters: [], result: Some(ir.Whole), reached: ir.ThroughTheClass, body: body }
+}
+
+/// The method `returning_method` spelled, which gives back the whole number one.
+// example: list.length(returning_spelled().instructions) == 2
+private fn returning_spelled() -> Spelled {
+    Spelled { name: "of", descriptor: MethodDescriptor { parameters: [], result: Some(Long) }, receiver: None, instructions: [LongOf(1), Return(Some(Long))], slots: 0, guards: [] }
 }
 
 /// The field `at` of the record `a/B`.
 // example: boxed_at().name == "at"
-private fn boxed_at() -> ir.FieldRef {
-    ir.FieldRef { class: "a/B", name: "at", of: ir.Long }
+private fn boxed_at() -> FieldRef {
+    FieldRef { class: "a/B", name: "at", of: Long }
 }
 
 /// The constructor of the record `a/B`, which takes one whole number.
 // example: box_made().name == "<init>"
-private fn box_made() -> ir.MethodRef {
-    ir.MethodRef { class: "a/B", name: "<init>", descriptor: ir.MethodDescriptor { parameters: [ir.Long], result: None } }
+private fn box_made() -> MethodRef {
+    MethodRef { class: "a/B", name: "<init>", descriptor: MethodDescriptor { parameters: [Long], result: None } }
 }
 
 /// A class the writer did not write, the method of it at fault where one is, and why.
@@ -1736,3 +2364,104 @@ type Entry =
         class: Int
         member: Int
     }
+
+/// A method as a JVM runs it: its name and descriptor, the class of its receiver where it has
+/// one, its instructions over numbered slots, how many slots it takes, and its guards.
+type Spelled = {
+    name: String
+    descriptor: MethodDescriptor
+    receiver: Option<String>
+    instructions: List<Instruction>
+    slots: Int
+    guards: List<ir.Guard>
+}
+
+/// Where the locals of one method live: the slot of each name, and how many slots they take.
+type Locals = {
+    slots: map.Map<String, Placed>
+    width: Int
+}
+
+/// Where one local lives: the first of its slots, and how many slots it takes.
+type Placed = {
+    at: Int
+    width: Int
+}
+
+/// One instruction a JVM runs, over a stack and numbered slots.
+type Instruction =
+    | LongOf(Int)
+    | BooleanOf(Bool)
+    | IntegerOf(Int)
+    | TextOf(String)
+    | Load {
+        slot: Int
+        of: Descriptor
+    }
+    | Store {
+        slot: Int
+        of: Descriptor
+    }
+    | Drop(Descriptor)
+    | Copy
+    | Arithmetic(ir.Arithmetic)
+    | Concat
+    | CompareLongs(ir.Comparison)
+    | CompareIntegers(ir.Comparison)
+    | Not
+    | Widen
+    | Narrow
+    | LowEightBits
+    | Label(Int)
+    | Jump(Int)
+    | JumpIfFalse(Int)
+    | JumpIfNull(Int)
+    | New(String)
+    | NewArray(String)
+    | StoreInArray
+    | LoadFromArray
+    | ArrayLength
+    | Construct(MethodRef)
+    | GetField(FieldRef)
+    | GetStatic(FieldRef)
+    | PutField(FieldRef)
+    | InvokeStatic(MethodRef)
+    | InvokeVirtual(MethodRef)
+    | InvokeInterface(MethodRef)
+    | InvokeStaticOfInterface(MethodRef)
+    | Cast(String)
+    | InstanceOf(String)
+    | Increment(Int)
+    | Return(Option<Descriptor>)
+    | Throw
+
+/// A field of a class.
+type FieldRef = {
+    class: String
+    name: String
+    of: Descriptor
+}
+
+/// A method of a class.
+type MethodRef = {
+    class: String
+    name: String
+    descriptor: MethodDescriptor
+}
+
+/// What a method takes, and what it gives back, which is nothing for `void`.
+type MethodDescriptor = {
+    parameters: List<Descriptor>
+    result: Option<Descriptor>
+}
+
+/// What holds a value on the JVM.
+derive Eq for Descriptor
+
+type Descriptor =
+    | Long
+    | Boolean
+    | Integer
+    | Character
+    | Reference(String)
+    | Array(Descriptor)

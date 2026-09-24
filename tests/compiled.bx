@@ -28,15 +28,41 @@ fn lowered_alone(source: String, library: ir.Library) -> List<ir.Lowered> {
     lowered_beside(source: source, directory: "no-such-directory", library: library)
 }
 
-/// Every module of `source`, lowered as `demo` beside `directory`, or none where it is refused.
+/// Every module of `source`, lowered as `demo` beside `directory`, or none where it is refused or
+/// the writer cannot spell one of its methods.
 ///
 /// A module beside it in `directory` is one it may import. The lowering is the one a build runs,
 /// but a function is not held to state an example, because a drawn source states none.
 // example: list.length(lowered_beside(source: "fn (", directory: "no-such-directory", library: ir.little_library())) == 0
 fn lowered_beside(source: String, directory: String, library: ir.Library) -> List<ir.Lowered> {
     match command.checked_as_written(command.Page { source: source, path: directory + "/demo.bx" }, library) {
-        Ok(program) => ir.passes_lowered(inferred_of(program), library)
+        Ok(program) => spelled_whole(ir.passes_lowered(inferred_of(program), library))
         Err(_) => []
+    }
+}
+
+/// `lowered`, or none where the writer cannot spell one of its methods.
+///
+/// A property reads each method as the writer spells it, so a method it cannot spell must
+/// refuse the whole source, and not stand as a method of no instruction.
+// example: list.length(spelled_whole([])) == 0
+fn spelled_whole(lowered: List<ir.Lowered>) -> List<ir.Lowered> {
+    for class in every_class(lowered) {
+        for method in class.methods {
+            if !is_spelled(jvm.method_spelled(method, jvm.class_of(class.of))) {
+                return []
+            }
+        }
+    }
+    lowered
+}
+
+/// Whether the writer spelled a method.
+// example: !is_spelled(Err(jvm.Defect("")))
+fn is_spelled(spelled: Result<jvm.Spelled, jvm.Why>) -> Bool {
+    match spelled {
+        Ok(_) => true
+        Err(_) => false
     }
 }
 
@@ -90,13 +116,14 @@ fn every_class(lowered: List<ir.Lowered>) -> List<ir.Class> {
     classes
 }
 
-/// The instructions of every method of every class the module `demo` among `lowered` writes.
+/// The instructions of every method of every class the module `demo` among `lowered` writes, as
+/// the writer spells them.
 // example: list.length(demo_bodies([])) == 0
-fn demo_bodies(lowered: List<ir.Lowered>) -> List<List<ir.Instruction>> {
+fn demo_bodies(lowered: List<ir.Lowered>) -> List<List<jvm.Instruction>> {
     var bodies = []
     for class in demo_classes(lowered) {
         for method in class.methods {
-            bodies = list.push(bodies, method.body.instructions)
+            bodies = list.push(bodies, spelled_of(method: method, class: class).instructions)
         }
     }
     bodies
@@ -104,16 +131,17 @@ fn demo_bodies(lowered: List<ir.Lowered>) -> List<List<ir.Instruction>> {
 
 /// The instructions of the method `named` of the class `demo`, which are none where it has none.
 // example: list.length(instructions_of(lowered: [], named: "go")) == 0
-fn instructions_of(lowered: List<ir.Lowered>, named: String) -> List<ir.Instruction> {
+fn instructions_of(lowered: List<ir.Lowered>, named: String) -> List<jvm.Instruction> {
     match body_of(lowered: lowered, named: named) {
         Some(body) => body.instructions
         None => []
     }
 }
 
-/// The body of the method `named` of the class `demo` among `lowered`, or `None` where it has none.
+/// The method `named` of the class `demo` among `lowered`, as the writer spells it, or `None`
+/// where it has none.
 // example: is_none(body_of(lowered: [], named: "go"))
-fn body_of(lowered: List<ir.Lowered>, named: String) -> Option<ir.Body> {
+fn body_of(lowered: List<ir.Lowered>, named: String) -> Option<jvm.Spelled> {
     method_in(classes: demo_classes(lowered), class: "demo", named: named)
 }
 
@@ -127,33 +155,53 @@ fn demo_classes(lowered: List<ir.Lowered>) -> List<ir.Class> {
 // example: list.length(module_classes(lowered: [], named: "demo")) == 0
 fn module_classes(lowered: List<ir.Lowered>, named: String) -> List<ir.Class> {
     for module in lowered {
-        if or(list.at(module.classes, 0), no_class()).name == named {
+        if jvm.class_of(or(list.at(module.classes, 0), no_class()).of) == named {
             return module.classes
         }
     }
     []
 }
 
-/// The body of the method `named` of the class `class` among `classes`, or `None` if none.
+/// The method `named` of the class `class` among `classes`, as the writer spells it, or `None`
+/// if none.
 // example: is_none(method_in(classes: [], class: "demo", named: "go"))
-fn method_in(classes: List<ir.Class>, class: String, named: String) -> Option<ir.Body> {
+fn method_in(classes: List<ir.Class>, class: String, named: String) -> Option<jvm.Spelled> {
     for one in classes {
-        if one.name == class {
+        if jvm.class_of(one.of) == class {
             return body_named(one, named)
         }
     }
     None
 }
 
-/// The body of the method of `class` written as `named`, or `None` where it writes none.
+/// The method of `class` written as `named`, as the writer spells it, or `None` where it writes
+/// none.
 // example: is_none(body_named(no_class(), "go"))
-fn body_named(class: ir.Class, named: String) -> Option<ir.Body> {
+fn body_named(class: ir.Class, named: String) -> Option<jvm.Spelled> {
     for method in class.methods {
         if method.name == named {
-            return Some(method.body)
+            return Some(spelled_of(method: method, class: class))
         }
     }
     None
+}
+
+/// `method` of `class` as the writer spells it, and a method of nothing where the writer refuses.
+///
+/// `lowered_beside` gives no class with a method the writer refuses, so the method of nothing
+/// stands only for a class that a test builds itself.
+// example: list.length(spelled_of(method: ir.Method { name: "go", parameters: [], result: None, reached: ir.ThroughTheClass, body: ir.Body { instructions: [ir.Return(None)], locals: [], guards: [] } }, class: no_class()).instructions) == 1
+fn spelled_of(method: ir.Method, class: ir.Class) -> jvm.Spelled {
+    match jvm.method_spelled(method, jvm.class_of(class.of)) {
+        Ok(spelled) => spelled
+        Err(_) => no_spelled()
+    }
+}
+
+/// A method of no name, no instruction, and no guard, which stands where the writer spelled none.
+// example: list.length(no_spelled().guards) == 0
+fn no_spelled() -> jvm.Spelled {
+    jvm.Spelled { name: "", descriptor: jvm.MethodDescriptor { parameters: [], result: None }, receiver: None, instructions: [], slots: 0, guards: [] }
 }
 
 /// Whether `maybe` holds nothing.
@@ -166,15 +214,15 @@ fn is_none<T>(maybe: Option<T>) -> Bool {
     }
 }
 
-/// A class with no name, no field, and no method, which stands where a module wrote no class.
-// example: no_class().name == ""
+/// A class of no module, with no field and no method, which stands where a module wrote no class.
+// example: jvm.class_of(no_class().of) == ""
 fn no_class() -> ir.Class {
-    ir.Class { name: "", extends: "", extending: ir.Never, implements: [], fields: [], methods: [] }
+    ir.Class { of: ir.ModuleOf(ir.OfTheProgram("")), extends: ir.Anything, extending: ir.Never, implements: [], fields: [], methods: [] }
 }
 
 /// The name of every method `instructions` call, in the order they call them.
-// example: calls_named([ir.Copy]) == []
-fn calls_named(instructions: List<ir.Instruction>) -> List<String> {
+// example: calls_named([jvm.Copy]) == []
+fn calls_named(instructions: List<jvm.Instruction>) -> List<String> {
     var names = []
     for instruction in instructions {
         names = both(first: names, second: name_called(called(instruction)))
@@ -184,7 +232,7 @@ fn calls_named(instructions: List<ir.Instruction>) -> List<String> {
 
 /// The name of `reference`, where there is one.
 // example: name_called(None) == []
-fn name_called(reference: Option<ir.MethodRef>) -> List<String> {
+fn name_called(reference: Option<jvm.MethodRef>) -> List<String> {
     match reference {
         Some(one) => [one.name]
         None => []
@@ -192,8 +240,8 @@ fn name_called(reference: Option<ir.MethodRef>) -> List<String> {
 }
 
 /// Every class `instructions` reach: by a call, by a static field, by a `new`, or by a cast.
-// example: reached_in([ir.New("a/B"), ir.Copy]) == ["a/B"]
-fn reached_in(instructions: List<ir.Instruction>) -> List<String> {
+// example: reached_in([jvm.New("a/B"), jvm.Copy]) == ["a/B"]
+fn reached_in(instructions: List<jvm.Instruction>) -> List<String> {
     var reached = []
     for instruction in instructions {
         reached = both(first: reached, second: class_reached(instruction))
@@ -202,20 +250,20 @@ fn reached_in(instructions: List<ir.Instruction>) -> List<String> {
 }
 
 /// The class one instruction reaches, where it reaches one.
-// example: class_reached(ir.Cast("a/B")) == ["a/B"]
-// example: class_reached(ir.Copy) == []
-fn class_reached(instruction: ir.Instruction) -> List<String> {
+// example: class_reached(jvm.Cast("a/B")) == ["a/B"]
+// example: class_reached(jvm.Copy) == []
+fn class_reached(instruction: jvm.Instruction) -> List<String> {
     match instruction {
-        ir.New(class) => [class]
-        ir.GetStatic(field) => [field.class]
-        ir.Cast(class) => [class]
+        jvm.New(class) => [class]
+        jvm.GetStatic(field) => [field.class]
+        jvm.Cast(class) => [class]
         _ => class_called(called(instruction))
     }
 }
 
 /// The class of `reference`, where there is one.
 // example: class_called(None) == []
-fn class_called(reference: Option<ir.MethodRef>) -> List<String> {
+fn class_called(reference: Option<jvm.MethodRef>) -> List<String> {
     match reference {
         Some(one) => [one.class]
         None => []
@@ -223,14 +271,14 @@ fn class_called(reference: Option<ir.MethodRef>) -> List<String> {
 }
 
 /// The method `instruction` calls, where it is a call at all.
-// example: is_none(called(ir.Copy))
-fn called(instruction: ir.Instruction) -> Option<ir.MethodRef> {
+// example: is_none(called(jvm.Copy))
+fn called(instruction: jvm.Instruction) -> Option<jvm.MethodRef> {
     match instruction {
-        ir.Construct(reference) => Some(reference)
-        ir.InvokeStatic(reference) => Some(reference)
-        ir.InvokeVirtual(reference) => Some(reference)
-        ir.InvokeInterface(reference) => Some(reference)
-        ir.InvokeStaticOfInterface(reference) => Some(reference)
+        jvm.Construct(reference) => Some(reference)
+        jvm.InvokeStatic(reference) => Some(reference)
+        jvm.InvokeVirtual(reference) => Some(reference)
+        jvm.InvokeInterface(reference) => Some(reference)
+        jvm.InvokeStaticOfInterface(reference) => Some(reference)
         _ => None
     }
 }
