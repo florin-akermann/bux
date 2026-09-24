@@ -279,6 +279,7 @@ fn code_of(kind: LoadErrorKind) -> String {
         NoSuchPackage(named) => "L0316"
         DependsTwice(named) => "L0315"
         ArchivedTwice(named) => "L0315"
+        SplitsTheClassPath(path) => "L0315"
         InTwoFiles { module, first, second } => "L0317"
     }
 }
@@ -295,6 +296,7 @@ fn message(kind: LoadErrorKind) -> String {
         NoSuchPackage(named) => "there is no package in `" + named + "`"
         DependsTwice(named) => "`" + named + "` is depended on twice"
         ArchivedTwice(named) => "`" + named + "` is stated twice"
+        SplitsTheClassPath(path) => "`" + path + "` holds `:`"
         InTwoFiles { module, first, second } => "`" + module + "` is both `" + first + "` and `" + second + "`"
     }
 }
@@ -311,6 +313,7 @@ fn help_of(kind: LoadErrorKind) -> String {
         NoSuchPackage(named) => "a package is a directory holding `bux.package`"
         DependsTwice(named) => "a manifest states one `depends` for each package it reaches"
         ArchivedTwice(named) => "a manifest states one `jar` for each archive it reaches"
+        SplitsTheClassPath(path) => "a class path puts `:` between two paths, so a path on it cannot hold one"
         InTwoFiles { module, first, second } => "one name has one definition; rename one of the two modules"
     }
 }
@@ -488,7 +491,10 @@ fn read_out_of(source: String) -> Result<Stated, LoadError> {
 }
 
 /// `stated` with what `line` states: a dependency before the first archive, and an archive after.
+///
+/// The path of either holds no `:`, because the class path of a run puts a `:` between two paths.
 // example: list.length(ok_or(line_added(no_lines(), Line { text: "depends ../b", span: lexer.Span { start: 0, length: 12 } }), no_lines()).depends) == 1
+// example: error_printed(refused_with(read_out_of("package a\nversion 1\ndepends a:b\n"))) == "L0315 20..31 `a:b` holds `:`\nhelp: a class path puts `:` between two paths, so a path on it cannot hold one\n"
 fn line_added(stated: Stated, line: Line) -> Result<Stated, LoadError> {
     if is_an_archive_line(line) {
         let archive = archive_of(line)?
@@ -500,7 +506,11 @@ fn line_added(stated: Stated, line: Line) -> Result<Stated, LoadError> {
     if list.length(stated.archives) > 0 {
         return Err(LoadError { kind: LineIsNot(Jar), span: line.span })
     }
-    Ok(stated { depends: list.push(stated.depends, word_of(line, Depends)?) })
+    let named = word_of(line, Depends)?
+    if can_split_the_class_path(named.word) {
+        return Err(LoadError { kind: SplitsTheClassPath(named.word), span: line.span })
+    }
+    Ok(stated { depends: list.push(stated.depends, named) })
 }
 
 /// Whether `archives` holds one at `path`, as the line writes it.
@@ -529,19 +539,30 @@ fn is_an_archive_line(line: Line) -> Bool {
 
 /// The archive a `jar` line states: a path, one space, and `sha256:` with 64 hexadecimal digits.
 ///
-/// A path holds no blank, and no `:`, because a class path puts a `:` between two archives. It
-/// holds no `*`, because a JVM reads a class path entry that ends in `*` as every archive there.
+/// A path holds no blank. It holds no `*`, because a JVM reads a class path entry that ends in `*`
+/// as every archive there. A path that holds a `:` is refused on its own, as `line_added` says.
 // example: ok_or(archive_of(Line { text: "jar lib/x.jar sha256:" + repeated_zero(64), span: lexer.Span { start: 0, length: 85 } }), Archive { path: "", digest: Digest(""), span: lexer.Span { start: 0, length: 0 } }).path == "lib/x.jar"
 // example: error_printed(refused_with_archive(archive_of(Line { text: "jar x.jar sha256:0", span: lexer.Span { start: 0, length: 18 } }))) == "L0315 0..18 `jar` states a path and a hash, and this line does not\nhelp: a `jar` line is `jar`, a path, and `sha256:` with 64 lowercase hexadecimal digits\n"
+// example: message(refused_with_archive(archive_of(Line { text: "jar c:x.jar sha256:" + repeated_zero(64), span: lexer.Span { start: 0, length: 83 } })).kind) == "`c:x.jar` holds `:`"
 fn archive_of(line: Line) -> Result<Archive, LoadError> {
     let words = or(strings.cut(line.text, 4, strings.length(line.text)), "")
     let space = first_unit(text: words, unit: 32)
     let path = or(strings.cut(words, 0, space), "")
     let hash = or(strings.cut(words, space + 1, strings.length(words)), "")
-    if space < 1 || has_blank(path) || first_unit(text: path, unit: 58) >= 0 || first_unit(text: path, unit: 42) >= 0 || !is_a_hash(hash) {
+    if space < 1 || has_blank(path) || first_unit(text: path, unit: 42) >= 0 || !is_a_hash(hash) {
         return Err(LoadError { kind: NotAnArchiveLine, span: line.span })
     }
+    if can_split_the_class_path(path) {
+        return Err(LoadError { kind: SplitsTheClassPath(path), span: line.span })
+    }
     Ok(Archive { path: path, digest: Digest(or(strings.cut(hash, 7, 71), "")), span: line.span })
+}
+
+/// Whether `path` holds a `:`, which a class path reads as the end of one path.
+// example: can_split_the_class_path("a:b")
+// example: !can_split_the_class_path("../b")
+fn can_split_the_class_path(path: String) -> Bool {
+    first_unit(text: path, unit: 58) >= 0
 }
 
 /// Whether `word` is `sha256:` and 64 lowercase hexadecimal digits, which is a hash a line states.
@@ -1029,6 +1050,7 @@ type LoadErrorKind =
     | NoSuchPackage(String)
     | DependsTwice(String)
     | ArchivedTwice(String)
+    | SplitsTheClassPath(String)
     | InTwoFiles {
         module: String
         first: String

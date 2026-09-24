@@ -194,6 +194,10 @@ Each is raised before a class is written:
 - `L0608` — the manifest of an archive has a `Class-Path`, which names more archives.
 - `L0609` — a file that a `jar` line names is no Java archive.
 
+`bux run` and `bux test` raise this one, in `compiler/command.bx`, before they compile:
+
+- `L0610` — the directory of the module holds `:`, which splits the class path of the run.
+
 `bux build`, `bux run`, and `bux test` raise these, in `compiler/jvm.bx`, for the first
 class that the writer cannot write:
 
