@@ -127,13 +127,3 @@ An import that reaches a private name is refused with a code and a help that nam
 [120][e] - `tests/spec/modules/` and `tests/spec/examples/` show the refusal and the exemption.
 [120][f] - The helpers of `compiler/exhaustiveness.bx` named above become `private` or tests.
 
-## 🔴 Item 123: The profile prices specialization and counts the JVM starts of one suite
-**Depends on:** Item 111 — this item adds two numbers to the profile that item records.
-A generic is compiled once for each set of types, so one body is written several times.
-`bux check compiler/main.bx` spends 2.0 s to 2.8 s on work, and none of it is priced per body.
-A run of `bux test` starts one JVM for each module, and a start costs 0.12 s before any work.
-[123][a] - Section 7 records how many specialized bodies one build of `compiler/main.bx` writes.
-It records the seconds spent on the second and later copies of one body.
-[123][b] - Section 7 records the JVM starts of one `bux test tests`, and the seconds they cost.
-[123][c] - Items 112, 115, 116, and 117 each cite the number of this item they attack, or go.
-
