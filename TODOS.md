@@ -66,41 +66,6 @@ The price is the build of the compiler before and after.
 [127][e] - `bin/bootstrap` gets a new seed, as section 6 reason two states.
 [127][f] - `tests/spec/library/` holds, and a drawn property round trips bytes through `String`.
 
-## 🔴 Item 130: `1brc/src/main.bx` answers the One Billion Row Challenge
-**Depends on:** Item 129, Item 134 — a worker reads part of the file, and 1brc keeps the layout.
-The challenge is a file of one billion `<station>;<temperature>` lines, and one line of output.
-The output is `{Abha=-23.0/18.0/59.2, Abidjan=-16.2/26.3/67.3, ...}`, sorted by station name.
-Each station shows its lowest, mean, and highest reading, each with one decimal.
-A half rounds toward positive infinity, as `Math.round` rounds, which the challenge states.
-A name is UTF-8 of at most 100 bytes, and a reading is `-99.9` to `99.9` with one decimal.
-There are at most 10 000 stations.
-`example/src/main.bx` is the program a newcomer reads, and `1brc/src/main.bx` is the one measured.
-It is the second dogfood program, written in Bux over `library/` alone, with no `extern` of its own.
-`main` reads the path from its arguments, and spawns one worker process for each processor.
-Each worker takes one contiguous part of the file, and reads it in slices with `read_between`.
-It starts after the first line end past its start, and ends after the first past its end.
-A reading is held in tenths as an `Int`, so no floating type is needed.
-The mean, and its rounding, are whole-number arithmetic.
-A worker holds a `map.Map<String, Summary>` and the list of the names it has seen.
-`main` takes each summary with `ended`, merges them by the names, sorts the names, and writes.
-Dogfooding found four gaps, and question 12 of `docs/principles.md` judges each one.
-A whole number read off text is a `for` loop over `strings.at`, so the program writes it.
-An iterator over a map is the list of names the program holds, so nothing lands.
-A sort is the loop `sorted` in `compiler/command.bx` writes, and the program would write it twice.
-`docs/specs/library.md` lands a function on that test, so `list.sorted` lands, at the cost asked.
-The count of processors is what `tests/runner.bx` reaches with an `extern` of its own.
-So that count moves to the library.
-[130][a] - `docs/specs/billion-rows.md` states the program: input, output, exit codes, and `1brc/`.
-[130][b] - `list.sorted<T: Ord<T>>(values: List<T>) -> List<T>` lands, a merge sort with loops.
-`sorted` and `inserted` in `compiler/command.bx` go, and `command.bx` calls `list.sorted`.
-[130][c] - `environment.processors() -> Int` lands, and `tests/runner.bx` calls it.
-[130][d] - `1brc/src/main.bx` is the program, and `1brc/tests/samples/` holds samples and outputs.
-One sample holds UTF-8 names, one holds a mean that is a negative half, and one holds one station.
-[130][e] - `tests/started.bx` runs `1brc/src/main.bx` over each sample, as it runs the example.
-It holds the output to the expected one, and it runs the examples and tests of the module.
-[130][f] - `docs/implementation.md` section 12 names the program as the second dogfood.
-Section 7 records the wall time over one billion rows, on the machine and the JDK it names.
-
 ## 🔴 Item 131: The profile of `1brc/src/main.bx` says what the next item attacks
 **Depends on:** Item 130 — the program must run over one billion rows before it is profiled.
 Section 7 profiled the compiler, and each item after Item 111 attacked a share the profile priced.
@@ -115,23 +80,6 @@ Those are the candidates the reading suggests, and the profile says which one is
 It records the wall time, the processor time, and the time the collector paused.
 [131][b] - The item files one item for the largest share, with the requirement and the alternatives.
 It files no item for a share below ten percent, and it changes no library code.
-
-## 🔴 Item 132: `1brc/src/create_measurements.bx` writes the file of one billion rows
-**Depends on:** Item 130 — the program is what reads what this writes.
-The challenge gives a Java generator, and a JDK runs it, so the file exists before this item.
-Dogfooding says Bux writes it, and the generator finds one more gap.
-`files.write` writes a file whole, and 13 GB is no `String`, so a file is written in parts.
-No `for` loop appends to a file, so `files.append` passes question 12 of the principles.
-A draw is a linear congruential generator, as `tests/drawn.bx` writes one.
-The program writes its own, because no program imports a module of `tests/`.
-The generator holds the stations of the challenge and the mean of each in one list literal.
-[132][a] - `docs/specs/io.md` states `files.append(path, text) -> Result<String, String>`.
-It writes `text` after what the file holds, makes the file where there is none, and gives `path`.
-[132][b] - `docs/specs/billion-rows.md` states the command line of the generator.
-It is `bux run 1brc/src/create_measurements.bx <rows> <path>`.
-[132][c] - `1brc/src/create_measurements.bx` writes `rows` lines, in parts of one million lines.
-[132][d] - A test of the module writes a small file, and `1brc/src/main.bx` reads it to its output.
-[132][e] - Section 7 records the wall time of one billion rows written, beside their read time.
 
 ## 🔴 Item 133: The compiler's sources move to `src/`, and its resources sit beside `library/`
 **Depends on:** Item 113, Item 114 — both rewrite the class path in `bin/`, which this item moves.
@@ -186,10 +134,43 @@ The README and `tests/started.bx` run `example/src/main.bx`.
 [134][g] - `tests/spec/packages/` shows each refusal, and a drawn package in the layout loads.
 `tests/commands/fixtures.txt` holds the goldens of each command on a package in the layout.
 
-## 🔴 Item 135: A module that imports itself crashes the compiler
-`import list` inside `library/list.bx` ends `bux build` with a `StackOverflowError`.
-`modules.walk` follows the import into the module it walks, and it never ends.
-The compiler never crashes, so an import of the module itself is a refusal with a code.
-[135][a] - `docs/specs/modules.md` states the refusal, its code, and its message.
-[135][b] - `modules.walk` refuses a self-import before it follows any import.
-[135][c] - `tests/spec/modules/imports_itself.bx` is the example, and the runner holds it.
+## 🔴 Item 136: A runner, a build, and a run use a bounded share of the machine
+The compiler's own JVMs have no bound, so two runners at once held 8 GB on 2026-09-24.
+`bin/runner`, `bin/bux`, and `bin/bootstrap` start a JVM with no `-Xmx`.
+JDK ergonomics give each JVM a quarter of the memory, 6 GB, and G1 grows to it before it collects.
+So a runner held 4 GB, a `bux build compiler/main.bx` held 1.4 GB, and the bound is per JVM.
+Nothing bounds the sum, and each worktree agent starts runners of its own beside the others.
+A pass starts 401 short JVMs, one for each run, each with the flags of a long program.
+Each gets G1 with 10 collector threads, C2 with 4 compiler threads, and no class-data sharing.
+A pool of 12 workers starts up to 12 of them at once, on 12 processors that other pools share.
+Section 7 priced a start at 0.064 s, but not what the 12 at once cost the runner's own JIT.
+The count of JVMs is by design since Item 084, and this item does not change it.
+It bounds what one JVM takes, and it measures whether a smaller pool costs wall time.
+[136][a] - `docs/implementation.md` section 7 records the RSS of each JVM and the pass wall time.
+It records them before and after, at the load the run had, with the flags of each JVM.
+[136][b] - `bin/runner`, `bin/bux`, and `bin/bootstrap` start the compiler with a heap bound.
+The measurement of [136][a] says what the bound is.
+[136][c] - `command.program_line` starts each run with the flags of a short program.
+Class-data sharing, the serial collector, and C1 only are tried, and each stays where it measures.
+The runner starts its runs with the same line, so `bux test` and the runner agree.
+[136][d] - A measurement says what a pool of half the processors costs in wall time.
+The smaller pool stays where the cost is small, and the measurement is recorded either way.
+
+## 🔴 Item 137: A comment above a declaration says why, or it is not there
+Nearly every declaration in the Bux sources carries a `///` comment that says what it gives back.
+2372 of the 2460 functions of `compiler/`, `library/`, and `1brc/` carry one, and `tests/` alike.
+Such a comment restates the signature, and it drifts when the body changes.
+The code and its `// example:` lines carry the what, and a comment is kept only for a why.
+A why is a constraint the types cannot state, a trade-off, a platform fact, or a decision.
+So `every_punctuation` keeps "longest first, so that `==` wins over `=`", and `lex` keeps nothing.
+A kept why is one or two `//` lines above the examples, and no `///` line remains.
+`docs/specs/doc-examples.md` requires the examples, and `bux test` runs them, so each one stays.
+The file header stays, and a comment inside a body stays.
+The `.tokens`, `.ast`, `.error`, and `.api` goldens hold byte offsets, so their `.bx` files stay.
+`tests/spec/format/` shows the formatter moving a `///` line, so that directory stays.
+[137][a] - `AGENTS.md` states the rule: a comment above a declaration says why, or it is not there.
+[137][b] - Every `///` line above a declaration in `compiler/`, `library/`, and `1brc/` goes.
+A kept why is rewritten as `//` lines, and `bin/bux check` accepts each file.
+[137][c] - Every `///` line above a declaration in `tests/*.bx` goes the same way.
+[137][d] - Every `///` line above a declaration in `tests/spec/` goes, except where a golden stays.
+[137][e] - `bin/bootstrap` and `bin/runner` pass, and `mycs check` reports no finding.

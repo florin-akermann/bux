@@ -206,7 +206,7 @@ fn every_run_held(runs: List<Staged>, java: String, limit: Int) -> held.Held {
 /// What the JVM writes goes into the directory of the run, which no other run writes into.
 // example: unended_line(walk.NotStarted) == "error: the run of its examples could not be started\n"
 fn run_held(staged: Staged, java: String, limit: Int) -> List<String> {
-    let line = command.program_line(java, [staged.beside], staged.class, [])
+    let line = command.examples_line(java, [staged.beside], staged.class)
     match walk.completed_from(line, ".", staged.beside, limit) {
         Ok(completion) => ended_read(programs.Finished { code: completion.status, output: completion.output, errors: completion.errors }, staged)
         Err(unended) => reported(errors: unended_line(unended), path: staged.path)

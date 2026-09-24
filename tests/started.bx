@@ -27,6 +27,7 @@ fn every_run_held(library: ir.Library, limit: Int) -> held.Held {
     found = held.added(found, every_test_held(library))
     found = held.added(found, example_program_run(library, limit))
     found = held.added(found, example_program_tested(library))
+    found = held.added(found, billion_rows_held(library, limit))
     found = held.added(found, every_missing_jdk_held(limit))
     held.added(found, every_injection_removed(limit))
 }
@@ -164,6 +165,89 @@ fn example_program_tested(library: ir.Library) -> held.Held {
     let said = enacted.said_to(["test", modules.joined(scene, "main.bx")], library)
     command.removed_whole(scene)
     enacted.facts_held("every example of example/main.bx holds", enacted.said_facts("test", said))
+}
+
+/// The checks of `1brc/src/main.bx`, which `docs/specs/billion-rows.md` states: each sample,
+/// the run with no file named, the examples of the module, and the tests of its generator.
+// example: sample_named("a.txt") == "1brc/tests/samples/a.txt"
+fn billion_rows_held(library: ir.Library, limit: Int) -> held.Held {
+    var found = every_sample_answered(library, limit)
+    found = held.added(found, billion_rows_unnamed(library, limit))
+    found = held.added(found, billion_rows_tested(library))
+    held.added(found, measurements_tested(library))
+}
+
+/// `1brc/src/main.bx` writes the line each sample expects, in `1brc/tests/samples/<name>.out`.
+// example: strings.length(billion_rows_text()) >= 0
+fn every_sample_answered(library: ir.Library, limit: Int) -> held.Held {
+    let names = ok_or(files.listed("1brc/tests/samples"), [])
+    var facts = [enacted.Fact { what: "1brc/tests/samples holds a sample", expected: "true", found: shown(list.length(names) > 0) }]
+    for name in names {
+        if walk.is_ending_in(name, ".txt") {
+            facts = command.all_of(facts, sample_facts(name: name, library: library, limit: limit))
+        }
+    }
+    enacted.facts_held("1brc/src/main.bx writes the line each sample expects", facts)
+}
+
+/// The status and the output of `1brc/src/main.bx` over the sample called `name`, beside what the
+/// sample expects.
+// example: strings.length(billion_rows_text()) >= 0
+fn sample_facts(name: String, library: ir.Library, limit: Int) -> List<enacted.Fact> {
+    let sample = enacted.Written { at: "sample.txt", text: ok_or(files.read(sample_named(name)), "") }
+    let scene = enacted.scene_of([enacted.Written { at: "main.bx", text: billion_rows_text() }, sample])
+    let answer = command.answered_within(["run", modules.joined(scene, "main.bx"), modules.joined(scene, "sample.txt")], library)
+    let said = ended_said(answer, scene, limit)
+    command.removed_whole(scene)
+    let expected = ok_or(files.read(sample_named(enacted.without(name, ".txt") + ".out")), "no expected output")
+    [enacted.Fact { what: name + ": status", expected: "0", found: shown(said.status) }, enacted.Fact { what: name + ": output", expected: expected, found: said.output }]
+}
+
+/// The path of the file called `name` under `1brc/tests/samples`.
+// example: sample_named("b.out") == "1brc/tests/samples/b.out"
+fn sample_named(name: String) -> String {
+    modules.joined("1brc/tests/samples", name)
+}
+
+/// `1brc/src/main.bx` ends with status 2 and says how it is run, where no file is named.
+// example: strings.length(billion_rows_text()) >= 0
+fn billion_rows_unnamed(library: ir.Library, limit: Int) -> held.Held {
+    let scene = enacted.scene_of([enacted.Written { at: "main.bx", text: billion_rows_text() }])
+    let answer = command.answered_within(["run", modules.joined(scene, "main.bx")], library)
+    let said = ended_said(answer, scene, limit)
+    command.removed_whole(scene)
+    let facts = [enacted.status_fact(said, 2), enacted.opening_fact("errors", said.errors, "usage: ")]
+    enacted.facts_held("1brc/src/main.bx says how it is run where no file is named", facts)
+}
+
+/// Every example of `1brc/src/main.bx` holds.
+// example: strings.length(billion_rows_text()) >= 0
+// The example of `written` writes the empty answer `{}`, and `bux test` passes that line on.
+fn billion_rows_tested(library: ir.Library) -> held.Held {
+    let scene = enacted.scene_of([enacted.Written { at: "main.bx", text: billion_rows_text() }])
+    let said = enacted.said_to(["test", modules.joined(scene, "main.bx")], library)
+    command.removed_whole(scene)
+    let facts = [enacted.Fact { what: "test: status", expected: "0", found: shown(said.status) }, enacted.Fact { what: "test: output", expected: "{}\n", found: said.output }, enacted.Fact { what: "test: errors", expected: "", found: said.errors }]
+    enacted.facts_held("every example of 1brc/src/main.bx holds", facts)
+}
+
+/// Every example and every test of `1brc/src/create_measurements.bx` holds.
+///
+/// A test of it starts `bin/bux run 1brc/src/main.bx`, which the runner's own directory holds, so
+/// only the module is copied into the scene.
+// example: strings.length(billion_rows_text()) >= 0
+fn measurements_tested(library: ir.Library) -> held.Held {
+    let text = ok_or(files.read("1brc/src/create_measurements.bx"), "")
+    let scene = enacted.scene_of([enacted.Written { at: "create_measurements.bx", text: text }])
+    let said = enacted.said_to(["test", modules.joined(scene, "create_measurements.bx")], library)
+    command.removed_whole(scene)
+    enacted.facts_held("every example and test of 1brc/src/create_measurements.bx holds", enacted.said_facts("test", said))
+}
+
+/// The text of `1brc/src/main.bx`.
+// example: strings.length(billion_rows_text()) >= 0
+fn billion_rows_text() -> String {
+    ok_or(files.read("1brc/src/main.bx"), "")
 }
 
 /// What `answer` says, where a program to start is started in `directory` and ends.

@@ -83,15 +83,47 @@ Then it sorts the names with `list.sorted` and writes the line.
 An error of a read stops the worker with that error as its state.
 `main` then writes the error on standard error, and ends with the status 2.
 
+## The generator
+
+`1brc/src/create_measurements.bx` writes the input, so no program in another language writes it.
+
+```text
+bux run 1brc/src/create_measurements.bx <rows> <path>
+```
+
+It writes `<rows>` lines to the file at `<path>`, and it empties whatever that file held before.
+`<rows>` is a whole number in decimal digits, from `0` up to 18 digits.
+A line is `<station>;<reading>` and a line end, as the section on the input states.
+
+The stations are the stations of the challenge, 412 names, each with its mean temperature.
+The module holds them in one list literal of records, each a name and a mean in tenths.
+A line draws a station, with the same chance for each, and then a reading of that station.
+The reading in tenths is the mean of the station plus the sum of three draws.
+Each of the three is a whole number from -100 to 100, with the same chance for each.
+So the readings of a station spread around its mean with a standard deviation of about 10.0.
+The challenge draws from a normal distribution with a standard deviation of 10.0, so the two agree.
+A reading is held from -999 to 999 tenths, and it is written with one decimal, such as `-3.4`.
+
+A draw is a linear congruential generator with Knuth's MMIX constants, as `tests/drawn.bx` has.
+The module writes its own, because no program imports a module of `tests/`.
+The first draw starts from the seed 1, so two runs with the same count write the same file.
+A run of fewer rows writes the first lines of a run of more rows.
+
+The file is written in parts of one million lines.
+Each part is one `String`, and `files.append` writes it after the parts before it.
+So a run of one billion lines holds one part in memory at a time.
+
+Its exit codes are these:
+
+- `0`: the program wrote the file.
+- `2`: an argument is missing, the count is no whole number, or the file cannot be written.
+  The program says why on standard error.
+
 ## The layout
 
 - `1brc/src/main.bx` is the program, a module of its own; `bux build` writes `1brc/src/target/`.
+- `1brc/src/create_measurements.bx` writes a file of measurements, a module of its own.
 - `1brc/tests/samples/<name>.txt` is an input, and `<name>.out` is the output it expects.
-- `1brc/generate.py` writes an input of a given count of lines, to measure the program.
-
-`uv run 1brc/generate.py <rows> <path>` writes `<rows>` lines to `<path>`.
-It takes each station from a fixed list, and each reading from `-99.9` to `99.9` at random.
-It uses the Python standard library only.
 
 ## The samples
 
@@ -106,6 +138,13 @@ It holds the status to `0` and the output to the `.out` file of the sample.
 It also runs the program with no argument, and holds the status to `2`.
 It runs `bux test` over the module, so every `// example:` line of it holds.
 
+It also runs `bux test` over `1brc/src/create_measurements.bx`, whose two tests say the rest.
+The first writes 5000 lines into the temporary directory, and runs `bin/bux run 1brc/src/main.bx`.
+It holds the output to one entry for each station, in the order of the names, with one decimal.
+Then it deletes the file.
+The second writes 300 lines twice, and holds the two files to the same text.
+The first test starts `bin/bux` from the current directory, so a run of it starts at the root.
+
 ## What dogfooding found
 
 Three gaps came up, and question 12 of `docs/principles.md` judges each.
@@ -114,5 +153,13 @@ Three gaps came up, and question 12 of `docs/principles.md` judges each.
 - An iterator over a map is the list of names the program holds, so nothing lands.
 - A sort is the loop `sorted` in `compiler/command.bx` writes, and the program writes it again.
   `docs/specs/library.md` lands a function that a reader writes twice, so `list.sorted` lands.
+
+The generator found two more.
+
+- No `for` loop appends to a file, so `files.append` lands, as `docs/specs/io.md` states.
+- `strings.join` adds each part to the text it has so far, which copies that text again each time.
+  A part of one million lines is about 14 MB, so such a join copies terabytes.
+  The generator joins two neighbours at a time until one part is left, so each pass copies once.
+  That loop is written once, so it stays in the generator, and `strings.join` does not change.
 
 `docs/implementation.md` section 7 records the wall time of a run over one billion lines.

@@ -1,0 +1,10 @@
+Oslo;-0.1
+Oslo;-0.2
+Lima;0.1
+Lima;0.2
+Nuuk;-1.0
+Nuuk;-2.0
+Nuuk;-3.0
+Nuuk;-0.5
+Perth;-0.1
+Perth;0.0

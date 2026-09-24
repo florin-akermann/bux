@@ -1,0 +1,12 @@
+Zürich;12.3
+İzmir;30.1
+São Paulo;25.0
+Abéché;40.2
+Zürich;-3.4
+Kraków;-10.0
+İzmir;28.9
+Abha;18.0
+Ürümqi;-22.5
+São Paulo;19.9
+Kraków;2.5
+Zagreb;11.1

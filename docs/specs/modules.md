@@ -72,6 +72,11 @@ first.
 That is unlike two declarations within one module, which are written either way and resolve either
 way.
 
+A module that imports itself is the ring of one module, and it is refused as `L0307` too.
+The message names the module once, as in `` `demo` imports itself ``.
+A library module is held to the same rule, so `import list` in `library/list.bx` is refused.
+A ring is refused at the name in the import that closes it, before the loader follows the import.
+
 What a loaded module offers is every function it declares that is not `private`, reached through
 the module's name.
 `demo.helper(2)` is that call, written exactly as `io.print("hi")` is written.

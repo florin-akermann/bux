@@ -1022,16 +1022,6 @@ status 0
 $ check tests/spec/modules/holder.bx
 status 0
 
-$ check tests/spec/modules/itself.bx
-status 1
-! error[L0307]: `itself` imports `itself`
-!   --> tests/spec/modules/itself.bx:3:8
-!
-!   3 | import itself
-!     |        ^^^^^^
-!
-! help: a module is compiled after what it imports, and a ring has no such order
-
 $ check tests/spec/modules/knot.bx
 status 1
 ! error[L0307]: `knot` imports `ring`, which imports `knot`
@@ -3086,10 +3076,6 @@ status 0
 
 $ check --json tests/spec/modules/holder.bx
 status 0
-
-$ check --json tests/spec/modules/itself.bx
-status 1
-> {"file":"tests/spec/modules/itself.bx","code":"L0307","message":"`itself` imports `itself`","span":{"start":80,"len":6},"help":"a module is compiled after what it imports, and a ring has no such order"}
 
 $ check --json tests/spec/modules/knot.bx
 status 1
@@ -5510,16 +5496,6 @@ status 0
 >     | Sent(String)
 >     | Pending
 
-$ api tests/spec/modules/itself.bx
-status 1
-! error[L0307]: `itself` imports `itself`
-!   --> tests/spec/modules/itself.bx:3:8
-!
-!   3 | import itself
-!     |        ^^^^^^
-!
-! help: a module is compiled after what it imports, and a ring has no such order
-
 $ api tests/spec/modules/knot.bx
 status 1
 ! error[L0307]: `knot` imports `ring`, which imports `knot`
@@ -7807,6 +7783,12 @@ status 0
 >
 > fn bytes_sent(sink: Writer, bytes: List<Int>, to: String) -> Result<String, String>
 >
+> fn append(path: String, text: String) -> Result<String, String>
+>
+> fn appended_and_let_go(stream: Sink, bytes: strings.Bytes, to: String) -> Result<String, String>
+>
+> fn drained(channel: Channel, bytes: strings.Bytes, to: String) -> Result<String, String>
+>
 > fn listed(path: String) -> Result<List<String>, String>
 >
 > fn names_within(found: Path) -> Result<List<String>, String>
@@ -7903,6 +7885,16 @@ status 0
 >
 > extern type interface Path = "java.nio.file.Path"
 >
+> extern new opened_to_append(path: String, at_the_end: Bool) -> Result<Sink, String>
+>
+> extern method channel_to(stream: Sink) -> Channel = "getChannel"
+>
+> extern method int written_from(channel: Channel, bytes: strings.Bytes) -> Result<Int, String> = "write"
+>
+> extern method shut(stream: Sink) -> () = "close"
+>
+> extern type Sink = "java.io.FileOutputStream"
+>
 > extern type Source = "java.io.FileInputStream"
 >
 > extern type Channel = "java.nio.channels.FileChannel"
@@ -7952,6 +7944,8 @@ status 0
 > fn has_value<T: Eq<T>>(values: List<T>, value: T) -> Bool
 >
 > fn index_of<T: Eq<T>>(values: List<T>, value: T) -> Option<Int>
+>
+> fn sorted<T: Ord<T>>(values: List<T>) -> List<T>
 
 $ api library/map.bx
 status 0
@@ -9497,16 +9491,6 @@ status 0
 
 $ test tests/spec/modules/holder.bx
 status 0
-
-$ test tests/spec/modules/itself.bx
-status 1
-! error[L0307]: `itself` imports `itself`
-!   --> tests/spec/modules/itself.bx:3:8
-!
-!   3 | import itself
-!     |        ^^^^^^
-!
-! help: a module is compiled after what it imports, and a ring has no such order
 
 $ test tests/spec/modules/knot.bx
 status 1
@@ -13077,9 +13061,6 @@ status 0
 $ fmt tests/spec/modules/holder.bx
 status 0
 
-$ fmt tests/spec/modules/itself.bx
-status 0
-
 $ fmt tests/spec/modules/knot.bx
 status 0
 
@@ -15256,16 +15237,6 @@ status 0
 
 $ build tests/spec/modules/holder.bx
 status 0
-
-$ build tests/spec/modules/itself.bx
-status 1
-! error[L0307]: `itself` imports `itself`
-!   --> tests/spec/modules/itself.bx:3:8
-!
-!   3 | import itself
-!     |        ^^^^^^
-!
-! help: a module is compiled after what it imports, and a ring has no such order
 
 $ build tests/spec/modules/knot.bx
 status 1
@@ -18675,3 +18646,71 @@ status 1
 !     |         ^^^^^^^^
 !
 ! help: `private` keeps a name in its module, and only these four declare a name that another module reaches
+
+$ check tests/spec/modules/imports_itself.bx
+status 1
+! error[L0307]: `imports_itself` imports itself
+!   --> tests/spec/modules/imports_itself.bx:3:8
+!
+!   3 | import imports_itself
+!     |        ^^^^^^^^^^^^^^
+!
+! help: a module is compiled after what it imports, and a ring has no such order
+
+$ check --json tests/spec/modules/imports_itself.bx
+status 1
+> {"file":"tests/spec/modules/imports_itself.bx","code":"L0307","message":"`imports_itself` imports itself","span":{"start":80,"len":14},"help":"a module is compiled after what it imports, and a ring has no such order"}
+
+$ api tests/spec/modules/imports_itself.bx
+status 1
+! error[L0307]: `imports_itself` imports itself
+!   --> tests/spec/modules/imports_itself.bx:3:8
+!
+!   3 | import imports_itself
+!     |        ^^^^^^^^^^^^^^
+!
+! help: a module is compiled after what it imports, and a ring has no such order
+
+$ test tests/spec/modules/imports_itself.bx
+status 1
+! error[L0307]: `imports_itself` imports itself
+!   --> tests/spec/modules/imports_itself.bx:3:8
+!
+!   3 | import imports_itself
+!     |        ^^^^^^^^^^^^^^
+!
+! help: a module is compiled after what it imports, and a ring has no such order
+
+$ fmt tests/spec/modules/imports_itself.bx
+status 0
+
+$ build tests/spec/modules/imports_itself.bx
+status 1
+! error[L0307]: `imports_itself` imports itself
+!   --> tests/spec/modules/imports_itself.bx:3:8
+!
+!   3 | import imports_itself
+!     |        ^^^^^^^^^^^^^^
+!
+! help: a module is compiled after what it imports, and a ring has no such order
+
+$ check tests/spec/io/file_appended.bx
+status 0
+
+$ check --json tests/spec/io/file_appended.bx
+status 0
+
+$ api tests/spec/io/file_appended.bx
+status 0
+> fn main(arguments: List<String>) -> Int
+>
+> fn grown(path: String) -> Result<String, String>
+
+$ test tests/spec/io/file_appended.bx
+status 0
+
+$ fmt tests/spec/io/file_appended.bx
+status 0
+
+$ build tests/spec/io/file_appended.bx
+status 0

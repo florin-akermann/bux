@@ -207,6 +207,41 @@ The refusal of a value shows that value, and `java.lang.Long.toString` shows a n
 `tests/spec/io/bytes_written.bx` writes bytes, reads them back as text, and shows them.
 `docs/specs/codegen.md` states the one caller in the compiler, which writes each class file.
 
+## Appending to a file
+
+`files.write` writes a file whole, and a file of one billion rows holds about 13 GB.
+No `String` holds that much, so a program that writes such a file writes it one part at a time.
+
+```text
+files.append(path: String, text: String) -> Result<String, String>
+```
+
+`files.append` writes `text` as UTF-8 after what the file at `path` holds.
+Where no file is at `path`, it makes the file first, so the first part is written as the rest are.
+It gives back `path` in the `Ok`, as `files.write` does.
+A file that cannot be opened or written is an `Err` that holds what the JVM said.
+A program that wants a file of its own parts alone empties it first with `files.write(path, "")`.
+
+`java.nio.file.Files.writeString` takes an array of `OpenOption`, so it does not cross.
+A `java.io.PrintWriter` opened to append takes a `java.io.Writer`, and no subtype crosses.
+So `files.append` opens a `java.io.FileOutputStream` with its second argument `true`.
+That constructor opens the file to append, and it makes the file where there is none.
+The stream gives its `java.nio.channels.FileChannel`, which writes at the end of the file.
+`strings.encoded` writes the text as UTF-8 into a `java.nio.ByteBuffer`.
+The channel writes from the buffer, and it gives the count of bytes it took as an `int`.
+A write can take fewer bytes than are left, so `files` writes until the buffer holds no more.
+A write that takes no byte is an `Err`, so no loop waits on a file that takes no more.
+
+The stream is closed after the writes, whether they worked or did not.
+A close gives nothing back, so its `extern` holds no `Result`, as the close of a read holds none.
+The stream holds no buffer of its own, so each byte reached the file before the close.
+
+`files` adds `append`, `appended_and_let_go`, `drained`, `opened_to_append`, `channel_to`,
+`written_from`, `shut`, and `Sink` for this.
+So `files` reaches one more JVM class, `java.io.FileOutputStream`.
+`tests/spec/io/file_appended.bx` writes a line, appends two, and reads the file back.
+`1brc/src/create_measurements.bx` is the first caller, which `docs/specs/billion-rows.md` states.
+
 ## Reading bytes
 
 A build hashes each Java archive that a manifest states, and a hash is over bytes, not text.

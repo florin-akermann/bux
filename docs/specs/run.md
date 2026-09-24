@@ -101,7 +101,8 @@ Each variable adds options to the JVM, and an option such as `-javaagent` can ch
 No other variable of the environment changes, so a program still reads its environment.
 The JVM of the compiler still reads the three variables, because `bin/bux` starts it unchanged.
 
-`run` and `test` build the command line with one function, `program_line`.
+`run` and `test` build the command line with one function, `line_of`, in `compiler/command.bx`.
+`run` reaches it through `program_line`, and `test` through `examples_line`.
 Both remove the variables with one function, `cleared`, in `compiler/command.bx`.
 `tests/spec/interop/outside_java_base.bx` shows that the compiler refuses a class of `java.naming`.
 `tests/started.bx` starts `run` and `test` with `JAVA_TOOL_OPTIONS` set.
@@ -182,6 +183,29 @@ Once a program runs, `bux run` ends with the status the program ended with, what
 A program the operating system stopped rather than let end has no status of its own, and is
 reported as 128 plus the number of the signal.
 
+## The flags of a short run
+
+`bux test` and the runner start the JVM of a run of examples and tests with three more flags.
+They come after `-Djdk.serialFilter=!*` and before `-cp`, and `bux run` does not add them.
+
+```text
+-Xmx256m -XX:+UseSerialGC -XX:TieredStopAtLevel=1
+```
+
+A run of examples ends in a second or less, and a pass of the runner starts hundreds of them.
+Several start at the same time, one for each worker, beside the JVM of the runner itself.
+Without the flags, the JDK gives each JVM a quarter of the memory and a collector thread per core.
+So each flag makes a short JVM take less of the machine:
+
+- `-Xmx256m` bounds the heap, so no run of examples takes more than 256 MB of heap.
+- `-XX:+UseSerialGC` collects on one thread, without the threads of the default collector.
+- `-XX:TieredStopAtLevel=1` compiles with C1 only, and a run that short gains nothing from C2.
+
+A program of `bux run` can run for a long time and hold much data, so it keeps the defaults.
+`short_run_flags` in `compiler/command.bx` is the one place that spells the three flags.
+`docs/implementation.md` section 7 records the measurement of each flag.
+No flag of class-data sharing is among them, because the JVM turns it off beside `--limit-modules`.
+
 ## The command line written in Bux
 
 `compiler/main.bx` is the command line written in Bux.
@@ -189,7 +213,8 @@ reported as 128 plus the number of the signal.
 The help text is read as a class-path resource: a file in `compiler/help/`.
 
 `bin/bux` is the launcher, a POSIX `sh` script.
-It starts `java --enable-preview` on the class `main`, with every word it was given.
+It starts `java --enable-preview -Xmx4g` on the class `main`, with every word it was given.
+The heap bound keeps the compiler from the quarter of the memory that the JDK gives it by default.
 The class path is `compiler/target/` alone, which holds the classes and the resources.
 A link to the launcher, as on `PATH`, works: the launcher follows the link to find `compiler/`.
 It finds the JDK as this page says: `JAVA_HOME` names it, and nothing else is searched.

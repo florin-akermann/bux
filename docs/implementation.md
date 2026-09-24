@@ -398,6 +398,42 @@ Item 112 put `bux test <package>` on a pool; the medians of three, before and af
 `bux test compiler` took 28.8 s and 10.2 s, and `bux test tests` took 106.6 s and 20.8 s.
 `bin/runner` took 55.7 s and 57.0 s, at a load of 4 to 22, and the pool property adds 20 s of work.
 
+### The One Billion Row Challenge
+
+Item 130 ran `1brc/src/main.bx` once over one billion lines; `docs/specs/billion-rows.md` states it.
+A script that is not in the repository wrote the input once: 13.5 GB with 412 stations, in 625 s.
+`time bin/bux run 1brc/src/main.bx <path>` took 187.3 s of wall time, and 804 s of processor time.
+That is the compile of the program and its run, on 12 workers, with no flag added to the JVM.
+The machine was an Apple M4 Pro with 12 processors and 24 GB, on JDK 28-ea+16.
+Other work ran beside it: the load was 10 when the run started and 50 when it ended.
+The line of output matched the one a Python reference script wrote from the same file.
+Item 131 profiles the run, and the program is not tuned before it.
+Item 132 wrote the input in Bux: `time bin/bux run 1brc/src/create_measurements.bx 1000000000`.
+It wrote 13.8 GB in 288.6 s of wall time and 216 s of processor time, on one thread.
+The load was 72 when the run started and 43 when it ended, on the same machine and JDK.
+
+### The share of the machine
+
+Item 136 bounds the heap of each JVM, because the JDK gives each one a quarter of the memory.
+On 2026-09-24 two runners at once held 8 GB, and each worktree agent starts runners of its own.
+The numbers are peaks of `ps -o rss`, on 12 processors and 24 GB, under a load of 30 to 140.
+
+| JVM | Heap before | RSS before | Heap after | RSS after |
+|-----|-------------|------------|------------|-----------|
+| The runner | 6 GB | 6.7 GB | 4 GB | 4.6 GB |
+| `bux test tests` | 6 GB | 6.7 GB | 4 GB | 4.6 GB |
+| One compile of `bin/bootstrap` | 6 GB | 1.5 GB | 1 GB | 0.7 GB to 0.9 GB |
+| The largest JVM the runner starts | 6 GB | 0.9 GB | 256 MB for a run | 0.1 GB |
+
+With no bound, the runner held 5.5 GB after a collection, and 3.5 GB after a remark.
+It ran out of heap at 2 GB and passed at 3 GB, and `bux test tests` ran out at 1 GB.
+So `bin/runner` and `bin/bux` get 4 GB, and each compile of `bin/bootstrap` gets 1 GB.
+Item 114 then deleted `bin/runner`, so `bin/bux test tests` holds the checks it held.
+Each module of `tests/` runs in a JVM of its own, and that JVM has no bound yet.
+`bin/runner` took 183 s at a load of 115 and 110 s after, at a load of 41; the load makes both vague.
+A short run gets `-Xmx256m`, `-XX:+UseSerialGC`, and `-XX:TieredStopAtLevel=1`.
+`-Xshare:auto` is refused, because the JVM turns class-data sharing off beside `--limit-modules`.
+
 ### Drawn properties
 
 A property is a Bux function that tries one invariant on drawn input.
