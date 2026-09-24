@@ -7745,11 +7745,25 @@ status 1
 !
 ! help: use `Bool` for a flag, and `Result<(), E>` for a failure with a reason
 
+$ api library/bits.bx
+status 0
+> extern static gathered(value: Int, mask: Int) -> Int = "java.lang.Long.compress"
+>
+> extern static spread(value: Int, mask: Int) -> Int = "java.lang.Long.expand"
+>
+> extern static turned(value: Int, int distance: Int) -> Option<Int> = "java.lang.Long.rotateRight"
+
+$ api library/clock.bx
+status 0
+> extern static nanoseconds() -> Int = "java.lang.System.nanoTime"
+
 $ api library/environment.bx
 status 0
 > fn processors() -> Int
 >
 > extern static read(name: String) -> Option<String> = "java.lang.System.getenv"
+>
+> extern static property(name: String) -> Option<String> = "java.lang.System.getProperty"
 >
 > extern static machine() -> Machine = "java.lang.Runtime.getRuntime"
 >
@@ -7769,15 +7783,15 @@ status 0
 >
 > fn too_long(path: String, length: Int) -> String
 >
-> fn read_into(path: String, buffer: Bytes, from: Int) -> Result<String, String>
+> fn read_into(path: String, buffer: strings.Bytes, from: Int) -> Result<String, String>
 >
-> fn read_and_let_go(stream: Source, buffer: Bytes, from: Int) -> Result<String, String>
+> fn read_and_let_go(stream: Source, buffer: strings.Bytes, from: Int) -> Result<String, String>
 >
-> fn filled(channel: Channel, buffer: Bytes, from: Int) -> Result<String, String>
+> fn filled(channel: Channel, buffer: strings.Bytes, from: Int) -> Result<String, String>
 >
-> fn text_or_why(answer: Result<Int, String>, buffer: Bytes) -> Result<String, String>
+> fn text_or_why(answer: Result<Int, String>, buffer: strings.Bytes) -> Result<String, String>
 >
-> fn text_of(buffer: Bytes) -> String
+> fn text_of(buffer: strings.Bytes) -> String
 >
 > fn size(path: String) -> Result<Int, String>
 >
@@ -7815,23 +7829,17 @@ status 0
 >
 > extern method channel_of(stream: Source) -> Channel = "getChannel"
 >
-> extern method int read_at(channel: Channel, buffer: Bytes, position: Int) -> Result<Int, String> = "read"
+> extern method int read_at(channel: Channel, buffer: strings.Bytes, position: Int) -> Result<Int, String> = "read"
 >
-> extern static allotted(int capacity: Int) -> Result<Option<Bytes>, String> = "java.nio.ByteBuffer.allocate"
+> extern static allotted(int capacity: Int) -> Result<Option<strings.Bytes>, String> = "java.nio.ByteBuffer.allocate"
 >
-> extern method has_room(buffer: Bytes) -> Bool = "hasRemaining"
+> extern method has_room(buffer: strings.Bytes) -> Bool = "hasRemaining"
 >
-> extern method flipped(buffer: Bytes) -> Bytes = "flip"
->
-> extern method decoded_as(encoding: strings.Encoding, bytes: Bytes) -> Chars = "decode"
->
-> extern method text_in(chars: Chars) -> String = "toString"
+> extern method flipped(buffer: strings.Bytes) -> strings.Bytes = "flip"
 >
 > extern method let_go(stream: Source) -> () = "close"
 >
 > extern new opened(path: String, written_as: strings.Encoding) -> Result<Writer, String>
->
-> extern static one_char(int code: Int) -> Option<String> = "java.lang.Character.toString"
 >
 > extern method put(sink: Writer, text: String) -> () = "print"
 >
@@ -7865,6 +7873,22 @@ status 0
 >
 > extern new named(path: String) -> File
 >
+> extern method is_there(file: File) -> Bool = "exists"
+>
+> extern method is_file(file: File) -> Bool = "isFile"
+>
+> extern method is_directory(file: File) -> Bool = "isDirectory"
+>
+> extern method is_readable(file: File) -> Bool = "canRead"
+>
+> extern method has_made_all(file: File) -> Bool = "mkdirs"
+>
+> extern method parent_path(file: File) -> Option<String> = "getParent"
+>
+> extern method canonical_path(file: File) -> Result<String, String> = "getCanonicalPath"
+>
+> extern field path_separator() -> String = "java.io.File.pathSeparator"
+>
 > extern type File = "java.io.File"
 >
 > extern type Writer = "java.io.PrintWriter"
@@ -7882,10 +7906,6 @@ status 0
 > extern type Source = "java.io.FileInputStream"
 >
 > extern type Channel = "java.nio.channels.FileChannel"
->
-> extern type Bytes = "java.nio.ByteBuffer"
->
-> extern type Chars = "java.nio.CharBuffer"
 
 $ api library/io.bx
 status 0
@@ -7904,6 +7924,28 @@ status 0
 > extern field err() -> PrintStream = "java.lang.System.err"
 >
 > extern type PrintStream = "java.io.PrintStream"
+
+$ api library/jars.bx
+status 0
+> extern new opened(name: String) -> Result<JarFile, String>
+>
+> extern method manifest_of(archive: JarFile) -> Result<Option<JarManifest>, String> = "getManifest"
+>
+> extern method main_attributes(manifest: JarManifest) -> Attributes = "getMainAttributes"
+>
+> extern method value_of(attributes: Attributes, name: String) -> Option<String> = "getValue"
+>
+> extern method entry_of(archive: JarFile, name: String) -> Option<Entry> = "getEntry"
+>
+> extern method closed(archive: JarFile) -> () = "close"
+>
+> extern type JarFile = "java.util.jar.JarFile"
+>
+> extern type JarManifest = "java.util.jar.Manifest"
+>
+> extern type Entry = "java.util.zip.ZipEntry"
+>
+> extern type Attributes = "java.util.jar.Attributes"
 
 $ api library/list.bx
 status 0
@@ -7994,6 +8036,30 @@ status 0
 >
 > extern method int waited_for(ran: Running) -> Result<Int, String> = "waitFor"
 >
+> extern method inheriting(builder: ProcessBuilder) -> ProcessBuilder = "inheritIO"
+>
+> extern method within(builder: ProcessBuilder, directory: files.File) -> ProcessBuilder = "directory"
+>
+> extern method input_from(builder: ProcessBuilder, file: files.File) -> ProcessBuilder = "redirectInput"
+>
+> extern method output_to(builder: ProcessBuilder, file: files.File) -> ProcessBuilder = "redirectOutput"
+>
+> extern method errors_to(builder: ProcessBuilder, file: files.File) -> ProcessBuilder = "redirectError"
+>
+> extern method variables_of(builder: ProcessBuilder) -> Variables = "environment"
+>
+> extern method removed(variables: Variables, name: files.Anything) -> Option<files.Anything> = "remove"
+>
+> extern method held_as_constant(text: String) -> Constant = "describeConstable"
+>
+> extern method as_object(constant: Constant) -> files.Anything = "orElseThrow"
+>
+> extern method is_ended_within(ran: Running, limit: Int, unit: TimeUnit) -> Result<Bool, String> = "waitFor"
+>
+> extern method stopped(ran: Running) -> Running = "destroyForcibly"
+>
+> extern field seconds() -> TimeUnit = "java.util.concurrent.TimeUnit.SECONDS"
+>
 > extern new over(stream: InputStream) -> Scanner
 >
 > extern method delimited(scanner: Scanner, pattern: String) -> Scanner = "useDelimiter"
@@ -8019,6 +8085,12 @@ status 0
 > extern type Scanner = "java.util.Scanner"
 >
 > extern type Redirect = "java.lang.ProcessBuilder$Redirect"
+>
+> extern type interface Variables = "java.util.Map"
+>
+> extern type Constant = "java.util.Optional"
+>
+> extern type TimeUnit = "java.util.concurrent.TimeUnit"
 
 $ api library/set.bx
 status 0
@@ -8047,6 +8119,12 @@ status 0
 > extern method char code_unit_at(text: String, int index: Int) -> Result<Option<Int>, String> = "charAt"
 >
 > extern method cut_out(text: String, int from: Int, int to: Int) -> Result<Option<String>, String> = "substring"
+>
+> extern static one_char(int code: Int) -> Option<String> = "java.lang.Character.toString"
+>
+> extern static is_alphabetic(int code: Int) -> Option<Bool> = "java.lang.Character.isAlphabetic"
+>
+> extern static int general_category(int code: Int) -> Option<Int> = "java.lang.Character.getType"
 >
 > extern method encoded(encoding: Encoding, text: String) -> Bytes = "encode"
 >

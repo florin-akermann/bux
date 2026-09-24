@@ -11,6 +11,7 @@
 import archived
 import boundaries
 import branching
+import clock
 import collected
 import command
 import commanded
@@ -25,6 +26,7 @@ import environment
 import escaping
 import exampled
 import exemplified
+import files
 import held
 import instances
 import io
@@ -80,7 +82,7 @@ fn main(arguments: List<String>) -> Int {
 // example: environment.processors() > 0
 fn every_part_held(setting: Setting) -> Counted {
     let workers = environment.processors()
-    let jobs = every_job(chunks: workers, root: ok_or(modules.canonical_path(modules.file_at(".")), "."))
+    let jobs = every_job(chunks: workers, root: ok_or(files.canonical_path(files.named(".")), "."))
     counted_of(jobs, pooled(jobs, setting, workers).answers)
 }
 
@@ -299,9 +301,9 @@ process Worker {
 /// `working` once the job of `given` is held and its answer is sent to the pool.
 // example: list.length(or(map.get(pooled([ExamplesOf([])], Setting { library: ir.little_library(), limit: 1 }, 1).answers, 0), unanswered(0)).found) == 1
 fn worked(working: Working, given: Given) -> Working {
-    let mark = command.nanoseconds()
+    let mark = clock.nanoseconds()
     let found = job_held(given.job, working.setting)
-    let answer = Answer { number: given.number, found: found, nanoseconds: command.nanoseconds() - mark }
+    let answer = Answer { number: given.number, found: found, nanoseconds: clock.nanoseconds() - mark }
     _ = send(working.pool, Finished(answer, given.worker), NoLimit)
     working
 }

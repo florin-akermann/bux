@@ -182,7 +182,7 @@ An example says it so the compiler can hold the function to it, and a stale one 
 A private function is reached only by the functions of its module.
 The examples of those functions run it, so it is held without an example of its own.
 Without `private`, a helper stated an example, and more helpers kept that example on one line.
-Item 120 found five such helpers in `compiler/exhaustiveness.bx`, and each was a public name.
+Item 120 found five such helpers in `compiler/exhaustiveness.bx`, and more than 100 in the compiler.
 
 ### A test states what one line cannot
 

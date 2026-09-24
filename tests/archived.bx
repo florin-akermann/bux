@@ -139,8 +139,8 @@ fn refused_facts(said: command.Said, scene: String, opening: String) -> List<ena
 // example: list.length(pack_line(jar: "a.jar", target: "t", manifest: "")) == 7
 fn packed(scene: String, library: ir.Library, limit: Int, manifest: String) -> String {
     let source = modules.joined(scene, "source")
-    _ = command.has_made_all(command.place_at(source))
-    _ = command.has_made_all(command.place_at(modules.joined(scene, "lib")))
+    _ = files.has_made_all(files.named(source))
+    _ = files.has_made_all(files.named(modules.joined(scene, "lib")))
     _ = files.write(modules.joined(source, "shouting.bx"), shouting_text())
     _ = enacted.said_to(["build", modules.joined(source, "shouting.bx")], library)
     let jar = modules.joined(scene, "lib/shouting.jar")

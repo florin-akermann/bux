@@ -5,6 +5,7 @@
 // `tests/loading.bx` holds the loader to both on drawn trees of modules.
 // A library module is a resource on the class path, which `docs/specs/library.md` states.
 import ast
+import environment
 import files
 import lexer
 import list
@@ -61,7 +62,7 @@ fn loaded_printed(loaded: List<Module>) -> String {
 /// One step of the walk gives back what it reached or why it stopped, and this is what an example
 /// of such a step reads.
 // example: refused_printed(Ok(1)) == "not refused\n"
-fn refused_printed<T>(answer: Result<T, NotLoaded>) -> String {
+private fn refused_printed<T>(answer: Result<T, NotLoaded>) -> String {
     match answer {
         Ok(_) => "not refused\n"
         Err(refused) => refusal_printed(refused)
@@ -211,7 +212,7 @@ fn from_index(following: List<String>, opened: Int) -> List<String> {
 fn file_of(imported: ast.ImportDeclaration, whence: Whence) -> Result<Route, NotLoaded> {
     let name = imported.module.text
     let beside = module_in(directory: directory_of(whence.at.shown), name: name)
-    if is_file(file_at(beside)) {
+    if files.is_file(files.named(beside)) {
         return Ok(route_to(beside))
     }
     let held = holding(whence.depends, name)
@@ -236,7 +237,7 @@ fn holding(depends: List<Route>, name: String) -> List<String> {
     var held = []
     for package in depends {
         let file = module_in(directory: package.shown, name: name)
-        if is_file(file_at(file)) {
+        if files.is_file(files.named(file)) {
             held = list.push(held, file)
         }
     }
@@ -437,7 +438,7 @@ fn is_held(depends: List<Route>, one: Route) -> Bool {
 // example: has_no_manifest(ok_or(manifest_in("no-such-directory"), Some(Manifest { path: "", source: "" })))
 fn manifest_in(directory: String) -> Result<Option<Manifest>, NotLoaded> {
     let path = joined(directory: directory, name: "bux.package")
-    if !is_file(file_at(path)) {
+    if !files.is_file(files.named(path)) {
         return Ok(None)
     }
     let source = read_whole(path)?
@@ -446,7 +447,7 @@ fn manifest_in(directory: String) -> Result<Option<Manifest>, NotLoaded> {
 
 /// Whether nothing is there, which is what a directory with no manifest in it holds.
 // example: has_no_manifest(None)
-fn has_no_manifest(held: Option<Manifest>) -> Bool {
+private fn has_no_manifest(held: Option<Manifest>) -> Bool {
     match held {
         Some(_) => false
         None => true
@@ -609,7 +610,7 @@ fn first_unit(text: String, unit: Int) -> Int {
 
 /// The error an archive line was refused with, and an error pointing nowhere where it was not.
 // example: refused_with_archive(Ok(Archive { path: "", digest: Digest(""), span: lexer.Span { start: 0, length: 0 } })).span.length == 0
-fn refused_with_archive(read: Result<Archive, LoadError>) -> LoadError {
+private fn refused_with_archive(read: Result<Archive, LoadError>) -> LoadError {
     match read {
         Ok(_) => LoadError { kind: NoSuchModule(""), span: lexer.Span { start: 0, length: 0 } }
         Err(error) => error
@@ -618,7 +619,7 @@ fn refused_with_archive(read: Result<Archive, LoadError>) -> LoadError {
 
 /// The error a manifest was refused with, and an error pointing nowhere where it was not.
 // example: refused_with(Ok(no_lines())).span.length == 0
-fn refused_with(read: Result<Stated, LoadError>) -> LoadError {
+private fn refused_with(read: Result<Stated, LoadError>) -> LoadError {
     match read {
         Ok(_) => LoadError { kind: NoSuchModule(""), span: lexer.Span { start: 0, length: 0 } }
         Err(error) => error
@@ -761,7 +762,7 @@ fn resource_text(path: String) -> Option<String> {
 fn resource_directory(name: String) -> Option<String> {
     for entry in class_path_entries() {
         let directory = joined(directory: entry, name: name)
-        if is_directory(file_at(directory)) {
+        if files.is_directory(files.named(directory)) {
             return Some(directory)
         }
     }
@@ -789,7 +790,7 @@ fn text_read(path: String) -> Option<String> {
 /// Each entry of the class path the compiler was started with, in the order the JVM reads them.
 // example: list.length(class_path_entries()) > 0
 fn class_path_entries() -> List<String> {
-    split_at(text: or(property("java.class.path"), ""), separator: path_separator())
+    split_at(text: or(environment.property("java.class.path"), ""), separator: files.path_separator())
 }
 
 /// The parts of `text` between each two `separator`s, in order.
@@ -828,7 +829,7 @@ fn read_whole(path: String) -> Result<String, NotLoaded> {
 /// The route to `spelled`, with the JVM's canonical path of it for comparing two routes.
 // example: route_to("a/../b.bx").shown == "a/../b.bx"
 fn route_to(spelled: String) -> Route {
-    Route { shown: spelled, found: ok_or(canonical_path(file_at(spelled)), spelled) }
+    Route { shown: spelled, found: ok_or(files.canonical_path(files.named(spelled)), spelled) }
 }
 
 /// The module a file declares, which is the name of the file without what follows its last dot.
@@ -935,24 +936,6 @@ fn last_unit(text: String, unit: Int) -> Int {
     }
     found
 }
-
-/// The value of the system property `name`, and `None` where it has none.
-extern static property(name: String) -> Option<String> = "java.lang.System.getProperty"
-
-/// What the JVM writes between two entries of a class path.
-extern field path_separator() -> String = "java.io.File.pathSeparator"
-
-/// The file at `path`, which is a name for it whether or not anything is there.
-extern new file_at(path: String) -> File
-
-/// Whether `file` is a file that is there, rather than a directory or nothing at all.
-extern method is_file(file: File) -> Bool = "isFile"
-
-/// Whether `file` is a directory that is there.
-extern method is_directory(file: File) -> Bool = "isDirectory"
-
-/// The one path the JVM gives `file` however it is spelled, which is what compares two routes.
-extern method canonical_path(file: File) -> Result<String, String> = "getCanonicalPath"
 
 /// Every module a program reaches so far, the modules read, and the imports being followed.
 type Loader = {
@@ -1082,5 +1065,3 @@ type Keyword =
     | Version
     | Depends
     | Jar
-
-extern type File = "java.io.File"

@@ -211,10 +211,10 @@ are called.
 `prelude` is every name above, and nothing else.
 
 `list`, `strings`, `map`, and `set` each hold what a `for` loop writes the same way twice, and
-`io`, `files`, `programs`, and `environment` hold what no `for` loop writes at all.
+`io`, `files`, `programs`, `environment`, `clock`, `jars`, and `bits` hold what no loop writes.
 `strings` holds each of them: `join` is the loop, `length` is what no loop reads, and `at` and
 `cut` are a check written over two more `extern` declarations.
-`from_utf_8` reaches the decoder of the JVM, so no loop over `files.one_char` writes a second one.
+`from_utf_8` reaches the decoder of the JVM, so no loop over `strings.one_char` writes a second one.
 A second decoder would need rules of its own for a malformed sequence, and the JVM has them.
 `list` holds three more: `length`, `push`, and `at`, which the section above gives the compiler.
 
@@ -229,6 +229,9 @@ process:     run
 environment: read  processors
 ```
 
+`clock`, `jars`, and `bits` hold `extern` declarations and no function.
+The compiler and the runner call them, and `docs/specs/io.md` names each of them.
+
 A library module may import another, and `map`, `set`, `files`, and `programs` are the four
 that do.
 Three of them import `list`: `map` grows the children of a node with `list.push` and reads one
@@ -236,6 +239,7 @@ with `list.at`, `files` builds the list `files.listed` gives back the same way, 
 grows the list a JVM starts a program from.
 `set` imports `map`, because a set is the trie a map is, at a key for each value it holds.
 `files` also imports `strings`, because `files.read_bytes` reads the value of each char.
+`programs` also imports `files`, because a program starts in a `files.File` and writes into one.
 Loading hands an imported library module over below the one that imports it, as it does for a
 module read out of a file, so nothing about the order a module is read in changes.
 

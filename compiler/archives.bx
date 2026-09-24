@@ -4,9 +4,10 @@
 // the class path the archives go on. `docs/specs/interop.md` states the classes an `extern` may
 // name, which are the classes these archives hold and the classes on its list. The manifest is
 // read by `modules`, which also reads it for the dependencies. An archive is read with `files`,
-// hashed with `digest`, and opened with the `extern` declarations below.
+// hashed with `digest`, and opened with `jars`.
 import digest
 import files
+import jars
 import lexer
 import list
 import modules
@@ -34,7 +35,7 @@ fn classes_held(directory: String, named: List<String>) -> Result<set.Set<String
 /// `known`, with each of `named` that the archive at `file` has an entry for.
 // example: set.has_value(held_in(file: "no-such-directory/x.jar", named: ["a.B"], known: set.empty()), "a.B") == false
 fn held_in(file: String, named: List<String>, known: set.Set<String>) -> set.Set<String> {
-    match opened(file) {
+    match jars.opened(file) {
         Ok(archive) => entries_held(archive: archive, named: named, known: known)
         Err(_) => known
     }
@@ -42,21 +43,21 @@ fn held_in(file: String, named: List<String>, known: set.Set<String>) -> set.Set
 
 /// `known`, with each of `named` that `archive` has an entry for, and `archive` closed after.
 // example: set.has_value(held_in(file: "no-such-directory/x.jar", named: [], known: set.insert(set.empty(), "a.B")), "a.B")
-fn entries_held(archive: JarFile, named: List<String>, known: set.Set<String>) -> set.Set<String> {
+fn entries_held(archive: jars.JarFile, named: List<String>, known: set.Set<String>) -> set.Set<String> {
     var found = known
     for class in named {
         if has_entry(archive, entry_name(class)) {
             found = set.insert(found, class)
         }
     }
-    closed(archive)
+    jars.closed(archive)
     found
 }
 
 /// Whether `archive` has an entry called `name`.
 // example: set.has_value(held_in(file: "no-such-directory/x.jar", named: ["a.B"], known: set.empty()), "a.B") == false
-fn has_entry(archive: JarFile, name: String) -> Bool {
-    match entry_of(archive, name) {
+fn has_entry(archive: jars.JarFile, name: String) -> Bool {
+    match jars.entry_of(archive, name) {
         Some(_) => true
         None => false
     }
@@ -103,7 +104,7 @@ fn each_held(stated: List<modules.Reached>) -> Result<List<String>, Unreached> {
 /// The file of `one`, where it is there and has the hash its line states, and why not otherwise.
 // example: code_of(refused_kind(held(one_at("no-such-directory/x.jar")))) == "L0606"
 fn held(one: modules.Reached) -> Result<String, Unreached> {
-    if !modules.is_file(modules.file_at(one.file)) {
+    if !files.is_file(files.named(one.file)) {
         return Err(refused(one, Missing(one.archive.path)))
     }
     let bytes = read_of(one)?
@@ -126,7 +127,7 @@ fn read_of(one: modules.Reached) -> Result<List<Int>, Unreached> {
 /// The file of `one`, where it opens as a Java archive whose manifest names no other archive.
 // example: code_of(refused_kind(opened_held(one_at("no-such-directory/x.jar")))) == "L0609"
 fn opened_held(one: modules.Reached) -> Result<String, Unreached> {
-    match opened(one.file) {
+    match jars.opened(one.file) {
         Ok(archive) => class_path_held(one, archive)
         Err(_) => Err(refused(one, NotAnArchive(one.archive.path)))
     }
@@ -136,9 +137,9 @@ fn opened_held(one: modules.Reached) -> Result<String, Unreached> {
 ///
 /// The manifest's `Class-Path` names more archives, and a JVM would reach each of them.
 // example: code_of(refused_kind(opened_held(one_at("no-such-directory/x.jar")))) == "L0609"
-fn class_path_held(one: modules.Reached, archive: JarFile) -> Result<String, Unreached> {
+fn class_path_held(one: modules.Reached, archive: jars.JarFile) -> Result<String, Unreached> {
     let named = more_named(archive)
-    closed(archive)
+    jars.closed(archive)
     match named {
         Ok(false) => Ok(one.file)
         Ok(true) => Err(refused(one, NamesMore(one.archive.path)))
@@ -150,9 +151,9 @@ fn class_path_held(one: modules.Reached, archive: JarFile) -> Result<String, Unr
 ///
 /// An archive with no manifest names no other archive.
 // example: code_of(refused_kind(opened_held(one_at("no-such-directory/x.jar")))) == "L0609"
-fn more_named(archive: JarFile) -> Result<Bool, String> {
-    match manifest_of(archive) {
-        Ok(Some(manifest)) => Ok(has_class_path(main_attributes(manifest)))
+fn more_named(archive: jars.JarFile) -> Result<Bool, String> {
+    match jars.manifest_of(archive) {
+        Ok(Some(manifest)) => Ok(has_class_path(jars.main_attributes(manifest)))
         Ok(None) => Ok(false)
         Err(why) => Err(why)
     }
@@ -160,8 +161,8 @@ fn more_named(archive: JarFile) -> Result<Bool, String> {
 
 /// Whether `attributes` has a `Class-Path`, whatever it holds.
 // example: code_of(refused_kind(opened_held(one_at("no-such-directory/x.jar")))) == "L0609"
-fn has_class_path(attributes: Attributes) -> Bool {
-    match value_of(attributes, "Class-Path") {
+fn has_class_path(attributes: jars.Attributes) -> Bool {
+    match jars.value_of(attributes, "Class-Path") {
         Some(_) => true
         None => false
     }
@@ -208,7 +209,7 @@ fn help_of(kind: ArchiveErrorKind) -> String {
 
 /// The kind of refusal `answer` holds, and a missing archive where it holds none.
 // example: code_of(refused_kind(Ok("x.jar"))) == "L0606"
-fn refused_kind<T>(answer: Result<T, Unreached>) -> ArchiveErrorKind {
+private fn refused_kind<T>(answer: Result<T, Unreached>) -> ArchiveErrorKind {
     match answer {
         Err(Refused { error }) => error.kind
         _ => Missing("")
@@ -217,7 +218,7 @@ fn refused_kind<T>(answer: Result<T, Unreached>) -> ArchiveErrorKind {
 
 /// Whether `answer` holds a file that could not be read.
 // example: !is_unread(Ok(1))
-fn is_unread<T>(answer: Result<T, Unreached>) -> Bool {
+private fn is_unread<T>(answer: Result<T, Unreached>) -> Bool {
     match answer {
         Err(Unread(_)) => true
         _ => false
@@ -226,28 +227,10 @@ fn is_unread<T>(answer: Result<T, Unreached>) -> Bool {
 
 /// An archive at `file`, stated with a hash of zeros by the line at the start of a manifest.
 // example: one_at("x.jar").file == "x.jar"
-fn one_at(file: String) -> modules.Reached {
+private fn one_at(file: String) -> modules.Reached {
     let archive = modules.Archive { path: file, digest: modules.Digest(modules.repeated_zero(64)), span: lexer.Span { start: 0, length: 0 } }
     modules.Reached { file: file, archive: archive, manifest: modules.Manifest { path: "bux.package", source: "" } }
 }
-
-/// The Java archive at `name`, opened to be read.
-extern new opened(name: String) -> Result<JarFile, String>
-
-/// The manifest of `archive`, and `None` where it has none.
-extern method manifest_of(archive: JarFile) -> Result<Option<JarManifest>, String> = "getManifest"
-
-/// The attributes of the main section of `manifest`, which is where `Class-Path` is written.
-extern method main_attributes(manifest: JarManifest) -> Attributes = "getMainAttributes"
-
-/// The value of the attribute `name`, and `None` where there is no such attribute.
-extern method value_of(attributes: Attributes, name: String) -> Option<String> = "getValue"
-
-/// The entry of `archive` called `name`, and `None` where it has no such entry.
-extern method entry_of(archive: JarFile, name: String) -> Option<Entry> = "getEntry"
-
-/// Closes `archive`, which gives its file back to the file system.
-extern method closed(archive: JarFile) -> () = "close"
 
 /// Why a build reaches no archive: a file that could not be read, or a line that is refused.
 type Unreached =
@@ -272,15 +255,3 @@ type ArchiveErrorKind =
     }
     | NamesMore(String)
     | NotAnArchive(String)
-
-/// A Java archive, opened.
-extern type JarFile = "java.util.jar.JarFile"
-
-/// The manifest of a Java archive, which is its `META-INF/MANIFEST.MF`.
-extern type JarManifest = "java.util.jar.Manifest"
-
-/// One entry of a Java archive, which is one file the archive holds.
-extern type Entry = "java.util.zip.ZipEntry"
-
-/// The attributes of one section of a manifest.
-extern type Attributes = "java.util.jar.Attributes"

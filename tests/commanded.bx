@@ -165,7 +165,7 @@ fn answer_held(golden: Golden, written: Case, library: ir.Library) -> held.Held 
 // example: or(absent_example(["check", "no/such.bx"]), "none") == "none"
 fn absent_example(words: List<String>) -> Option<String> {
     for word in words {
-        if command.has_prefix(word, "tests/spec") && !command.is_there(command.place_at(word)) {
+        if command.has_prefix(word, "tests/spec") && !files.is_there(files.named(word)) {
             return Some(word)
         }
     }
@@ -201,7 +201,7 @@ fn answered_in(words: List<String>, stage: Stage, library: ir.Library) -> comman
 // example: placed_in(word: "a/b", stage: "no-such-directory") == "a/b"
 fn placed_in(word: String, stage: String) -> String {
     let first = first_part(word)
-    if first == "" || command.has_prefix(word, "-") || !command.is_there(command.place_at(modules.joined(stage, first))) {
+    if first == "" || command.has_prefix(word, "-") || !files.is_there(files.named(modules.joined(stage, first))) {
         return word
     }
     stage + "/" + word
@@ -232,7 +232,7 @@ fn ended_in(answer: command.Answer, stage: Stage) -> command.Said {
 fn staged() -> String {
     let stage = ok_or(command.somewhere_of_its_own(), "/no-such-directory-for-a-stage")
     sources_copied(stage)
-    _ = command.has_made_all(command.place_at(modules.joined(stage, "compiler")))
+    _ = files.has_made_all(files.named(modules.joined(stage, "compiler")))
     _ = files.write(modules.joined(stage, "compiler/bux.package"), "package compiler\nversion 0.1.0\n")
     _ = files.write(modules.joined(stage, "compiler/main.bx"), "fn main(arguments: List<String>) -> Int {\n    0\n}\n")
     _ = files.write(modules.joined(stage, "echo.bx"), echo_text())
@@ -248,10 +248,10 @@ fn sources_copied(stage: String) -> () {
 
 /// Copies every file under `from` to the same place under `to`, but a class file or a hidden one.
 fn copied(from: String, to: String) -> () {
-    _ = command.has_made_all(command.place_at(to))
+    _ = files.has_made_all(files.named(to))
     for name in ok_or(files.listed(from), []) {
         let path = modules.joined(from, name)
-        if command.is_folder(command.place_at(path)) {
+        if files.is_directory(files.named(path)) {
             copied(from: path, to: modules.joined(to, name))
         } else if is_carried(name) {
             _ = files.write(modules.joined(to, name), ok_or(files.read(path), ""))

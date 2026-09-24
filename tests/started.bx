@@ -307,7 +307,7 @@ fn program_said(completion: Result<walk.Ended, walk.Unended>) -> command.Said {
 /// holds the classes, and beside them the help, the explanations, and the library.
 // example: or(list.at(command_line(["a"]), 5), "") == "a"
 fn command_line(words: List<String>) -> List<String> {
-    let root = or(property("user.dir"), ".")
+    let root = or(environment.property("user.dir"), ".")
     command.all_of([java(), "--enable-preview", "-cp", modules.joined(root, "compiler/target"), "main"], words)
 }
 
@@ -353,6 +353,3 @@ fn writes_a_line_text() -> String {
 fn twice_text() -> String {
     "import greeting\n\n// example: twice() == \"hello, world\"\nfn twice() -> String {\n    greeting.greeting(\"world\")\n}\n"
 }
-
-/// The value of the system property `name`, where there is one.
-extern static property(name: String) -> Option<String> = "java.lang.System.getProperty"

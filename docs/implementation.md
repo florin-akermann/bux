@@ -80,6 +80,8 @@ However, Java APIs should have a clear boundary.
 The standard library should provide idiomatic wrappers around common Java APIs.
 Users should not be forced to interact directly with Java's object model.
 A program calls `http.get(url)`, and the library holds the `HttpClient` builder under it.
+A program reaches the platform through the library, so only `library/` declares an `extern`.
+The compiler is the first program held to it, and `tests/conventions.bx` refuses any other file.
 
 Java interop should be powerful but should not determine the design of the language.
 
@@ -98,20 +100,15 @@ A map looks a key up in constant time, and a list is read at an index in constan
 The implementation is a textbook one, written as a school project writes it: plain and correct.
 Tuning beyond that cost is refused until a measurement on a real program asks for it.
 
-Initial areas:
+The library stands on files, programs, streams, the environment, the clock, and text.
+It also stands on Java archives and on the bits of a whole number, which the compiler needs.
+`docs/specs/io.md` names the module and the `extern` declarations of each of these.
+Before Item 128, `library/` declared 78 `extern` declarations, `compiler/` 43, and the runner 21.
+After it, `library/` declares 117, and no file outside it and `tests/spec/` declares one.
+The 25 that went were second declarations of a class or a member that the library held already.
 
-```text
-String
-Collections
-Option
-Result
-IO
-Files
-HTTP
-Time
-JSON
-Concurrency
-```
+The initial areas are strings, collections, `Option`, `Result`, IO, and files.
+HTTP, time, JSON, and concurrency are initial areas too.
 
 The language should make it easy to consume JVM libraries.
 It should not attempt to recreate the entire Java ecosystem.

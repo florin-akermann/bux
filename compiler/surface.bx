@@ -39,7 +39,7 @@ fn scheme_offered(offered: Offered) -> unify.Scheme {
 
 /// The renaming a module called `demo` that declares `User` gives its surface.
 // example: renaming_of_user().module == "demo"
-fn renaming_of_user() -> unify.Renaming {
+private fn renaming_of_user() -> unify.Renaming {
     unify.Renaming { module: "demo", own: set.insert(set.empty(), "User") }
 }
 
@@ -199,7 +199,7 @@ fn surface_of(imported: Imported, module: String) -> Option<Reached> {
 
 /// Whether a module is loaded.
 // example: !is_loaded(None)
-fn is_loaded(found: Option<Reached>) -> Bool {
+private fn is_loaded(found: Option<Reached>) -> Bool {
     match found {
         Some(_) => true
         None => false

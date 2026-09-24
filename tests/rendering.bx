@@ -5,7 +5,6 @@
 // character. A drawn message holds every character JSON cannot write as it is.
 import command
 import drawn
-import files
 import held
 import lexer
 import list
@@ -194,7 +193,7 @@ fn text_a_data_form_writes_reads_back_as_the_text_it_was_given(draw: drawn.Draw)
 /// and one at the very start are both drawn. One awkward piece is always drawn.
 // example: strings.length(message_of(drawn.seeded(1))) > 0
 fn message_of(draw: drawn.Draw) -> String {
-    let awkward = ["\"", "\\", "\n", "\r", "\t", or(files.one_char(1), ""), "é", "a < b"]
+    let awkward = ["\"", "\\", "\n", "\r", "\t", or(strings.one_char(1), ""), "é", "a < b"]
     var woven = ""
     var at = drawn.next(draw)
     for strings.length(woven) < drawn.number(draw, 12) {
@@ -210,7 +209,7 @@ fn character_of(draw: drawn.Draw) -> String {
     let ranges = [[32, 95], [0, 32], [128, 1920], [128512, 80]]
     let range = drawn.picked(draw, ranges, [32, 95])
     let unit = or(list.at(range, 0), 32) + drawn.number(drawn.next(draw), or(list.at(range, 1), 95))
-    or(files.one_char(unit), "?")
+    or(strings.one_char(unit), "?")
 }
 
 /// The text of the field `named` of a data form, with every escape turned back, where it closes.
@@ -245,7 +244,7 @@ fn taken_at(written: String, at: Int) -> Taken {
         "n" => Taken { text: "\n", width: 2 }
         "r" => Taken { text: "\r", width: 2 }
         "t" => Taken { text: "\t", width: 2 }
-        "u" => Taken { text: or(files.one_char(hex_value(or(strings.cut(written, at + 2, at + 6), ""))), ""), width: 6 }
+        "u" => Taken { text: or(strings.one_char(hex_value(or(strings.cut(written, at + 2, at + 6), ""))), ""), width: 6 }
         _ => Taken { text: escaped, width: 2 }
     }
 }

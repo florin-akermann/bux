@@ -17,7 +17,7 @@ import unify
 
 /// The code and span of the refusal `source` earns against the small prelude, or `""`.
 // example: carried_code("fn is_none() -> Bool {\n    match [None, Some(())] {\n        _ => true\n    }\n}\n") == "L0432 34..38"
-fn carried_code(source: String) -> String {
+private fn carried_code(source: String) -> String {
     let resolved = declared.resolved_of(source)
     match declared.environment_of(declared.little_environment(), resolved, [], [], unify.empty_table()) {
         Ok(declaring) => refusal.code_given(inferred_and_read(infer.module_inferred(resolved, surface.nothing_imported(), declaring)))
@@ -27,7 +27,7 @@ fn carried_code(source: String) -> String {
 
 /// `inferred`, read for an `Option<()>` and an escape where inference accepted it.
 // example: refusal.code_given(inferred_and_read(Ok(infer.nothing_inferred()))) == ""
-fn inferred_and_read(inferred: Result<infer.Inference, refusal.TypeError>) -> Result<infer.Inference, refusal.TypeError> {
+private fn inferred_and_read(inferred: Result<infer.Inference, refusal.TypeError>) -> Result<infer.Inference, refusal.TypeError> {
     nothing_carried(inferred?)
 }
 
@@ -199,7 +199,7 @@ fn reading_of(inference: infer.Inference) -> Reading {
 
 /// A span at the start of the source, which the examples of a single node are written at.
 // example: nowhere().length == 0
-fn nowhere() -> lexer.Span {
+private fn nowhere() -> lexer.Span {
     lexer.Span { start: 0, length: 0 }
 }
 

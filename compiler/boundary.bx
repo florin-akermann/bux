@@ -635,7 +635,7 @@ fn is_continuing(point: Int) -> Bool {
 // example: is_opening(95)
 // example: !is_opening(48)
 fn is_opening(point: Int) -> Bool {
-    point == 95 || point == 36 || or(is_alphabetic(point), false)
+    point == 95 || point == 36 || or(strings.is_alphabetic(point), false)
 }
 
 /// Whether `point` is a number: a decimal digit, a letter number, or another number.
@@ -644,13 +644,13 @@ fn is_opening(point: Int) -> Bool {
 // example: is_numeric(1637)
 // example: !is_numeric(97)
 fn is_numeric(point: Int) -> Bool {
-    let category = or(general_category(point), 0)
+    let category = or(strings.general_category(point), 0)
     category == 9 || category == 10 || category == 11
 }
 
 /// The first `extern` of `source`, which the examples read declarations from.
 // example: extern_of("extern new now() -> Int").name.text == "now"
-fn extern_of(source: String) -> ast.ExternDeclaration {
+private fn extern_of(source: String) -> ast.ExternDeclaration {
     match parser.parse(source) {
         Ok(program) => first_extern(program)
         Err(_) => first_extern(ast.Program { items: [] })
@@ -659,20 +659,20 @@ fn extern_of(source: String) -> ast.ExternDeclaration {
 
 /// The first item of `source`, and an `import` of nothing where it has none.
 // example: class_named(item_of("")) == ""
-fn item_of(source: String) -> ast.Item {
+private fn item_of(source: String) -> ast.Item {
     let nowhere = lexer.Span { start: 0, length: 0 }
     or(list.at(program_of(source).items, 0), ast.Import(ast.ImportDeclaration { module: ast.Name { text: "", span: nowhere }, span: nowhere }))
 }
 
 /// The program `source` parses to, and an empty one where it parses to none.
 // example: list.length(program_of("fn (").items) == 0
-fn program_of(source: String) -> ast.Program {
+private fn program_of(source: String) -> ast.Program {
     ok_or(parser.parse(source), ast.Program { items: [] })
 }
 
 /// The last `extern` of `program`, or an empty one where it has none.
 // example: first_extern(ast.Program { items: [] }).name.text == ""
-fn first_extern(program: ast.Program) -> ast.ExternDeclaration {
+private fn first_extern(program: ast.Program) -> ast.ExternDeclaration {
     let nowhere = lexer.Span { start: 0, length: 0 }
     var found = ast.ExternDeclaration { name: ast.Name { text: "", span: nowhere }, reaches: ast.Constructor, gives: ast.GivesAsDeclared, parameters: [], result: ast.TypeRef { kind: ast.UnitType, span: nowhere }, span: nowhere }
     for item in program.items {
@@ -683,7 +683,7 @@ fn first_extern(program: ast.Program) -> ast.ExternDeclaration {
 
 /// The `extern` `item` declares, and `fallback` where it declares none.
 // example: extern_or(ast.Import(ast.ImportDeclaration { module: parameter_of("io").name, span: lexer.Span { start: 0, length: 0 } }), extern_of("")).name.text == ""
-fn extern_or(item: ast.Item, fallback: ast.ExternDeclaration) -> ast.ExternDeclaration {
+private fn extern_or(item: ast.Item, fallback: ast.ExternDeclaration) -> ast.ExternDeclaration {
     match item {
         ast.Extern(declaration) => declaration
         _ => fallback
@@ -692,7 +692,7 @@ fn extern_or(item: ast.Item, fallback: ast.ExternDeclaration) -> ast.ExternDecla
 
 /// A parameter called `name` that takes an `Int`, which the examples narrow.
 // example: parameter_of("at").name.text == "at"
-fn parameter_of(name: String) -> ast.Parameter {
+private fn parameter_of(name: String) -> ast.Parameter {
     let nowhere = lexer.Span { start: 0, length: 0 }
     ast.Parameter { name: ast.Name { text: name, span: nowhere }, type_ref: Some(ast.TypeRef { kind: ast.UnitType, span: nowhere }), span: nowhere }
 }
@@ -714,9 +714,3 @@ type Boundary = {
 type Segments =
     | AtLeast(Int)
     | Exactly(Int)
-
-/// Whether Java takes `code` for a letter, which is `None` for a number no `int` holds.
-extern static is_alphabetic(int code: Int) -> Option<Bool> = "java.lang.Character.isAlphabetic"
-
-/// The general category Java gives `code`, which is `None` for a number no `int` holds.
-extern static int general_category(int code: Int) -> Option<Int> = "java.lang.Character.getType"

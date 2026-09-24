@@ -1,0 +1,34 @@
+// A Java archive opened, its manifest read, and its entries asked for by name.
+//
+// `docs/specs/io.md` states what each of these gives back. Each is one `extern` declaration away
+// from a JVM member, which `docs/specs/interop.md` states, and an open that can throw gives a
+// `Result`, except the close, which gives nothing back to guard.
+/// The Java archive at `name`, opened to be read.
+extern new opened(name: String) -> Result<JarFile, String>
+
+/// The manifest of `archive`, and `None` where it has none.
+extern method manifest_of(archive: JarFile) -> Result<Option<JarManifest>, String> = "getManifest"
+
+/// The attributes of the main section of `manifest`, which is where `Class-Path` is written.
+extern method main_attributes(manifest: JarManifest) -> Attributes = "getMainAttributes"
+
+/// The value of the attribute `name`, and `None` where there is no such attribute.
+extern method value_of(attributes: Attributes, name: String) -> Option<String> = "getValue"
+
+/// The entry of `archive` called `name`, and `None` where it has no such entry.
+extern method entry_of(archive: JarFile, name: String) -> Option<Entry> = "getEntry"
+
+/// Closes `archive`, which gives its file back to the file system.
+extern method closed(archive: JarFile) -> () = "close"
+
+/// A Java archive, opened.
+extern type JarFile = "java.util.jar.JarFile"
+
+/// The manifest of a Java archive, which is its `META-INF/MANIFEST.MF`.
+extern type JarManifest = "java.util.jar.Manifest"
+
+/// One entry of a Java archive, which is one file the archive holds.
+extern type Entry = "java.util.zip.ZipEntry"
+
+/// The attributes of one section of a manifest.
+extern type Attributes = "java.util.jar.Attributes"

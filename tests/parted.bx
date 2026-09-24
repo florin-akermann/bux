@@ -175,7 +175,7 @@ fn is_refused(answer: Result<String, String>) -> Bool {
 fn one_char_each(bytes: List<Int>) -> String {
     var text = ""
     for byte in bytes {
-        text += or(files.one_char(byte), "")
+        text += or(strings.one_char(byte), "")
     }
     text
 }

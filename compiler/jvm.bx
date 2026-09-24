@@ -13,7 +13,7 @@ import strings
 
 /// Every class file of the program at `path`, in the order a build writes them, or why not.
 // example: list.length(ok_or(classes_of("no-such-directory/main.bx", ir.little_library()), [])) == 0
-fn classes_of(path: String, library: ir.Library) -> Result<List<ClassFile>, String> {
+private fn classes_of(path: String, library: ir.Library) -> Result<List<ClassFile>, String> {
     match ir.program_lowered(path, library) {
         Ok(lowered) => written_or_said(program_written(lowered))
         Err(unchecked) => Err(exhaustiveness.unchecked_printed(unchecked))
@@ -22,7 +22,7 @@ fn classes_of(path: String, library: ir.Library) -> Result<List<ClassFile>, Stri
 
 /// The class files, or why they are not written, printed.
 // example: list.length(ok_or(written_or_said(Ok([])), [ClassFile { path: "", bytes: [] }])) == 0
-fn written_or_said(answer: Result<List<ClassFile>, Unwritten>) -> Result<List<ClassFile>, String> {
+private fn written_or_said(answer: Result<List<ClassFile>, Unwritten>) -> Result<List<ClassFile>, String> {
     match answer {
         Ok(files) => Ok(files)
         Err(unwritten) => Err(message(unwritten))
@@ -200,7 +200,7 @@ fn method_written(writer: Writer, method: ir.Method, class: ir.Class, into: List
 
 /// What `answer` wrote, and nothing written where it was refused.
 // example: written_or_none(Ok(Written { pool: no_pool(), bytes: [1] })).bytes == [1]
-fn written_or_none(answer: Result<Written, Unwritten>) -> Written {
+private fn written_or_none(answer: Result<Written, Unwritten>) -> Written {
     ok_or(answer, Written { pool: no_pool(), bytes: [] })
 }
 
@@ -407,7 +407,7 @@ fn reach_of(assembling: Assembling, patch: Patch) -> Result<Int, Why> {
 
 /// A body one byte longer than a method may be, with nothing else assembled.
 // example: list.length(too_large().code) == 65536
-fn too_large() -> Assembling {
+private fn too_large() -> Assembling {
     var code = []
     for list.length(code) < 65536 {
         code = list.push(code, 0)
@@ -520,7 +520,7 @@ fn landed_at(assembling: Assembling, label: Int) -> Int {
 
 /// An empty body part-way through being assembled, with no slots and no guards.
 // example: assembling_of([]).is_reachable
-fn assembling_of(guards: List<ir.Guard>) -> Assembling {
+private fn assembling_of(guards: List<ir.Guard>) -> Assembling {
     Assembling { code: [], frame: Frame { locals: [], stack: [] }, is_reachable: true, landings: map.empty(), landed: [], expected: map.empty(), pending: [], deepest: 0, next: 4294967295, guards: guards, pool: no_pool(), hierarchy: hierarchy_of([]), defect: None }
 }
 
@@ -577,7 +577,7 @@ fn guarding(assembling: Assembling, label: Int) -> Assembling {
 
 /// Whether some place control may reach `label` from is known.
 // example: !is_expecting(assembling_of([]), 3)
-fn is_expecting(assembling: Assembling, label: Int) -> Bool {
+private fn is_expecting(assembling: Assembling, label: Int) -> Bool {
     match map.get(assembling.expected, label) {
         Some(_) => true
         None => false
@@ -1442,7 +1442,7 @@ fn refused_code<T>(answer: Result<T, Unwritten>) -> String {
 
 /// The code of the reason `answer` holds, and nothing where it holds none.
 // example: why_code(Err(Defect("a defect"))) == "L0703"
-fn why_code<T>(answer: Result<T, Why>) -> String {
+private fn why_code<T>(answer: Result<T, Why>) -> String {
     match answer {
         Ok(_) => ""
         Err(why) => code_of(why)
@@ -1541,44 +1541,44 @@ fn one_class(class: ir.Class) -> ir.Lowered {
 
 /// The record `a/B`, which holds one whole number, `at`.
 // example: record_class().name == "a/B"
-fn record_class() -> ir.Class {
+private fn record_class() -> ir.Class {
     record_class_named("a/B")
 }
 
 /// The record `class`, which holds one whole number, `at`.
 // example: record_class_named("a/b").name == "a/b"
-fn record_class_named(class: String) -> ir.Class {
+private fn record_class_named(class: String) -> ir.Class {
     ir.Class { name: class, extends: "java/lang/Object", extending: ir.Never, implements: [], fields: [ir.Field { name: "at", of: ir.Long }], methods: [] }
 }
 
 /// The base `a/B` of a sum type, which holds the tag of its variant.
 // example: base_class().extends == "java/lang/Object"
-fn base_class() -> ir.Class {
+private fn base_class() -> ir.Class {
     ir.Class { name: "a/B", extends: "java/lang/Object", extending: ir.ByItsVariants, implements: [], fields: [ir.Field { name: "tag", of: ir.Integer }], methods: [] }
 }
 
 /// The variant `a/B$C`, which extends the base `a/B`.
 // example: variant_class().extends == "a/B"
-fn variant_class() -> ir.Class {
+private fn variant_class() -> ir.Class {
     ir.Class { name: "a/B$C", extends: "a/B", extending: ir.Never, implements: [], fields: [], methods: [] }
 }
 
 /// A static method `of` that gives back the whole number one.
 // example: returning_method().name == "of"
-fn returning_method() -> ir.Method {
+private fn returning_method() -> ir.Method {
     let body = ir.Body { instructions: [ir.LongOf(1), ir.Return(Some(ir.Long))], locals: 0, guards: [] }
     ir.Method { name: "of", descriptor: ir.MethodDescriptor { parameters: [], result: Some(ir.Long) }, reached: ir.ThroughTheClass, body: body }
 }
 
 /// The field `at` of the record `a/B`.
 // example: boxed_at().name == "at"
-fn boxed_at() -> ir.FieldRef {
+private fn boxed_at() -> ir.FieldRef {
     ir.FieldRef { class: "a/B", name: "at", of: ir.Long }
 }
 
 /// The constructor of the record `a/B`, which takes one whole number.
 // example: box_made().name == "<init>"
-fn box_made() -> ir.MethodRef {
+private fn box_made() -> ir.MethodRef {
     ir.MethodRef { class: "a/B", name: "<init>", descriptor: ir.MethodDescriptor { parameters: [ir.Long], result: None } }
 }
 
