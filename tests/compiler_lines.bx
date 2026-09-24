@@ -1,10 +1,10 @@
-// Every `// example:` line and every test of `compiler/`.
+// Every `// example:` line and every test of `src/`.
 //
 // `tests/documented.bx` runs them. They are a module of their own, so that `bux test` runs them
 // beside the other long checks, on a worker of their own.
 import documented
 import walk
 
-test "every example line of compiler/ holds" {
-    documented.is_every_line_held(walk.files_in("compiler", ".bx"))
+test "every example line of src/ holds" {
+    documented.is_every_line_held(walk.files_in("src", ".bx"))
 }

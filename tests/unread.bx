@@ -1,7 +1,7 @@
 // The drawn properties of the rule that every name a module introduces is read.
 //
 // `docs/specs/unused.md` states the rule. Each property draws a shape and a name to put in it,
-// and resolves the module with `compiler/resolver.bx` against the prelude the compiler carries,
+// and resolves the module with `src/resolver.bx` against the prelude the compiler carries,
 // with the imports its examples read. A failure names the seed and the module it drew.
 import checking
 import command

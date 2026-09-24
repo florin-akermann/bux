@@ -260,7 +260,7 @@ That encoding reads each byte as the one char of the same value, and every byte 
 `files.read_whole_as` is `java.nio.file.Files.readString` with an encoding.
 `files.each_byte` and `files.values_of` turn each char into its value with `strings.at`.
 So `files` imports `strings`, and it reaches no JVM class that it did not reach already.
-`compiler/archives.bx` is the one caller, and `docs/specs/packages.md` states it.
+`src/archives.bx` is the one caller, and `docs/specs/packages.md` states it.
 
 ## Reading a part of a file
 
@@ -462,7 +462,7 @@ Each takes an `int`, so each narrows its argument and gives back an `Option`.
 `jars` opens a Java archive and reads its manifest and its entries, over `java.util.jar.JarFile`.
 Its members are `opened`, `manifest_of`, `main_attributes`, `value_of`, `entry_of`, and `closed`.
 `bits` gathers, spreads, and turns the 64 bits of an `Int`, over `java.lang.Long`.
-Its members are `gathered`, `spread`, and `turned`, which `compiler/digest.bx` calls.
+Its members are `gathered`, `spread`, and `turned`, which `src/digest.bx` calls.
 
 ## Properties
 

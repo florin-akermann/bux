@@ -151,7 +151,7 @@ Three gaps came up, and question 12 of `docs/principles.md` judges each.
 
 - A whole number read off text is a `for` loop over `strings.at`, so the program writes it.
 - An iterator over a map is the list of names the program holds, so nothing lands.
-- A sort is the loop `sorted` in `compiler/command.bx` writes, and the program writes it again.
+- A sort is the loop `sorted` in `src/command.bx` writes, and the program writes it again.
   `docs/specs/library.md` lands a function that a reader writes twice, so `list.sorted` lands.
 
 The generator found two more.

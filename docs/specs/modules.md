@@ -142,15 +142,15 @@ a constraint over a trait the declaring module keeps to itself is refused as `L0
 
 ## The loader written in Bux
 
-`compiler/modules.bx` is this loader, written in Bux.
+`src/modules.bx` is this loader, written in Bux.
 `modules.load(path)` reads the module at `path` and every module it reaches, as this section and
 `docs/specs/packages.md` state.
 It gives the modules in order, dependencies before dependents.
 Each module keeps its name, the path it was read from, its source, and the tree of
-`compiler/parser.bx`.
+`src/parser.bx`.
 
 It stops at the first refusal, which has a file, a code, a span, a message, and a help line.
-A span counts UTF-8 bytes, as a span of `compiler/lexer.bx` does.
+A span counts UTF-8 bytes, as a span of `src/lexer.bx` does.
 A library module is a resource on the class path, which `docs/specs/library.md` states.
 Whether two routes reach one file is the JVM's canonical path of each.
 
@@ -342,9 +342,9 @@ Resolution stops at the first error, as parsing does.
 
 ## The resolver written in Bux
 
-`compiler/resolver.bx` is this resolver, written in Bux.
-It reads the name and the tree of each module that `compiler/modules.bx` loads.
-The tree is the tree of `compiler/parser.bx`, and nothing in it changes.
+`src/resolver.bx` is this resolver, written in Bux.
+It reads the name and the tree of each module that `src/modules.bx` loads.
+The tree is the tree of `src/parser.bx`, and nothing in it changes.
 The answer is the tree and, for each name that has a definition, the definition that it means.
 
 `resolver.prelude_of(program)` reads the names of the prelude out of its parsed tree.

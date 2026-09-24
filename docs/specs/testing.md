@@ -144,7 +144,7 @@ The test writes a line for each failure and a line `skipped: <why>` for each che
 A test that skips a check holds, so the reason is on standard output and the run goes on.
 A check that starts a JVM stops it after 60 s, and a JVM stopped so is a failure of the check.
 
-`tests/documented.bx` runs the examples and the tests of `library/`, `compiler/`, and `tests/spec/`.
+`tests/documented.bx` runs the examples and the tests of `library/`, `src/`, and `tests/spec/`.
 It leaves out the tests under `tests/spec/`, because each of those files states its own answer.
 It leaves out `tests/` itself, because `bin/bux test tests` runs those modules directly.
 It skips `library/prelude.bx`, because the run of its examples declares `or` a second time.

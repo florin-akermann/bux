@@ -47,7 +47,7 @@ A program that calls the compiler then finds the resources on its own class path
 An example is a test of `tests/` that calls `bux help` or `bux explain`.
 
 That one `target/` is the whole class path, for a run and for the script below.
-`bin/bux` starts `compiler/target/`, with that one directory on the class path and no other entry.
+`bin/bux` starts `src/target/`, with that one directory on the class path and no other entry.
 
 `bux test` is the one exception, and it writes nothing into `target/`.
 It writes the classes and the resources of its run into a directory made for that run alone.
@@ -101,9 +101,9 @@ Each variable adds options to the JVM, and an option such as `-javaagent` can ch
 No other variable of the environment changes, so a program still reads its environment.
 The JVM of the compiler still reads the three variables, because `bin/bux` starts it unchanged.
 
-`run` and `test` build the command line with one function, `line_of`, in `compiler/command.bx`.
+`run` and `test` build the command line with one function, `line_of`, in `src/command.bx`.
 `run` reaches it through `program_line`, and `test` through `examples_line`.
-Both remove the variables with one function, `cleared`, in `compiler/command.bx`.
+Both remove the variables with one function, `cleared`, in `src/command.bx`.
 `tests/spec/interop/outside_java_base.bx` shows that the compiler refuses a class of `java.naming`.
 `tests/started.bx` starts `run` and `test` with `JAVA_TOOL_OPTIONS` set.
 It shows that the program sees no such variable and that its JVM writes nothing about one.
@@ -202,26 +202,26 @@ So each flag makes a short JVM take less of the machine:
 - `-XX:TieredStopAtLevel=1` compiles with C1 only, and a run that short gains nothing from C2.
 
 A program of `bux run` can run for a long time and hold much data, so it keeps the defaults.
-`short_run_flags` in `compiler/command.bx` is the one place that spells the three flags.
+`short_run_flags` in `src/command.bx` is the one place that spells the three flags.
 `docs/implementation.md` section 7 records the measurement of each flag.
 No flag of class-data sharing is among them, because the JVM turns it off beside `--limit-modules`.
 
 ## The command line written in Bux
 
-`compiler/main.bx` is the command line written in Bux.
-`compiler/command.bx` holds every command, because no module can import a module named `main`.
-The help text is read as a class-path resource: a file in `compiler/help/`.
+`src/main.bx` is the command line written in Bux.
+`src/command.bx` holds every command, because no module can import a module named `main`.
+The help text is read as a class-path resource: a file in `help/`.
 
 `bin/bux` is the launcher, a POSIX `sh` script.
 It starts `java --enable-preview -Xmx3g` on the class `main`, with every word it was given.
 The heap bound keeps the compiler from the quarter of the memory that the JDK gives it by default.
-The class path is `compiler/target/` alone, which holds the classes and the resources.
-A link to the launcher, as on `PATH`, works: the launcher follows the link to find `compiler/`.
+The class path is `src/target/` alone, which holds the classes and the resources.
+A link to the launcher, as on `PATH`, works: the launcher follows the link to find `src/`.
 It finds the JDK as this page says: `JAVA_HOME` names it, and nothing else is searched.
 It refuses with status `2` when the compiler is not built, and when `JAVA_HOME` names no JDK.
 
 ```text
-error: <root>/compiler/target/main.class: the compiler is not built; bin/bootstrap builds it
+error: <root>/src/target/main.class: the compiler is not built; bin/bootstrap builds it
 error: JAVA_HOME is not set, and the bux compiler runs on the JDK it names
 error: /opt/nothing/bin/java: JAVA_HOME names no JDK
 ```
@@ -251,14 +251,14 @@ The seed `bin/seed.jar` holds the classes of a Bux compiler that an earlier comp
 It is the one archive that the repository keeps, and `docs/implementation.md` section 6 says why.
 
 `bin/bootstrap` is a POSIX `sh` script, and it needs only `JAVA_HOME` and the checkout.
-It deletes `compiler/target/`, so no class of an old build is left.
+It deletes `src/target/`, so no class of an old build is left.
 It unpacks the seed into a temporary directory, with the `jar` tool of the JDK.
 It then replaces the three directories of resources there with those of the checkout.
-These are `library/`, `compiler/help/`, and `compiler/explanations/`.
+These are `library/`, `help/`, and `explanations/`.
 The seed runs with that one directory as its class path.
-The seed then builds stage 1, the classes in `compiler/target/`, which `bin/bux` starts.
+The seed then builds stage 1, the classes in `src/target/`, which `bin/bux` starts.
 So stage 1 holds the resources of the checkout, and not the old copies that the seed holds.
-Stage 1 then builds stage 2 from a copy of `compiler/` in a temporary directory.
+Stage 1 then builds stage 2 from a copy of `src/` in a temporary directory.
 Stage 2 is in the `target/` of that copy.
 That directory is outside the repository, and the script deletes it when it ends.
 
@@ -268,15 +268,15 @@ One `diff -rq` over the two `target/` directories compares the stages.
 When they differ, the script names the first class of that answer and ends with status 1.
 A class or a directory that only one stage holds is a difference too, and the script names it.
 When `diff` cannot compare the stages, the script ends with the status of `diff`, which is 2.
-A difference is a defect in the compiler under `compiler/`, and the fix goes there.
+A difference is a defect in the compiler under `src/`, and the fix goes there.
 The script refuses with status `2` when `JAVA_HOME` names no JDK and when the seed is missing.
 
 The script is the check of the bootstrap, because it compares the two stages itself.
 `bin/bux test tests` runs on stage 1, so each test of `tests/` is a check of stage 1.
 
 A build copies the resources of its compiler, not those of the checkout.
-So `bin/bux build compiler/main.bx` copies the resources that `compiler/target/` holds already.
-Run `bin/bootstrap` after a change to `library/`, `compiler/help/`, or `compiler/explanations/`.
+So `bin/bux build src/main.bx` copies the resources that `src/target/` holds already.
+Run `bin/bootstrap` after a change to `library/`, `help/`, or `explanations/`.
 The bootstrap is the one step that reads the resources of the checkout into stage 1.
 
 ## Properties

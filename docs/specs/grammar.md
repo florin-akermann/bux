@@ -281,8 +281,8 @@ Every other character is written as it is, so the printed form of a string has o
 
 ## The parser written in Bux
 
-`compiler/parser.bx` is this parser, written in Bux.
-It reads the tokens of `compiler/lexer.bx` by kind and builds the tree `compiler/ast.bx` declares.
+`src/parser.bx` is this parser, written in Bux.
+It reads the tokens of `src/lexer.bx` by kind and builds the tree `src/ast.bx` declares.
 It is the second phase of the Bux compiler, which `docs/implementation.md` section 6 states.
 
 `parser.printed(source)` gives the printed form: the tree, or the error that stops the parse.

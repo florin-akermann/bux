@@ -1,6 +1,6 @@
 // The drawn properties of the `jar` line of a manifest, of the hash it states, and of a path.
 //
-// `docs/specs/packages.md` states the line, and `compiler/digest.bx` is the SHA-256 it is held to.
+// `docs/specs/packages.md` states the line, and `src/digest.bx` is the SHA-256 it is held to.
 // That digest is held here to `shasum`, which is the reference, run once over every drawn file.
 import checking
 import command

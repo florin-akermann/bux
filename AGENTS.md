@@ -95,10 +95,10 @@ An example of the second half: `17 / 0` is `None`, because a panic is simpler an
 
 ## Architecture
 
-- One module per phase under `compiler/`, per `docs/implementation.md` section 6.
+- One module per phase under `src/`, per `docs/implementation.md` section 6.
 - Each phase consumes one typed representation and produces the next, never one mutable AST.
 - A module is created by the todo that gives it real content, never ahead of it.
-- `compiler/main.bx` is the command line only; `compiler/command.bx` holds every command.
+- `src/main.bx` is the command line only; `src/command.bx` holds every command.
 - `tests/spec/<area>/*.bx` are executable examples that are the language specification.
 - `docs/specs/` holds behaviour specs written before a feature lands, updated in place.
 - `bin/bootstrap` builds the compiler from the seed `bin/seed.jar`, and `bin/bux` starts it.
@@ -117,7 +117,7 @@ An example of the second half: `17 / 0` is `None`, because a panic is simpler an
 - `bin/bootstrap`, `bin/bux test tests`, and the built-in `/code-review` pass before every commit.
 - `TODOS.md` is the sole task tracker; there is no `gh` and no GitHub integration.
 - A user-facing feature is documented under `bux --help` in the todo that adds it.
-- Help text lives in `compiler/help/*.md`, read as a class-path resource: one source, no drift.
+- Help text lives in `help/*.md`, read as a class-path resource: one source, no drift.
 
 ## Tools and dependencies
 
@@ -136,7 +136,7 @@ An example of the second half: `17 / 0` is `None`, because a panic is simpler an
 ## Markdown Prose Style
 
 - **One sentence per line, maximum 100 characters.** the hook holds every `.md` file to both.
-- The rules are lifted only in `compiler/help/`, where terminal-wrapped help topics live.
+- The rules are lifted only in `help/`, where terminal-wrapped help topics live.
 - Never wrap a sentence across lines; shorten it, and split it only if it still will not fit.
 - This section is itself the rule: `Governance Doc Omits Prose Style` fires if it goes missing.
 

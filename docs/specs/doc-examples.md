@@ -218,7 +218,7 @@ and `L0604` says so the same way.
 
 ## The examples written in Bux
 
-`compiler/command.bx` finds the examples of a module in Bux.
+`src/command.bx` finds the examples of a module in Bux.
 A `build`, a `run`, and a `test` refuse `L0601` and `L0602` with it, before the module is lowered.
 `test` writes the run as this page says.
 It puts a refusal of the run back into the file the author wrote.

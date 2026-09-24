@@ -3,7 +3,7 @@
 //
 // `docs/specs/doc-examples.md` states what an example line is and what running one amounts to, and
 // `docs/specs/testing.md` states a test. The modules are those under `tests/spec`, `library/`,
-// and `compiler/`, because `bin/bux test tests` runs those of `tests/` itself. An example under
+// and `src/`, because `bin/bux test tests` runs those of `tests/` itself. An example under
 // `tests/spec` that its header says is refused cannot be run, so its lines are not either. The tests of an example under `tests/spec` are left
 // out, because a golden answer of `bux test` holds what is said of them.
 // `docs/implementation.md` section 7 states how the runs share one memo of typed modules, and how

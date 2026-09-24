@@ -95,14 +95,14 @@ A hole given the wrong number of arguments is `L0401`, for the same reason.
 
 ## The hole listing written in Bux
 
-`compiler/holes.bx` finds the holes in Bux.
-It reads each module that `compiler/exhaustiveness.bx` accepts, in the order they load.
+`src/holes.bx` finds the holes in Bux.
+It reads each module that `src/exhaustiveness.bx` accepts, in the order they load.
 A call is a hole when resolution says that its callee is the `todo` of the prelude.
 
 `holes.of_module(resolved)` gives every hole of one module, in the order they are written.
 The code, the message, and the help of each hole are the ones that `bux build` shows.
 
-`compiler/command.bx` renders the line and the column of each hole from the span.
+`src/command.bx` renders the line and the column of each hole from the span.
 
 `tests/unfinished.bx` holds the holes to the properties below, on modules with drawn holes.
 The `holes_refused` check of `tests/enacted.bx` holds `bux build` to its refusal.

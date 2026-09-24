@@ -5723,7 +5723,7 @@ type ShapeDeclared =
 /// One instruction of a body, over a stack.
 ///
 /// An instruction names a local, a class, and a call by what each is in Bux, and
-/// `compiler/jvm.bx` spells each one as the JVM does.
+/// `src/jvm.bx` spells each one as the JVM does.
 type Instruction =
     | LongOf(Int)
     | BooleanOf(Bool)

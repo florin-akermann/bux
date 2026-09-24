@@ -2,7 +2,7 @@
 // `docs/specs/packages.md` state.
 //
 // Each case draws a set of modules from a fixed seed, writes it into a directory of its own under
-// the temporary directory, and loads it with `compiler/modules.bx`. The directory is removed whole
+// the temporary directory, and loads it with `src/modules.bx`. The directory is removed whole
 // when every property has run, and nothing is written into the repository.
 import ast
 import command

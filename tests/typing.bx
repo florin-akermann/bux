@@ -1,7 +1,7 @@
 // The drawn properties of the type inference over whole modules, which `docs/specs/types.md` and
 // `docs/specs/arguments.md` state.
 //
-// Each case draws a module from a fixed seed and checks it in-process with `compiler/types.bx`
+// Each case draws a module from a fixed seed and checks it in-process with `src/types.bx`
 // against the prelude the compiler carries. A failure names the seed and the module it drew.
 import ast
 import checking

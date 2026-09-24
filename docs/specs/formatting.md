@@ -198,20 +198,20 @@ A rule is checked by the phase that holds the information it needs, and no earli
 How a name is spelled is a rule of the same kind, and `docs/specs/naming.md` says where each of
 those is checked.
 
-Import order is syntax, so `compiler/format.bx` checks it with canonical form and raises `L0201`.
-The place of a test is syntax too, so `compiler/format.bx` raises `L0201` below a test.
+Import order is syntax, so `src/format.bx` checks it with canonical form and raises `L0201`.
+The place of a test is syntax too, so `src/format.bx` raises `L0201` below a test.
 The message is "this declaration is written after a test".
 The help is "tests come last, after every declaration: `bux fmt` moves it above them".
 Whether a declaration is written above what uses it needs to know which name means which
-declaration, so `compiler/resolver.bx` checks it and raises `L0303`.
+declaration, so `src/resolver.bx` checks it and raises `L0303`.
 `docs/specs/modules.md` states that rule.
-Arm order needs the variant list, so `compiler/exhaustiveness.bx` checks it and raises `L0501`.
+Arm order needs the variant list, so `src/exhaustiveness.bx` checks it and raises `L0501`.
 `docs/specs/exhaustiveness.md` states that rule.
 
 ## The formatter written in Bux
 
-`compiler/format.bx` is this formatter, written in Bux.
-It prints the tree of `compiler/parser.bx`, and it reads the comments from `compiler/lexer.bx`.
+`src/format.bx` is this formatter, written in Bux.
+It prints the tree of `src/parser.bx`, and it reads the comments from `src/lexer.bx`.
 `format.format(source)` gives the canonical text, or the parse error where the source is no program.
 That text has each import and each test in place.
 `format.reordered(canonical, wanted)` writes a canonical text with its items in the order given.

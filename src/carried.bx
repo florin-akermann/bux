@@ -1,8 +1,8 @@
 // The refusals of what the settled type of an expression carries: an `Option` that carries `()`,
 // and a call that gives back a foreign reference through a type parameter.
 //
-// `docs/specs/types.md` states the first rule, and `compiler/declared.bx` refuses a written one
-// first. `docs/specs/interop.md` states the second, and `compiler/escapes.bx` decides each call.
+// `docs/specs/types.md` states the first rule, and `src/declared.bx` refuses a written one
+// first. `docs/specs/interop.md` states the second, and `src/escapes.bx` decides each call.
 // This module reads the types inference settled, so it is reached after every other refusal of
 // inference. An expression is read after the expressions inside it, so the refusal points at the
 // innermost expression that is refused.

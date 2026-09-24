@@ -516,7 +516,7 @@ The constant pool is built in the order entries are first asked for, which the l
 
 ## The lowering and the class-file writer written in Bux
 
-`compiler/ir.bx` lowers, `compiler/jvm.bx` writes each class, and `compiler/bytes.bx` its bytes.
+`src/ir.bx` lowers, `src/jvm.bx` writes each class, and `src/bytes.bx` its bytes.
 
 `ir.program_lowered(path, library)` lowers the module at `path` and each module that it reaches.
 It gives `exhaustiveness.Unchecked` when an earlier phase refuses it, or a module holds a hole.

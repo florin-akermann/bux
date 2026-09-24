@@ -164,8 +164,8 @@ of `Failed(String, List<Int>)` is `Failed.1` and the `tags` of a `Sent { tags: L
 `Sent.tags`.
 
 `L0300`, `L0303`, `L0308`, `L0310`, `L0311`, and `L0312` are raised by name resolution, which
-`compiler/resolver.bx` words.
-`L0401` and `L0422` are raised by type inference, which `compiler/refusal.bx` words.
+`src/resolver.bx` words.
+`L0401` and `L0422` are raised by type inference, which `src/refusal.bx` words.
 
 ## Executable examples
 

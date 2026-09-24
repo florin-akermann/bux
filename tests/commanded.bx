@@ -12,7 +12,7 @@
 // - A blank line, which comes between two command lines and says nothing.
 //
 // Each golden file is answered in a stage: a directory of its own that holds a copy of every file
-// of `tests/spec`, the files of `library`, `echo.bx`, and a small package called `compiler`. It also
+// of `tests/spec`, the files of `library`, `echo.bx`, and a small package in `src`. It also
 // holds `echo.lm`, the text of `echo.bx` in a file that no Bux source is named as. A word whose
 // first part names an entry of the stage is read there, so no command writes into the tree,
 // and the path of the stage is taken out of each answer again. A program that `run` starts is
@@ -233,9 +233,9 @@ fn ended_in(answer: command.Answer, stage: Stage) -> command.Said {
 fn staged() -> String {
     let stage = ok_or(command.somewhere_of_its_own(), "/no-such-directory-for-a-stage")
     sources_copied(stage)
-    _ = files.has_made_all(files.named(modules.joined(stage, "compiler")))
-    _ = files.write(modules.joined(stage, "compiler/bux.package"), "package compiler\nversion 0.1.0\n")
-    _ = files.write(modules.joined(stage, "compiler/main.bx"), "fn main(arguments: List<String>) -> Int {\n    0\n}\n")
+    _ = files.has_made_all(files.named(modules.joined(stage, "src")))
+    _ = files.write(modules.joined(stage, "src/bux.package"), "package compiler\nversion 0.1.0\n")
+    _ = files.write(modules.joined(stage, "src/main.bx"), "fn main(arguments: List<String>) -> Int {\n    0\n}\n")
     _ = files.write(modules.joined(stage, "echo.bx"), echo_text())
     _ = files.write(modules.joined(stage, "echo.lm"), echo_text())
     stage
@@ -278,11 +278,11 @@ fn echo_text() -> String {
 // example: explanation_held("no-such-directory/L0100.md", ir.little_library()).cases == 1
 fn every_explanation_held(library: ir.Library) -> held.Held {
     var found = held.nothing_failed(0)
-    for path in walk.files_in("compiler/explanations", ".md") {
+    for path in walk.files_in("explanations", ".md") {
         found = held.added(found, explanation_held(path, library))
     }
     if found.cases == 0 {
-        return held.with_failure(found, "compiler/explanations: holds no explanation")
+        return held.with_failure(found, "explanations: holds no explanation")
     }
     found
 }
@@ -423,12 +423,12 @@ type Case = {
 
 test "bux help process prints the topic from the copy beside the classes" {
     let said = command.said_by(command.answered(["help", "process"]))
-    said.status == 0 && said.output == ok_or(files.read("compiler/help/process.md"), "")
+    said.status == 0 && said.output == ok_or(files.read("help/process.md"), "")
 }
 
 test "bux explain prints the long form of a code from the copy beside the classes" {
     let said = command.said_by(command.answered(["explain", "L0100"]))
-    said.status == 0 && said.output == ok_or(files.read("compiler/explanations/L0100.md"), "")
+    said.status == 0 && said.output == ok_or(files.read("explanations/L0100.md"), "")
 }
 
 test "every command line of tests/commands/lines.txt gets the answer written under it" {

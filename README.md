@@ -104,7 +104,7 @@ There are no anonymous functions, and a function is a first-class value by its n
 
 Version 0.1 and version 0.2 are in: types, records, ADTs, `match`, generics, and inference.
 Traits, `derive`, operators as trait methods, collections, modules, and packages are in with them.
-Version 0.3 is self-hosting, and Item 075 completed it: the compiler in `compiler/` builds itself.
+Version 0.3 is self-hosting, and Item 075 completed it: the compiler in `src/` builds itself.
 Item 087 then deleted the Rust compiler that was the bootstrap.
 A seed, `bin/seed.jar`, builds the compiler now, and the compiler then builds itself again.
 The tests under `tests/` hold the compiler to every example and every drawn property.
