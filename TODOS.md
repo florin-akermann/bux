@@ -186,13 +186,3 @@ It records the seconds spent on the second and later copies of one body.
 [123][b] - Section 7 records the JVM starts of one `bux test tests`, and the seconds they cost.
 [123][c] - Items 112, 115, 116, and 117 each cite the number of this item they attack, or go.
 
-## 🔴 Item 124: The compiler names a skipped module with a type, not `"skipped\n"`
-`compiler/exhaustiveness.bx` and `compiler/ir.bx` give back `Result<T, String>`.
-Each writes `Err("skipped\n")` where an earlier phase refused the module.
-`docs/principles.md` question 3 asks for a domain type over `String`.
-The compiler is the first program held to it.
-A caller that matches on the string cannot be checked, and a caller that matches on a variant can.
-[124][a] - A variant type in `compiler/refusal.bx` or beside it names the two outcomes.
-One is a module skipped because an earlier phase refused it, and one is a refusal of this module.
-[124][b] - `modules_checked`, `typed`, `typed_or_skipped`, `refused_in`, and callers give it back.
-[124][c] - `bin/bootstrap` holds the classes byte for byte, and every command prints what it did.
