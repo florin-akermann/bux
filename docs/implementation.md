@@ -428,6 +428,44 @@ Item 132 wrote the input in Bux: `time bin/bux run 1brc/src/create_measurements.
 It wrote 13.8 GB in 288.6 s of wall time and 216 s of processor time, on one thread.
 The load was 72 when the run started and 43 when it ended, on the same machine and JDK.
 
+### The profile of the billion rows
+
+Item 131 profiled `1brc/src/main.bx` over one billion lines on 2026-09-24, on the same machine.
+The generator wrote 13.8 GB in 149 s of wall time and 201 s of processor time, at a load of 17.
+`bux build` wrote the classes, and `java` started them with the line of `bux run` and no flag added.
+A profiled run added the flag of Item 111, and `jfr view gc-pauses` gave the collector pauses.
+The load is the one-minute load before and after each run; the 12 workers of the run add about 12.
+
+| Run | Wall time | Processor time | Collector pauses | Peak RSS | Load |
+|-----|-----------|----------------|------------------|----------|------|
+| Without JFR | 113.2 s | 874 s | not recorded | 5.2 GB | 9.8 to 20.1 |
+| Without JFR | 120.1 s | 881 s | not recorded | 5.1 GB | 7.3 to 18.5 |
+| With JFR | 92.0 s | 915 s | 3.2 s, 2 591 pauses | 3.3 GB | 9.8 to 14.5 |
+| With JFR | 128.0 s | 888 s | 4.9 s, 2 020 pauses | 4.6 GB | 11.2 to 24.2 |
+
+The wall time of the four runs is 28% apart, and the processor time only 5%, so it is the number.
+The collector threads used 22.8 s and 18.5 s of processor time, which is 2% of a run.
+The output of each run was the same line.
+The two profiles took 92 628 and 47 022 samples, and their shares agree within one point.
+The table gives the shares of the first profile, then of the second.
+
+| Module or class, by the frame on top | Share | Method, with what it calls | Share |
+|--------------------------------------|-------|----------------------------|-------|
+| `map` | 43.8%, 43.8% | `map.insert` | 81.7%, 81.7% |
+| `List`, all of it `list.push` | 36.1%, 36.3% | `map.with_child`, in `insert` | 68.9%, 69.6% |
+| `main` | 9.9%, 10.4% | `map.no_children`, in `with_child` | 26.4%, 26.0% |
+| `java.lang.Long`, all of it `valueOf` | 6.7%, 6.4% | `java.lang.Long.valueOf` | 6.7%, 6.4% |
+| `Option$Some` | 3.0%, 2.7% | `map.get` | 4.8%, 4.8% |
+| The JDK's reads and text | below 0.3% | `strings.at` | 3.3%, 2.9% |
+
+Of the candidates of Item 131, `map.insert` is 82% of the run, and `strings.at` is 3%.
+`strings.cut` and `Hash<String>` are each below 0.1%, as `String.hashCode` keeps its hash.
+In `insert`, `with_child` is 69%: it copies a node of 32 children at each level of the walk.
+Its loop runs over a fresh row of 32 empty maps from `no_children`, which is 26% of the run.
+So `Map.Empty` is 25% of the allocation pressure, and `Object[]`, the arrays of `List`, is 57%.
+`Long.valueOf` is `digit_of` and `without_digit`, which box the `Int` of `or(code % 32, 0)`.
+That is 6%, below ten percent, so it gets no item.
+
 ### The share of the machine
 
 Item 136 bounds the heap of each JVM, because the JDK gives each one a quarter of the memory.
