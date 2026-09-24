@@ -164,18 +164,6 @@ An import that reaches a private name is refused with a code and a help that nam
 [120][e] - `tests/spec/modules/` and `tests/spec/examples/` show the refusal and the exemption.
 [120][f] - The helpers of `compiler/exhaustiveness.bx` named above become `private` or tests.
 
-## 🔴 Item 121: A function value is removed from the roadmap
-`docs/design.md` section 11 still promises `map(filter(users, is_active), user_name)`.
-With named functions only and an example per function, that pipeline costs more than a `for` loop.
-Section 12 already makes the loop the idiom.
-Section 14 names the absence of a closure as what keeps the escape check at one paragraph.
-So the promise is withdrawn rather than kept, and nothing is added to the language.
-[121][a] - `docs/design.md` section 11 states that a function is reached by a call and no other way.
-The snippet that passes `is_active` to `filter` is removed.
-[121][b] - `docs/design.md` section 12 and `docs/implementation.md` section 4 drop `map`, `filter`.
-[121][c] - `docs/principles.md` question 12 names a higher-order function as a loop written twice.
-[121][d] - `docs/implementation.md` sections 11 and 12 drop the function value from every version.
-
 ## 🔴 Item 122: Record construction puns a field as a pattern does
 A pattern writes `Authorized { authorization_id }`, and construction writes `User { id: id }`.
 That is two rules for one shape, and one of them costs a token per field.
