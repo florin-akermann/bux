@@ -8,6 +8,7 @@ import lexer
 import parser
 import refusal
 import resolver
+import set
 import surface
 import types
 
@@ -24,7 +25,7 @@ fn inferred(source: String, prelude: types.Prelude) -> Option<infer.Inference> {
 /// `program` resolved and typed, and nothing where either refuses it.
 // example: is_typed(resolved_typed(ast.Program { items: [] }, types.little_prelude()))
 fn resolved_typed(program: ast.Program, prelude: types.Prelude) -> Option<infer.Inference> {
-    match resolver.resolve(program, "demo", prelude.names) {
+    match resolver.resolve(program, "demo", prelude.names, set.empty()) {
         Ok(resolved) => typed_only(types.check(resolved, surface.nothing_imported(), prelude))
         Err(_) => None
     }

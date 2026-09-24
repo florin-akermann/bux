@@ -1,0 +1,13 @@
+// expect-error: L0320
+// An import that nothing reads is refused, because a reader cannot tell what the module needs.
+import io
+import list
+
+// example: counted([1, 2]) == 2
+fn counted(values: List<Int>) -> Int {
+    var count = 0
+    for _ in values {
+        count += 1
+    }
+    count
+}

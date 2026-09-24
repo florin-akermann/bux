@@ -85,7 +85,7 @@ fn is_propagating(found: Option<Propagated>) -> Bool {
 // example: typed_code("fn count() -> Int {\n    1\n}\n") == ""
 fn typed_code(source: String) -> String {
     let program = declared.first_program(source)
-    match resolver.resolve(program, "main", resolver.prelude_of(declared.little_prelude())) {
+    match resolver.resolve(program, "main", resolver.prelude_of(declared.little_prelude()), set.empty()) {
         Ok(resolved) => declared_and_typed(resolved)
         Err(_) => "unresolved"
     }
@@ -477,14 +477,14 @@ fn binary_walked(inference: Inference, operator: ast.BinaryOperator, operands: O
 }
 
 /// A call: the type of what it calls, met against the type of each value it passes.
-// example: typed_code("fn count(held: Int) -> Int {\n    count(1, 2)\n}\n") == "L0401 33..38"
+// example: typed_code("fn count(held: Int) -> Int {\n    count(held, 2)\n}\n") == "L0401 33..38"
 fn call_walked(inference: Inference, callee: ast.Expr, arguments: ast.Arguments, at: lexer.Span) -> Result<Typed, refusal.TypeError> {
     _ = called_plainly(inference, callee, arguments, at)?
     call_typed(callee_type(inference, callee, AsACall)?, callee, arguments, at)
 }
 
 /// A call whose callee has the type `signature` found, met against the type of each value it passes.
-// example: typed_code("fn count(held: Int) -> Int {\n    count(\"one\")\n}\n") == "L0400 39..44"
+// example: typed_code("fn count(held: Int) -> Int {\n    count(\"one\") + held\n}\n") == "L0400 39..44"
 fn call_typed(signature: Typed, callee: ast.Expr, arguments: ast.Arguments, at: lexer.Span) -> Result<Typed, refusal.TypeError> {
     let passed = values_of(arguments)
     var walking = signature.inference
@@ -754,7 +754,7 @@ fn miscounted_call(inference: Inference, callee: ast.Expr, applying: Applied, at
 }
 
 /// Each value a call passes, met against what its function takes at that place.
-// example: typed_code("fn count(held: Int) -> Int {\n    count(\"one\")\n}\n") == "L0400 39..44"
+// example: typed_code("fn count(held: Int) -> Int {\n    count(\"one\") + held\n}\n") == "L0400 39..44"
 fn each_expected(inference: Inference, taken: List<unify.Type>, given: List<unify.Type>, passed: List<ast.Expr>) -> Result<Inference, refusal.TypeError> {
     var walking = inference
     var index = 0
@@ -898,7 +898,7 @@ fn applied(inference: Inference, calling: unify.Type, given: List<unify.Type>, a
 }
 
 /// One call held to the rule for naming its arguments, or left waiting on the whole module.
-// example: typed_code("fn count(held: Int) -> Int {\n    count(other: 1)\n}\n") == "L0410 39..47"
+// example: typed_code("fn count(held: Int) -> Int {\n    count(other: 1) + held\n}\n") == "L0410 39..47"
 fn named_as_declared(inference: Inference, callee: ast.Expr, arguments: ast.Arguments, at: lexer.Span) -> Result<Inference, refusal.TypeError> {
     match name_of(callee) {
         Some(reached) => named_as_written(inference, Calling { callee: callee, reached: reached, at: at }, declaration_of(inference, reached), arguments)
@@ -911,7 +911,7 @@ fn named_as_declared(inference: Inference, callee: ast.Expr, arguments: ast.Argu
 fn name_of(callee: ast.Expr) -> Option<ast.Name> {
     match callee.kind {
         ast.NameExpr(named) => Some(named)
-        ast.Field { receiver, name } => Some(name)
+        ast.Field { name } => Some(name)
         _ => None
     }
 }
@@ -926,7 +926,7 @@ fn named_as_written(inference: Inference, calling: Calling, declaration: Option<
 }
 
 /// A call of a function this module declares: in order where named, and waiting where not.
-// example: typed_code("fn count(held: Int, more: Int) -> Int {\n    count(1, 2)\n}\n") == "L0409 44..55"
+// example: typed_code("fn count(held: Int, more: Int) -> Int {\n    count(held, more)\n}\n") == "L0409 44..61"
 fn declared_call(inference: Inference, function: ast.FunctionDeclaration, at: lexer.Span, arguments: ast.Arguments) -> Result<Inference, refusal.TypeError> {
     match arguments {
         ast.Positional(_) => Ok(inference { positional: list.push(inference.positional, Positional { function: function.name, at: at }) })
@@ -1059,7 +1059,7 @@ fn bodies_of(item: ast.Item) -> List<ast.FunctionDeclaration> {
 }
 
 /// A call that names its arguments, which it writes in the order the declaration lists them.
-// example: typed_code("fn count(held: Int, more: Int) -> Int {\n    count(more: 1, held: 2)\n}\n") == "L0410 50..57"
+// example: typed_code("fn count(held: Int, more: Int) -> Int {\n    count(more: 1, held: 2) + held + more\n}\n") == "L0410 50..57"
 fn in_order(inference: Inference, function: ast.FunctionDeclaration, written: List<ast.NamedArgument>) -> Result<Inference, refusal.TypeError> {
     var index = 0
     for argument in written {
@@ -1089,7 +1089,7 @@ fn named_in_order(argument: ast.NamedArgument, parameter: ast.Parameter) -> Resu
 }
 
 /// Every call of this module that names none of its arguments, held to the rule.
-// example: typed_code("fn count(held: Int, more: String) -> Int {\n    count(1, \"two\")\n}\n") == ""
+// example: typed_code("fn count(held: Int, more: String) -> Int {\n    count(held, more)\n}\n") == ""
 fn settle_positional(inference: Inference) -> Result<Inference, refusal.TypeError> {
     for call in inference.positional {
         _ = held_apart(call.function, takes_of(inference, call.function), call.at)?
@@ -1139,7 +1139,7 @@ fn look_up_fields(inference: Inference) -> Result<Inference, refusal.TypeError> 
 fn look_up(inference: Inference, lookup: Lookup) -> Result<Inference, refusal.TypeError> {
     let through = unify.solved(inference.table, lookup.through)
     match through {
-        unify.Named { name, arguments } => record_looked_up(inference, name, through, lookup)
+        unify.Named { name } => record_looked_up(inference, name, through, lookup)
         unify.Module(module) => inside(inference, module, lookup)
         _ => Err(unreachable_field(through, lookup.field))
     }
@@ -1400,7 +1400,7 @@ fn any_of(inference: Inference, alternatives: List<ast.Pattern>, expected: unify
 }
 
 /// A variant with what it carries in order, each held to its own pattern.
-// example: typed_code("fn count(held: Option<Int>) -> Int {\n    match held {\n        Some(one, two) => 1\n        _ => 2\n    }\n}\n") == "L0401 62..66"
+// example: typed_code("fn count(held: Option<Int>) -> Int {\n    match held {\n        Some(_, _) => 1\n        _ => 2\n    }\n}\n") == "L0401 62..66"
 fn tuple_pattern(inference: Inference, written: TupleWritten, expected: unify.Type) -> Result<Inference, refusal.TypeError> {
     let named = written.path.name
     let built = built_by(inference, written.path)?
@@ -1442,7 +1442,7 @@ fn literal_pattern(inference: Inference, matched: Matched, at: lexer.Span) -> Re
 }
 
 /// A bare name matches a variant that carries nothing, or binds whatever is matched.
-// example: typed_code("fn count(held: Option<Int>) -> Int {\n    match held {\n        None => 1\n        other => 2\n    }\n}\n") == ""
+// example: typed_code("fn count(held: Option<Int>) -> Int {\n    match held {\n        None => 1\n        other => or(other, 2)\n    }\n}\n") == ""
 fn bare_pattern(inference: Inference, path: ast.Path, expected: unify.Type) -> Result<Inference, refusal.TypeError> {
     if !is_built(inference, path) {
         return Ok(introduce(inference, path.name, unify.monomorphic(expected)))
@@ -1461,22 +1461,38 @@ fn is_built(inference: Inference, base: ast.Path) -> Bool {
 }
 
 /// A variant with labelled values, each field it writes bound to what it carries there.
-// example: typed_code("fn count(held: Box) -> Int {\n    match held {\n        Box { size } => 1\n    }\n}\n\ntype Box = {\n    count: Int\n}\n") == "L0402 60..64"
+///
+/// A variant that carries its values in order has no field to name, so `Some {}` is refused as
+/// the expression `Some {}` is.
+// example: typed_code("fn count(held: Box) -> Int {\n    match held {\n        Box { size } => size\n    }\n}\n\ntype Box = {\n    count: Int\n}\n") == "L0402 60..64"
+// example: typed_code("fn f(held: Option<Int>) -> Int {\n    match held {\n        Some {} => 1\n        None => 0\n    }\n}\n") == "L0401 58..62"
 fn record_pattern(inference: Inference, written: RecordWritten, expected: unify.Type) -> Result<Inference, refusal.TypeError> {
     let named = written.path.name
     let built = built_by(inference, written.path)?
     let labels = or(map.get(built.inference.environment.labels, built.key), [])
     if !unify.is_function(built.found) {
-        return Err(miscounted(named: named, takes: 0, given: list.length(written.fields)))
+        return carrying_nothing(built, written, expected)
     }
     let taken = unify.parameters_of(built.found)
     let made = unify.result_of(built.found)
+    if list.length(labels) != list.length(taken) && list.length(written.fields) == 0 {
+        return Err(miscounted(named: named, takes: list.length(taken), given: 0))
+    }
     var walking = expect(inference: built.inference, expected: expected, found: made, at: named.span)?
     for field in written.fields {
         let index = labelled(labels, field, made)?
         walking = introduce(walking, field, unify.monomorphic(or(list.at(taken, index), unify.Unit)))
     }
     Ok(walking)
+}
+
+/// A variant that carries nothing, which `P {}` matches as `P` does, as the expression does.
+// example: typed_code("fn f(held: Shape) -> Int {\n    match held {\n        Dot {} => 1\n    }\n}\n\ntype Shape =\n    | Dot\n") == ""
+fn carrying_nothing(built: BuiltUse, written: RecordWritten, expected: unify.Type) -> Result<Inference, refusal.TypeError> {
+    if list.length(written.fields) > 0 {
+        return Err(miscounted(named: written.path.name, takes: 0, given: list.length(written.fields)))
+    }
+    expect(inference: built.inference, expected: expected, found: built.found, at: written.path.name.span)
 }
 
 /// A call that passes other than as many values as its function takes, refused at its name.
@@ -1558,7 +1574,7 @@ fn propagates(inference: Inference, found: unify.Type) -> Option<Propagated> {
 // example: is_propagating(kind_of(unify.option_of(unify.int())))
 fn kind_of(settled: unify.Type) -> Option<Propagated> {
     match settled {
-        unify.Named { name, arguments } => kind_named(name)
+        unify.Named { name } => kind_named(name)
         _ => None
     }
 }
@@ -1632,7 +1648,7 @@ fn settle_literal(inference: Inference, written: Literal) -> Result<Inference, r
 // example: named_of(unify.Unit) == ""
 fn named_of(at: unify.Type) -> String {
     match at {
-        unify.Named { name, arguments } => name
+        unify.Named { name } => name
         _ => ""
     }
 }
@@ -1753,7 +1769,7 @@ fn settle_discard(inference: Inference, discard: Discard) -> Result<Inference, r
 /// The parameters of one function, each something a call can say more than `true` of.
 ///
 /// An instance method has none to answer for, because its trait wrote them.
-// example: typed_code("fn count(whole: Bool) -> Int {\n    1\n}\n") == "L0412 9..20"
+// example: typed_code("fn count(whole: Bool) -> Int {\n    _ = whole\n    1\n}\n") == "L0412 9..20"
 fn settle_parameters(inference: Inference, function: ast.FunctionDeclaration, taken: List<unify.Type>) -> Result<Inference, refusal.TypeError> {
     match map.get(inference.environment.written_as, declared.at_key(function.name.span.start)) {
         Some(_) => Ok(inference)

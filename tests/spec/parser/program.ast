@@ -31,7 +31,7 @@ type Payment 325..432
       named-type String 399..405
   variant Failed 418..432
     named-type String 425..431
-function count_active 434..914
+function count_active 434..979
   type-parameter T 450..451
   parameter users 453..470
     named-type List 460..470
@@ -42,7 +42,7 @@ function count_active 434..914
     named-type Result 487..506
       named-type Int 494..497
       named-type String 499..505
-  block 507..914
+  block 507..979
     binding Mutable total 513..526
       integer 0 525..526
     for-in user 531..738
@@ -99,61 +99,70 @@ function count_active 434..914
       record first 860..883
         field-value active 868..881
           bool false 876..881
-    call 888..912
-      name Ok 888..890
-      binary Subtract 891..911
-        call 891..907
-          name or 891..893
-          binary Divide 894..903
-            name total 894..899
-            integer 1 902..903
-          integer 0 905..906
-        integer 0 910..911
-function identifier 916..1005
-  parameter user 930..940
-    named-type User 936..940
+    if 888..948
+      branch 888..948
+        field active 891..905
+          name renamed 891..898
+        block 906..948
+          call 916..942
+            field println 916..926
+              name io 916..918
+            string "still active" 927..941
+    call 953..977
+      name Ok 953..955
+      binary Subtract 956..976
+        call 956..972
+          name or 956..958
+          binary Divide 959..968
+            name total 959..964
+            integer 1 967..968
+          integer 0 970..971
+        integer 0 975..976
+function identifier 981..1070
+  parameter user 995..1005
+    named-type User 1001..1005
   result
-    named-type Int 945..948
-  block 949..1005
-    match 955..1003
-      field id 961..968
-        name user 961..965
-      arm 979..997
-        pattern-tuple UserId 979..990
-          pattern raw 986..989
-        name raw 994..997
-function first_user 1007..1141
-  parameter users 1021..1038
-    named-type List 1028..1038
-      named-type User 1033..1037
+    named-type Int 1010..1013
+  block 1014..1070
+    match 1020..1068
+      field id 1026..1033
+        name user 1026..1030
+      arm 1044..1062
+        pattern-tuple UserId 1044..1055
+          pattern raw 1051..1054
+        name raw 1059..1062
+function first_user 1072..1206
+  parameter users 1086..1103
+    named-type List 1093..1103
+      named-type User 1098..1102
   result
-    named-type Result 1043..1063
-      named-type User 1050..1054
-      named-type String 1056..1062
-  block 1064..1141
-    for-in user 1070..1119
-      name users 1082..1087
-      block 1088..1119
-        return 1098..1113
-          call 1105..1113
-            name Ok 1105..1107
-            name user 1108..1112
-    call 1124..1139
-      name Err 1124..1127
-      string "no users" 1128..1138
-type User 1143..1190
-  field id 1161..1171
-    named-type UserId 1165..1171
-  field active 1176..1188
-    named-type Bool 1184..1188
-type UserId 1192..1217
-  variant UserId 1206..1217
-    named-type Int 1213..1216
-function forever 1219..1275
+    named-type Result 1108..1128
+      named-type User 1115..1119
+      named-type String 1121..1127
+  block 1129..1206
+    for-in user 1135..1184
+      name users 1147..1152
+      block 1153..1184
+        return 1163..1178
+          call 1170..1178
+            name Ok 1170..1172
+            name user 1173..1177
+    call 1189..1204
+      name Err 1189..1192
+      string "no users" 1193..1203
+type User 1208..1255
+  field id 1226..1236
+    named-type UserId 1230..1236
+  field active 1241..1253
+    named-type Bool 1249..1253
+type UserId 1257..1282
+  variant UserId 1271..1282
+    named-type Int 1278..1281
+function forever 1284..1340
   result
-    unit-type 1235..1237
-  block 1238..1275
-    for 1244..1273
-      block 1248..1273
-        return 1258..1267
-          unit 1265..1267
+    unit-type 1300..1302
+  block 1303..1340
+    for 1309..1338
+      block 1313..1338
+        return 1323..1332
+          unit 1330..1332

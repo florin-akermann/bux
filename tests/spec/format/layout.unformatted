@@ -25,3 +25,5 @@ seen
 type User = { id:UserId
 active:Bool }
 type UserId=UserId(Int)
+fn saved(text:String)->(){_ = files.write("seen.txt",text)
+io.println(text)}

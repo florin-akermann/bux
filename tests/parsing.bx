@@ -5,7 +5,6 @@
 import ast
 import drawn
 import held
-import ir
 import lexer
 import lexing
 import list
@@ -13,8 +12,8 @@ import parser
 import strings
 
 /// Every property of the parser, each tried on `cases` drawn cases, in a fixed order.
-// example: list.length(every_property(1, ir.little_library())) == 6
-fn every_property(cases: Int, library: ir.Library) -> List<held.Held> {
+// example: list.length(every_property(1)) == 6
+fn every_property(cases: Int) -> List<held.Held> {
     [no_extern_declaration_writes_a_body(cases), parsing_is_deterministic(cases), an_error_span_is_not_empty_and_lies_within_the_source(cases), a_well_formed_program_parses(cases), item_spans_are_ordered_and_within_the_source(cases), a_test_inside_a_body_is_refused_at_its_word(cases)]
 }
 

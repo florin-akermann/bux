@@ -2,7 +2,7 @@
 // A generic function gives back what it is given, so a call of one that is given a foreign
 // reference would give that reference back to a caller. The call is refused where it is written.
 fn main(arguments: List<String>) -> Int {
-    let file = same(named("notes.txt"))
+    _ = same(named("notes.txt"))
     0
 }
 

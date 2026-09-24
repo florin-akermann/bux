@@ -1,0 +1,7 @@
+// expect-error: L0321
+// A `let` that nothing reads is refused; `_ =` is how a value is thrown away.
+// example: doubled(2) == 4
+fn doubled(count: Int) -> Int {
+    let half = count
+    count + count
+}

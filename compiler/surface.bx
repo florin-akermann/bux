@@ -61,7 +61,7 @@ fn constructors(offered: OfferedType) -> List<OfferedConstructor> {
     match offered.built_by {
         Record(one) => [one]
         Variants(variants) => variants
-        ForeignClass { class, called } => []
+        ForeignClass {} => []
     }
 }
 
@@ -141,7 +141,7 @@ fn built_by_renamed(built_by: BuiltBy, rename: unify.Renaming) -> BuiltBy {
     match built_by {
         Record(one) => Record(constructor_renamed(one, rename))
         Variants(variants) => Variants(each_constructor_renamed(variants, rename))
-        ForeignClass { class, called } => built_by
+        ForeignClass {} => built_by
     }
 }
 

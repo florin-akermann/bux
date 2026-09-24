@@ -11,7 +11,6 @@ import exemplified
 import held
 import ir
 import list
-import modules
 
 /// The one property of a package run on a pool, checked over `cases` drawn packages.
 // example: list.length(every_property(0, ir.little_library())) == 1

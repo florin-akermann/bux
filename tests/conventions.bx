@@ -149,9 +149,9 @@ fn in_order_call(pair: Pair) -> String {
 }
 
 /// A declaration taking the types of `pair`, beside a function that writes `call`.
-// example: taking(Pair { first: Left { written: "1", leaves: "Int" }, second: Left { written: "2", leaves: "Int" } }, "takes(1, 2)") == "fn main() -> Int {\n    takes(1, 2)\n}\n\nfn takes(first: Int, second: Int) -> Int {\n    1\n}\n"
+// example: taking(Pair { first: Left { written: "1", leaves: "Int" }, second: Left { written: "2", leaves: "Int" } }, "takes(1, 2)") == "fn main() -> Int {\n    takes(1, 2)\n}\n\nfn takes(first: Int, second: Int) -> Int {\n    _ = first\n    _ = second\n    1\n}\n"
 fn taking(pair: Pair, call: String) -> String {
-    "fn main() -> Int {\n    " + call + "\n}\n\nfn takes(first: " + pair.first.leaves + ", second: " + pair.second.leaves + ") -> Int {\n    1\n}\n"
+    "fn main() -> Int {\n    " + call + "\n}\n\nfn takes(first: " + pair.first.leaves + ", second: " + pair.second.leaves + ") -> Int {\n    _ = first\n    _ = second\n    1\n}\n"
 }
 
 /// A `Bool` parameter compiles only where every type the signature writes is `Bool`.
@@ -270,9 +270,9 @@ fn passable() -> List<Left> {
 /// A module whose one function gives back `result` and holds `written`, over the ones it calls.
 ///
 /// The function asks a question in its name, because its result is drawn and may be a `Bool`.
-// example: body(result: "()", written: "    ()") == "fn is_done() -> () {\n    ()\n}\n\nfn save(value: Int) -> Result<(), String> {\n    Ok(())\n}\n\nfn log(value: Int) -> () {\n    ()\n}\n"
+// example: body(result: "()", written: "    ()") == "fn is_done() -> () {\n    ()\n}\n\nfn log(value: Int) -> () {\n    _ = save(value)\n}\n\nfn save(value: Int) -> Result<(), String> {\n    if value == 0 {\n        return Err(\"nothing to save\")\n    }\n    Ok(())\n}\n"
 fn body(result: String, written: String) -> String {
-    "fn is_done() -> " + result + " {\n" + written + "\n}\n\nfn save(value: Int) -> Result<(), String> {\n    Ok(())\n}\n\nfn log(value: Int) -> () {\n    ()\n}\n"
+    "fn is_done() -> " + result + " {\n" + written + "\n}\n\nfn log(value: Int) -> () {\n    _ = save(value)\n}\n\nfn save(value: Int) -> Result<(), String> {\n    if value == 0 {\n        return Err(\"nothing to save\")\n    }\n    Ok(())\n}\n"
 }
 
 /// The two values a call of `takes` passes.

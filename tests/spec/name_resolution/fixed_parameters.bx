@@ -1,0 +1,35 @@
+// expect-run
+// > counted
+// A signature the function does not choose is not held to the rule: the `arguments` of `main`,
+// every parameter of an instance method, and the parameters of `start` and `receive`.
+import io
+
+fn main(arguments: List<String>) -> Int {
+    if Coin(1) == Coin(2) {
+        io.println("counted")
+    }
+    _ = spawn Counter(0)
+    0
+}
+
+instance Eq<Coin> {
+    fn is_equal(one: Coin, other: Coin) -> Bool {
+        true
+    }
+}
+
+process Counter {
+    fn start(first: Int) -> Int {
+        0
+    }
+
+    fn receive(total: Int, message: Counted) -> Next<Int> {
+        match message {
+            Counted => Done
+        }
+    }
+}
+
+type Coin = Coin(Int)
+
+type Counted = Counted

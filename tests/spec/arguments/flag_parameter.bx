@@ -5,5 +5,8 @@ fn main() -> String {
 }
 
 fn open(path: String, read_only: Bool) -> String {
-    path
+    if read_only {
+        return path
+    }
+    path + " to write"
 }

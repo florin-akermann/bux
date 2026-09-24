@@ -9,7 +9,6 @@ import command
 import drawn
 import files
 import held
-import ir
 import lexer
 import list
 import modules
@@ -19,8 +18,8 @@ import walk
 /// One `Held` for each property of loading, in a fixed order.
 ///
 /// Where no directory of its own can be made, each property is skipped with the reason.
-// example: list.length(every_property(1, ir.little_library())) == 8
-fn every_property(cases: Int, library: ir.Library) -> List<held.Held> {
+// example: list.length(every_property(1)) == 8
+fn every_property(cases: Int) -> List<held.Held> {
     match command.somewhere_of_its_own() {
         Ok(directory) => every_property_in(cases, directory)
         Err(said) => every_skipped(said.errors)
@@ -219,7 +218,7 @@ fn refusal_outside(answer: Result<List<modules.Module>, modules.NotLoaded>) -> S
 // example: refused_outside(modules.Unreadable { path: "a.bx", why: "" }) == "unreadable a.bx\n"
 fn refused_outside(refused: modules.NotLoaded) -> String {
     match refused {
-        modules.Refused { path, source, error } => outside(start: error.span.start, length: error.span.length, within: strings.length(source))
+        modules.Refused { source, error } => outside(start: error.span.start, length: error.span.length, within: strings.length(source))
         _ => modules.refusal_printed(refused)
     }
 }

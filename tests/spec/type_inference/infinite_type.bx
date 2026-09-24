@@ -1,5 +1,7 @@
 // expect-error: L0403
 // A list and its items are not the same type, so nothing finite is both.
+import list
+
 fn go() -> Int {
     var items = []
     for item in items {
@@ -9,5 +11,5 @@ fn go() -> Int {
 }
 
 fn counted<T>(one: T, other: T) -> Int {
-    1
+    list.length([one, other])
 }

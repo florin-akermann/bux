@@ -86,11 +86,11 @@ fn run_said(asked: Started, library: ir.Library) -> Answer {
 fn path_of(command: Command) -> String {
     match command {
         Fmt(file) => file
-        Check { path, form } => path
+        Check { path } => path
         Build(path) => path
         Test(file) => file
         Api(file) => file
-        Explain(code) => ""
+        Explain(_) => ""
     }
 }
 
@@ -127,7 +127,7 @@ fn misnamed_said(path: String, form: Form) -> Said {
 // example: form_asked(Build("a.bx")) == AsPage
 fn form_asked(command: Command) -> Form {
     match command {
-        Check { path, form } => form
+        Check { form } => form
         _ => AsPage
     }
 }
@@ -1261,7 +1261,7 @@ fn loaded_or_refused(answer: Result<List<modules.Module>, modules.NotLoaded>) ->
 // example: not_compiled_said(not_loaded(modules.Unreadable { path: "no-such-directory/a.bx", why: "" }), AsPage).errors == "error: no-such-directory/a.bx: No such file or directory (os error 2)\n"
 fn not_loaded(not: modules.NotLoaded) -> NotCompiled {
     match not {
-        modules.Unreadable { path, why } => Unusable("error: " + path + ": " + read_refusal(path) + "\n")
+        modules.Unreadable { path } => Unusable("error: " + path + ": " + read_refusal(path) + "\n")
         modules.Unparsed { path, source, error } => Refused(Refusal { diagnostics: [parse_diagnostic(error)], page: Page { source: source, path: path } })
         modules.Refused { path, source, error } => Refused(Refusal { diagnostics: [load_diagnostic(error)], page: Page { source: source, path: path } })
     }
@@ -1293,10 +1293,39 @@ fn accepted(module: modules.Module, accepting: Accepting, library: ir.Library) -
     if accepting.form == ToCanonicalForm {
         _ = in_canonical_form(module.source)?
     }
-    let resolved = resolved_of(resolver.resolve(module.program, module.name, library.prelude.names))?
+    let resolved = resolved_of(resolved_in(module, library.prelude.names))?
     let inferred = inferred_of(types.check(resolved, accepting.imported, types.with_archived(library.prelude, accepting.archived)))?
     _ = exhaustive(exhaustiveness.check(inferred))?
     Ok(inferred)
+}
+
+/// `module`, resolved, where a module name that an example writes before a dot reads its import.
+///
+/// Only an unread import is an answer that the examples can change, and the source is lexed once
+/// more to find them, so that is done only where the first answer is an unread import.
+// example: resolver.answer_printed(resolved_in(modules.Module { name: "main", path: "main.bx", source: "import io\n\n// example: io.shown(1) == \"1\"\nfn f() -> Int {\n    1\n}\n", program: ok_or(parser.parse("import io\n"), ast.Program { items: [] }) }, ir.little_library().prelude.names)) == "resolved\n7..9 value module declared 7..9\n"
+fn resolved_in(module: modules.Module, names: resolver.Prelude) -> Result<resolver.Resolved, resolver.ResolveError> {
+    match resolver.resolve(module.program, module.name, names, set.empty()) {
+        Ok(resolved) => Ok(resolved)
+        Err(refused) => if resolver.code_of(refused.kind) == "L0320" {
+            resolver.resolve(module.program, module.name, names, examples_read(module.source))
+        } else {
+            Err(refused)
+        }
+    }
+}
+
+/// Each module name an example of `source` writes before a dot.
+///
+/// An example is compiled in the module's scope with the module's imports, so it reads them.
+// example: set.has_value(examples_read("// example: list.length([]) == 0\n"), "list")
+// example: set.has_value(examples_read("// list.length([]) == 0\n"), "list") == false
+fn examples_read(source: String) -> set.Set<String> {
+    var read = set.empty()
+    for comment in commented_of(source).comments {
+        read = with_modules_written(read, or(stated_at(comment.text), ""))
+    }
+    read
 }
 
 /// The code a refusal carries, and `""` where there is none.
@@ -1318,7 +1347,7 @@ fn in_canonical_form(source: String) -> Result<(), Diagnostic> {
 }
 
 /// The program resolved, or the refusal of resolving it.
-// example: code_refused(resolved_of(resolver.resolve(ast.Program { items: [] }, "main", types.little_prelude().names))) == ""
+// example: code_refused(resolved_of(resolver.resolve(ast.Program { items: [] }, "main", types.little_prelude().names, set.empty()))) == ""
 fn resolved_of(answer: Result<resolver.Resolved, resolver.ResolveError>) -> Result<resolver.Resolved, Diagnostic> {
     match answer {
         Ok(resolved) => Ok(resolved)
@@ -1378,7 +1407,7 @@ fn is_fixed(diagnostic: Diagnostic) -> Bool {
 // example: is_fixed(Diagnostic { code: "", message: "", span: lexer.Span { start: 0, length: 0 }, help: None, fix: fix_of(format.NotCanonical { deviation: format.ExtraLine(lexer.Span { start: 0, length: 1 }), canonical: "a\n" }, "a") })
 fn fix_of(refused: format.CheckError, source: String) -> Option<Fix> {
     match refused {
-        format.NotCanonical { deviation, canonical } => Some(Fix { span: lexer.Span { start: 0, length: byte_count(source) }, text: canonical })
+        format.NotCanonical { canonical } => Some(Fix { span: lexer.Span { start: 0, length: byte_count(source) }, text: canonical })
         _ => None
     }
 }
@@ -1775,7 +1804,7 @@ fn trimmed_start(text: String) -> String {
 fn run_of(page: Page, program: ast.Program, stated: Trying) -> Result<Run, Diagnostic> {
     var reached = ["io", "arguments"]
     var ordinal = 0
-    for counted in stated.tests {
+    for _ in stated.tests {
         reached = list.push(reached, test_function(ordinal))
         ordinal += 1
     }
@@ -1831,23 +1860,38 @@ fn name_declared(item: ast.Item) -> ast.Name {
     }
 }
 
-/// The module the run is: the imports, `main` trying each example and each test, the function of
-/// each test, then every declaration.
+/// The module the run is: the imports it reads, `main` trying each example and each test, the
+/// function of each test, then every declaration.
+///
+/// The run leaves out the module's `main`, and the runner leaves out the tests of an example under
+/// `tests/spec`, so the run imports only each module the rest of it writes before a dot. Every
+/// import of the run is then read, as every import of a module is.
+// example: run_written(Page { source: "", path: "a.bx" }, ast.Program { items: [] }, Trying { examples: [], tests: [] }).source == "\nfn main(arguments: List<String>) -> Int {\n    0\n}\n"
+fn run_written(page: Page, program: ast.Program, stated: Trying) -> Run {
+    let body = body_written(page, program, stated)
+    let imports = wrote(Writing { source: "", bytes: 0, stretches: [] }, Stretch { text: imports_of(program, with_modules_written(set.empty(), body.source)), about: WholeModule })
+    var stretches = imports.stretches
+    for placed in body.stretches {
+        stretches = list.push(stretches, Placed { span: lexer.Span { start: placed.span.start + imports.bytes, length: placed.span.length }, about: placed.about })
+    }
+    Run { source: imports.source + body.source, stretches: stretches, examples: stated.examples, tests: stated.tests, module: lexer.Span { start: 0, length: byte_count(page.source) } }
+}
+
+/// Every part of the run after its imports: `main`, the function of each test, then every
+/// declaration.
 ///
 /// The function of a test is written above the declarations, because a function is written above
 /// what it uses.
-// example: run_written(Page { source: "", path: "a.bx" }, ast.Program { items: [] }, Trying { examples: [], tests: [] }).source == "import io\n\nfn main(arguments: List<String>) -> Int {\n    0\n}\n"
-fn run_written(page: Page, program: ast.Program, stated: Trying) -> Run {
-    var writing = Writing { source: "", bytes: 0, stretches: [] }
-    writing = wrote(writing, Stretch { text: imports_of(program), about: WholeModule })
-    writing = wrote(writing, Stretch { text: "fn main(arguments: List<String>) -> Int {\n", about: WholeModule })
+// example: body_written(Page { source: "", path: "a.bx" }, ast.Program { items: [] }, Trying { examples: [], tests: [] }).source == "fn main(arguments: List<String>) -> Int {\n    0\n}\n"
+fn body_written(page: Page, program: ast.Program, stated: Trying) -> Writing {
+    var writing = wrote(Writing { source: "", bytes: 0, stretches: [] }, Stretch { text: "fn main(arguments: List<String>) -> Int {\n", about: WholeModule })
     var ordinal = 0
     for example in stated.examples {
         writing = wrote(writing, Stretch { text: "    if !(" + example.expression + ") {\n        io.println(\"bux: example " + shown(ordinal) + "\")\n    }\n", about: OneExample(ordinal) })
         ordinal += 1
     }
     ordinal = 0
-    for counted in stated.tests {
+    for _ in stated.tests {
         writing = wrote(writing, Stretch { text: "    if !" + test_function(ordinal) + "() {\n        io.println(\"bux: test " + shown(ordinal) + "\")\n    }\n", about: WholeModule })
         ordinal += 1
     }
@@ -1860,7 +1904,7 @@ fn run_written(page: Page, program: ast.Program, stated: Trying) -> Run {
         writing = wrote(writing, Stretch { text: measured_cut(commented.measured, Stretched { from: block.start, to: block.start + block.length }), about: SameText(block.start) })
         writing = wrote(writing, Stretch { text: "\n", about: WholeModule })
     }
-    Run { source: writing.source, stretches: writing.stretches, examples: stated.examples, tests: stated.tests, module: lexer.Span { start: 0, length: byte_count(page.source) } }
+    writing
 }
 
 /// `writing`, with one function written after it for each of `tests`, whose body is the body of
@@ -1914,9 +1958,11 @@ fn byte_count(text: String) -> Int {
     lexer.byte_length(lexer.Rest { source: text, start: 0 }, strings.length(text))
 }
 
-/// Every module `program` imports, and `io`, each once and in order, in one block, as the run imports them.
-// example: imports_of(ok_or(parser.parse("import list\n"), ast.Program { items: [] })) == "import io\nimport list\n\n"
-fn imports_of(program: ast.Program) -> String {
+/// Every module `program` imports, and `io`, that `read` holds, each once and in order, in one
+/// block, as the run imports them.
+// example: imports_of(ok_or(parser.parse("import list\n"), ast.Program { items: [] }), set.insert(set.insert(set.empty(), "io"), "list")) == "import io\nimport list\n\n"
+// example: imports_of(ok_or(parser.parse("import list\n"), ast.Program { items: [] }), set.insert(set.empty(), "io")) == "import io\n\n"
+fn imports_of(program: ast.Program, read: set.Set<String>) -> String {
     var named = ["io"]
     for item in program.items {
         named = match item {
@@ -1927,12 +1973,36 @@ fn imports_of(program: ast.Program) -> String {
     var written = ""
     var last = ""
     for module in sorted(named) {
-        if module != last {
+        if module != last && set.has_value(read, module) {
             written += "import " + module + "\n"
         }
         last = module
     }
     written + "\n"
+}
+
+/// `read` with each name `text` writes before a dot, where no dot stands before that name.
+///
+/// A name after a dot is a field or a member, so only the first name of a chain is a module.
+// example: set.has_value(with_modules_written(set.empty(), "a.b(c.d)"), "c")
+// example: set.has_value(with_modules_written(set.empty(), "a.b.c"), "b") == false
+fn with_modules_written(read: set.Set<String>, text: String) -> set.Set<String> {
+    var named = read
+    var before = ""
+    var after_a_dot = false
+    for token in lexer.lex(text) {
+        let is_dot = token.kind == lexer.Punct(lexer.Dot)
+        if is_dot && before != "" {
+            named = set.insert(named, before)
+        }
+        before = if token.kind == lexer.Identifier && !after_a_dot {
+            token.text
+        } else {
+            ""
+        }
+        after_a_dot = is_dot
+    }
+    named
 }
 
 /// `values`, from the one that sorts first to the one that sorts last.

@@ -8,7 +8,6 @@ import digest
 import drawn
 import files
 import held
-import ir
 import lexer
 import list
 import modules
@@ -16,8 +15,8 @@ import strings
 import walk
 
 /// One `Held` for each property of the `jar` line and of its hash, in a fixed order.
-// example: list.length(every_property(0, ir.little_library())) == 4
-fn every_property(cases: Int, library: ir.Library) -> List<held.Held> {
+// example: list.length(every_property(0)) == 4
+fn every_property(cases: Int) -> List<held.Held> {
     [a_printed_jar_line_reads_back(cases), a_malformed_jar_line_is_refused(cases), a_path_with_a_colon_is_refused(cases), every_digest_is_the_one_shasum_gives(cases)]
 }
 

@@ -61,7 +61,7 @@ fn held_as(claim: String, held: Int, wanted: Int) -> String {
 // example: nothing(claim: "17 / 0 is None", answer: None) == "17 / 0 is None"
 fn nothing(claim: String, answer: Option<Int>) -> String {
     match answer {
-        Some(held) => "an answer where " + claim
+        Some(_) => "an answer where " + claim
         None => claim
     }
 }

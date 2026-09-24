@@ -188,7 +188,7 @@ fn declared_span(declared_records: List<RecordOf>, named: String) -> lexer.Span 
 // example: head_of(ast.TypeRef { kind: ast.UnitType, span: lexer.Span { start: 0, length: 2 } }) == ""
 fn head_of(written: ast.TypeRef) -> String {
     match written.kind {
-        ast.NamedType { path, arguments } => bare_text(path)
+        ast.NamedType { path } => bare_text(path)
         ast.UnitType => ""
     }
 }
@@ -437,7 +437,7 @@ fn function_name_of(item: ast.Item) -> List<ast.Name> {
 /// It is `""` where the source declares what it writes, and `unresolved` where resolution refuses.
 // example: declared_code("fn f() -> Int {\n    1\n}\n") == ""
 fn declared_code(source: String) -> String {
-    match resolver.resolve(first_program(source), "main", resolver.prelude_of(little_prelude())) {
+    match resolver.resolve(first_program(source), "main", resolver.prelude_of(little_prelude()), set.empty()) {
         Ok(resolved) => refusal.code_given(environment_of(little_environment(), resolved, [], [], unify.empty_table()))
         Err(_) => "unresolved"
     }
@@ -489,7 +489,7 @@ fn given_by_another_module(environment: Environment, given: surface.OfferedInsta
 }
 
 /// Every item of the module, declared in the order it is written.
-// example: declared_code("import io\n") == ""
+// example: declared_code("type Box = Box\n") == ""
 fn declare_items(declaring: Declaring, resolved: resolver.Resolved) -> Result<Declaring, refusal.TypeError> {
     var declared = declaring
     for item in resolved.program.items {
@@ -499,7 +499,7 @@ fn declare_items(declaring: Declaring, resolved: resolver.Resolved) -> Result<De
 }
 
 /// One item of the module, declared.
-// example: declared_code("fn f(held: List) -> Int {\n    1\n}\n") == "L0401 11..15"
+// example: declared_code("fn f(held: List) -> Int {\n    _ = held\n    1\n}\n") == "L0401 11..15"
 fn declare_item(declaring: Declaring, resolved: resolver.Resolved, item: ast.Item) -> Result<Declaring, refusal.TypeError> {
     match item {
         ast.Import(imported) => Ok(declaring { environment: bound(declaring.environment, declared_at(declaring.environment, imported.module), unify.monomorphic(unify.Module(imported.module.text))) })
@@ -670,7 +670,7 @@ fn declared_type(program: ast.Program, named: String) -> List<ast.TypeDeclaratio
 // example: refusal.code_given(reads_what_it_holds(first_type("type Box = Box\n"), ast.Name { text: "Box", span: lexer.Span { start: 0, length: 3 } })) == ""
 fn reads_what_it_holds(declared_one: ast.TypeDeclaration, for_type: ast.Name) -> Result<(), refusal.TypeError> {
     match declared_one.definition {
-        ast.Foreign { class, called } => Err(refusal.TypeError { kind: refusal.DerivesAForeignType(for_type.text), span: for_type.span })
+        ast.Foreign {} => Err(refusal.TypeError { kind: refusal.DerivesAForeignType(for_type.text), span: for_type.span })
         _ => Ok(())
     }
 }
@@ -681,7 +681,7 @@ fn holds_of(declared_one: ast.TypeDeclaration) -> List<Held> {
     match declared_one.definition {
         ast.RecordType(fields) => fields_held(fields, "")
         ast.Variants(variants) => variants_held(variants)
-        ast.Foreign { class, called } => []
+        ast.Foreign {} => []
     }
 }
 
@@ -1020,7 +1020,7 @@ fn definition_declared(environment: Environment, resolved: resolver.Resolved, de
     match declaration.definition {
         ast.RecordType(fields) => record_declared(environment, resolved, declaration.name, fields, shape)
         ast.Variants(variants) => variants_declared(environment, resolved, variants, shape)
-        ast.Foreign { class, called } => class_declared(environment, class)
+        ast.Foreign { class } => class_declared(environment, class)
     }
 }
 
@@ -1267,8 +1267,8 @@ fn counting(environment: Environment, resolved: resolver.Resolved, for_type: ast
 /// `written` as a type, with each name it holds pointed at what it was resolved to.
 ///
 /// `Option<()>` is refused where it is written, and the innermost one where one holds another.
-// example: declared_code("fn f(held: Option<Int, Int>) -> Int {\n    1\n}\n") == "L0401 11..17"
-// example: declared_code("fn f(held: List<Option<()>>) -> Int {\n    1\n}\n") == "L0432 16..26"
+// example: declared_code("fn f(held: Option<Int, Int>) -> Int {\n    _ = held\n    1\n}\n") == "L0401 11..17"
+// example: declared_code("fn f(held: List<Option<()>>) -> Int {\n    _ = held\n    1\n}\n") == "L0432 16..26"
 fn type_written(environment: Environment, resolved: resolver.Resolved, written: ast.TypeRef) -> Result<unify.Type, refusal.TypeError> {
     let found = match written.kind {
         ast.NamedType { path, arguments } => named_written(environment, resolved, path, arguments)
@@ -1278,16 +1278,16 @@ fn type_written(environment: Environment, resolved: resolver.Resolved, written: 
 }
 
 /// A written type that has a name, which is this module's, the prelude's, or another module's.
-// example: declared_code("import io\n\nfn f(held: io.Missing) -> Int {\n    1\n}\n") == "L0414 22..32"
+// example: declared_code("import io\n\nfn f(held: io.Missing) -> Int {\n    _ = held\n    1\n}\n") == "L0414 22..32"
 fn named_written(environment: Environment, resolved: resolver.Resolved, path: ast.Path, arguments: List<ast.TypeRef>) -> Result<unify.Type, refusal.TypeError> {
     match path.module {
-        Some(module) => reached_written(environment, path, types_written(environment, resolved, arguments)?)
+        Some(_) => reached_written(environment, path, types_written(environment, resolved, arguments)?)
         None => bare_written(environment, resolved, path.name, arguments)
     }
 }
 
 /// A type written by its name alone, which is a type parameter or a declared type.
-// example: declared_code("fn f<T>(held: T<Int>) -> Int {\n    1\n}\n") == "L0401 14..15"
+// example: declared_code("fn f<T>(held: T<Int>) -> Int {\n    _ = held\n    1\n}\n") == "L0401 14..15"
 fn bare_written(environment: Environment, resolved: resolver.Resolved, named: ast.Name, arguments: List<ast.TypeRef>) -> Result<unify.Type, refusal.TypeError> {
     let definition = definition_of(resolved, resolver.TypeNamespace, named)
     if definition.kind == resolver.TypeParameter {
@@ -1592,7 +1592,7 @@ fn first_item(source: String) -> ast.Item {
 // example: resolved_of("fn f() -> Int {\n    1\n}\n").module == "main"
 fn resolved_of(source: String) -> resolver.Resolved {
     let program = first_program(source)
-    ok_or(resolver.resolve(program, "main", resolver.prelude_of(little_prelude())), resolver.Resolved { module: "main", program: program, found: map.empty() })
+    ok_or(resolver.resolve(program, "main", resolver.prelude_of(little_prelude()), set.empty()), resolver.Resolved { module: "main", program: program, found: map.empty() })
 }
 
 /// The small prelude the examples of the type inference are read against.
@@ -1600,7 +1600,7 @@ fn resolved_of(source: String) -> resolver.Resolved {
 /// It declares `Eq` and `Add` for `Int`, and `IntegerLiteral` for `Int` over the numbers 0 to 255.
 // example: list.length(little_prelude().items) == 9
 fn little_prelude() -> ast.Program {
-    first_program("instance Eq<Int> {\n    fn is_equal(one: Int, other: Int) -> Bool {\n        true\n    }\n}\n\ninstance Add<Int> {\n    fn add(one: Int, other: Int) -> Int {\n        one\n    }\n}\n\ninstance IntegerLiteral<Int> {\n    fn lowest() -> Int {\n        0\n    }\n\n    fn highest() -> Int {\n        255\n    }\n\n    fn from_literal(literal: Int) -> Int {\n        literal\n    }\n}\n\ntrait Eq<T> {\n    fn is_equal(one: T, other: T) -> Bool\n}\n\ntrait Add<T> {\n    fn add(one: T, other: T) -> T\n}\n\ntrait IntegerLiteral<T> {\n    fn lowest() -> Int\n    fn highest() -> Int\n    fn from_literal(literal: Int) -> T\n}\n\ntype Option<T> =\n    | Some(T)\n    | None\n\ntype Result<T, E> =\n    | Ok(T)\n    | Err(E)\n\nfn or<T>(maybe: Option<T>, fallback: T) -> T {\n    fallback\n}\n")
+    first_program("instance Eq<Int> {\n    fn is_equal(one: Int, other: Int) -> Bool {\n        true\n    }\n}\n\ninstance Add<Int> {\n    fn add(one: Int, other: Int) -> Int {\n        one\n    }\n}\n\ninstance IntegerLiteral<Int> {\n    fn lowest() -> Int {\n        0\n    }\n\n    fn highest() -> Int {\n        255\n    }\n\n    fn from_literal(literal: Int) -> Int {\n        literal\n    }\n}\n\ntrait Eq<T> {\n    fn is_equal(one: T, other: T) -> Bool\n}\n\ntrait Add<T> {\n    fn add(one: T, other: T) -> T\n}\n\ntrait IntegerLiteral<T> {\n    fn lowest() -> Int\n    fn highest() -> Int\n    fn from_literal(literal: Int) -> T\n}\n\ntype Option<T> =\n    | Some(T)\n    | None\n\ntype Result<T, E> =\n    | Ok(T)\n    | Err(E)\n\nfn or<T>(maybe: Option<T>, fallback: T) -> T {\n    match maybe {\n        Some(value) => value\n        None => fallback\n    }\n}\n")
 }
 
 /// `source`, parsed, and a program of nothing where it does not parse.

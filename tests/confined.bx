@@ -79,7 +79,7 @@ fn passed_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
         }
         at = drawn.next(at)
     }
-    let source = "fn go(path: String) -> Option<String> {\n" + body + "    Some(name_of(file))\n}\n\nfn size_of(file: File) -> Int {\n    1\n}\n" + reaching()
+    let source = "fn go(path: String) -> Option<String> {\n" + body + "    Some(name_of(file))\n}\n\nfn size_of(file: File) -> Int {\n    _ = name_of(file)\n    1\n}\n" + reaching()
     let answer = checking.checked(source, library)
     if checking.code_of(answer) != "" {
         return checking.Tried { input: source, why: "the module is refused: " + checking.code_of(answer) + " " + held.quoted(checking.message_of(answer)) }

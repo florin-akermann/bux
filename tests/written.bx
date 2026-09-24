@@ -308,7 +308,7 @@ fn drawn_program(draw: drawn.Draw) -> String {
     for which in drawn.numbers(drawn.next(draw), many, 9) {
         body += "    " + or(list.at(statements(), which), "") + "\n"
     }
-    "import list\nimport strings\n\nfn main(arguments: List<String>) -> Int {\n    let count = list.length(arguments)\n    var total = 0\n" + body + "    total\n}\n\n/// Whether `total` is even.\n// example: is_even(2)\nfn is_even(total: Int) -> Bool {\n    or(total % 2, 1) == 0\n}\n\ntype Box = {\n    held: Int\n}\n"
+    "import list\nimport strings\n\nfn main(arguments: List<String>) -> Int {\n    let count = list.length(arguments)\n    var total = strings.length(shown(count))\n" + body + "    total\n}\n\n/// Whether `total` is even.\n// example: is_even(2)\nfn is_even(total: Int) -> Bool {\n    or(total % 2, 1) == 0\n}\n\ntype Box = {\n    held: Int\n}\n"
 }
 
 /// The statements a drawn program writes before it gives back its total.

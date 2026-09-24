@@ -2,7 +2,7 @@
 // A constructor is a call too, and a record of a type parameter holds whatever it is built with.
 // So a record built around a foreign reference is refused where it is built.
 fn main(arguments: List<String>) -> Int {
-    let boxed = Box { value: named("notes.txt") }
+    _ = Box { value: named("notes.txt") }
     0
 }
 

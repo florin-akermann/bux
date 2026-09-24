@@ -57,7 +57,7 @@ fn drawing(draw: drawn.Draw, library: ir.Library) -> Drawing {
 ///
 /// `through` is the name the fields are read through: the name the record is built for keeps it
 /// in locals, and a second name bound to it lets it go.
-// example: module(given: [1], through: "point") == "fn held(count: Int) -> Int {\n    let point = Point { across: 7 }\n    point.across\n}\n\ntype Point = {\n    across: Int\n}\n"
+// example: module(given: [1], through: "point") == "fn held(count: Int) -> Int {\n    _ = count\n    let point = Point { across: 7 }\n    point.across\n}\n\ntype Point = {\n    across: Int\n}\n"
 fn module(given: List<Int>, through: String) -> String {
     var literal = []
     var reads = []
@@ -74,7 +74,7 @@ fn module(given: List<Int>, through: String) -> String {
     if through != "point" {
         second = "    let " + through + " = point\n"
     }
-    "fn held(count: Int) -> Int {\n    let point = Point { " + strings.join(literal, ", ") + " }\n" + second + "    " + strings.join(reads, " + ") + "\n}\n\ntype Point = {\n" + declared + "}\n"
+    "fn held(count: Int) -> Int {\n    _ = count\n    let point = Point { " + strings.join(literal, ", ") + " }\n" + second + "    " + strings.join(reads, " + ") + "\n}\n\ntype Point = {\n" + declared + "}\n"
 }
 
 /// Whether the body of `held` builds an instance of anything at all.
@@ -149,8 +149,8 @@ fn answer_of(machine: Machine) -> Result<Int, String> {
 fn stepped(machine: Machine, instruction: ir.Instruction, classes: List<ir.Class>) -> Machine {
     match instruction {
         ir.LongOf(value) => pushed(machine, Number(value))
-        ir.Load { slot, of } => loaded(machine, slot)
-        ir.Store { slot, of } => stored(machine, slot)
+        ir.Load { slot } => loaded(machine, slot)
+        ir.Store { slot } => stored(machine, slot)
         ir.Copy => pushed(machine, top(machine))
         ir.Arithmetic(how) => worked_out(machine, how)
         ir.New(_) => pushed(machine, Fresh)

@@ -7,7 +7,10 @@ fn main(arguments: List<String>) -> Int {
     let flagged = is_kept(true)
     let tagged = held(Tag { at: counted })
     let nested = twice(3)
-    0
+    if flagged && tagged.at == counted && nested == 3 {
+        return 0
+    }
+    1
 }
 
 // example: kept(7) == 7

@@ -11,7 +11,6 @@ import held
 import ir
 import list
 import modules
-import strings
 
 /// Every property of what an instance becomes, each over `cases` drawn modules, in a fixed order.
 // example: list.length(every_property(0, ir.little_library())) == 7
@@ -97,7 +96,7 @@ fn held_beside(property: Property, cases: Int, place: Place) -> held.Held {
 /// inside of a `List`, and `is_same` constrains one by `Eq`.
 // example: holder() != ""
 fn holder() -> String {
-    "fn held<T>(value: T) -> T {\n    value\n}\n\nfn counted<T>(values: List<T>) -> Int {\n    1\n}\n\nfn is_same<T: Eq<T>>(one: T, other: T) -> Bool {\n    one == other\n}\n"
+    "fn held<T>(value: T) -> T {\n    value\n}\n\nfn counted<T>(values: List<T>) -> Int {\n    var count = 0\n    for _ in values {\n        count += 1\n    }\n    count\n}\n\nfn is_same<T: Eq<T>>(one: T, other: T) -> Bool {\n    one == other\n}\n"
 }
 
 /// `property` checked over `cases` modules drawn beside `place`.
@@ -163,7 +162,7 @@ fn comparison(draw: drawn.Draw, library: ir.Library) -> Drawing {
 /// A module writing `written` over `Money`, which has an instance of every operator's trait.
 // example: owning("-one") != ""
 fn owning(written: String) -> String {
-    "fn worked_out(one: Money, other: Money) -> () {\n    _ = " + written + "\n    ()\n}\n" + money_owns()
+    "fn worked_out(one: Money, other: Money) -> () {\n    _ = " + written + "\n    _ = other\n}\n" + money_owns()
 }
 
 /// `Money` with an instance of every trait an operator is, so any operator may be written over it.

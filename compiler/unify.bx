@@ -150,7 +150,7 @@ fn settled_if_it_takes_one(table: Table, variable: Int, to: Type) -> Result<Tabl
 // example: is_written_at(Table { settled: map.empty(), whole_numbers: set.empty(), written_at: set.insert(set.empty(), "Int"), made: 0 }, int())
 fn is_written_at(table: Table, to: Type) -> Bool {
     match to {
-        Named { name, arguments } => set.has_value(table.written_at, name)
+        Named { name } => set.has_value(table.written_at, name)
         _ => false
     }
 }
@@ -219,7 +219,7 @@ fn unsettled(table: Table, of: Type, into: List<Int>) -> List<Int> {
     let found = shallow(table, of)
     match found {
         Var(variable) => with_var(into, variable)
-        Named { name, arguments } => each_unsettled(table, arguments, into)
+        Named { arguments } => each_unsettled(table, arguments, into)
         Function { parameters, result } => unsettled(table, result, each_unsettled(table, parameters, into))
         _ => into
     }
@@ -316,7 +316,7 @@ fn has_unit_in_option(found: Type) -> Bool {
         return true
     }
     match found {
-        Named { name, arguments } => is_any_holding_unit(arguments)
+        Named { arguments } => is_any_holding_unit(arguments)
         _ => false
     }
 }
@@ -348,7 +348,7 @@ fn result_type(value: Type, error: Type) -> Type {
 // example: parameters_of(Function { parameters: [Unit], result: Unit }) == [Unit]
 fn parameters_of(function: Type) -> List<Type> {
     match function {
-        Function { parameters, result } => parameters
+        Function { parameters } => parameters
         _ => []
     }
 }
@@ -357,7 +357,7 @@ fn parameters_of(function: Type) -> List<Type> {
 // example: result_of(Function { parameters: [], result: int() }) == int()
 fn result_of(function: Type) -> Type {
     match function {
-        Function { parameters, result } => result
+        Function { result } => result
         _ => Unit
     }
 }
@@ -366,7 +366,7 @@ fn result_of(function: Type) -> Type {
 // example: is_function(Function { parameters: [], result: Unit })
 fn is_function(found: Type) -> Bool {
     match found {
-        Function { parameters, result } => true
+        Function {} => true
         _ => false
     }
 }

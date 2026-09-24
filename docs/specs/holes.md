@@ -36,6 +36,8 @@ Bux hides no name, so a module that declares its own `todo` is refused with `L03
 binding or a parameter of that name is refused the same way.
 `todo` therefore means the hole wherever it is in scope, which is everywhere.
 
+A hole reads every name in scope where it is written, so `L0321` never refuses a name above it.
+
 ## What `bux check` does
 
 Nothing.

@@ -15,6 +15,7 @@ import list
 import modules
 import parser
 import resolver
+import set
 import strings
 import surface
 import types
@@ -61,7 +62,7 @@ fn type_written(source: String, written: String, count: Int, library: ir.Library
 // example: code_of(checked("fn one() -> Int {\n    \"one\"\n}\n", ir.little_library())) == "L0400"
 fn checked(source: String, library: ir.Library) -> Result<infer.Inference, command.Diagnostic> {
     let program = parsed(source)?
-    let resolved = command.resolved_of(resolver.resolve(program, "demo", library.prelude.names))?
+    let resolved = command.resolved_of(resolver.resolve(program, "demo", library.prelude.names, set.empty()))?
     command.inferred_of(types.check(resolved, surface.nothing_imported(), library.prelude))
 }
 
@@ -191,7 +192,7 @@ fn module_of(draw: drawn.Draw, among: List<String>) -> String {
     let count = drawn.number(draw, list.length(among) + 2)
     var at = drawn.next(draw)
     var chosen = []
-    for index in numbers_below(count) {
+    for _ in numbers_below(count) {
         let piece = drawn.picked(at, among, "")
         if !list.has_value(chosen, piece) {
             chosen = list.push(chosen, piece)
@@ -205,7 +206,7 @@ fn module_of(draw: drawn.Draw, among: List<String>) -> String {
 // example: after(drawn.seeded(1), 2).state == drawn.next(drawn.next(drawn.seeded(1))).state
 fn after(draw: drawn.Draw, steps: Int) -> drawn.Draw {
     var at = draw
-    for step in numbers_below(steps) {
+    for _ in numbers_below(steps) {
         at = drawn.next(at)
     }
     at

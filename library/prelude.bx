@@ -18,7 +18,7 @@ fn or<T>(maybe: Option<T>, fallback: T) -> T {
 fn ok_or<T, E>(answer: Result<T, E>, fallback: T) -> T {
     match answer {
         Ok(value) => value
-        Err(why) => fallback
+        Err(_) => fallback
     }
 }
 
@@ -55,7 +55,7 @@ instance<T: Eq<T>> Eq<List<T>> {
             }
         }
         var counted = 0
-        for held in other {
+        for _ in other {
             counted += 1
         }
         index == counted
@@ -167,7 +167,7 @@ instance<T: Ord<T>> Ord<List<T>> {
             index += 1
         }
         var counted = 0
-        for held in other {
+        for _ in other {
             counted += 1
         }
         index < counted

@@ -33,7 +33,7 @@ fn main(arguments: List<String>) -> Int {
         io.println("a list of the type is compared by the prelude's instance")
     }
     match map.get(map.insert(map.empty(), two, "two"), two) {
-        Some(named) => io.println("a map is keyed by the type")
+        Some(_) => io.println("a map is keyed by the type")
         None => ()
     }
     if Wallet(one) == Wallet(one) {

@@ -1,0 +1,10 @@
+// expect-error: L0321
+// A `for` that reads none of its values binds `_`, so a name it binds and never reads is refused.
+// example: counted([1, 2]) == 2
+fn counted(values: List<Int>) -> Int {
+    var count = 0
+    for value in values {
+        count += 1
+    }
+    count
+}

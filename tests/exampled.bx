@@ -7,7 +7,6 @@ import ast
 import command
 import drawn
 import held
-import ir
 import lexer
 import list
 import parser
@@ -16,8 +15,8 @@ import strings
 /// Every property of the example lines over `cases` drawn cases each, in a fixed order.
 ///
 /// Examples are read without the prelude, so no property needs the one it is handed.
-// example: list.length(every_property(1, ir.little_library())) == 4
-fn every_property(cases: Int, library: ir.Library) -> List<held.Held> {
+// example: list.length(every_property(1)) == 4
+fn every_property(cases: Int) -> List<held.Held> {
     var found = []
     for property in [EveryOneFound, EveryOneAccepted, TextAfterTheMarker, SpanInTheFile] {
         found = list.push(found, held_over(property, cases))

@@ -168,7 +168,7 @@ fn is_name_of(written: ast.Expr, named: String) -> Bool {
 fn is_one_call_or_one_name(body: ast.Expr) -> Bool {
     match body.kind {
         ast.NameExpr(_) => true
-        ast.Call { callee, arguments } => true
+        ast.Call {} => true
         _ => false
     }
 }

@@ -13,7 +13,7 @@ process Counter {
 
     fn receive(total: String, message: Counted) -> Next<String> {
         match message {
-            Add(amount) => Continue(total)
+            Add(_) => Continue(total)
             Stop => Done
         }
     }

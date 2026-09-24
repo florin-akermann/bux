@@ -127,7 +127,7 @@ statement       = binding | assignment | discard | "return" [ expression ]
 binding         = ( "let" | "var" ) Name "=" expression
 assignment      = Name ( "=" | "+=" ) expression
 discard         = "_" "=" expression
-for             = "for" [ Name "in" expression | expression ] block
+for             = "for" [ ( Name | "_" ) "in" expression | expression ] block
 
 expression      = or
 or              = and { "||" and }
@@ -151,7 +151,7 @@ match           = "match" expression "{" { match_arm } "}"
 match_arm       = pattern "=>" expression
 
 pattern         = alternative { "|" alternative }
-alternative     = Name [ "(" pattern { "," pattern } ")" | "{" Name { "," Name } "}" ]
+alternative     = Name [ "(" pattern { "," pattern } ")" | "{" [ Name { "," Name } ] "}" ]
                 | Integer | String | "true" | "false" | "_"
 ```
 
@@ -167,9 +167,13 @@ A comparison does not chain: `a < b < c` is a parse error, as it is in Go.
 Every other binary operator is left-associative.
 
 A list the grammar writes with at least one element is not accepted empty.
-`List<>`, `fn f<>()`, `Failed()`, and the pattern `P {}` each name what was wanted instead.
-A call, a parameter list, a record literal, and a written list are the four the grammar writes
-as optional.
+`List<>`, `fn f<>()`, and `Failed()` each name what was wanted instead.
+A call, a parameter list, a record literal, a written list, and the fields of a record pattern
+are the five the grammar writes as optional.
+A record pattern names the fields its arm reads, so `Point {}` matches a `Point` and binds none.
+
+A `for … in` binds each value to a name, or to `_` where the loop reads none of the values.
+`for _ in users` is how a loop that only counts is written, and `_` binds nothing there.
 
 A call names all of its arguments or none of them, which the two alternatives above say.
 A name followed by `:` opens a named argument, so the first argument settles which list follows.

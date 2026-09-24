@@ -27,6 +27,7 @@ fn is_held(box: Box<()>) -> Bool {
 /// Nothing is given, and there is nothing to say about it but that it arrived.
 // example: is_given(())
 fn is_given(given: ()) -> Bool {
+    _ = given
     true
 }
 

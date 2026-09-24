@@ -5,14 +5,13 @@
 // UTF-16 code units, so each property walks the source in both at once.
 import drawn
 import held
-import ir
 import lexer
 import list
 import strings
 
 /// Every property of the lexer, each tried on `cases` drawn cases, in a fixed order.
-// example: list.length(every_property(1, ir.little_library())) == 4
-fn every_property(cases: Int, library: ir.Library) -> List<held.Held> {
+// example: list.length(every_property(1)) == 4
+fn every_property(cases: Int) -> List<held.Held> {
     [lexing_is_deterministic(cases), spans_are_ordered_and_on_character_boundaries(cases), every_code_unit_outside_a_token_is_a_blank(cases), token_texts_joined_by_spaces_lex_back_to_their_kinds(cases)]
 }
 

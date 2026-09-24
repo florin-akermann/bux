@@ -7,7 +7,6 @@ import command
 import drawn
 import exhaustiveness
 import held
-import infer
 import ir
 import lexer
 import list
@@ -75,7 +74,7 @@ fn name_of(property: Property) -> String {
 /// cases do not parse, and a case that does not type holds at once.
 // example: checking_never_panics_and_is_deterministic(drawn.seeded(1), types.little_prelude()).why == ""
 fn checking_never_panics_and_is_deterministic(draw: drawn.Draw, prelude: types.Prelude) -> Tried {
-    let pieces = [payment_arm(0), payment_arm(1), payment_arm(2), "        other => \"else\"\n", "        _ => \"any\"\n", "        Pending | Failed(_) => \"two\"\n", "        Failed(\"no\") => \"no\"\n", "é", "(", "=> "]
+    let pieces = [payment_arm(0), payment_arm(1), payment_arm(2), "        other => describe(other)\n", "        _ => \"any\"\n", "        Pending | Failed(_) => \"two\"\n", "        Failed(\"no\") => \"no\"\n", "é", "(", "=> "]
     let source = payments(drawn.text_of(drawn.next(draw), pieces, drawn.number(draw, 6)))
     Tried { case: source, why: answered_alike(source, prelude) }
 }
@@ -120,7 +119,7 @@ fn a_name_that_binds_covers_whatever_else_is_written(draw: drawn.Draw, prelude: 
         arms += payment_arm(index)
         index += 1
     }
-    let source = payments(arms + "        other => \"something else\"\n")
+    let source = payments(arms + "        other => describe(other)\n")
     let answer = answer_of(source, prelude)
     var why = ""
     if answer != "" {
@@ -223,23 +222,37 @@ fn span_outside(span: lexer.Span, bytes: Int) -> String {
     ""
 }
 
-/// A module of one `match` of up to four drawn arms over one of four values.
+/// A module of one `match` of up to four drawn arms over one of four values, which the function
+/// takes as its one parameter.
 ///
 /// The truth is a field of a record, because a `Bool` parameter is refused before the check.
 // example: has_text(text: drawn_match(drawn.seeded(1)), piece: "type Status")
 fn drawn_match(draw: drawn.Draw) -> String {
     let over = drawn.number(draw, 4)
     let scrutinee = or(list.at(["status", "maybe", "count", "given.flag"], over), "given.flag")
+    let parameter = or(list.at(["status: Status", "maybe: Option<Status>", "count: Int", "given: Given"], over), "given: Given")
     let patterns = or(list.at(patterns_over(), over), ["_"])
     var body = ""
     var at = drawn.next(draw)
     for index in [0, 1, 2, 3] {
         if index <= drawn.number(drawn.next(at), 4) {
-            body += "        " + drawn.picked(at, patterns, "_") + " => 1\n"
+            body += arm_of(drawn.picked(at, patterns, "_"))
         }
         at = drawn.next(drawn.next(at))
     }
-    "fn check(status: Status, maybe: Option<Status>, count: Int, given: Given) -> Int {\n    match " + scrutinee + " {\n" + body + "    }\n}\n\ntype Status =\n    | Pending\n    | Running(Int)\n    | Failed(Int, Bool)\n\ntype Given = {\n    flag: Bool\n}\n"
+    "fn check(" + parameter + ") -> Int {\n    match " + scrutinee + " {\n" + body + "    }\n}\n\ntype Status =\n    | Pending\n    | Running(Int)\n    | Failed(Int, Bool)\n\ntype Given = {\n    flag: Bool\n}\n"
+}
+
+/// The arm of `pattern` in a drawn `match`, whose value is a hole where the pattern binds `other`.
+///
+/// A hole reads every name in scope, so the name the pattern binds is read.
+// example: arm_of("_") == "        _ => 1\n"
+// example: arm_of("Some(other)") == "        Some(other) => todo(\"the value is not the point\")\n"
+fn arm_of(pattern: String) -> String {
+    if has_text(text: pattern, piece: "other") {
+        return "        " + pattern + " => todo(\"the value is not the point\")\n"
+    }
+    "        " + pattern + " => 1\n"
 }
 
 /// The patterns an arm over each parameter of a drawn `match` writes, in the order of the four.

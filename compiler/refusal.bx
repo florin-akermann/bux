@@ -38,19 +38,19 @@ fn code_given<T>(answer: Result<T, TypeError>) -> String {
 // example: code_of(NarrowsWithoutOption(unify.Unit)) == "L0431"
 fn code_of(kind: TypeErrorKind) -> String {
     match kind {
-        Mismatched { expected, found } => "L0400"
+        Mismatched {} => "L0400"
         WrongArgumentCount(_) => "L0401"
         WrongTypeArgumentCount(_) => "L0401"
-        UnknownField { of, field } => "L0402"
+        UnknownField {} => "L0402"
         UnknownReceiver(_) => "L0402"
         InfiniteType => "L0403"
-        MissingField { of, field } => "L0404"
-        FieldWrittenTwice { of, field } => "L0405"
-        NoOperator { written_as, of, at } => "L0406"
+        MissingField {} => "L0404"
+        FieldWrittenTwice {} => "L0405"
+        NoOperator {} => "L0406"
         DivisorIsZero => "L0407"
         Discarded(_) => "L0408"
-        Unnamed { function, repeated } => "L0409"
-        Misnamed { written, parameter } => "L0410"
+        Unnamed {} => "L0409"
+        Misnamed {} => "L0410"
         _ => later_code(kind)
     }
 }
@@ -64,14 +64,14 @@ fn later_code(kind: TypeErrorKind) -> String {
         NamedThroughModule(_) => "L0411"
         FlagParameter(_) => "L0412"
         NotAPredicate(_) => "L0413"
-        NotInModule { module, name } => "L0414"
+        NotInModule {} => "L0414"
         HoldsItself(_) => "L0415"
-        NoInstance { of, at } => "L0418"
+        NoInstance {} => "L0418"
         SignatureWithoutType(_) => "L0419"
-        LiteralDoesNotFit { value, at, least, most } => "L0420"
-        BoundIsNotAWholeNumber { bound, of } => "L0421"
-        HeldTypeHasNoInstance { of, deriving, held, held_as } => "L0422"
-        CalledOnAValue { function, plain } => "L0433"
+        LiteralDoesNotFit {} => "L0420"
+        BoundIsNotAWholeNumber {} => "L0421"
+        HeldTypeHasNoInstance {} => "L0422"
+        CalledOnAValue {} => "L0433"
         UnitInOption => "L0432"
         _ => boundary_code(kind)
     }
@@ -81,19 +81,19 @@ fn later_code(kind: TypeErrorKind) -> String {
 // example: boundary_code(NotCalled { module: "io", name: "print" }) == "L0304"
 fn boundary_code(kind: TypeErrorKind) -> String {
     match kind {
-        NotCalled { module, name } => "L0304"
-        TraitStaysInItsModule { module, name, of } => "L0424"
-        DoesNotCross { written, crossing } => "L0425"
+        NotCalled {} => "L0304"
+        TraitStaysInItsModule {} => "L0424"
+        DoesNotCross {} => "L0425"
         NotAJavaName(_) => "L0426"
         DerivesAForeignType(_) => "L0427"
         ReachesNoClass(_) => "L0428"
-        WidensNoInt { width, written } => "L0429"
+        WidensNoInt {} => "L0429"
         NarrowsNoInt(_) => "L0429"
         BuildsAnInterface(_) => "L0430"
         NarrowsWithoutOption(_) => "L0431"
         Unaccounted(_) => "L0434"
         LeftOutMember(_) => "L0434"
-        Escapes { place, held, foreign } => "L0435"
+        Escapes {} => "L0435"
         SignatureLeftOut(_) => "L0436"
         _ => process_code(kind)
     }
@@ -114,7 +114,7 @@ fn process_code(kind: TypeErrorKind) -> String {
         ReceivesTwoValues(_) => "L0807"
         ReceivesWithoutAMatch(_) => "L0808"
         ArmDoesTheWork(_) => "L0809"
-        HoldsAForeignReference { called, held, foreign } => "L0811"
+        HoldsAForeignReference {} => "L0811"
         _ => "L0810"
     }
 }
@@ -153,7 +153,7 @@ fn how_it_is_written(kind: TypeErrorKind) -> String {
         FlagParameter(function) => "this parameter is a `Bool`, so a call of `" + function + "` passes `true` and says no more"
         NotAPredicate(function) => "`" + function + "` gives back a `Bool`, so its name asks the question it answers"
         NotInModule { module, name } => "`" + module + "` declares no `" + name + "`"
-        CalledOnAValue { function, plain } => "a dot after a value reads a field, so this call of `" + function + "` is written plainly"
+        CalledOnAValue { function } => "a dot after a value reads a field, so this call of `" + function + "` is written plainly"
         NotCalled { module, name } => "`" + module + "." + name + "` is a function, so it is written as a call"
         TraitStaysInItsModule { module, name, of } => "`" + module + "." + name + "` requires `" + of + "`, which `" + module + "` declares and nothing here names"
         _ => what_is_declared(kind)
@@ -289,7 +289,7 @@ fn ring_text(ring: List<String>) -> String {
 // example: help_of(InfiniteType) == "one of these two is being used where the other was meant"
 fn help_of(kind: TypeErrorKind) -> String {
     match kind {
-        NoOperator { written_as, of, at } => operator_help(of, at)
+        NoOperator { of, at } => operator_help(of, at)
         _ => stated(kind)
     }
 }
@@ -333,19 +333,19 @@ fn has_dot(name: String) -> Bool {
 // example: stated(DivisorIsZero) == "a zero written here is never anything else; drop the division"
 fn stated(kind: TypeErrorKind) -> String {
     match kind {
-        Mismatched { expected, found } => "one type is not another, however alike they are held"
+        Mismatched {} => "one type is not another, however alike they are held"
         WrongArgumentCount(_) => "a call passes one argument for each the declaration lists"
         WrongTypeArgumentCount(_) => "a type is written with one argument for each the declaration lists"
-        UnknownField { of, field } => "a field is looked up in the record its type declares"
+        UnknownField {} => "a field is looked up in the record its type declares"
         UnknownReceiver(_) => "declare the type of a parameter or a result so the field can be found"
         InfiniteType => "one of these two is being used where the other was meant"
-        MissingField { of, field } => "building a record gives every field a value; update one to change only some"
-        FieldWrittenTwice { of, field } => "a record gives each of its fields one value"
-        NoInstance { of, at } => "write the instance, or constrain the type parameter the call is made at"
-        LiteralDoesNotFit { value, at, least, most } => "write a whole number the type holds, or widen what its instance says it holds"
-        BoundIsNotAWholeNumber { bound, of } => "a bound is read rather than run, so write it as one whole number and nothing else"
-        HeldTypeHasNoInstance { of, deriving, held, held_as } => "a derived instance reads what it holds by that type's own; give the held one"
-        TraitStaysInItsModule { module, name, of } => "a trait has no name outside its module, so write the loop here instead"
+        MissingField {} => "building a record gives every field a value; update one to change only some"
+        FieldWrittenTwice {} => "a record gives each of its fields one value"
+        NoInstance {} => "write the instance, or constrain the type parameter the call is made at"
+        LiteralDoesNotFit {} => "write a whole number the type holds, or widen what its instance says it holds"
+        BoundIsNotAWholeNumber {} => "a bound is read rather than run, so write it as one whole number and nothing else"
+        HeldTypeHasNoInstance {} => "a derived instance reads what it holds by that type's own; give the held one"
+        TraitStaysInItsModule {} => "a trait has no name outside its module, so write the loop here instead"
         _ => stated_of_a_use(kind)
     }
 }
@@ -356,18 +356,18 @@ fn stated_of_a_use(kind: TypeErrorKind) -> String {
     match kind {
         DivisorIsZero => "a zero written here is never anything else; drop the division"
         Discarded(_) => "write `_ = ` in front of it to throw the value away on purpose"
-        Unnamed { function, repeated } => "a call names its arguments when the declaration gives two parameters one type"
-        Misnamed { written, parameter } => "arguments are named in the order the declaration lists its parameters"
+        Unnamed {} => "a call names its arguments when the declaration gives two parameters one type"
+        Misnamed {} => "arguments are named in the order the declaration lists its parameters"
         NamedConstructor(_) => "a variant whose values want names declares them as fields and is built as a record"
         NamedPrelude(_) => "only a call of a function this module declares names its arguments"
         NamedThroughModule(_) => "only a call of a function this module declares names its arguments"
         FlagParameter(_) => "declare a two-variant type and take that instead, so the call says which of the two"
         NotAPredicate(_) => "begin the name with `is_`, `has_`, `can_`, or `should_`"
-        NotInModule { module, name } => "a module offers the functions and the types it declares, and nothing else"
+        NotInModule {} => "a module offers the functions and the types it declares, and nothing else"
         HoldsItself(_) => "hold an `Option` of it, which is how a type holds another of its own kind"
         SignatureWithoutType(_) => "a signature has no body to read a type off, so it writes each one out"
-        CalledOnAValue { function, plain } => "write `" + plain + "`"
-        NotCalled { module, name } => "version 0.1 reaches a function by calling it; write the call"
+        CalledOnAValue { plain } => "write `" + plain + "`"
+        NotCalled {} => "version 0.1 reaches a function by calling it; write the call"
         UnitInOption => "use `Bool` for a flag, and `Result<(), E>` for a failure with a reason"
         _ => the_rule_of_java(kind)
     }
@@ -377,17 +377,17 @@ fn stated_of_a_use(kind: TypeErrorKind) -> String {
 // example: the_rule_of_java(NotAJavaName("")) == "a Java name is its segments, each a name, with a dot between two of them"
 fn the_rule_of_java(kind: TypeErrorKind) -> String {
     match kind {
-        DoesNotCross { written, crossing } => "a boundary carries `Bool`, `Int`, `String`, a `List`, and a type an `extern` names"
+        DoesNotCross {} => "a boundary carries `Bool`, `Int`, `String`, a `List`, and a type an `extern` names"
         NotAJavaName(_) => "a Java name is its segments, each a name, with a dot between two of them"
         DerivesAForeignType(_) => "write an `instance` over `extern` declarations instead"
         ReachesNoClass(_) => "a class is `String`, or a type an `extern type` declares"
-        WidensNoInt { width, written } => "a width widens to an `Int`; drop the word, or give an `Int` back"
+        WidensNoInt {} => "a width widens to an `Int`; drop the word, or give an `Int` back"
         NarrowsNoInt(_) => "an `int` narrows an `Int`; drop the word, or take an `Int`"
         BuildsAnInterface(_) => "a `new` builds a class; reach one through a member of a class instead"
         NarrowsWithoutOption(_) => "give back an `Option`, which is `None` where an argument does not fit"
         Unaccounted(_) => "a class is in an archive a `jar` line states, or on the list of `java.base` in `docs/specs/interop.md`, and this one is in neither"
         LeftOutMember(_) => "the list in `docs/specs/interop.md` leaves this member out; reach another member"
-        Escapes { place, held, foreign } => "a foreign reference stays in the function that reaches it; bind it, and pass it as an argument"
+        Escapes {} => "a foreign reference stays in the function that reaches it; bind it, and pass it as an argument"
         SignatureLeftOut(unwritten) => "write the signature `" + unwritten.settled + "`"
         _ => the_shape_of_a_process(kind)
     }
@@ -407,7 +407,7 @@ fn the_shape_of_a_process(kind: TypeErrorKind) -> String {
         ReceivesTwoValues(_) => "write `fn receive(state: S, message: M) -> Next<S>`"
         ReceivesWithoutAMatch(_) => "write the body as one `match` on the message, and move other work into a function"
         ArmDoesTheWork(_) => "move the work into a function, give it a name, and call it here"
-        HoldsAForeignReference { called, held, foreign } => "a process holds values only, and a foreign reference stays with the function that reaches it"
+        HoldsAForeignReference {} => "a process holds values only, and a foreign reference stays with the function that reaches it"
         _ => "`receive` takes the state `start` gives and one message, and gives `Next` of that state"
     }
 }

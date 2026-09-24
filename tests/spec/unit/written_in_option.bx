@@ -13,5 +13,6 @@ fn held() -> Option<()> {
 }
 
 fn is_given(given: ()) -> Bool {
+    _ = given
     true
 }

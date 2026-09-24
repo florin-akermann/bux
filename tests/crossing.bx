@@ -102,8 +102,10 @@ fn name_of(property: Property) -> String {
 /// A drawn call of a library module, which reaches only the classes of the library modules.
 // example: into_the_library(drawn.seeded(1), ir.little_library()).source != ""
 fn into_the_library(draw: drawn.Draw, library: ir.Library) -> Drawing {
-    let call = drawn.picked(draw, ["io.print(text)", "io.println(text)", "_ = files.read(text)", "_ = files.write(text, text)", "_ = files.listed(text)", "_ = files.made(text)", "_ = files.removed(text)", "_ = environment.read(text)"], "")
-    let source = "import environment\nimport files\nimport io\n\nfn go(text: String) -> () {\n    " + call + "\n}\n"
+    let at = drawn.number(draw, 8)
+    let call = or(list.at(["io.print(text)", "io.println(text)", "_ = files.read(text)", "_ = files.write(text, text)", "_ = files.listed(text)", "_ = files.made(text)", "_ = files.removed(text)", "_ = environment.read(text)"], at), "")
+    let module = or(list.at(["io", "io", "files", "files", "files", "files", "files", "environment"], at), "")
+    let source = "import " + module + "\n\nfn go(text: String) -> () {\n    " + call + "\n}\n"
     let lowered = compiled.lowered_alone(source, library)
     var why = refused(lowered)
     for reached in compiled.reached_in(compiled.instructions_of(lowered, "go")) {

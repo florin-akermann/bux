@@ -104,7 +104,7 @@ fn whole_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
 // example: whole_number(drawn.seeded(1)) >= 0
 fn whole_number(draw: drawn.Draw) -> Int {
     var value = drawn.number(draw, 2147483648) * 4294967296 + drawn.number(drawn.next(draw), 4294967296)
-    for digit in checking.numbers_below(drawn.number(checking.after(draw, 2), 19)) {
+    for _ in checking.numbers_below(drawn.number(checking.after(draw, 2), 19)) {
         value = or(value / 10, 0)
     }
     value

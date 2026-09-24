@@ -1,0 +1,8 @@
+// An example is compiled in the module's scope with the module's imports, so a module name that
+// an example writes before a dot reads that import, and nothing else in the module needs to.
+import list
+
+// example: list.length(kept([1, 2])) == 2
+fn kept(values: List<Int>) -> List<Int> {
+    values
+}

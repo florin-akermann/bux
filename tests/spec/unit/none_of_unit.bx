@@ -8,5 +8,6 @@ fn is_there() -> Bool {
 }
 
 fn is_given(given: ()) -> Bool {
+    _ = given
     true
 }

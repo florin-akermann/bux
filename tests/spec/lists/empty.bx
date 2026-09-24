@@ -22,7 +22,7 @@ fn picked() -> List<String> {
 // example: !is_empty(["a"])
 fn is_empty(fruit: List<String>) -> Bool {
     var held = false
-    for one in fruit {
+    for _ in fruit {
         held = true
     }
     !held

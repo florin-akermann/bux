@@ -858,7 +858,7 @@ fn block_walked(lowering: Lowering, walk: Escape, block: ast.Block) -> Escape {
 fn statement_walked(lowering: Lowering, walk: Escape, kind: ast.StatementKind) -> Escape {
     match kind {
         ast.Binding { mutability, name, value } => bound_walked(lowering, walk, mutability, name, value)
-        ast.Assign { target, operator, value } => expr_walked(lowering, let_go_of(lowering, walk, target), value)
+        ast.Assign { target, value } => expr_walked(lowering, let_go_of(lowering, walk, target), value)
         ast.Return(value) => optional_walked(lowering, walk, value)
         ast.For(repeated) => loop_walked(lowering, walk, repeated)
         ast.Discard(value) => expr_walked(lowering, walk, value)
@@ -883,7 +883,7 @@ fn loop_walked(lowering: Lowering, walk: Escape, repeated: ast.ForLoop) -> Escap
     let headed = match repeated.header {
         ast.Forever => walk
         ast.While(condition) => expr_walked(lowering, walk, condition)
-        ast.Over { binding, iterable } => expr_walked(lowering, walk, iterable)
+        ast.Over { iterable } => expr_walked(lowering, walk, iterable)
     }
     block_walked(lowering, headed, repeated.body)
 }
@@ -902,10 +902,10 @@ fn optional_walked(lowering: Lowering, walk: Escape, value: Option<ast.Expr>) ->
 fn expr_walked(lowering: Lowering, walk: Escape, written: ast.Expr) -> Escape {
     match written.kind {
         ast.NameExpr(name) => let_go_of(lowering, walk, name)
-        ast.Unary { operator, operand } => expr_walked(lowering, walk, operand)
-        ast.Binary { operator, left, right } => expr_walked(lowering, expr_walked(lowering, walk, left), right)
+        ast.Unary { operand } => expr_walked(lowering, walk, operand)
+        ast.Binary { left, right } => expr_walked(lowering, expr_walked(lowering, walk, left), right)
         ast.Call { callee, arguments } => each_walked(lowering, callee_walked(lowering, walk, callee), infer.values_of(arguments))
-        ast.Field { receiver, name } => receiver_walked(lowering, walk, receiver)
+        ast.Field { receiver } => receiver_walked(lowering, walk, receiver)
         ast.Try(inner) => expr_walked(lowering, walk, inner)
         ast.Written(elements) => each_walked(lowering, walk, elements)
         ast.Record { base, fields } => fields_walked(lowering, record_base_walked(lowering, walk, base), fields)
@@ -929,7 +929,7 @@ fn receiver_walked(lowering: Lowering, walk: Escape, receiver: ast.Expr) -> Esca
 // example: list.length(callee_walked(little_lowering(""), Escape { built: [], escaped: set.empty() }, no_expr()).built) == 0
 fn callee_walked(lowering: Lowering, walk: Escape, callee: ast.Expr) -> Escape {
     match callee.kind {
-        ast.Field { receiver, name } => walk
+        ast.Field {} => walk
         _ => expr_walked(lowering, walk, callee)
     }
 }
@@ -990,7 +990,7 @@ fn is_immutable(mutability: ast.Mutability) -> Bool {
 // example: !is_record_literal(little_lowering(""), no_expr())
 fn is_record_literal(lowering: Lowering, value: ast.Expr) -> Bool {
     match value.kind {
-        ast.Record { base, fields } => is_constructor(lowering, base) && is_record_constructor(lowering.shapes, path_text(base))
+        ast.Record { base } => is_constructor(lowering, base) && is_record_constructor(lowering.shapes, path_text(base))
         _ => false
     }
 }
@@ -1672,7 +1672,7 @@ fn fields_carried(shapes: Shapes, resolved: resolver.Resolved, fields: List<ast.
 // example: is_nothing(written_type(no_shapes(), declared.resolved_of(""), ast.TypeRef { kind: ast.UnitType, span: infer.no_name().span }))
 fn written_type(shapes: Shapes, resolved: resolver.Resolved, type_ref: ast.TypeRef) -> Option<Descriptor> {
     match type_ref.kind {
-        ast.NamedType { path, arguments } => Some(named_path(shapes, resolved, path))
+        ast.NamedType { path } => Some(named_path(shapes, resolved, path))
         ast.UnitType => None
     }
 }
@@ -1947,7 +1947,7 @@ fn statement_built(builder: Builder, statement: ast.Statement) -> Left {
 // example: list.length(performed(little_builder(""), ast.Break).instructions) == 0
 fn performed(builder: Builder, kind: ast.StatementKind) -> Builder {
     match kind {
-        ast.Binding { mutability, name, value } => binding_built(builder, name, value)
+        ast.Binding { name, value } => binding_built(builder, name, value)
         ast.Assign { target, operator, value } => assigned(builder, target, operator, value)
         ast.Return(value) => returned(builder, value)
         ast.Break => left_for(builder, repeat_done(builder.repeat))
@@ -2043,7 +2043,7 @@ fn for_loop(builder: Builder, repeated: ast.ForLoop) -> Builder {
     let adapted = adapt(builder: left.builder, from: left.held, to: None)
     let walked = emit(adapted { repeat: outer }, Label(again))
     let stepped = match turn {
-        Walk { walked_list, index, item } => emit(walked, Increment(index))
+        Walk { index } => emit(walked, Increment(index))
         _ => walked
     }
     emit(emit(stepped, Jump(top)), Label(done))
@@ -3118,7 +3118,7 @@ fn held_key(binding: lexer.Span, field: String) -> String {
 // example: named_type_at(little_builder(""), infer.no_name().span) == ""
 fn named_type_at(builder: Builder, written: lexer.Span) -> String {
     match infer.type_at(builder.lowering.typed, written) {
-        Some(unify.Named { name, arguments }) => name
+        Some(unify.Named { name }) => name
         _ => ""
     }
 }
@@ -3163,7 +3163,7 @@ fn record_updated(builder: Builder, base: ast.Name) -> Shape {
 // example: record_of(little_builder(""), infer.no_name().span).class == ""
 fn record_of(builder: Builder, written: lexer.Span) -> Shape {
     match infer.type_at(builder.lowering.typed, written) {
-        Some(unify.Named { name, arguments }) => record_shape(builder.lowering.shapes, name)
+        Some(unify.Named { name }) => record_shape(builder.lowering.shapes, name)
         _ => no_shape()
     }
 }
@@ -3774,7 +3774,7 @@ fn instantiation_of(function: ast.FunctionDeclaration, written_at: unify.Type, u
 fn settle(written_at: unify.Type, used: unify.Type, into: List<Settled>) -> List<Settled> {
     match written_at {
         unify.Parameter(parameter) => bound_first(into, origin_of(parameter), used)
-        unify.Named { name, arguments } => each_settled(mine: arguments, theirs: arguments_of(used), into: into)
+        unify.Named { arguments } => each_settled(mine: arguments, theirs: arguments_of(used), into: into)
         unify.Function { parameters, result } => settle(written_at: result, used: result_or_unit(used), into: each_settled(mine: parameters, theirs: parameters_or_none(used), into: into))
         _ => into
     }
@@ -3808,7 +3808,7 @@ fn bound_first(into: List<Settled>, origin: Int, at: unify.Type) -> List<Settled
 // example: list.length(arguments_of(unify.list_of(unify.int()))) == 1
 fn arguments_of(of: unify.Type) -> List<unify.Type> {
     match of {
-        unify.Named { name, arguments } => arguments
+        unify.Named { arguments } => arguments
         _ => []
     }
 }
@@ -4487,7 +4487,7 @@ fn wholly_named(name: String, arguments: List<unify.Type>) -> String {
 // example: head_of(unify.Var(1)) == "Any"
 fn head_of(at: unify.Type) -> String {
     match at {
-        unify.Named { name, arguments } => dots_replaced(named: name, replacement: "$")
+        unify.Named { name } => dots_replaced(named: name, replacement: "$")
         unify.Unit => "Unit"
         _ => "Any"
     }
@@ -4633,7 +4633,7 @@ fn used_as(lowering: Lowering, written: lexer.Span) -> unify.Type {
 // example: called_by(no_shapes(), unify.int()) == ThroughItsClass
 fn called_by(shapes: Shapes, of: unify.Type) -> CalledAs {
     match of {
-        unify.Named { name, arguments } => foreign_called(map.get(shapes.foreign, name))
+        unify.Named { name } => foreign_called(map.get(shapes.foreign, name))
         _ => ThroughItsClass
     }
 }
@@ -4790,7 +4790,7 @@ fn answer_of(shapes: Shapes, written_at: unify.Type, gives: ast.Gives) -> Answer
 // example: is_nothing(carried_type(no_shapes(), unify.Unit))
 fn carried_type(shapes: Shapes, of: unify.Type) -> Option<Descriptor> {
     match of {
-        unify.Named { name, arguments } => Some(named_descriptor(shapes, name))
+        unify.Named { name } => Some(named_descriptor(shapes, name))
         unify.Unit => None
         _ => Some(object())
     }
@@ -4888,7 +4888,7 @@ fn first_dot(named: String) -> Option<Int> {
 // example: result_or_unit(unify.Unit) == unify.Unit
 fn result_or_unit(of: unify.Type) -> unify.Type {
     match of {
-        unify.Function { parameters, result } => result
+        unify.Function { result } => result
         _ => unify.Unit
     }
 }
@@ -4944,7 +4944,7 @@ fn received_by(written_at: unify.Type) -> unify.Type {
 // example: list.length(parameters_or_none(unify.Unit)) == 0
 fn parameters_or_none(of: unify.Type) -> List<unify.Type> {
     match of {
-        unify.Function { parameters, result } => parameters
+        unify.Function { parameters } => parameters
         _ => []
     }
 }

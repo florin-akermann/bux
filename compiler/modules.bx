@@ -72,9 +72,9 @@ fn refused_printed<T>(answer: Result<T, NotLoaded>) -> String {
 // example: refusal_printed(Unreadable { path: "main.bx", why: "gone" }) == "unreadable main.bx\n"
 fn refusal_printed(refused: NotLoaded) -> String {
     match refused {
-        Unreadable { path, why } => "unreadable " + path + "\n"
-        Unparsed { path, source, error } => "refused " + path + "\n" + parser.code_of(error.kind) + " " + parser.error_printed(error)
-        Refused { path, source, error } => "refused " + path + "\n" + error_printed(error)
+        Unreadable { path } => "unreadable " + path + "\n"
+        Unparsed { path, error } => "refused " + path + "\n" + parser.code_of(error.kind) + " " + parser.error_printed(error)
+        Refused { path, error } => "refused " + path + "\n" + error_printed(error)
     }
 }
 
@@ -271,16 +271,16 @@ fn error_printed(error: LoadError) -> String {
 // example: code_of(Ring(["main"])) == "L0307"
 fn code_of(kind: LoadErrorKind) -> String {
     match kind {
-        NoSuchModule(name) => "L0306"
-        Ring(ring) => "L0307"
-        LineIsNot(keyword) => "L0315"
-        NotOneWord(keyword) => "L0315"
+        NoSuchModule(_) => "L0306"
+        Ring(_) => "L0307"
+        LineIsNot(_) => "L0315"
+        NotOneWord(_) => "L0315"
         NotAnArchiveLine => "L0315"
-        NoSuchPackage(named) => "L0316"
-        DependsTwice(named) => "L0315"
-        ArchivedTwice(named) => "L0315"
-        SplitsTheClassPath(path) => "L0315"
-        InTwoFiles { module, first, second } => "L0317"
+        NoSuchPackage(_) => "L0316"
+        DependsTwice(_) => "L0315"
+        ArchivedTwice(_) => "L0315"
+        SplitsTheClassPath(_) => "L0315"
+        InTwoFiles {} => "L0317"
     }
 }
 
@@ -305,16 +305,16 @@ fn message(kind: LoadErrorKind) -> String {
 // example: help_of(NoSuchPackage("../a")) == "a package is a directory holding `bux.package`"
 fn help_of(kind: LoadErrorKind) -> String {
     match kind {
-        NoSuchModule(name) => "a module is a file beside this one, or one of a package it depends on"
-        Ring(ring) => "a module is compiled after what it imports, and a ring has no such order"
-        LineIsNot(keyword) => "a manifest is `package`, then `version`, then a `depends` for each dependency, then a `jar` for each archive"
-        NotOneWord(keyword) => "a manifest line is a keyword, one space, and one word"
+        NoSuchModule(_) => "a module is a file beside this one, or one of a package it depends on"
+        Ring(_) => "a module is compiled after what it imports, and a ring has no such order"
+        LineIsNot(_) => "a manifest is `package`, then `version`, then a `depends` for each dependency, then a `jar` for each archive"
+        NotOneWord(_) => "a manifest line is a keyword, one space, and one word"
         NotAnArchiveLine => "a `jar` line is `jar`, a path, and `sha256:` with 64 lowercase hexadecimal digits"
-        NoSuchPackage(named) => "a package is a directory holding `bux.package`"
-        DependsTwice(named) => "a manifest states one `depends` for each package it reaches"
-        ArchivedTwice(named) => "a manifest states one `jar` for each archive it reaches"
-        SplitsTheClassPath(path) => "a class path puts `:` between two paths, so a path on it cannot hold one"
-        InTwoFiles { module, first, second } => "one name has one definition; rename one of the two modules"
+        NoSuchPackage(_) => "a package is a directory holding `bux.package`"
+        DependsTwice(_) => "a manifest states one `depends` for each package it reaches"
+        ArchivedTwice(_) => "a manifest states one `jar` for each archive it reaches"
+        SplitsTheClassPath(_) => "a class path puts `:` between two paths, so a path on it cannot hold one"
+        InTwoFiles {} => "one name has one definition; rename one of the two modules"
     }
 }
 

@@ -11,6 +11,7 @@ import list
 import map
 import parser
 import resolver
+import set
 import strings
 
 /// One `Held` for each property of name resolution, in a fixed order.
@@ -76,7 +77,7 @@ fn a_refusal_points_inside_the_source(cases: Int, names: resolver.Prelude) -> he
 // example: refusal_outside("fn f() -> Int {\n    1\n}\n", ir.little_library().prelude.names) == "it resolves"
 fn refusal_outside(source: String, names: resolver.Prelude) -> String {
     match parser.parse(source) {
-        Ok(program) => span_outside(resolver.resolve(program, "demo", names), strings.length(source))
+        Ok(program) => span_outside(resolver.resolve(program, "demo", names, set.empty()), strings.length(source))
         Err(_) => "it does not parse"
     }
 }
@@ -122,7 +123,7 @@ fn every_declared_name_is_declared_there(cases: Int, names: resolver.Prelude) ->
 // example: undeclared_name("fn (", ir.little_library().prelude.names) == "it does not parse"
 fn undeclared_name(source: String, names: resolver.Prelude) -> String {
     match parser.parse(source) {
-        Ok(program) => resolved_undeclared(resolver.resolve(program, "demo", names), source)
+        Ok(program) => resolved_undeclared(resolver.resolve(program, "demo", names, set.empty()), source)
         Err(_) => "it does not parse"
     }
 }
@@ -255,7 +256,7 @@ fn module_of(draw: drawn.Draw, among: List<String>) -> String {
 /// own names, so any set of them is a module that resolves.
 // example: list.length(pieces()) == 6
 fn pieces() -> List<String> {
-    ["import io", "type UserId = UserId(Int)", "type User = {\n    id: Int\n}", "fn identity<T>(value: T) -> T {\n    value\n}", "fn total(counts: List<Int>) -> Int {\n    var sum = 0\n    for count in counts {\n        sum += 1\n    }\n    sum\n}", "fn describe(payment: Payment) -> String {\n    match payment {\n        Pending => \"waiting\"\n        Failed(reason) => reason\n    }\n}\n\ntype Payment =\n    | Pending\n    | Failed(String)\n"]
+    ["import io\n\nfn greet() -> () {\n    io.println(\"hello\")\n}", "type UserId = UserId(Int)", "type User = {\n    id: Int\n}", "fn identity<T>(value: T) -> T {\n    value\n}", "fn total(counts: List<Int>) -> Int {\n    var sum = 0\n    for count in counts {\n        sum += count\n    }\n    sum\n}", "fn describe(payment: Payment) -> String {\n    match payment {\n        Pending => \"waiting\"\n        Failed(reason) => reason\n    }\n}\n\ntype Payment =\n    | Pending\n    | Failed(String)\n"]
 }
 
 /// The pieces that are refused however sound the module around them is.

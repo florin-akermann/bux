@@ -23,9 +23,8 @@ fn main(arguments: List<String>) -> Int {
     io.println(paired(first: 3, second: "three"))
     io.println(paired(first: "three", second: 3))
     io.println(shown(down(3)) + " came back through three calls of itself")
-    if is_unit(identity(())) {
-        io.println("nothing came back")
-    }
+    _ = identity(())
+    io.println("nothing came back")
     io.println(shown(joined(one: 3, other: 7)))
     match joined(one: Money { cents: 3 }, other: Money { cents: 7 }) {
         Money { cents } => io.println(shown(cents) + " cents")
@@ -56,11 +55,6 @@ fn counted_down<T>(value: T, left: Int) -> T {
         return value
     }
     counted_down(value, left - 1)
-}
-
-// example: is_unit(())
-fn is_unit(value: ()) -> Bool {
-    true
 }
 
 // A constraint promises `+`, and each use reaches the instance of the type it settled.
