@@ -2,7 +2,7 @@
 //
 // `docs/specs/io.md` states what each of these gives back. Each is written over `extern`
 // declarations, which `docs/specs/interop.md` states, and every step that can throw gives a
-// `Result`, so nothing here throws through a program.
+// `Result`, except the close of a file read in parts, which gives nothing back to guard.
 import list
 import strings
 
@@ -19,9 +19,107 @@ fn read(path: String) -> Result<String, String> {
 // example: ok_or(read_bytes(""), [1]) == [1]
 fn read_bytes(path: String) -> Result<List<Int>, String> {
     match as_a_path(named(path)) {
-        Ok(found) => each_byte(read_whole_as(found, as_latin_1()))
+        Ok(found) => each_byte(read_whole_as(found, strings.as_latin_1()))
         Err(why) => Err(why)
     }
+}
+
+/// The bytes from `from` up to `to` of the file at `path`, one char for each byte, as
+/// `read_bytes` reads them.
+///
+/// A `to` past the end reads up to the end, and a `from` past it reads nothing. A negative `from`,
+/// a `to` below `from`, and a part longer than one buffer holds are each an `Err` that names why,
+/// and the file is not opened for any of them.
+// example: ok_or(read_between(path: "no-such-file.bin", from: 0, to: 1), "not there") == "not there"
+// example: ok_or(read_between(path: "unused.bin", from: 2, to: 1), "refused") == "refused"
+// example: ok_or(read_between(path: "unused.bin", from: 0, to: 2147483648), "refused") == "refused"
+fn read_between(path: String, from: Int, to: Int) -> Result<String, String> {
+    if from < 0 || to < from {
+        return Err("no part of " + path + " runs from " + shown(from) + " to " + shown(to))
+    }
+    if to - from > 2147483647 {
+        return Err(too_long(path: path, length: to - from))
+    }
+    match size(path) {
+        Ok(end) => part_before(path: path, from: from, to: to, end: end)
+        Err(why) => Err(why)
+    }
+}
+
+/// The bytes from `from` up to `to` of the file at `path`, which holds `end` bytes.
+// example: ok_or(part_before(path: "no-such-file.bin", from: 3, to: 9, end: 3), "none") == ""
+fn part_before(path: String, from: Int, to: Int, end: Int) -> Result<String, String> {
+    var last = to
+    if end < last {
+        last = end
+    }
+    if from >= last {
+        return Ok("")
+    }
+    match allotted(last - from) {
+        Ok(Some(buffer)) => read_into(path: path, buffer: buffer, from: from)
+        Ok(None) => Err(too_long(path: path, length: last - from))
+        Err(why) => Err(why)
+    }
+}
+
+/// Why a part of `length` bytes of the file at `path` is not read.
+// example: too_long(path: "a.txt", length: 3) == "a part of 3 bytes of a.txt is more than one buffer holds"
+fn too_long(path: String, length: Int) -> String {
+    "a part of " + shown(length) + " bytes of " + path + " is more than one buffer holds"
+}
+
+/// The bytes of the file at `path` that fill `buffer` from `from` on, or what stopped the read.
+// example: ok_or(part_before(path: "no-such-file.bin", from: 0, to: 9, end: 9), "none") == "none"
+fn read_into(path: String, buffer: Bytes, from: Int) -> Result<String, String> {
+    match opened_to_read(path) {
+        Ok(stream) => read_and_let_go(stream: stream, buffer: buffer, from: from)
+        Err(why) => Err(why)
+    }
+}
+
+/// The bytes `stream` fills `buffer` with from `from` on.
+///
+/// The stream goes back to the file system here, whether the read worked or did not.
+// example: ok_or(part_before(path: "no-such-file.bin", from: 0, to: 9, end: 9), "none") == "none"
+fn read_and_let_go(stream: Source, buffer: Bytes, from: Int) -> Result<String, String> {
+    let part = filled(channel: channel_of(stream), buffer: buffer, from: from)
+    let_go(stream)
+    part
+}
+
+/// The text of the bytes `channel` gives from `from` on, until `buffer` is full or the file ends.
+///
+/// A read gives the count of bytes it read, which can be fewer than the room left, and `-1` at
+/// the end of the file. A count of `0` ends the reads too, so no loop waits on a file that holds
+/// no more.
+// example: ok_or(part_before(path: "no-such-file.bin", from: 0, to: 9, end: 9), "none") == "none"
+fn filled(channel: Channel, buffer: Bytes, from: Int) -> Result<String, String> {
+    var at = from
+    for has_room(buffer) {
+        let answer = read_at(channel, buffer, at)
+        let count = ok_or(answer, 0)
+        if count <= 0 {
+            return text_or_why(answer: answer, buffer: buffer)
+        }
+        at += count
+    }
+    Ok(text_of(buffer))
+}
+
+/// The text of `buffer` where `answer` is a count, and why the read failed where it is not.
+// example: ok_or(part_before(path: "no-such-file.bin", from: 0, to: 9, end: 9), "none") == "none"
+fn text_or_why(answer: Result<Int, String>, buffer: Bytes) -> Result<String, String> {
+    match answer {
+        Ok(_) => Ok(text_of(buffer))
+        Err(why) => Err(why)
+    }
+}
+
+/// The bytes `buffer` holds from its start up to where the reads stopped, one char for each.
+// example: ok_or(part_before(path: "no-such-file.bin", from: 0, to: 9, end: 9), "none") == "none"
+fn text_of(buffer: Bytes) -> String {
+    text_in(decoded_as(strings.as_latin_1(), flipped(buffer)))
 }
 
 /// How many bytes the file at `path` holds, or what went wrong asking the file system.
@@ -57,7 +155,7 @@ fn values_of(text: String) -> List<Int> {
 /// `text` written as the whole of the file at `path`, with `path` back where that worked.
 // example: ok_or(write(path: "", text: ""), "nothing written") == "nothing written"
 fn write(path: String, text: String) -> Result<String, String> {
-    match opened(path, as_utf_8()) {
+    match opened(path, strings.as_utf_8()) {
         Ok(sink) => sent(sink: sink, text: text, to: path)
         Err(why) => Err(why)
     }
@@ -85,7 +183,7 @@ fn write_bytes(path: String, bytes: List<Int>) -> Result<String, String> {
             return Err(shown(byte) + " is no byte, so nothing was written to " + path)
         }
     }
-    match opened(path, as_latin_1()) {
+    match opened(path, strings.as_latin_1()) {
         Ok(sink) => bytes_sent(sink: sink, bytes: bytes, to: path)
         Err(why) => Err(why)
     }
@@ -170,19 +268,45 @@ fn removed(path: String) -> Result<Bool, String> {
 extern static read_whole(path: Path) -> Result<String, String> = "java.nio.file.Files.readString"
 
 /// The whole file at `path`, read in `encoding`.
-extern static read_whole_as(path: Path, encoding: Encoding) -> Result<String, String> = "java.nio.file.Files.readString"
+extern static read_whole_as(path: Path, encoding: strings.Encoding) -> Result<String, String> = "java.nio.file.Files.readString"
 
 /// How many bytes the file at `path` holds, which the file system answers without a read.
 extern static byte_count(path: Path) -> Result<Int, String> = "java.nio.file.Files.size"
 
+/// A stream of the bytes of the file at `path`, opened to be read and never written.
+extern new opened_to_read(path: String) -> Result<Source, String>
+
+/// The channel of `stream`, which reads at a position rather than where the last read stopped.
+extern method channel_of(stream: Source) -> Channel = "getChannel"
+
+/// Reads what fits in `buffer` from `position` on, and gives the count read, or `-1` at the end.
+extern method int read_at(channel: Channel, buffer: Bytes, position: Int) -> Result<Int, String> = "read"
+
+/// A buffer with room for `capacity` bytes, and `None` where `capacity` does not fit in an `int`.
+///
+/// The `Err` is a JVM that has no memory left for so many bytes.
+extern static allotted(int capacity: Int) -> Result<Option<Bytes>, String> = "java.nio.ByteBuffer.allocate"
+
+/// Whether `buffer` has room for another byte.
+extern method has_room(buffer: Bytes) -> Bool = "hasRemaining"
+
+/// `buffer`, turned to be read from its start up to where the reads into it stopped.
+extern method flipped(buffer: Bytes) -> Bytes = "flip"
+
+/// The chars `encoding` reads `bytes` as, which for ISO-8859-1 is one char for each byte.
+extern method decoded_as(encoding: strings.Encoding, bytes: Bytes) -> Chars = "decode"
+
+/// The text of the chars `chars` holds.
+extern method text_in(chars: Chars) -> String = "toString"
+
+/// Closes `stream` and its channel, which gives the file back to the file system.
+///
+/// A close gives nothing back, so no `Result` can carry what it throws. The part is read before
+/// it, so a close that fails loses no byte of it.
+extern method let_go(stream: Source) -> () = "close"
+
 /// A file at `path` opened to be written whole, which is a file emptied of whatever it held.
-extern new opened(path: String, written_as: Encoding) -> Result<Writer, String>
-
-/// UTF-8, which is the encoding a write uses because it is the one a read is read with.
-extern field as_utf_8() -> Encoding = "java.nio.charset.StandardCharsets.UTF_8"
-
-/// ISO-8859-1, which writes each char from 0 to 255 as the one byte of the same value.
-extern field as_latin_1() -> Encoding = "java.nio.charset.StandardCharsets.ISO_8859_1"
+extern new opened(path: String, written_as: strings.Encoding) -> Result<Writer, String>
 
 /// The text of the one char `code` stands for, where `code` fits in an `int`.
 extern static one_char(int code: Int) -> Option<String> = "java.lang.Character.toString"
@@ -241,9 +365,6 @@ extern type File = "java.io.File"
 /// A file a program writes text on, one piece of text at a time.
 extern type Writer = "java.io.PrintWriter"
 
-/// How the characters of a text are held as bytes, which a write is told and a read is not.
-extern type Encoding = "java.nio.charset.Charset"
-
 /// Everything a directory holds, which a JVM answers a listing with.
 extern type interface Entries = "java.util.stream.Stream"
 
@@ -258,3 +379,15 @@ extern type Anything = "java.lang.Object"
 
 /// Where a file the file system holds is, which is what a read takes.
 extern type interface Path = "java.nio.file.Path"
+
+/// A file opened to be read, one byte after another or at a position through its channel.
+extern type Source = "java.io.FileInputStream"
+
+/// What reads a file at a position, which a stream opened to read it gives.
+extern type Channel = "java.nio.channels.FileChannel"
+
+/// Bytes a JVM holds apart from any array, which a channel reads into.
+extern type Bytes = "java.nio.ByteBuffer"
+
+/// Chars a JVM holds apart from any text, which an encoding reads bytes into.
+extern type Chars = "java.nio.CharBuffer"
