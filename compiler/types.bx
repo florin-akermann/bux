@@ -6,6 +6,7 @@
 import ast
 import carried
 import declared
+import escapes
 import format
 import infer
 import lexer
@@ -126,8 +127,9 @@ fn page_code(source: String) -> String {
 /// Every expression of `resolved` given its type, or the first refusal.
 ///
 /// A record that holds itself is refused first, then a process that breaks its shape, then a
-/// declaration, then a process that holds a foreign reference, then a body, and then an
-/// `Option<()>` that inference reached.
+/// declaration, then a process that holds a foreign reference, then a body, then a declaration
+/// that lets a foreign reference escape, and then an `Option<()>` or an escape that inference
+/// reached.
 // example: page_code("fn count() -> Int {\n    \"one\"\n}\n") == "L0400 18..31"
 // example: page_code("fn is_there() -> Bool {\n    _ = Some(())\n    true\n}\n") == "L0432 32..40"
 fn check(resolved: resolver.Resolved, imported: surface.Imported, prelude: Prelude) -> Result<infer.Inference, refusal.TypeError> {
@@ -135,7 +137,9 @@ fn check(resolved: resolver.Resolved, imported: surface.Imported, prelude: Prelu
     _ = processes.every_process_shaped(resolved.program)?
     let declaring = declared.environment_of(prelude.declared, resolved, surface.every_type(imported), surface.every_instance(imported), unify.empty_table())?
     _ = processes.nothing_foreign_held(declaring.environment, resolved.program, surface.every_type(imported))?
-    carried.nothing_carried(infer.module_inferred(resolved, imported, declaring)?)
+    let inference = infer.module_inferred(resolved, imported, declaring)?
+    _ = escapes.nothing_declared_escapes(inference)?
+    carried.nothing_carried(inference)
 }
 
 /// `prelude`, with the classes the archives of a build hold, which an `extern` may name.

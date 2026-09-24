@@ -14,6 +14,7 @@ import branching
 import collected
 import command
 import commanded
+import confined
 import conventions
 import covered
 import crossing
@@ -438,6 +439,7 @@ fn every_property_held(library: ir.Library) -> List<held.Held> {
     found = command.all_of(found, typing.every_property(cases, library))
     found = command.all_of(found, conventions.every_property(cases, library))
     found = command.all_of(found, boundaries.every_property(cases, library))
+    found = command.all_of(found, confined.every_property(cases, library))
     found = command.all_of(found, operating.every_property(cases, library))
     found = command.all_of(found, deriving.every_property(cases, library))
     found = command.all_of(found, lowering.every_property(cases, library))

@@ -1,0 +1,16 @@
+// expect-error: L0435
+// A constructor is a call too, and a record of a type parameter holds whatever it is built with.
+// So a record built around a foreign reference is refused where it is built.
+fn main(arguments: List<String>) -> Int {
+    let boxed = Box { value: named("notes.txt") }
+    0
+}
+
+/// One value of any type.
+type Box<T> = {
+    value: T
+}
+
+extern new named(path: String) -> File
+
+extern type File = "java.io.File"

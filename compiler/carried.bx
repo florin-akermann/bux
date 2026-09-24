@@ -1,11 +1,14 @@
-// The refusal of an `Option` that carries `()`, where inference reaches one.
+// The refusals of what the settled type of an expression carries: an `Option` that carries `()`,
+// and a call that gives back a foreign reference through a type parameter.
 //
-// `docs/specs/types.md` states the rule, and `compiler/declared.bx` refuses a written one first.
+// `docs/specs/types.md` states the first rule, and `compiler/declared.bx` refuses a written one
+// first. `docs/specs/interop.md` states the second, and `compiler/escapes.bx` decides each call.
 // This module reads the types inference settled, so it is reached after every other refusal of
 // inference. An expression is read after the expressions inside it, so the refusal points at the
-// innermost expression whose type holds `Option<()>`.
+// innermost expression that is refused.
 import ast
 import declared
+import escapes
 import infer
 import lexer
 import refusal
@@ -22,85 +25,95 @@ fn carried_code(source: String) -> String {
     }
 }
 
-/// `inferred`, read for an `Option<()>` where inference accepted it.
+/// `inferred`, read for an `Option<()>` and an escape where inference accepted it.
 // example: refusal.code_given(inferred_and_read(Ok(infer.nothing_inferred()))) == ""
 fn inferred_and_read(inferred: Result<infer.Inference, refusal.TypeError>) -> Result<infer.Inference, refusal.TypeError> {
     nothing_carried(inferred?)
 }
 
-/// `inference`, or the refusal of the first expression whose type holds `Option<()>`.
+/// `inference`, or the refusal of the first expression whose type holds `Option<()>`, or that
+/// lets a foreign reference escape.
 ///
 /// The functions are read in the order the module writes them, and then the tests.
 // example: carried_code("fn is_there() -> Bool {\n    match Some(()) {\n        Some(_) => true\n        None => false\n    }\n}\n") == "L0432 34..42"
 // example: carried_code("fn is_there() -> Bool {\n    match Some(true) {\n        Some(held) => held\n        None => false\n    }\n}\n") == ""
 // example: carried_code("test \"a\" {\n    match Some(()) {\n        Some(_) => true\n        None => false\n    }\n}\n") == "L0432 21..29"
 fn nothing_carried(inference: infer.Inference) -> Result<infer.Inference, refusal.TypeError> {
+    let reading = reading_of(inference)
     for function in infer.functions_of(inference.resolved.program) {
-        _ = block_read(inference, function.body)?
+        _ = block_read(reading, function.body)?
     }
     for stated in ast.tests_of(inference.resolved.program) {
-        _ = block_read(inference, stated.body)?
+        _ = block_read(reading, stated.body)?
     }
     Ok(inference)
 }
 
 /// Each statement of `block`, read in the order it is written.
-// example: refusal.code_given(block_read(infer.nothing_inferred(), ast.Block { statements: [], span: nowhere() })) == ""
-fn block_read(inference: infer.Inference, block: ast.Block) -> Result<(), refusal.TypeError> {
+// example: refusal.code_given(block_read(reading_of(infer.nothing_inferred()), ast.Block { statements: [], span: nowhere() })) == ""
+fn block_read(reading: Reading, block: ast.Block) -> Result<(), refusal.TypeError> {
     for statement in block.statements {
-        _ = statement_read(inference, statement)?
+        _ = statement_read(reading, statement)?
     }
     Ok(())
 }
 
 /// The expressions of one statement.
-// example: refusal.code_given(statement_read(infer.nothing_inferred(), ast.Statement { kind: ast.Break, span: nowhere() })) == ""
-fn statement_read(inference: infer.Inference, statement: ast.Statement) -> Result<(), refusal.TypeError> {
+// example: refusal.code_given(statement_read(reading_of(infer.nothing_inferred()), ast.Statement { kind: ast.Break, span: nowhere() })) == ""
+fn statement_read(reading: Reading, statement: ast.Statement) -> Result<(), refusal.TypeError> {
     match statement.kind {
-        ast.Binding { mutability, name, value } => expression_read(inference, value)
-        ast.Assign { target, operator, value } => expression_read(inference, value)
-        ast.Return(given) => given_read(inference, given)
-        ast.For(looped) => loop_read(inference, looped)
-        ast.Discard(value) => expression_read(inference, value)
-        ast.Evaluated(value) => expression_read(inference, value)
+        ast.Binding { mutability, name, value } => expression_read(reading, value)
+        ast.Assign { target, operator, value } => expression_read(reading, value)
+        ast.Return(given) => given_read(reading, given)
+        ast.For(looped) => loop_read(reading, looped)
+        ast.Discard(value) => expression_read(reading, value)
+        ast.Evaluated(value) => expression_read(reading, value)
         _ => Ok(())
     }
 }
 
 /// The value a `return` gives back, where it gives one.
-// example: refusal.code_given(given_read(infer.nothing_inferred(), None)) == ""
-fn given_read(inference: infer.Inference, given: Option<ast.Expr>) -> Result<(), refusal.TypeError> {
+// example: refusal.code_given(given_read(reading_of(infer.nothing_inferred()), None)) == ""
+fn given_read(reading: Reading, given: Option<ast.Expr>) -> Result<(), refusal.TypeError> {
     match given {
-        Some(value) => expression_read(inference, value)
+        Some(value) => expression_read(reading, value)
         None => Ok(())
     }
 }
 
 /// The header of a `for`, then its body.
 // example: carried_code("fn is_there() -> Bool {\n    for held in [Some(())] {\n        return true\n    }\n    false\n}\n") == "L0432 41..49"
-fn loop_read(inference: infer.Inference, looped: ast.ForLoop) -> Result<(), refusal.TypeError> {
-    _ = header_read(inference, looped.header)?
-    block_read(inference, looped.body)
+fn loop_read(reading: Reading, looped: ast.ForLoop) -> Result<(), refusal.TypeError> {
+    _ = header_read(reading, looped.header)?
+    block_read(reading, looped.body)
 }
 
 /// The condition of a `for`, or what it loops over.
-// example: refusal.code_given(header_read(infer.nothing_inferred(), ast.Forever)) == ""
-fn header_read(inference: infer.Inference, header: ast.ForHeader) -> Result<(), refusal.TypeError> {
+// example: refusal.code_given(header_read(reading_of(infer.nothing_inferred()), ast.Forever)) == ""
+fn header_read(reading: Reading, header: ast.ForHeader) -> Result<(), refusal.TypeError> {
     match header {
         ast.Forever => Ok(())
-        ast.While(condition) => expression_read(inference, condition)
-        ast.Over { binding, iterable } => expression_read(inference, iterable)
+        ast.While(condition) => expression_read(reading, condition)
+        ast.Over { binding, iterable } => expression_read(reading, iterable)
     }
 }
 
 /// The expressions inside `written`, then `written` itself.
-// example: refusal.code_given(expression_read(infer.nothing_inferred(), ast.Expr { kind: ast.Unit, span: nowhere() })) == ""
-fn expression_read(inference: infer.Inference, written: ast.Expr) -> Result<(), refusal.TypeError> {
-    _ = inside_read(inference, written)?
-    match infer.type_at(inference, written.span) {
-        Some(found) => held_refused(found, written.span)
+// example: refusal.code_given(expression_read(reading_of(infer.nothing_inferred()), ast.Expr { kind: ast.Unit, span: nowhere() })) == ""
+fn expression_read(reading: Reading, written: ast.Expr) -> Result<(), refusal.TypeError> {
+    _ = inside_read(reading, written)?
+    match infer.type_at(reading.inference, written.span) {
+        Some(found) => settled_refused(reading, written, found)
         None => Ok(())
     }
+}
+
+/// Refuses `written`, whose type inference settled on `found`, where that holds `Option<()>` or
+/// where it is a call that lets a foreign reference escape.
+// example: carried_code("fn kept(path: String) -> Int {\n    _ = Some(named(path))\n    1\n}\n\nextern new named(path: String) -> File\n\nextern type File = \"java.io.File\"\n") == "L0435 39..56"
+fn settled_refused(reading: Reading, written: ast.Expr, found: unify.Type) -> Result<(), refusal.TypeError> {
+    _ = held_refused(found, written.span)?
+    escapes.built_refused(reading.holding, reading.inference, written, found)
 }
 
 /// Refuses the expression at `at` where its type `found` holds `Option<()>`.
@@ -114,72 +127,84 @@ fn held_refused(found: unify.Type, at: lexer.Span) -> Result<(), refusal.TypeErr
 
 /// The expressions `written` holds, each in the order it is written.
 // example: carried_code("fn held() -> Option<Bool> {\n    _ = Some(())?\n    None\n}\n") == "L0432 36..44"
-fn inside_read(inference: infer.Inference, written: ast.Expr) -> Result<(), refusal.TypeError> {
+fn inside_read(reading: Reading, written: ast.Expr) -> Result<(), refusal.TypeError> {
     match written.kind {
-        ast.Unary { operator, operand } => expression_read(inference, operand)
-        ast.Binary { operator, left, right } => each_read(inference, [left, right])
-        ast.Call { callee, arguments } => call_read(inference, callee, arguments)
-        ast.Field { receiver, name } => expression_read(inference, receiver)
-        ast.Try(inner) => expression_read(inference, inner)
-        ast.Written(elements) => each_read(inference, elements)
-        ast.Record { base, fields } => fields_read(inference, fields)
-        ast.If(chain) => if_read(inference, chain)
-        ast.Match(matched) => match_read(inference, matched)
-        ast.Spawn(started) => expression_read(inference, started)
+        ast.Unary { operator, operand } => expression_read(reading, operand)
+        ast.Binary { operator, left, right } => each_read(reading, [left, right])
+        ast.Call { callee, arguments } => call_read(reading, callee, arguments)
+        ast.Field { receiver, name } => expression_read(reading, receiver)
+        ast.Try(inner) => expression_read(reading, inner)
+        ast.Written(elements) => each_read(reading, elements)
+        ast.Record { base, fields } => fields_read(reading, fields)
+        ast.If(chain) => if_read(reading, chain)
+        ast.Match(matched) => match_read(reading, matched)
+        ast.Spawn(started) => expression_read(reading, started)
         _ => Ok(())
     }
 }
 
 /// What a call calls, then each value it passes.
 // example: carried_code("fn is_there() -> Bool {\n    _ = or(Some(()), ())\n    true\n}\n") == "L0432 35..43"
-fn call_read(inference: infer.Inference, callee: ast.Expr, arguments: ast.Arguments) -> Result<(), refusal.TypeError> {
-    _ = expression_read(inference, callee)?
-    each_read(inference, infer.values_of(arguments))
+fn call_read(reading: Reading, callee: ast.Expr, arguments: ast.Arguments) -> Result<(), refusal.TypeError> {
+    _ = expression_read(reading, callee)?
+    each_read(reading, infer.values_of(arguments))
 }
 
 /// Each of `values`, in order.
-// example: refusal.code_given(each_read(infer.nothing_inferred(), [])) == ""
-fn each_read(inference: infer.Inference, values: List<ast.Expr>) -> Result<(), refusal.TypeError> {
+// example: refusal.code_given(each_read(reading_of(infer.nothing_inferred()), [])) == ""
+fn each_read(reading: Reading, values: List<ast.Expr>) -> Result<(), refusal.TypeError> {
     for value in values {
-        _ = expression_read(inference, value)?
+        _ = expression_read(reading, value)?
     }
     Ok(())
 }
 
 /// The value of each field a record literal writes.
-// example: refusal.code_given(fields_read(infer.nothing_inferred(), [])) == ""
-fn fields_read(inference: infer.Inference, fields: List<ast.FieldValue>) -> Result<(), refusal.TypeError> {
+// example: refusal.code_given(fields_read(reading_of(infer.nothing_inferred()), [])) == ""
+fn fields_read(reading: Reading, fields: List<ast.FieldValue>) -> Result<(), refusal.TypeError> {
     for field in fields {
-        _ = expression_read(inference, field.value)?
+        _ = expression_read(reading, field.value)?
     }
     Ok(())
 }
 
 /// Each condition and the block it guards, then the `else` block.
 // example: carried_code("fn is_there(held: Int) -> Bool {\n    _ = if held == 1 {\n        Some(())\n    } else {\n        None\n    }\n    true\n}\n") == "L0432 64..72"
-fn if_read(inference: infer.Inference, chain: ast.IfExpr) -> Result<(), refusal.TypeError> {
+fn if_read(reading: Reading, chain: ast.IfExpr) -> Result<(), refusal.TypeError> {
     for branch in chain.branches {
-        _ = expression_read(inference, branch.condition)?
-        _ = block_read(inference, branch.block)?
+        _ = expression_read(reading, branch.condition)?
+        _ = block_read(reading, branch.block)?
     }
     match chain.otherwise {
-        Some(otherwise) => block_read(inference, otherwise)
+        Some(otherwise) => block_read(reading, otherwise)
         None => Ok(())
     }
 }
 
 /// The scrutinee, then the body of each arm.
 // example: carried_code("fn is_there(held: Int) -> Bool {\n    match held {\n        1 => is_there(held)\n        _ => false\n    }\n}\n") == ""
-fn match_read(inference: infer.Inference, matched: ast.MatchExpr) -> Result<(), refusal.TypeError> {
-    _ = expression_read(inference, matched.scrutinee)?
+fn match_read(reading: Reading, matched: ast.MatchExpr) -> Result<(), refusal.TypeError> {
+    _ = expression_read(reading, matched.scrutinee)?
     for arm in matched.arms {
-        _ = expression_read(inference, arm.body)?
+        _ = expression_read(reading, arm.body)?
     }
     Ok(())
+}
+
+/// What the walk reads: the settled module, and what the escape check reads of it.
+// example: reading_of(infer.nothing_inferred()).inference.result == unify.Unit
+fn reading_of(inference: infer.Inference) -> Reading {
+    Reading { inference: inference, holding: escapes.holding_of(inference) }
 }
 
 /// A span at the start of the source, which the examples of a single node are written at.
 // example: nowhere().length == 0
 fn nowhere() -> lexer.Span {
     lexer.Span { start: 0, length: 0 }
+}
+
+/// The settled module the walk reads, and what the escape check reads of it.
+type Reading = {
+    inference: infer.Inference
+    holding: escapes.Holding
 }

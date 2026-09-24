@@ -93,6 +93,7 @@ fn boundary_code(kind: TypeErrorKind) -> String {
         NarrowsWithoutOption(_) => "L0431"
         Unaccounted(_) => "L0434"
         LeftOutMember(_) => "L0434"
+        Escapes { place, held, foreign } => "L0435"
         _ => process_code(kind)
     }
 }
@@ -185,6 +186,7 @@ fn what_java_is_not(kind: TypeErrorKind) -> String {
         NarrowsWithoutOption(written) => "an `int` parameter narrows an `Int`, and this signature gives back `" + unify.text_of(written) + "`"
         Unaccounted(class) => "`" + class + "` is a class this build cannot account for"
         LeftOutMember(member) => "the member `" + member + "` is one the list of `java.base` leaves out"
+        Escapes { place, held, foreign } => escape_text(place) + " `" + unify.text_of(held) + "`, and the `extern` type `" + foreign + "` is a foreign reference"
         _ => what_a_process_is_not(kind)
     }
 }
@@ -207,6 +209,20 @@ fn what_a_process_is_not(kind: TypeErrorKind) -> String {
         ReceivesAnotherState { state, receive } => "`start` gives `" + unify.text_of(state) + "`, and `receive` is `" + unify.text_of(receive) + "`"
         HoldsAForeignReference { called, held, foreign } => "`" + called + "` holds `" + unify.text_of(held) + "`, and the `extern` type `" + foreign + "` is a foreign reference"
         _ => ""
+    }
+}
+
+/// Where a foreign reference would escape to, as the message says it.
+// example: escape_text(GivenBackBy("opened")) == "`opened` gives back"
+// example: escape_text(HeldAt("Box.value")) == "`Box.value` holds"
+// example: escape_text(GivenBackByACall("same")) == "this call of `same` gives back"
+// example: escape_text(BuiltAs("Box")) == "this `Box` is"
+fn escape_text(place: Escape) -> String {
+    match place {
+        GivenBackBy(function) => "`" + function + "` gives back"
+        HeldAt(field) => "`" + field + "` holds"
+        GivenBackByACall(callee) => "this call of `" + callee + "` gives back"
+        BuiltAs(record) => "this `" + record + "` is"
     }
 }
 
@@ -358,6 +374,7 @@ fn the_rule_of_java(kind: TypeErrorKind) -> String {
         NarrowsWithoutOption(_) => "give back an `Option`, which is `None` where an argument does not fit"
         Unaccounted(_) => "a class is in an archive a `jar` line states, or on the list of `java.base` in `docs/specs/interop.md`, and this one is in neither"
         LeftOutMember(_) => "the list in `docs/specs/interop.md` leaves this member out; reach another member"
+        Escapes { place, held, foreign } => "a foreign reference stays in the function that reaches it; bind it, and pass it as an argument"
         _ => the_shape_of_a_process(kind)
     }
 }
@@ -504,6 +521,18 @@ type TypeErrorKind =
         held: unify.Type
         foreign: String
     }
+    | Escapes {
+        place: Escape
+        held: unify.Type
+        foreign: String
+    }
+
+/// The place a foreign reference would escape its function to, which `L0435` names.
+type Escape =
+    | GivenBackBy(String)
+    | HeldAt(String)
+    | GivenBackByACall(String)
+    | BuiltAs(String)
 
 /// What a declaration takes and what a use of it gave, for the two counts that can be wrong.
 type Count = {

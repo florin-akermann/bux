@@ -7,12 +7,12 @@
 import ast
 import boundary
 import declared
+import escapes
 import lexer
 import list
 import map
 import parser
 import refusal
-import set
 import surface
 import unify
 
@@ -180,11 +180,7 @@ fn is_one_call_or_one_name(body: ast.Expr) -> Bool {
 /// `reached` is each type another module offers, which a process of this module can hold.
 // example: refusal.code_given(nothing_foreign_held(declared.little_environment(), ast.Program { items: [] }, [])) == ""
 fn nothing_foreign_held(environment: declared.Environment, program: ast.Program, reached: List<surface.OfferedType>) -> Result<(), refusal.TypeError> {
-    var types = declared.offered_types(environment, program)
-    for offered in reached {
-        types = list.push(types, offered)
-    }
-    let holding = Holding { foreign: environment.foreign, carried: carried_by_name(types) }
+    let holding = escapes.held_by(environment, program, reached)
     for item in program.items {
         for declaration in process_of_item(item) {
             _ = holds_values(holding, declaration.name.text, each_held(environment, declaration))?
@@ -203,10 +199,10 @@ fn process_of_item(item: ast.Item) -> List<ast.ProcessDeclaration> {
 }
 
 /// Refuses the first of `held` that is or holds a foreign reference.
-// example: refusal.code_given(holds_values(Holding { foreign: map.insert(map.empty(), "File", ast.AsAClass), carried: map.empty() }, "Keeper", [Held { held: unify.list_of(unify.Named { name: "File", arguments: [] }), span: lexer.Span { start: 3, length: 4 } }])) == "L0811 3..7"
-fn holds_values(holding: Holding, called: String, held: List<Held>) -> Result<(), refusal.TypeError> {
+// example: refusal.code_given(holds_values(escapes.Holding { foreign: map.insert(map.empty(), "File", ast.AsAClass), carried: map.empty() }, "Keeper", [Held { held: unify.list_of(unify.Named { name: "File", arguments: [] }), span: lexer.Span { start: 3, length: 4 } }])) == "L0811 3..7"
+fn holds_values(holding: escapes.Holding, called: String, held: List<Held>) -> Result<(), refusal.TypeError> {
     for one in held {
-        let foreign = foreign_in(holding, Walk { seen: set.empty(), found: "" }, one.held).found
+        let foreign = escapes.foreign_found(holding, one.held)
         if foreign != "" {
             return Err(refusal.TypeError { kind: refusal.HoldsAForeignReference { called: called, held: one.held, foreign: foreign }, span: one.span })
         }
@@ -241,50 +237,6 @@ fn written_at(written: Option<ast.TypeRef>, name: ast.Name) -> lexer.Span {
     }
 }
 
-/// What each constructor of each type in `types` carries, under the name of the type.
-// example: list.length(or(map.get(carried_by_name([surface.OfferedType { name: "Box", over: [], declared: unify.Unit, built_by: surface.Record(surface.OfferedConstructor { name: "Box", labels: [], carries: [unify.int()] }) }]), "Box"), [])) == 1
-fn carried_by_name(types: List<surface.OfferedType>) -> map.Map<String, List<unify.Type>> {
-    var carried = map.empty()
-    for offered in types {
-        var carries = []
-        for built in surface.constructors(offered) {
-            for one in built.carries {
-                carries = list.push(carries, one)
-            }
-        }
-        carried = map.insert(carried, offered.name, carries)
-    }
-    carried
-}
-
-/// The walk after `held`: the first foreign type it is or holds is found, where there is one.
-///
-/// A type is gone into once, so a type that holds itself ends the walk. Its arguments are read at
-/// each use, because `List<File>` holds what `List<Int>` does not.
-// example: foreign_in(Holding { foreign: map.insert(map.empty(), "File", ast.AsAClass), carried: map.empty() }, Walk { seen: set.empty(), found: "" }, unify.Named { name: "File", arguments: [] }).found == "File"
-// example: foreign_in(Holding { foreign: map.empty(), carried: map.insert(map.empty(), "Box", [unify.Named { name: "Box", arguments: [] }]) }, Walk { seen: set.empty(), found: "" }, unify.Named { name: "Box", arguments: [] }).found == ""
-fn foreign_in(holding: Holding, walk: Walk, held: unify.Type) -> Walk {
-    let name = boundary.name_of(held)
-    if walk.found != "" || name == "" {
-        return walk
-    }
-    if boundary.is_foreign(holding.foreign, name) {
-        return walk { found: name }
-    }
-    var walking = walk
-    for argument in boundary.arguments_of(held) {
-        walking = foreign_in(holding, walking, argument)
-    }
-    if set.has_value(walking.seen, name) {
-        return walking
-    }
-    walking = walking { seen: set.insert(walking.seen, name) }
-    for carried in or(map.get(holding.carried, name), []) {
-        walking = foreign_in(holding, walking, carried)
-    }
-    walking
-}
-
 /// A function of no parameters and an empty body, named as the process is.
 // example: empty_function(ast.Name { text: "P", span: lexer.Span { start: 8, length: 1 } }).name.text == "P"
 fn empty_function(name: ast.Name) -> ast.FunctionDeclaration {
@@ -295,19 +247,6 @@ fn empty_function(name: ast.Name) -> ast.FunctionDeclaration {
 // example: empty_parameter(ast.Name { text: "receive", span: lexer.Span { start: 8, length: 7 } }).name.text == "receive"
 fn empty_parameter(name: ast.Name) -> ast.Parameter {
     ast.Parameter { name: name, type_ref: None, span: name.span }
-}
-
-/// What the walk of the types a process holds reads: which types are foreign, and what each
-/// declared type carries.
-type Holding = {
-    foreign: map.Map<String, ast.Called>
-    carried: map.Map<String, List<unify.Type>>
-}
-
-/// The walk so far: each type gone into, and the first foreign type found, or `""`.
-type Walk = {
-    seen: set.Set<String>
-    found: String
 }
 
 /// One type a process holds, and where it is written.

@@ -1,0 +1,15 @@
+// expect-error: L0435
+// A value of an `extern` type is a foreign reference, and it stays in the function that reaches it.
+// A function the program declares gives back no foreign reference, so the caller reaches its own.
+fn main(arguments: List<String>) -> Int {
+    _ = opened("notes.txt")
+    0
+}
+
+fn opened(path: String) -> File {
+    named(path)
+}
+
+extern new named(path: String) -> File
+
+extern type File = "java.io.File"

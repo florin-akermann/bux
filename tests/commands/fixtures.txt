@@ -17018,3 +17018,271 @@ status 1
 !     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 !
 ! help: a `jar` line is `jar`, a path, and `sha256:` with 64 lowercase hexadecimal digits
+
+$ check tests/spec/interop/builds_a_record_around_a_foreign_reference.bx
+status 1
+! error[L0435]: this `Box` is `Box<File>`, and the `extern` type `File` is a foreign reference
+!   --> tests/spec/interop/builds_a_record_around_a_foreign_reference.bx:5:17
+!
+!   5 |     let boxed = Box { value: named("notes.txt") }
+!     |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+!
+! help: a foreign reference stays in the function that reaches it; bind it, and pass it as an argument
+
+$ check --json tests/spec/interop/builds_a_record_around_a_foreign_reference.bx
+status 1
+> {"file":"tests/spec/interop/builds_a_record_around_a_foreign_reference.bx","code":"L0435","message":"this `Box` is `Box<File>`, and the `extern` type `File` is a foreign reference","span":{"start":257,"len":33},"help":"a foreign reference stays in the function that reaches it; bind it, and pass it as an argument"}
+
+$ api tests/spec/interop/builds_a_record_around_a_foreign_reference.bx
+status 1
+! error[L0435]: this `Box` is `Box<File>`, and the `extern` type `File` is a foreign reference
+!   --> tests/spec/interop/builds_a_record_around_a_foreign_reference.bx:5:17
+!
+!   5 |     let boxed = Box { value: named("notes.txt") }
+!     |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+!
+! help: a foreign reference stays in the function that reaches it; bind it, and pass it as an argument
+
+$ test tests/spec/interop/builds_a_record_around_a_foreign_reference.bx
+status 1
+! error[L0435]: this `Box` is `Box<File>`, and the `extern` type `File` is a foreign reference
+!   --> tests/spec/interop/builds_a_record_around_a_foreign_reference.bx:5:17
+!
+!   5 |     let boxed = Box { value: named("notes.txt") }
+!     |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+!
+! help: a foreign reference stays in the function that reaches it; bind it, and pass it as an argument
+
+$ fmt tests/spec/interop/builds_a_record_around_a_foreign_reference.bx
+status 0
+
+$ build tests/spec/interop/builds_a_record_around_a_foreign_reference.bx
+status 1
+! error[L0435]: this `Box` is `Box<File>`, and the `extern` type `File` is a foreign reference
+!   --> tests/spec/interop/builds_a_record_around_a_foreign_reference.bx:5:17
+!
+!   5 |     let boxed = Box { value: named("notes.txt") }
+!     |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+!
+! help: a foreign reference stays in the function that reaches it; bind it, and pass it as an argument
+
+$ check tests/spec/interop/gives_back_a_foreign_reference.bx
+status 1
+! error[L0435]: `opened` gives back `File`, and the `extern` type `File` is a foreign reference
+!   --> tests/spec/interop/gives_back_a_foreign_reference.bx:9:28
+!
+!   9 | fn opened(path: String) -> File {
+!     |                            ^^^^
+!
+! help: a foreign reference stays in the function that reaches it; bind it, and pass it as an argument
+
+$ check --json tests/spec/interop/gives_back_a_foreign_reference.bx
+status 1
+> {"file":"tests/spec/interop/gives_back_a_foreign_reference.bx","code":"L0435","message":"`opened` gives back `File`, and the `extern` type `File` is a foreign reference","span":{"start":329,"len":4},"help":"a foreign reference stays in the function that reaches it; bind it, and pass it as an argument"}
+
+$ api tests/spec/interop/gives_back_a_foreign_reference.bx
+status 1
+! error[L0435]: `opened` gives back `File`, and the `extern` type `File` is a foreign reference
+!   --> tests/spec/interop/gives_back_a_foreign_reference.bx:9:28
+!
+!   9 | fn opened(path: String) -> File {
+!     |                            ^^^^
+!
+! help: a foreign reference stays in the function that reaches it; bind it, and pass it as an argument
+
+$ test tests/spec/interop/gives_back_a_foreign_reference.bx
+status 1
+! error[L0435]: `opened` gives back `File`, and the `extern` type `File` is a foreign reference
+!   --> tests/spec/interop/gives_back_a_foreign_reference.bx:9:28
+!
+!   9 | fn opened(path: String) -> File {
+!     |                            ^^^^
+!
+! help: a foreign reference stays in the function that reaches it; bind it, and pass it as an argument
+
+$ fmt tests/spec/interop/gives_back_a_foreign_reference.bx
+status 0
+
+$ build tests/spec/interop/gives_back_a_foreign_reference.bx
+status 1
+! error[L0435]: `opened` gives back `File`, and the `extern` type `File` is a foreign reference
+!   --> tests/spec/interop/gives_back_a_foreign_reference.bx:9:28
+!
+!   9 | fn opened(path: String) -> File {
+!     |                            ^^^^
+!
+! help: a foreign reference stays in the function that reaches it; bind it, and pass it as an argument
+
+$ check tests/spec/interop/gives_back_through_a_type_parameter.bx
+status 1
+! error[L0435]: this call of `same` gives back `File`, and the `extern` type `File` is a foreign reference
+!   --> tests/spec/interop/gives_back_through_a_type_parameter.bx:5:16
+!
+!   5 |     let file = same(named("notes.txt"))
+!     |                ^^^^^^^^^^^^^^^^^^^^^^^^
+!
+! help: a foreign reference stays in the function that reaches it; bind it, and pass it as an argument
+
+$ check --json tests/spec/interop/gives_back_through_a_type_parameter.bx
+status 1
+> {"file":"tests/spec/interop/gives_back_through_a_type_parameter.bx","code":"L0435","message":"this call of `same` gives back `File`, and the `extern` type `File` is a foreign reference","span":{"start":270,"len":24},"help":"a foreign reference stays in the function that reaches it; bind it, and pass it as an argument"}
+
+$ api tests/spec/interop/gives_back_through_a_type_parameter.bx
+status 1
+! error[L0435]: this call of `same` gives back `File`, and the `extern` type `File` is a foreign reference
+!   --> tests/spec/interop/gives_back_through_a_type_parameter.bx:5:16
+!
+!   5 |     let file = same(named("notes.txt"))
+!     |                ^^^^^^^^^^^^^^^^^^^^^^^^
+!
+! help: a foreign reference stays in the function that reaches it; bind it, and pass it as an argument
+
+$ test tests/spec/interop/gives_back_through_a_type_parameter.bx
+status 1
+! error[L0435]: this call of `same` gives back `File`, and the `extern` type `File` is a foreign reference
+!   --> tests/spec/interop/gives_back_through_a_type_parameter.bx:5:16
+!
+!   5 |     let file = same(named("notes.txt"))
+!     |                ^^^^^^^^^^^^^^^^^^^^^^^^
+!
+! help: a foreign reference stays in the function that reaches it; bind it, and pass it as an argument
+
+$ fmt tests/spec/interop/gives_back_through_a_type_parameter.bx
+status 0
+
+$ build tests/spec/interop/gives_back_through_a_type_parameter.bx
+status 1
+! error[L0435]: this call of `same` gives back `File`, and the `extern` type `File` is a foreign reference
+!   --> tests/spec/interop/gives_back_through_a_type_parameter.bx:5:16
+!
+!   5 |     let file = same(named("notes.txt"))
+!     |                ^^^^^^^^^^^^^^^^^^^^^^^^
+!
+! help: a foreign reference stays in the function that reaches it; bind it, and pass it as an argument
+
+$ check tests/spec/interop/holds_a_foreign_reference_in_a_field.bx
+status 1
+! error[L0435]: `Kept.file` holds `File`, and the `extern` type `File` is a foreign reference
+!   --> tests/spec/interop/holds_a_foreign_reference_in_a_field.bx:10:11
+!
+!   10 |     file: File
+!      |           ^^^^
+!
+! help: a foreign reference stays in the function that reaches it; bind it, and pass it as an argument
+
+$ check --json tests/spec/interop/holds_a_foreign_reference_in_a_field.bx
+status 1
+> {"file":"tests/spec/interop/holds_a_foreign_reference_in_a_field.bx","code":"L0435","message":"`Kept.file` holds `File`, and the `extern` type `File` is a foreign reference","span":{"start":336,"len":4},"help":"a foreign reference stays in the function that reaches it; bind it, and pass it as an argument"}
+
+$ api tests/spec/interop/holds_a_foreign_reference_in_a_field.bx
+status 1
+! error[L0435]: `Kept.file` holds `File`, and the `extern` type `File` is a foreign reference
+!   --> tests/spec/interop/holds_a_foreign_reference_in_a_field.bx:10:11
+!
+!   10 |     file: File
+!      |           ^^^^
+!
+! help: a foreign reference stays in the function that reaches it; bind it, and pass it as an argument
+
+$ test tests/spec/interop/holds_a_foreign_reference_in_a_field.bx
+status 1
+! error[L0435]: `Kept.file` holds `File`, and the `extern` type `File` is a foreign reference
+!   --> tests/spec/interop/holds_a_foreign_reference_in_a_field.bx:10:11
+!
+!   10 |     file: File
+!      |           ^^^^
+!
+! help: a foreign reference stays in the function that reaches it; bind it, and pass it as an argument
+
+$ fmt tests/spec/interop/holds_a_foreign_reference_in_a_field.bx
+status 0
+
+$ build tests/spec/interop/holds_a_foreign_reference_in_a_field.bx
+status 1
+! error[L0435]: `Kept.file` holds `File`, and the `extern` type `File` is a foreign reference
+!   --> tests/spec/interop/holds_a_foreign_reference_in_a_field.bx:10:11
+!
+!   10 |     file: File
+!      |           ^^^^
+!
+! help: a foreign reference stays in the function that reaches it; bind it, and pass it as an argument
+
+$ check tests/spec/interop/holds_a_foreign_reference_in_a_variant.bx
+status 1
+! error[L0435]: `There.0` holds `Option<File>`, and the `extern` type `File` is a foreign reference
+!   --> tests/spec/interop/holds_a_foreign_reference_in_a_variant.bx:9:13
+!
+!   9 |     | There(Option<File>)
+!     |             ^^^^^^^^^^^^
+!
+! help: a foreign reference stays in the function that reaches it; bind it, and pass it as an argument
+
+$ check --json tests/spec/interop/holds_a_foreign_reference_in_a_variant.bx
+status 1
+> {"file":"tests/spec/interop/holds_a_foreign_reference_in_a_variant.bx","code":"L0435","message":"`There.0` holds `Option<File>`, and the `extern` type `File` is a foreign reference","span":{"start":255,"len":12},"help":"a foreign reference stays in the function that reaches it; bind it, and pass it as an argument"}
+
+$ api tests/spec/interop/holds_a_foreign_reference_in_a_variant.bx
+status 1
+! error[L0435]: `There.0` holds `Option<File>`, and the `extern` type `File` is a foreign reference
+!   --> tests/spec/interop/holds_a_foreign_reference_in_a_variant.bx:9:13
+!
+!   9 |     | There(Option<File>)
+!     |             ^^^^^^^^^^^^
+!
+! help: a foreign reference stays in the function that reaches it; bind it, and pass it as an argument
+
+$ test tests/spec/interop/holds_a_foreign_reference_in_a_variant.bx
+status 1
+! error[L0435]: `There.0` holds `Option<File>`, and the `extern` type `File` is a foreign reference
+!   --> tests/spec/interop/holds_a_foreign_reference_in_a_variant.bx:9:13
+!
+!   9 |     | There(Option<File>)
+!     |             ^^^^^^^^^^^^
+!
+! help: a foreign reference stays in the function that reaches it; bind it, and pass it as an argument
+
+$ fmt tests/spec/interop/holds_a_foreign_reference_in_a_variant.bx
+status 0
+
+$ build tests/spec/interop/holds_a_foreign_reference_in_a_variant.bx
+status 1
+! error[L0435]: `There.0` holds `Option<File>`, and the `extern` type `File` is a foreign reference
+!   --> tests/spec/interop/holds_a_foreign_reference_in_a_variant.bx:9:13
+!
+!   9 |     | There(Option<File>)
+!     |             ^^^^^^^^^^^^
+!
+! help: a foreign reference stays in the function that reaches it; bind it, and pass it as an argument
+
+$ check tests/spec/interop/passes_a_foreign_reference.bx
+status 0
+
+$ check --json tests/spec/interop/passes_a_foreign_reference.bx
+status 0
+
+$ api tests/spec/interop/passes_a_foreign_reference.bx
+status 0
+> fn main(arguments: List<String>) -> Int
+>
+> fn described(path: String) -> Result<String, String>
+>
+> fn folder_of(path: String) -> String
+>
+> extern new named(path: String) -> File
+>
+> extern method canonical(file: File) -> Result<File, String> = "getCanonicalFile"
+>
+> extern method name_of(file: File) -> String = "getName"
+>
+> extern method parent_of(file: File) -> Option<File> = "getParentFile"
+>
+> extern type File = "java.io.File"
+
+$ test tests/spec/interop/passes_a_foreign_reference.bx
+status 0
+
+$ fmt tests/spec/interop/passes_a_foreign_reference.bx
+status 0
+
+$ build tests/spec/interop/passes_a_foreign_reference.bx
+status 0
