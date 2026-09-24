@@ -82,7 +82,7 @@ A pool of processes types every module whose imports are typed, as `tests/runner
 The refusal a build reports stays the first one in load order, whatever process ends first.
 [113][a] - `docs/specs/types.md` states that the reported refusal does not depend on the order.
 `docs/specs/concurrency.md` names the compiler as the second user of a pool.
-[113][b] - A `process` in `compiler/command.bx` hands a module to a worker once its imports are done.
+[113][b] - A `process` in `compiler/command.bx` hands a module to a worker once its imports are in.
 It holds each answer by the number of its module, as the pool of the runner does.
 [113][c] - A drawn property holds that a program typed in waves is typed as it is in load order.
 [113][d] - Section 7 records `bux check` and `bux build` on `compiler/main.bx` before and after.
@@ -95,7 +95,7 @@ The asks of one module reach the next module of the same pass.
 A pass that gives every module the asks known when the pass starts lowers each module alone.
 The passes repeat until no module asks for more, as they do now, and the result is the same.
 `bin/bootstrap` holds the classes byte for byte, so it is the check that the order changed nothing.
-Item 091 measured the writer at 0.31 s, so the writer stays on one thread unless the profile says no.
+Item 091 measured the writer at 0.31 s, so the writer stays on one thread unless the profile says so.
 [114][a] - `docs/implementation.md` section 6 states that a pass lowers each module alone.
 [114][b] - `pass_over` hands each module of a pass to the pool of Item 113.
 [114][c] - A drawn property holds that a program lowered in a pool gives the classes of one thread.
