@@ -394,8 +394,11 @@ fn every_refused_run_held(library: ir.Library) -> held.Held {
     found = held.added(found, no_program("fn main() -> Int {\n    7\n}\n", library))
     found = held.added(found, no_program("fn main() -> () {\n    ()\n}\n", library))
     found = held.added(found, refused_program_run(library))
+    found = held.added(found, split_refused("run", library))
+    found = held.added(found, split_refused("test", library))
     found = held.added(found, test_refused(source: "fn shared(total: Int) -> Int {\n    total\n}\n", refusal: "error[L0601]: `shared` states no example", library: library))
     found = held.added(found, test_refused(source: holds_text() + "\n// example: io(total: 7) == 7\nfn io(total: Int) -> Int {\n    total\n}\n", refusal: "error[L0604]", library: library))
+    found = held.added(found, split_but_reaching_no_archive(library))
     held.added(found, nothing_to_test(library))
 }
 
@@ -434,6 +437,38 @@ fn refused_program_run(library: ir.Library) -> held.Held {
     let found = facts_held("run refuses a program the compiler will not have", facts)
     command.removed_whole(scene)
     found
+}
+
+/// `word` refuses a module in a directory whose path holds `:`, and builds nothing.
+///
+/// A class path reads the `:` as the end of one path, so the refusal comes before a build. The
+/// package states an archive, because an archive is what puts the directory on the class path of
+/// `test`. The archive is not there, and the refusal comes before an archive is looked for.
+// example: strings.length(split_manifest_text()) > 0
+fn split_refused(word: String, library: ir.Library) -> held.Held {
+    let scene = scene_of([Written { at: "a:b/example.bx", text: counting_program_text() }, Written { at: "a:b/bux.package", text: split_manifest_text() }])
+    let said = said_to([word, modules.joined(scene, "a:b/example.bx")], library)
+    let facts = [status_fact(said, 1), within_fact(what: "errors", text: said.errors, part: "error[L0610]"), absence(scene: scene, at: "a:b/target")]
+    let found = facts_held(word + " refuses a module in a directory whose path holds `:`", facts)
+    command.removed_whole(scene)
+    found
+}
+
+/// `test` takes a module in a directory whose path holds `:` where the package reaches no
+/// archive, because its classes go into a directory of its own, and nothing else is on the path.
+// example: strings.length(counting_program_text()) > 0
+fn split_but_reaching_no_archive(library: ir.Library) -> held.Held {
+    let scene = scene_of([Written { at: "a:b/example.bx", text: "type Colour =\n    | Red\n    | Blue\n" }])
+    let said = said_to(["test", modules.joined(scene, "a:b/example.bx")], library)
+    let found = facts_held("test takes a module in a directory with `:` that reaches no archive", said_facts(what: "test", said: said))
+    command.removed_whole(scene)
+    found
+}
+
+/// A manifest that states one archive, which is not there.
+// example: is_within(text: split_manifest_text(), part: "jar ")
+fn split_manifest_text() -> String {
+    "package split\nversion 0.1.0\njar lib/gone.jar sha256:0000000000000000000000000000000000000000000000000000000000000000\n"
 }
 
 /// `test` refuses the module `source` with `refusal` before it looks for a JDK.

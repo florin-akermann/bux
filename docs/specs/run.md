@@ -59,6 +59,7 @@ A package that two routes reach puts its archives on the class path once, at the
 `target/` is first, so a class that the build writes is never hidden by a class of an archive.
 A module with no manifest, and a package with no `jar` line, has `target/` alone.
 The command line below writes the class path as `<dir>[:<archive>...]`.
+No entry holds `:`, so `run`, and `test` with an archive, refuse a directory with one as `L0610`.
 
 ## What the program can reach
 

@@ -75,6 +75,9 @@ fn run_said(asked: Started, library: ir.Library) -> Answer {
     if is_misnamed(asked.file) {
         return Spoken(misnamed_said(asked.file, AsPage))
     }
+    if has_a_split_directory(asked.file) {
+        return Spoken(split_said(asked.file))
+    }
     started(asked, library)
 }
 
@@ -354,10 +357,55 @@ fn has_starting_method(methods: List<ir.Method>) -> Bool {
 /// run, which is a run that held.
 // example: tested("no-such-directory/a.bx", ir.little_library()).status == 2
 fn tested(path: String, library: ir.Library) -> Said {
+    if has_a_split_archive(path) {
+        return split_said(path)
+    }
     if is_folder(place_at(path)) {
         return package_tested(path, library)
     }
     reported(module_tested(path, library))
+}
+
+/// Whether an archive that the package at `path` reaches is at a path that holds a `:`.
+///
+/// `test` writes its classes into a directory of its own, so only an archive, read against the
+/// directory of the package, puts that directory on its class path. A manifest that is refused is
+/// refused again when the module is compiled.
+// example: !has_a_split_archive("no-such-directory:a/main.bx")
+fn has_a_split_archive(path: String) -> Bool {
+    for one in ok_or(modules.archives_reached(package_directory_of(path)), []) {
+        if modules.can_split_the_class_path(one.file) {
+            return true
+        }
+    }
+    false
+}
+
+/// Whether the directory of the module at `path` holds a `:`, where the module is there.
+///
+/// `run` puts the `target/` of that directory on a class path, which reads a `:` as the end of
+/// one path. A path that names nothing is refused when it is read.
+// example: !has_a_split_directory("no-such-directory:a/main.bx")
+fn has_a_split_directory(path: String) -> Bool {
+    is_there(place_at(path)) && modules.can_split_the_class_path(modules.directory_of(path))
+}
+
+/// The refusal of the module or the package at `path`, whose directory holds a `:`.
+///
+/// The directory is what is wrong, not the text, so the diagnostic points at the start of the file.
+// example: split_said("no-such-directory:a/main.bx").errors == "error[L0610]: `no-such-directory:a` holds `:`, which a class path reads as two paths\n  --> no-such-directory:a/main.bx:1:1\n\n  1 | \n    | ^\n\nhelp: move the module to a directory whose path holds no `:`\n"
+fn split_said(path: String) -> Said {
+    let diagnostic = Diagnostic { code: "L0610", message: "`" + package_directory_of(path) + "` holds `:`, which a class path reads as two paths", span: lexer.Span { start: 0, length: 0 }, help: Some("move the module to a directory whose path holds no `:`"), fix: None }
+    refused_each([diagnostic], Page { source: ok_or(files.read(path), ""), path: path })
+}
+
+/// The directory of the module at `path`, or `path` itself where it names a package.
+// example: package_directory_of("no-such-directory/main.bx") == "no-such-directory"
+fn package_directory_of(path: String) -> String {
+    if is_folder(place_at(path)) {
+        return path
+    }
+    modules.directory_of(path)
 }
 
 /// Runs the examples and the tests of every module of the package in `directory`, in the order
