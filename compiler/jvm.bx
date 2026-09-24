@@ -4,17 +4,26 @@
 // Nothing here knows the language: it knows classes, descriptors, opcodes, and the verifier.
 // Each step takes the state it writes to and gives back the state it made, which is a value.
 import bytes
+import exhaustiveness
 import ir
 import list
 import map
 import set
 import strings
 
-/// Every class file of the program at `path`, in the order a build writes them, or `skipped`.
+/// Every class file of the program at `path`, in the order a build writes them, or why not.
 // example: list.length(ok_or(classes_of("no-such-directory/main.bx", ir.little_library()), [])) == 0
 fn classes_of(path: String, library: ir.Library) -> Result<List<ClassFile>, String> {
-    let lowered = ir.program_lowered(path, library)?
-    match program_written(lowered) {
+    match ir.program_lowered(path, library) {
+        Ok(lowered) => written_or_said(program_written(lowered))
+        Err(unchecked) => Err(exhaustiveness.unchecked_printed(unchecked))
+    }
+}
+
+/// The class files, or why they are not written, printed.
+// example: list.length(ok_or(written_or_said(Ok([])), [ClassFile { path: "", bytes: [] }])) == 0
+fn written_or_said(answer: Result<List<ClassFile>, Unwritten>) -> Result<List<ClassFile>, String> {
+    match answer {
         Ok(files) => Ok(files)
         Err(unwritten) => Err(message(unwritten))
     }
