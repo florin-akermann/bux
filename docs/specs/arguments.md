@@ -179,7 +179,7 @@ error[L0433]: a dot after a value reads a field, so this call of `or` is written
 help: write `or(maybe, 0)`
 ```
 
-All four are raised in `compiler/infer.bx`.
+All four are raised in `src/infer.bx`.
 `L0433` is raised as inference reaches the call, before anything else about it is counted or met.
 `L0410` and `L0411` are raised as inference reaches the call.
 `L0409` is raised once inference has walked every function of the module.

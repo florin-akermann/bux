@@ -12336,16 +12336,16 @@ $ check no/such.bx
 status 2
 ! error: no/such.bx: No such file or directory (os error 2)
 
-$ check compiler/
+$ check src/
 status 0
 
-$ check compiler/main.bx/
+$ check src/main.bx/
 status 2
-! error: compiler/main.bx/: Not a directory (os error 20)
+! error: src/main.bx/: Not a directory (os error 20)
 
-$ check compiler/main.bx/x
+$ check src/main.bx/x
 status 2
-! error: compiler/main.bx/x: Not a directory (os error 20)
+! error: src/main.bx/x: Not a directory (os error 20)
 
 $ check tests
 status 2
@@ -12355,16 +12355,16 @@ $ check --json no/such.bx
 status 2
 ! error: no/such.bx: No such file or directory (os error 2)
 
-$ check --json compiler/
+$ check --json src/
 status 0
 
-$ check --json compiler/main.bx/
+$ check --json src/main.bx/
 status 2
-! error: compiler/main.bx/: Not a directory (os error 20)
+! error: src/main.bx/: Not a directory (os error 20)
 
-$ check --json compiler/main.bx/x
+$ check --json src/main.bx/x
 status 2
-! error: compiler/main.bx/x: Not a directory (os error 20)
+! error: src/main.bx/x: Not a directory (os error 20)
 
 $ check --json tests
 status 2
@@ -12374,17 +12374,17 @@ $ api no/such.bx
 status 2
 ! error: no/such.bx: No such file or directory (os error 2)
 
-$ api compiler/
+$ api src/
 status 2
-! error: compiler/: Is a directory (os error 21)
+! error: src/: Is a directory (os error 21)
 
-$ api compiler/main.bx/
+$ api src/main.bx/
 status 2
-! error: compiler/main.bx/: Not a directory (os error 20)
+! error: src/main.bx/: Not a directory (os error 20)
 
-$ api compiler/main.bx/x
+$ api src/main.bx/x
 status 2
-! error: compiler/main.bx/x: Not a directory (os error 20)
+! error: src/main.bx/x: Not a directory (os error 20)
 
 $ api tests
 status 2
@@ -12394,17 +12394,17 @@ $ fmt no/such.bx
 status 2
 ! error: no/such.bx: No such file or directory (os error 2)
 
-$ fmt compiler/
+$ fmt src/
 status 2
-! error: compiler/: Is a directory (os error 21)
+! error: src/: Is a directory (os error 21)
 
-$ fmt compiler/main.bx/
+$ fmt src/main.bx/
 status 2
-! error: compiler/main.bx/: Not a directory (os error 20)
+! error: src/main.bx/: Not a directory (os error 20)
 
-$ fmt compiler/main.bx/x
+$ fmt src/main.bx/x
 status 2
-! error: compiler/main.bx/x: Not a directory (os error 20)
+! error: src/main.bx/x: Not a directory (os error 20)
 
 $ fmt tests
 status 2
@@ -12414,16 +12414,16 @@ $ build no/such.bx
 status 2
 ! error: no/such.bx: No such file or directory (os error 2)
 
-$ build compiler/
+$ build src/
 status 0
 
-$ build compiler/main.bx/
+$ build src/main.bx/
 status 2
-! error: compiler/main.bx/: Not a directory (os error 20)
+! error: src/main.bx/: Not a directory (os error 20)
 
-$ build compiler/main.bx/x
+$ build src/main.bx/x
 status 2
-! error: compiler/main.bx/x: Not a directory (os error 20)
+! error: src/main.bx/x: Not a directory (os error 20)
 
 $ build tests
 status 2
@@ -12433,16 +12433,16 @@ $ test no/such.bx
 status 2
 ! error: no/such.bx: No such file or directory (os error 2)
 
-$ test compiler/
+$ test src/
 status 0
 
-$ test compiler/main.bx/
+$ test src/main.bx/
 status 2
-! error: compiler/main.bx/: Not a directory (os error 20)
+! error: src/main.bx/: Not a directory (os error 20)
 
-$ test compiler/main.bx/x
+$ test src/main.bx/x
 status 2
-! error: compiler/main.bx/x: Not a directory (os error 20)
+! error: src/main.bx/x: Not a directory (os error 20)
 
 $ test tests
 status 2
@@ -12461,17 +12461,17 @@ $ run no/such.bx
 status 2
 ! error: no/such.bx: No such file or directory (os error 2)
 
-$ run compiler/
+$ run src/
 status 2
-! error: compiler/: Is a directory (os error 21)
+! error: src/: Is a directory (os error 21)
 
-$ run compiler/main.bx/
+$ run src/main.bx/
 status 2
-! error: compiler/main.bx/: Not a directory (os error 20)
+! error: src/main.bx/: Not a directory (os error 20)
 
-$ run compiler/main.bx/x
+$ run src/main.bx/x
 status 2
-! error: compiler/main.bx/x: Not a directory (os error 20)
+! error: src/main.bx/x: Not a directory (os error 20)
 
 $ run tests
 status 2

@@ -129,7 +129,7 @@ A `field` and a `static` name their member with its class.
 A `method` names its member, and the class of its receiver is known from the extern type.
 So each of the three kinds is held to this second list, and a member that is out is `L0434` too.
 
-The list is a table in `compiler/boundary.bx`, and the lists above are that table.
+The list is a table in `src/boundary.bx`, and the lists above are that table.
 A program cannot add to it, and a manifest cannot add to it.
 A class that a program needs and that is not on the list comes from an archive the package states.
 The compiler and its tests are Bux programs, so they obey the same list.

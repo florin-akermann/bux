@@ -104,10 +104,10 @@ It then looks up the entry of each such class in each archive, and `L0434` refus
 The compiler does not read the bytes of a class, copy an archive, or write a manifest.
 The line is for the JVM target alone, and `docs/implementation.md` section 1 says so.
 
-The package reader in `compiler/modules.bx` reads the line.
-`compiler/archives.bx` holds the externs that open an archive, because only a build opens one.
+The package reader in `src/modules.bx` reads the line.
+`src/archives.bx` holds the externs that open an archive, because only a build opens one.
 So the library stays small, and no program reaches a Java archive through it.
-`compiler/digest.bx` is the SHA-256, written in Bux, over the bytes that `files.read_bytes` reads.
+`src/digest.bx` is the SHA-256, written in Bux, over the bytes that `files.read_bytes` reads.
 It is written in Bux because no array crosses the boundary, which `docs/specs/interop.md` states.
 
 ## How an import reaches a module
@@ -244,7 +244,7 @@ These hold and are checked by drawn properties, each a test of `tests/`:
 4. A printed `jar` line reads back as the path and the hash it was printed with, in line order.
 5. Each malformed shape of a `jar` line is refused as `L0315`, at the line itself.
 6. A `depends` or a `jar` path with a `:` at a drawn place is refused as `L0315`, at that line.
-7. The SHA-256 of `compiler/digest.bx` is the one that `shasum -a 256` gives for a drawn file.
+7. The SHA-256 of `src/digest.bx` is the one that `shasum -a 256` gives for a drawn file.
 
 `tests/pinned.bx` holds properties 4 to 7.
 The runner skips property 7 with the reason when `shasum` cannot be run.

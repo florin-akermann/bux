@@ -1,4 +1,4 @@
-// The parser: the tokens of a source file to the tree `compiler/ast.bx` declares.
+// The parser: the tokens of a source file to the tree `src/ast.bx` declares.
 //
 // `docs/specs/grammar.md` states what it does, and `tests/parsing.bx` holds it on drawn input.
 // `tests/siblings.bx` holds it to every `.ast` and `.error` file under `tests/spec`.

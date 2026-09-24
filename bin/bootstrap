@@ -2,7 +2,7 @@
 # The bootstrap: the seed builds the Bux compiler, and that compiler builds itself once more.
 #
 # bin/seed.jar holds the classes of a Bux compiler that an earlier compiler built. It writes
-# stage 1, the classes in compiler/target/, which bin/bux starts. Stage 1 then builds stage 2 from
+# stage 1, the classes in src/target/, which bin/bux starts. Stage 1 then builds stage 2 from
 # a copy of the sources in a temporary directory outside the repository. Stage 2 must be stage 1
 # byte for byte. If it is not, the compiler does not build itself as it says, and this script
 # names the first class that differs and ends with status 1. A build writes only under target/,
@@ -40,24 +40,24 @@ fi
 # the machine", records why it is 256 MB.
 heap=-Xmx256m
 cd "$root"
-rm -rf compiler/target
+rm -rf src/target
 seed=$(mktemp -d "${TMPDIR:-/tmp}/bux-seed.XXXXXX")
 copy=$(mktemp -d "${TMPDIR:-/tmp}/bux-bootstrap.XXXXXX")
 trap 'rm -rf "$seed" "$copy"' EXIT
 (cd "$seed" && "$JAVA_HOME/bin/jar" xf "$root/bin/seed.jar")
 rm -rf "$seed/library" "$seed/help" "$seed/explanations"
-cp -R library compiler/help compiler/explanations "$seed"
-"$java" --enable-preview "$heap" -cp "$seed" main build compiler/main.bx
+cp -R library help explanations "$seed"
+"$java" --enable-preview "$heap" -cp "$seed" main build src/main.bx
 
-cp -R compiler "$copy/compiler"
-rm -rf "$copy/compiler/target"
-"$java" --enable-preview "$heap" -cp "$root/compiler/target" main build "$copy/compiler/main.bx"
+cp -R src "$copy/src"
+rm -rf "$copy/src/target"
+"$java" --enable-preview "$heap" -cp "$root/src/target" main build "$copy/src/main.bx"
 
 # One diff compares the stages. Its first line names the first class that differs, as
 # "Files A and B differ", or the first class or directory that only one stage holds, as
 # "Only in D: C". A status of 2 from diff is a comparison that failed, and diff names why.
 status=0
-answer=$(diff -rq compiler/target "$copy/compiler/target") || status=$?
+answer=$(diff -rq src/target "$copy/src/target") || status=$?
 if [ "$status" -ne 1 ]; then
     exit "$status"
 fi

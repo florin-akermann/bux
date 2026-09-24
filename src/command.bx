@@ -740,7 +740,7 @@ fn archives_of(path: String) -> Result<List<String>, NotCompiled> {
 ///
 /// A module of a package sits in the package's directory, so this is the package's `target/`.
 /// No class lands beside a source, and deleting this directory is a clean build.
-// example: target_of("compiler/main.bx") == "compiler/target"
+// example: target_of("src/main.bx") == "src/target"
 // example: target_of("main.bx") == "target"
 fn target_of(path: String) -> String {
     modules.joined(modules.directory_of(path), "target")
@@ -945,7 +945,7 @@ fn resource_found(name: String) -> Result<String, Said> {
 /// the checkout took out stays readable. Where `from` is `into`, it holds the copy already. Only
 /// a resource is copied, so another file there, such as one a file manager wrote, stops no build.
 // example: is_refused(directory_copied(from: "no-such-directory", into: "/dev/null/resources"))
-// example: !is_refused(directory_copied(from: "compiler", into: "compiler/../compiler"))
+// example: !is_refused(directory_copied(from: "src", into: "src/../src"))
 fn directory_copied(from: String, into: String) -> Result<(), Said> {
     let names = listed_or_said(from)?
     if is_same_place(one: from, other: into) {
@@ -997,8 +997,8 @@ fn last_dot(name: String) -> Int {
 }
 
 /// Whether the paths `one` and `other` name the same place, however each is spelled.
-// example: is_same_place(one: "compiler", other: "compiler/../compiler")
-// example: !is_same_place(one: "compiler", other: "library")
+// example: is_same_place(one: "src", other: "src/../src")
+// example: !is_same_place(one: "src", other: "library")
 fn is_same_place(one: String, other: String) -> Bool {
     ok_or(files.canonical_path(files.named(one)), one) == ok_or(files.canonical_path(files.named(other)), other)
 }

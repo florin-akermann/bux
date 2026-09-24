@@ -5,7 +5,7 @@
 // A foreign reference is reached by an `extern`, bound to a local, and passed to a call, and it
 // goes nowhere else. So a declared result, a field, and a variant position are refused where they
 // are or hold an `extern` type, and so is a call that gives one back through a type parameter.
-// `compiler/processes.bx` refuses a process that holds one, with `L0811`, through the same walk.
+// `src/processes.bx` refuses a process that holds one, with `L0811`, through the same walk.
 import ast
 import boundary
 import declared

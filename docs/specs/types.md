@@ -278,18 +278,18 @@ Inference stops at the first error it reaches, which is the one lowest in the fi
 
 ## The type inference written in Bux
 
-`compiler/types.bx` is this phase, written in Bux.
-It reads each module that `compiler/resolver.bx` resolves, in the order `compiler/modules.bx` loads.
+`src/types.bx` is this phase, written in Bux.
+It reads each module that `src/resolver.bx` resolves, in the order `src/modules.bx` loads.
 Seven more modules hold the parts of the phase, one concern each, and no two import each other.
-`compiler/unify.bx` holds the types, the unification table, and the schemes.
-`compiler/refusal.bx` holds each refusal, with its code, its message, and its help.
-`compiler/boundary.bx` holds the rules for a type that crosses to Java.
+`src/unify.bx` holds the types, the unification table, and the schemes.
+`src/refusal.bx` holds each refusal, with its code, its message, and its help.
+`src/boundary.bx` holds the rules for a type that crosses to Java.
 It asks `java.lang.Character` whether each code point of a Java name is a letter or a number.
-`compiler/surface.bx` holds what a module offers the modules that import it.
-`compiler/declared.bx` holds what a module declares, with the checks of each declaration.
-`compiler/infer.bx` walks each function and settles what the walk left open.
-`compiler/carried.bx` reads the settled types, and refuses an `Option<()>` that inference reached.
-`compiler/types.bx` refuses a signature that leaves a type out, after the walk of the module.
+`src/surface.bx` holds what a module offers the modules that import it.
+`src/declared.bx` holds what a module declares, with the checks of each declaration.
+`src/infer.bx` walks each function and settles what the walk left open.
+`src/carried.bx` reads the settled types, and refuses an `Option<()>` that inference reached.
+`src/types.bx` refuses a signature that leaves a type out, after the walk of the module.
 
 The unification table is a value: each step gives back a new table, and no step changes one.
 The table is a `Map` from each type variable to the type it was settled on.

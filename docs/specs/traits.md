@@ -376,8 +376,8 @@ A trait's name and the type an instance is for are written in `PascalCase`, and 
 | `L0436` | A method a trait declares writes no result, where `-> ()` is the one spelling. |
 
 `L0308`, `L0309`, `L0310`, `L0311`, and `L0318` are raised by name resolution, which
-`compiler/resolver.bx` words.
-`L0401`, `L0418`, `L0419`, and `L0436` are raised by type inference, which `compiler/refusal.bx`
+`src/resolver.bx` words.
+`L0401`, `L0418`, `L0419`, and `L0436` are raised by type inference, which `src/refusal.bx`
 words.
 
 ## Properties

@@ -77,7 +77,7 @@ A name below the hole is not in scope at the hole, so the hole does not read it.
 
 ## What holds it
 
-`compiler/resolver.bx` refuses the name after it resolves the module.
+`src/resolver.bx` refuses the name after it resolves the module.
 `tests/unread.bx` holds two drawn properties:
 
 - A module with one unread name is refused, and the refusal names the kind and the name.

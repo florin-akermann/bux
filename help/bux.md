@@ -22,7 +22,7 @@ Every error carries a code on its first line; `bux explain <code>` says more abo
 
 A process owns a state and takes messages; `bux help process` says how one is written.
 
-The same command line is written in Bux, in `compiler/`. Build it with
-`bux build compiler/main.bx`, then start it with `bin/bux`, on the JDK that JAVA_HOME names.
+The same command line is written in Bux, in `src/`. Build it with
+`bux build src/main.bx`, then start it with `bin/bux`, on the JDK that JAVA_HOME names.
 
 Further commands land one at a time; each is documented here in the change that adds it.

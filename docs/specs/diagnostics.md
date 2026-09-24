@@ -59,7 +59,7 @@ inference `L04xx`.
 Exhaustiveness writes `L05xx`, and what a build asks of a module it compiles writes `L06xx`.
 Code generation writes `L07xx`, and the shape of a process writes `L08xx`.
 
-The long form of a code is the file in `compiler/explanations/` named after it.
+The long form of a code is the file in `explanations/` named after it.
 `command.explanation_of` reads that file as a class-path resource, so there is one copy of it.
 
 A code that stops being raised is taken out whole: the number, the long form, and the paragraph
@@ -67,7 +67,7 @@ that stated it.
 The number is not given to anything else afterwards, so a gap in the run is a code that was
 retired and nothing more.
 
-The grammar raises these, in `compiler/parser.bx`:
+The grammar raises these, in `src/parser.bx`:
 
 - `L0100` — the grammar expected one thing and the source wrote another.
 - `L0101` — a string has no closing quote.
@@ -81,7 +81,7 @@ The grammar raises these, in `compiler/parser.bx`:
 - `L0109` — a statement binds a name with `:=`, which is not part of Bux.
 - `L0110` — a test is written inside a body, where only a statement is written.
 
-Canonical form raises these, in `compiler/format.bx`:
+Canonical form raises these, in `src/format.bx`:
 
 - `L0200` — the file is not in canonical form.
 - `L0201` — an import is after a declaration or out of sort, or a declaration is after a test.
@@ -99,7 +99,7 @@ knows.
 `L0413` is with inference rather than here because the result it reads is the one inference
 settled, which `docs/specs/naming.md` states.
 
-Name resolution raises these, in `compiler/resolver.bx`:
+Name resolution raises these, in `src/resolver.bx`:
 
 - `L0300` — nothing in scope has this name.
 - `L0301` — a module declares the same name twice.
@@ -120,7 +120,7 @@ Name resolution raises these, in `compiler/resolver.bx`:
 - `L0321` — a binding or a parameter is read by nothing.
 - `L0322` — another module reaches a name that its module declares `private`.
 
-Loading raises these, in `compiler/modules.bx`, before any module is resolved:
+Loading raises these, in `src/modules.bx`, before any module is resolved:
 
 - `L0306` — an import names a module neither a file beside it nor a package it reaches holds.
 - `L0307` — a ring of imports, which leaves the modules in it no order to be compiled in.
@@ -128,7 +128,7 @@ Loading raises these, in `compiler/modules.bx`, before any module is resolved:
 - `L0316` — a directory named as a package holds no manifest, so there is no package there.
 - `L0317` — two files claim the module name an import writes, so one build would hold both.
 
-Type inference raises these, and `compiler/refusal.bx` words them:
+Type inference raises these, and `src/refusal.bx` words them:
 
 - `L0400` — a type met a type it does not match.
 - `L0401` — a call passes more or fewer arguments than the function takes.
@@ -165,25 +165,25 @@ Type inference raises these, and `compiler/refusal.bx` words them:
 - `L0435` — a result, a field, a variant, or a call gives back or holds an `extern` type.
 - `L0436` — a function or a trait method leaves a parameter type or its result out.
 
-`compiler/escapes.bx` decides `L0435` after inference, because a call is read at its settled type.
-`compiler/types.bx` decides `L0436` after inference, so its help spells the settled signature.
-`compiler/declared.bx` decides `L0322` in inference, where a name of another module is reached.
+`src/escapes.bx` decides `L0435` after inference, because a call is read at its settled type.
+`src/types.bx` decides `L0436` after inference, so its help spells the settled signature.
+`src/declared.bx` decides `L0322` in inference, where a name of another module is reached.
 
-Exhaustiveness raises these, in `compiler/exhaustiveness.bx`:
+Exhaustiveness raises these, in `src/exhaustiveness.bx`:
 
 - `L0500` — a `match` leaves a value of the type it matches unanswered.
 - `L0501` — a `match` lists its arms in an order the type does not declare its variants in.
 
-`bux build` raises this one, in `compiler/command.bx`, for each hole `compiler/holes.bx` finds:
+`bux build` raises this one, in `src/command.bx`, for each hole `src/holes.bx` finds:
 
 - `L0600` — a hole is still in the program, and a hole has nothing to compile.
 
-`bux build`, `bux run`, and `bux test` raise these, in `compiler/command.bx`:
+`bux build`, `bux run`, and `bux test` raise these, in `src/command.bx`:
 
 - `L0601` — a public function a module declares at the top level states no example.
 - `L0602` — an example is written where nothing carries one.
 
-`bux test` raises these alone, in `compiler/command.bx`:
+`bux test` raises these alone, in `src/command.bx`:
 
 - `L0603` — an example a module states did not hold when it was run.
 - `L0604` — a module declares the name a run of its examples reaches for.
@@ -191,11 +191,11 @@ Exhaustiveness raises these, in `compiler/exhaustiveness.bx`:
 All three are reported together rather than one at a time, unlike every code above them.
 A reader answering them is answering a list, and a list of one would not be that list.
 
-Every command that takes a file raises this one, in `compiler/command.bx`, before it compiles:
+Every command that takes a file raises this one, in `src/command.bx`, before it compiles:
 
 - `L0605` — the file named on the command line is no Bux source: its name does not end in `.bx`.
 
-`bux build`, `bux run`, and `bux test` raise these in `compiler/archives.bx`.
+`bux build`, `bux run`, and `bux test` raise these in `src/archives.bx`.
 Each is raised before a class is written:
 
 - `L0606` — an archive that a `jar` line names is not there.
@@ -203,11 +203,11 @@ Each is raised before a class is written:
 - `L0608` — the manifest of an archive has a `Class-Path`, which names more archives.
 - `L0609` — a file that a `jar` line names is no Java archive.
 
-`bux run` and `bux test` raise this one, in `compiler/command.bx`, before they compile:
+`bux run` and `bux test` raise this one, in `src/command.bx`, before they compile:
 
 - `L0610` — the directory of the module holds `:`, which splits the class path of the run.
 
-`bux build`, `bux run`, and `bux test` raise these, in `compiler/jvm.bx`, for the first
+`bux build`, `bux run`, and `bux test` raise these, in `src/jvm.bx`, for the first
 class that the writer cannot write:
 
 - `L0700` — a function is too large to compile as one function.
@@ -215,11 +215,11 @@ class that the writer cannot write:
 - `L0702` — two parts of one program have one name, or two class names differ only in case.
 - `L0703` — the compiler did not write a function, which is a defect of the compiler.
 
-Name resolution raises the first two of these, in `compiler/resolver.bx`.
+Name resolution raises the first two of these, in `src/resolver.bx`.
 Inference raises the same two for a process reached through a module, whose surface it reads.
-The shape check raises the next eight, in `compiler/processes.bx`, before inference.
-The declarations raise `L0810`, in `compiler/declared.bx`.
-The process phase raises `L0811` after the declarations, in `compiler/processes.bx`.
+The shape check raises the next eight, in `src/processes.bx`, before inference.
+The declarations raise `L0810`, in `src/declared.bx`.
+The process phase raises `L0811` after the declarations, in `src/processes.bx`.
 `docs/specs/concurrency.md` states the shape that each one holds.
 
 - `L0800` — `spawn` names no process, or names one without a call.
@@ -315,7 +315,7 @@ Both `1` and `2` are given before a program runs, so neither is ever a status a 
 
 ## The diagnostics written in Bux
 
-`compiler/command.bx` renders a diagnostic in Bux.
+`src/command.bx` renders a diagnostic in Bux.
 It writes the layout above: the `error[` line, the location, the source line, and the carets.
 It counts the column in characters and keeps a tab before the span as a tab.
 A span that runs on to a later line gets the note that names the line it ends on.

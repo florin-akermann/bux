@@ -184,7 +184,7 @@ fn classes_listed(path: String, program: ast.Program) -> checking.Tried {
 // example: list.length(tree_modules()) > 0
 fn tree_modules() -> List<String> {
     var found = []
-    for directory in ["compiler", "library", "tests"] {
+    for directory in ["src", "library", "tests"] {
         for path in walk.files_in(directory, ".bx") {
             found = list.push(found, path)
         }

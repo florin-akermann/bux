@@ -86,7 +86,7 @@ An example is a whole program held to `docs/specs/executable-examples.md`, not a
 
 ## The lexer written in Bux
 
-`compiler/lexer.bx` is this lexer, written in Bux.
+`src/lexer.bx` is this lexer, written in Bux.
 It is the first phase of the Bux compiler, which `docs/implementation.md` section 6 states.
 
 A Bux string is read one UTF-16 code unit at a time, and a span still counts UTF-8 bytes.

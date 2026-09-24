@@ -103,7 +103,7 @@ Tuning beyond that cost is refused until a measurement on a real program asks fo
 The library stands on files, programs, streams, the environment, the clock, and text.
 It also stands on Java archives and on the bits of a whole number, which the compiler needs.
 `docs/specs/io.md` names the module and the `extern` declarations of each of these.
-Before Item 128, `library/` declared 78 `extern` declarations, `compiler/` 43, and `tests/` 21.
+Before Item 128, `library/` declared 78 `extern` declarations, `src/` 43, and `tests/` 21.
 After it, `library/` declares 117, and no file outside it and `tests/spec/` declares one.
 The 25 that went were second declarations of a class or a member that the library held already.
 
@@ -160,26 +160,28 @@ The compiler runs on the JVM under `--enable-preview`, started by the `bux` laun
 No native binary is needed to compile the compiler with itself.
 GraalVM native-image waits until GraalVM tracks JDK 28 and Valhalla, and section 12 holds it.
 
-The compiler lives in `compiler/`, one module for each phase, and the lexer is the first.
-`compiler/main.bx` is its command line, and `compiler/command.bx` holds every command.
+The compiler lives in `src/`, one module for each phase, and the lexer is the first.
+`src/main.bx` is its command line, and `src/command.bx` holds every command.
 A build writes every class under `target/`, in the directory of the module it builds.
-So a build of the compiler writes `compiler/target/`, and no class lands beside a source.
-`compiler/help/` and `compiler/explanations/` hold the help text and the long form of each code.
-`library/` at the root holds the library, and the compiler reads all three as resources.
+So a build of the compiler writes `src/target/`, and no class lands beside a source.
+`help/` and `explanations/` at the root hold the help text and the long form of each code.
+`library/` beside them holds the library, and the compiler reads all three as resources.
 A module there has a `.bx` name, and the module loader reads no other extension.
 A build copies the three from its own class path into `target/`, beside the classes it writes.
-The launcher `bin/bux` starts the compiler with `compiler/target/` alone on the class path.
+The launcher `bin/bux` starts the compiler with `src/target/` alone on the class path.
 Run `bin/bootstrap` after a change to a resource, because only it copies those of the checkout.
 
 What remains of the repository is small, and a JDK is the one tool it needs:
 
 ```text
-bin/        bootstrap, bux, and the seed seed.jar
-compiler/   the compiler, its help text, and its explanations
-library/    the standard library, read by the compiler as a resource
-tests/      the tests of the compiler, and tests/spec, the executable examples
-example/    the example program
-docs/       the specification, this document, and the behaviour specs
+bin/           bootstrap, bux, and the seed seed.jar
+src/           the compiler
+library/       the standard library, read by the compiler as a resource
+help/          the help text, read by the compiler as a resource
+explanations/  the long form of each code, read by the compiler as a resource
+tests/         the tests of the compiler, and tests/spec, the executable examples
+example/       the example program
+docs/          the specification, this document, and the behaviour specs
 ```
 
 ### The bootstrap
@@ -187,8 +189,8 @@ docs/       the specification, this document, and the behaviour specs
 The bootstrap has a seed and two stages, and `bin/bootstrap` runs them.
 The seed `bin/seed.jar` holds the classes of a compiler that an earlier compiler built.
 The seed runs from one temporary directory: the seed unpacked, with the resources of the checkout.
-The seed builds stage 1, the classes in `compiler/target/`.
-Stage 1 builds stage 2 from a copy of `compiler/` outside the repository.
+The seed builds stage 1, the classes in `src/target/`.
+Stage 1 builds stage 2 from a copy of `src/` outside the repository.
 Stage 2 must be stage 1 byte for byte, and `docs/specs/run.md` states the script.
 No class file other than the seed is kept in the repository, so a checkout bootstraps first.
 
@@ -231,7 +233,7 @@ The item packs stage 3 as the new seed.
 Item 082 did this when a name that never changes was first bound with `let`.
 In each case, `bin/bootstrap` must then hold stage 2 equal to stage 1 with the new seed.
 The item says so, and it replaces the seed in its own commit.
-The seed packs `compiler/target/` whole, and `bin/bootstrap` replaces its copies of the resources.
+The seed packs `src/target/` whole, and `bin/bootstrap` replaces its copies of the resources.
 
 The compiler should itself use strong typed representations for compiler phases.
 
@@ -253,7 +255,7 @@ ClassFile
 
 rather than one mutable AST that means different things at different stages.
 
-The last two phases are the lowering, `compiler/ir.bx`, and the writer, `compiler/jvm.bx`.
+The last two phases are the lowering, `src/ir.bx`, and the writer, `src/jvm.bx`.
 The lowering names a local by its name, a call by its function, and a type by its Bux type.
 So its tree has no field for a JVM class, a descriptor, a slot, or a `java/` string.
 The writer names each of them: it gives each local its slot and each call its descriptor.
@@ -282,7 +284,7 @@ Each check is a `test` block of the module that holds it:
 - `exemplified.bx`: every example under `tests/spec`, to its header and to canonical form.
 - `siblings.bx`: every sibling file, to the view of its phase: tokens, tree, surface, format.
 - `documented.bx`, `compiler_lines.bx`, and `spec_lines.bx`: every `// example:` line.
-  They hold `library/`, `compiler/`, and `tests/spec`, one place each.
+  They hold `library/`, `src/`, and `tests/spec`, one place each.
   They also run every `test` block of those modules, except the tests under `tests/spec/`.
 - One module for each phase, with a test for each drawn property of that phase.
 - `commanded.bx` and `fixtures.bx`: the command line, held to the golden answers.
@@ -345,7 +347,7 @@ Item 114 made each check a test, so `bux test` is the one runner, as every Bux p
 On 2026-09-24 `bin/runner` took 262 s, 211 s, and 147 s, and the median was 211 s.
 After Item 114, `bin/bux test tests` took 176 s, 118 s, and 118 s, and the median was 118 s.
 The runs of before and after took turns, under a load of 40 to 65 on 12 cores from other work.
-One module held every example line of `tests/spec`, `library/`, and `compiler/` at first.
+One module held every example line of `tests/spec`, `library/`, and `src/` at first.
 It took 91 s alone, so `compiler_lines.bx` and `spec_lines.bx` now hold two of those places.
 `fixtures.bx` holds the longest golden file, so it runs beside `commanded.bx` too.
 On 2026-09-23 `bin/runner` took 182 s before Item 093 and 97 s after it.
@@ -364,7 +366,7 @@ Item 110 compares them with one `diff -rq` over the two `target/` directories.
 On 2026-09-24 it compared 923 classes, and one `diff -rq` took 0.08 s.
 The median of three `bin/bootstrap` wall times was 7.6 s before Item 110 and 6.2 s after.
 The runs of before and after took turns, under a load of 11 to 12 on 12 cores from other work.
-On 2026-09-24 `bux build compiler/main.bx` took 18.8 s before Item 126 and 18.9 s after it.
+On 2026-09-24 `bux build src/main.bx` took 18.8 s before Item 126 and 18.9 s after it.
 Each is the median wall time of three runs that took turns, under a load of 54 to 68.
 The medians of processor time were 15.2 s and 17.5 s, but after built its own tree, which is larger.
 On the sources of before, the two compilers used 16.8 s and 16.9 s, the medians of three runs.
@@ -380,9 +382,9 @@ Loading is `lexer`, `parser`, `format`, `ast`, `modules`, and the rest of `comma
 Resolving is `resolver`, lowering is `ir`, and class writing is `jvm`, `bytes`, and disk writes.
 Typing is `declared`, `infer`, `unify`, `types`, `surface`, `exhaustiveness`, and `holes`.
 It is also `escapes`, `carried`, `boundary`, `refusal`, and `processes`.
-The job held the 25 modules of `compiler/`, and it staged 24 runs with the class path of the runner.
+The job held the 25 modules of `src/`, and it staged 24 runs with the class path of the runner.
 
-| Phase | Build of `compiler/main.bx` | Job over `compiler/` | Runner pass | `bux test tests` |
+| Phase | Build of `src/main.bx` | Job over `src/` | Runner pass | `bux test tests` |
 |-------|-----------------------------|----------------------|-------------|------------------|
 | Typing | 37%, 1.28 s | 22%, 2.4 s | 22% | 44% |
 | Loading | 26%, 0.89 s | 31%, 3.4 s | 28% | 30% |
@@ -539,7 +541,7 @@ Item 087 moved every Rust test to the runner, which Item 114 made the tests of `
 - The JVM verifier still reads each class that an `expect-run` example loads.
 - The load order of modules, and the checks of the Rust catalogue of diagnostic codes.
 - L0601 and the placements of L0602, which only `bux test` gives, and an example states `check`.
-- `check` and `api` on the modules of `compiler/`, which change with each compiler edit.
+- `check` and `api` on the modules of `src/`, which change with each compiler edit.
 - An empty file as an example, because an empty example teaches nothing.
 - Every program under `tests/spec` run under stage 2 and under the launcher, beside the Rust run.
 - A test runs each `expect-run` example on stage 1, and `bin/bootstrap` compares stage 2.

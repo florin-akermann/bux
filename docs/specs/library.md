@@ -36,7 +36,7 @@ A resource is a file in a directory of the class path the compiler was started w
 `library/<name>.bx` sits in such a directory: the `target/` that holds the compiler classes.
 Nothing is generated from the files, and nothing is copied into Bux source.
 
-`compiler/modules.bx` reads a library module without a class loader.
+`src/modules.bx` reads a library module without a class loader.
 It reads the property `java.class.path` and splits it at `java.io.File.pathSeparator`.
 Then it looks in each entry in order, with `files.read`, and the first file there is the resource.
 A class loader is a thing that `docs/specs/interop.md` refuses to every program, the compiler too.
@@ -303,7 +303,7 @@ Two equal values keep the order the list holds them in.
 It is a merge sort with `for` loops and `var`: each value is a run, and each pass merges two runs.
 So it costs time `n log n` for `n` values, and no function of it calls itself.
 It lands by the test above, because a reader wrote the loop twice.
-`compiler/command.bx` sorted the modules it imports, and `1brc/src/main.bx` sorts its stations.
+`src/command.bx` sorted the modules it imports, and `1brc/src/main.bx` sorts its stations.
 
 `strings` has a `length` and so does `list`, and neither of the two is a prelude name: one name
 has one definition, and a prelude holding both would break that.

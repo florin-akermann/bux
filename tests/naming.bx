@@ -1,6 +1,6 @@
 // The drawn properties of name resolution, which `docs/specs/modules.md` states.
 //
-// Each property draws a module from a fixed seed and resolves it with `compiler/resolver.bx`
+// Each property draws a module from a fixed seed and resolves it with `src/resolver.bx`
 // against the prelude the compiler carries. A failure names the seed and the module it drew.
 import ast
 import checking

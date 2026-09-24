@@ -63,7 +63,7 @@ There it binds nothing too, and `docs/specs/grammar.md` states it.
 
 ## The error
 
-A discarded value is `L0408`, raised by inference and worded by `compiler/refusal.bx`:
+A discarded value is `L0408`, raised by inference and worded by `src/refusal.bx`:
 
 ```text
 error[L0408]: `Result<(), Error>` is left here and nothing takes it

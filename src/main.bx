@@ -1,6 +1,6 @@
 // The `bux` command line, written in Bux: `bin/bux` starts it on a JVM.
 //
-// `compiler/command.bx` holds every command, because a module named `main` cannot be imported.
+// `src/command.bx` holds every command, because a module named `main` cannot be imported.
 // This file only writes the answer out.
 import command
 import io
