@@ -50,7 +50,8 @@ It writes the classes of its run into a directory made for that run alone, and t
 ## The archives on the class path
 
 A `jar` line of the manifest names a Java archive, which `docs/specs/packages.md` states.
-The class path of `bux run` and of `bux test` is the one `target/`, then the archives.
+The class path of `bux run` is the one `target/`, then the archives.
+The class path of `bux test` is the directory it writes its classes into, then the archives.
 The archives are in the order of their lines, and nothing else is on the class path.
 The archives of each dependency come after, in the order of the `depends` lines.
 Each dependency puts its own archives first and then those of its dependencies.

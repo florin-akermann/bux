@@ -302,7 +302,7 @@ It holds these parts, each in a module of its own under `tests/`:
 The runner splits the parts into jobs, and one pool process hands each job to a worker process.
 There is one worker for each processor that `Runtime.availableProcessors` gives.
 The examples are split into at most one job for each worker.
-The example lines are split so for each place: `tests/`, `compiler/`, `library/`, `tests/spec`.
+The example lines are split by place: `tests/`, `compiler/`, `library/`, `tests/spec`.
 A module of `tests/` or `compiler/` costs much more than one of `tests/spec`, so no job holds many.
 Before Item 103 one job held most modules of `tests/`, and it took 47 s of the 56 s of wall time.
 On 2026-09-24 the median of three `bin/runner` wall times was 56 s before Item 103 and 43 s after.
