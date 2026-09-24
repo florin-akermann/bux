@@ -2,7 +2,7 @@
 
 A process owns a state, and a message is the only way to that state.
 This spec states `process`, `spawn`, the handle, the mailbox, `send`, and `ended`.
-`docs/design.md` section 15 gives the reasons, and this spec gives the rules.
+`docs/design.md` section 15 gives the design, and `docs/rationale.md` section 15 the reasons.
 
 ## Intent
 

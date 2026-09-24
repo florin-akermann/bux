@@ -144,7 +144,7 @@ primary         = Name [ record_literal ] | Integer | String | "true" | "false"
                 | "(" ")" | "(" expression ")" | written_list | if | match
 written_list    = "[" [ expression { "," expression } ] "]"
 record_literal  = "{" [ field_value { "," field_value } ] "}"
-field_value     = Name ":" expression
+field_value     = Name [ ":" expression ]
 
 if              = "if" expression block [ "else" ( block | if ) ]
 match           = "match" expression "{" { match_arm } "}"
@@ -179,6 +179,11 @@ Which of the two forms a call may use is type inference's to say, in `docs/specs
 Brackets nest at most 32 deep, which no program a person or the formatter writes comes near.
 The budget is what makes "parsing never panics" true of generated input: the parser reports an
 error where it would otherwise recurse until the stack is gone.
+
+A field of a record literal is `name: value`, or a bare `name` that reads the binding of that name.
+The two are two forms, not one, as the forms of a pattern are in `docs/specs/patterns.md`.
+The update form `user { name }` is the same `record_literal` after a name, so it takes both forms.
+A bare name not in scope is refused as `name: name` is, with the same code, at the name.
 
 A record literal is not parsed where a block would follow an expression, as in Go.
 Those places are the condition of an `if`, the header of a `for`, and the scrutinee of a `match`.
@@ -244,7 +249,7 @@ A value is changed by building the one it becomes rather than by reaching inside
 `=` and `+=` are the whole of the rule, and the grammar above is what makes that so.
 `++`, `--`, `-=`, `*=`, `/=`, and `%=` are not in it, so each is `L0100` where it is written:
 the grammar expected an expression and the source wrote an operator.
-`docs/design.md` section 2 says why they are refused rather than deferred, and
+`docs/rationale.md` section 2 says why they are refused rather than deferred, and
 `docs/principles.md` question 9 is what a proposal for one has to answer.
 
 ## Executable examples

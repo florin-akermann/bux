@@ -20,24 +20,6 @@ It settles a `main` that reads no arguments the same way.
 [109][d] - `tests/spec/name_resolution/` shows each refusal.
 A drawn property holds that every name the compiler accepts is read at least once.
 
-## 🔴 Item 111: A profile says where a build and a runner pass spend their time
-Item 091 put the class writer on 1400 processes and measured no gain, because the guess was wrong.
-So the speed-up starts with a measurement, and every item after this one cites it.
-On 2026-09-24 a JVM that prints `bux help` took 0.12 s.
-`bux check compiler/main.bx` took 2.0 s to 2.8 s.
-`bux build compiler/main.bx` took 2.8 s to 3.3 s.
-The same build with `-XX:TieredStopAtLevel=1` took 4.2 s, so the time is work and not JIT waiting.
-A class data archive of the compiler's classes changed nothing, so class loading is not the cost.
-`bin/runner` took 62 s of wall time and 311 s of processor time, on 12 workers.
-Its jobs of example lines took 326 s of that, its command lines 44 s, its examples 18 s.
-[111][a] - JFR, which ships with the JDK, records one `bux build compiler/main.bx`.
-`docs/implementation.md` section 7 records the seconds of each phase, from the lexer to the writer.
-[111][b] - JFR records one job of example lines over the modules of `compiler/`.
-Section 7 records the seconds of typing, of lowering, of class writing, and of the JVM starts.
-[111][c] - Section 7 records how many JVMs one runner pass starts, and what one start costs.
-[111][d] - Each of Items 112 and 115 to 117 names the number of this profile it attacks.
-An item whose number is small is removed from `TODOS.md` rather than built.
-
 ## 🔴 Item 112: `bux test` runs the modules of a package on a pool of workers
 **Depends on:** Item 111 — the profile says what a module run spends on typing before it starts.
 Attacks: typing, 2.4 s of the 11.2 s that one job over `compiler/` compiles (section 7).
@@ -113,32 +95,6 @@ Item 091 measured the writer at 0.31 s, so it stays on one thread unless the pro
 [116][c] - A drawn property holds that a program lowered in a pool gives the classes of one thread.
 [116][d] - Section 7 records `bux build compiler/main.bx` and `bin/bootstrap` before and after.
 
-## 🔴 Item 117: A run of `bux test` writes only the classes its run adds
-**Depends on:** Item 111, Item 114 — the profile says what a run spends on its classes.
-Attacks: the writes to disk, 0.2 s of the 11.2 s that one job over `compiler/` compiles, 2%.
-Each run writes the classes of its whole import closure into a directory of its own.
-A run of a module of `tests/` writes about 900 classes, and 73 modules do so in one suite.
-`docs/implementation.md` section 7 says why one shared build is not correct.
-A run asks generics for types that no build asks for, and each lands in the class that declares it.
-The classes a run changes are those of the modules that declare an asked generic, and no other.
-[117][a] - `docs/specs/testing.md` states which classes a run shares with the run before it.
-[117][b] - A worker writes a class again only where its bytes differ from the last run it made.
-Each run still starts a JVM with a class path of its own.
-[117][c] - A property holds that the class path of a run holds every class its program reaches.
-[117][d] - Section 7 records the wall time of `bux test tests` before and after.
-
-## 🔴 Item 118: `docs/design.md` splits into rules and rationale
-`docs/design.md` is 1367 lines, and most of it argues with Erlang, Go, and Rust.
-Every agent session loads that text before it writes a line of Bux, and the arguments cost tokens.
-The sugar rule is stated in `AGENTS.md`, `docs/principles.md`, and `docs/design.md`.
-A rule is stated once, in the document that is the specification.
-A reason is opened only when a change to the rule is proposed.
-[118][a] - `docs/design.md` keeps every normative sentence and drops every comparison and defence.
-Each section keeps its number, so every `docs/specs/*.md` reference still lands.
-[118][b] - `docs/rationale.md` holds the reasons, one section per section of `docs/design.md`.
-[118][c] - `docs/principles.md` and `AGENTS.md` point at a rule instead of restating it.
-[118][d] - `AGENTS.md` says when an agent opens `docs/rationale.md`: to propose a language change.
-
 ## 🔴 Item 119: `bux fmt` repairs every order the compiler can compute
 `docs/specs/formatting.md` says that order is checked and never rewritten.
 Import order, the place of a test, and declaration order each have one answer the compiler knows.
@@ -159,7 +115,7 @@ Every name a module declares is public, so every helper is API, and every helper
 `compiler/exhaustiveness.bx` shows the cost.
 Five helpers exist only to keep the examples of other functions on one line.
 They are `said_in`, `found_printed`, `no_reading`, `no_space`, and `status_module`.
-`docs/design.md` section 11 says the `test` block was added to prevent that shape.
+`docs/rationale.md` section 11 says the `test` block was added to prevent that shape.
 One keyword is a smaller surface than the helpers it removes, and `bux api` lists less.
 [120][a] - `docs/design.md` sections 11 and 16 state `private` and narrow the example rule.
 [120][b] - `docs/specs/modules.md` states that a `private` name is reached only in its module.
@@ -170,18 +126,6 @@ A private function may state one, and `bux test` runs it.
 An import that reaches a private name is refused with a code and a help that names the module.
 [120][e] - `tests/spec/modules/` and `tests/spec/examples/` show the refusal and the exemption.
 [120][f] - The helpers of `compiler/exhaustiveness.bx` named above become `private` or tests.
-
-## 🔴 Item 122: Record construction puns a field as a pattern does
-A pattern writes `Authorized { authorization_id }`, and construction writes `User { id: id }`.
-That is two rules for one shape, and one of them costs a token per field.
-`docs/specs/patterns.md` says none of the pattern forms is a shorthand for another.
-Construction gets the same rule: `User { id }` and `User { id: id }` are two forms, not one.
-[122][a] - `docs/design.md` section 9 and `docs/specs/grammar.md` make `: expression` optional.
-A bare name reads the binding of that name, and a name not in scope is refused as it is now.
-[122][b] - `docs/specs/formatting.md` states that the formatter keeps the form the author wrote.
-[122][c] - The parser, formatter, resolver, and inference accept a bare field name.
-[122][d] - `tests/spec/parser/` and `tests/spec/format/` show both forms.
-A property holds that `User { id }` and `User { id: id }` type and lower alike.
 
 ## 🔴 Item 123: The profile prices specialization and counts the JVM starts of one suite
 **Depends on:** Item 111 — this item adds two numbers to the profile that item records.
