@@ -74,7 +74,7 @@ fn in_their_places(declaration: ast.ProcessDeclaration) -> Result<(), refusal.Ty
 /// The function at `index` of `declaration`, and whether it is called `wanted`.
 ///
 /// Where the process declares no function at `index`, the name is the process's own.
-// example: named_at(ast.ProcessDeclaration { name: ast.Name { text: "P", span: lexer.Span { start: 8, length: 1 } }, functions: [], span: lexer.Span { start: 0, length: 12 } }, 0, "start").name.text == "P"
+// example: named_at(ast.ProcessDeclaration { name: ast.Name { text: "P", span: lexer.Span { start: 8, length: 1 } }, functions: [], span: lexer.Span { start: 0, length: 12 }, visibility: ast.Public }, 0, "start").name.text == "P"
 fn named_at(declaration: ast.ProcessDeclaration, index: Int, wanted: String) -> Found {
     match list.at(declaration.functions, index) {
         Some(function) => Found { name: function.name, is_named: function.name.text == wanted }
@@ -212,7 +212,7 @@ fn holds_values(holding: escapes.Holding, called: String, held: List<Held>) -> R
 
 /// Each type a process holds, where it is written: what `start` takes, then the state, then the
 /// message.
-// example: list.length(each_held(declared.little_environment(), ast.ProcessDeclaration { name: ast.Name { text: "P", span: lexer.Span { start: 8, length: 1 } }, functions: [], span: lexer.Span { start: 0, length: 12 } })) == 2
+// example: list.length(each_held(declared.little_environment(), ast.ProcessDeclaration { name: ast.Name { text: "P", span: lexer.Span { start: 8, length: 1 } }, functions: [], span: lexer.Span { start: 0, length: 12 }, visibility: ast.Public })) == 2
 fn each_held(environment: declared.Environment, declaration: ast.ProcessDeclaration) -> List<Held> {
     let spawned = or(map.get(environment.values, declared.declared_at(environment, declaration.name)), unify.monomorphic(unify.Unit)).body
     let start = or(list.at(declaration.functions, 0), empty_function(declaration.name))
@@ -240,7 +240,7 @@ fn written_at(written: Option<ast.TypeRef>, name: ast.Name) -> lexer.Span {
 /// A function of no parameters and an empty body, named as the process is.
 // example: empty_function(ast.Name { text: "P", span: lexer.Span { start: 8, length: 1 } }).name.text == "P"
 fn empty_function(name: ast.Name) -> ast.FunctionDeclaration {
-    ast.FunctionDeclaration { name: name, type_parameters: [], parameters: [], result: None, body: ast.Block { statements: [], span: name.span }, span: name.span }
+    ast.FunctionDeclaration { name: name, type_parameters: [], parameters: [], result: None, body: ast.Block { statements: [], span: name.span }, span: name.span, visibility: ast.Public }
 }
 
 /// A parameter of no type, named as the function is.

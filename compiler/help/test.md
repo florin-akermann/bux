@@ -1,8 +1,8 @@
 Run the examples and the tests of a module, or of every module of a package.
 
-Every function a module declares at the top level states at least one example, and `bux test`
-runs them. An example is a line of the comment above the function, and it is Bux rather than
-prose:
+Every public function a module declares at the top level states at least one example, and
+`bux test` runs them. A `private` function may state one too. An example is a line of the
+comment above the function, and it is Bux rather than prose:
 
 ```text
 // Divides `total` among `people`, giving back nothing where there is nobody to divide among.

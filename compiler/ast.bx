@@ -99,9 +99,9 @@ fn takes_word(takes: Takes) -> String {
 }
 
 /// A trait, the one type it is written over, and each signature it declares.
-// example: trait_lines(TraitDeclaration { name: Name { text: "Eq", span: lexer.Span { start: 6, length: 2 } }, parameter: Name { text: "T", span: lexer.Span { start: 9, length: 1 } }, methods: [], span: lexer.Span { start: 0, length: 20 } }) == "trait Eq 0..20\n  type-parameter T 9..10\n"
+// example: trait_lines(TraitDeclaration { name: Name { text: "Eq", span: lexer.Span { start: 6, length: 2 } }, parameter: Name { text: "T", span: lexer.Span { start: 9, length: 1 } }, methods: [], span: lexer.Span { start: 0, length: 20 }, visibility: Public }) == "trait Eq 0..20\n  type-parameter T 9..10\n"
 fn trait_lines(declaration: TraitDeclaration) -> String {
-    var written = node(0, "trait " + declaration.name.text, declaration.span)
+    var written = node(0, written_before(visibility_word(declaration.visibility)) + "trait " + declaration.name.text, declaration.span)
     written += node(1, "type-parameter " + declaration.parameter.text, declaration.parameter.span)
     for method in declaration.methods {
         written += signature_lines(method)
@@ -133,9 +133,9 @@ fn instance_lines(declaration: InstanceDeclaration) -> String {
 }
 
 /// A process: its name, then each function it declares, one level in.
-// example: process_lines(ProcessDeclaration { name: Name { text: "Counter", span: lexer.Span { start: 8, length: 7 } }, functions: [], span: lexer.Span { start: 0, length: 19 } }) == "process Counter 0..19\n"
+// example: process_lines(ProcessDeclaration { name: Name { text: "Counter", span: lexer.Span { start: 8, length: 7 } }, functions: [], span: lexer.Span { start: 0, length: 19 }, visibility: Public }) == "process Counter 0..19\n"
 fn process_lines(declaration: ProcessDeclaration) -> String {
-    var written = node(0, "process " + declaration.name.text, declaration.span)
+    var written = node(0, written_before(visibility_word(declaration.visibility)) + "process " + declaration.name.text, declaration.span)
     for function in declaration.functions {
         written += function_lines(function, 1)
     }
@@ -153,9 +153,9 @@ fn derive_lines(declaration: DeriveDeclaration) -> String {
 }
 
 /// A type declaration: its name, its type parameters, and what it defines.
-// example: type_lines(TypeDeclaration { name: Name { text: "Id", span: lexer.Span { start: 5, length: 2 } }, parameters: [], definition: RecordType([]), span: lexer.Span { start: 0, length: 12 } }) == "type Id 0..12\n"
+// example: type_lines(TypeDeclaration { name: Name { text: "Id", span: lexer.Span { start: 5, length: 2 } }, parameters: [], definition: RecordType([]), span: lexer.Span { start: 0, length: 12 }, visibility: Public }) == "type Id 0..12\n"
 fn type_lines(declaration: TypeDeclaration) -> String {
-    var written = node(0, "type " + declaration.name.text, declaration.span)
+    var written = node(0, written_before(visibility_word(declaration.visibility)) + "type " + declaration.name.text, declaration.span)
     for parameter in declaration.parameters {
         written += node(1, "type-parameter " + parameter.text, parameter.span)
     }
@@ -170,16 +170,6 @@ fn definition_lines(definition: TypeDefinition) -> String {
         Variants(variants) => variant_lines(variants)
         Foreign { class, called } => node(1, "java " + written_before(called_word(called)) + class.text, class.span)
     }
-}
-
-/// A word and the blank after it, or nothing at all where the word is empty.
-// example: written_before("int") == "int "
-// example: written_before("") == ""
-fn written_before(word: String) -> String {
-    if word == "" {
-        return ""
-    }
-    word + " "
 }
 
 /// The word written before a foreign type's name, and `""` where it names an ordinary class.
@@ -234,9 +224,9 @@ fn field_lines(fields: List<RecordField>, depth: Int) -> String {
 }
 
 /// A function: its type parameters, its parameters, its result, and its body.
-// example: function_lines(FunctionDeclaration { name: Name { text: "go", span: lexer.Span { start: 3, length: 2 } }, type_parameters: [], parameters: [], result: None, body: Block { statements: [], span: lexer.Span { start: 8, length: 3 } }, span: lexer.Span { start: 0, length: 11 } }, 0) == "function go 0..11\n  block 8..11\n"
+// example: function_lines(FunctionDeclaration { name: Name { text: "go", span: lexer.Span { start: 3, length: 2 } }, type_parameters: [], parameters: [], result: None, body: Block { statements: [], span: lexer.Span { start: 8, length: 3 } }, span: lexer.Span { start: 0, length: 11 }, visibility: Public }, 0) == "function go 0..11\n  block 8..11\n"
 fn function_lines(declaration: FunctionDeclaration, depth: Int) -> String {
-    var written = node(depth, "function " + declaration.name.text, declaration.span)
+    var written = node(depth, written_before(visibility_word(declaration.visibility)) + "function " + declaration.name.text, declaration.span)
     for parameter in declaration.type_parameters {
         written += type_parameter_lines(parameter, depth + 1)
     }
@@ -245,6 +235,27 @@ fn function_lines(declaration: FunctionDeclaration, depth: Int) -> String {
     }
     written += result_lines(declaration.result, depth + 2)
     written + block_lines(declaration.body, depth + 1)
+}
+
+/// The word written before a declaration that keeps its name in its module, and `""` for one
+/// that every module reaches.
+// example: visibility_word(Private) == "private"
+// example: visibility_word(Public) == ""
+fn visibility_word(visibility: Visibility) -> String {
+    match visibility {
+        Public => ""
+        Private => "private"
+    }
+}
+
+/// A word and the blank after it, or nothing at all where the word is empty.
+// example: written_before("int") == "int "
+// example: written_before("") == ""
+fn written_before(word: String) -> String {
+    if word == "" {
+        return ""
+    }
+    word + " "
 }
 
 /// A parameter at `depth`, with `narrowed` before its name and its type one level in.
@@ -637,6 +648,28 @@ fn extent_of(declared: Item) -> lexer.Span {
     }
 }
 
+/// Whether `declared` is written `private`, which keeps its name in its module.
+// example: !is_kept(Import(ImportDeclaration { module: Name { text: "io", span: lexer.Span { start: 7, length: 2 } }, span: lexer.Span { start: 0, length: 9 } }))
+fn is_kept(declared: Item) -> Bool {
+    match declared {
+        Type(declaration) => is_private(declaration.visibility)
+        Trait(declaration) => is_private(declaration.visibility)
+        Function(declaration) => is_private(declaration.visibility)
+        Process(declaration) => is_private(declaration.visibility)
+        _ => false
+    }
+}
+
+/// Whether a name of `visibility` is reached only in its module.
+// example: is_private(Private)
+// example: !is_private(Public)
+fn is_private(visibility: Visibility) -> Bool {
+    match visibility {
+        Public => false
+        Private => true
+    }
+}
+
 /// Every test `program` states, in the order it writes them.
 // example: list.length(tests_of(Program { items: [] })) == 0
 fn tests_of(program: Program) -> List<TestDeclaration> {
@@ -684,6 +717,7 @@ type ProcessDeclaration = {
     name: Name
     functions: List<FunctionDeclaration>
     span: lexer.Span
+    visibility: Visibility
 }
 
 /// `extern static read_string(path: Path) -> String = "java.nio.file.Files.readString"`.
@@ -741,6 +775,7 @@ type TypeDeclaration = {
     parameters: List<Name>
     definition: TypeDefinition
     span: lexer.Span
+    visibility: Visibility
 }
 
 /// What a type declaration declares: a record, one or more variants, or a Java class.
@@ -783,6 +818,7 @@ type TraitDeclaration = {
     parameter: Name
     methods: List<Signature>
     span: lexer.Span
+    visibility: Visibility
 }
 
 /// One method a trait declares: a function's first line, with no body to go with it.
@@ -811,7 +847,16 @@ type FunctionDeclaration = {
     result: Option<TypeRef>
     body: Block
     span: lexer.Span
+    visibility: Visibility
 }
+
+/// Who reaches a declared name: every module that imports its module, or its module alone.
+///
+/// Only a function, a type, a trait, and a process of the top level is written `private`; every
+/// other declaration is `Public`.
+type Visibility =
+    | Public
+    | Private
 
 /// `T`, or `T: Eq<T> + Hash<T>`: a type parameter, with what it may be asked to do.
 type TypeParameter = {

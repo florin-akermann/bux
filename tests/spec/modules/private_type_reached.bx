@@ -1,0 +1,9 @@
+// expect-error: L0322
+// `Mood` is a `private` type of `kept`, so no other module writes its name.
+import kept
+
+// example: named(mood: kept.glad()) == "a mood"
+fn named(mood: kept.Mood) -> String {
+    _ = mood
+    "a mood"
+}

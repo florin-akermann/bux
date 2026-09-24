@@ -432,6 +432,54 @@ fn function_name_of(item: ast.Item) -> List<ast.Name> {
     }
 }
 
+/// Each name `program` keeps in its module: a `private` function, process, type, and trait, and
+/// each constructor of a `private` type, in written order.
+// example: kept_by(first_program("private type Shape =\n    | Dot\n    | Line\n")) == [surface.KeptType("Shape"), surface.KeptValue("Dot"), surface.KeptValue("Line")]
+// example: list.length(kept_by(first_program("fn f() -> Int {\n    1\n}\n"))) == 0
+fn kept_by(program: ast.Program) -> List<surface.KeptName> {
+    var kept = []
+    for item in program.items {
+        if ast.is_kept(item) {
+            kept = with_names_of(kept, item)
+        }
+    }
+    kept
+}
+
+/// `kept`, with the name `item` declares after it, and each constructor where it is a type.
+// example: with_names_of([], first_item("fn f() -> Int {\n    1\n}\n")) == [surface.KeptValue("f")]
+fn with_names_of(kept: List<surface.KeptName>, item: ast.Item) -> List<surface.KeptName> {
+    match item {
+        ast.Type(declaration) => with_constructors(list.push(kept, surface.KeptType(declaration.name.text)), declaration)
+        ast.Trait(declaration) => list.push(kept, surface.KeptType(declaration.name.text))
+        ast.Function(declaration) => list.push(kept, surface.KeptValue(declaration.name.text))
+        ast.Process(declaration) => list.push(kept, surface.KeptValue(declaration.name.text))
+        _ => kept
+    }
+}
+
+/// `kept`, with the name of each constructor `declaration` declares after it.
+///
+/// A record type is built through its own name, which is then a value too.
+// example: with_constructors([], first_type("type Point = {\n    across: Int\n}\n")) == [surface.KeptValue("Point")]
+fn with_constructors(kept: List<surface.KeptName>, declaration: ast.TypeDeclaration) -> List<surface.KeptName> {
+    match declaration.definition {
+        ast.RecordType(_) => list.push(kept, surface.KeptValue(declaration.name.text))
+        ast.Variants(variants) => with_variants(kept, variants)
+        ast.Foreign {} => kept
+    }
+}
+
+/// `kept`, with the name of each of `variants` after it.
+// example: list.length(with_variants([surface.KeptType("Shape")], [])) == 1
+fn with_variants(kept: List<surface.KeptName>, variants: List<ast.Variant>) -> List<surface.KeptName> {
+    var named = kept
+    for variant in variants {
+        named = list.push(named, surface.KeptValue(variant.name.text))
+    }
+    named
+}
+
 /// What `source` declares against the small prelude, as the code and span of its refusal.
 ///
 /// It is `""` where the source declares what it writes, and `unresolved` where resolution refuses.
@@ -539,7 +587,7 @@ fn process_declared(declaring: Declaring, resolved: resolver.Resolved, declarati
 }
 
 /// The type of the function `named` that a process declares, and `()` where it declares none.
-// example: process_function_type(empty_environment(WhereWritten), ast.ProcessDeclaration { name: ast.Name { text: "P", span: lexer.Span { start: 8, length: 1 } }, functions: [], span: lexer.Span { start: 0, length: 12 } }, "start") == unify.Unit
+// example: process_function_type(empty_environment(WhereWritten), ast.ProcessDeclaration { name: ast.Name { text: "P", span: lexer.Span { start: 8, length: 1 } }, functions: [], span: lexer.Span { start: 0, length: 12 }, visibility: ast.Public }, "start") == unify.Unit
 fn process_function_type(environment: Environment, declaration: ast.ProcessDeclaration, named: String) -> unify.Type {
     match map.get(environment.values, declared_at(environment, process_function_name(declaration, named))) {
         Some(scheme) => scheme.body
@@ -549,7 +597,7 @@ fn process_function_type(environment: Environment, declaration: ast.ProcessDecla
 
 /// The name of the function `named` that a process declares, and the name of the process where
 /// it declares none.
-// example: process_function_name(ast.ProcessDeclaration { name: ast.Name { text: "P", span: lexer.Span { start: 8, length: 1 } }, functions: [], span: lexer.Span { start: 0, length: 12 } }, "start").text == "P"
+// example: process_function_name(ast.ProcessDeclaration { name: ast.Name { text: "P", span: lexer.Span { start: 8, length: 1 } }, functions: [], span: lexer.Span { start: 0, length: 12 }, visibility: ast.Public }, "start").text == "P"
 fn process_function_name(declaration: ast.ProcessDeclaration, named: String) -> ast.Name {
     for function in declaration.functions {
         if function.name.text == named {
@@ -926,6 +974,12 @@ fn foreign_noted(environment: Environment, foreign: ForeignType) -> Environment 
 fn with_archived(environment: Environment, archived: set.Set<String>) -> Environment {
     let accounting = environment.accounting
     environment { accounting: accounting { archived: archived } }
+}
+
+/// The environment checked against the names other modules keep, each written as `module.Name`.
+// example: refusal.code_given(value_reachable(with_kept(empty_environment(WhereWritten), set.insert(set.empty(), surface.KeptValue("demo.helper"))), "demo", ast.Name { text: "helper", span: lexer.Span { start: 5, length: 6 } })) == "L0322 5..11"
+fn with_kept(environment: Environment, kept: set.Set<surface.KeptName>) -> Environment {
+    environment { kept: kept }
 }
 
 /// Every trait the module declares, which an instance below it is read against.
@@ -1312,10 +1366,34 @@ fn types_written(environment: Environment, resolved: resolver.Resolved, types: L
 // example: refusal.code_given(reached_written(empty_environment(WhereWritten), ast.Path { module: Some(ast.Name { text: "io", span: lexer.Span { start: 0, length: 2 } }), name: ast.Name { text: "File", span: lexer.Span { start: 3, length: 4 } } }, [])) == "L0414 0..7"
 fn reached_written(environment: Environment, path: ast.Path, held: List<unify.Type>) -> Result<unify.Type, refusal.TypeError> {
     let written_one = written_name(path)
+    _ = type_reachable(environment, module_text(path), path.name)?
     match map.get(environment.arities, written_one.text) {
         Some(takes) => counted_named(written_one, takes, held)
         None => Err(refusal.TypeError { kind: refusal.NotInModule { module: module_text(path), name: path.name.text }, span: written_one.span })
     }
+}
+
+/// Nothing where the module `module` offers the type or the trait `name`, and the refusal at
+/// `name` where it keeps it.
+// example: refusal.code_given(type_reachable(with_kept(empty_environment(WhereWritten), set.insert(set.empty(), surface.KeptValue("demo.Box"))), "demo", ast.Name { text: "Box", span: lexer.Span { start: 5, length: 3 } })) == ""
+fn type_reachable(environment: Environment, module: String, name: ast.Name) -> Result<(), refusal.TypeError> {
+    reachable(environment, surface.KeptType(module + "." + name.text), module, name)
+}
+
+/// Nothing where the module `module` offers the function, the process, or the constructor
+/// `name`, and the refusal at `name` where it keeps it.
+// example: refusal.code_given(value_reachable(empty_environment(WhereWritten), "demo", ast.Name { text: "helper", span: lexer.Span { start: 5, length: 6 } })) == ""
+fn value_reachable(environment: Environment, module: String, name: ast.Name) -> Result<(), refusal.TypeError> {
+    reachable(environment, surface.KeptValue(module + "." + name.text), module, name)
+}
+
+/// Nothing where `kept` is no name another module keeps, and the refusal at `name` where it is.
+// example: refusal.code_given(reachable(empty_environment(WhereWritten), surface.KeptType("demo.Box"), "demo", ast.Name { text: "Box", span: lexer.Span { start: 5, length: 3 } })) == ""
+fn reachable(environment: Environment, kept: surface.KeptName, module: String, name: ast.Name) -> Result<(), refusal.TypeError> {
+    if set.has_value(environment.kept, kept) {
+        return Err(refusal.TypeError { kind: refusal.KeptInModule { module: module, name: name.text }, span: name.span })
+    }
+    Ok(())
 }
 
 /// The name a path is written as, which runs from the module through the name.
@@ -1529,7 +1607,7 @@ fn todo_scheme() -> unify.Scheme {
 /// An environment that files nothing yet.
 // example: !has_value(empty_environment(ByName), "todo")
 fn empty_environment(keyed: Keyed) -> Environment {
-    Environment { keyed: keyed, values: map.empty(), labels: map.empty(), records: map.empty(), arities: map.empty(), methods: map.empty(), instances: map.empty(), holds: map.empty(), written_at: set.empty(), written_as: map.empty(), declares: map.empty(), declared: map.empty(), foreign: map.empty(), accounting: boundary.no_accounting(), traits: set.empty() }
+    Environment { keyed: keyed, values: map.empty(), labels: map.empty(), records: map.empty(), arities: map.empty(), methods: map.empty(), instances: map.empty(), holds: map.empty(), written_at: set.empty(), written_as: map.empty(), declares: map.empty(), declared: map.empty(), foreign: map.empty(), accounting: boundary.no_accounting(), traits: set.empty(), kept: set.empty() }
 }
 
 /// The small prelude, resolved as the prelude.
@@ -1555,7 +1633,7 @@ fn first_type(source: String) -> ast.TypeDeclaration {
     for declaration in type_of_item(first_item(source)) {
         return declaration
     }
-    ast.TypeDeclaration { name: ast.Name { text: "", span: lexer.Span { start: 0, length: 0 } }, parameters: [], definition: ast.RecordType([]), span: lexer.Span { start: 0, length: 0 } }
+    ast.TypeDeclaration { name: ast.Name { text: "", span: lexer.Span { start: 0, length: 0 } }, parameters: [], definition: ast.RecordType([]), span: lexer.Span { start: 0, length: 0 }, visibility: ast.Public }
 }
 
 /// The type an item declares, as a list of one, or none.
@@ -1619,6 +1697,7 @@ type Declaring = {
 ///
 /// A name is filed under where it is declared, `@` and the offset, or under its spelling for a
 /// prelude name, or as `module.Name` for a name another module declares.
+/// `kept` holds each name another module declares `private`, as `module.Name`.
 type Environment = {
     keyed: Keyed
     values: map.Map<String, unify.Scheme>
@@ -1635,6 +1714,7 @@ type Environment = {
     foreign: map.Map<String, ast.Called>
     accounting: boundary.Accounting
     traits: set.Set<String>
+    kept: set.Set<surface.KeptName>
 }
 
 /// An extern type: its name, the Java class it names, and how that class is called.

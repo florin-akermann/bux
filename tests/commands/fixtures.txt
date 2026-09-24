@@ -18023,3 +18023,393 @@ status 0
 
 $ build tests/spec/io/part_read.bx
 status 0
+
+$ check tests/spec/api/kept.bx
+status 0
+
+$ check --json tests/spec/api/kept.bx
+status 0
+
+$ api tests/spec/api/kept.bx
+status 0
+> fn sized(count: Int) -> Int
+>
+> type Shape =
+>     | Dot
+>     | Line(Int)
+
+$ test tests/spec/api/kept.bx
+status 0
+
+$ fmt tests/spec/api/kept.bx
+status 0
+
+$ build tests/spec/api/kept.bx
+status 0
+
+$ check tests/spec/api/namesakes.bx
+status 0
+
+$ check --json tests/spec/api/namesakes.bx
+status 0
+
+$ api tests/spec/api/namesakes.bx
+status 0
+> fn sized(size: Box) -> Int
+>
+> instance Eq<Box>
+>
+> type Box =
+>     | Small
+>     | Large
+
+$ test tests/spec/api/namesakes.bx
+status 0
+
+$ fmt tests/spec/api/namesakes.bx
+status 0
+
+$ build tests/spec/api/namesakes.bx
+status 0
+
+$ check tests/spec/examples/kept_unstated.bx
+status 0
+
+$ check --json tests/spec/examples/kept_unstated.bx
+status 0
+
+$ api tests/spec/examples/kept_unstated.bx
+status 0
+> fn doubled(count: Int) -> Int
+
+$ test tests/spec/examples/kept_unstated.bx
+status 0
+
+$ fmt tests/spec/examples/kept_unstated.bx
+status 0
+
+$ build tests/spec/examples/kept_unstated.bx
+status 0
+
+$ check tests/spec/format/private.bx
+status 0
+
+$ check --json tests/spec/format/private.bx
+status 0
+
+$ api tests/spec/format/private.bx
+status 0
+> fn shown_twice(count: Int) -> String
+
+$ test tests/spec/format/private.bx
+status 0
+
+$ fmt tests/spec/format/private.bx
+status 0
+
+$ build tests/spec/format/private.bx
+status 0
+
+$ check tests/spec/modules/kept.bx
+status 0
+
+$ check --json tests/spec/modules/kept.bx
+status 0
+
+$ api tests/spec/modules/kept.bx
+status 0
+> fn greeted(name: String) -> String
+>
+> fn said(mood: Mood) -> String
+>
+> fn glad() -> Mood
+
+$ test tests/spec/modules/kept.bx
+status 0
+
+$ fmt tests/spec/modules/kept.bx
+status 0
+
+$ build tests/spec/modules/kept.bx
+status 0
+
+$ check tests/spec/modules/kept_reached.bx
+status 0
+
+$ check --json tests/spec/modules/kept_reached.bx
+status 0
+
+$ api tests/spec/modules/kept_reached.bx
+status 0
+> fn main(arguments: List<String>) -> Int
+
+$ test tests/spec/modules/kept_reached.bx
+status 0
+
+$ fmt tests/spec/modules/kept_reached.bx
+status 0
+
+$ build tests/spec/modules/kept_reached.bx
+status 0
+
+$ check tests/spec/modules/namesakes.bx
+status 0
+
+$ check --json tests/spec/modules/namesakes.bx
+status 0
+
+$ api tests/spec/modules/namesakes.bx
+status 0
+> fn sized(size: Box) -> String
+>
+> fn unpacked(packed: Packed) -> String
+>
+> type Box =
+>     | Small
+>     | Large
+>
+> type Packed = Tray(String)
+
+$ test tests/spec/modules/namesakes.bx
+status 0
+
+$ fmt tests/spec/modules/namesakes.bx
+status 0
+
+$ build tests/spec/modules/namesakes.bx
+status 0
+
+$ check tests/spec/modules/namesakes_reached.bx
+status 0
+
+$ check --json tests/spec/modules/namesakes_reached.bx
+status 0
+
+$ api tests/spec/modules/namesakes_reached.bx
+status 0
+> fn main(arguments: List<String>) -> Int
+>
+> fn largest() -> namesakes.Box
+
+$ test tests/spec/modules/namesakes_reached.bx
+status 0
+
+$ fmt tests/spec/modules/namesakes_reached.bx
+status 0
+
+$ build tests/spec/modules/namesakes_reached.bx
+status 0
+
+$ check tests/spec/modules/private_function_reached.bx
+status 1
+! error[L0322]: `opening` is private to `kept`
+!   --> tests/spec/modules/private_function_reached.bx:7:10
+!
+!   7 |     kept.opening()
+!     |          ^^^^^^^
+!
+! help: a private name is reached only in `kept`, the module that declares it
+
+$ check --json tests/spec/modules/private_function_reached.bx
+status 1
+> {"file":"tests/spec/modules/private_function_reached.bx","code":"L0322","message":"`opening` is private to `kept`","span":{"start":182,"len":7},"help":"a private name is reached only in `kept`, the module that declares it"}
+
+$ api tests/spec/modules/private_function_reached.bx
+status 1
+! error[L0322]: `opening` is private to `kept`
+!   --> tests/spec/modules/private_function_reached.bx:7:10
+!
+!   7 |     kept.opening()
+!     |          ^^^^^^^
+!
+! help: a private name is reached only in `kept`, the module that declares it
+
+$ test tests/spec/modules/private_function_reached.bx
+status 1
+! error[L0322]: `opening` is private to `kept`
+!   --> tests/spec/modules/private_function_reached.bx:7:10
+!
+!   7 |     kept.opening()
+!     |          ^^^^^^^
+!
+! help: a private name is reached only in `kept`, the module that declares it
+
+$ fmt tests/spec/modules/private_function_reached.bx
+status 0
+
+$ build tests/spec/modules/private_function_reached.bx
+status 1
+! error[L0322]: `opening` is private to `kept`
+!   --> tests/spec/modules/private_function_reached.bx:7:10
+!
+!   7 |     kept.opening()
+!     |          ^^^^^^^
+!
+! help: a private name is reached only in `kept`, the module that declares it
+
+$ check tests/spec/modules/private_type_reached.bx
+status 1
+! error[L0322]: `Mood` is private to `kept`
+!   --> tests/spec/modules/private_type_reached.bx:6:21
+!
+!   6 | fn named(mood: kept.Mood) -> String {
+!     |                     ^^^^
+!
+! help: a private name is reached only in `kept`, the module that declares it
+
+$ check --json tests/spec/modules/private_type_reached.bx
+status 1
+> {"file":"tests/spec/modules/private_type_reached.bx","code":"L0322","message":"`Mood` is private to `kept`","span":{"start":182,"len":4},"help":"a private name is reached only in `kept`, the module that declares it"}
+
+$ api tests/spec/modules/private_type_reached.bx
+status 1
+! error[L0322]: `Mood` is private to `kept`
+!   --> tests/spec/modules/private_type_reached.bx:6:21
+!
+!   6 | fn named(mood: kept.Mood) -> String {
+!     |                     ^^^^
+!
+! help: a private name is reached only in `kept`, the module that declares it
+
+$ test tests/spec/modules/private_type_reached.bx
+status 1
+! error[L0322]: `Mood` is private to `kept`
+!   --> tests/spec/modules/private_type_reached.bx:6:21
+!
+!   6 | fn named(mood: kept.Mood) -> String {
+!     |                     ^^^^
+!
+! help: a private name is reached only in `kept`, the module that declares it
+
+$ fmt tests/spec/modules/private_type_reached.bx
+status 0
+
+$ build tests/spec/modules/private_type_reached.bx
+status 1
+! error[L0322]: `Mood` is private to `kept`
+!   --> tests/spec/modules/private_type_reached.bx:6:21
+!
+!   6 | fn named(mood: kept.Mood) -> String {
+!     |                     ^^^^
+!
+! help: a private name is reached only in `kept`, the module that declares it
+
+$ check tests/spec/modules/private_variant_reached.bx
+status 1
+! error[L0322]: `Low` is private to `kept`
+!   --> tests/spec/modules/private_variant_reached.bx:7:20
+!
+!   7 |     kept.said(kept.Low)
+!     |                    ^^^
+!
+! help: a private name is reached only in `kept`, the module that declares it
+
+$ check --json tests/spec/modules/private_variant_reached.bx
+status 1
+> {"file":"tests/spec/modules/private_variant_reached.bx","code":"L0322","message":"`Low` is private to `kept`","span":{"start":199,"len":3},"help":"a private name is reached only in `kept`, the module that declares it"}
+
+$ api tests/spec/modules/private_variant_reached.bx
+status 1
+! error[L0322]: `Low` is private to `kept`
+!   --> tests/spec/modules/private_variant_reached.bx:7:20
+!
+!   7 |     kept.said(kept.Low)
+!     |                    ^^^
+!
+! help: a private name is reached only in `kept`, the module that declares it
+
+$ test tests/spec/modules/private_variant_reached.bx
+status 1
+! error[L0322]: `Low` is private to `kept`
+!   --> tests/spec/modules/private_variant_reached.bx:7:20
+!
+!   7 |     kept.said(kept.Low)
+!     |                    ^^^
+!
+! help: a private name is reached only in `kept`, the module that declares it
+
+$ fmt tests/spec/modules/private_variant_reached.bx
+status 0
+
+$ build tests/spec/modules/private_variant_reached.bx
+status 1
+! error[L0322]: `Low` is private to `kept`
+!   --> tests/spec/modules/private_variant_reached.bx:7:20
+!
+!   7 |     kept.said(kept.Low)
+!     |                    ^^^
+!
+! help: a private name is reached only in `kept`, the module that declares it
+
+$ check tests/spec/parser/private_declarations.bx
+status 0
+
+$ check --json tests/spec/parser/private_declarations.bx
+status 0
+
+$ api tests/spec/parser/private_declarations.bx
+status 0
+> fn count_of(tally: Tally) -> Int
+
+$ test tests/spec/parser/private_declarations.bx
+status 0
+
+$ fmt tests/spec/parser/private_declarations.bx
+status 0
+
+$ build tests/spec/parser/private_declarations.bx
+status 0
+
+$ check tests/spec/parser/private_instance.bx
+status 1
+! error[L0100]: expected a function, a type, a trait, or a process, found `instance`
+!   --> tests/spec/parser/private_instance.bx:4:9
+!
+!   4 | private instance Show<Box> {
+!     |         ^^^^^^^^
+!
+! help: `private` keeps a name in its module, and only these four declare a name that another module reaches
+
+$ check --json tests/spec/parser/private_instance.bx
+status 1
+> {"file":"tests/spec/parser/private_instance.bx","code":"L0100","message":"expected a function, a type, a trait, or a process, found `instance`","span":{"start":192,"len":8},"help":"`private` keeps a name in its module, and only these four declare a name that another module reaches"}
+
+$ api tests/spec/parser/private_instance.bx
+status 1
+! error[L0100]: expected a function, a type, a trait, or a process, found `instance`
+!   --> tests/spec/parser/private_instance.bx:4:9
+!
+!   4 | private instance Show<Box> {
+!     |         ^^^^^^^^
+!
+! help: `private` keeps a name in its module, and only these four declare a name that another module reaches
+
+$ test tests/spec/parser/private_instance.bx
+status 1
+! error[L0100]: expected a function, a type, a trait, or a process, found `instance`
+!   --> tests/spec/parser/private_instance.bx:4:9
+!
+!   4 | private instance Show<Box> {
+!     |         ^^^^^^^^
+!
+! help: `private` keeps a name in its module, and only these four declare a name that another module reaches
+
+$ fmt tests/spec/parser/private_instance.bx
+status 1
+! error[L0100]: expected a function, a type, a trait, or a process, found `instance`
+!   --> tests/spec/parser/private_instance.bx:4:9
+!
+!   4 | private instance Show<Box> {
+!     |         ^^^^^^^^
+!
+! help: `private` keeps a name in its module, and only these four declare a name that another module reaches
+
+$ build tests/spec/parser/private_instance.bx
+status 1
+! error[L0100]: expected a function, a type, a trait, or a process, found `instance`
+!   --> tests/spec/parser/private_instance.bx:4:9
+!
+!   4 | private instance Show<Box> {
+!     |         ^^^^^^^^
+!
+! help: `private` keeps a name in its module, and only these four declare a name that another module reaches

@@ -118,6 +118,7 @@ Name resolution raises these, in `compiler/resolver.bx`:
 - `L0319` — two tests of one module have the same name.
 - `L0320` — an import is read by nothing.
 - `L0321` — a binding or a parameter is read by nothing.
+- `L0322` — another module reaches a name that its module declares `private`.
 
 Loading raises these, in `compiler/modules.bx`, before any module is resolved:
 
@@ -166,6 +167,7 @@ Type inference raises these, and `compiler/refusal.bx` words them:
 
 `compiler/escapes.bx` decides `L0435` after inference, because a call is read at its settled type.
 `compiler/types.bx` decides `L0436` after inference, so its help spells the settled signature.
+`compiler/declared.bx` decides `L0322` in inference, where a name of another module is reached.
 
 Exhaustiveness raises these, in `compiler/exhaustiveness.bx`:
 
@@ -178,7 +180,7 @@ Exhaustiveness raises these, in `compiler/exhaustiveness.bx`:
 
 `bux build`, `bux run`, and `bux test` raise these, in `compiler/command.bx`:
 
-- `L0601` — a function a module declares at the top level states no example.
+- `L0601` — a public function a module declares at the top level states no example.
 - `L0602` — an example is written where nothing carries one.
 
 `bux test` raises these alone, in `compiler/command.bx`:

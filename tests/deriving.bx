@@ -236,7 +236,7 @@ fn signature_of(of: ast.InstanceDeclaration, traits: List<ast.TraitDeclaration>,
 }
 
 /// The signature `declaration` gives the method called `method`, where it declares one.
-// example: signature_text(signature: method_named(declaration: ast.TraitDeclaration { name: named("Eq"), parameter: named("T"), methods: [], span: nowhere() }, method: "is_equal"), standing: Standing { parameter: "T", settled: "Int" }) == "no signature"
+// example: signature_text(signature: method_named(declaration: ast.TraitDeclaration { name: named("Eq"), parameter: named("T"), methods: [], span: nowhere(), visibility: ast.Public }, method: "is_equal"), standing: Standing { parameter: "T", settled: "Int" }) == "no signature"
 fn method_named(declaration: ast.TraitDeclaration, method: String) -> Option<ast.Signature> {
     for one in declaration.methods {
         if one.name.text == method {
@@ -325,7 +325,7 @@ fn applied(name: String, arguments: List<ast.TypeRef>, standing: Standing) -> St
 ///
 /// Every method the prelude writes leaves one expression, so where one does not, the stretch is
 /// the method's name, which has the signature's type and not the value's.
-// example: leaves(ast.FunctionDeclaration { name: named("f"), type_parameters: [], parameters: [], result: None, body: ast.Block { statements: [], span: nowhere() }, span: nowhere() }).start == -1
+// example: leaves(ast.FunctionDeclaration { name: named("f"), type_parameters: [], parameters: [], result: None, body: ast.Block { statements: [], span: nowhere() }, span: nowhere(), visibility: ast.Public }).start == -1
 fn leaves(method: ast.FunctionDeclaration) -> lexer.Span {
     let last = list.at(method.body.statements, list.length(method.body.statements) - 1)
     match last {

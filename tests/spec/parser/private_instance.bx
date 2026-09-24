@@ -1,0 +1,10 @@
+// expect-error: L0100
+// `private` comes before a function, a type, a trait, or a process.
+// An instance declares no name that another module could reach, so it has nothing to keep.
+private instance Show<Box> {
+    fn shown(value: Box) -> String {
+        "box"
+    }
+}
+
+type Box = Box

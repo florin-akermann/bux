@@ -83,6 +83,8 @@ A **function** is `fn name<T>(a: A, b: B) -> R`, then its block.
 A parameter that omits its type is kept as the bare name, and an omitted result stays omitted.
 The formatter writes no type in; the type phase refuses the omission with `L0436`.
 
+A **private** declaration is `private`, one space, and then the declaration as usual.
+
 A **block** opens with `{` at the end of the line that heads it, writes one statement per line one
 level in, and closes with `}` alone at that head line's level.
 A block with no statements still spans those two lines.

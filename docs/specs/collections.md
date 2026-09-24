@@ -39,8 +39,9 @@ declare only one of them.
 The type is reached through the module too: `map.Map<String, Int>` is what `ages` above is, and
 `set.Set<Int>` is what a set of whole numbers is.
 
-Every name a module declares is public, which `docs/specs/modules.md` states, so the variants a
-map is made of are writable as well: `map.Empty`, `map.Leaf`, and `map.Branch`.
+A name a module declares is public unless it is written `private`, which `docs/specs/modules.md`
+states, and `map` keeps none, so the variants a map is made of are writable as well:
+`map.Empty`, `map.Leaf`, and `map.Branch`.
 A map written out of those by hand is a map, and `get` reads it exactly as the trie below says it
 does: it is read by the hash of the key it is asked for, and not by the order anything was
 written in.

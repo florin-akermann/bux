@@ -1,0 +1,9 @@
+// Canonical form writes `private` before the declaration keyword, with one space between them.
+// example: shown_twice(2) == "2 and 2"
+fn shown_twice(count: Int) -> String {
+    joined(one: shown(count), other: shown(count))
+}
+
+private    fn joined(one: String, other: String) -> String {
+    one + " and " + other
+}

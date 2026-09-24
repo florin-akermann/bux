@@ -173,11 +173,16 @@ Nothing is given up: the one place such a parameter can be written is the one pl
 
 A program already knows what it is, so its name is not one of its arguments.
 
-### Every function carries an example
+### Every public function carries an example
 
 A signature says what a function takes and gives back, and says nothing about what it does.
 Prose says that and drifts, because nothing runs prose.
 An example says it so the compiler can hold the function to it, and a stale one is a failing test.
+
+A private function is reached only by the functions of its module.
+The examples of those functions run it, so it is held without an example of its own.
+Without `private`, a helper stated an example, and more helpers kept that example on one line.
+Item 120 found five such helpers in `compiler/exhaustiveness.bx`, and each was a public name.
 
 ### A test states what one line cannot
 
@@ -292,7 +297,11 @@ A network call fails where a local `send` does not, and one name for both hides 
 
 ## 16. Modules and names
 
-A module is one file and a file is small, so a private declaration waits for a case that needs one.
+A module is one file and a file is small, so `private` is one keyword and not a system of scopes.
+A helper that only its module calls was a public name before Item 120.
+So `bux api` listed it, another module could come to depend on it, and it had to state an example.
+One keyword is a smaller surface than the helpers the example rule made authors write.
+`private` goes before a declaration that has a name, because a name is what another module reaches.
 
 A reader who meets `io.print` knows where to look without knowing what else the file imports.
 An unqualified import would take that away.

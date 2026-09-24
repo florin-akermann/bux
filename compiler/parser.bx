@@ -73,7 +73,51 @@ fn item(cursor: Cursor) -> Result<Parsed<ast.Item>, ParseError> {
     if is_at_keyword(cursor, lexer.Test) {
         return test_item(cursor)
     }
+    if is_at_keyword(cursor, lexer.Private) {
+        return private_item(cursor)
+    }
     Err(error(cursor, ItemWanted))
+}
+
+/// `private` and the declaration it keeps in its module, whose span runs from `private` on.
+// example: item_printed(private_item(over("private type Id = Id(Int)"))) == "private type Id 0..25\n  variant Id 18..25\n    named-type Int 21..24\n"
+// example: failed(private_item(over("private import io"))) == "8..14 expected a function, a type, a trait, or a process, found `import`\nhelp: `private` keeps a name in its module, and only these four declare a name that another module reaches\n"
+fn private_item(cursor: Cursor) -> Result<Parsed<ast.Item>, ParseError> {
+    let start = offset(cursor)
+    let past_private = expect_keyword(cursor, lexer.Private)?
+    let declared = named_item(past_private)?
+    Ok(Parsed { value: made_private(declared.value, span_since(declared.cursor, start)), cursor: declared.cursor })
+}
+
+/// A declaration whose name another module reaches: a function, a type, a trait, or a process.
+// example: item_printed(named_item(over("type Id = Id(Int)"))) == "type Id 0..17\n  variant Id 10..17\n    named-type Int 13..16\n"
+fn named_item(cursor: Cursor) -> Result<Parsed<ast.Item>, ParseError> {
+    if is_at_keyword(cursor, lexer.Fn) {
+        let declared = function_declaration(cursor)?
+        return Ok(Parsed { value: ast.Function(declared.value), cursor: declared.cursor })
+    }
+    if is_at_keyword(cursor, lexer.Type) {
+        return type_item(cursor)
+    }
+    if is_at_keyword(cursor, lexer.Trait) {
+        return trait_item(cursor)
+    }
+    if is_at_keyword(cursor, lexer.Process) {
+        return process_item(cursor)
+    }
+    Err(error(cursor, NamedItemWanted))
+}
+
+/// `declared`, kept in its module, over `span`.
+// example: ast.extent_of(made_private(ast.Test(ast.TestDeclaration { name: ast.Name { text: "a", span: lexer.Span { start: 5, length: 3 } }, body: ast.Block { statements: [], span: lexer.Span { start: 9, length: 3 } }, span: lexer.Span { start: 0, length: 12 } }), lexer.Span { start: 0, length: 1 })).length == 12
+fn made_private(declared: ast.Item, span: lexer.Span) -> ast.Item {
+    match declared {
+        ast.Type(declaration) => ast.Type(declaration { span: span, visibility: ast.Private })
+        ast.Trait(declaration) => ast.Trait(declaration { span: span, visibility: ast.Private })
+        ast.Function(declaration) => ast.Function(declaration { span: span, visibility: ast.Private })
+        ast.Process(declaration) => ast.Process(declaration { span: span, visibility: ast.Private })
+        _ => declared
+    }
 }
 
 /// `extern type File = "java.io.File"`, or an `extern` naming one member of a Java class.
@@ -96,7 +140,7 @@ fn foreign_type(cursor: Cursor) -> Result<Parsed<ast.Item>, ParseError> {
     let equals = expect_punct(name.cursor, lexer.Eq)?
     let class = java_name(equals)?
     let definition = ast.Foreign { class: class.value, called: called.value }
-    let declared = ast.TypeDeclaration { name: name.value, parameters: [], definition: definition, span: span_since(class.cursor, start) }
+    let declared = ast.TypeDeclaration { name: name.value, parameters: [], definition: definition, span: span_since(class.cursor, start), visibility: ast.Public }
     Ok(Parsed { value: ast.Type(declared), cursor: class.cursor })
 }
 
@@ -305,7 +349,7 @@ fn type_item(cursor: Cursor) -> Result<Parsed<ast.Item>, ParseError> {
     let parameters = type_parameters(name.cursor)?
     let equals = expect_punct(parameters.cursor, lexer.Eq)?
     let definition = type_definition(equals)?
-    let declared = ast.TypeDeclaration { name: name.value, parameters: parameters.value, definition: definition.value, span: span_since(definition.cursor, start) }
+    let declared = ast.TypeDeclaration { name: name.value, parameters: parameters.value, definition: definition.value, span: span_since(definition.cursor, start), visibility: ast.Public }
     Ok(Parsed { value: ast.Type(declared), cursor: definition.cursor })
 }
 
@@ -402,7 +446,7 @@ fn trait_item(cursor: Cursor) -> Result<Parsed<ast.Item>, ParseError> {
         methods = list.push(methods, method.value)
         step = body_opening(method.cursor, 1)
     }
-    let declared = ast.TraitDeclaration { name: name.value, parameter: written_over.value, methods: methods, span: span_since(cursor_of(step), start) }
+    let declared = ast.TraitDeclaration { name: name.value, parameter: written_over.value, methods: methods, span: span_since(cursor_of(step), start), visibility: ast.Public }
     Ok(Parsed { value: ast.Trait(declared), cursor: cursor_of(step) })
 }
 
@@ -460,7 +504,7 @@ fn process_item(cursor: Cursor) -> Result<Parsed<ast.Item>, ParseError> {
         functions = list.push(functions, function.value)
         step = body_opening(function.cursor, 1)
     }
-    let declared = ast.ProcessDeclaration { name: name.value, functions: functions, span: span_since(cursor_of(step), start) }
+    let declared = ast.ProcessDeclaration { name: name.value, functions: functions, span: span_since(cursor_of(step), start), visibility: ast.Public }
     Ok(Parsed { value: ast.Process(declared), cursor: cursor_of(step) })
 }
 
@@ -506,7 +550,7 @@ fn function_declaration(cursor: Cursor) -> Result<Parsed<ast.FunctionDeclaration
     let generic = constrained_parameters(name.cursor)?
     let shape = takes_and_gives(generic.cursor)?
     let body = block(shape.cursor)?
-    let declared = ast.FunctionDeclaration { name: name.value, type_parameters: generic.value, parameters: shape.value.parameters, result: shape.value.result, body: body.value, span: span_since(body.cursor, start) }
+    let declared = ast.FunctionDeclaration { name: name.value, type_parameters: generic.value, parameters: shape.value.parameters, result: shape.value.result, body: body.value, span: span_since(body.cursor, start), visibility: ast.Public }
     Ok(Parsed { value: declared, cursor: body.cursor })
 }
 
@@ -1966,6 +2010,7 @@ fn help_of(kind: ErrorKind) -> String {
 fn expected_help(expected: Expected) -> String {
     match expected {
         FunctionNameWanted => "every function has a name; Bux has no anonymous functions"
+        NamedItemWanted => "`private` keeps a name in its module, and only these four declare a name that another module reaches"
         _ => ""
     }
 }
@@ -2032,6 +2077,7 @@ fn expected_text(expected: Expected) -> String {
         TestNameWanted => "the name of the test in quotes"
         TraitWanted => "a trait"
         ItemWanted => "an import, a type, a trait, an instance, a derive, a function, an extern, a process, or a test"
+        NamedItemWanted => "a function, a type, a trait, or a process"
         ExpressionWanted => "an expression"
         TypeWanted => "a type"
         PatternWanted => "a pattern"
@@ -2073,6 +2119,7 @@ type Expected =
     | TestNameWanted
     | TraitWanted
     | ItemWanted
+    | NamedItemWanted
     | ExpressionWanted
     | TypeWanted
     | PatternWanted

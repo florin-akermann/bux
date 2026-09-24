@@ -81,6 +81,7 @@ fn later_code(kind: TypeErrorKind) -> String {
 // example: boundary_code(NotCalled { module: "io", name: "print" }) == "L0304"
 fn boundary_code(kind: TypeErrorKind) -> String {
     match kind {
+        KeptInModule {} => "L0322"
         NotCalled {} => "L0304"
         TraitStaysInItsModule {} => "L0424"
         DoesNotCross {} => "L0425"
@@ -153,6 +154,7 @@ fn how_it_is_written(kind: TypeErrorKind) -> String {
         FlagParameter(function) => "this parameter is a `Bool`, so a call of `" + function + "` passes `true` and says no more"
         NotAPredicate(function) => "`" + function + "` gives back a `Bool`, so its name asks the question it answers"
         NotInModule { module, name } => "`" + module + "` declares no `" + name + "`"
+        KeptInModule { module, name } => "`" + name + "` is private to `" + module + "`"
         CalledOnAValue { function } => "a dot after a value reads a field, so this call of `" + function + "` is written plainly"
         NotCalled { module, name } => "`" + module + "." + name + "` is a function, so it is written as a call"
         TraitStaysInItsModule { module, name, of } => "`" + module + "." + name + "` requires `" + of + "`, which `" + module + "` declares and nothing here names"
@@ -364,6 +366,7 @@ fn stated_of_a_use(kind: TypeErrorKind) -> String {
         FlagParameter(_) => "declare a two-variant type and take that instead, so the call says which of the two"
         NotAPredicate(_) => "begin the name with `is_`, `has_`, `can_`, or `should_`"
         NotInModule {} => "a module offers the functions and the types it declares, and nothing else"
+        KeptInModule { module } => "a private name is reached only in `" + module + "`, the module that declares it"
         HoldsItself(_) => "hold an `Option` of it, which is how a type holds another of its own kind"
         SignatureWithoutType(_) => "a signature has no body to read a type off, so it writes each one out"
         CalledOnAValue { plain } => "write `" + plain + "`"
@@ -461,6 +464,10 @@ type TypeErrorKind =
     | FlagParameter(String)
     | NotAPredicate(String)
     | NotInModule {
+        module: String
+        name: String
+    }
+    | KeptInModule {
         module: String
         name: String
     }

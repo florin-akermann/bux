@@ -83,14 +83,14 @@ fn scheme_of(offered: OfferedType, built: OfferedConstructor) -> unify.Scheme {
 /// What the modules loaded so far offer, where none is loaded yet.
 // example: list.length(every_type(nothing_imported())) == 0
 fn nothing_imported() -> Imported {
-    Imported { surfaces: map.empty(), modules: [] }
+    Imported { surfaces: map.empty(), modules: [], kept: set.empty() }
 }
 
 /// The same, with `module` now offering `surface` to whatever imports it.
 ///
 /// Each type of the module is written through its name, and `list` also offers what the compiler
 /// holds for it, which `docs/specs/library.md` names.
-// example: list.length(every_type(offering(nothing_imported(), "demo", Surface { functions: [], processes: [], types: [record_of_user()], instances: [] }))) == 1
+// example: list.length(every_type(offering(nothing_imported(), "demo", Surface { functions: [], processes: [], types: [record_of_user()], instances: [], kept: [] }))) == 1
 fn offering(imported: Imported, module: String, surface: Surface) -> Imported {
     var own = set.empty()
     for offered in surface.types {
@@ -117,7 +117,27 @@ fn offering(imported: Imported, module: String, surface: Surface) -> Imported {
         instances = list.push(instances, instance_renamed(given, module))
     }
     let reached = Reached { functions: functions, processes: processes, types: types, instances: instances }
-    Imported { surfaces: map.insert(imported.surfaces, module, reached), modules: list.push(imported.modules, module) }
+    Imported { surfaces: map.insert(imported.surfaces, module, reached), modules: list.push(imported.modules, module), kept: kept_through(imported.kept, module, surface.kept) }
+}
+
+/// `kept`, with each of `names` written as `module` writes it for a module that imports it.
+// example: set.has_value(kept_through(set.empty(), "demo", [KeptValue("helper")]), KeptValue("demo.helper"))
+// example: !set.has_value(kept_through(set.empty(), "demo", [KeptType("Box")]), KeptValue("demo.Box"))
+fn kept_through(kept: set.Set<KeptName>, module: String, names: List<KeptName>) -> set.Set<KeptName> {
+    var written = kept
+    for name in names {
+        written = set.insert(written, written_through(module, name))
+    }
+    written
+}
+
+/// `name`, written through `module`, in the same namespace.
+// example: written_through("demo", KeptType("Box")) == KeptType("demo.Box")
+fn written_through(module: String, name: KeptName) -> KeptName {
+    match name {
+        KeptType(text) => KeptType(module + "." + text)
+        KeptValue(text) => KeptValue(module + "." + text)
+    }
 }
 
 /// `offered`, with every type it names written as a module importing it writes it.
@@ -250,15 +270,17 @@ fn at_scheme() -> unify.Scheme {
     unify.Scheme { quantified: [unify.Written(unify.prelude_parameter("T"))], body: unify.Function { parameters: [unify.list_of(element), unify.int()], result: unify.option_of(element) }, required: [] }
 }
 
-/// Every function, every process, and every type a module declares, and the instances it gives
-/// those types.
+/// Every function, every process, and every type a module declares, the instances it gives those
+/// types, and the name of each of them that the module keeps with `private`.
 ///
+/// A kept name stays in the surface, because a value of a kept type still reaches another module.
 /// A process is offered as the call `spawn` makes of it: what `start` takes, and the handle.
 type Surface = {
     functions: List<OfferedFunction>
     processes: List<OfferedFunction>
     types: List<OfferedType>
     instances: List<OfferedInstance>
+    kept: List<KeptName>
 }
 
 /// One function a module offers, under the name it declares it by.
@@ -267,11 +289,23 @@ type OfferedFunction = {
     offered: Offered
 }
 
-/// What the modules loaded so far offer, by name, and the order they were loaded in.
+/// What the modules loaded so far offer, by name, the order they were loaded in, and each name
+/// they keep, written as `module.Name`.
 type Imported = {
     surfaces: map.Map<String, Reached>
     modules: List<String>
+    kept: set.Set<KeptName>
 }
+
+derive Eq, Hash for KeptName
+
+/// A name a module keeps with `private`, in its namespace: a type or a trait, or a value, which is
+/// a function, a process, or a constructor.
+///
+/// The namespaces are apart, because a type and a constructor of another type may share a name.
+type KeptName =
+    | KeptType(String)
+    | KeptValue(String)
 
 /// A surface as a module importing it reaches it, with each function and each process found by
 /// its name.

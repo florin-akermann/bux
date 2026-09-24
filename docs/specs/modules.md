@@ -17,7 +17,32 @@ The resolver is where the compiler makes that true, before any type is known.
 ## Modules
 
 One file is one module, and nothing in the file declares it.
-Every name the file declares at the top level is public; there is no private declaration.
+Every name the file declares at the top level is public, unless its declaration is `private`.
+
+## A private declaration
+
+`private` is a keyword, and it comes before `fn`, `type`, `trait`, or `process`.
+Those four declare a name that another module can reach, and nothing else does.
+`private instance`, `private derive`, `private test`, `private import`, and `private extern` are
+each `L0100`, at the word after `private`.
+Canonical form writes `private`, one space, and then the keyword, as `private fn opening()`.
+
+A private name is reached only in its module, and every rule of this spec holds for it there.
+An import that reaches it is refused as `L0322`, at the name after the dot.
+That holds for a function, a process after `spawn`, and a type written through the module.
+A variant of a private type is private with the type, so `kept.Low` is refused too.
+A private record type is built through its name, so that name is refused as a constructor too.
+A type and a constructor are in two namespaces, and `L0322` keeps them apart.
+So a private constructor `Box` does not keep a public type `Box`, as `namesakes_reached.bx` shows.
+A private trait needs no refusal of its own, because a module offers no trait.
+
+A value reaches further than a name does, as the section on loading states.
+A public function can give back a value of a private type, and a module that imports it holds that
+value and passes it on.
+It never writes the name of that type, and it never builds or matches a variant of it.
+The instances of a private type travel with its values, as the instances of any type do.
+
+A private name of the prelude is reached only in the prelude, so no other module has it in scope.
 
 `import io` brings the module `io` into scope under its own name.
 A name inside it is reached as `io.print`, which is a field access on the module and not a name in
@@ -47,7 +72,8 @@ first.
 That is unlike two declarations within one module, which are written either way and resolve either
 way.
 
-What a loaded module offers is every function it declares, reached through the module's name.
+What a loaded module offers is every function it declares that is not `private`, reached through
+the module's name.
 `demo.helper(2)` is that call, written exactly as `io.print("hi")` is written.
 A module offers each process it declares in the same way, and `spawn demo.Ticker(5)` starts one.
 `docs/specs/concurrency.md` states how a process is reached.
@@ -244,6 +270,7 @@ Canonical form puts every import first and sorted, which settles where it goes w
 | module is two files | `L0317` | `demo` is both `../shapes/demo.bx` and `demo.bx` |
 | reached through no module | `L0313` | `user` is a module in neither scope, and a type is reached through one |
 | import read by nothing | `L0320` | the import `strings` is read by nothing |
+| private name reached | `L0322` | `opening` is private to `kept` |
 
 `L0300` helps with `a name is declared in this file, imported, or supplied by the prelude`.
 `L0301` helps with `one name has one definition; rename one of the two`.
@@ -257,11 +284,16 @@ Canonical form puts every import first and sorted, which settles where it goes w
 `L0317` helps with `one name has one definition; rename one of the two modules`.
 `L0313` helps with ``a type of another module is reached through the import: write `demo.User```.
 `L0320` helps with `read it, or remove it`.
+`L0322` helps with ``a private name is reached only in `kept`, the module that declares it``.
 
 `L0320` is the import whose module name nothing writes before a dot, at the name in the import.
 A run compiles an example in the module scope, so a module name before a dot there is a read.
 `docs/specs/doc-examples.md` states that an example is a claim in Bux, and a run compiles it.
 `docs/specs/unused.md` states the same rule for a binding and for a parameter, which is `L0321`.
+
+`L0322` is raised where a name reached inside a module is looked up, which is inference.
+The resolver reads one module and knows nothing another module declares, so it cannot raise it.
+It is raised before `L0414`, so a private name is never reported as a name its module lacks.
 
 `L0313` is the name on the left of the dot of a type or of a pattern, which is a module or
 nothing at all.

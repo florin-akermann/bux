@@ -1,0 +1,7 @@
+fn sized(size: Box) -> Int
+
+instance Eq<Box>
+
+type Box =
+    | Small
+    | Large
