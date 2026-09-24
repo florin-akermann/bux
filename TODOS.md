@@ -6,14 +6,6 @@
 
 ## Open
 
-## 🔴 Item 107: A foreign reference cannot escape the function that reaches it
-`docs/design.md` section 14 states the escape check, and Item 101 found that it is not built.
-A function can still return a value of an `extern` type, and a type can still hold one in a field.
-`L0811` guards a process only, so the rule holds for a process and not for the rest of a program.
-[107][a] - `docs/specs/interop.md` states where a foreign reference can and cannot go.
-[107][b] - A diagnostic refuses a return, a field, or a constructor argument of an `extern` type.
-[107][c] - A `tests/spec/interop/` example shows each refused place, and a drawn property holds it.
-
 ## 🔴 Item 108: A top-level function writes its signature
 `docs/design.md` section 6 asks for a signature "when useful".
 `bux api` prints `_` where nothing settled a type, so a reader of the page opens the file.
