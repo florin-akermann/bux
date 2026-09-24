@@ -169,3 +169,95 @@ The compiler is a program, and it is the first one the rule holds to.
 [128][b] - Each `extern` of `compiler/` moves to its library module, or one there replaces it.
 [128][c] - A project check refuses an `extern` outside `library/`, and its message names section 3.
 [128][d] - Section 4 records the count of `extern` declarations before and after.
+
+## 🔴 Item 129: `files` reads a part of a file, and says how long the file is
+`files.read` reads a file whole into one `String`, and a JVM `String` holds 2^31 chars at most.
+A file of one billion rows holds 13 GB, so no program can read it at all.
+A file that fits is held whole, so a program that reads a large file holds it, not its work.
+Item 130 is the program that needs this, and it reads one part of the file in each process.
+No `for` loop reads a byte of a file, so each function here passes question 12 of the principles.
+The read gives ISO-8859-1 text, one char for each byte, as `files.read_bytes` already reads.
+So the length of the text is the count of bytes, and a caller finds a line end by its offset.
+A part cut at any byte can split a UTF-8 sequence, so a decoded read could not say where it ends.
+A name read out of a part is written as the UTF-8 it was, so `strings` gets the one decoding.
+[129][a] - `docs/specs/io.md` states `files.size(path) -> Result<Int, String>`.
+It gives the bytes the file holds.
+[129][b] - It states `files.read_between(path, from, to) -> Result<String, String>`.
+It gives the bytes from `from` up to `to` as ISO-8859-1 text.
+A `to` past the end gives what is there.
+A part longer than one JVM buffer holds is an `Err` that names the length, before the file opens.
+[129][c] - `files` reads the part with a `FileChannel` read at a position into a `ByteBuffer`.
+A `Charset` decodes the buffer, so no array crosses.
+Each step that throws is an `extern` with a `Result`, as `files.listed` walks a stream.
+[129][d] - `docs/specs/library.md` states `strings.from_utf_8(text: String) -> String`.
+It gives the text that the chars of `text` spell as UTF-8 bytes, decoded by a `Charset` of the JVM.
+A malformed sequence becomes the replacement char, as `Charset.decode` gives it, so it is total.
+[129][e] - `tests/spec/io/part_read.bx` writes a file, reads it in parts, and shows the parts.
+A drawn property holds that the parts of a drawn file, joined, are what `files.read_bytes` gives.
+A second holds that `from_utf_8` of the joined parts is `files.read`, for a drawn UTF-8 file.
+
+## 🔴 Item 130: `1brc/main.bx` answers the One Billion Row Challenge
+**Depends on:** Item 129 — a worker reads its part of the file, and a name comes back as UTF-8.
+The challenge is a file of one billion `<station>;<temperature>` lines, and one line of output.
+The output is `{Abha=-23.0/18.0/59.2, Abidjan=-16.2/26.3/67.3, ...}`, sorted by station name.
+Each station shows its lowest, mean, and highest reading, each with one decimal.
+A half rounds toward positive infinity, as `Math.round` rounds, which the challenge states.
+A name is UTF-8 of at most 100 bytes, and a reading is `-99.9` to `99.9` with one decimal.
+There are at most 10 000 stations.
+`example/main.bx` is the program a newcomer reads, and `1brc/main.bx` is the program measured.
+It is the second dogfood program, written in Bux over `library/` alone, with no `extern` of its own.
+`main` reads the path from its arguments, and spawns one worker process for each processor.
+Each worker takes one contiguous part of the file, and reads it in slices with `read_between`.
+It starts after the first line end past its start, and ends after the first past its end.
+A reading is held in tenths as an `Int`, so no floating type is needed.
+The mean, and its rounding, are whole-number arithmetic.
+A worker holds a `map.Map<String, Summary>` and the list of the names it has seen.
+`main` takes each summary with `ended`, merges them by the names, sorts the names, and writes.
+Dogfooding found four gaps, and question 12 of `docs/principles.md` judges each one.
+A whole number read off text is a `for` loop over `strings.at`, so the program writes it.
+An iterator over a map is the list of names the program holds, so nothing lands.
+A sort is the loop `sorted` in `compiler/command.bx` writes, and the program would write it twice.
+`docs/specs/library.md` lands a function on that test, so `list.sorted` lands, at the cost asked.
+The count of processors is what `tests/runner.bx` reaches with an `extern` of its own.
+So that count moves to the library.
+[130][a] - `docs/specs/billion-rows.md` states the program: input, output, exit codes, and `1brc/`.
+[130][b] - `list.sorted<T: Ord<T>>(values: List<T>) -> List<T>` lands, a merge sort with loops.
+`sorted` and `inserted` in `compiler/command.bx` go, and `command.bx` calls `list.sorted`.
+[130][c] - `environment.processors() -> Int` lands, and `tests/runner.bx` calls it.
+[130][d] - `1brc/main.bx` is the program, and `1brc/samples/` holds small files and their outputs.
+One sample holds UTF-8 names, one holds a mean that is a negative half, and one holds one station.
+[130][e] - `tests/started.bx` runs `1brc/main.bx` over each sample, as it runs `example/main.bx`.
+It holds the output to the expected one, and it runs the examples and tests of the module.
+[130][f] - `docs/implementation.md` section 12 names the program as the second dogfood.
+Section 7 records the wall time over one billion rows, on the machine and the JDK it names.
+
+## 🔴 Item 131: The profile of `1brc/main.bx` says what the next item attacks
+**Depends on:** Item 130 — the program must run over one billion rows before it is profiled.
+Section 7 profiled the compiler, and each item after Item 111 attacked a share the profile priced.
+The program gets the same, and no library change lands before the profile prices it.
+`docs/specs/collections.md` refuses a tuned node until a measurement on a real program asks.
+`map.insert` copies one node of thirty-two children at each level.
+One row is one `get` and one `insert`, so one row copies about a hundred children.
+`strings.at` guards two bounds and one `extern` for each byte.
+`strings.cut` makes one `String` for each line, and `Hash<String>` hashes it once for each row.
+Those are the candidates the reading suggests, and the profile says which one is a cost.
+[131][a] - Section 7 records the profile with JFR over one billion rows, by module and by class.
+It records the wall time, the processor time, and the time the collector paused.
+[131][b] - The item files one item for the largest share, with the requirement and the alternatives.
+It files no item for a share below ten percent, and it changes no library code.
+
+## 🔴 Item 132: `1brc/create_measurements.bx` writes the file of one billion rows
+**Depends on:** Item 130 — the program is what reads what this writes.
+The challenge gives a Java generator, and a JDK runs it, so the file exists before this item.
+Dogfooding says Bux writes it, and the generator finds one more gap.
+`files.write` writes a file whole, and 13 GB is no `String`, so a file is written in parts.
+No `for` loop appends to a file, so `files.append` passes question 12 of the principles.
+A draw is a linear congruential generator, as `tests/drawn.bx` writes one.
+The program writes its own, because no program imports a module of `tests/`.
+The generator holds the stations of the challenge and the mean of each in one list literal.
+[132][a] - `docs/specs/io.md` states `files.append(path, text) -> Result<String, String>`.
+It writes `text` after what the file holds, makes the file where there is none, and gives `path`.
+[132][b] - `docs/specs/billion-rows.md` states `bux run 1brc/create_measurements.bx <rows> <path>`.
+[132][c] - `1brc/create_measurements.bx` writes `rows` lines, in parts of one million lines each.
+[132][d] - A test of the module writes a small file, and `1brc/main.bx` reads it to its output.
+[132][e] - Section 7 records the wall time of one billion rows written, beside their read time.
