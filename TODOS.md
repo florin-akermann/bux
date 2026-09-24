@@ -128,3 +128,92 @@ The classes a run changes are those of the modules that declare an asked generic
 Each run still starts a JVM with a class path of its own.
 [117][c] - A property holds that the class path of a run holds every class its program reaches.
 [117][d] - Section 7 records the wall time of `bux test tests` before and after.
+
+## 🔴 Item 118: `docs/design.md` splits into rules and rationale
+`docs/design.md` is 1367 lines, and most of it argues with Erlang, Go, and Rust.
+Every agent session loads that text before it writes a line of Bux, and the arguments cost tokens.
+The sugar rule is stated in `AGENTS.md`, `docs/principles.md`, and `docs/design.md`.
+A rule is stated once, in the document that is the specification.
+A reason is opened only when a change to the rule is proposed.
+[118][a] - `docs/design.md` keeps every normative sentence and drops every comparison and defence.
+Each section keeps its number, so every `docs/specs/*.md` reference still lands.
+[118][b] - `docs/rationale.md` holds the reasons, one section per section of `docs/design.md`.
+[118][c] - `docs/principles.md` and `AGENTS.md` point at a rule instead of restating it.
+[118][d] - `AGENTS.md` says when an agent opens `docs/rationale.md`: to propose a language change.
+
+## 🔴 Item 119: `bux fmt` repairs every order the compiler can compute
+`docs/specs/formatting.md` says that order is checked and never rewritten.
+Import order, the place of a test, and declaration order each have one answer the compiler knows.
+Each refusal costs an agent one round trip: write, build, read the refusal, edit, build again.
+That round trip costs more than the rule saves, so `bux fmt` writes the answer it already knows.
+Naming stays a refusal, because the compiler cannot choose a name.
+Arm order stays a refusal until a case shows that the formatter needs the types.
+[119][a] - `docs/design.md` section 13 and `docs/specs/formatting.md` name each order `fmt` repairs.
+[119][b] - `compiler/format.bx` sorts the imports and moves a declaration written after a test.
+[119][c] - `bux fmt` runs the resolver and moves a declaration below what uses it.
+Two declarations that use each other keep the order the author wrote.
+[119][d] - `L0201` and `L0303` stay for `bux build`, and their help names `bux fmt`.
+[119][e] - `tests/spec/format/` shows each repair.
+A property holds that a repaired file builds, and that `fmt` of a repaired file changes nothing.
+
+## 🔴 Item 120: A `private` declaration exists, and only a public function carries an example
+Every name a module declares is public, so every helper is API, and every helper pays an example.
+`compiler/exhaustiveness.bx` shows the cost.
+Five helpers exist only to keep the examples of other functions on one line.
+They are `said_in`, `found_printed`, `no_reading`, `no_space`, and `status_module`.
+`docs/design.md` section 11 says the `test` block was added to prevent that shape.
+One keyword is a smaller surface than the helpers it removes, and `bux api` lists less.
+[120][a] - `docs/design.md` sections 11 and 16 state `private` and narrow the example rule.
+[120][b] - `docs/specs/modules.md` states that a `private` name is reached only in its module.
+`docs/specs/api-surface.md` leaves a private declaration out of the page.
+[120][c] - `docs/specs/doc-examples.md` requires an example of a public function only.
+A private function may state one, and `bux test` runs it.
+[120][d] - The lexer, parser, formatter, and resolver carry `private`.
+An import that reaches a private name is refused with a code and a help that names the module.
+[120][e] - `tests/spec/modules/` and `tests/spec/examples/` show the refusal and the exemption.
+[120][f] - The helpers of `compiler/exhaustiveness.bx` named above become `private` or tests.
+
+## 🔴 Item 121: A function value is removed from the roadmap
+`docs/design.md` section 11 still promises `map(filter(users, is_active), user_name)`.
+With named functions only and an example per function, that pipeline costs more than a `for` loop.
+Section 12 already makes the loop the idiom.
+Section 14 names the absence of a closure as what keeps the escape check at one paragraph.
+So the promise is withdrawn rather than kept, and nothing is added to the language.
+[121][a] - `docs/design.md` section 11 states that a function is reached by a call and no other way.
+The snippet that passes `is_active` to `filter` is removed.
+[121][b] - `docs/design.md` section 12 and `docs/implementation.md` section 4 drop `map`, `filter`.
+[121][c] - `docs/principles.md` question 12 names a higher-order function as a loop written twice.
+[121][d] - `docs/implementation.md` sections 11 and 12 drop the function value from every version.
+
+## 🔴 Item 122: Record construction puns a field as a pattern does
+A pattern writes `Authorized { authorization_id }`, and construction writes `User { id: id }`.
+That is two rules for one shape, and one of them costs a token per field.
+`docs/specs/patterns.md` says none of the pattern forms is a shorthand for another.
+Construction gets the same rule: `User { id }` and `User { id: id }` are two forms, not one.
+[122][a] - `docs/design.md` section 9 and `docs/specs/grammar.md` make `: expression` optional.
+A bare name reads the binding of that name, and a name not in scope is refused as it is now.
+[122][b] - `docs/specs/formatting.md` states that the formatter keeps the form the author wrote.
+[122][c] - The parser, formatter, resolver, and inference accept a bare field name.
+[122][d] - `tests/spec/parser/` and `tests/spec/format/` show both forms.
+A property holds that `User { id }` and `User { id: id }` type and lower alike.
+
+## 🔴 Item 123: The profile prices specialization and counts the JVM starts of one suite
+**Depends on:** Item 111 — this item adds two numbers to the profile that item records.
+A generic is compiled once for each set of types, so one body is written several times.
+`bux check compiler/main.bx` spends 2.0 s to 2.8 s on work, and none of it is priced per body.
+A run of `bux test` starts one JVM for each module, and a start costs 0.12 s before any work.
+[123][a] - Section 7 records how many specialized bodies one build of `compiler/main.bx` writes.
+It records the seconds spent on the second and later copies of one body.
+[123][b] - Section 7 records the JVM starts of one `bux test tests`, and the seconds they cost.
+[123][c] - Items 112, 115, 116, and 117 each cite the number of this item they attack, or go.
+
+## 🔴 Item 124: The compiler names a skipped module with a type, not `"skipped\n"`
+`compiler/exhaustiveness.bx` and `compiler/ir.bx` give back `Result<T, String>`.
+Each writes `Err("skipped\n")` where an earlier phase refused the module.
+`docs/principles.md` question 3 asks for a domain type over `String`.
+The compiler is the first program held to it.
+A caller that matches on the string cannot be checked, and a caller that matches on a variant can.
+[124][a] - A variant type in `compiler/refusal.bx` or beside it names the two outcomes.
+One is a module skipped because an earlier phase refused it, and one is a refusal of this module.
+[124][b] - `modules_checked`, `typed`, `typed_or_skipped`, `refused_in`, and callers give it back.
+[124][c] - `bin/bootstrap` holds the classes byte for byte, and every command prints what it did.
