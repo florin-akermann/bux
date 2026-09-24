@@ -6,21 +6,6 @@
 
 ## Open
 
-## 🔴 Item 114: The runner's checks become `test` blocks, and `bin/runner` goes
-**Depends on:** Item 112, Item 113 — the pool and the resources must be in `bux test` first.
-`tests/runner.bx` calls six parts, and each part is a function of a module under `tests/`.
-Each part becomes one or more `test` blocks of its module, and `bin/bux test tests` runs them all.
-Then there is one test runner in the project, and it is the one every Bux program has.
-A part that started JVMs still does, from inside its test, and the limit of 60 s stays.
-[114][a] - `docs/specs/testing.md` states that the compiler's tests are the tests of `tests/`.
-`docs/implementation.md` section 7 is rewritten to match.
-[114][b] - Each module of `tests/` that the runner calls states its checks as `test` blocks.
-[114][c] - `bin/runner golden` becomes `bin/bux run tests/golden.bx`, which rewrites the goldens.
-[114][d] - `.githooks/pre-commit` runs `bin/bootstrap` and then `bin/bux test tests`.
-[114][e] - `bin/runner` and `tests/runner.bx` are deleted.
-[114][f] - Where one test of every spec example is slower than the chunks were, one module per area.
-[114][g] - Section 7 records the wall time of the suite before and after.
-
 ## 🔴 Item 116: The lowering lowers the modules of one pass at the same time
 **Depends on:** Item 111, Item 115 — the profile prices lowering, and 115 pools the phases.
 Attacks: lowering, 0.46 s of the 3.5 s of `bux build compiler/main.bx`, 13% (section 7).
