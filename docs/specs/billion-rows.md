@@ -87,11 +87,6 @@ An error of a read stops the worker with that error as its state.
 
 - `1brc/src/main.bx` is the program, a module of its own; `bux build` writes `1brc/src/target/`.
 - `1brc/tests/samples/<name>.txt` is an input, and `<name>.out` is the output it expects.
-- `1brc/generate.py` writes an input of a given count of lines, to measure the program.
-
-`uv run 1brc/generate.py <rows> <path>` writes `<rows>` lines to `<path>`.
-It takes each station from a fixed list, and each reading from `-99.9` to `99.9` at random.
-It uses the Python standard library only.
 
 ## The samples
 

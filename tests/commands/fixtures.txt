@@ -7952,6 +7952,8 @@ status 0
 > fn has_value<T: Eq<T>>(values: List<T>, value: T) -> Bool
 >
 > fn index_of<T: Eq<T>>(values: List<T>, value: T) -> Option<Int>
+>
+> fn sorted<T: Ord<T>>(values: List<T>) -> List<T>
 
 $ api library/map.bx
 status 0
