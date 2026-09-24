@@ -46,7 +46,7 @@ Bux has no channel, because a queue that belongs to no process is shared state w
 An in-application message bus is a process that holds the handles of whoever cares.
 A program writes that bus in Bux, because the language gives processes and messages and no more.
 Erlang's crash, supervisor, link, monitor, and unbounded mailbox are each refused.
-Section 15 of `docs/design.md` says why each one goes.
+Section 15 of `docs/rationale.md` says why each one goes.
 Concurrency is in: Item 091 landed `process`, `spawn`, and `send`, and the test runner runs on them.
 
 ### Nothing panics, ever

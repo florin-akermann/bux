@@ -169,7 +169,7 @@ the value it was given.
 
 `Some(())` says only that a value is there, and `None` says that it is not.
 That is `Bool` written a second way, and at the boundary to the platform it is a flag for `null`.
-`docs/design.md` section 5 gives the reason, and the compiler refuses `Option<()>` with `L0432`.
+`docs/rationale.md` section 5 gives the reason, and the compiler refuses `Option<()>` with `L0432`.
 
 A written `Option<()>` is refused where it is written: in a signature, a field, or an `extern`.
 The span is the written type, and in `List<Option<()>>` it is the inner `Option<()>`.

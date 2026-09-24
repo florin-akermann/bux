@@ -2,6 +2,7 @@
 
 Bux is a small ML-inspired language with Go's philosophy and tooling, compiled to the JVM in Bux.
 `docs/design.md` is the language specification; a language change is a change there first.
+`docs/rationale.md` gives the reasons, and an agent opens it only to propose a language change.
 `docs/implementation.md` says how the compiler is built and what ships when.
 `docs/principles.md` holds the questions every proposed feature must answer.
 AI agents write most of the code, and agents drift without a fixed anchor.
@@ -22,8 +23,8 @@ An example of the second half: `17 / 0` is `None`, because a panic is simpler an
 
 - **Goal**: Go's simplicity, Haskell's types, Erlang's messages, Valhalla's values, a Bux compiler.
 - Everyday Bux code is mostly `for` loops, plus algebraic data types and `match`.
-- Plain loops are the default idiom; higher-order functions are library, not a second paradigm.
-- **Concurrency is Erlang's**: all messages, one mailbox per process, one enforced `process` shape.
+- Plain loops are the one idiom, and `docs/design.md` section 12 states it.
+- **Concurrency is Erlang's**: all messages, as `docs/design.md` section 15 states.
 - **Self-hosting comes first.** Version 0.3 is what the Bux compiler needs, in the order needed.
 - Version 0.4 starts with concurrency, which makes the compiler fast; a native binary comes later.
 - **Dogfood early and often.** The compiler, its tests, and its tools are written in Bux.
@@ -34,28 +35,23 @@ An example of the second half: `17 / 0` is `None`, because a panic is simpler an
 
 ## Language principles
 
+`docs/design.md` states each rule once; a line below names a principle and points at its section.
+
 - **One way to write a thing.** A second spelling is a cost with no guarantee behind it.
-- So there is no anonymous function, no ternary, and no compound assignment beyond `+=`.
-- `+=` is kept because a `for` loop that totals is the everyday shape; it is a ceiling, not a start.
+- `docs/design.md` section 2 states the sugar rule, and `+=` is the one shorthand it keeps.
 - **A rule holds for every type alike, or it is no rule.** No built-in type is special.
-- So `Int`, `Bool`, and `String` are types a library could have declared, with the same powers.
-- Boxing and the primitive/reference split live inside the compiler; no program can observe them.
-- An operator is a function with other syntax; `main` is `fn main(arguments: List<String>) -> Int`.
-- **Values, not objects.** A value has no identity, `hashCode`, or `toString`; it is its state.
-- Equality is opt-in: `==` needs `Eq`, which a type derives, and compares what a value holds.
-- **`Option` never carries `()`**: `Some(())` is nullability by another name; `Result<(), E>` stays.
-- Every type is a Valhalla value class from day one: identity-free, null-free, equal by state.
-- **Nothing panics, ever.** No operation is partial, and the type says so; there is no `unwrap`.
+- `docs/design.md` sections 2 and 3 state what that asks of `Int`, of an operator, and of `main`.
+- **Values, not objects.** A value is its state; `docs/design.md` sections 2, 8, and 10 say how.
+- **Nothing panics, ever.** No operation is partial; `docs/design.md` section 5 states the rule.
+- `Option` never carries `()`, and `docs/design.md` section 5 states that rule too.
 - The compiler is held to the same: a program it cannot compile gets a diagnostic, never a crash.
-- **The JVM is the target, not the model.** Its object model and its constraints stay out.
-- **Formatting is a compile error.** Source that is not in canonical form does not compile.
-- **Non-goals**, never implemented, suggested, or planned: ownership, borrowing, lifetimes.
-- Likewise inheritance, null, checked exceptions, macros, implicit runtime magic, Java's types.
+- **The JVM is the target, not the model.** `docs/design.md` section 2 states what stays out.
+- **Formatting is a compile error.** `docs/design.md` section 13 states the canonical form.
+- **Non-goals** are never implemented, suggested, or planned; `docs/design.md` section 2 lists them.
 
 ## Library principles
 
-- **The standard library is small**: a function lands only where a `for` loop cannot write it.
-- So a map has no iterator, a method is a trait method only, and `list.push` is a module function.
+- **The standard library is small**; `docs/principles.md` question 12 is the test a function passes.
 - A library data structure has the best known asymptotic cost, written plainly and never tuned.
 
 ## Simplicity in the compiler

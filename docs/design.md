@@ -9,12 +9,12 @@ A small, statically typed language for building practical software.
 It is built on Valhalla, the JVM's value classes, and every Bux value is a value.
 No type a program declares has identity, and equality is by state, only where a type asks for it.
 No built-in type is special: a type a library declares can do everything `Int` can.
-It inherits neither Java's object model, Rust's ownership model, nor Haskell's complexity.
 
 The compiler is written in Bux and targets JVM bytecode, on JDK 28 or later.
 The JVM is the first compilation target and nothing more; section 2 says what that rules out.
 
 This document is the language specification; every change to the language is a change here first.
+It states the rules, and `docs/rationale.md` gives the reasons under the same section numbers.
 How the compiler is built and what ships when is in `docs/implementation.md`.
 The questions every proposed feature must answer are in `docs/principles.md`.
 
@@ -22,35 +22,35 @@ The questions every proposed feature must answer are in `docs/principles.md`.
 
 ## 1. Goals
 
-The language combines six properties.
+The language combines five properties.
 
 ### Go
 
-Take inspiration from Go's:
+From Go, the language takes:
 
-* small language surface
+* a small language surface
 * readable syntax
 * fast compilation
 * straightforward tooling
-* simple deployment model
-* practical standard library
-* preference for explicit, boring code
+* a simple deployment model
+* a practical standard library
+* a preference for explicit, boring code
 * one canonical formatting
 
 ### Erlang
 
-Take one idea from Erlang, and take it whole:
+From Erlang, the language takes one idea, and takes it whole:
 
 * a process owns its state, and nothing else reaches that state
 * a message is the only way one process reaches another
 * a process is cheap, so a program writes as many as the work has parts
 
 That idea is the whole of what Bux takes.
-Section 15 lists what Erlang does beside it, and Bux refuses each one.
+Section 15 names what Erlang does beside it, and Bux refuses each one.
 
 ### Haskell / ML
 
-Take inspiration from the ML/Haskell family for:
+From the ML and Haskell family, the language takes:
 
 * algebraic data types
 * exhaustive pattern matching
@@ -64,7 +64,7 @@ Take inspiration from the ML/Haskell family for:
 
 ### JVM
 
-Use the JVM for:
+The language uses the JVM for:
 
 * garbage collection
 * JIT compilation
@@ -81,7 +81,7 @@ The JVM is an implementation target, not the semantic model of the language.
 
 ### Valhalla
 
-Build every type on the JVM's value classes, so that:
+Every type is built on the JVM's value classes, so that:
 
 * a value has no identity, and two built alike are one value
 * equality is by state, and only where a type says it is
@@ -89,26 +89,13 @@ Build every type on the JVM's value classes, so that:
 * a built-in type and a declared type are the same kind of thing
 * boxing is the compiler's business and never a program's
 
-Valhalla's data model is the one part of the JVM Bux adopts whole, because it is Bux's own.
 Every class the compiler writes is a value class, from the first release on.
-
-### Rust
-
-Write the compiler in Rust to benefit from:
-
-* strong compiler implementation safety
-* excellent tooling
-* algebraic data types
-* exhaustive matching
-* fast compilation
-* good performance
-* mature ecosystem
 
 ---
 
 ## 2. Non-goals
 
-The language should **not** attempt to be:
+The language does **not** attempt to be:
 
 * Rust without lifetimes
 * Haskell with Go syntax
@@ -117,7 +104,7 @@ The language should **not** attempt to be:
 * a JVM version of C#
 * a language with every advanced type-system feature imaginable
 
-In particular, the language should initially avoid:
+In particular, the language has none of:
 
 * ownership
 * borrowing
@@ -134,7 +121,7 @@ In particular, the language should initially avoid:
 * syntactic sugar: `++`, `--`, `-=`, `*=`, `/=`, `%=`, a ternary `?:`
 * anonymous functions
 * async/await, or any other function colouring
-* a crash, a supervisor, or a restart; section 15 says why Bux needs none of them
+* a crash, a supervisor, or a restart
 * a link, a monitor, a process registry, or hot code loading
 * a mailbox that grows without a bound, or a receive that searches one
 * a channel, or any other message queue that belongs to no process
@@ -156,16 +143,14 @@ That shape is no identity, no null, and equality by state, and every Bux type al
 
 ### Sugar is a second spelling, and a second spelling is a cost
 
-A shorthand that writes what the language already writes buys nothing the type system can check.
-A reader learns both spellings, canonical form has to choose between them, and every later feature
-answers to two forms rather than one.
+There is one way to write a thing, and a second spelling of it is refused.
 So `++`, `--`, `-=`, `*=`, `/=`, `%=`, and a ternary `?:` are not deferred; they are refused.
-`a = a + 1` and an `if` say each of them, and say it in the one shape the rest of the language has.
+`a = a + 1` and an `if` say each of them.
+There is no anonymous function either, because section 11 gives every function a name.
 
-`+=` is the one shorthand the language keeps, because a `for` loop that totals is the everyday
-shape Bux is built around, and section 8 makes it `Add` exactly as `+` is.
-It is the ceiling rather than the first of a set: a second shorthand lands only where it removes a
-class of mistake, never where it removes typing.
+`+=` is the one shorthand the language keeps, and section 8 makes it `Add` exactly as `+` is.
+It is the ceiling rather than the first of a set.
+A second shorthand lands only where it removes a class of mistake, never where it removes typing.
 `docs/principles.md` question 9 is what any proposal for one answers.
 
 ### Nothing is a special case
@@ -173,28 +158,22 @@ class of mistake, never where it removes typing.
 A rule of this document holds for every type, every function, and every operator, or it is no rule.
 A prelude type is a type a library could have declared, and `Int` has nothing a declared type lacks.
 An operator is a function with other syntax, and section 5 gives it no exemption from its type.
-`main` is a function like any other: it declares what it takes and gives back, and section 11
-makes that `List<String>` and `Int`.
+`main` is a function like any other: it declares what it takes and gives back.
+Section 11 makes that `List<String>` and `Int`.
 A feature that works only because one name is treated apart from the rest is reshaped or refused.
 `docs/principles.md` question 10 asks it of every proposal.
 
 ### Nothing panics
 
 An operation with no answer for some of its input says so in its type, and never at runtime.
-Rust panics on `x / 0` and calls the panic a design; Bux does not, because a crash is an untyped
-answer.
 There is no panic, no trap, no exception, and no `unwrap`: no runtime failure a program can reach.
 Section 5 states the rule, and `docs/principles.md` question 11 asks it of every proposal.
-
-The guiding principle is:
-
-> Strong static guarantees, without the programmer understanding the runtime's memory model.
 
 ---
 
 ## 3. Core design
 
-A program should look approximately like this:
+A program looks approximately like this:
 
 ```text
 type UserId = UserId(Int)
@@ -216,38 +195,11 @@ fn find_user(id: UserId) -> Result<User, FindUserError> {
 }
 ```
 
-The compiler should distinguish:
-
-```text
-UserId
-```
-
-from:
-
-```text
-Int
-```
-
-even though they may have essentially the same runtime representation.
-
-Likewise:
-
-```text
-Email
-```
-
-must not be interchangeable with:
-
-```text
-String
-```
-
-without an explicit conversion.
-
+The compiler distinguishes `UserId` from `Int`, even where the two have one runtime representation.
+Likewise, `Email` is not interchangeable with `String` without an explicit conversion.
 This makes domain concepts first-class types.
 
 `Int` is the one whole number type the prelude supplies, and it is 64 bits wide.
-A language with several of them asks every author to choose a width that almost never matters.
 A program that needs another width declares one, and the type it declares is no lesser than `Int`.
 
 That last sentence is a promise the language is held to, and it has three parts.
@@ -299,14 +251,11 @@ fn describe(payment: Payment) -> String {
 }
 ```
 
-A pattern is one of four things: a name that binds, `_`, a literal, or a constructor with
-patterns inside it.
-Alternatives are written in one arm as `Pending | Running`, which matches what either of them
-matches and binds nothing.
+A pattern is a name that binds, `_`, a literal, or a constructor with patterns inside it.
+Alternatives are written in one arm as `Pending | Running`.
+Such an arm matches what either of them matches, and binds nothing.
 
 A guard is refused.
-An `if` inside the arm says the same thing, and a guarded arm is an arm no exhaustiveness check
-can reason about.
 
 The compiler must verify that matches are exhaustive.
 
@@ -316,35 +265,15 @@ Adding a variant must therefore make the compiler point at every affected match 
 
 ## 5. Option and Result
 
-Null should not exist in ordinary language code.
+Null does not exist in ordinary language code.
 
-Optional values use:
+Optional values use `Option<T>`, as in `fn find_user(id: UserId) -> Option<User>`.
 
-```text
-Option<T>
-```
+Failure uses `Result<T, E>`, as in `fn save_user(user: User) -> Result<(), DatabaseError>`.
 
-For example:
+Both are ordinary algebraic data types rather than special magic wherever practical.
 
-```text
-fn find_user(id: UserId) -> Option<User>
-```
-
-Failure uses:
-
-```text
-Result<T, E>
-```
-
-For example:
-
-```text
-fn save_user(user: User) -> Result<(), DatabaseError>
-```
-
-Both should be ordinary algebraic data types rather than special magic wherever practical.
-
-Error propagation should be concise:
+Error propagation is concise:
 
 ```text
 fn load_user(id: UserId) -> Result<User, Error> {
@@ -364,42 +293,36 @@ An operation without an answer for some of its input says so in its type rather 
 That holds for an operator as much as for a function.
 An operator is a function with other syntax, and syntax buys no exemption from the type.
 There is no panic and no trap, so there is no runtime failure for a program to catch or to observe.
-Rust panics on `x / 0` and calls the panic a design; Bux refuses the trade, and the type answers.
 
-A library module may sit on a platform operation that throws, and gives back a `Result` where it does.
-The throw is caught where the declaration that reaches the operation is written, and never reaches
-the program.
+A library module may sit on a platform operation that throws, and gives back a `Result` there.
+The throw is caught where the declaration that reaches the operation is written.
+It never reaches the program.
 `docs/specs/interop.md` states the catch, and `docs/specs/io.md` the one read version 0.1 has.
 
 So every operator that can fail gives back an `Option` or a `Result`, and never a bare answer.
 `/` and `%` are the ones version 0.1 has, and `17 / 0` is `None` rather than a crash.
-A divisor is never a hazard a reader has to spot.
 An operator with an answer for every input keeps its plain type, which is why `Int + Int` is `Int`.
 Wrapping on overflow is a defined answer, and there is no whole number equal to `x / 0`.
 An operator is a trait method, and section 8 says so; the rule binds every instance alike.
 A type whose `/` has an answer for every divisor may give a plain result, and `Int`'s does not.
-Arithmetic over `Int` divides through `?`, one per division, and reads as arithmetic.
+Arithmetic over `Int` divides through `?`, one per division.
 `or` is for the author who means a fallback, and `match` for the zero divisor with something to say.
 
 Which of the two an operation reaches for is settled by what the failure has to say.
 `Option` is for the case that explains itself, where the absence is the whole story.
-An error type there would carry nothing the caller is not already holding.
 `Result` is for the failure with something to say that the caller could not work out.
 `?` propagates either, each into a function that gives back its kind.
 `docs/specs/arithmetic.md` works the choice through for `/` and `%`.
 
-**`Option` never carries `()`.**
-`Some(())` says only that a value is there, and `None` that it is not: `Bool` spelled a second way.
-At the boundary to the platform it is worse, because `Some` there also reads a `null` that did not come.
-`Some(())` is then a flag for `null`, and nullability is a non-goal of section 2.
+**`Option` never carries `()`**.
 The compiler refuses `Option<()>` wherever a program writes it or inference reaches it.
-`Result<(), E>` stays, because its `Err` carries a reason the caller could not work out.
+`Result<(), E>` stays.
 `docs/specs/interop.md` states the boundary rule, and `docs/specs/types.md` the refusal.
 
 There is no `unwrap` and no `expect`, in the prelude or anywhere else.
-`or(maybe, fallback)` is the total default, named for what it does rather than for what it is not.
+`or(maybe, fallback)` is the total default.
 
-**A value nothing takes is a compile error**, because a dropped `Result` is a swallowed failure.
+**A value nothing takes is a compile error**.
 A statement written for its effect has nothing to leave behind, so its type is `()`.
 Throwing a value away is written rather than implied: `_ = save(user)` says it and `_` is no name.
 `docs/specs/discarding.md` states which statements give their value away and which discard it.
@@ -407,7 +330,6 @@ Throwing a value away is written rather than implied: `_ = save(user)` says it a
 **An unfinished body says so in the language**, with `todo("a reason")` where a value belongs.
 A hole takes whatever type is expected of it, so the work around it is typed like finished work.
 `bux check` accepts a hole and `bux build` refuses every one it finds, naming each.
-Incompleteness is then greppable and gated, rather than filled in with plausible wrong code.
 `docs/specs/holes.md` states what the two commands do.
 
 ---
@@ -415,7 +337,6 @@ Incompleteness is then greppable and gated, rather than filled in with plausible
 ## 6. Type inference
 
 Every function a program writes states the type of each parameter and of its result.
-A signature is a boundary: a caller and the `bux api` page read it, and neither reads the body.
 Inside a body, inference does the work, so a binding writes no type.
 
 For example:
@@ -429,7 +350,7 @@ fn greeting(name: String) -> String {
 }
 ```
 
-should infer:
+infers:
 
 ```text
 count: Int
@@ -441,13 +362,13 @@ chosen: String
 A signature that leaves a type out is refused, and the help spells the one inference settled.
 A nested function of section 11 stays inferred when it lands, because it is no boundary.
 
-The language should aim for Haskell/ML-level inference.
+The language aims for Haskell/ML-level inference.
 
 ---
 
 ## 7. Generics
 
-Generic programming should be fundamental.
+Generic programming is fundamental.
 
 ```text
 fn first<T>(items: List<T>) -> Option<T> {
@@ -463,32 +384,25 @@ type Result<T, E> =
     | Err(E)
 ```
 
-The type system should support parametric polymorphism without requiring verbose annotations.
+The type system supports parametric polymorphism without verbose annotations.
 
 ### A generic is specialized at each use
 
-**A generic function is compiled once for each set of types it is used at**, and never once for
-all of them.
+**A generic function is compiled once for each set of types it is used at**, never once for all.
 
-`identity(1)` and `identity(word)` reach two different methods: one taking a whole number, one
-taking text.
-Neither boxes, neither casts, and an `Int` crossing a generic is the same 64 bits it is anywhere
-else.
+`identity(1)` and `identity(word)` reach two different methods.
+One takes a whole number, and the other takes text.
+Neither boxes, neither casts, and an `Int` crossing a generic is the same 64 bits as elsewhere.
 
-The alternative is erasure, which compiles one body over a type that every value fits, and pays
-for it by boxing every `Int` on the way in and casting it back on the way out.
-That would make `Int` the one type a program can tell from a declared one, and section 3 says
-there is no such type.
-
-A use that settles no type settles none for the machine either, and two uses that differ only in
-a type the machine cannot tell apart are one use.
+A use that settles no type settles none for the machine either.
+Two uses that differ only in a type the machine cannot tell apart are one use.
 `docs/specs/codegen.md` states what is written and what it is named.
 
 ---
 
 ## 8. Typeclasses / traits
 
-The language should provide a simple form of typeclasses inspired by Haskell and Rust traits.
+The language provides a simple form of typeclasses.
 
 ```text
 trait Eq<T> {
@@ -518,42 +432,37 @@ instance Eq<Point> {
 ```
 
 An instance writes a body for every method its trait declares, and for no other name.
-Each body has the trait's signature with the trait's type parameter standing for the instance's
-type, so an instance adds nothing the trait had not already said.
-A trait declares one type parameter, which is what `Eq<T>`, `Ord<T>`, and `IntegerLiteral<T>` each
-ask for and all the language has needed.
+Each body has the trait's signature, with the trait's type parameter standing for the instance's.
+So an instance adds nothing the trait had not already said.
+A trait declares one type parameter.
 An instance is for a type written by name: `Eq<Point>`, and not `Eq<List<Point>>`.
 The spec that derives an instance for a generic type settles how one is written for `List<T>`.
 
 An instance belongs in the module that declares the trait or in the module that declares the type.
 One trait and one type have one instance in a program, and a second is refused where it is written.
-That is what lets a constraint reach an instance without anyone saying which one:
+That is what lets a constraint reach an instance without anyone saying which one.
 `T: Eq<T>` at `T = Point` reaches the one `Eq<Point>` there is.
 
 A type parameter takes one constraint for each trait the body asks of it, joined by `+`.
-`K: Eq<K> + Hash<K>` is what a hashed map asks of a key, and a use of it is accepted only where the
-key's type has both instances.
+`K: Eq<K> + Hash<K>` is what a hashed map asks of a key.
+A use of it is accepted only where the key's type has both instances.
 
-A constraint resolves while the program is compiled, because a generic is compiled once per set of
-types.
+A constraint resolves while the program is compiled, because a generic is compiled once per set.
 `has_value` at `Point` is a method whose body calls the `is_equal` of `Eq<Point>` and nothing else.
-No dictionary is passed, no method table is built, and nothing about the call waits for the program
-to run.
-A trait method called at a type with no instance is refused where it is called, and a constrained
-generic used at such a type is refused the same way.
+No dictionary is passed, no method table is built, and nothing about the call waits for a run.
+A trait method called at a type with no instance is refused where it is called.
+A constrained generic used at such a type is refused the same way.
 
 `==` is `Eq`: a type is compared only when it has an instance, and a built-in type is no exception.
 The library ships the three instances: `Int`, `Bool`, and `String`.
 `==` on a record or a variant is refused until its type has one, which it writes or derives.
 
-Every operator is a trait method, and `==` is only the first to be written that way.
+Every operator is a trait method.
 `+` is `Add`, `-` is `Sub`, `*` is `Mul`, `/` is `Div`, `%` is `Rem`, and prefix `-` is `Neg`.
 `<`, `<=`, `>`, and `>=` are `Ord`, and `&&`, `||`, and `!` stay `Bool`'s alone: they short-circuit.
 An operator's type is its instance's type: `Div<Int>` gives `Option<Int>`, `Add<Int>` an `Int`.
 The library ships the instances for `Int` and `String`; a declared type writes its own the same way.
-A type without an instance has no operator, so `a + b` over two `UserId`s is refused, as it is now.
-The wiring version 0.1 shipped, which named `Int` and `String` where an instance now stands, was
-the degenerate case of this design rather than a design of its own, and it is gone.
+A type without an instance has no operator, so `a + b` over two `UserId`s is refused.
 
 A literal is a trait method too, so a declared type can be written as plainly as `Int` can.
 A whole-number literal takes the type the context expects, provided that type has `IntegerLiteral`.
@@ -562,28 +471,21 @@ It is never a wrapped value and never a runtime failure, because a literal is no
 A literal whose type nothing settles is an `Int`, which is the one default the language keeps.
 `docs/specs/literals.md` settles how an instance states what fits: two bounds the compiler reads.
 
-Standard traits should include concepts such as:
+Standard traits include `Eq`, `Ord`, `Hash`, and `Show`.
 
-```text
-Eq
-Ord
-Hash
-Show
-```
-
-Common implementations should be derivable:
+Common implementations are derivable:
 
 ```text
 derive Eq, Ord, Hash for User
 ```
 
-Advanced type-level machinery should not be introduced until there is a concrete need for it.
+Advanced type-level machinery is not introduced until there is a concrete need for it.
 
 ---
 
 ## 9. Records
 
-Records should be lightweight and pleasant to use.
+Records are lightweight.
 
 A record is a value with no identity: nothing can ask whether two of them are one object.
 Two records holding the same fields are one value, which is what a Valhalla value class makes true.
@@ -606,7 +508,7 @@ let user = User {
 }
 ```
 
-Record updates should be concise:
+Record updates are concise:
 
 ```text
 let updated = user {
@@ -624,10 +526,13 @@ fn contact(user: User) {
     }
 }
 
-let result = map(users, contact)
+var contacts = []
+for user in users {
+    contacts = list.push(contacts, contact(user))
+}
 ```
 
-This should be considered only after the core type system is stable.
+They are considered only after the core type system is stable.
 
 A map and a set are values too, and both are library types rather than language ones.
 
@@ -636,12 +541,13 @@ let ages = map.insert(map.empty(), "ada", 36)
 let found = map.get(ages, "ada")
 ```
 
-`Map<K, V>` holds one value for each key it is given, and `Set<T>` holds a value once however
-often it is given.
+`Map<K, V>` holds one value for each key it is given.
+`Set<T>` holds a value once however often it is given.
 Neither has identity, as no record has: nothing can ask whether two of them are one object.
 A key is a type a program compares and hashes, so `K` is constrained by `Eq<K>` and `Hash<K>`.
-Each of the two is a hash array mapped trie: a branch holds thirty-two children, indexed by five
-bits of the key's hash, and a leaf holds the entries whose keys hash alike.
+Each of the two is a hash array mapped trie.
+A branch holds thirty-two children, indexed by five bits of the key's hash.
+A leaf holds the entries whose keys hash alike.
 `get` gives an `Option<V>`, because a key the map has no entry for is a case the type has to say.
 There is no literal for either: a map is built by `empty` and `insert`, and read by `get`.
 `docs/specs/collections.md` states each function, its type, and what it costs.
@@ -650,11 +556,11 @@ There is no literal for either: a map is built by `empty` and `insert`, and read
 
 ## 10. Immutability
 
-Data should be immutable by default.
+Data is immutable by default.
 
-Mutation should be explicit.
+Mutation is explicit.
 
-Prefer:
+A record changes by a new value, not by implicit mutation:
 
 ```text
 let user = user {
@@ -662,9 +568,7 @@ let user = user {
 }
 ```
 
-over implicit mutation.
-
-If mutable state is required:
+Mutable state is written with `var`:
 
 ```text
 var counter = 0
@@ -672,7 +576,7 @@ var counter = 0
 counter += 1
 ```
 
-The distinction should be obvious in source code.
+The distinction is obvious in source code.
 
 **A binding says with its keyword whether its name can change**.
 `let total = 0` binds a name that never changes, and `var total = 0` binds a name that can.
@@ -715,15 +619,11 @@ Every function has a name, and the name is written where the function is called.
 Nested named functions may be declared inside a function body when they are local to it.
 
 A function name written as anything but the name of a call is refused rather than lowered.
-Nothing then reaches code generation that it has no way to write.
-
-A name forces the author to say what the function is for, and gives the reader a word to search.
 
 ### A function is called one way
 
 A call writes the name of what it calls, then every argument inside the parentheses.
 `or(maybe, 0)` is the call, and `maybe.or(0)` is refused: a dot never moves an argument in front.
-A second spelling of one call is a cost with no guarantee behind it, as section 2 states.
 
 A dot does one of two things, and the name before it says which.
 `io.print("hi")` reaches a function of the module `io`, and `user.name` reads a field.
@@ -748,9 +648,6 @@ A call names all of its arguments or none of them.
 
 A call must name them when the declaration gives two of its parameters one type.
 `add(a: Int, b: Int)` above is one, so `add(1, 2)` is refused and `add(a: 1, b: 2)` is not.
-Nothing else tells two of one type apart.
-`rename(old, new)` and `rename(new, old)` both typecheck, and one of them is wrong.
-A mistake a type system can make unwriteable belongs in the language rather than in a linter.
 
 The types compared are the ones the signature writes, which every function writes whole.
 A type parameter counts as a type.
@@ -760,10 +657,6 @@ A variant whose values want names declares them as fields and is built as a reco
 `docs/specs/arguments.md` is the specification.
 
 ### A parameter is never a bare `Bool`
-
-`open(true)` says nothing.
-The reader has to find the declaration to learn what is true, and `open(false)` is one keystroke
-away from a program that does the other thing without looking wrong.
 
 A parameter of type `Bool` is refused.
 A two-variant type takes its place, and the call then says which of the two it means:
@@ -776,27 +669,19 @@ type Mode =
 fn open(path: String, mode: Mode) -> File {
 ```
 
-`open(path, ReadOnly)` reads where `open(path, true)` did not, and a third mode is a variant
-rather than a second flag.
-
 A function whose parameters are all `Bool` and whose result is `Bool` is the one carve-out.
-`Bool` is what such a function is about, rather than something it is told, so its operands stay
-writable.
 
 A record field, a variant payload, a binding, and a result type may each be `Bool`.
-The rule is about what a call passes, which is the one place a bare `true` loses its meaning.
+The rule is about what a call passes.
 
-The rule asks an author to have declared that two-variant type instead, so it holds where they
-chose the types and nowhere else.
-An instance method's signature is its trait's: `instance Hash<Bool>` writes `hashed(value: Bool)`
-because `trait Hash<T>` wrote `hashed(value: T)` and the instance settled `T` on `Bool`.
-There is no flag its author could have declined to write, and the two-variant type the rule asks
-for is one the trait would have had to take.
+The rule asks an author to have declared that two-variant type instead.
+So it holds where they chose the types and nowhere else.
+An instance method's signature is its trait's.
+`instance Hash<Bool>` writes `hashed(value: Bool)` because `trait Hash<T>` wrote `hashed(value: T)`.
+The instance settled `T` on `Bool`.
 
 So the rule reaches an instance method through its trait rather than at the instance.
-A trait writing `fn hashed(value: Bool) -> Int` is refused where it writes it, because that `Bool`
-is a flag every instance of the trait would then have to take.
-Nothing is given up: the one place such a parameter can be written is the one place it is read.
+A trait writing `fn hashed(value: Bool) -> Int` is refused where it writes it.
 
 ### The entry point
 
@@ -810,22 +695,21 @@ fn main(arguments: List<String>) -> Int {
 ```
 
 `main` takes the words the program was run with and gives back the status the run ends with.
-That is the one shape a program starts at: the one parameter is `List<String>`, and the result
-is `Int`.
+That is the one shape a program starts at: the one parameter is `List<String>`, the result `Int`.
 It is a function like any other, and the signature is written out, not a form it is spared.
 A module declaring `main` at that shape can be run.
-A module declaring `main` at any other shape is a library, exactly as one declaring no `main` is,
-and running it is refused with a message naming the shape to write.
+A module declaring `main` at any other shape is a library, exactly as one declaring no `main` is.
+Running it is refused with a message naming the shape to write.
 
 `arguments` holds every word written after the file, in the order the command wrote them.
-The name of the program is not one of them, because a program already knows what it is.
+The name of the program is not one of them.
 The JVM starts at a `main(String[])` of its own; the compiler writes that, and no program sees it.
 That entry point gathers the array into the `List<String>` it hands `main`.
 
 A run is over when `main` is, and the `Int` it gave back is the status the run ends with.
 A program that has nothing to say gives back `0`.
-A status is eight bits wide on every system the JDK runs on, so the entry point hands the system
-the low eight bits of that answer and nothing else.
+A status is eight bits wide on every system the JDK runs on.
+So the entry point hands the system the low eight bits of that answer and nothing else.
 Every `Int` maps to one status that way, so giving back a status is never a partial operation.
 `docs/specs/run.md` states how a run passes the arguments and reads the status.
 
@@ -845,13 +729,9 @@ fn shared(total: Int, people: Int) -> Option<Int> {
 An example is a line of the comment above the function, and it is Bux rather than prose.
 It is an expression of type `Bool`, and `bux test` runs every one a module states.
 
-A signature says what a function takes and gives back, and says nothing about what it does.
-Prose says that and drifts, because nothing runs prose.
-An example says it so the compiler can hold the function to it, and a stale one is a failing test.
-
 `main` is exempt: it is reached by running the module, so running the module is its example.
-`bux check` accepts a function that states none, because a function is written before the
-example over it can compile.
+`bux check` accepts a function that states none.
+A function is written before the example over it can compile.
 `docs/specs/doc-examples.md` is the specification.
 
 ### A test states what one line cannot
@@ -867,11 +747,6 @@ test "a sum does not depend on the order" {
     summed(numbers) == summed([6, 5, 4])
 }
 ```
-
-An example is one expression on one comment line.
-A claim that binds names, builds a value in a loop, or calls `io` does not fit on that line.
-Without a test block, such a claim becomes a function written only to be called by an example.
-That function would then need an example of its own, and it would ship in every program.
 
 A test is a top-level item with a name in quotes and a body whose value is a `Bool`.
 It has no signature, no example, and no caller but `bux test`.
@@ -943,18 +818,16 @@ Canonical form covers how a name is spelled, not only where it is written.
 **A type, a variant, and a type parameter are `PascalCase`**.
 An acronym is a word, so `UserId` is canonical and `UserID` does not compile.
 
-**A declared name is two characters or more**, because `f` names nothing a reader can look for.
+**A declared name is two characters or more**.
 A type parameter is exempt: it names no domain concept, and `T` is how that is written.
 
-**A function whose result is `Bool` asks the question it answers**, beginning `is_`, `has_`,
-`can_`, or `should_`.
-`if is_active(user)` reads as a question where `active(user)` reads as a command.
+**A function whose result is `Bool` asks the question it answers**.
+Its name begins `is_`, `has_`, `can_`, or `should_`.
 
 The rules are about declared names, which is every name another file can write.
 A local binding is private to the body it is written in, so none of them is about one.
 
-Naming is checked and never rewritten, for the same reason order is: what a thing is called is the
-author's decision, so the compiler says what canonical form spells it rather than spelling it.
+Naming is checked and never rewritten: the compiler says how canonical form spells a name.
 `docs/specs/naming.md` is the specification.
 
 ### Order
@@ -975,14 +848,13 @@ A test uses the declarations of its module, and nothing uses a test.
 A new variant then has exactly one place to be handled, and no diff is ever reorder-only.
 
 Order is checked and never rewritten.
-`bux fmt` repairs whitespace, which is nobody's decision.
-Where a declaration belongs is the author's, so the compiler says where rather than moving it.
+`bux fmt` repairs whitespace, and the compiler says where a declaration belongs.
 
 ---
 
 ## 14. Effects
 
-A future language feature should make effects explicit.
+A future language feature makes effects explicit.
 
 Pure code:
 
@@ -1018,29 +890,21 @@ The purpose is to let the compiler distinguish pure domain logic from operations
 * external services
 * mutable global state
 
-This feature should come after the basic language and type system are working.
+This feature comes after the basic language and type system are working.
 
 ### Resources are the same feature
 
 A scoped resource, a file or a connection, needs two guarantees.
 It is released on every exit path, and it is never used after release.
-Go's `defer` and Java's try-with-resources give only the first; a closed handle can still escape.
-The second needs the type system; the classic answer is linear types, which are ownership's family.
-The intended answer is instead an escape check.
+The intended answer is an escape check.
 A resource-typed value may be passed as an argument to an ordinary call, and nothing else.
 It may not be returned, stored in a field, sent in a message, or given to a process.
 It therefore cannot outlive the block that opened it.
-A foreign reference is held to the same four clauses, and the reason is the object behind it.
-That object has identity and mutates, so one a process holds is shared state again.
-That is the escape check doing one job rather than a second rule written for the boundary.
+A foreign reference is held to the same four clauses.
 An effect is a capability passed the same way, so effects and resources are one mechanism, not two.
-Elsewhere most of the cost of such a check is closures, which capture capabilities silently.
-Bux has no anonymous functions, and a named function cannot capture a local.
-The escape routes are therefore enumerable, and the rule stays one paragraph.
-That is a standing reason to keep the no-closures rule when it feels inconvenient.
+A named function cannot capture a local, so the escape routes are enumerable.
 No syntax is committed.
 The block that opens a resource compiles to try/finally, and `AutoCloseable` never surfaces.
-It is a JVM interface, and the JVM is a target, not a model.
 
 **A resource has identity, and a `type` declaration does not write one**.
 The file it names is one file, and releasing it is a change every later use would see.
@@ -1056,8 +920,7 @@ Bux adopts Erlang's concurrency model.
 A process owns its state, a message is the only way to that state, and a process is cheap.
 There is no **`async`/`await`** and no function colouring.
 A function that blocks is an ordinary function, called like any other.
-There is one kind of function, and no caller ever has to ask which kind it holds.
-A target must make blocking cheap, as the JVM's virtual threads do, so no second kind is needed.
+A target must make blocking cheap, as the JVM's virtual threads do.
 
 Conceptually:
 
@@ -1097,57 +960,34 @@ A process accepts one type, which is why `Request` is an ADT and not a list of m
 `match` on that ADT is how a process tells one message from another.
 
 **Every process has one shape, and the compiler gives it no second one**.
-Seen one process, seen them all: a reader knows where the state starts and where each message goes.
 A `process` declares `start` and `receive`, in that order, and declares nothing else.
 `start` builds the first state, and `receive` takes the state and one message and gives the next.
 The prelude declares `Next<T>` as `Continue(T)` or `Done`, and a library could have declared it.
-`Done` is how a process ends itself, and question 8 is answered because the type is an ordinary ADT.
+`Done` is how a process ends itself.
 The body of `receive` is one `match` on its message parameter, and nothing else.
 Each arm of that `match` is one call or one name, and never a block, an `if`, or a second `match`.
 
-That last rule is what keeps a process readable as it grows.
-A branch cannot hold the work, so the author must lift the work out and give it a name.
-The compiler holds the shape, and it does not judge the name it forced the author to write.
-A rule about a good name is not a rule a compiler can hold, and Bux does not pretend otherwise.
-
 The shape is a declaration rather than a check over a loop a program writes.
-Question 7 of `docs/principles.md` is why: elegance leaves the invalid case unwriteable.
-A hand-written loop lets every author write a slightly different process.
-A linter over that loop rejects each one after the fact, which question 7 calls adequacy.
-There is no loop here to write differently, and no `var` to hold state beside the state.
+There is no loop to write differently, and no `var` to hold state beside the state.
 There is no early `return` either, so no path leaves the process without a next state.
-
-Question 12 holds a library function to a `for` loop, and a `process` declaration is no function.
-Read broadly, the question still lands: a `for` loop could write this, and that is the problem.
-A process is the one place where a second shape costs a reader the whole program.
 A process is therefore written one way, and `spawn` takes no other.
-A second form would be the second spelling that question 9 refuses.
 
 **It is all messages**.
 There is no mutex, no atomic, and no condition variable.
 This is not a rule the compiler polices but a consequence of the value model.
-A lock protects shared mutable state, and no type a program declares holds any.
 Every type a program declares is a value with no identity, so two processes never hold one.
-A record is rebuilt rather than reached into, as section 10 says.
 A named function cannot capture a local, and `spawn` passes its arguments by value.
 The one mutable thing, a `var` binding, is therefore never visible from another process.
-There is no mutable global state, which section 14 lists as an effect for the same reason.
-A foreign reference is no value a program declared either.
-Section 14 refuses one given to a process, which is the clause that keeps it out.
+There is no mutable global state.
+Section 14 refuses a foreign reference given to a process.
 
 **A queue belongs to a process, and Bux has no channel**.
-Go gives a queue an identity of its own, and any process may hold it.
-Such a queue is shared mutable state with a name, which the value model refuses everywhere else.
-It also needs rules that a mailbox does not need.
-Nothing owns a channel, so closing one is a protocol rather than an event.
-A reader holds several channels, so a `select` must choose among them.
 A mailbox ends when its process ends, and one mailbox needs no `select` because `match` chooses.
-One queue with many readers is the one shape a channel has and a mailbox does not.
-A worker pool is that shape, and the answer is a process that takes jobs and hands them out.
+A worker pool is a process that takes jobs and hands them out.
 That costs one process and one message, and a program writes it rather than the language.
 
 **A process has identity, and a `type` declaration does not write one**.
-The example above shows why: `counting` names one process, and a second `spawn` names another.
+`counting` above names one process, and a second `spawn` names another.
 `send` puts a message in that process's queue, and the process reads it.
 A scoped resource is the second and a foreign reference the third, which section 14 holds both of.
 Section 10 states the rule all three stand outside, and a program has no type of its own to lock on.
@@ -1155,33 +995,24 @@ Section 10 states the rule all three stand outside, and a program has no type of
 **A slow receiver makes the sender wait**.
 A mailbox holds a bounded number of messages, and `send` blocks while the mailbox is full.
 That is the whole of backpressure, and every mailbox gives the same answer.
-Erlang lets a mailbox grow without a bound, and one slow process then exhausts the memory.
-Bux refuses that, because the type system cannot see it and the program cannot recover from it.
 A shared counter, cache, or pool is a process that owns the state and receives requests.
-That is slower than a lock on a hot path, and the trade is accepted.
 A lock-free structure is a platform library reached through `extern`, never something Bux writes.
 
 **A message that cannot arrive is a typed result, never a silent drop**.
 A process ends when `receive` gives `Done`, and its mailbox ends with it.
-Erlang drops a message sent to a process that has ended, and it never tells the sender.
 Bux says so in the type of `send`, because section 5 gives every operation an answer.
-The same rule refuses Erlang's crash: no Bux process fails, so none needs a restart.
-A supervisor, a link, and a monitor each answer a failure that Bux's types answer first.
+No Bux process fails, so none needs a restart.
 A process reports an end the sender must know about through a message, as every result travels.
 Cancellation is a message, and the spec names the idiom rather than adding a primitive.
 
 **A mailbox is read in order, and nothing searches it**.
-Erlang's selective receive walks the mailbox for a message that matches and leaves the rest behind.
-It reads well, and it costs one scan for each receive, which a full mailbox makes slow.
 Bux gives `receive` the next message, and a process that must wait holds that in its own state.
 A `send` says how long it waits for room: not at all, some milliseconds, or with no limit.
-That is what a bus that drops the oldest message needs, and no other primitive answers it.
 A process never calls `receive` itself, so a deadline on the receiving side is not a value it holds.
 A process never wakes without a message, and a tick is a message that another process sends.
 
 **An in-application message bus is a library type, not a primitive**.
-A `send` names the process it reaches, and a program often has a message that whoever cares reads.
-A bus is the process that closes that gap, and it is written in Bux the day a program needs one.
+A bus is a process, and it is written in Bux the day a program needs one.
 It carries messages between the processes of one program, and it never leaves that program.
 It holds the handles of its subscribers, and it gives every message to every one of them.
 A subscriber joins by sending the bus one message.
@@ -1196,13 +1027,11 @@ A bus chooses what a slow subscriber sees: the publisher waits, or a buffer drop
 The dropping bus reports the loss as a typed result on receive, never silently.
 A latest-value cell is a third type, not a mode on the first; a policy knob is refused.
 The derivation runs one way: a bus is processes and messages, and no process comes from a bus.
-That is why the process is underneath and the bus on top.
 
 A bus that crosses a network is a different thing, and the paragraph below says where it lives.
 
 Distributed messaging is a platform library, never part of the language or its runtime.
-Erlang makes a remote process look like a local one, and Bux does not.
-A network call fails where a local `send` does not, and one name for both hides that difference.
+A remote process does not look like a local one.
 A transport that shares the mailbox's receive shape gets a library wrapper once a program needs one.
 
 `docs/specs/concurrency.md` states `process`, `spawn`, the handle, the mailbox, and `send`.
@@ -1218,7 +1047,6 @@ Each process runs on a JVM virtual thread, and no program can see how.
 
 One file is one module, and the module is named by its file.
 There is no module declaration: the file is the declaration, and every name it declares is public.
-A module is one file and a file is small, so a private declaration waits for a case that needs one.
 
 `import io` brings the module `io` into scope, and its names are reached through it:
 
@@ -1230,13 +1058,11 @@ fn greet(name: String) -> () {
 }
 ```
 
-A reader who meets `io.print` knows where to look without knowing what else the file imports.
-An unqualified import would take that away, so Bux has none.
+Bux has no unqualified import.
 
 **One name has one definition**.
 No two declarations of a module share a name, and no binding hides a name already in scope.
 There is no overloading: within a module a name is one thing wherever it is written.
-Searching for a name then finds its definition and its uses, with nothing else mixed in.
 
 Types and values are named separately, which is what makes a newtype ordinary:
 
@@ -1265,13 +1091,11 @@ A field of a record and a name of an imported module are each reached through so
 Neither is a name in scope.
 `user.name` is looked up in the record and `io.print` in the module, never in the file.
 A dot after anything else reads a field, so `maybe.or(0)` is refused and `or(maybe, 0)` is written.
-Section 11 states why a function is called one way.
+Section 11 states that a function is called one way.
 
 An import names the file the module is written in, beside the file that writes the import.
-`import greeting` therefore reads `greeting.bx` from the same directory, and nowhere else but
-a package this one depends on.
-A ring of imports is refused: a module is compiled after what it imports, and a ring has no such
-order.
+`import greeting` reads `greeting.bx` from the same directory, or from a package depended on.
+A ring of imports is refused: a module is compiled after what it imports, and a ring has no order.
 
 `docs/specs/modules.md` states the scopes, the prelude every module has, and the errors.
 
@@ -1283,8 +1107,7 @@ version 0.2.0
 depends ../geometry
 ```
 
-An import that reaches nothing beside the file that wrote it reaches a module of a package this
-one depends on.
+An import that reaches nothing beside the file that wrote it reaches a module of a dependency.
 Nothing is fetched: a dependency is a directory that is already there, and the manifest names it.
 Two dependencies holding a module of one name are refused, because one name has one definition.
 `docs/specs/packages.md` states the manifest, the order an import is answered in, and the errors.
@@ -1293,8 +1116,7 @@ Two dependencies holding a module of one name are refused, because one name has 
 
 ## 17. Reaching the platform
 
-A platform has libraries that are worth reaching, and the model that comes with them is not.
-A boundary lets a program use those libraries, and it keeps their model out of the language.
+A boundary lets a program use the libraries of a platform, and keeps their model out of Bux.
 An `extern` declaration is the one place a member of the platform is named.
 It names exactly one member, and it gives that member a Bux signature.
 From there it is a function like any other.
@@ -1314,7 +1136,6 @@ A declaration names only a part of the platform that the build can account for.
 That part is in a library the package states and pins, or it is on a fixed list of the target.
 The list holds the parts of the standard library of the platform that load no code by a name.
 So it leaves out reflection, the loading of code, handles to members, and deserialization.
-Each of those reaches code that the program text does not name, which no reader can check.
 A program and a manifest cannot add to the list, and the spec of each target states it.
 Everything else is refused where the declaration names it, before any code runs.
 
@@ -1322,7 +1143,6 @@ Every parameter and every result is a Bux type.
 There is no subtyping and no implicit conversion.
 So a member that takes a wider type than the caller holds is not reachable.
 The answer is to name a member that takes what the caller holds.
-That is what keeps the boundary a signature rather than a second type system.
 
 A fact about a member that no Bux type states is written in the declaration, if the form has it.
 The width of a number that a member gives back is one example.
@@ -1342,13 +1162,10 @@ There is no `equals`, no `hashCode`, and no `toString` reaching it, and no hiera
 Section 2 is not suspended inside the boundary.
 
 What a program cannot reach, the foreign value still has: it has identity, and it mutates.
-That is why section 14 names a foreign reference among what its escape check refuses.
-One a process holds is shared mutable state, which section 15 has no answer for.
-The clause already written is that answer, rather than a rule of the boundary's own.
+So section 14 names a foreign reference among what its escape check refuses.
 An `extern` declaration is where a foreign reference comes from, and the check is what it goes to.
 
 An `extern` declares what it can fail with, and that claim is the author's, not the compiler's.
 It is the one claim in the language that nothing checks.
-That is why the boundary is narrow and lives in the library.
 `io` and `files` are Bux modules over `extern` declarations.
 A program reaches the platform through them, rather than through an `extern` of its own.
