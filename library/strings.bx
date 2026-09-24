@@ -8,6 +8,8 @@
 // `at` and `cut` are the bounds check each such call needs, written once here rather than at
 // every reading of a string. Every name here is public, so each of the two declarations they
 // call guards its member: nothing this module offers is partial.
+// `from_utf_8` meets neither test either, because no loop builds a char out of its value.
+// A `Charset` of the JVM decodes the text, and a `ByteBuffer` holds the bytes, so no array crosses.
 /// The UTF-16 code unit at `index`, and `None` where `index` is past either end of the text.
 ///
 /// It counts the units a JVM counts, which `length` counts too: a character the JVM holds as a
@@ -65,6 +67,17 @@ fn join(parts: List<String>, between: String) -> String {
     joined
 }
 
+/// The text that the chars of `text` spell as UTF-8, one byte for each char.
+///
+/// A char above 255 is no byte, and ISO-8859-1 writes it as `?`. A sequence that is not UTF-8
+/// is the replacement char, as `Charset.decode` gives it, so every text has an answer.
+// example: from_utf_8("Ã©") == "é"
+// example: from_utf_8("é") == "�"
+// example: from_utf_8("Bux") == "Bux"
+fn from_utf_8(text: String) -> String {
+    spelled(decoded(as_utf_8(), encoded(as_latin_1(), text)))
+}
+
 /// How many UTF-16 code units the text holds, widened from the `int` a JVM counts them as.
 ///
 /// It is the length a JVM reports and not always the number of characters: a character the JVM
@@ -84,3 +97,27 @@ extern method char code_unit_at(text: String, int index: Int) -> Result<Option<I
 /// The `None` is the answer an index outside the `int` range gets, and the `Err` is what the
 /// member throws for a pair of indices inside that range and outside the text.
 extern method cut_out(text: String, int from: Int, int to: Int) -> Result<Option<String>, String> = "substring"
+
+/// The bytes `encoding` writes `text` as, with `?` for a char it has no byte for.
+extern method encoded(encoding: Encoding, text: String) -> Bytes = "encode"
+
+/// The chars `encoding` reads `bytes` as, with the replacement char for a sequence it cannot read.
+extern method decoded(encoding: Encoding, bytes: Bytes) -> Chars = "decode"
+
+/// The text of the chars `chars` holds, from where it stands to where it ends.
+extern method spelled(chars: Chars) -> String = "toString"
+
+/// UTF-8, which is what a name in a file is written as.
+extern field as_utf_8() -> Encoding = "java.nio.charset.StandardCharsets.UTF_8"
+
+/// ISO-8859-1, which reads each char from 0 to 255 as the one byte of the same value.
+extern field as_latin_1() -> Encoding = "java.nio.charset.StandardCharsets.ISO_8859_1"
+
+/// How the chars of a text are held as bytes.
+extern type Encoding = "java.nio.charset.Charset"
+
+/// Bytes that a JVM holds apart from any array, which an encoding writes and reads.
+extern type Bytes = "java.nio.ByteBuffer"
+
+/// Chars that a JVM holds apart from any text, which an encoding reads bytes into.
+extern type Chars = "java.nio.CharBuffer"

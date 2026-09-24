@@ -7769,6 +7769,8 @@ status 0
 >
 > fn read_bytes(path: String) -> Result<List<Int>, String>
 >
+> fn size(path: String) -> Result<Int, String>
+>
 > fn each_byte(answer: Result<String, String>) -> Result<List<Int>, String>
 >
 > fn values_of(text: String) -> List<Int>
@@ -7796,6 +7798,8 @@ status 0
 > extern static read_whole(path: Path) -> Result<String, String> = "java.nio.file.Files.readString"
 >
 > extern static read_whole_as(path: Path, encoding: Encoding) -> Result<String, String> = "java.nio.file.Files.readString"
+>
+> extern static byte_count(path: Path) -> Result<Int, String> = "java.nio.file.Files.size"
 >
 > extern new opened(path: String, written_as: Encoding) -> Result<Writer, String>
 >
@@ -8006,11 +8010,29 @@ status 0
 >
 > fn join(parts: List<String>, between: String) -> String
 >
+> fn from_utf_8(text: String) -> String
+>
 > extern method int length(text: String) -> Int = "length"
 >
 > extern method char code_unit_at(text: String, int index: Int) -> Result<Option<Int>, String> = "charAt"
 >
 > extern method cut_out(text: String, int from: Int, int to: Int) -> Result<Option<String>, String> = "substring"
+>
+> extern method encoded(encoding: Encoding, text: String) -> Bytes = "encode"
+>
+> extern method decoded(encoding: Encoding, bytes: Bytes) -> Chars = "decode"
+>
+> extern method spelled(chars: Chars) -> String = "toString"
+>
+> extern field as_utf_8() -> Encoding = "java.nio.charset.StandardCharsets.UTF_8"
+>
+> extern field as_latin_1() -> Encoding = "java.nio.charset.StandardCharsets.ISO_8859_1"
+>
+> extern type Encoding = "java.nio.charset.Charset"
+>
+> extern type Bytes = "java.nio.ByteBuffer"
+>
+> extern type Chars = "java.nio.CharBuffer"
 
 $ test tests/spec/api/inferred.bx
 status 1

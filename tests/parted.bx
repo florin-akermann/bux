@@ -1,0 +1,81 @@
+// The drawn properties of a file read as bytes, which `docs/specs/io.md` states, and of the text
+// those bytes spell as UTF-8, which `docs/specs/library.md` states.
+//
+// Each case writes a drawn file into a directory of its own under the temporary directory, and
+// the directory is removed whole when every property has run. The runner runs on a JVM already,
+// so each case calls `files` and `strings` in the runner itself, and no JDK is started.
+import checking
+import command
+import drawn
+import files
+import held
+import list
+import modules
+import strings
+
+/// One `Held` for each property of a file read as bytes, in a fixed order.
+///
+/// Where no directory of its own can be made, each property is skipped with the reason.
+// example: list.length(every_property(1)) == 1
+fn every_property(cases: Int) -> List<held.Held> {
+    match command.somewhere_of_its_own() {
+        Ok(directory) => every_property_in(cases, directory)
+        Err(said) => [held.with_skip(held.nothing_failed(0), "parted: " + said.errors)]
+    }
+}
+
+/// Every property, each case written under `directory`, which is removed whole afterwards.
+// example: list.length(every_property_in(0, "no-such-directory")) == 1
+fn every_property_in(cases: Int, directory: String) -> List<held.Held> {
+    let found = [the_bytes_of_a_utf_8_file_spell_what_a_read_of_it_gives(cases, directory)]
+    command.removed_whole(directory)
+    found
+}
+
+/// The bytes of a drawn UTF-8 file, taken one char for each byte, spell what `files.read` gives.
+// example: held.is_held(the_bytes_of_a_utf_8_file_spell_what_a_read_of_it_gives(0, "no-such-directory"))
+fn the_bytes_of_a_utf_8_file_spell_what_a_read_of_it_gives(cases: Int, directory: String) -> held.Held {
+    var found = held.nothing_failed(cases)
+    for seed in checking.seeds(cases) {
+        let tried = spelled_tried(drawn.seeded(seed), modules.joined(directory, "drawn.txt"))
+        found = checking.noted(found, "the_bytes_of_a_utf_8_file_spell_what_a_read_of_it_gives", seed, tried)
+    }
+    found
+}
+
+/// A drawn UTF-8 text written at `path`, and whether its bytes spell what a read of it gives.
+// example: spelled_tried(drawn.seeded(1), "no-such-directory/drawn.txt").why != ""
+fn spelled_tried(draw: drawn.Draw, path: String) -> checking.Tried {
+    let text = drawn.text_of(drawn.next(draw), pieces(), drawn.number(draw, 40) + 1)
+    match files.write(path, text) {
+        Ok(_) => checking.Tried { input: text, why: spelled_why(path: path, text: text) }
+        Err(why) => checking.Tried { input: text, why: "the drawn file was not written: " + why }
+    }
+}
+
+/// What is wrong where the bytes at `path` spell other than what a read gives, or than `text`.
+// example: spelled_why(path: "no-such-directory/drawn.txt", text: "a") != ""
+fn spelled_why(path: String, text: String) -> String {
+    let read = ok_or(files.read(path), "")
+    let spelled = strings.from_utf_8(one_char_each(ok_or(files.read_bytes(path), [])))
+    if spelled != read || read != text {
+        return "the bytes spell " + held.quoted(spelled) + ", a read gives " + held.quoted(read) + ", and the file was written as " + held.quoted(text)
+    }
+    ""
+}
+
+/// The text of one char for each of `bytes`, each of the same value as its byte.
+// example: one_char_each([66, 233]) == "Bé"
+fn one_char_each(bytes: List<Int>) -> String {
+    var text = ""
+    for byte in bytes {
+        text += or(files.one_char(byte), "")
+    }
+    text
+}
+
+/// The pieces a drawn text is made of: one, two, three, and four bytes of UTF-8 each.
+// example: list.length(pieces()) == 8
+fn pieces() -> List<String> {
+    ["a", "Z", " ", "\n", "é", "€", "日", "😀"]
+}
