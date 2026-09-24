@@ -13,7 +13,6 @@ fn main(arguments: List<String>) -> Int {
     0
 }
 
-/// How many spaces the text holds, counted one code unit at a time.
 // example: spaces("a b") == 1
 fn spaces(text: String) -> Int {
     var counted = 0

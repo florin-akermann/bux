@@ -10,7 +10,6 @@ fn main(arguments: List<String>) -> Int {
     0
 }
 
-/// What each of `people` gets of `total`, which is nothing at all when there is nobody.
 // example: or(shared(total: 17, people: 5), 0) == 3
 // example: or(shared(total: 17, people: 0), 9) == 9
 fn shared(total: Int, people: Int) -> Option<Int> {

@@ -12,7 +12,6 @@ import set
 import surface
 import types
 
-/// `source` typed as the module `demo` against `prelude`, and nothing where a phase refuses it.
 // example: is_typed(inferred("fn f() -> Int {\n    1\n}\n", types.little_prelude()))
 // example: !is_typed(inferred("fn (", types.little_prelude()))
 fn inferred(source: String, prelude: types.Prelude) -> Option<infer.Inference> {
@@ -22,7 +21,6 @@ fn inferred(source: String, prelude: types.Prelude) -> Option<infer.Inference> {
     }
 }
 
-/// `program` resolved and typed, and nothing where either refuses it.
 // example: is_typed(resolved_typed(ast.Program { items: [] }, types.little_prelude()))
 fn resolved_typed(program: ast.Program, prelude: types.Prelude) -> Option<infer.Inference> {
     match resolver.resolve(program, "demo", prelude.names, set.empty()) {
@@ -31,7 +29,6 @@ fn resolved_typed(program: ast.Program, prelude: types.Prelude) -> Option<infer.
     }
 }
 
-/// The typed module, and nothing where typing refuses it.
 // example: !is_typed(typed_only(Err(refusal.TypeError { kind: refusal.DivisorIsZero, span: lexer.Span { start: 0, length: 1 } })))
 fn typed_only(answer: Result<infer.Inference, refusal.TypeError>) -> Option<infer.Inference> {
     match answer {
@@ -40,7 +37,6 @@ fn typed_only(answer: Result<infer.Inference, refusal.TypeError>) -> Option<infe
     }
 }
 
-/// Whether a module was typed.
 // example: !is_typed(None)
 fn is_typed(found: Option<infer.Inference>) -> Bool {
     match found {

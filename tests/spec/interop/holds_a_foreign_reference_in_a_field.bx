@@ -5,7 +5,6 @@ fn main(arguments: List<String>) -> Int {
     0
 }
 
-/// A file a program keeps, by the reference to it.
 type Kept = {
     file: File
 }

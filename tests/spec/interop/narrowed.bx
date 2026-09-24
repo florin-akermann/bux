@@ -19,7 +19,6 @@ fn main(arguments: List<String>) -> Int {
     0
 }
 
-/// The code unit at `index`, shown, and the word for an index no `int` holds.
 // example: read("hello", 1) == "101"
 fn read(text: String, index: Int) -> String {
     match code_unit_at(text, index) {
@@ -28,7 +27,6 @@ fn read(text: String, index: Int) -> String {
     }
 }
 
-/// The same reading with the member guarded, which tells the two answers apart.
 // example: guarded("hello", 3000000000) == "no such index"
 fn guarded(text: String, index: Int) -> String {
     match caught(text, index) {
@@ -37,7 +35,6 @@ fn guarded(text: String, index: Int) -> String {
     }
 }
 
-/// What the guard handed back, shown.
 // example: read_out(None) == "no such index"
 fn read_out(held: Option<Int>) -> String {
     match held {

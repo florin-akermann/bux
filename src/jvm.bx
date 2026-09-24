@@ -13,7 +13,6 @@ import map
 import set
 import strings
 
-/// Every class file of the program at `path`, in the order a build writes them, or why not.
 // example: list.length(ok_or(classes_of("no-such-directory/main.bx", ir.little_library()), [])) == 0
 private fn classes_of(path: String, library: ir.Library) -> Result<List<ClassFile>, String> {
     match ir.program_lowered(path, library) {
@@ -22,7 +21,6 @@ private fn classes_of(path: String, library: ir.Library) -> Result<List<ClassFil
     }
 }
 
-/// The class files, or why they are not written, printed.
 // example: list.length(ok_or(written_or_said(Ok([])), [ClassFile { path: "", bytes: [] }])) == 0
 private fn written_or_said(answer: Result<List<ClassFile>, Unwritten>) -> Result<List<ClassFile>, String> {
     match answer {
@@ -31,14 +29,8 @@ private fn written_or_said(answer: Result<List<ClassFile>, Unwritten>) -> Result
     }
 }
 
-/// Every class of every module of `program`, each once, in the order the modules name them.
-///
-/// The modules are written together, because a frame names the class two branches share, and a
-/// variant one module gives back may extend a base that another module declares. Two modules
-/// that write one class, such as the class of a list, write the same bytes, and the file is
-/// written once. Two different classes of one name are refused: two parts of the program have one name.
-/// Two classes whose names differ only in case are refused too, even with the same bytes, because
-/// a disk that ignores case holds them as one file, and a build gives one answer on every disk.
+// The modules are written together, because a variant of one module can extend a base of another.
+// Names that differ only in case clash, because a disk that ignores case holds them as one file.
 // example: list.length(ok_or(program_written([]), [ClassFile { path: "", bytes: [] }])) == 0
 // example: list.length(ok_or(program_written([one_class(record_class()), one_class(record_class())]), [])) == 1
 // example: refused_code(program_written([one_class(record_class()), one_class(base_class())])) == "L0702"
@@ -70,9 +62,7 @@ fn program_written(program: List<ir.Lowered>) -> Result<List<ClassFile>, Unwritt
     Ok(files)
 }
 
-/// Why `file` is not written, where `earlier` is the file written first under its folded path.
-///
-/// The same path with the same bytes is one class that two modules write, and it is no clash.
+// Two modules can write one class, so the same path with the same bytes is no clash.
 // example: !is_held(clash_of(Some(ClassFile { path: "a/B.class", bytes: [1] }), ClassFile { path: "a/B.class", bytes: [1] }))
 // example: help_of(or(clash_of(Some(ClassFile { path: "a/B.class", bytes: [1] }), ClassFile { path: "a/B.class", bytes: [2] }), TooLarge)) == help_of(NamedTwice)
 // example: help_of(or(clash_of(Some(ClassFile { path: "a/B.class", bytes: [1] }), ClassFile { path: "a/b.class", bytes: [1] }), TooLarge)) == help_of(NamedInCase("a/B"))
@@ -89,11 +79,7 @@ fn clash_of(earlier: Option<ClassFile>, file: ClassFile) -> Option<Why> {
     }
 }
 
-/// `path` with each ASCII uppercase letter in lowercase, which is how a disk that ignores case
-/// compares two names.
-///
-/// A class name is spelled in the letters of Java names. Only the 26 ASCII letters are folded
-/// here, and a letter outside ASCII keeps its case.
+// Only the 26 ASCII letters are folded, and a letter outside ASCII keeps its case.
 // example: case_folded("demo/Box.class") == "demo/box.class"
 // example: case_folded("Ärger/ZZ") == "Ärger/zz"
 fn case_folded(path: String) -> String {
@@ -106,7 +92,6 @@ fn case_folded(path: String) -> String {
     folded
 }
 
-/// The code unit of `path` at `at` as a text, in lowercase where it is an ASCII uppercase letter.
 // example: unit_folded("aB", 1) == "b"
 // example: unit_folded("aB", 0) == "a"
 fn unit_folded(path: String, at: Int) -> String {
@@ -117,10 +102,7 @@ fn unit_folded(path: String, at: Int) -> String {
     or(strings.cut(path, at, at + 1), "")
 }
 
-/// `class` as the bytes a JVM loads, or why it is not written.
-///
-/// The class file is JDK 28 marked preview, and the class is a value class: its identity bit is
-/// clear. A class that waits on the layout of no other class carries no attribute for it.
+// The class file is JDK 28 with the preview mark, and a value class has its identity bit clear.
 // example: list.length(ok_or(class_written(record_class(), hierarchy_of([record_class()])), [])) > 10
 fn class_written(class: ir.Class, hierarchy: Hierarchy) -> Result<List<Int>, Unwritten> {
     let name = class_of(class.of)
@@ -145,7 +127,6 @@ fn class_written(class: ir.Class, hierarchy: Hierarchy) -> Result<List<Int>, Unw
     Ok(bytes.all(bytes.u2(written, 1), wanted.bytes))
 }
 
-/// How many interfaces a class implements, then the pool index of each one.
 // example: interfaces_written(no_pool(), []).bytes == [0, 0]
 fn interfaces_written(pool: Pool, implements: List<ir.Kind>) -> Written {
     var writing = Written { pool: pool, bytes: bytes.u2([], list.length(implements)) }
@@ -156,7 +137,6 @@ fn interfaces_written(pool: Pool, implements: List<ir.Kind>) -> Written {
     writing
 }
 
-/// The access a class is written with beside `ACC_PUBLIC`: final, or abstract for a base.
 // example: extending_access(ir.ByItsVariants) == 1024
 fn extending_access(extending: ir.Extending) -> Int {
     match extending {
@@ -165,7 +145,6 @@ fn extending_access(extending: ir.Extending) -> Int {
     }
 }
 
-/// The fields of `class`, each public, final, and written before the constructor hands itself up.
 // example: fields_written(no_pool(), base_class()).bytes == [0, 1, 8, 17, 0, 1, 0, 2, 0, 0]
 fn fields_written(pool: Pool, class: ir.Class) -> Written {
     var writing = Written { pool: pool, bytes: bytes.u2([], list.length(class.fields)) }
@@ -178,7 +157,6 @@ fn fields_written(pool: Pool, class: ir.Class) -> Written {
     writing
 }
 
-/// The methods of `class`, each with its code, or why one of them is not written.
 // example: list.length(written_or_none(methods_written(Writer { pool: no_pool(), hierarchy: hierarchy_of([]) }, base_class())).bytes) == 2
 fn methods_written(writer: Writer, class: ir.Class) -> Result<Written, Unwritten> {
     let name = class_of(class.of)
@@ -190,11 +168,8 @@ fn methods_written(writer: Writer, class: ir.Class) -> Result<Written, Unwritten
     Ok(writing)
 }
 
-/// Each of `methods` of the class `class` as a JVM runs it, the first of each name and descriptor
-/// only, or why one of them is not spelled.
-///
-/// The lowering tells two methods apart by their Bux values, and two values can have one
-/// descriptor, such as `Anything` and an extern type of `java.lang.Object`.
+// Lowering tells two methods apart by their Bux values, and two values can have one descriptor,
+// such as `Anything` and an extern type of `java.lang.Object`.
 // example: list.length(ok_or(spelled_once([returning_method(), returning_method()], "a/B"), [])) == 1
 fn spelled_once(methods: List<ir.Method>, class: String) -> Result<List<Spelled>, Unwritten> {
     var seen = set.empty()
@@ -210,11 +185,7 @@ fn spelled_once(methods: List<ir.Method>, class: String) -> Result<List<Spelled>
     Ok(spelled)
 }
 
-/// `into`, with one method of the class `class` after it: its access, its name, its descriptor,
-/// and its code.
-///
-/// A text the method asks the pool for is held to the length a class file can write here, so a
-/// refusal names the method whose text it is.
+// The texts of the method are held to the class file limit here, so a refusal names the method.
 // example: list.length(written_or_none(method_written(Writer { pool: no_pool(), hierarchy: hierarchy_of([]) }, returning_spelled(), "a/B", [])).bytes) > 10
 fn method_written(writer: Writer, spelled: Spelled, class: String, into: List<Int>) -> Result<Written, Unwritten> {
     let name = pooled_utf8(writer.pool, spelled.name)
@@ -225,10 +196,6 @@ fn method_written(writer: Writer, spelled: Spelled, class: String, into: List<In
     Ok(Written { pool: code.pool, bytes: bytes.all(bytes.u2(bytes.u2(written, descriptor.index), 1), code.bytes) })
 }
 
-/// `method` of the class `class` as a JVM runs it, or the defect of a local that no slot holds.
-///
-/// Each local is given its slot, each value its descriptor, and each instruction is spelled as
-/// the ones a JVM runs for it.
 // example: list.length(ok_or(method_spelled(returning_method(), "a/B"), returning_spelled()).instructions) == 2
 // example: why_code(method_spelled(ir.Method { name: "of", parameters: [], result: None, reached: ir.ThroughTheClass, body: ir.Body { instructions: [ir.Load(ir.Local { name: "x", of: ir.Whole })], locals: [], guards: [] } }, "a/B")) == "L0703"
 fn method_spelled(method: ir.Method, class: String) -> Result<Spelled, Why> {
@@ -245,7 +212,6 @@ fn method_spelled(method: ir.Method, class: String) -> Result<Spelled, Why> {
     Ok(Spelled { name: name_spelled(method), descriptor: descriptor, receiver: receiver, instructions: instructions, slots: locals.width, guards: method.body.guards })
 }
 
-/// The name a class file gives `method`: `<init>` for a constructor, and its own name otherwise.
 // example: name_spelled(returning_method()) == "of"
 fn name_spelled(method: ir.Method) -> String {
     match method.reached {
@@ -254,7 +220,6 @@ fn name_spelled(method: ir.Method) -> String {
     }
 }
 
-/// The class a method reached through an instance runs on, and nothing for a static method.
 // example: or(receiver_of(ir.AsItsConstructor, "a/B"), "") == "a/B"
 // example: !is_held(receiver_of(ir.ThroughTheClass, "a/B"))
 fn receiver_of(reached: ir.Reached, class: String) -> Option<String> {
@@ -264,8 +229,6 @@ fn receiver_of(reached: ir.Reached, class: String) -> Option<String> {
     }
 }
 
-/// Where each local of a method lives: the receiver as `this` in slot zero, then each parameter,
-/// then each local of the body, each as wide as what it holds.
 // example: locals_of(receiver: None, parameters: [ir.Local { name: "x", of: ir.Whole }], body: [ir.Local { name: "y", of: ir.Small }]).width == 3
 // example: ok_or(slot_of(locals_of(receiver: Some("a/B"), parameters: [], body: [ir.Local { name: "y", of: ir.Small }]), ir.Local { name: "y", of: ir.Small }), 0) == 1
 fn locals_of(receiver: Option<String>, parameters: List<ir.Local>, body: List<ir.Local>) -> Locals {
@@ -282,9 +245,7 @@ fn locals_of(receiver: Option<String>, parameters: List<ir.Local>, body: List<ir
     every
 }
 
-/// `locals`, with `name` given the next slot and as many slots as `of` takes.
-///
-/// A name is one local, so a name placed already takes no second slot.
+// A name is one local, so a name that has a slot already takes no second slot.
 // example: local_placed(locals: Locals { slots: map.empty(), width: 0 }, name: "x", of: Long).width == 2
 // example: local_placed(locals: local_placed(locals: Locals { slots: map.empty(), width: 0 }, name: "x", of: Long), name: "x", of: Long).width == 2
 fn local_placed(locals: Locals, name: String, of: Descriptor) -> Locals {
@@ -294,8 +255,6 @@ fn local_placed(locals: Locals, name: String, of: Descriptor) -> Locals {
     Locals { slots: map.insert(locals.slots, name, Placed { at: locals.width, width: width(of) }), width: locals.width + width(of) }
 }
 
-/// The instructions a JVM runs for `instruction`, each local read as its slot in `locals`, or the
-/// defect of a local that no slot holds.
 // example: list.length(ok_or(instruction_spelled(ir.Increment(ir.Local { name: "x", of: ir.Small }), locals_of(receiver: None, parameters: [ir.Local { name: "x", of: ir.Small }], body: [])), [])) == 1
 fn instruction_spelled(instruction: ir.Instruction, locals: Locals) -> Result<List<Instruction>, Why> {
     match instruction {
@@ -307,8 +266,6 @@ fn instruction_spelled(instruction: ir.Instruction, locals: Locals) -> Result<Li
     }
 }
 
-/// The instructions a JVM runs for `instruction`, which names no local: a constant, the stack,
-/// arithmetic, or a jump.
 // example: list.length(plain_spelled(ir.Convert { from: ir.Of(ir.Anything), to: ir.Whole })) == 2
 fn plain_spelled(instruction: ir.Instruction) -> List<Instruction> {
     match instruction {
@@ -335,8 +292,6 @@ fn plain_spelled(instruction: ir.Instruction) -> List<Instruction> {
     }
 }
 
-/// The instructions a JVM runs for `instruction`, which makes, reads, or calls a class the
-/// lowering names by its kind.
 // example: list.length(object_spelled(ir.Construct { built: ir.Anything, taken: [] })) == 1
 fn object_spelled(instruction: ir.Instruction) -> List<Instruction> {
     match instruction {
@@ -356,8 +311,6 @@ fn object_spelled(instruction: ir.Instruction) -> List<Instruction> {
     }
 }
 
-/// The instructions a JVM runs for `instruction`, which asks the Java platform for text, a
-/// failure, the end of the program, or an array.
 // example: list.length(java_spelled(ir.Unmatched)) == 4
 fn java_spelled(instruction: ir.Instruction) -> List<Instruction> {
     let text = "java/lang/String"
@@ -375,7 +328,6 @@ fn java_spelled(instruction: ir.Instruction) -> List<Instruction> {
     }
 }
 
-/// The call that turns a value `of` holds into its text, and nothing for a value that is text.
 // example: list.length(shown_spelled(ir.Whole)) == 1
 // example: list.length(shown_spelled(ir.Of(ir.Text))) == 0
 fn shown_spelled(of: ir.Value) -> List<Instruction> {
@@ -386,15 +338,12 @@ fn shown_spelled(of: ir.Value) -> List<Instruction> {
     }
 }
 
-/// The throw of an `AssertionError`, which a match where no arm fits runs.
 // example: list.length(unmatched()) == 4
 fn unmatched() -> List<Instruction> {
     let thrown = "java/lang/AssertionError"
     [New(thrown), Copy, Construct(constructor_of(thrown, [])), Throw]
 }
 
-/// The instructions a JVM runs for `instruction`, which starts a process, or reads its mailbox,
-/// its envelope, its end, or the failure it ended with.
 // example: list.length(process_spelled(ir.Started)) == 2
 fn process_spelled(instruction: ir.Instruction) -> List<Instruction> {
     let mailbox = class_of(ir.Mailbox)
@@ -416,28 +365,23 @@ fn process_spelled(instruction: ir.Instruction) -> List<Instruction> {
     }
 }
 
-/// The task on the stack started on a virtual thread of its own, and the thread dropped.
 // example: list.length(started()) == 2
 fn started() -> List<Instruction> {
     let thread = Reference("java/lang/Thread")
     [InvokeStatic(method_of(class: "java/lang/Thread", name: "startVirtualThread", taken: [Reference(class_of(ir.Task))], gives: Some(thread))), Drop(thread)]
 }
 
-/// The offer of the envelope on the stack to the class `mailbox`, within the milliseconds on the
-/// stack, which leaves whether the mailbox took it.
 // example: list.length(offered("java/util/concurrent/ArrayBlockingQueue")) == 2
 fn offered(mailbox: String) -> List<Instruction> {
     let unit = Reference("java/util/concurrent/TimeUnit")
     [GetStatic(FieldRef { class: "java/util/concurrent/TimeUnit", name: "MILLISECONDS", of: unit }), InvokeVirtual(method_of(class: mailbox, name: "offer", taken: [object(), Long, unit], gives: Some(Boolean)))]
 }
 
-/// `field` as a class file names it.
 // example: field_spelled(ir.FieldRef { owner: ir.Anything, name: "at", of: ir.Whole }).of == Long
 fn field_spelled(field: ir.FieldRef) -> FieldRef {
     FieldRef { class: class_of(field.owner), name: field.name, of: descriptor_of(field.of) }
 }
 
-/// What turns `held` into `wanted`: a box, an unbox, a cast from `Object`, or nothing.
 // example: list.length(converted(held: Long, wanted: object())) == 1
 // example: list.length(converted(held: object(), wanted: Long)) == 2
 // example: list.length(converted(held: object(), wanted: text_descriptor())) == 1
@@ -460,7 +404,6 @@ fn converted(held: Descriptor, wanted: Descriptor) -> List<Instruction> {
     []
 }
 
-/// A cast from `Object` to the class `wanted` names, where both are classes.
 // example: list.length(narrowed(held: object(), wanted: text_descriptor())) == 1
 // example: list.length(narrowed(held: text_descriptor(), wanted: object())) == 0
 fn narrowed(held: Descriptor, wanted: Descriptor) -> List<Instruction> {
@@ -474,7 +417,6 @@ fn narrowed(held: Descriptor, wanted: Descriptor) -> List<Instruction> {
     }
 }
 
-/// The method of its box that reads a value `of` holds back out.
 // example: box_read(Boolean) == "booleanValue"
 fn box_read(of: Descriptor) -> String {
     match of {
@@ -484,7 +426,6 @@ fn box_read(of: Descriptor) -> String {
     }
 }
 
-/// The class a value `of` holds is boxed in, and `""` for a value no box holds.
 // example: boxing_class(Long) == "java/lang/Long"
 // example: boxing_class(object()) == ""
 fn boxing_class(of: Descriptor) -> String {
@@ -496,10 +437,6 @@ fn boxing_class(of: Descriptor) -> String {
     }
 }
 
-/// The member an `extern` reaches, with `loaded` put on the stack first where it takes them.
-///
-/// `taking` is what the member takes and gives back. An instance method takes its receiver
-/// first, and a constructor gives back the class it builds.
 // example: list.length(member_reached(reaches: ast.Constructor, through: ir.ThroughItsClass, taking: MethodDescriptor { parameters: [], result: Some(object()) }, loaded: [])) == 3
 fn member_reached(reaches: ast.Reaches, through: ir.CalledAs, taking: MethodDescriptor, loaded: List<Instruction>) -> List<Instruction> {
     match reaches {
@@ -510,7 +447,6 @@ fn member_reached(reaches: ast.Reaches, through: ir.CalledAs, taking: MethodDesc
     }
 }
 
-/// What each argument reaches the member as.
 // example: list.length(each_reaching([])) == 0
 fn each_reaching(arguments: List<ir.Argument>) -> List<Descriptor> {
     var taken = []
@@ -520,7 +456,6 @@ fn each_reaching(arguments: List<ir.Argument>) -> List<Descriptor> {
     taken
 }
 
-/// What the member takes where `argument` arrives as its local holds it and crosses as it says.
 // example: reaching_of(ir.Argument { local: ir.Local { name: "x", of: ir.Whole }, crossing: ir.Narrowed }) == Integer
 fn reaching_of(argument: ir.Argument) -> Descriptor {
     match argument.crossing {
@@ -530,7 +465,6 @@ fn reaching_of(argument: ir.Argument) -> Descriptor {
     }
 }
 
-/// A class built and its constructor called with each of `loaded`.
 // example: list.length(constructed_member([], MethodDescriptor { parameters: [], result: Some(object()) })) == 3
 fn constructed_member(loaded: List<Instruction>, taking: MethodDescriptor) -> List<Instruction> {
     let class = class_named_by(or(taking.result, object()))
@@ -541,14 +475,11 @@ fn constructed_member(loaded: List<Instruction>, taking: MethodDescriptor) -> Li
     list.push(instructions, Construct(constructor_of(class, taking.parameters)))
 }
 
-/// The constructor of the class `class`, which takes `taken`.
 // example: constructor_of("a/B", [Long]).name == "<init>"
 fn constructor_of(class: String, taken: List<Descriptor>) -> MethodRef {
     method_of(class: class, name: "<init>", taken: taken, gives: None)
 }
 
-/// Every argument loaded from the slot it arrives in, and made what the member takes, or the
-/// defect of an argument that no slot holds.
 // example: list.length(ok_or(arguments_loaded([ir.Argument { local: ir.Local { name: "x", of: ir.Whole }, crossing: ir.Narrowed }], locals_of(receiver: None, parameters: [ir.Local { name: "x", of: ir.Whole }], body: [])), [])) == 2
 fn arguments_loaded(arguments: List<ir.Argument>, locals: Locals) -> Result<List<Instruction>, Why> {
     var instructions = []
@@ -563,8 +494,6 @@ fn arguments_loaded(arguments: List<ir.Argument>, locals: Locals) -> Result<List
     Ok(instructions)
 }
 
-/// The slot `local` lives in, or the defect of a local that no slot holds, or that holds a value
-/// wider than its slot.
 // example: why_code(slot_of(locals_of(receiver: None, parameters: [], body: []), ir.Local { name: "x", of: ir.Whole })) == "L0703"
 // example: why_code(slot_of(locals_of(receiver: None, parameters: [], body: [ir.Local { name: "x", of: ir.Small }]), ir.Local { name: "x", of: ir.Whole })) == "L0703"
 fn slot_of(locals: Locals, local: ir.Local) -> Result<Int, Why> {
@@ -574,7 +503,6 @@ fn slot_of(locals: Locals, local: ir.Local) -> Result<Int, Why> {
     }
 }
 
-/// Where `slot` is wide enough for `local`, the first of its slots, and the defect otherwise.
 // example: ok_or(slot_held(Placed { at: 3, width: 2 }, ir.Local { name: "x", of: ir.Small }), 0) == 3
 fn slot_held(slot: Placed, local: ir.Local) -> Result<Int, Why> {
     if width(descriptor_of(local.of)) > slot.width {
@@ -583,20 +511,17 @@ fn slot_held(slot: Placed, local: ir.Local) -> Result<Int, Why> {
     Ok(slot.at)
 }
 
-/// The function of the prelude that turns a list into a `java.util.List`.
 // example: list_crossed().name == "listed"
 fn list_crossed() -> MethodRef {
     let listed = class_of(ir.TypeOf { module: ir.ThePrelude, name: "List" })
     method_of(class: listed, name: "listed", taken: [Reference(listed)], gives: Some(java_list()))
 }
 
-/// The method `name` of the class `class`, which takes `taken` and gives back `gives`.
 // example: method_of(class: "a/B", name: "of", taken: [], gives: None).name == "of"
 fn method_of(class: String, name: String, taken: List<Descriptor>, gives: Option<Descriptor>) -> MethodRef {
     MethodRef { class: class, name: name, descriptor: MethodDescriptor { parameters: taken, result: gives } }
 }
 
-/// The call an instance method is reached with, which the JVM writes one way for an interface.
 // example: list.length(instruction_written(assembling_of([]), member_called(ir.ThroughItsInterface, list_crossed())).code) == 5
 fn member_called(through: ir.CalledAs, method: MethodRef) -> Instruction {
     match through {
@@ -605,7 +530,6 @@ fn member_called(through: ir.CalledAs, method: MethodRef) -> Instruction {
     }
 }
 
-/// The class a `field` or a `static` names, which is every segment but the last.
 // example: class_of_member("java.lang.Math.abs") == "java/lang/Math"
 fn class_of_member(named: String) -> String {
     match last_dot(named) {
@@ -614,7 +538,6 @@ fn class_of_member(named: String) -> String {
     }
 }
 
-/// The member a `field` or a `static` names, which is the last segment.
 // example: member_of("java.lang.Math.abs") == "abs"
 fn member_of(named: String) -> String {
     match last_dot(named) {
@@ -623,7 +546,6 @@ fn member_of(named: String) -> String {
     }
 }
 
-/// Where the last dot of `named` is, where it has one.
 // example: or(last_dot("a.b.c"), 0) == 3
 fn last_dot(named: String) -> Option<Int> {
     var found = None
@@ -638,7 +560,6 @@ fn last_dot(named: String) -> Option<Int> {
     found
 }
 
-/// The class `of` is, which every descriptor an `extern` writes a class into is one of.
 // example: class_named_by(object()) == "java/lang/Object"
 fn class_named_by(of: Descriptor) -> String {
     match of {
@@ -647,7 +568,6 @@ fn class_named_by(of: Descriptor) -> String {
     }
 }
 
-/// Each of `taken` after the first.
 // example: list.length(after_first([Long, Integer])) == 1
 fn after_first(taken: List<Descriptor>) -> List<Descriptor> {
     var rest = []
@@ -661,7 +581,6 @@ fn after_first(taken: List<Descriptor>) -> List<Descriptor> {
     rest
 }
 
-/// What each parameter holds, as a class file writes it.
 // example: parameters_spelled([ir.Local { name: "x", of: ir.Whole }]) == [Long]
 fn parameters_spelled(parameters: List<ir.Local>) -> List<Descriptor> {
     var spelled = []
@@ -671,7 +590,6 @@ fn parameters_spelled(parameters: List<ir.Local>) -> List<Descriptor> {
     spelled
 }
 
-/// What each of `values` is, as a class file writes it.
 // example: descriptors_of([ir.Small]) == [Integer]
 fn descriptors_of(values: List<ir.Value>) -> List<Descriptor> {
     var spelled = []
@@ -681,7 +599,6 @@ fn descriptors_of(values: List<ir.Value>) -> List<Descriptor> {
     spelled
 }
 
-/// What `value` is, as a class file writes it, and nothing for a function that gives nothing.
 // example: held_text(result_of(Some(ir.Truth))) == "Z"
 fn result_of(value: Option<ir.Value>) -> Option<Descriptor> {
     match value {
@@ -690,28 +607,23 @@ fn result_of(value: Option<ir.Value>) -> Option<Descriptor> {
     }
 }
 
-/// What holds an object.
 // example: descriptor_text(object()) == "Ljava/lang/Object;"
 fn object() -> Descriptor {
     Reference(class_of(ir.Anything))
 }
 
-/// What holds a `java.util.List`.
 // example: descriptor_text(java_list()) == "Ljava/util/List;"
 fn java_list() -> Descriptor {
     Reference(class_of(ir.JavaList))
 }
 
-/// What `answer` wrote, and nothing written where it was refused.
 // example: written_or_none(Ok(Written { pool: no_pool(), bytes: [1] })).bytes == [1]
 private fn written_or_none(answer: Result<Written, Unwritten>) -> Written {
     ok_or(answer, Written { pool: no_pool(), bytes: [] })
 }
 
-/// Nothing where each text `pool` holds from its entry `from` on fits, and why not where one does not.
-///
-/// A class file writes the length of a text in two bytes, so a text of more is refused, not cut.
-/// Only a text of more than a third of that many units can take more bytes than that.
+// A class file writes the length of a text in two bytes, so a longer text is refused, not cut.
+// Only a text of more than a third of that many units can take more bytes than that.
 // example: refused_code(texts_held(pool: pooled_utf8(no_pool(), "a").pool, from: 0, class: "a/B", method: None)) == ""
 fn texts_held(pool: Pool, from: Int, class: String, method: Option<String>) -> Result<(), Unwritten> {
     var at = 0
@@ -724,7 +636,6 @@ fn texts_held(pool: Pool, from: Int, class: String, method: Option<String>) -> R
     Ok(())
 }
 
-/// Nothing where `entry` is no text or a text that fits, and why not where it is one that does not.
 // example: refused_code(text_held(entry: Utf8Entry("a"), class: "a/B", method: None)) == ""
 fn text_held(entry: Entry, class: String, method: Option<String>) -> Result<(), Unwritten> {
     match entry {
@@ -737,7 +648,6 @@ fn text_held(entry: Entry, class: String, method: Option<String>) -> Result<(), 
     }
 }
 
-/// The access a method is written with beside `ACC_PUBLIC`: static where it has no receiver.
 // example: static_access(None) == 8
 // example: static_access(Some("a/B")) == 0
 fn static_access(receiver: Option<String>) -> Int {
@@ -747,7 +657,6 @@ fn static_access(receiver: Option<String>) -> Int {
     }
 }
 
-/// The `Code` attribute of one method, with the exception table and the stack map it needs.
 // example: list.length(written_or_none(code_written(Writer { pool: no_pool(), hierarchy: hierarchy_of([]) }, returning_spelled(), "a/B")).bytes) == 22
 fn code_written(writer: Writer, spelled: Spelled, class: String) -> Result<Written, Unwritten> {
     let assembled = placed_in(answer: assembled_of(spelled, writer), class: class, method: spelled.name)?
@@ -761,7 +670,6 @@ fn code_written(writer: Writer, spelled: Spelled, class: String) -> Result<Writt
     Ok(Written { pool: named.pool, bytes: bytes.all(bytes.u4(bytes.u2([], named.index), list.length(body)), body) })
 }
 
-/// `answer`, where a refusal is one of the method `method` of the class `class`.
 // example: refused_code(placed_in(answer: Err(TooLarge), class: "a/B", method: "of")) == "L0700"
 fn placed_in<T>(answer: Result<T, Why>, class: String, method: String) -> Result<T, Unwritten> {
     match answer {
@@ -770,7 +678,6 @@ fn placed_in<T>(answer: Result<T, Why>, class: String, method: String) -> Result
     }
 }
 
-/// One where `written` holds anything, and zero where it holds nothing.
 // example: has_any([]) == 0
 fn has_any(written: List<Int>) -> Int {
     if list.length(written) == 0 {
@@ -779,7 +686,6 @@ fn has_any(written: List<Int>) -> Int {
     1
 }
 
-/// The exception table, which names every span whose throw is caught and where it lands.
 // example: handlers_written(no_pool(), []).bytes == [0, 0]
 fn handlers_written(pool: Pool, handlers: List<Caught>) -> Written {
     var writing = Written { pool: pool, bytes: bytes.u2([], list.length(handlers)) }
@@ -791,7 +697,6 @@ fn handlers_written(pool: Pool, handlers: List<Caught>) -> Written {
     writing
 }
 
-/// The `StackMapTable` attribute, each frame a full one, and nothing where nothing branches.
 // example: map_written(no_pool(), []).bytes == []
 fn map_written(pool: Pool, frames: List<Landed>) -> Written {
     if list.length(frames) == 0 {
@@ -808,9 +713,6 @@ fn map_written(pool: Pool, frames: List<Landed>) -> Written {
     Written { pool: named.pool, bytes: bytes.all(bytes.u4(bytes.u2([], named.index), list.length(writing.bytes)), writing.bytes) }
 }
 
-/// The `LoadableDescriptors` attribute: each field whose class a JVM may fold, named once.
-///
-/// A class that waits on nothing carries no attribute, which is written here as no bytes.
 // example: loadable_written(no_pool(), record_class(), hierarchy_of([])).bytes == []
 fn loadable_written(pool: Pool, class: ir.Class, hierarchy: Hierarchy) -> Written {
     var wanted = []
@@ -836,7 +738,6 @@ fn loadable_written(pool: Pool, class: ir.Class, hierarchy: Hierarchy) -> Writte
     Written { pool: named.pool, bytes: bytes.all(bytes.u4(bytes.u2([], named.index), list.length(descriptors)), descriptors) }
 }
 
-/// What holds a value of `value` on the JVM.
 // example: descriptor_of(ir.Array(ir.Small)) == Array(Integer)
 // example: descriptor_of(ir.Of(ir.Text)) == Reference("java/lang/String")
 fn descriptor_of(value: ir.Value) -> Descriptor {
@@ -850,10 +751,8 @@ fn descriptor_of(value: ir.Value) -> Descriptor {
     }
 }
 
-/// Whether a value of `of` is one a JVM may fold into the class that holds it.
-///
-/// Only a class this build writes is a value class, and a base of a sum type is not folded,
-/// because a field typed as one holds whichever variant it was given.
+// Only a class that this build writes is a value class. A sum type base is not folded,
+// because a field of that type holds whichever variant it was given.
 // example: !is_foldable(hierarchy_of([]), Long)
 fn is_foldable(hierarchy: Hierarchy, of: Descriptor) -> Bool {
     match of {
@@ -862,7 +761,6 @@ fn is_foldable(hierarchy: Hierarchy, of: Descriptor) -> Bool {
     }
 }
 
-/// Whether this build writes the class `class`.
 // example: !is_written_here(hierarchy_of([]), "a/B")
 fn is_written_here(hierarchy: Hierarchy, class: String) -> Bool {
     match map.get(hierarchy.extends, class) {
@@ -871,7 +769,6 @@ fn is_written_here(hierarchy: Hierarchy, class: String) -> Bool {
     }
 }
 
-/// The instructions of `spelled` assembled into the bytes it runs, with its frames and handlers.
 // example: why_code(assembled_of(returning_spelled(), Writer { pool: no_pool(), hierarchy: hierarchy_of([]) })) == ""
 fn assembled_of(spelled: Spelled, writer: Writer) -> Result<Assembled, Why> {
     var assembling = Assembling { code: [], frame: entering(spelled.descriptor.parameters, spelled.receiver, spelled.slots), is_reachable: true, landings: map.empty(), landed: [], expected: map.empty(), pending: [], deepest: 0, next: 4294967295, guards: spelled.guards, pool: writer.pool, hierarchy: writer.hierarchy, defect: None }
@@ -881,10 +778,7 @@ fn assembled_of(spelled: Spelled, writer: Writer) -> Result<Assembled, Why> {
     finished(assembling, spelled.slots)
 }
 
-/// The assembled body: each branch patched, each frame and each handler read off where they land.
-///
-/// A body longer than a method holds, or with a branch farther than two bytes of offset reach, is
-/// refused as too large. A defect found while it was assembled is refused as one.
+// A body longer than a JVM method holds, or a branch past a two-byte offset, is too large.
 // example: why_code(finished(assembling_of([]), 0)) == ""
 // example: why_code(finished(branched(assembling: assembling_of([]), opcode: 167, label: 3), 0)) == "L0703"
 // example: why_code(finished(too_large(), 0)) == "L0700"
@@ -901,7 +795,6 @@ fn finished(assembling: Assembling, slots: Int) -> Result<Assembled, Why> {
     Ok(Assembled { code: patched(assembling.code, patches), max_stack: capped(assembling.deepest), max_locals: slots, frames: frames_written(assembling), handlers: handlers, pool: assembling.pool })
 }
 
-/// Nothing where no defect was found, and the defect where one was.
 // example: why_code(sound(Some("a defect"))) == "L0703"
 fn sound(defect: Option<String>) -> Result<(), Why> {
     match defect {
@@ -910,7 +803,6 @@ fn sound(defect: Option<String>) -> Result<(), Why> {
     }
 }
 
-/// The offset `patch` branches by, or why it has none that two bytes hold.
 // example: ok_or(reach_of(landed_with(assembling_of([]), 3, Frame { locals: [], stack: [] }), Patch { at: 0, label: 3, from: 0 }), 1) == 0
 fn reach_of(assembling: Assembling, patch: Patch) -> Result<Int, Why> {
     let away = landing_of(assembling, patch.label)? - patch.from
@@ -920,7 +812,6 @@ fn reach_of(assembling: Assembling, patch: Patch) -> Result<Int, Why> {
     Ok(away)
 }
 
-/// A body one byte longer than a method may be, with nothing else assembled.
 // example: list.length(too_large().code) == 65536
 private fn too_large() -> Assembling {
     var code = []
@@ -930,7 +821,6 @@ private fn too_large() -> Assembling {
     Assembling { code: code, frame: Frame { locals: [], stack: [] }, is_reachable: true, landings: map.empty(), landed: [], expected: map.empty(), pending: [], deepest: 0, next: 4294967295, guards: [], pool: no_pool(), hierarchy: hierarchy_of([]), defect: None }
 }
 
-/// `code`, with the two bytes at each place `patches` names replaced by what it holds there.
 // example: patched([167, 0, 0], map.insert(map.empty(), 1, 3)) == [167, 0, 3]
 fn patched(code: List<Int>, patches: map.Map<Int, Int>) -> List<Int> {
     var written = []
@@ -948,7 +838,6 @@ fn patched(code: List<Int>, patches: map.Map<Int, Int>) -> List<Int> {
     written
 }
 
-/// Each guard as the offsets the exception table names, in the order they were stated.
 // example: list.length(ok_or(caught_of(assembling_of([])), [])) == 0
 fn caught_of(assembling: Assembling) -> Result<List<Caught>, Why> {
     var caught = []
@@ -958,7 +847,6 @@ fn caught_of(assembling: Assembling) -> Result<List<Caught>, Why> {
     Ok(caught)
 }
 
-/// Where `label` lands, or the defect of a label that never does.
 // example: why_code(landing_of(assembling_of([]), 3)) == "L0703"
 fn landing_of(assembling: Assembling, label: Int) -> Result<Int, Why> {
     match map.get(assembling.landings, label) {
@@ -967,10 +855,8 @@ fn landing_of(assembling: Assembling, label: Int) -> Result<Int, Why> {
     }
 }
 
-/// Each place a jump lands, in the order they are written, with no offset named twice.
-///
-/// Two labels that land at one offset are taken in the order of their numbers, and a label the
-/// assembler made for itself has a larger number than any a body names.
+// Two labels at one offset go in the order of their numbers, and a label that the assembler
+// made for itself has a larger number than any label that a body names.
 // example: list.length(frames_written(assembling_of([]))) == 0
 fn frames_written(assembling: Assembling) -> List<Landed> {
     var frames = []
@@ -991,7 +877,6 @@ fn frames_written(assembling: Assembling) -> List<Landed> {
     frames
 }
 
-/// Each label that landed, by where it landed and then by its number.
 // example: list.length(landings_in_order(assembling_of([]))) == 0
 fn landings_in_order(assembling: Assembling) -> List<Int> {
     var ordered = []
@@ -1001,7 +886,6 @@ fn landings_in_order(assembling: Assembling) -> List<Int> {
     ordered
 }
 
-/// `ordered`, with `label` put in its place.
 // example: placed(assembling_of([]), [1, 2], 3) == [1, 2, 3]
 fn placed(assembling: Assembling, ordered: List<Int>, label: Int) -> List<Int> {
     var placing = []
@@ -1019,7 +903,6 @@ fn placed(assembling: Assembling, ordered: List<Int>, label: Int) -> List<Int> {
     placing
 }
 
-/// Whether `label` lands before `other`, or at the same offset with a smaller number.
 // example: is_before(assembling: assembling_of([]), label: 1, other: 2)
 fn is_before(assembling: Assembling, label: Int, other: Int) -> Bool {
     let at = landed_at(assembling, label)
@@ -1027,21 +910,17 @@ fn is_before(assembling: Assembling, label: Int, other: Int) -> Bool {
     at < there || at == there && label < other
 }
 
-/// Where `label`, which has landed, lands.
 // example: landed_at(landed_with(assembling_of([]), 3, Frame { locals: [], stack: [] }), 3) == 0
 fn landed_at(assembling: Assembling, label: Int) -> Int {
     or(map.get(assembling.landings, label), 0)
 }
 
-/// An empty body part-way through being assembled, with no slots and no guards.
 // example: assembling_of([]).is_reachable
 private fn assembling_of(guards: List<ir.Guard>) -> Assembling {
     Assembling { code: [], frame: Frame { locals: [], stack: [] }, is_reachable: true, landings: map.empty(), landed: [], expected: map.empty(), pending: [], deepest: 0, next: 4294967295, guards: guards, pool: no_pool(), hierarchy: hierarchy_of([]), defect: None }
 }
 
-/// What each class extends, each class named once, by the first class of its name.
-///
-/// A later class of one name is the same class, or `program_written` refuses it as named twice.
+// A later class of one name is the same class, or `program_written` refuses it as named twice.
 // example: set.has_value(hierarchy_of([base_class()]).extends_it, "java/lang/Object")
 // example: or(map.get(hierarchy_of([variant_class(), ir.Class { of: variant_class().of, extends: ir.TypeOf { module: ir.OfTheProgram("a"), name: "D" }, extending: ir.Never, implements: [], fields: [], methods: [] }]).extends, "a/B$C"), "") == "a/B"
 fn hierarchy_of(classes: List<ir.Class>) -> Hierarchy {
@@ -1059,7 +938,6 @@ fn hierarchy_of(classes: List<ir.Class>) -> Hierarchy {
     Hierarchy { extends: extends, extends_it: bases }
 }
 
-/// `assembling` after one instruction: a label lands, and anything else is written where reached.
 // example: list.length(one_written(assembling_of([]), Copy).code) == 0
 fn one_written(assembling: Assembling, instruction: Instruction) -> Assembling {
     match instruction {
@@ -1072,10 +950,8 @@ fn one_written(assembling: Assembling, instruction: Instruction) -> Assembling {
     }
 }
 
-/// `assembling`, having said that control may reach the handler of each guard `label` opens or closes.
-///
-/// A throw reaches a handler, not a branch, so the locals are the ones the span runs with, and
-/// the stack holds the throwable alone, which is what the JVM leaves when it hands control over.
+// A throw reaches a handler, not a branch, so the locals are the ones the span runs with,
+// and the stack holds only the throwable, which is what the JVM leaves.
 // example: assembling_of([]).is_reachable == guarding(assembling_of([]), 0).is_reachable
 fn guarding(assembling: Assembling, label: Int) -> Assembling {
     if !assembling.is_reachable {
@@ -1091,7 +967,6 @@ fn guarding(assembling: Assembling, label: Int) -> Assembling {
     reached
 }
 
-/// Whether some place control may reach `label` from is known.
 // example: !is_expecting(assembling_of([]), 3)
 private fn is_expecting(assembling: Assembling, label: Int) -> Bool {
     match map.get(assembling.expected, label) {
@@ -1100,7 +975,6 @@ private fn is_expecting(assembling: Assembling, label: Int) -> Bool {
     }
 }
 
-/// `assembling` with `instruction` written, and what it does to the stack and the locals followed.
 // example: instruction_written(assembling_of([]), LongOf(1)).code == [20, 0, 1]
 fn instruction_written(assembling: Assembling, instruction: Instruction) -> Assembling {
     match instruction {
@@ -1149,7 +1023,6 @@ fn instruction_written(assembling: Assembling, instruction: Instruction) -> Asse
     }
 }
 
-/// `assembling` with a comparison written as the truth value it leaves behind.
 // example: truth(assembling: assembling_of([]), opcode: 153, consumes: 1).code == [153, 0, 0, 3, 167, 0, 0, 4]
 fn truth(assembling: Assembling, opcode: Int, consumes: Int) -> Assembling {
     let yes = own_label(assembling)
@@ -1161,10 +1034,8 @@ fn truth(assembling: Assembling, opcode: Int, consumes: Int) -> Assembling {
     landing(writing, done.next)
 }
 
-/// `assembling`, having recorded where `label` lands and what holds there.
-///
-/// A handler is reached with the throwable on the stack, which nothing pushed, so the deepest the
-/// stack goes is read here as well as where a value is put on it.
+// A handler starts with the throwable on the stack, which nothing pushed,
+// so the deepest stack is read here as well as where a value is put on the stack.
 // example: landed_at(landing(assembling_of([]), 3), 3) == 0
 fn landing(assembling: Assembling, label: Int) -> Assembling {
     let expecting = if assembling.is_reachable {
@@ -1178,7 +1049,6 @@ fn landing(assembling: Assembling, label: Int) -> Assembling {
     }
 }
 
-/// `assembling`, where `label` lands here with `frame`.
 // example: list.length(landed_with(assembling_of([]), 3, Frame { locals: [], stack: [] }).landed) == 1
 fn landed_with(assembling: Assembling, label: Int, frame: Frame) -> Assembling {
     let landed = match map.get(assembling.landings, label) {
@@ -1189,13 +1059,11 @@ fn landed_with(assembling: Assembling, label: Int, frame: Frame) -> Assembling {
     assembling { frame: frame, deepest: deepest, is_reachable: true, landings: map.insert(assembling.landings, label, offset(assembling)), landed: landed }
 }
 
-/// `assembling`, where nothing reaches what comes next until a label says otherwise.
 // example: !unreachable(assembling_of([])).is_reachable
 fn unreachable(assembling: Assembling) -> Assembling {
     assembling { is_reachable: false }
 }
 
-/// `assembling` with a branch to `label`, whose offset is patched once the label lands.
 // example: branched(assembling: assembling_of([]), opcode: 167, label: 3).code == [167, 0, 0]
 fn branched(assembling: Assembling, opcode: Int, label: Int) -> Assembling {
     let expecting = reaching(assembling, label, assembling.frame)
@@ -1204,7 +1072,6 @@ fn branched(assembling: Assembling, opcode: Int, label: Int) -> Assembling {
     short(written { pending: list.push(written.pending, Patch { at: list.length(written.code), label: label, from: from }) }, 0)
 }
 
-/// `assembling`, having said that control may reach `label` holding what `frame` holds.
 // example: is_expecting(reaching(assembling_of([]), 3, Frame { locals: [], stack: [] }), 3)
 // example: is_held(reaching(reaching(assembling_of([]), 3, Frame { locals: [], stack: [] }), 3, Frame { locals: [], stack: [HeldLong] }).defect)
 fn reaching(assembling: Assembling, label: Int, frame: Frame) -> Assembling {
@@ -1218,7 +1085,6 @@ fn reaching(assembling: Assembling, label: Int, frame: Frame) -> Assembling {
     }
 }
 
-/// `assembling`, having found `defect`, where it found none before; the first one found is kept.
 // example: or(defective(defective(assembling_of([]), "one"), "two").defect, "") == "one"
 fn defective(assembling: Assembling, defect: String) -> Assembling {
     if is_held(assembling.defect) {
@@ -1227,20 +1093,17 @@ fn defective(assembling: Assembling, defect: String) -> Assembling {
     assembling { defect: Some(defect) }
 }
 
-/// `assembling` with a label of the assembler's own taken, counting down from the largest.
 // example: own_label(assembling_of([])).next == 4294967294
 fn own_label(assembling: Assembling) -> Assembling {
     assembling { next: assembling.next - 1 }
 }
 
-/// `assembling` with a whole number put on the stack, out of the constant pool.
 // example: long_written(assembling_of([]), 7).code == [20, 0, 1]
 fn long_written(assembling: Assembling, value: Int) -> Assembling {
     let held = pooled(assembling.pool, LongEntry(value))
     pushed(short(byte(assembling { pool: held.pool }, 20), held.index), HeldLong)
 }
 
-/// `assembling` with a small whole number put on the stack in the fewest bytes that hold it.
 // example: integer_written(assembling_of([]), -1).code == [16, 255]
 // example: integer_written(assembling_of([]), 1000).code == [17, 3, 232]
 fn integer_written(assembling: Assembling, value: Int) -> Assembling {
@@ -1258,21 +1121,18 @@ fn integer_written(assembling: Assembling, value: Int) -> Assembling {
     pushed(written, HeldInteger)
 }
 
-/// `assembling` with a small whole number put on the stack out of the constant pool.
 // example: pooled_integer(assembling_of([]), 100000).code == [18, 1]
 fn pooled_integer(assembling: Assembling, value: Int) -> Assembling {
     let held = pooled(assembling.pool, IntegerEntry(value))
     constant(assembling { pool: held.pool }, held.index)
 }
 
-/// `assembling` with text put on the stack, out of the constant pool.
 // example: text_written(assembling_of([]), "a").code == [18, 2]
 fn text_written(assembling: Assembling, value: String) -> Assembling {
     let held = pooled_text(assembling.pool, value)
     pushed(constant(assembling { pool: held.pool }, held.index), HeldObject("java/lang/String"))
 }
 
-/// `assembling` with what the pool holds at `held` put on the stack, in one word.
 // example: constant(assembling_of([]), 300).code == [19, 1, 44]
 fn constant(assembling: Assembling, held: Int) -> Assembling {
     if held < 256 {
@@ -1281,7 +1141,6 @@ fn constant(assembling: Assembling, held: Int) -> Assembling {
     short(byte(assembling, 19), held)
 }
 
-/// The opcode that loads a value `of` holds.
 // example: load_opcode(Long) == 22
 fn load_opcode(of: Descriptor) -> Int {
     match of {
@@ -1292,7 +1151,6 @@ fn load_opcode(of: Descriptor) -> Int {
     }
 }
 
-/// `assembling` with a value stored in `slot`, which holds it from here on.
 // example: stored(assembling_of([]), 0, Long).code == [55, 0]
 fn stored(assembling: Assembling, slot: Int, of: Descriptor) -> Assembling {
     let opcode = match of {
@@ -1305,7 +1163,6 @@ fn stored(assembling: Assembling, slot: Int, of: Descriptor) -> Assembling {
     written { frame: held_in(written.frame, slot, of) }
 }
 
-/// `assembling` with an instruction that names a local, widened where the slot needs two bytes.
 // example: indexed(assembling: assembling_of([]), opcode: 22, slot: 300).code == [196, 22, 1, 44]
 fn indexed(assembling: Assembling, opcode: Int, slot: Int) -> Assembling {
     if slot < 256 {
@@ -1314,7 +1171,6 @@ fn indexed(assembling: Assembling, opcode: Int, slot: Int) -> Assembling {
     short(each_byte(assembling, [196, opcode]), slot)
 }
 
-/// The opcode that drops a value `of` holds: two words for a whole number, and one otherwise.
 // example: drop_opcode(Long) == 88
 fn drop_opcode(of: Descriptor) -> Int {
     match of {
@@ -1323,7 +1179,6 @@ fn drop_opcode(of: Descriptor) -> Int {
     }
 }
 
-/// `assembling` with the top of the stack copied, and nothing done where the stack is empty.
 // example: copied(assembling_of([])).code == []
 fn copied(assembling: Assembling) -> Assembling {
     match list.at(assembling.frame.stack, list.length(assembling.frame.stack) - 1) {
@@ -1332,7 +1187,6 @@ fn copied(assembling: Assembling) -> Assembling {
     }
 }
 
-/// The opcode that copies `top`: two words for a whole number, and one otherwise.
 // example: copy_opcode(HeldLong) == 92
 fn copy_opcode(top: Held) -> Int {
     match top {
@@ -1341,7 +1195,6 @@ fn copy_opcode(top: Held) -> Int {
     }
 }
 
-/// `assembling` with arithmetic on whole numbers, which takes two and leaves one, or negates one.
 // example: arithmetic_written(assembling_of([]), ir.Negate).code == [117]
 fn arithmetic_written(assembling: Assembling, what: ir.Arithmetic) -> Assembling {
     match what {
@@ -1354,19 +1207,16 @@ fn arithmetic_written(assembling: Assembling, what: ir.Arithmetic) -> Assembling
     }
 }
 
-/// `String.concat`, which joins two texts.
 // example: concat_method().name == "concat"
 fn concat_method() -> MethodRef {
     MethodRef { class: "java/lang/String", name: "concat", descriptor: MethodDescriptor { parameters: [text_descriptor()], result: Some(text_descriptor()) } }
 }
 
-/// What holds text.
 // example: descriptor_text(text_descriptor()) == "Ljava/lang/String;"
 fn text_descriptor() -> Descriptor {
     Reference(class_of(ir.Text))
 }
 
-/// The class a value of `kind` is, as a class file names it.
 // example: class_of(ir.Text) == "java/lang/String"
 // example: class_of(ir.TypeOf { module: ir.ThePrelude, name: "List" }) == "bux/List"
 // example: class_of(ir.VariantOf { module: ir.OfTheLibrary("lexer"), of: "Token", variant: "Word" }) == "bux/library/lexer/Token$Word"
@@ -1390,7 +1240,6 @@ fn class_of(kind: ir.Kind) -> String {
     }
 }
 
-/// The class of the type `name` that `module` declares; the prelude's types are in `bux`.
 // example: type_class(ir.OfTheProgram("demo"), "Box") == "demo/Box"
 fn type_class(module: ir.Module, name: String) -> String {
     match module {
@@ -1399,10 +1248,7 @@ fn type_class(module: ir.Module, name: String) -> String {
     }
 }
 
-/// The class of `module`, which holds its functions.
-///
-/// A module of the library is a class of the package `bux/library`, and a module of the program
-/// is a class of no package, so a program may name a module as the library names one.
+// A library module is a class in the package `bux/library`, so a program module can have its name.
 // example: module_class(ir.ThePrelude) == "bux/library/prelude"
 // example: module_class(ir.OfTheProgram("demo")) == "demo"
 fn module_class(module: ir.Module) -> String {
@@ -1413,7 +1259,7 @@ fn module_class(module: ir.Module) -> String {
     }
 }
 
-/// How far a comparison's opcode sits from `ifeq`, which is as far as it sits from `if_icmpeq`.
+// A comparison opcode is as far from `ifeq` as from `if_icmpeq`, so one step serves both.
 // example: step(ir.GreaterOrEqual) == 3
 fn step(how: ir.Comparison) -> Int {
     match how {
@@ -1426,7 +1272,6 @@ fn step(how: ir.Comparison) -> Int {
     }
 }
 
-/// `assembling` with an instance of `class` made, which is not built until its constructor runs.
 // example: made(assembling_of([]), "a/B").code == [187, 0, 2]
 fn made(assembling: Assembling, class: String) -> Assembling {
     let named = pooled_class(assembling.pool, class)
@@ -1434,34 +1279,29 @@ fn made(assembling: Assembling, class: String) -> Assembling {
     pushed(short(byte(assembling { pool: named.pool }, 187), named.index), Uninitialised(at))
 }
 
-/// The offset the next instruction is written at.
 // example: offset(assembling_of([])) == 0
 fn offset(assembling: Assembling) -> Int {
     capped(list.length(assembling.code))
 }
 
-/// `assembling` with an array of `class` as long as the number on the stack, which it replaces.
 // example: array_made(assembling_of([]), "java/lang/Object").code == [189, 0, 2]
 fn array_made(assembling: Assembling, class: String) -> Assembling {
     let written = popped(class_named(assembling, 189, class))
     pushed(written, held_of(Array(Reference(class))))
 }
 
-/// `assembling` with an instruction that names `class` out of the pool.
 // example: class_named(assembling_of([]), 192, "a/B").code == [192, 0, 2]
 fn class_named(assembling: Assembling, opcode: Int, class: String) -> Assembling {
     let named = pooled_class(assembling.pool, class)
     short(byte(assembling { pool: named.pool }, opcode), named.index)
 }
 
-/// `assembling` with an instruction that names `field` out of the pool.
 // example: field_written(assembling_of([]), 180, boxed_at()).code == [180, 0, 6]
 fn field_written(assembling: Assembling, opcode: Int, field: FieldRef) -> Assembling {
     let named = pooled_field(assembling.pool, field)
     short(byte(assembling { pool: named.pool }, opcode), named.index)
 }
 
-/// `assembling` with a constructor run, which builds each copy of the instance it is handed.
 // example: list.length(constructed(assembling_of([]), box_made()).code) == 3
 fn constructed(assembling: Assembling, method: MethodRef) -> Assembling {
     let named = pooled_method(assembling.pool, method)
@@ -1474,14 +1314,12 @@ fn constructed(assembling: Assembling, method: MethodRef) -> Assembling {
     }
 }
 
-/// `assembling` with a method called: its arguments and receiver taken, and its result left.
 // example: list.length(invoked(assembling: assembling_of([]), opcode: 184, method: box_made(), receivers: 0).frame.stack) == 0
 fn invoked(assembling: Assembling, opcode: Int, method: MethodRef, receivers: Int) -> Assembling {
     let named = pooled_method(assembling.pool, method)
     returned_from(short(byte(assembling { pool: named.pool }, opcode), named.index), method, receivers)
 }
 
-/// `assembling` with a method of an interface called on the receiver below its arguments.
 // example: list.length(interface_invoked(assembling_of([]), box_made()).code) == 5
 fn interface_invoked(assembling: Assembling, method: MethodRef) -> Assembling {
     let named = pooled_interface_method(assembling.pool, method)
@@ -1494,7 +1332,6 @@ fn interface_invoked(assembling: Assembling, method: MethodRef) -> Assembling {
     returned_from(each_byte(short(byte(assembling { pool: named.pool }, 185), named.index), [counted, 0]), method, 1)
 }
 
-/// How many slots the parameters of `method` take.
 // example: parameters_width(MethodDescriptor { parameters: [Long, object()], result: None }) == 3
 fn parameters_width(method: MethodDescriptor) -> Int {
     var slots = 0
@@ -1504,20 +1341,17 @@ fn parameters_width(method: MethodDescriptor) -> Int {
     slots
 }
 
-/// `assembling` with a static method of an interface called, which the pool names as such.
 // example: list.length(static_of_interface_invoked(assembling_of([]), box_made()).code) == 3
 fn static_of_interface_invoked(assembling: Assembling, method: MethodRef) -> Assembling {
     let named = pooled_interface_method(assembling.pool, method)
     returned_from(short(byte(assembling { pool: named.pool }, 184), named.index), method, 0)
 }
 
-/// `assembling` with one byte written.
 // example: byte(assembling_of([]), 3).code == [3]
 fn byte(assembling: Assembling, value: Int) -> Assembling {
     assembling { code: bytes.u1(assembling.code, value) }
 }
 
-/// What a call leaves: its arguments gone, the receiver too, and its result on top.
 // example: list.length(returned_from(assembling_of([]), box_made(), 0).frame.stack) == 0
 fn returned_from(assembling: Assembling, method: MethodRef, receivers: Int) -> Assembling {
     let taken = popped_times(assembling, list.length(method.descriptor.parameters) + receivers)
@@ -1527,7 +1361,6 @@ fn returned_from(assembling: Assembling, method: MethodRef, receivers: Int) -> A
     }
 }
 
-/// `assembling` with `held` put on the stack, and the deepest the stack goes kept.
 // example: pushed(assembling_of([]), HeldLong).deepest == 2
 fn pushed(assembling: Assembling, held: Held) -> Assembling {
     let frame = assembling.frame
@@ -1535,7 +1368,6 @@ fn pushed(assembling: Assembling, held: Held) -> Assembling {
     assembling { frame: grown, deepest: greater(one: assembling.deepest, other: depth(grown)) }
 }
 
-/// The larger of `one` and `other`.
 // example: greater(one: 3, other: 5) == 5
 fn greater(one: Int, other: Int) -> Int {
     if one > other {
@@ -1544,7 +1376,6 @@ fn greater(one: Int, other: Int) -> Int {
     other
 }
 
-/// `assembling` with `count` values taken off the stack.
 // example: list.length(popped_times(pushed(assembling_of([]), HeldLong), 2).frame.stack) == 0
 fn popped_times(assembling: Assembling, count: Int) -> Assembling {
     var popping = assembling
@@ -1556,14 +1387,12 @@ fn popped_times(assembling: Assembling, count: Int) -> Assembling {
     popping
 }
 
-/// `assembling` with the top of the stack taken off, where there is one.
 // example: list.length(popped(pushed(assembling_of([]), HeldLong)).frame.stack) == 0
 fn popped(assembling: Assembling) -> Assembling {
     let frame = assembling.frame
     assembling { frame: frame { stack: without_last(frame.stack) } }
 }
 
-/// `values` without the last one.
 // example: without_last([1, 2]) == [1]
 fn without_last<T>(values: List<T>) -> List<T> {
     var kept = []
@@ -1577,7 +1406,6 @@ fn without_last<T>(values: List<T>) -> List<T> {
     kept
 }
 
-/// `assembling` with one added to the small whole number in `slot`, widened where it needs to be.
 // example: incremented(assembling_of([]), 3).code == [132, 3, 1]
 fn incremented(assembling: Assembling, slot: Int) -> Assembling {
     if slot < 256 {
@@ -1586,19 +1414,16 @@ fn incremented(assembling: Assembling, slot: Int) -> Assembling {
     short(short(each_byte(assembling, [196, 132]), slot), 1)
 }
 
-/// `assembling` with two bytes written.
 // example: short(assembling_of([]), 258).code == [1, 2]
 fn short(assembling: Assembling, value: Int) -> Assembling {
     assembling { code: bytes.u2(assembling.code, value) }
 }
 
-/// `assembling` with each of `values` written as one byte.
 // example: each_byte(assembling_of([]), [1, 2]).code == [1, 2]
 fn each_byte(assembling: Assembling, values: List<Int>) -> Assembling {
     assembling { code: bytes.all(assembling.code, values) }
 }
 
-/// The opcode that gives back a value `of` holds, and nothing for `void`.
 // example: return_opcode(None) == 177
 fn return_opcode(of: Option<Descriptor>) -> Int {
     match of {
@@ -1610,7 +1435,6 @@ fn return_opcode(of: Option<Descriptor>) -> Int {
     }
 }
 
-/// What a method starts with: what it is reached through, then its parameters.
 // example: list.length(entering([Long], None, 3).locals) == 3
 fn entering(parameters: List<Descriptor>, receiver: Option<String>, slots: Int) -> Frame {
     var locals = []
@@ -1633,7 +1457,6 @@ fn entering(parameters: List<Descriptor>, receiver: Option<String>, slots: Int) 
     frame
 }
 
-/// The slot a receiver takes, which a static method has none of.
 // example: receiver_width(Some("a/B")) == 1
 fn receiver_width(receiver: Option<String>) -> Int {
     match receiver {
@@ -1642,7 +1465,6 @@ fn receiver_width(receiver: Option<String>) -> Int {
     }
 }
 
-/// `frame`, with `slot` holding a value `of` holds, and the slot after it where that is two wide.
 // example: held_in(Frame { locals: [Nothing, Nothing], stack: [] }, 0, Long).locals == [Holding(HeldLong), Second]
 fn held_in(frame: Frame, slot: Int, of: Descriptor) -> Frame {
     let holding = replaced(frame.locals, slot, Holding(held_of(of)))
@@ -1652,7 +1474,6 @@ fn held_in(frame: Frame, slot: Int, of: Descriptor) -> Frame {
     frame { locals: holding }
 }
 
-/// How many slots a value `of` holds takes: two for a `long`, and one for anything else.
 // example: width(Long) == 2
 // example: width(Integer) == 1
 fn width(of: Descriptor) -> Int {
@@ -1662,7 +1483,6 @@ fn width(of: Descriptor) -> Int {
     }
 }
 
-/// `values`, with the one at `at` replaced by `value`.
 // example: replaced([1, 2, 3], 1, 5) == [1, 5, 3]
 fn replaced<T>(values: List<T>, at: Int, value: T) -> List<T> {
     var written = []
@@ -1678,7 +1498,6 @@ fn replaced<T>(values: List<T>, at: Int, value: T) -> List<T> {
     written
 }
 
-/// `frame`, with every copy of the instance made at `at` now one that is built.
 // example: initialised(Frame { locals: [], stack: [Uninitialised(4)] }, 4, "a/B").stack == [HeldObject("a/B")]
 fn initialised(frame: Frame, at: Int, class: String) -> Frame {
     var stack = []
@@ -1695,7 +1514,6 @@ fn initialised(frame: Frame, at: Int, class: String) -> Frame {
     Frame { locals: locals, stack: stack }
 }
 
-/// `held`, or a built `class` where it is the instance made at `at`.
 // example: built_if_made(Uninitialised(4), 4, "a/B") == HeldObject("a/B")
 fn built_if_made(held: Held, at: Int, class: String) -> Held {
     if held == Uninitialised(at) {
@@ -1704,7 +1522,6 @@ fn built_if_made(held: Held, at: Int, class: String) -> Held {
     held
 }
 
-/// The stack words `frame` holds, which is what the deepest stack is the largest of.
 // example: depth(Frame { locals: [], stack: [HeldLong, HeldInteger] }) == 3
 fn depth(frame: Frame) -> Int {
     var words = 0
@@ -1714,7 +1531,6 @@ fn depth(frame: Frame) -> Int {
     words
 }
 
-/// The stack words `held` takes, which is two for a whole number.
 // example: held_width(HeldLong) == 2
 fn held_width(held: Held) -> Int {
     match held {
@@ -1723,11 +1539,7 @@ fn held_width(held: Held) -> Int {
     }
 }
 
-/// What holds on both paths into one place, which is what the verifier is told.
-///
-/// A slot that holds one thing on one path and another on the other holds nothing, and a value
-/// that is one class on one path and another on the other is the class they share. Two paths
-/// with locals or a stack of two lengths are a defect, which is refused, not cut to the shorter.
+// Two paths with locals or stacks of two lengths are a defect, which is refused, not cut short.
 // example: ok_or(merged_with(frame: Frame { locals: [Holding(HeldLong)], stack: [] }, other: Frame { locals: [Nothing], stack: [] }, hierarchy: hierarchy_of([])), Frame { locals: [], stack: [] }).locals == [Nothing]
 // example: ok_or(merged_with(frame: Frame { locals: [], stack: [HeldLong] }, other: Frame { locals: [], stack: [] }, hierarchy: hierarchy_of([])), Frame { locals: [], stack: [HeldLong] }).stack == [HeldLong]
 fn merged_with(frame: Frame, other: Frame, hierarchy: Hierarchy) -> Result<Frame, String> {
@@ -1759,7 +1571,6 @@ fn merged_with(frame: Frame, other: Frame, hierarchy: Hierarchy) -> Result<Frame
     Ok(Frame { locals: locals, stack: stack })
 }
 
-/// The class both are: one of them, the one they extend, or `java.lang.Object`.
 // example: shared_by(hierarchy: hierarchy_of([]), mine: HeldObject("a/B"), theirs: HeldObject("a/C")) == HeldObject("java/lang/Object")
 fn shared_by(hierarchy: Hierarchy, mine: Held, theirs: Held) -> Held {
     match mine {
@@ -1771,7 +1582,6 @@ fn shared_by(hierarchy: Hierarchy, mine: Held, theirs: Held) -> Held {
     }
 }
 
-/// The class `one` and `other` share, read one step up the hierarchy.
 // example: class_shared(hierarchy: hierarchy_of([variant_class()]), one: "a/B$C", other: "a/B") == "a/B"
 fn class_shared(hierarchy: Hierarchy, one: String, other: String) -> String {
     if one == other {
@@ -1791,7 +1601,7 @@ fn class_shared(hierarchy: Hierarchy, one: String, other: String) -> String {
     "java/lang/Object"
 }
 
-/// `into`, with `frame` after it as a full frame, which is the one form that says everything.
+// Every frame is a full frame, because that one form says everything.
 // example: frame_written(no_pool(), Frame { locals: [Holding(HeldInteger)], stack: [] }, 3, []).bytes == [255, 0, 3, 0, 1, 1, 0, 0]
 fn frame_written(pool: Pool, frame: Frame, delta: Int, into: List<Int>) -> Written {
     let named = named_locals(frame)
@@ -1809,10 +1619,8 @@ fn frame_written(pool: Pool, frame: Frame, delta: Int, into: List<Int>) -> Writt
     writing
 }
 
-/// The locals as a frame writes them.
-///
-/// The second half of a whole number is left out, a slot that holds nothing yet is the verifier's
-/// `Top`, and the slots after the last one that holds anything are left off.
+// A frame leaves out the second half of a `long` and the empty slots at the end.
+// A slot that holds nothing yet is `Top` to the verifier.
 // example: named_locals(Frame { locals: [Holding(HeldLong), Second, Nothing], stack: [] }) == [Holding(HeldLong)]
 fn named_locals(frame: Frame) -> List<Slot> {
     var last = 0
@@ -1838,7 +1646,6 @@ fn named_locals(frame: Frame) -> List<Slot> {
     named
 }
 
-/// `writing`, with one value a frame holds after it.
 // example: held_written(Written { pool: no_pool(), bytes: [] }, HeldLong).bytes == [4]
 fn held_written(writing: Written, held: Held) -> Written {
     match held {
@@ -1849,14 +1656,13 @@ fn held_written(writing: Written, held: Held) -> Written {
     }
 }
 
-/// `writing`, with an object of `class` after it, which the pool names.
 // example: object_written(Written { pool: no_pool(), bytes: [] }, "a/B").bytes == [7, 0, 2]
 fn object_written(writing: Written, class: String) -> Written {
     let named = pooled_class(writing.pool, class)
     Written { pool: named.pool, bytes: bytes.u2(bytes.u1(writing.bytes, 7), named.index) }
 }
 
-/// What a value `of` holds is, to the verifier; a truth value is a small whole number there.
+// The verifier holds a truth value as an `int`.
 // example: held_of(Array(Long)) == HeldObject("[J")
 fn held_of(of: Descriptor) -> Held {
     match of {
@@ -1867,20 +1673,18 @@ fn held_of(of: Descriptor) -> Held {
     }
 }
 
-/// A constant pool that holds nothing yet, whose first index is one, as a class file counts.
+// A class file counts the indices of its pool from one.
 // example: no_pool().next == 1
 fn no_pool() -> Pool {
     Pool { entries: [], known: map.empty(), next: 1 }
 }
 
-/// `pool` with `text` held as text, and its index.
 // example: pooled_text(no_pool(), "a").index == 2
 fn pooled_text(pool: Pool, text: String) -> Pooled {
     let held = pooled_utf8(pool, text)
     pooled(held.pool, TextEntry(held.index))
 }
 
-/// `pool` with `field` held, and its index.
 // example: pooled_field(no_pool(), boxed_at()).index == 6
 fn pooled_field(pool: Pool, field: FieldRef) -> Pooled {
     let class = pooled_class(pool, field.class)
@@ -1888,7 +1692,6 @@ fn pooled_field(pool: Pool, field: FieldRef) -> Pooled {
     pooled(member.pool, FieldEntry { class: class.index, member: member.index })
 }
 
-/// `pool` with `method` held as a method of a class, and its index.
 // example: pooled_method(no_pool(), box_made()).index == 6
 fn pooled_method(pool: Pool, method: MethodRef) -> Pooled {
     let class = pooled_class(pool, method.class)
@@ -1896,7 +1699,6 @@ fn pooled_method(pool: Pool, method: MethodRef) -> Pooled {
     pooled(member.pool, MethodEntry { class: class.index, member: member.index })
 }
 
-/// `pool` with `method` held as a method of an interface, and its index.
 // example: pooled_interface_method(no_pool(), box_made()).index == 6
 fn pooled_interface_method(pool: Pool, method: MethodRef) -> Pooled {
     let class = pooled_class(pool, method.class)
@@ -1904,7 +1706,6 @@ fn pooled_interface_method(pool: Pool, method: MethodRef) -> Pooled {
     pooled(member.pool, InterfaceMethodEntry { class: class.index, member: member.index })
 }
 
-/// `method` as a class file writes it.
 // example: method_descriptor_text(MethodDescriptor { parameters: [Long, object()], result: Some(Boolean) }) == "(JLjava/lang/Object;)Z"
 fn method_descriptor_text(method: MethodDescriptor) -> String {
     var written = "("
@@ -1914,7 +1715,6 @@ fn method_descriptor_text(method: MethodDescriptor) -> String {
     written + ")" + held_text(method.result)
 }
 
-/// What a value `held` holds is written as in a descriptor, and `V` for nothing.
 // example: held_text(Some(Long)) == "J"
 // example: held_text(None) == "V"
 fn held_text(held: Option<Descriptor>) -> String {
@@ -1924,7 +1724,6 @@ fn held_text(held: Option<Descriptor>) -> String {
     }
 }
 
-/// `of` as a class file writes it.
 // example: descriptor_text(Array(Integer)) == "[I"
 fn descriptor_text(of: Descriptor) -> String {
     match of {
@@ -1937,7 +1736,6 @@ fn descriptor_text(of: Descriptor) -> String {
     }
 }
 
-/// `pool` with a name and a descriptor held as one member, and its index.
 // example: name_and_type(pool: no_pool(), name: "of", descriptor: "()V").index == 3
 fn name_and_type(pool: Pool, name: String, descriptor: String) -> Pooled {
     let named = pooled_utf8(pool, name)
@@ -1945,22 +1743,18 @@ fn name_and_type(pool: Pool, name: String, descriptor: String) -> Pooled {
     pooled(described.pool, NameAndTypeEntry { name: named.index, descriptor: described.index })
 }
 
-/// `pool` with the class `class` held, and its index.
 // example: pooled_class(no_pool(), "a/B").index == 2
 fn pooled_class(pool: Pool, class: String) -> Pooled {
     let written = pooled_utf8(pool, class)
     pooled(written.pool, ClassEntry(written.index))
 }
 
-/// `pool` with `text` held as modified UTF-8, and its index.
 // example: pooled_utf8(no_pool(), "a").index == 1
 fn pooled_utf8(pool: Pool, text: String) -> Pooled {
     pooled(pool, Utf8Entry(text))
 }
 
-/// `pool` with `entry` held, and its index; an entry held already keeps the index it has.
-///
-/// A whole number takes two indices, the second of which a class file leaves unusable.
+// A whole number takes two indices, and a class file leaves the second one unusable.
 // example: pooled(pooled(no_pool(), LongEntry(1)).pool, Utf8Entry("a")).index == 3
 fn pooled(pool: Pool, entry: Entry) -> Pooled {
     let key = entry_key(entry)
@@ -1970,7 +1764,6 @@ fn pooled(pool: Pool, entry: Entry) -> Pooled {
     }
 }
 
-/// How many indices `entry` takes: two for a whole number, and one otherwise.
 // example: entry_width(LongEntry(1)) == 2
 fn entry_width(entry: Entry) -> Int {
     match entry {
@@ -1979,7 +1772,6 @@ fn entry_width(entry: Entry) -> Int {
     }
 }
 
-/// The key two equal entries share, and no two different entries do.
 // example: entry_key(ClassEntry(3)) == "class 3"
 fn entry_key(entry: Entry) -> String {
     match entry {
@@ -1995,7 +1787,6 @@ fn entry_key(entry: Entry) -> String {
     }
 }
 
-/// Every entry of `pool`, in the order they were added, as a class file writes them.
 // example: pool_written(pooled_utf8(no_pool(), "a").pool) == [1, 0, 1, 97]
 fn pool_written(pool: Pool) -> List<Int> {
     var written = []
@@ -2005,7 +1796,6 @@ fn pool_written(pool: Pool) -> List<Int> {
     written
 }
 
-/// `into`, with one entry of the pool after it.
 // example: entry_written([], IntegerEntry(-1)) == [3, 255, 255, 255, 255]
 fn entry_written(into: List<Int>, entry: Entry) -> List<Int> {
     match entry {
@@ -2021,14 +1811,12 @@ fn entry_written(into: List<Int>, entry: Entry) -> List<Int> {
     }
 }
 
-/// `into`, with a text entry after it, whose length `texts_held` has held to two bytes already.
 // example: utf8_written([], "a") == [1, 0, 1, 97]
 fn utf8_written(into: List<Int>, text: String) -> List<Int> {
     let encoded = bytes.modified_utf8(text)
     bytes.all(bytes.u2(bytes.u1(into, 1), list.length(encoded)), encoded)
 }
 
-/// `value`, or the largest two bytes hold where it is larger.
 // example: capped(70000) == 65535
 fn capped(value: Int) -> Int {
     if value > 65535 {
@@ -2037,13 +1825,11 @@ fn capped(value: Int) -> Int {
     value
 }
 
-/// `into`, with an entry of the tag `tag` that names two other entries after it.
 // example: pair_written(into: [], tag: 12, first: 1, second: 2) == [12, 0, 1, 0, 2]
 fn pair_written(into: List<Int>, tag: Int, first: Int, second: Int) -> List<Int> {
     bytes.u2(bytes.u2(bytes.u1(into, tag), first), second)
 }
 
-/// Whether `maybe` holds a value.
 // example: !is_held(None)
 fn is_held<T>(maybe: Option<T>) -> Bool {
     match maybe {
@@ -2052,7 +1838,6 @@ fn is_held<T>(maybe: Option<T>) -> Bool {
     }
 }
 
-/// The code of the refusal `answer` holds, and nothing where it holds none.
 // example: refused_code(Ok(1)) == ""
 // example: refused_code(Err(Unwritten { class: "a/B", method: None, why: TooLarge })) == "L0700"
 fn refused_code<T>(answer: Result<T, Unwritten>) -> String {
@@ -2062,7 +1847,6 @@ fn refused_code<T>(answer: Result<T, Unwritten>) -> String {
     }
 }
 
-/// The code of the reason `answer` holds, and nothing where it holds none.
 // example: why_code(Err(Defect("a defect"))) == "L0703"
 private fn why_code<T>(answer: Result<T, Why>) -> String {
     match answer {
@@ -2071,7 +1855,6 @@ private fn why_code<T>(answer: Result<T, Why>) -> String {
     }
 }
 
-/// The code a refusal of the writer is refused with, which `docs/specs/diagnostics.md` lists.
 // example: code_of(TooLong(65536)) == "L0701"
 fn code_of(why: Why) -> String {
     match why {
@@ -2083,7 +1866,6 @@ fn code_of(why: Why) -> String {
     }
 }
 
-/// The line a refusal of the writer opens with, which names the function or the type it is in.
 // example: message(Unwritten { class: "demo", method: Some("total$Int"), why: TooLarge }) == "`total` is too large to compile as one function"
 // example: message(Unwritten { class: "demo/Box", method: None, why: TooLong(65536) }) == "a text or a name in `demo/Box` takes 65536 bytes, and one takes 65535 at most"
 // example: message(Unwritten { class: "demo/SetUp", method: None, why: NamedInCase("demo/Setup") }) == "two names in `demo` differ only in case: `demo/SetUp` and `demo/Setup`"
@@ -2098,7 +1880,6 @@ fn message(unwritten: Unwritten) -> String {
     }
 }
 
-/// What a reader does about a refusal of the writer.
 // example: help_of(TooLarge) == "split the function into smaller functions"
 fn help_of(why: Why) -> String {
     match why {
@@ -2110,10 +1891,7 @@ fn help_of(why: Why) -> String {
     }
 }
 
-/// The module a class belongs to: `<module>` under `bux/library/`, else its name up to the first `/`.
-///
-/// A class `bux/<Type>` is a type of the prelude, or of a program's module named `bux`. The
-/// prelude is written first, so a class refused there is the program's, and it names `bux`.
+// The prelude is written first, so a refused class `bux/<Type>` is of the program module `bux`.
 // example: module_of("demo/Box") == "demo"
 // example: module_of("strings") == "strings"
 // example: module_of("bux/library/strings") == "strings"
@@ -2128,7 +1906,6 @@ fn module_of(class: String) -> String {
     up_to(class, 47)
 }
 
-/// The function a refusal is in, which is the method up to its first `$`, or else the class.
 // example: named_in(Unwritten { class: "demo", method: Some("total$Int"), why: TooLarge }) == "total"
 // example: named_in(Unwritten { class: "demo", method: None, why: TooLarge }) == "demo"
 fn named_in(unwritten: Unwritten) -> String {
@@ -2138,10 +1915,6 @@ fn named_in(unwritten: Unwritten) -> String {
     }
 }
 
-/// `name` up to the first code unit `unit`, or all of `name` where it holds none.
-///
-/// Up to a `$`, it is the function that a specialised or derived method was written for.
-/// Up to a `/`, it is the package of a class.
 // example: up_to("Eq$Box$is_equal", 36) == "Eq"
 // example: up_to("total", 36) == "total"
 fn up_to(name: String, unit: Int) -> String {
@@ -2155,75 +1928,60 @@ fn up_to(name: String, unit: Int) -> String {
     name
 }
 
-/// A lowered module of the one class `class`.
 // example: list.length(one_class(record_class()).classes) == 1
 fn one_class(class: ir.Class) -> ir.Lowered {
     ir.Lowered { classes: [class], asks: ir.no_asks() }
 }
 
-/// The record `a.B`, which holds one whole number, `at`.
 // example: class_of(record_class().of) == "a/B"
 private fn record_class() -> ir.Class {
     record_class_named("B")
 }
 
-/// The record `named` of the module `a`, which holds one whole number, `at`.
 // example: class_of(record_class_named("b").of) == "a/b"
 private fn record_class_named(named: String) -> ir.Class {
     ir.Class { of: ir.TypeOf { module: ir.OfTheProgram("a"), name: named }, extends: ir.Anything, extending: ir.Never, implements: [], fields: [ir.Field { name: "at", of: ir.Whole }], methods: [] }
 }
 
-/// The variant `C` of `a.B`, which extends the base `a.B`.
 // example: class_of(variant_class().extends) == "a/B"
 private fn variant_class() -> ir.Class {
     ir.Class { of: ir.VariantOf { module: ir.OfTheProgram("a"), of: "B", variant: "C" }, extends: base_class().of, extending: ir.Never, implements: [], fields: [], methods: [] }
 }
 
-/// The base `a.B` of a sum type, which holds the tag of its variant.
 // example: base_class().extends == ir.Anything
 private fn base_class() -> ir.Class {
     ir.Class { of: ir.TypeOf { module: ir.OfTheProgram("a"), name: "B" }, extends: ir.Anything, extending: ir.ByItsVariants, implements: [], fields: [ir.Field { name: "tag", of: ir.Small }], methods: [] }
 }
 
-/// A static method `of` that gives back the whole number one.
 // example: returning_method().name == "of"
 private fn returning_method() -> ir.Method {
     let body = ir.Body { instructions: [ir.LongOf(1), ir.Return(Some(ir.Whole))], locals: [], guards: [] }
     ir.Method { name: "of", parameters: [], result: Some(ir.Whole), reached: ir.ThroughTheClass, body: body }
 }
 
-/// The method `returning_method` spelled, which gives back the whole number one.
 // example: list.length(returning_spelled().instructions) == 2
 private fn returning_spelled() -> Spelled {
     Spelled { name: "of", descriptor: MethodDescriptor { parameters: [], result: Some(Long) }, receiver: None, instructions: [LongOf(1), Return(Some(Long))], slots: 0, guards: [] }
 }
 
-/// The field `at` of the record `a/B`.
 // example: boxed_at().name == "at"
 private fn boxed_at() -> FieldRef {
     FieldRef { class: "a/B", name: "at", of: Long }
 }
 
-/// The constructor of the record `a/B`, which takes one whole number.
 // example: box_made().name == "<init>"
 private fn box_made() -> MethodRef {
     MethodRef { class: "a/B", name: "<init>", descriptor: MethodDescriptor { parameters: [Long], result: None } }
 }
 
-/// A class the writer did not write, the method of it at fault where one is, and why.
 type Unwritten = {
     class: String
     method: Option<String>
     why: Why
 }
 
-/// Why a class was not written: past a limit a program can reach, or a defect of the compiler.
-///
-/// A method holds 65535 bytes of code, and a branch reaches 32767 bytes either way, and a body
-/// past either is too large. A text of the pool holds 65535 bytes, and one of more is too long.
-/// Two modules of one name write two different classes of one name, and one file holds one.
-/// Two classes whose names differ only in case are one file on a disk that ignores case, and
-/// `NamedInCase` holds the name of the class written first.
+// A method holds 65535 bytes of code, a branch reaches 32767 bytes either way,
+// and a text of the pool holds 65535 bytes.
 type Why =
     | TooLarge
     | TooLong(Int)
@@ -2231,25 +1989,21 @@ type Why =
     | NamedInCase(String)
     | Defect(String)
 
-/// One class, and the path a build writes it to, such as `demo/User.class`.
 type ClassFile = {
     path: String
     bytes: List<Int>
 }
 
-/// What writing one class holds besides the bytes: the pool so far, and the hierarchy.
 type Writer = {
     pool: Pool
     hierarchy: Hierarchy
 }
 
-/// Bytes written, and the pool after they are written.
 type Written = {
     pool: Pool
     bytes: List<Int>
 }
 
-/// A body's bytes, with everything its `Code` attribute is written from.
 type Assembled = {
     code: List<Int>
     max_stack: Int
@@ -2259,13 +2013,11 @@ type Assembled = {
     pool: Pool
 }
 
-/// One place a jump lands, and what holds there.
 type Landed = {
     at: Int
     frame: Frame
 }
 
-/// One row of the exception table: the span covered, where it lands, and what it catches.
 type Caught = {
     from: Int
     to: Int
@@ -2273,7 +2025,6 @@ type Caught = {
     catching: String
 }
 
-/// A body part-way through being assembled.
 type Assembling = {
     code: List<Int>
     frame: Frame
@@ -2290,27 +2041,22 @@ type Assembling = {
     defect: Option<String>
 }
 
-/// What extends what, which is how two classes are found to share one, and each class extended.
 type Hierarchy = {
     extends: map.Map<String, String>
     extends_it: set.Set<String>
 }
 
-/// A branch whose landing was not known when it was written: where its offset goes, the label,
-/// and where its opcode sits, which the offset is measured from.
 type Patch = {
     at: Int
     label: Int
     from: Int
 }
 
-/// What holds where control is, which is what a frame says.
 type Frame = {
     locals: List<Slot>
     stack: List<Held>
 }
 
-/// One local slot: what it holds, the second half of a whole number, or nothing yet.
 derive Eq for Slot
 
 type Slot =
@@ -2318,8 +2064,6 @@ type Slot =
     | Second
     | Nothing
 
-/// What one value is, as the verifier counts them; an instance not yet built is named by where
-/// it was made.
 derive Eq for Held
 
 type Held =
@@ -2328,20 +2072,17 @@ type Held =
     | HeldObject(String)
     | Uninitialised(Int)
 
-/// A pool after an entry is asked for, and the index the entry has.
 type Pooled = {
     pool: Pool
     index: Int
 }
 
-/// Everything one class file names, each named once, in the order it was first asked for.
 type Pool = {
     entries: List<Entry>
     known: map.Map<String, Int>
     next: Int
 }
 
-/// One entry of the constant pool.
 type Entry =
     | Utf8Entry(String)
     | IntegerEntry(Int)
@@ -2365,8 +2106,6 @@ type Entry =
         member: Int
     }
 
-/// A method as a JVM runs it: its name and descriptor, the class of its receiver where it has
-/// one, its instructions over numbered slots, how many slots it takes, and its guards.
 type Spelled = {
     name: String
     descriptor: MethodDescriptor
@@ -2376,19 +2115,16 @@ type Spelled = {
     guards: List<ir.Guard>
 }
 
-/// Where the locals of one method live: the slot of each name, and how many slots they take.
 type Locals = {
     slots: map.Map<String, Placed>
     width: Int
 }
 
-/// Where one local lives: the first of its slots, and how many slots it takes.
 type Placed = {
     at: Int
     width: Int
 }
 
-/// One instruction a JVM runs, over a stack and numbered slots.
 type Instruction =
     | LongOf(Int)
     | BooleanOf(Bool)
@@ -2435,27 +2171,23 @@ type Instruction =
     | Return(Option<Descriptor>)
     | Throw
 
-/// A field of a class.
 type FieldRef = {
     class: String
     name: String
     of: Descriptor
 }
 
-/// A method of a class.
 type MethodRef = {
     class: String
     name: String
     descriptor: MethodDescriptor
 }
 
-/// What a method takes, and what it gives back, which is nothing for `void`.
 type MethodDescriptor = {
     parameters: List<Descriptor>
     result: Option<Descriptor>
 }
 
-/// What holds a value on the JVM.
 derive Eq for Descriptor
 
 type Descriptor =

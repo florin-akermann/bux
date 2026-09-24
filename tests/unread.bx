@@ -14,8 +14,6 @@ import parser
 import resolver
 import strings
 
-/// A module with one name that nothing reads is refused, and the refusal names the kind of the
-/// name and the name, where the module introduces it.
 // example: held.is_held(a_name_read_by_nothing_is_refused_naming_its_kind(2, ir.little_library().prelude.names))
 fn a_name_read_by_nothing_is_refused_naming_its_kind(cases: Int, names: resolver.Prelude) -> held.Held {
     var found = held.nothing_failed(cases)
@@ -33,7 +31,6 @@ fn a_name_read_by_nothing_is_refused_naming_its_kind(cases: Int, names: resolver
     found
 }
 
-/// The same module with the name read is accepted.
 // example: held.is_held(a_module_whose_every_name_is_read_is_accepted(2, ir.little_library().prelude.names))
 fn a_module_whose_every_name_is_read_is_accepted(cases: Int, names: resolver.Prelude) -> held.Held {
     var found = held.nothing_failed(cases)
@@ -50,14 +47,12 @@ fn a_module_whose_every_name_is_read_is_accepted(cases: Int, names: resolver.Pre
     found
 }
 
-/// The first two lines of the refusal of `name` in `source`, which `shape` introduces first.
 // example: refusal_of(shape: Shape { unread: "", read: "", kind: "binding", code: "L0321" }, name: "tally", source: "fn f() -> Int {\n    let tally = 1\n    2\n}\n") == "refused\nL0321 24..29 the binding `tally` is read by nothing\n"
 fn refusal_of(shape: Shape, name: String, source: String) -> String {
     let at = checking.occurrence(source, name, 1)
     "refused\n" + shape.code + " " + shown(at.start) + ".." + shown(at.start + at.length) + " the " + shape.kind + " `" + name + "` is read by nothing\n"
 }
 
-/// What the resolver says of `source`, where each module an example writes before a dot is read.
 // example: answered("fn (", ir.little_library().prelude.names) == "unparsed\n"
 fn answered(source: String, names: resolver.Prelude) -> String {
     match parser.parse(source) {
@@ -66,7 +61,6 @@ fn answered(source: String, names: resolver.Prelude) -> String {
     }
 }
 
-/// The names a shape may introduce: a module for an import, and a plain name otherwise.
 // example: names_for(no_shape()) == ["tally", "parcel", "label", "weight"]
 fn names_for(shape: Shape) -> List<String> {
     if shape.kind == "import" {
@@ -75,24 +69,18 @@ fn names_for(shape: Shape) -> List<String> {
     ["tally", "parcel", "label", "weight"]
 }
 
-/// Each shape of a name a module introduces, with `{}` where the name goes.
-///
-/// A shape is written once with nothing that reads the name, and once with a read of it. An
-/// assignment is no read, a hole reads only the names above it, and an example reads an import.
+// An assignment is no read, a hole reads only the names above it, and an example reads an import.
 // example: list.length(shapes()) == 8
 fn shapes() -> List<Shape> {
     let bound = "L0321"
     [Shape { unread: "import {}\n\nfn f() -> Int {\n    1\n}\n", read: "import {}\n\nfn f() -> Int {\n    {}.counted()\n}\n", kind: "import", code: "L0320" }, Shape { unread: "import {}\n\n// example: f() == 1\nfn f() -> Int {\n    1\n}\n", read: "import {}\n\n// example: {}.counted(f()) == 1\nfn f() -> Int {\n    1\n}\n", kind: "import", code: "L0320" }, Shape { unread: "fn f() -> Int {\n    let {} = 1\n    2\n}\n", read: "fn f() -> Int {\n    let {} = 1\n    {}\n}\n", kind: "binding", code: bound }, Shape { unread: "fn f() -> Int {\n    var {} = 1\n    {} = 2\n    3\n}\n", read: "fn f() -> Int {\n    var {} = 1\n    {} = 2\n    {}\n}\n", kind: "binding", code: bound }, Shape { unread: "fn f(values: List<Int>) -> Int {\n    var sum = 0\n    for {} in values {\n        sum += 1\n    }\n    sum\n}\n", read: "fn f(values: List<Int>) -> Int {\n    var sum = 0\n    for {} in values {\n        sum += {}\n    }\n    sum\n}\n", kind: "binding", code: bound }, Shape { unread: "fn f(maybe: Option<Int>) -> Int {\n    match maybe {\n        Some({}) => 1\n        None => 0\n    }\n}\n", read: "fn f(maybe: Option<Int>) -> Int {\n    match maybe {\n        Some({}) => {}\n        None => 0\n    }\n}\n", kind: "binding", code: bound }, Shape { unread: "fn f({}: Int, other: Int) -> Int {\n    other\n}\n", read: "fn f({}: Int, other: Int) -> Int {\n    {} + other\n}\n", kind: "parameter", code: bound }, Shape { unread: "fn f() -> Int {\n    _ = todo(\"later\")\n    let {} = 1\n    2\n}\n", read: "fn f() -> Int {\n    let {} = 1\n    todo(\"later\")\n}\n", kind: "binding", code: bound }]
 }
 
-/// The shape a draw falls back to, which introduces nothing.
 // example: no_shape().kind == ""
 fn no_shape() -> Shape {
     Shape { unread: "", read: "", kind: "", code: "" }
 }
 
-/// A module with a name in it that nothing reads, the same module with the name read, the kind
-/// of name, and the code of its refusal.
 type Shape = {
     unread: String
     read: String

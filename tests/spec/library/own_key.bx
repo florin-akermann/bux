@@ -24,7 +24,6 @@ fn main(arguments: List<String>) -> Int {
     0
 }
 
-/// The age as it is written, and `none` where the map holds no entry at that key.
 // example: named(None) == "none"
 fn named(age: Option<Int>) -> String {
     match age {

@@ -12,7 +12,6 @@ import list
 import parser
 import strings
 
-/// `property` tried on `cases` cases, each drawn from a seed of its own.
 // example: held.is_held(held_over(EveryOneFound, 2))
 fn held_over(property: Property, cases: Int) -> held.Held {
     var found = held.nothing_failed(cases)
@@ -28,7 +27,6 @@ fn held_over(property: Property, cases: Int) -> held.Held {
     found
 }
 
-/// One case of `property`, drawn from `draw`.
 // example: tried_by(EveryOneAccepted, drawn.seeded(1)).why == ""
 fn tried_by(property: Property, draw: drawn.Draw) -> Tried {
     let many = 1 + drawn.number(draw, 5)
@@ -41,7 +39,6 @@ fn tried_by(property: Property, draw: drawn.Draw) -> Tried {
     }
 }
 
-/// The name a failure of `property` is reported with.
 // example: name_of(EveryOneAccepted) == "a_module_whose_every_function_states_an_example_is_accepted"
 fn name_of(property: Property) -> String {
     match property {
@@ -52,7 +49,6 @@ fn name_of(property: Property) -> String {
     }
 }
 
-/// There are as many examples as there are functions, each of which states one.
 // example: every_example_a_module_states_is_found_however_many_functions_it_declares(2).why == ""
 fn every_example_a_module_states_is_found_however_many_functions_it_declares(many: Int) -> Tried {
     let source = documented(many)
@@ -64,7 +60,6 @@ fn every_example_a_module_states_is_found_however_many_functions_it_declares(man
     Tried { case: source, why: why }
 }
 
-/// A module whose every function states an example earns no refusal.
 // example: a_module_whose_every_function_states_an_example_is_accepted(documented(2)).why == ""
 fn a_module_whose_every_function_states_an_example_is_accepted(source: String) -> Tried {
     let why = match stated_in(source) {
@@ -74,7 +69,6 @@ fn a_module_whose_every_function_states_an_example_is_accepted(source: String) -
     Tried { case: source, why: why }
 }
 
-/// The text an example's span covers is its line: the marker, then the expression it states.
 // example: the_text_of_an_example_is_the_text_of_its_line_after_the_marker(documented(2)).why == ""
 fn the_text_of_an_example_is_the_text_of_its_line_after_the_marker(source: String) -> Tried {
     var why = ""
@@ -87,7 +81,6 @@ fn the_text_of_an_example_is_the_text_of_its_line_after_the_marker(source: Strin
     Tried { case: source, why: why }
 }
 
-/// A span anywhere in what a run writes is placed back inside the file the examples came from.
 // example: a_span_a_run_reports_is_a_span_of_the_file_the_examples_were_read_out_of(source: documented(2), draw: drawn.seeded(1)).why == ""
 fn a_span_a_run_reports_is_a_span_of_the_file_the_examples_were_read_out_of(source: String, draw: drawn.Draw) -> Tried {
     let program = parsed(source)
@@ -102,7 +95,6 @@ fn a_span_a_run_reports_is_a_span_of_the_file_the_examples_were_read_out_of(sour
     Tried { case: source, why: why }
 }
 
-/// A module of `many` functions, each stating one example of itself.
 // example: documented(1) == "// example: held(total: 7) == 7\nfn held(total: Int) -> Int {\n    total\n}\n"
 fn documented(many: Int) -> String {
     var declared = []
@@ -114,25 +106,21 @@ fn documented(many: Int) -> String {
     strings.join(declared, "\n")
 }
 
-/// Every example `source` states, or every refusal of how it states them.
 // example: list.length(ok_or(stated_in(documented(3)), [])) == 3
 fn stated_in(source: String) -> Result<List<command.Example>, List<command.Diagnostic>> {
     command.stated_by(source, parsed(source))
 }
 
-/// The tree of `source`, and no items where it does not parse.
 // example: list.length(parsed(documented(2)).items) == 2
 fn parsed(source: String) -> ast.Program {
     ok_or(parser.parse(source), ast.Program { items: [] })
 }
 
-/// One case of a property: the drawn input as text, and why it failed, which is `""` where it held.
 type Tried = {
     case: String
     why: String
 }
 
-/// Each property of the example lines.
 type Property =
     | EveryOneFound
     | EveryOneAccepted

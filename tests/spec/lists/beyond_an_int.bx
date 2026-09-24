@@ -16,7 +16,6 @@ fn main(arguments: List<String>) -> Int {
     0
 }
 
-/// What the list holds at `index`, as a word, and `nothing` where it holds none there.
 // example: read_at([1], 0) == "1"
 // example: read_at([1], 4294967296) == "nothing"
 fn read_at(values: List<Int>, index: Int) -> String {

@@ -1,5 +1,4 @@
 // A module that declares a process, which a module that imports it spawns through its name.
-/// A total that each `Add` grows, and that `Stop` ends.
 process Tally {
     fn start(initial: Int) -> Int {
         initial
@@ -13,7 +12,6 @@ process Tally {
     }
 }
 
-/// What a tally is sent.
 type Counted =
     | Add(Int)
     | Stop

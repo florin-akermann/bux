@@ -9,7 +9,6 @@ fn main(arguments: List<String>) -> Int {
     0
 }
 
-/// Whether `steps` is even, which `is_odd` answers for one step fewer.
 // example: is_even(4, "four") == true
 fn is_even(steps: Int, label: String) -> Bool {
     if steps == 0 {
@@ -19,7 +18,6 @@ fn is_even(steps: Int, label: String) -> Bool {
     }
 }
 
-/// Whether `steps` is odd, which `is_even` answers for one step fewer.
 // example: is_odd(4, "four") == false
 fn is_odd(steps: Int, label: String) -> Bool {
     if steps == 0 {

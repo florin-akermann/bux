@@ -8,9 +8,6 @@ import bits
 import list
 import strings
 
-/// The SHA-256 of `bytes`, as 64 lowercase hexadecimal digits.
-///
-/// Each of `bytes` is a whole number from 0 to 255, as `files.read_bytes` gives them.
 // example: sha256([]) == "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 // example: sha256([97, 98, 99]) == "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
 // example: sha256([97, 98, 99, 100, 98, 99, 100, 101, 99, 100, 101, 102, 100, 101, 102, 103, 101, 102, 103, 104, 102, 103, 104, 105, 103, 104, 105, 106, 104, 105, 106, 107, 105, 106, 107, 108, 106, 107, 108, 109, 107, 108, 109, 110, 108, 109, 110, 111, 109, 110, 111, 112, 110, 111, 112, 113]) == "248d6a61d20638b8e5c026930c3e6039a33ce45964ff2167f6ecedd419db06c1"
@@ -29,9 +26,6 @@ fn sha256(bytes: List<Int>) -> String {
     written
 }
 
-/// `bytes`, then the byte 128, then zeros, then the number of bits of `bytes` as eight bytes.
-///
-/// The length of what it gives is a multiple of 64, which is the length of one block.
 // example: list.length(padded([])) == 64
 // example: or(list.at(padded([97]), 63), 0) == 8
 fn padded(bytes: List<Int>) -> List<Int> {
@@ -48,7 +42,6 @@ fn padded(bytes: List<Int>) -> List<Int> {
     written
 }
 
-/// The 64 words of the schedule of the block that starts at `at` in `message`.
 // example: or(list.at(scheduled(padded([97, 98, 99]), 0), 0), 0) == 1633837952
 fn scheduled(message: List<Int>, at: Int) -> List<Int> {
     var words = []
@@ -68,7 +61,6 @@ fn scheduled(message: List<Int>, at: Int) -> List<Int> {
     words
 }
 
-/// The word the four bytes at `first` in `bytes` make, the highest byte first.
 // example: word_at([1, 2, 3, 4], 0) == 16909060
 fn word_at(bytes: List<Int>, first: Int) -> Int {
     var word = 0
@@ -80,7 +72,6 @@ fn word_at(bytes: List<Int>, first: Int) -> Int {
     word
 }
 
-/// `state` after the 64 rounds of one block, whose schedule is `words`.
 // example: list.length(compressed(state: initial_state(), words: scheduled(padded([]), 0))) == 8
 fn compressed(state: List<Int>, words: List<Int>) -> List<Int> {
     let constants = round_constants()
@@ -97,7 +88,6 @@ fn compressed(state: List<Int>, words: List<Int>) -> List<Int> {
     summed
 }
 
-/// The eight words of `working` after one round, which adds `added` to the new first and fifth.
 // example: held(round([0, 0, 0, 0, 0, 0, 0, 0], 1), 4) == 1
 fn round(working: List<Int>, added: Int) -> List<Int> {
     let fifth = held(working, 4)
@@ -107,25 +97,19 @@ fn round(working: List<Int>, added: Int) -> List<Int> {
     [word_of(first + second), lead, held(working, 1), held(working, 2), word_of(held(working, 3) + first), fifth, held(working, 5), held(working, 6)]
 }
 
-/// The word at `index` of `words`, which is there for each index the rounds read.
 // example: held([5, 6], 1) == 6
 fn held(words: List<Int>, index: Int) -> Int {
     or(list.at(words, index), 0)
 }
 
-/// The bits of `set` where `picker` has a one, and the bits of `clear` where it has a zero.
-///
-/// The two parts share no bit, so their sum is the exclusive or that FIPS 180-4 writes.
+// The two parts share no bit, so their sum is the exclusive or that FIPS 180-4 writes.
 // example: chosen(picker: 4294967295, set: 1, clear: 2) == 1
 // example: chosen(picker: 0, set: 1, clear: 2) == 2
 fn chosen(picker: Int, set: Int, clear: Int) -> Int {
     both(one: picker, other: set) + both(one: 4294967295 - picker, other: clear)
 }
 
-/// Each bit that at least two of `one`, `two`, and `three` have.
-///
-/// The bits both `one` and `two` have, and the bits of `three` where only one of them has a one,
-/// share no bit, so their sum is the majority.
+// The two parts share no bit, so their sum is the majority.
 // example: majority(one: 3, two: 5, three: 6) == 7
 // example: majority(one: 1, two: 0, three: 0) == 0
 fn majority(one: Int, two: Int, three: Int) -> Int {
@@ -133,50 +117,40 @@ fn majority(one: Int, two: Int, three: Int) -> Int {
     shared + both(one: three, other: one + two - 2 * shared)
 }
 
-/// The exclusive or of three words, which FIPS 180-4 writes as `Σ0`.
 // example: big_sigma_zero(0) == 0
 fn big_sigma_zero(word: Int) -> Int {
     odd(one: rotated(word: word, count: 2), two: rotated(word: word, count: 13), three: rotated(word: word, count: 22))
 }
 
-/// The exclusive or of three words, which FIPS 180-4 writes as `Σ1`.
 // example: big_sigma_one(0) == 0
 fn big_sigma_one(word: Int) -> Int {
     odd(one: rotated(word: word, count: 6), two: rotated(word: word, count: 11), three: rotated(word: word, count: 25))
 }
 
-/// The exclusive or of three words, which FIPS 180-4 writes as `σ0`.
 // example: small_sigma_zero(8) == 268566529
 fn small_sigma_zero(word: Int) -> Int {
     odd(one: rotated(word: word, count: 7), two: rotated(word: word, count: 18), three: shifted(word: word, count: 3))
 }
 
-/// The exclusive or of three words, which FIPS 180-4 writes as `σ1`.
 // example: small_sigma_one(1024) == 41943041
 fn small_sigma_one(word: Int) -> Int {
     odd(one: rotated(word: word, count: 17), two: rotated(word: word, count: 19), three: shifted(word: word, count: 10))
 }
 
-/// `word` turned right by `count` bits, the bits that fall off the right put back on the left.
-///
-/// The word is written twice side by side, and the right half of that turned is the word turned.
+// The word is written twice side by side, so a shift of the right half is a turn of the word.
 // example: rotated(word: 1, count: 1) == 2147483648
 // example: rotated(word: 6, count: 1) == 3
 fn rotated(word: Int, count: Int) -> Int {
     shifted(word: word * 4294967297, count: count)
 }
 
-/// The right 32 bits of `value` moved right by `count` bits, the bits that fall off the right lost.
-///
-/// A turn of 64 bits puts the bits that fall off at the left, which the right 32 bits do not hold.
+// A turn of 64 bits puts the lost bits at the left, and the mask of the right 32 bits drops them.
 // example: shifted(word: 6, count: 1) == 3
 fn shifted(word: Int, count: Int) -> Int {
     bits.gathered(or(bits.turned(word, count), 0), 4294967295)
 }
 
-/// Each bit that an odd count of `one`, `two`, and `three` have, which is their exclusive or.
-///
-/// A sum counts each bit two words share twice, so it is the exclusive or and twice the shared bits.
+// A sum counts each shared bit twice, so the sum less twice the shared bits is the exclusive or.
 // example: odd(one: 6, two: 3, three: 0) == 5
 // example: odd(one: 1, two: 1, three: 1) == 1
 fn odd(one: Int, two: Int, three: Int) -> Int {
@@ -184,23 +158,18 @@ fn odd(one: Int, two: Int, three: Int) -> Int {
     first + three - 2 * both(one: first, other: three)
 }
 
-/// Each bit that both `one` and `other` have.
-///
-/// The bits of `one` where `other` has a one are gathered to the right, then spread back out to
-/// those places, which leaves every other bit a zero.
+// A gather and a spread through the same mask keep only the bits that both words have.
 // example: both(one: 6, other: 3) == 2
 // example: both(one: 4294967295, other: 305419896) == 305419896
 fn both(one: Int, other: Int) -> Int {
     bits.spread(bits.gathered(one, other), other)
 }
 
-/// `sum` modulo 2^32, which is the word a sum of words stands for.
 // example: word_of(4294967297) == 1
 fn word_of(sum: Int) -> Int {
     or(sum % 4294967296, 0)
 }
 
-/// `word` as eight lowercase hexadecimal digits, the highest first.
 // example: word_hex(3405691582) == "cafebabe"
 // example: word_hex(1) == "00000001"
 fn word_hex(word: Int) -> String {
@@ -215,13 +184,11 @@ fn word_hex(word: Int) -> String {
     written
 }
 
-/// The first eight words of the state, which FIPS 180-4 states for SHA-256.
 // example: list.length(initial_state()) == 8
 fn initial_state() -> List<Int> {
     [1779033703, 3144134277, 1013904242, 2773480762, 1359893119, 2600822924, 528734635, 1541459225]
 }
 
-/// The 64 words each round adds in turn, which FIPS 180-4 states for SHA-256.
 // example: list.length(round_constants()) == 64
 fn round_constants() -> List<Int> {
     [1116352408, 1899447441, 3049323471, 3921009573, 961987163, 1508970993, 2453635748, 2870763221, 3624381080, 310598401, 607225278, 1426881987, 1925078388, 2162078206, 2614888103, 3248222580, 3835390401, 4022224774, 264347078, 604807628, 770255983, 1249150122, 1555081692, 1996064986, 2554220882, 2821834349, 2952996808, 3210313671, 3336571891, 3584528711, 113926993, 338241895, 666307205, 773529912, 1294757372, 1396182291, 1695183700, 1986661051, 2177026350, 2456956037, 2730485921, 2820302411, 3259730800, 3345764771, 3516065817, 3600352804, 4094571909, 275423344, 430227734, 506948616, 659060556, 883997877, 958139571, 1322822218, 1537002063, 1747873779, 1955562222, 2024104815, 2227730452, 2361852424, 2428436474, 2756734187, 3204031479, 3329325298]

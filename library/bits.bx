@@ -3,11 +3,8 @@
 //
 // `docs/specs/io.md` states what each gives back. Each is one `extern` declaration away from a
 // JVM method, which `docs/specs/interop.md` states. A whole number is 64 bits, as a `long` is.
-/// The bits of `value` where `mask` has a one, gathered to the right in the order they stand.
 extern static gathered(value: Int, mask: Int) -> Int = "java.lang.Long.compress"
 
-/// The right bits of `value`, spread out to the places where `mask` has a one, in order.
 extern static spread(value: Int, mask: Int) -> Int = "java.lang.Long.expand"
 
-/// `value` turned right by `distance` bits of 64, where `distance` fits in an `int`.
 extern static turned(value: Int, int distance: Int) -> Option<Int> = "java.lang.Long.rotateRight"

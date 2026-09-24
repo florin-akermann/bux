@@ -13,7 +13,6 @@ import list
 import map
 import strings
 
-/// A record read only through the name it was built for is never built, and works out the same.
 // example: held.is_held(a_record_kept_in_locals_computes_what_the_same_record_built_on_the_heap_computes(0, ir.little_library()))
 fn a_record_kept_in_locals_computes_what_the_same_record_built_on_the_heap_computes(cases: Int, library: ir.Library) -> held.Held {
     var found = held.nothing_failed(cases)
@@ -27,7 +26,6 @@ fn a_record_kept_in_locals_computes_what_the_same_record_built_on_the_heap_compu
     found
 }
 
-/// A drawn record, read through the name it was built for and through a second name.
 // example: drawing(drawn.seeded(1), ir.little_library()).source != ""
 fn drawing(draw: drawn.Draw, library: ir.Library) -> Drawing {
     let many = drawn.number(draw, 3) + 1
@@ -49,10 +47,8 @@ fn drawing(draw: drawn.Draw, library: ir.Library) -> Drawing {
     Drawing { source: kept, why: why }
 }
 
-/// A module whose `held` builds a record of the fields `given` values and reads each field back.
-///
-/// `through` is the name the fields are read through: the name the record is built for keeps it
-/// in locals, and a second name bound to it lets it go.
+// The name the record is built for keeps the record in locals.
+// A second name for the record puts it on the heap.
 // example: module(given: [1], through: "point") == "fn held(count: Int) -> Int {\n    _ = count\n    let point = Point { across: 7 }\n    point.across\n}\n\ntype Point = {\n    across: Int\n}\n"
 fn module(given: List<Int>, through: String) -> String {
     var literal = []
@@ -73,7 +69,6 @@ fn module(given: List<Int>, through: String) -> String {
     "fn held(count: Int) -> Int {\n    _ = count\n    let point = Point { " + strings.join(literal, ", ") + " }\n" + second + "    " + strings.join(reads, " + ") + "\n}\n\ntype Point = {\n" + declared + "}\n"
 }
 
-/// Whether the body of `held` builds an instance of anything at all.
 // example: !has_new([])
 fn has_new(lowered: List<ir.Lowered>) -> Bool {
     for instruction in compiled.instructions_of(lowered, "held") {
@@ -84,7 +79,6 @@ fn has_new(lowered: List<ir.Lowered>) -> Bool {
     false
 }
 
-/// Whether `instruction` makes a new instance.
 // example: is_new(jvm.New("a/B"))
 // example: !is_new(jvm.Copy)
 fn is_new(instruction: jvm.Instruction) -> Bool {
@@ -94,7 +88,6 @@ fn is_new(instruction: jvm.Instruction) -> Bool {
     }
 }
 
-/// `answer` as text: the number it works out, or why the machine could not work it out.
 // example: answer_text(Ok(3)) == "3"
 // example: answer_text(Err("gone")) == "nothing, because gone"
 fn answer_text(answer: Result<Int, String>) -> String {
@@ -104,7 +97,6 @@ fn answer_text(answer: Result<Int, String>) -> String {
     }
 }
 
-/// What the function `held` of `lowered` gives back when it is handed `count`, run on the machine.
 // example: answer_text(computed(lowered: [], count: 1)) == "nothing, because the body gives nothing back"
 fn computed(lowered: List<ir.Lowered>, count: Int) -> Result<Int, String> {
     let classes = compiled.demo_classes(lowered)
@@ -121,7 +113,6 @@ fn computed(lowered: List<ir.Lowered>, count: Int) -> Result<Int, String> {
     Err("the body gives nothing back")
 }
 
-/// Whether `instruction` gives back from the method.
 // example: is_return(jvm.Return(None))
 // example: !is_return(jvm.Copy)
 fn is_return(instruction: jvm.Instruction) -> Bool {
@@ -131,7 +122,6 @@ fn is_return(instruction: jvm.Instruction) -> Bool {
     }
 }
 
-/// The number on top of the stack of `machine`, which is what the body gives back.
 // example: answer_text(answer_of(Machine { stack: [Number(2)], locals: map.empty(), broken: "" })) == "2"
 fn answer_of(machine: Machine) -> Result<Int, String> {
     match top(machine) {
@@ -140,7 +130,6 @@ fn answer_of(machine: Machine) -> Result<Int, String> {
     }
 }
 
-/// `machine` after it runs `instruction`, with the fields each of `classes` holds known.
 // example: stepped(machine: Machine { stack: [], locals: map.empty(), broken: "" }, instruction: jvm.LongOf(4), classes: []).stack == [Number(4)]
 fn stepped(machine: Machine, instruction: jvm.Instruction, classes: List<ir.Class>) -> Machine {
     match instruction {
@@ -156,7 +145,6 @@ fn stepped(machine: Machine, instruction: jvm.Instruction, classes: List<ir.Clas
     }
 }
 
-/// `machine` with the value of `slot` on top of its stack, or broken where the slot holds none.
 // example: loaded(Machine { stack: [], locals: map.empty(), broken: "" }, 3).broken != ""
 fn loaded(machine: Machine, slot: Int) -> Machine {
     match map.get(machine.locals, slot) {
@@ -165,14 +153,12 @@ fn loaded(machine: Machine, slot: Int) -> Machine {
     }
 }
 
-/// `machine` with the value on top of its stack taken off and kept in `slot`.
 // example: stored(Machine { stack: [Number(1)], locals: map.empty(), broken: "" }, 3).stack == []
 fn stored(machine: Machine, slot: Int) -> Machine {
     let kept = popped(machine)
     kept { locals: map.insert(kept.locals, slot, top(machine)) }
 }
 
-/// `machine` with the two numbers on top of its stack joined the way `how` joins them.
 // example: worked_out(Machine { stack: [Number(5), Number(3)], locals: map.empty(), broken: "" }, ir.Subtract).stack == [Number(2)]
 fn worked_out(machine: Machine, how: ir.Arithmetic) -> Machine {
     let right = number_of(top(machine))
@@ -186,10 +172,8 @@ fn worked_out(machine: Machine, how: ir.Arithmetic) -> Machine {
     }
 }
 
-/// `machine` with the `carried` numbers on top of its stack made the fields of the record below.
-///
-/// A constructor takes the values it carries and the copy that `new` left, and makes the instance
-/// below them the record.
+// A constructor takes the values it carries and the copy that `new` left.
+// So it makes the instance below them the record.
 // example: constructed(Machine { stack: [Fresh, Fresh, Number(4)], locals: map.empty(), broken: "" }, 1).stack == [Instance([4])]
 fn constructed(machine: Machine, carried: Int) -> Machine {
     let at = list.length(machine.stack) - carried
@@ -201,7 +185,6 @@ fn constructed(machine: Machine, carried: Int) -> Machine {
     pushed(below, Instance(fields))
 }
 
-/// The whole number `value` holds, which is 0 where it holds none.
 // example: number_of(Number(3)) == 3
 // example: number_of(Fresh) == 0
 fn number_of(value: Value) -> Int {
@@ -211,7 +194,6 @@ fn number_of(value: Value) -> Int {
     }
 }
 
-/// `machine` with the record on top of its stack replaced by its field at `at`.
 // example: read(Machine { stack: [Instance([4, 5])], locals: map.empty(), broken: "" }, 1).stack == [Number(5)]
 fn read(machine: Machine, at: Int) -> Machine {
     match top(machine) {
@@ -220,25 +202,21 @@ fn read(machine: Machine, at: Int) -> Machine {
     }
 }
 
-/// `machine` with `value` on top of its stack.
 // example: pushed(Machine { stack: [], locals: map.empty(), broken: "" }, Fresh).stack == [Fresh]
 fn pushed(machine: Machine, value: Value) -> Machine {
     machine { stack: list.push(machine.stack, value) }
 }
 
-/// The value on top of the stack of `machine`, which is `Fresh` where the stack is empty.
 // example: top(Machine { stack: [Number(1), Number(2)], locals: map.empty(), broken: "" }) == Number(2)
 fn top(machine: Machine) -> Value {
     or(list.at(machine.stack, list.length(machine.stack) - 1), Fresh)
 }
 
-/// `machine` without the value on top of its stack.
 // example: popped(Machine { stack: [Number(1), Number(2)], locals: map.empty(), broken: "" }).stack == [Number(1)]
 fn popped(machine: Machine) -> Machine {
     machine { stack: compiled.part(machine.stack, 0, list.length(machine.stack) - 1) }
 }
 
-/// The names of the fields the class named `class` among `classes` holds, in the order it declares.
 // example: fields_of([], "demo/Point") == []
 fn fields_of(classes: List<ir.Class>, class: String) -> List<String> {
     var names = []
@@ -254,20 +232,17 @@ fn fields_of(classes: List<ir.Class>, class: String) -> List<String> {
 
 derive Eq for Value
 
-/// One drawn record, the module that keeps it, and what went wrong, which is empty if nothing.
 type Drawing = {
     source: String
     why: String
 }
 
-/// The stack machine a drawn body runs on: its stack, its locals, and why it stopped, if it did.
 type Machine = {
     stack: List<Value>
     locals: map.Map<Int, Value>
     broken: String
 }
 
-/// One value on the stack of the machine.
 type Value =
     | Number(Int)
     | Instance(List<Int>)

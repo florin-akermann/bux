@@ -9,10 +9,6 @@ import lexer
 import list
 import strings
 
-/// The tree of `program`, one line for each node, as a `tests/spec/parser` `.ast` file holds it.
-///
-/// A node is written `<indent><label> <start>..<end>`, two blanks of indent for each level, and a
-/// node that only groups others, such as `result`, is written with no span.
 // example: printed(Program { items: [] }) == ""
 fn printed(program: Program) -> String {
     var written = ""
@@ -22,7 +18,6 @@ fn printed(program: Program) -> String {
     written
 }
 
-/// The lines of one top-level declaration, at the left margin.
 // example: item_lines(Import(ImportDeclaration { module: Name { text: "io", span: lexer.Span { start: 7, length: 2 } }, span: lexer.Span { start: 0, length: 9 } })) == "import io 0..9\n"
 fn item_lines(declared: Item) -> String {
     match declared {
@@ -38,13 +33,11 @@ fn item_lines(declared: Item) -> String {
     }
 }
 
-/// A test block: its name, as the string it is written with, then its body one level in.
 // example: test_lines(TestDeclaration { name: Name { text: "a", span: lexer.Span { start: 5, length: 3 } }, body: Block { statements: [], span: lexer.Span { start: 9, length: 3 } }, span: lexer.Span { start: 0, length: 12 } }) == "test \"a\" 0..12\n  block 9..12\n"
 fn test_lines(declaration: TestDeclaration) -> String {
     node(0, "test " + quoted(declaration.name.text), declaration.span) + block_lines(declaration.body, 1)
 }
 
-/// An `extern`: the member it reaches, the Java name, each parameter, and the result.
 // example: extern_lines(ExternDeclaration { name: Name { text: "now", span: lexer.Span { start: 0, length: 3 } }, reaches: Constructor, gives: GivesAsDeclared, parameters: [], result: TypeRef { kind: UnitType, span: lexer.Span { start: 5, length: 2 } }, span: lexer.Span { start: 0, length: 7 } }) == "extern new now 0..7\n  result\n    unit-type 5..7\n"
 fn extern_lines(declaration: ExternDeclaration) -> String {
     let width = written_before(gives_word(declaration.gives))
@@ -57,7 +50,6 @@ fn extern_lines(declaration: ExternDeclaration) -> String {
     written + group(1, "result") + type_ref_lines(declaration.result, 2)
 }
 
-/// The Java name an `extern` states, which a constructor states none of.
 // example: reached_lines(Constructor) == ""
 fn reached_lines(reaches: Reaches) -> String {
     match reaches {
@@ -68,7 +60,6 @@ fn reached_lines(reaches: Reaches) -> String {
     }
 }
 
-/// The word written after `extern`, which says which kind of member it reaches.
 // example: reaches_word(Constructor) == "new"
 fn reaches_word(reaches: Reaches) -> String {
     match reaches {
@@ -79,7 +70,6 @@ fn reaches_word(reaches: Reaches) -> String {
     }
 }
 
-/// The width written before an `extern`'s name, and `""` where it writes none.
 // example: gives_word(GivesChar) == "char"
 fn gives_word(gives: Gives) -> String {
     match gives {
@@ -89,7 +79,6 @@ fn gives_word(gives: Gives) -> String {
     }
 }
 
-/// The width written before a parameter's name, and `""` where it writes none.
 // example: takes_word(TakesInt) == "int"
 fn takes_word(takes: Takes) -> String {
     match takes {
@@ -98,7 +87,6 @@ fn takes_word(takes: Takes) -> String {
     }
 }
 
-/// A trait, the one type it is written over, and each signature it declares.
 // example: trait_lines(TraitDeclaration { name: Name { text: "Eq", span: lexer.Span { start: 6, length: 2 } }, parameter: Name { text: "T", span: lexer.Span { start: 9, length: 1 } }, methods: [], span: lexer.Span { start: 0, length: 20 }, visibility: Public }) == "trait Eq 0..20\n  type-parameter T 9..10\n"
 fn trait_lines(declaration: TraitDeclaration) -> String {
     var written = node(0, written_before(visibility_word(declaration.visibility)) + "trait " + declaration.name.text, declaration.span)
@@ -109,7 +97,6 @@ fn trait_lines(declaration: TraitDeclaration) -> String {
     written
 }
 
-/// A method a trait declares: its name, its parameters, and its result where one is written.
 // example: signature_lines(Signature { name: Name { text: "go", span: lexer.Span { start: 3, length: 2 } }, parameters: [], result: None, span: lexer.Span { start: 0, length: 7 } }) == "  signature go 0..7\n"
 fn signature_lines(method: Signature) -> String {
     var written = node(1, "signature " + method.name.text, method.span)
@@ -119,10 +106,7 @@ fn signature_lines(method: Signature) -> String {
     written + result_lines(method.result, 3)
 }
 
-/// An instance, and each method it writes a body for.
-///
-/// The type it is for is written with the trait, and each method carries the instance's own
-/// type parameters, so the arguments the type is written with are not written again.
+// Each method carries the type parameters of the instance, so the type arguments stay unwritten.
 // example: instance_lines(InstanceDeclaration { trait_name: Name { text: "Eq", span: lexer.Span { start: 9, length: 2 } }, type_parameters: [], for_type: Name { text: "Id", span: lexer.Span { start: 12, length: 2 } }, arguments: [], methods: [], span: lexer.Span { start: 0, length: 30 } }) == "instance Eq<Id> 0..30\n"
 fn instance_lines(declaration: InstanceDeclaration) -> String {
     var written = node(0, "instance " + declaration.trait_name.text + "<" + declaration.for_type.text + ">", declaration.span)
@@ -132,7 +116,6 @@ fn instance_lines(declaration: InstanceDeclaration) -> String {
     written
 }
 
-/// A process: its name, then each function it declares, one level in.
 // example: process_lines(ProcessDeclaration { name: Name { text: "Counter", span: lexer.Span { start: 8, length: 7 } }, functions: [], span: lexer.Span { start: 0, length: 19 }, visibility: Public }) == "process Counter 0..19\n"
 fn process_lines(declaration: ProcessDeclaration) -> String {
     var written = node(0, written_before(visibility_word(declaration.visibility)) + "process " + declaration.name.text, declaration.span)
@@ -142,7 +125,6 @@ fn process_lines(declaration: ProcessDeclaration) -> String {
     written
 }
 
-/// A derive: the traits it names, and the type it names them for, on one line.
 // example: derive_lines(DeriveDeclaration { traits: [Name { text: "Eq", span: lexer.Span { start: 7, length: 2 } }], for_type: Name { text: "Id", span: lexer.Span { start: 14, length: 2 } }, span: lexer.Span { start: 0, length: 16 } }) == "derive Eq for Id 0..16\n"
 fn derive_lines(declaration: DeriveDeclaration) -> String {
     var named = []
@@ -152,7 +134,6 @@ fn derive_lines(declaration: DeriveDeclaration) -> String {
     node(0, "derive " + strings.join(named, ", ") + " for " + declaration.for_type.text, declaration.span)
 }
 
-/// A type declaration: its name, its type parameters, and what it defines.
 // example: type_lines(TypeDeclaration { name: Name { text: "Id", span: lexer.Span { start: 5, length: 2 } }, parameters: [], definition: RecordType([]), span: lexer.Span { start: 0, length: 12 }, visibility: Public }) == "type Id 0..12\n"
 fn type_lines(declaration: TypeDeclaration) -> String {
     var written = node(0, written_before(visibility_word(declaration.visibility)) + "type " + declaration.name.text, declaration.span)
@@ -162,7 +143,6 @@ fn type_lines(declaration: TypeDeclaration) -> String {
     written + definition_lines(declaration.definition)
 }
 
-/// The fields of a record, each variant, or the Java class a foreign type is held as.
 // example: definition_lines(Variants([])) == ""
 fn definition_lines(definition: TypeDefinition) -> String {
     match definition {
@@ -172,7 +152,6 @@ fn definition_lines(definition: TypeDefinition) -> String {
     }
 }
 
-/// The word written before a foreign type's name, and `""` where it names an ordinary class.
 // example: called_word(AsAnInterface) == "interface"
 fn called_word(called: Called) -> String {
     match called {
@@ -181,7 +160,6 @@ fn called_word(called: Called) -> String {
     }
 }
 
-/// Each variant of a type, with whatever it carries one level in.
 // example: variant_lines([Variant { name: Name { text: "On", span: lexer.Span { start: 2, length: 2 } }, payload: NoPayload, span: lexer.Span { start: 2, length: 2 } }]) == "  variant On 2..4\n"
 fn variant_lines(variants: List<Variant>) -> String {
     var written = ""
@@ -192,7 +170,6 @@ fn variant_lines(variants: List<Variant>) -> String {
     written
 }
 
-/// What a variant carries: nothing, a type for each value, or a field for each name.
 // example: payload_lines(NoPayload) == ""
 fn payload_lines(payload: VariantPayload) -> String {
     match payload {
@@ -202,7 +179,6 @@ fn payload_lines(payload: VariantPayload) -> String {
     }
 }
 
-/// Each type of a list, at `depth`.
 // example: type_list_lines([TypeRef { kind: UnitType, span: lexer.Span { start: 0, length: 2 } }], 1) == "  unit-type 0..2\n"
 fn type_list_lines(types: List<TypeRef>, depth: Int) -> String {
     var written = ""
@@ -212,7 +188,6 @@ fn type_list_lines(types: List<TypeRef>, depth: Int) -> String {
     written
 }
 
-/// Each field of a record body, with its type one level in.
 // example: field_lines([], 1) == ""
 fn field_lines(fields: List<RecordField>, depth: Int) -> String {
     var written = ""
@@ -223,7 +198,6 @@ fn field_lines(fields: List<RecordField>, depth: Int) -> String {
     written
 }
 
-/// A function: its type parameters, its parameters, its result, and its body.
 // example: function_lines(FunctionDeclaration { name: Name { text: "go", span: lexer.Span { start: 3, length: 2 } }, type_parameters: [], parameters: [], result: None, body: Block { statements: [], span: lexer.Span { start: 8, length: 3 } }, span: lexer.Span { start: 0, length: 11 }, visibility: Public }, 0) == "function go 0..11\n  block 8..11\n"
 fn function_lines(declaration: FunctionDeclaration, depth: Int) -> String {
     var written = node(depth, written_before(visibility_word(declaration.visibility)) + "function " + declaration.name.text, declaration.span)
@@ -237,8 +211,6 @@ fn function_lines(declaration: FunctionDeclaration, depth: Int) -> String {
     written + block_lines(declaration.body, depth + 1)
 }
 
-/// The word written before a declaration that keeps its name in its module, and `""` for one
-/// that every module reaches.
 // example: visibility_word(Private) == "private"
 // example: visibility_word(Public) == ""
 fn visibility_word(visibility: Visibility) -> String {
@@ -248,7 +220,6 @@ fn visibility_word(visibility: Visibility) -> String {
     }
 }
 
-/// A word and the blank after it, or nothing at all where the word is empty.
 // example: written_before("int") == "int "
 // example: written_before("") == ""
 fn written_before(word: String) -> String {
@@ -258,7 +229,6 @@ fn written_before(word: String) -> String {
     word + " "
 }
 
-/// A parameter at `depth`, with `narrowed` before its name and its type one level in.
 // example: parameter_lines(Parameter { name: Name { text: "at", span: lexer.Span { start: 0, length: 2 } }, type_ref: None, span: lexer.Span { start: 0, length: 2 } }, "", 1) == "  parameter at 0..2\n"
 fn parameter_lines(parameter: Parameter, narrowed: String, depth: Int) -> String {
     let written = node(depth, "parameter " + narrowed + parameter.name.text, parameter.span)
@@ -268,7 +238,6 @@ fn parameter_lines(parameter: Parameter, narrowed: String, depth: Int) -> String
     }
 }
 
-/// The result a signature declares, under a `result` line, and nothing where it declares none.
 // example: result_lines(None, 2) == ""
 fn result_lines(result: Option<TypeRef>, depth: Int) -> String {
     match result {
@@ -277,7 +246,6 @@ fn result_lines(result: Option<TypeRef>, depth: Int) -> String {
     }
 }
 
-/// A type parameter of a function, with each trait it is constrained by one level in.
 // example: type_parameter_lines(TypeParameter { name: Name { text: "T", span: lexer.Span { start: 6, length: 1 } }, constraints: [] }, 1) == "  type-parameter T 6..7\n"
 fn type_parameter_lines(parameter: TypeParameter, depth: Int) -> String {
     var written = node(depth, "type-parameter " + parameter.name.text, parameter.name.span)
@@ -288,7 +256,6 @@ fn type_parameter_lines(parameter: TypeParameter, depth: Int) -> String {
     written
 }
 
-/// A written type, with each of its arguments one level in.
 // example: type_ref_lines(TypeRef { kind: UnitType, span: lexer.Span { start: 0, length: 2 } }, 0) == "unit-type 0..2\n"
 fn type_ref_lines(type_ref: TypeRef, depth: Int) -> String {
     match type_ref.kind {
@@ -297,7 +264,6 @@ fn type_ref_lines(type_ref: TypeRef, depth: Int) -> String {
     }
 }
 
-/// A block, and each statement it holds one level in.
 // example: block_lines(Block { statements: [], span: lexer.Span { start: 0, length: 3 } }, 1) == "  block 0..3\n"
 fn block_lines(block: Block, depth: Int) -> String {
     var written = node(depth, "block", block.span)
@@ -307,9 +273,6 @@ fn block_lines(block: Block, depth: Int) -> String {
     written
 }
 
-/// One statement, and what it holds one level in.
-///
-/// An expression written as a statement is no node of its own, so it is written at `depth`.
 // example: statement_lines(Statement { kind: Break, span: lexer.Span { start: 4, length: 5 } }, 2) == "    break 4..9\n"
 fn statement_lines(statement: Statement, depth: Int) -> String {
     let span = statement.span
@@ -325,7 +288,6 @@ fn statement_lines(statement: Statement, depth: Int) -> String {
     }
 }
 
-/// The word that says whether a binding may be assigned to afterwards.
 // example: mutability_word(Mutable) == "Mutable"
 fn mutability_word(mutability: Mutability) -> String {
     match mutability {
@@ -334,7 +296,6 @@ fn mutability_word(mutability: Mutability) -> String {
     }
 }
 
-/// The word that says whether an assignment replaces the value or adds to it.
 // example: assign_word(AddTo) == "Add"
 fn assign_word(operator: AssignOperator) -> String {
     match operator {
@@ -343,7 +304,6 @@ fn assign_word(operator: AssignOperator) -> String {
     }
 }
 
-/// The value a `return` gives back, and nothing where it gives back none.
 // example: optional_lines(None, 1) == ""
 fn optional_lines(value: Option<Expr>, depth: Int) -> String {
     match value {
@@ -352,7 +312,6 @@ fn optional_lines(value: Option<Expr>, depth: Int) -> String {
     }
 }
 
-/// A `for` loop, which is named by what it loops over, and its body one level in.
 // example: for_lines(ForLoop { header: Forever, body: Block { statements: [], span: lexer.Span { start: 4, length: 3 } } }, lexer.Span { start: 0, length: 7 }, 0) == "for 0..7\n  block 4..7\n"
 fn for_lines(written: ForLoop, span: lexer.Span, depth: Int) -> String {
     let header = match written.header {
@@ -363,7 +322,6 @@ fn for_lines(written: ForLoop, span: lexer.Span, depth: Int) -> String {
     header + block_lines(block: written.body, depth: depth + 1)
 }
 
-/// One expression, and what it is made of one level in.
 // example: expression_lines(Expr { kind: Integer(-7), span: lexer.Span { start: 0, length: 2 } }, 0) == "integer -7 0..2\n"
 // example: expression_lines(Expr { kind: Text("a\"b"), span: lexer.Span { start: 0, length: 6 } }, 0) == "string \"a\\\"b\" 0..6\n"
 fn expression_lines(expr: Expr, depth: Int) -> String {
@@ -387,7 +345,6 @@ fn expression_lines(expr: Expr, depth: Int) -> String {
     }
 }
 
-/// Each expression of a list, at `depth`.
 // example: expression_list_lines([], 1) == ""
 fn expression_list_lines(values: List<Expr>, depth: Int) -> String {
     var written = ""
@@ -397,7 +354,6 @@ fn expression_list_lines(values: List<Expr>, depth: Int) -> String {
     written
 }
 
-/// Each field of a record literal, with its value one level in.
 // example: field_value_lines([], 1) == ""
 fn field_value_lines(fields: List<FieldValue>, depth: Int) -> String {
     var written = ""
@@ -411,7 +367,6 @@ fn field_value_lines(fields: List<FieldValue>, depth: Int) -> String {
     written
 }
 
-/// The value a field of a record literal is given, where a bare name reads the binding it names.
 // example: expression_lines(field_expression(FieldValue { name: Name { text: "id", span: lexer.Span { start: 7, length: 2 } }, given: Bare, span: lexer.Span { start: 7, length: 2 } }), 0) == "name id 7..9\n"
 fn field_expression(field: FieldValue) -> Expr {
     match field.given {
@@ -420,7 +375,6 @@ fn field_expression(field: FieldValue) -> Expr {
     }
 }
 
-/// What a call passes, with each name written where the call writes one.
 // example: argument_lines(Positional([]), 1) == ""
 fn argument_lines(arguments: Arguments, depth: Int) -> String {
     match arguments {
@@ -429,7 +383,6 @@ fn argument_lines(arguments: Arguments, depth: Int) -> String {
     }
 }
 
-/// Each argument a call names, with its value one level in.
 // example: named_argument_lines([], 1) == ""
 fn named_argument_lines(arguments: List<NamedArgument>, depth: Int) -> String {
     var written = ""
@@ -441,7 +394,6 @@ fn named_argument_lines(arguments: List<NamedArgument>, depth: Int) -> String {
     written
 }
 
-/// An `if` chain: each branch, its condition, and its block, then the block of a final `else`.
 // example: if_lines(IfExpr { branches: [], otherwise: None }, lexer.Span { start: 0, length: 9 }, 0) == "if 0..9\n"
 fn if_lines(chain: IfExpr, span: lexer.Span, depth: Int) -> String {
     var written = node(depth, "if", span)
@@ -456,7 +408,6 @@ fn if_lines(chain: IfExpr, span: lexer.Span, depth: Int) -> String {
     }
 }
 
-/// A `match`: what it matches, then each arm, its pattern, and its body.
 // example: match_lines(MatchExpr { scrutinee: Expr { kind: Unit, span: lexer.Span { start: 6, length: 2 } }, arms: [] }, lexer.Span { start: 0, length: 12 }, 0) == "match 0..12\n  unit 6..8\n"
 fn match_lines(matched: MatchExpr, span: lexer.Span, depth: Int) -> String {
     var written = node(depth, "match", span) + expression_lines(expr: matched.scrutinee, depth: depth + 1)
@@ -468,7 +419,6 @@ fn match_lines(matched: MatchExpr, span: lexer.Span, depth: Int) -> String {
     written
 }
 
-/// A pattern, and what it is made of one level in.
 // example: pattern_lines(Pattern { kind: Wildcard, span: lexer.Span { start: 0, length: 1 } }, 0) == "pattern-wildcard 0..1\n"
 fn pattern_lines(pattern: Pattern, depth: Int) -> String {
     let span = pattern.span
@@ -484,7 +434,6 @@ fn pattern_lines(pattern: Pattern, depth: Int) -> String {
     }
 }
 
-/// A name as it was written: the module, a dot, and the name, or the name alone.
 // example: path_text(Path { module: None, name: Name { text: "Int", span: lexer.Span { start: 0, length: 3 } } }) == "Int"
 fn path_text(path: Path) -> String {
     match path.module {
@@ -493,7 +442,6 @@ fn path_text(path: Path) -> String {
     }
 }
 
-/// Each pattern of a list, at `depth`.
 // example: pattern_list_lines([], 1) == ""
 fn pattern_list_lines(patterns: List<Pattern>, depth: Int) -> String {
     var written = ""
@@ -503,7 +451,6 @@ fn pattern_list_lines(patterns: List<Pattern>, depth: Int) -> String {
     written
 }
 
-/// Each field a record pattern names.
 // example: pattern_field_lines([], 1) == ""
 fn pattern_field_lines(fields: List<Name>, depth: Int) -> String {
     var written = ""
@@ -513,7 +460,6 @@ fn pattern_field_lines(fields: List<Name>, depth: Int) -> String {
     written
 }
 
-/// The word a prefix operator is printed as.
 // example: unary_word(Negate) == "Negate"
 fn unary_word(operator: UnaryOperator) -> String {
     match operator {
@@ -522,7 +468,6 @@ fn unary_word(operator: UnaryOperator) -> String {
     }
 }
 
-/// The word an infix operator is printed as.
 // example: binary_word(LessOrEqual) == "LessOrEqual"
 fn binary_word(operator: BinaryOperator) -> String {
     match operator {
@@ -542,10 +487,6 @@ fn binary_word(operator: BinaryOperator) -> String {
     }
 }
 
-/// `text` between quotes, with each quote, backslash, and control character escaped.
-///
-/// It writes the escapes a string literal has, `\0`, and each
-/// other ASCII control character as `\u{…}` in hexadecimal. Every other character stays as it is.
 // example: quoted("say \"hi\"\n") == "\"say \\\"hi\\\"\\n\""
 // example: quoted("é") == "\"é\""
 fn quoted(text: String) -> String {
@@ -558,7 +499,6 @@ fn quoted(text: String) -> String {
     written + "\""
 }
 
-/// One code unit as `quoted` writes it: `unit` is its number, and `letter` is the unit as text.
 // example: escaped(9, "\t") == "\\t"
 // example: escaped(1, "") == "\\u{1}"
 // example: escaped(97, "a") == "a"
@@ -584,7 +524,6 @@ fn escaped(unit: Int, letter: String) -> String {
     letter
 }
 
-/// `value` in hexadecimal, lower case, with no leading zero.
 // example: hexadecimal(127) == "7f"
 // example: hexadecimal(0) == "0"
 fn hexadecimal(value: Int) -> String {
@@ -602,19 +541,16 @@ fn hexadecimal(value: Int) -> String {
     written
 }
 
-/// One node on a line of its own: the indent, the label, and the span.
 // example: node(1, "unit", lexer.Span { start: 0, length: 2 }) == "  unit 0..2\n"
 fn node(depth: Int, label: String, span: lexer.Span) -> String {
     indent(depth) + label + " " + shown(span.start) + ".." + shown(end_of(span)) + "\n"
 }
 
-/// A node that groups others and has no span of its own, such as `result`.
 // example: group(1, "else") == "  else\n"
 fn group(depth: Int, label: String) -> String {
     indent(depth) + label + "\n"
 }
 
-/// Two blanks for each level of `depth`.
 // example: indent(2) == "    "
 fn indent(depth: Int) -> String {
     var written = ""
@@ -626,13 +562,11 @@ fn indent(depth: Int) -> String {
     written
 }
 
-/// Where `span` ends, which is one byte past the last byte it covers.
 // example: end_of(lexer.Span { start: 3, length: 4 }) == 7
 fn end_of(span: lexer.Span) -> Int {
     span.start + span.length
 }
 
-/// The source an item covers.
 // example: extent_of(Import(ImportDeclaration { module: Name { text: "io", span: lexer.Span { start: 7, length: 2 } }, span: lexer.Span { start: 0, length: 9 } })).length == 9
 fn extent_of(declared: Item) -> lexer.Span {
     match declared {
@@ -648,7 +582,6 @@ fn extent_of(declared: Item) -> lexer.Span {
     }
 }
 
-/// Whether `declared` is written `private`, which keeps its name in its module.
 // example: !is_kept(Import(ImportDeclaration { module: Name { text: "io", span: lexer.Span { start: 7, length: 2 } }, span: lexer.Span { start: 0, length: 9 } }))
 fn is_kept(declared: Item) -> Bool {
     match declared {
@@ -660,7 +593,6 @@ fn is_kept(declared: Item) -> Bool {
     }
 }
 
-/// Whether a name of `visibility` is reached only in its module.
 // example: is_private(Private)
 // example: !is_private(Public)
 fn is_private(visibility: Visibility) -> Bool {
@@ -670,7 +602,6 @@ fn is_private(visibility: Visibility) -> Bool {
     }
 }
 
-/// Every test `program` states, in the order it writes them.
 // example: list.length(tests_of(Program { items: [] })) == 0
 fn tests_of(program: Program) -> List<TestDeclaration> {
     var found = []
@@ -683,12 +614,10 @@ fn tests_of(program: Program) -> List<TestDeclaration> {
     found
 }
 
-/// One source file: the items it declares, in source order.
 type Program = {
     items: List<Item>
 }
 
-/// A top-level declaration.
 type Item =
     | Import(ImportDeclaration)
     | Type(TypeDeclaration)
@@ -700,19 +629,14 @@ type Item =
     | Process(ProcessDeclaration)
     | Test(TestDeclaration)
 
-/// `test "name" { … }`: a test, named by a string, and the block whose value says it holds.
-///
-/// The name is the text the string holds, at the span of the string. Nothing calls a test but the
-/// run of `bux test`, so a test declares no name in scope and has no signature.
+// Only the run of `bux test` calls a test, so a test declares no name and has no signature.
 type TestDeclaration = {
     name: Name
     body: Block
     span: lexer.Span
 }
 
-/// `process Counter { … }`: a name, and the functions written inside the braces.
-///
-/// The parser takes any functions here, and the type phase holds them to the one process shape.
+// The parser accepts any functions here, and the type phase holds them to the one process shape.
 type ProcessDeclaration = {
     name: Name
     functions: List<FunctionDeclaration>
@@ -720,9 +644,6 @@ type ProcessDeclaration = {
     visibility: Visibility
 }
 
-/// `extern static read_string(path: Path) -> String = "java.nio.file.Files.readString"`.
-///
-/// One member of one Java class, under the name and the signature this declaration gives it.
 type ExternDeclaration = {
     name: Name
     reaches: Reaches
@@ -732,44 +653,37 @@ type ExternDeclaration = {
     span: lexer.Span
 }
 
-/// One parameter of an `extern`: the parameter itself, and what the member takes it as.
 type ExternParameter = {
     declared: Parameter
     takes: Takes
 }
 
-/// Which width the member's own descriptor takes, where `int` before the name says one.
 type Takes =
     | TakesAsDeclared
     | TakesInt
 
-/// Which width the member's own descriptor gives back, where `int` or `char` says one.
 type Gives =
     | GivesAsDeclared
     | GivesInt
     | GivesChar
 
-/// Which kind of member an `extern` reaches, and the Java name that says which one.
 type Reaches =
     | StaticField(JavaName)
     | StaticMethod(JavaName)
     | InstanceMethod(JavaName)
     | Constructor
 
-/// `derive Eq for User`: the traits the compiler writes the instances of, and the type.
 type DeriveDeclaration = {
     traits: List<Name>
     for_type: Name
     span: lexer.Span
 }
 
-/// `import io`: another module's names are brought into scope.
 type ImportDeclaration = {
     module: Name
     span: lexer.Span
 }
 
-/// `type User = { … }` or `type Payment = | Pending | Failed(String)`.
 type TypeDeclaration = {
     name: Name
     parameters: List<Name>
@@ -778,7 +692,6 @@ type TypeDeclaration = {
     visibility: Visibility
 }
 
-/// What a type declaration declares: a record, one or more variants, or a Java class.
 type TypeDefinition =
     | RecordType(List<RecordField>)
     | Variants(List<Variant>)
@@ -787,32 +700,27 @@ type TypeDefinition =
         called: Called
     }
 
-/// Which kind of class an `extern type` names, where the two are called in two different ways.
 type Called =
     | AsAClass
     | AsAnInterface
 
-/// One variant of a type, with whatever it carries.
 type Variant = {
     name: Name
     payload: VariantPayload
     span: lexer.Span
 }
 
-/// What a variant carries: nothing, positional types, or named fields.
 type VariantPayload =
     | NoPayload
     | TuplePayload(List<TypeRef>)
     | RecordPayload(List<RecordField>)
 
-/// `name: Type`, one line of a record body.
 type RecordField = {
     name: Name
     type_ref: TypeRef
     span: lexer.Span
 }
 
-/// `trait Eq<T> { fn is_equal(one: T, other: T) -> Bool }`.
 type TraitDeclaration = {
     name: Name
     parameter: Name
@@ -821,7 +729,6 @@ type TraitDeclaration = {
     visibility: Visibility
 }
 
-/// One method a trait declares: a function's first line, with no body to go with it.
 type Signature = {
     name: Name
     parameters: List<Parameter>
@@ -829,7 +736,6 @@ type Signature = {
     span: lexer.Span
 }
 
-/// `instance Eq<Point> { … }`, whose methods each carry the instance's type parameters.
 type InstanceDeclaration = {
     trait_name: Name
     type_parameters: List<TypeParameter>
@@ -839,7 +745,6 @@ type InstanceDeclaration = {
     span: lexer.Span
 }
 
-/// `fn count_active(users: List<User>, limit: Int) -> Int { … }`.
 type FunctionDeclaration = {
     name: Name
     type_parameters: List<TypeParameter>
@@ -850,41 +755,33 @@ type FunctionDeclaration = {
     visibility: Visibility
 }
 
-/// Who reaches a declared name: every module that imports its module, or its module alone.
-///
-/// Only a function, a type, a trait, and a process of the top level is written `private`; every
-/// other declaration is `Public`.
+// Only a function, a type, a trait, and a process of the top level can be `private`.
 type Visibility =
     | Public
     | Private
 
-/// `T`, or `T: Eq<T> + Hash<T>`: a type parameter, with what it may be asked to do.
 type TypeParameter = {
     name: Name
     constraints: List<Constraint>
 }
 
-/// `Eq<T>`: the trait a type parameter is constrained by, written over what it constrains.
 type Constraint = {
     name: Name
     argument: TypeRef
     span: lexer.Span
 }
 
-/// One parameter of a function, with its type where the author wrote one.
 type Parameter = {
     name: Name
     type_ref: Option<TypeRef>
     span: lexer.Span
 }
 
-/// A written type, such as `Int`, `List<User>`, or `()`.
 type TypeRef = {
     kind: TypeRefKind
     span: lexer.Span
 }
 
-/// The two shapes a written type takes: a name with its arguments, or `()`.
 type TypeRefKind =
     | NamedType {
         path: Path
@@ -892,19 +789,16 @@ type TypeRefKind =
     }
     | UnitType
 
-/// A `{ … }` body: its statements, in source order.
 type Block = {
     statements: List<Statement>
     span: lexer.Span
 }
 
-/// One statement of a block.
 type Statement = {
     kind: StatementKind
     span: lexer.Span
 }
 
-/// The statement forms.
 type StatementKind =
     | Binding {
         mutability: Mutability
@@ -923,23 +817,19 @@ type StatementKind =
     | Discard(Expr)
     | Evaluated(Expr)
 
-/// Whether a binding may be assigned to afterwards.
 type Mutability =
     | Immutable
     | Mutable
 
-/// Whether an assignment replaces the value or adds to it.
 type AssignOperator =
     | SetTo
     | AddTo
 
-/// `for user in users { … }`, `for total < limit { … }`, or a bare `for { … }`.
 type ForLoop = {
     header: ForHeader
     body: Block
 }
 
-/// What a `for` loops over, if anything.
 type ForHeader =
     | Forever
     | While(Expr)
@@ -948,13 +838,11 @@ type ForHeader =
         iterable: Expr
     }
 
-/// An expression, with the span of the source it was parsed from.
 type Expr = {
     kind: ExprKind
     span: lexer.Span
 }
 
-/// The expression forms.
 type ExprKind =
     | NameExpr(Name)
     | Integer(Int)
@@ -988,35 +876,29 @@ type ExprKind =
     | Match(MatchExpr)
     | Spawn(Expr)
 
-/// What a call passes: the values in order, or each value with the parameter it is passed for.
 type Arguments =
     | Positional(List<Expr>)
     | Named(List<NamedArgument>)
 
-/// One argument written with the parameter it is passed for, as `from: old`.
 type NamedArgument = {
     name: Name
     value: Expr
 }
 
-/// `name: value` or a bare `name`, one field of a record literal.
 type FieldValue = {
     name: Name
     given: FieldGiven
     span: lexer.Span
 }
 
-/// What a field of a record literal is given: the binding its bare name reads, or a value.
 type FieldGiven =
     | Bare
     | Given(Expr)
 
-/// The prefix operators.
 type UnaryOperator =
     | Not
     | Negate
 
-/// The infix operators, each left-associative except the comparisons, which do not chain.
 type BinaryOperator =
     | Or
     | And
@@ -1032,39 +914,33 @@ type BinaryOperator =
     | Divide
     | Remainder
 
-/// `if a { … } else if b { … } else { … }`, a flat chain of branches.
 type IfExpr = {
     branches: List<Branch>
     otherwise: Option<Block>
 }
 
-/// One `condition { … }` of an `if` chain.
 type Branch = {
     condition: Expr
     block: Block
     span: lexer.Span
 }
 
-/// `match payment { … }`.
 type MatchExpr = {
     scrutinee: Expr
     arms: List<MatchArm>
 }
 
-/// `Failed(reason) => "Failed: " + reason`.
 type MatchArm = {
     pattern: Pattern
     body: Expr
     span: lexer.Span
 }
 
-/// A pattern, with the span of the source it was parsed from.
 type Pattern = {
     kind: PatternKind
     span: lexer.Span
 }
 
-/// The forms a pattern is written in.
 type PatternKind =
     | NamePattern(Path)
     | TuplePattern {
@@ -1081,19 +957,16 @@ type PatternKind =
     | Wildcard
     | OrPattern(List<Pattern>)
 
-/// `User`, or `demo.User`: a name, and the module it is reached inside of when one is written.
 type Path = {
     module: Option<Name>
     name: Name
 }
 
-/// The Java name an `extern` states, as it was written.
 type JavaName = {
     text: String
     span: lexer.Span
 }
 
-/// One occurrence of an identifier, with the text it was spelled with.
 type Name = {
     text: String
     span: lexer.Span

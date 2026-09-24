@@ -1,7 +1,6 @@
 // A module named as one of the library's, which no import of that name ever reaches.
 // `docs/specs/library.md` says the name is the library's: the compiler holds the source, so this
 // file is not consulted and does not shadow it. `shadowing.bx` beside it is what proves that.
-/// What this would say if an import of `strings` reached a file beside it, which none does.
 // example: join(["a"], "-") == "a file beside"
 fn join(parts: List<String>, between: String) -> String {
     _ = parts

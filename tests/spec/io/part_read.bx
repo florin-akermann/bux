@@ -21,7 +21,7 @@ fn main(arguments: List<String>) -> Int {
     0
 }
 
-/// What a read that should be refused says, in words of this program rather than of the library.
+// This program writes its own words and not the words of the library.
 // example: refused(Ok("part")) == "the part is read"
 // example: refused(Err("no part")) == "the part from 9 to 4 is refused"
 fn refused(answer: Result<String, String>) -> String {

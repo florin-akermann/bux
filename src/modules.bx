@@ -13,10 +13,6 @@ import map
 import parser
 import strings
 
-/// What `load` says of `path`, in the form the harness compares.
-///
-/// A load is `loaded`, then each module's name and path. A refusal is `refused` and its file,
-/// then the code, the span, and the message, then the help. A file not read is `unreadable`.
 // example: printed("no-such-directory/main.bx") == "unreadable no-such-directory/main.bx\n"
 fn printed(path: String) -> String {
     match load(path) {
@@ -25,21 +21,13 @@ fn printed(path: String) -> String {
     }
 }
 
-/// The module at `path` and every module it reaches, dependencies before dependents.
-///
-/// It stops at the first file it cannot read and at the first refusal, which is said about the
-/// file that wrote what is refused.
 // example: list.length(ok_or(load("no-such-directory/main.bx"), [])) == 0
 fn load(path: String) -> Result<List<Module>, NotLoaded> {
     let loaded = reach(loader: Loader { modules: [], packages: map.empty(), read: map.empty(), following: [] }, name: stem_of(path), route: route_to(path))?
     Ok(loaded.modules)
 }
 
-/// Every module `text` reaches, as though `text` were the file at `path`, which is not read.
-///
-/// `bux test` writes a module out of the module under test, which `docs/specs/doc-examples.md`
-/// states. That module stands where the file stands, so its imports are found where the file's
-/// are, and a refusal of it names that file.
+// The written module has the path of the file, so its imports resolve as the imports of the file.
 // example: list.length(ok_or(load_written(text: "fn one() -> Int {\n    1\n}\n", path: "no-such-directory/main.bx"), [])) == 1
 fn load_written(text: String, path: String) -> Result<List<Module>, NotLoaded> {
     let place = placed(loader: Loader { modules: [], packages: map.empty(), read: map.empty(), following: [] }, at: route_to(path), source: text)?
@@ -47,7 +35,6 @@ fn load_written(text: String, path: String) -> Result<List<Module>, NotLoaded> {
     Ok(loaded.modules)
 }
 
-/// Each module on a line of its own, with the path it was read from.
 // example: loaded_printed([Module { name: "main", path: "main.bx", source: "", program: ast.Program { items: [] } }]) == "loaded\nmain main.bx\n"
 fn loaded_printed(loaded: List<Module>) -> String {
     var written = "loaded\n"
@@ -57,10 +44,6 @@ fn loaded_printed(loaded: List<Module>) -> String {
     written
 }
 
-/// The refusal `answer` holds, printed, and `not refused` where it holds none.
-///
-/// One step of the walk gives back what it reached or why it stopped, and this is what an example
-/// of such a step reads.
 // example: refused_printed(Ok(1)) == "not refused\n"
 private fn refused_printed<T>(answer: Result<T, NotLoaded>) -> String {
     match answer {
@@ -69,7 +52,6 @@ private fn refused_printed<T>(answer: Result<T, NotLoaded>) -> String {
     }
 }
 
-/// The refusal, the file it is about, and what the reader is told.
 // example: refusal_printed(Unreadable { path: "main.bx", why: "gone" }) == "unreadable main.bx\n"
 fn refusal_printed(refused: NotLoaded) -> String {
     match refused {
@@ -79,7 +61,6 @@ fn refusal_printed(refused: NotLoaded) -> String {
     }
 }
 
-/// Reads `name` out of the file `route` reaches, and everything it imports.
 // example: list.length(ok_or(load("no-such-directory/main.bx"), [])) == 0
 fn reach(loader: Loader, name: String, route: Route) -> Result<Loader, NotLoaded> {
     let source = read_whole(route.shown)?
@@ -87,10 +68,7 @@ fn reach(loader: Loader, name: String, route: Route) -> Result<Loader, NotLoaded
     walk(loader: place.loader, name: name, whence: place.whence)
 }
 
-/// Puts `name` below every module it reaches, having parsed the source it is written in.
-///
-/// `name` is followed while its imports are, which is what finds a ring, and is followed no more
-/// once they are all read.
+// A module stays in the walk while its imports are walked, so an import back to it closes a ring.
 // example: list.length(ok_or(walk(loader: Loader { modules: [], packages: map.empty(), read: map.empty(), following: [] }, name: "main", whence: Whence { at: route_to("main.bx"), package_sources: [], dependency_sources: [], source: "fn main() -> Int {\n    0\n}\n" }), Loader { modules: [], packages: map.empty(), read: map.empty(), following: [] }).modules) == 1
 fn walk(loader: Loader, name: String, whence: Whence) -> Result<Loader, NotLoaded> {
     let program = parsed(whence)?
@@ -102,7 +80,6 @@ fn walk(loader: Loader, name: String, whence: Whence) -> Result<Loader, NotLoade
     Ok(walked { modules: list.push(walked.modules, module), read: map.insert(walked.read, name, whence.at), following: loader.following })
 }
 
-/// The tree of the source `whence` holds, or the parse error, said about the file it was read from.
 // example: refused_printed(parsed(Whence { at: route_to("main.bx"), package_sources: [], dependency_sources: [], source: "fn (" })) == "refused main.bx\nL0100 3..4 expected a function name, found `(`\nhelp: every function has a name; Bux has no anonymous functions\n"
 fn parsed(whence: Whence) -> Result<ast.Program, NotLoaded> {
     match parser.parse(whence.source) {
@@ -111,7 +88,6 @@ fn parsed(whence: Whence) -> Result<ast.Program, NotLoaded> {
     }
 }
 
-/// The loader once `item` is followed, where it is an import, and as it was otherwise.
 // example: list.length(ok_or(load("no-such-directory/main.bx"), [])) == 0
 fn followed(loader: Loader, item: ast.Item, whence: Whence) -> Result<Loader, NotLoaded> {
     match item {
@@ -120,10 +96,7 @@ fn followed(loader: Loader, item: ast.Item, whence: Whence) -> Result<Loader, No
     }
 }
 
-/// Reads what `imported` names, unless it has been read already.
-///
-/// A module of the library is read out of the resource the compiler carries rather than out of a
-/// file, which `docs/specs/library.md` states, so a file of that name does not shadow it.
+// A library module comes from a resource of the compiler, so a file of that name cannot shadow it.
 // example: list.length(ok_or(load("no-such-directory/main.bx"), [])) == 0
 fn follow(loader: Loader, imported: ast.ImportDeclaration, whence: Whence) -> Result<Loader, NotLoaded> {
     match carried(imported.module.text) {
@@ -132,11 +105,7 @@ fn follow(loader: Loader, imported: ast.ImportDeclaration, whence: Whence) -> Re
     }
 }
 
-/// Reads a library module out of `text`, which sits in no package at all.
-///
-/// The prelude's name is the library's, and nothing imports it, so an import of it reaches no
-/// module a program may reach. An import of a library module already being walked closes a ring,
-/// which is refused before the walk follows it, so the walk ends.
+// A ring is refused before the walk follows the import, so the walk always ends.
 // example: refused_printed(from_library(loader: Loader { modules: [], packages: map.empty(), read: map.empty(), following: [] }, imported: ast.ImportDeclaration { module: ast.Name { text: "prelude", span: lexer.Span { start: 7, length: 7 } }, span: lexer.Span { start: 0, length: 14 } }, whence: Whence { at: route_to("main.bx"), package_sources: [], dependency_sources: [], source: "" }, text: "")) == "refused main.bx\nL0306 7..14 there is no module named `prelude`\nhelp: a module is beside this file, or in `src/` of this package or a dependency\n"
 // example: refused_printed(from_library(loader: Loader { modules: [], packages: map.empty(), read: map.empty(), following: ["main", "list"] }, imported: ast.ImportDeclaration { module: ast.Name { text: "list", span: lexer.Span { start: 7, length: 4 } }, span: lexer.Span { start: 0, length: 11 } }, whence: Whence { at: route_to(resource_of("list")), package_sources: [], dependency_sources: [], source: "" }, text: "")) == "refused library/list.bx\nL0307 7..11 `list` imports itself\nhelp: a module is compiled after what it imports, and a ring has no such order\n"
 fn from_library(loader: Loader, imported: ast.ImportDeclaration, whence: Whence, text: String) -> Result<Loader, NotLoaded> {
@@ -153,10 +122,8 @@ fn from_library(loader: Loader, imported: ast.ImportDeclaration, whence: Whence,
     }
 }
 
-/// The ring an import of the library module `name` closes, and `None` where it closes none.
-///
-/// The file a command names is walked first, and it is never the library module of its name,
-/// because a file does not shadow one; so only the modules walked after it are looked in.
+// The first file walked is never a library module, because a file does not shadow one.
+// So the search looks only at the modules walked after it.
 // example: or(library_ring(["main", "list", "strings"], "list"), []) == ["list", "strings"]
 // example: or(library_ring(["list"], "list"), ["none"]) == ["none"]
 fn library_ring(following: List<String>, name: String) -> Option<List<String>> {
@@ -166,10 +133,7 @@ fn library_ring(following: List<String>, name: String) -> Option<List<String>> {
     }
 }
 
-/// Reads what `imported` names out of its file, which settles before anything else about it.
-///
-/// A module already read under that name is that module only where it is that same file, so two
-/// files claiming one name are refused rather than picked between.
+// Two files that claim one name are refused, because the compiler does not pick one of them.
 // example: refused_printed(from_a_file(loader: Loader { modules: [], packages: map.empty(), read: map.empty(), following: ["main"] }, imported: ast.ImportDeclaration { module: ast.Name { text: "gone", span: lexer.Span { start: 7, length: 4 } }, span: lexer.Span { start: 0, length: 11 } }, whence: Whence { at: route_to("no-such-directory/main.bx"), package_sources: [], dependency_sources: [], source: "" })) == "refused no-such-directory/main.bx\nL0306 7..11 there is no module named `gone`\nhelp: a module is beside this file, or in `src/` of this package or a dependency\n"
 fn from_a_file(loader: Loader, imported: ast.ImportDeclaration, whence: Whence) -> Result<Loader, NotLoaded> {
     let name = imported.module.text
@@ -180,7 +144,6 @@ fn from_a_file(loader: Loader, imported: ast.ImportDeclaration, whence: Whence) 
     }
 }
 
-/// The module `found` holds, which is the one already read where that is the same file.
 // example: refused_printed(not_in_a_ring(loader: Loader { modules: [], packages: map.empty(), read: map.insert(map.empty(), "demo", route_to("one/demo.bx")), following: [] }, imported: ast.ImportDeclaration { module: ast.Name { text: "demo", span: lexer.Span { start: 7, length: 4 } }, span: lexer.Span { start: 0, length: 11 } }, whence: Whence { at: route_to("main.bx"), package_sources: [], dependency_sources: [], source: "" }, found: route_to("two/demo.bx"))) == "refused main.bx\nL0317 7..11 `demo` is both `one/demo.bx` and `two/demo.bx`\nhelp: one name has one definition; rename one of the two modules\n"
 fn not_in_a_ring(loader: Loader, imported: ast.ImportDeclaration, whence: Whence, found: Route) -> Result<Loader, NotLoaded> {
     let name = imported.module.text
@@ -190,7 +153,6 @@ fn not_in_a_ring(loader: Loader, imported: ast.ImportDeclaration, whence: Whence
     }
 }
 
-/// The loader as it is, where `read` and `found` are one file, and `refused` where they are two.
 // example: refused_printed(the_same_file(loader: Loader { modules: [], packages: map.empty(), read: map.empty(), following: [] }, read: route_to("a.bx"), found: route_to("b.bx"), refused: Unreadable { path: "b.bx", why: "" })) == "unreadable b.bx\n"
 fn the_same_file(loader: Loader, read: Route, found: Route, refused: NotLoaded) -> Result<Loader, NotLoaded> {
     if read.found == found.found {
@@ -199,7 +161,6 @@ fn the_same_file(loader: Loader, read: Route, found: Route, refused: NotLoaded) 
     Err(refused)
 }
 
-/// Whether a module called `name` has been read already.
 // example: !has_read(Loader { modules: [], packages: map.empty(), read: map.empty(), following: [] }, "io")
 fn has_read(loader: Loader, name: String) -> Bool {
     match map.get(loader.read, name) {
@@ -208,7 +169,6 @@ fn has_read(loader: Loader, name: String) -> Bool {
     }
 }
 
-/// The names `following` holds from `opened` on, which is the ring an import closed.
 // example: strings.join(from_index(["main", "left", "right"], 1), " ") == "left right"
 fn from_index(following: List<String>, opened: Int) -> List<String> {
     var ring = []
@@ -254,7 +214,6 @@ fn in_dependencies(imported: ast.ImportDeclaration, whence: Whence) -> Result<Ro
     }
 }
 
-/// The one file `held` names, and a refusal naming the first two where it names more than one.
 // example: refused_printed(only_one(["a/x.bx", "b/x.bx"], "a/x.bx", ast.ImportDeclaration { module: ast.Name { text: "x", span: lexer.Span { start: 7, length: 1 } }, span: lexer.Span { start: 0, length: 8 } }, Whence { at: route_to("main.bx"), package_sources: [], dependency_sources: [], source: "" })) == "refused main.bx\nL0317 7..8 `x` is both `a/x.bx` and `b/x.bx`\nhelp: one name has one definition; rename one of the two modules\n"
 fn only_one(held: List<String>, first: String, imported: ast.ImportDeclaration, whence: Whence) -> Result<Route, NotLoaded> {
     match list.at(held, 1) {
@@ -263,7 +222,6 @@ fn only_one(held: List<String>, first: String, imported: ast.ImportDeclaration, 
     }
 }
 
-/// The file each package of `depends` holds a module called `name` in, where it holds one.
 // example: list.length(holding([route_to("no-such-directory")], "demo")) == 0
 fn holding(depends: List<Route>, name: String) -> List<String> {
     var held = []
@@ -276,25 +234,21 @@ fn holding(depends: List<Route>, name: String) -> List<String> {
     held
 }
 
-/// An import that reaches nothing, said about the file that wrote it.
 // example: refusal_printed(missing(ast.ImportDeclaration { module: ast.Name { text: "x", span: lexer.Span { start: 7, length: 1 } }, span: lexer.Span { start: 0, length: 8 } }, Whence { at: route_to("main.bx"), package_sources: [], dependency_sources: [], source: "" })) == "refused main.bx\nL0306 7..8 there is no module named `x`\nhelp: a module is beside this file, or in `src/` of this package or a dependency\n"
 fn missing(imported: ast.ImportDeclaration, whence: Whence) -> NotLoaded {
     refusing(whence, LoadError { kind: NoSuchModule(imported.module.text), span: imported.module.span })
 }
 
-/// `error` as a refusal of the module `whence` is, shown against the file that wrote the import.
 // example: refusal_printed(refusing(Whence { at: route_to("main.bx"), package_sources: [], dependency_sources: [], source: "" }, LoadError { kind: NoSuchModule("x"), span: lexer.Span { start: 7, length: 1 } })) == "refused main.bx\nL0306 7..8 there is no module named `x`\nhelp: a module is beside this file, or in `src/` of this package or a dependency\n"
 fn refusing(whence: Whence, error: LoadError) -> NotLoaded {
     Refused { path: whence.at.shown, source: whence.source, error: error }
 }
 
-/// A refusal as the harness compares it: the code, the span, and the message, then the help.
 // example: error_printed(LoadError { kind: DependsTwice("../a"), span: lexer.Span { start: 0, length: 12 } }) == "L0315 0..12 `../a` is depended on twice\nhelp: a manifest states one `depends` for each package it reaches\n"
 fn error_printed(error: LoadError) -> String {
     code_of(error.kind) + " " + shown(error.span) + " " + message(error.kind) + "\nhelp: " + help_of(error.kind) + "\n"
 }
 
-/// The code a refusal of this kind is refused with, which `docs/specs/modules.md` lists.
 // example: code_of(Ring(["main"])) == "L0307"
 fn code_of(kind: LoadErrorKind) -> String {
     match kind {
@@ -313,7 +267,6 @@ fn code_of(kind: LoadErrorKind) -> String {
     }
 }
 
-/// The `error:` line, without its prefix.
 // example: message(Ring(["main", "left"])) == "`main` imports `left`, which imports `main`"
 fn message(kind: LoadErrorKind) -> String {
     match kind {
@@ -332,7 +285,6 @@ fn message(kind: LoadErrorKind) -> String {
     }
 }
 
-/// The `help:` line, which every refusal of loading has.
 // example: help_of(NoSuchPackage("../a")) == "a package is a directory holding `bux.package`"
 fn help_of(kind: LoadErrorKind) -> String {
     match kind {
@@ -351,7 +303,6 @@ fn help_of(kind: LoadErrorKind) -> String {
     }
 }
 
-/// A ring named in the order it runs, from the module it opens at back round to that module.
 // example: ring_text(["main"]) == "`main` imports itself"
 fn ring_text(ring: List<String>) -> String {
     let first = "`" + or(list.at(ring, 0), "") + "`"
@@ -461,17 +412,12 @@ fn part_of(directory: String) -> String {
     last_part(route_to(here_where_empty(directory)).found)
 }
 
-/// Every archive the package in `directory` states, then every archive of each package it
-/// depends on, in the order of its `depends` lines, and so on down, each package read once.
-///
-/// A directory holding no manifest states no archive.
 // example: list.length(ok_or(archives_reached("no-such-directory"), [])) == 0
 fn archives_reached(directory: String) -> Result<List<Reached>, NotLoaded> {
     let gathered = archives_below(Gathering { found: [], read: [] }, directory)?
     Ok(gathered.found)
 }
 
-/// `gathering` with the archives of the package in `directory` and of what it depends on.
 // example: list.length(ok_or(archives_below(Gathering { found: [], read: [] }, "no-such-directory"), Gathering { found: [], read: ["x"] }).read) == 1
 fn archives_below(gathering: Gathering, directory: String) -> Result<Gathering, NotLoaded> {
     let key = route_to(directory).found
@@ -485,7 +431,6 @@ fn archives_below(gathering: Gathering, directory: String) -> Result<Gathering, 
     }
 }
 
-/// `gathering` with each archive `manifest` states, then those of each package it depends on.
 // example: list.length(ok_or(archives_stated(Gathering { found: [], read: [] }, Manifest { path: "bux.package", source: "package a\nversion 1\njar x.jar sha256:" + repeated_zero(64) + "\n" }, "a"), Gathering { found: [], read: [] }).found) == 1
 fn archives_stated(gathering: Gathering, manifest: Manifest, directory: String) -> Result<Gathering, NotLoaded> {
     let stated = stated_by(manifest)?
@@ -501,7 +446,6 @@ fn archives_stated(gathering: Gathering, manifest: Manifest, directory: String) 
     Ok(gathered)
 }
 
-/// The packages `manifest` states, read against `directory`, each of them there and named once.
 // example: refused_printed(depends_of(Manifest { path: "bux.package", source: "package a\nversion 1\ndepends no-such-directory\n" }, ".")) == "refused bux.package\nL0316 20..45 there is no package in `no-such-directory`\nhelp: a package is a directory holding `bux.package`\n"
 fn depends_of(manifest: Manifest, directory: String) -> Result<List<Route>, NotLoaded> {
     let stated = stated_by(manifest)?
@@ -516,10 +460,7 @@ fn depends_of(manifest: Manifest, directory: String) -> Result<List<Route>, NotL
     Ok(depends)
 }
 
-/// The package `named` names, having proved there is one there.
-///
-/// Its manifest is read and its dependencies are not: reading it is what says a package is there,
-/// and nothing about a dependency is read until one of its modules is.
+// Only the manifest is read, because nothing of a dependency is read until one of its modules is.
 // example: refused_printed(depended_on(Manifest { path: "bux.package", source: "" }, ".", At { word: "gone", span: lexer.Span { start: 0, length: 12 } })) == "refused bux.package\nL0316 0..12 there is no package in `gone`\nhelp: a package is a directory holding `bux.package`\n"
 fn depended_on(manifest: Manifest, directory: String, named: At) -> Result<Route, NotLoaded> {
     let at = joined(directory: directory, name: named.word)
@@ -530,7 +471,6 @@ fn depended_on(manifest: Manifest, directory: String, named: At) -> Result<Route
     }
 }
 
-/// The route to the package at `at`, where its manifest `found` is written as a manifest is.
 // example: refused_printed(proved(Manifest { path: "a/bux.package", source: "" }, "a")) == "refused a/bux.package\nL0315 0..0 `package` is what a manifest states here\nhelp: a manifest is `package`, then `version`, then a `depends` for each dependency, then a `jar` for each archive\n"
 fn proved(found: Manifest, at: String) -> Result<Route, NotLoaded> {
     _ = stated_by(found)?
@@ -571,7 +511,6 @@ fn no_stem_in_both(sources: String, tests: String) -> Result<(), NotLoaded> {
     Ok(())
 }
 
-/// One name claimed by two files, each named by the route the imports reached it along.
 // example: message(in_two_files(module: "demo", first: route_to("a.bx"), second: route_to("b.bx"))) == "`demo` is both `a.bx` and `b.bx`"
 fn in_two_files(module: String, first: Route, second: Route) -> LoadErrorKind {
     InTwoFiles { module: module, first: first.shown, second: second.shown }
@@ -616,7 +555,6 @@ fn is_a_module_name(name: String) -> Bool {
     dot > 0 && or(strings.cut(name, dot + 1, strings.length(name)), "") == "bx"
 }
 
-/// Whether `depends` holds a route to the directory `one` reaches, however it is spelled.
 // example: is_held([route_to("a")], route_to("a"))
 fn is_held(depends: List<Route>, one: Route) -> Bool {
     for held in depends {
@@ -627,7 +565,6 @@ fn is_held(depends: List<Route>, one: Route) -> Bool {
     false
 }
 
-/// The manifest `directory` holds, or nothing where it holds none.
 // example: has_no_manifest(ok_or(manifest_in("no-such-directory"), Some(Manifest { path: "", source: "" })))
 fn manifest_in(directory: String) -> Result<Option<Manifest>, NotLoaded> {
     if !has_manifest(directory) {
@@ -647,7 +584,6 @@ fn has_manifest(directory: String) -> Bool {
     files.is_file(files.named(joined(directory: directory, name: "bux.package")))
 }
 
-/// Whether nothing is there, which is what a directory with no manifest in it holds.
 // example: has_no_manifest(None)
 private fn has_no_manifest(held: Option<Manifest>) -> Bool {
     match held {
@@ -656,9 +592,6 @@ private fn has_no_manifest(held: Option<Manifest>) -> Bool {
     }
 }
 
-/// What `manifest` states: each dependency and each archive, or the first line that is no line of it.
-///
-/// The name and the version are read here and kept nowhere, which `docs/specs/packages.md` says.
 // example: list.length(ok_or(stated_by(Manifest { path: "bux.package", source: "package a\nversion 1\ndepends ../b\n" }), no_lines()).depends) == 1
 fn stated_by(manifest: Manifest) -> Result<Stated, NotLoaded> {
     match read_out_of(manifest.source) {
@@ -667,15 +600,11 @@ fn stated_by(manifest: Manifest) -> Result<Stated, NotLoaded> {
     }
 }
 
-/// `error` as a refusal of `manifest`, shown against the file the manifest is.
 // example: refusal_printed(manifest_refusing(Manifest { path: "bux.package", source: "" }, LoadError { kind: DependsTwice("a"), span: lexer.Span { start: 0, length: 9 } })) == "refused bux.package\nL0315 0..9 `a` is depended on twice\nhelp: a manifest states one `depends` for each package it reaches\n"
 fn manifest_refusing(manifest: Manifest, error: LoadError) -> NotLoaded {
     Refused { path: manifest.path, source: manifest.source, error: error }
 }
 
-/// The same, against the text alone, which is where every refusal of a manifest is decided.
-///
-/// A `depends` line comes before every `jar` line, so a line after a `jar` line is one more.
 // example: error_printed(refused_with(read_out_of("package a\nversion 1\ndepend ../b\n"))) == "L0315 20..31 `depends` is what a manifest states here\nhelp: a manifest is `package`, then `version`, then a `depends` for each dependency, then a `jar` for each archive\n"
 // example: list.length(ok_or(read_out_of("package a\nversion 1\njar x.jar sha256:" + repeated_zero(64) + "\n"), no_lines()).archives) == 1
 fn read_out_of(source: String) -> Result<Stated, LoadError> {
@@ -693,9 +622,7 @@ fn read_out_of(source: String) -> Result<Stated, LoadError> {
     Ok(stated)
 }
 
-/// `stated` with what `line` states: a dependency before the first archive, and an archive after.
-///
-/// The path of either holds no `:`, because the class path of a run puts a `:` between two paths.
+// A path holds no `:`, because the class path of a run puts a `:` between two paths.
 // example: list.length(ok_or(line_added(no_lines(), Line { text: "depends ../b", span: lexer.Span { start: 0, length: 12 } }), no_lines()).depends) == 1
 // example: error_printed(refused_with(read_out_of("package a\nversion 1\ndepends a:b\n"))) == "L0315 20..31 `a:b` holds `:`\nhelp: a class path puts `:` between two paths, so a path on it cannot hold one\n"
 fn line_added(stated: Stated, line: Line) -> Result<Stated, LoadError> {
@@ -716,7 +643,6 @@ fn line_added(stated: Stated, line: Line) -> Result<Stated, LoadError> {
     Ok(stated { depends: list.push(stated.depends, named) })
 }
 
-/// Whether `archives` holds one at `path`, as the line writes it.
 // example: !is_archived([], "x.jar")
 fn is_archived(archives: List<Archive>, path: String) -> Bool {
     for archive in archives {
@@ -727,23 +653,18 @@ fn is_archived(archives: List<Archive>, path: String) -> Bool {
     false
 }
 
-/// A manifest that states no dependency and no archive.
 // example: list.length(no_lines().depends) == 0
 fn no_lines() -> Stated {
     Stated { depends: [], archives: [] }
 }
 
-/// Whether `line` opens with the keyword `jar`, whatever follows it.
 // example: is_an_archive_line(Line { text: "jar", span: lexer.Span { start: 0, length: 3 } })
 // example: !is_an_archive_line(Line { text: "jars x", span: lexer.Span { start: 0, length: 6 } })
 fn is_an_archive_line(line: Line) -> Bool {
     line.text == "jar" || lexer.has_prefix(lexer.Rest { source: line.text, start: 0 }, "jar ")
 }
 
-/// The archive a `jar` line states: a path, one space, and `sha256:` with 64 hexadecimal digits.
-///
-/// A path holds no blank. It holds no `*`, because a JVM reads a class path entry that ends in `*`
-/// as every archive there. A path that holds a `:` is refused on its own, as `line_added` says.
+// A path holds no `*`, because a JVM reads a class path entry that ends in `*` as all archives there.
 // example: ok_or(archive_of(Line { text: "jar lib/x.jar sha256:" + repeated_zero(64), span: lexer.Span { start: 0, length: 85 } }), Archive { path: "", digest: Digest(""), span: lexer.Span { start: 0, length: 0 } }).path == "lib/x.jar"
 // example: error_printed(refused_with_archive(archive_of(Line { text: "jar x.jar sha256:0", span: lexer.Span { start: 0, length: 18 } }))) == "L0315 0..18 `jar` states a path and a hash, and this line does not\nhelp: a `jar` line is `jar`, a path, and `sha256:` with 64 lowercase hexadecimal digits\n"
 // example: message(refused_with_archive(archive_of(Line { text: "jar c:x.jar sha256:" + repeated_zero(64), span: lexer.Span { start: 0, length: 83 } })).kind) == "`c:x.jar` holds `:`"
@@ -761,14 +682,12 @@ fn archive_of(line: Line) -> Result<Archive, LoadError> {
     Ok(Archive { path: path, digest: Digest(or(strings.cut(hash, 7, 71), "")), span: line.span })
 }
 
-/// Whether `path` holds a `:`, which a class path reads as the end of one path.
 // example: can_split_the_class_path("a:b")
 // example: !can_split_the_class_path("../b")
 fn can_split_the_class_path(path: String) -> Bool {
     first_unit(text: path, unit: 58) >= 0
 }
 
-/// Whether `word` is `sha256:` and 64 lowercase hexadecimal digits, which is a hash a line states.
 // example: is_a_hash("sha256:" + repeated_zero(64))
 // example: !is_a_hash("sha256:" + repeated_zero(63) + "A")
 fn is_a_hash(word: String) -> Bool {
@@ -786,7 +705,6 @@ fn is_a_hash(word: String) -> Bool {
     true
 }
 
-/// `count` zeros, which is a hash of the right length for an example.
 // example: repeated_zero(3) == "000"
 fn repeated_zero(count: Int) -> String {
     var written = ""
@@ -796,7 +714,6 @@ fn repeated_zero(count: Int) -> String {
     written
 }
 
-/// Where `text` first holds `unit`, and `-1` where it holds none.
 // example: first_unit(text: "a b c", unit: 32) == 1
 // example: first_unit(text: "abc", unit: 32) == -1
 fn first_unit(text: String, unit: Int) -> Int {
@@ -810,7 +727,6 @@ fn first_unit(text: String, unit: Int) -> Int {
     -1
 }
 
-/// The error an archive line was refused with, and an error pointing nowhere where it was not.
 // example: refused_with_archive(Ok(Archive { path: "", digest: Digest(""), span: lexer.Span { start: 0, length: 0 } })).span.length == 0
 private fn refused_with_archive(read: Result<Archive, LoadError>) -> LoadError {
     match read {
@@ -819,7 +735,6 @@ private fn refused_with_archive(read: Result<Archive, LoadError>) -> LoadError {
     }
 }
 
-/// The error a manifest was refused with, and an error pointing nowhere where it was not.
 // example: refused_with(Ok(no_lines())).span.length == 0
 private fn refused_with(read: Result<Stated, LoadError>) -> LoadError {
     match read {
@@ -828,9 +743,7 @@ private fn refused_with(read: Result<Stated, LoadError>) -> LoadError {
     }
 }
 
-/// The word line `index` states after `keyword`, the manifest having to have such a line.
-///
-/// A manifest too short to hold the line is refused as a whole, because there is no line to show.
+// A manifest too short to hold the line is refused whole, because there is no line to show.
 // example: error_printed(refused_with(read_out_of("package é\n"))) == "L0315 0..11 `version` is what a manifest states here\nhelp: a manifest is `package`, then `version`, then a `depends` for each dependency, then a `jar` for each archive\n"
 fn line_stating(lines: List<Line>, index: Int, keyword: Keyword, source: String) -> Result<At, LoadError> {
     match list.at(lines, index) {
@@ -839,7 +752,6 @@ fn line_stating(lines: List<Line>, index: Int, keyword: Keyword, source: String)
     }
 }
 
-/// The one word `line` states after `keyword`, or why it is not the line that was wanted.
 // example: error_printed(refused_with(read_out_of("package a b\n"))) == "L0315 0..11 `package` states one word, and this line does not\nhelp: a manifest line is a keyword, one space, and one word\n"
 fn word_of(line: Line, keyword: Keyword) -> Result<At, LoadError> {
     let opening = keyword_text(keyword) + " "
@@ -853,7 +765,6 @@ fn word_of(line: Line, keyword: Keyword) -> Result<At, LoadError> {
     Ok(At { word: word, span: line.span })
 }
 
-/// Whether `word` holds a code unit that is white space.
 // example: has_blank("a\tb")
 // example: !has_blank("../geometry")
 fn has_blank(word: String) -> Bool {
@@ -867,7 +778,6 @@ fn has_blank(word: String) -> Bool {
     false
 }
 
-/// Whether `unit` is white space: the ASCII blanks and the Unicode spaces and separators.
 // example: is_blank(12288)
 // example: !is_blank(97)
 fn is_blank(unit: Int) -> Bool {
@@ -880,9 +790,6 @@ fn is_blank(unit: Int) -> Bool {
     list.has_value([32, 133, 160, 5760, 8232, 8233, 8239, 8287, 12288], unit)
 }
 
-/// Every line of `source`, blank ones and all, each with the byte span it covers.
-///
-/// A line ends at a newline, and the carriage returns before that newline are no part of it.
 // example: shown(or(list.at(lines_of("a\r\né\n"), 1), Line { text: "", span: lexer.Span { start: 0, length: 0 } }).span) == "3..5"
 fn lines_of(source: String) -> List<Line> {
     var lines = []
@@ -903,7 +810,6 @@ fn lines_of(source: String) -> List<Line> {
     lines
 }
 
-/// The line from code unit `start` up to `end`, at byte `at`, without its carriage returns.
 // example: line_between(source: "ab\r\r", start: 0, end: 4, at: 5).text == "ab"
 fn line_between(source: String, start: Int, end: Int, at: Int) -> Line {
     var last = end
@@ -914,13 +820,11 @@ fn line_between(source: String, start: Int, end: Int, at: Int) -> Line {
     Line { text: text, span: lexer.Span { start: at, length: bytes_of(text) } }
 }
 
-/// How many bytes the UTF-8 form of `text` takes, which is what a span counts.
 // example: bytes_of("aé") == 3
 fn bytes_of(text: String) -> Int {
     lexer.byte_length(lexer.Rest { source: text, start: 0 }, strings.length(text))
 }
 
-/// The word a line of a manifest opens with, which says which line it is.
 // example: keyword_text(Depends) == "depends"
 fn keyword_text(keyword: Keyword) -> String {
     match keyword {
@@ -931,21 +835,14 @@ fn keyword_text(keyword: Keyword) -> String {
     }
 }
 
-/// The source of the library module called `name`, and `None` where the library holds none.
-///
-/// The library is a resource on the class path the compiler was started with, which
-/// `docs/specs/library.md` states, so nothing beside the module is looked at.
+// The library is a resource on the class path, so the compiler does not look beside the module.
 // example: or(carried("no_such_module"), "none") == "none"
 fn carried(name: String) -> Option<String> {
     resource_text(resource_of(name))
 }
 
-/// The text of the resource at `path` on the class path, and `None` where there is no such one.
-///
-/// The compiler carries the library, the help topics, and the long form of each diagnostic code
-/// this way, each read out of the one file of the repository that holds it, so nothing drifts.
-/// Each directory of the class path is looked in, in order, and the first that holds `path` gives
-/// it, so no class loader is reached.
+// Each resource comes from the one file of the repository that holds it, so no copy can drift.
+// The search reads the directories of the class path in order, so no class loader is used.
 // example: or(resource_text("no/such/resource.md"), "none") == "none"
 fn resource_text(path: String) -> Option<String> {
     var found = None
@@ -955,11 +852,6 @@ fn resource_text(path: String) -> Option<String> {
     found
 }
 
-/// The directory `name` in the first entry of the class path that holds one, and `None` where no
-/// entry does.
-///
-/// `resource_text` reads each resource under `name` from there, where no earlier entry holds the
-/// file itself. A build copies the directory beside its classes, which `docs/specs/run.md` states.
 // example: or(resource_directory("no/such/directory"), "none") == "none"
 fn resource_directory(name: String) -> Option<String> {
     for entry in class_path_entries() {
@@ -971,7 +863,6 @@ fn resource_directory(name: String) -> Option<String> {
     None
 }
 
-/// `found` where it holds a text already, and the text of `file` otherwise.
 // example: or(found_or_read(found: Some("a"), file: "no-such-directory/a.md"), "none") == "a"
 fn found_or_read(found: Option<String>, file: String) -> Option<String> {
     match found {
@@ -980,7 +871,6 @@ fn found_or_read(found: Option<String>, file: String) -> Option<String> {
     }
 }
 
-/// The text of the file at `path`, and `None` where there is no file there to read.
 // example: or(text_read("no-such-directory/a.md"), "none") == "none"
 fn text_read(path: String) -> Option<String> {
     match files.read(path) {
@@ -989,13 +879,11 @@ fn text_read(path: String) -> Option<String> {
     }
 }
 
-/// Each entry of the class path the compiler was started with, in the order the JVM reads them.
 // example: list.length(class_path_entries()) > 0
 fn class_path_entries() -> List<String> {
     split_at(text: or(environment.property("java.class.path"), ""), separator: files.path_separator())
 }
 
-/// The parts of `text` between each two `separator`s, in order.
 // example: split_at(text: "a:b", separator: ":") == ["a", "b"]
 // example: split_at(text: "", separator: ":") == [""]
 fn split_at(text: String, separator: String) -> List<String> {
@@ -1013,13 +901,11 @@ fn split_at(text: String, separator: String) -> List<String> {
     list.push(parts, or(strings.cut(text, from, strings.length(text)), ""))
 }
 
-/// What the library module called `name` is on the class path, and the path a refusal names.
 // example: resource_of("list") == "library/list.bx"
 fn resource_of(name: String) -> String {
     "library/" + name + ".bx"
 }
 
-/// The file at `path` as text, or a file that cannot be read, with the reason the JVM gives.
 // example: refused_printed(read_whole("no-such-directory/main.bx")) == "unreadable no-such-directory/main.bx\n"
 fn read_whole(path: String) -> Result<String, NotLoaded> {
     match files.read(path) {
@@ -1028,13 +914,11 @@ fn read_whole(path: String) -> Result<String, NotLoaded> {
     }
 }
 
-/// The route to `spelled`, with the JVM's canonical path of it for comparing two routes.
 // example: route_to("a/../b.bx").shown == "a/../b.bx"
 fn route_to(spelled: String) -> Route {
     Route { shown: spelled, found: ok_or(files.canonical_path(files.named(spelled)), spelled) }
 }
 
-/// The module a file declares, which is the name of the file without what follows its last dot.
 // example: stem_of("/tmp/app/main.bx") == "main"
 // example: stem_of("main") == "main"
 fn stem_of(path: String) -> String {
@@ -1046,13 +930,11 @@ fn stem_of(path: String) -> String {
     or(strings.cut(last, 0, dot), last)
 }
 
-/// The file a module called `name` is written in, in `directory`, whether or not it is written.
 // example: module_in(directory: "a", name: "demo") == "a/demo.bx"
 fn module_in(directory: String, name: String) -> String {
     joined(directory: directory, name: name + ".bx")
 }
 
-/// `name` read against `directory`, which is `name` alone where that is a whole path already.
 // example: joined(directory: "a", name: "../b") == "a/../b"
 // example: joined(directory: "", name: "b.bx") == "b.bx"
 // example: joined(directory: "/", name: "b.bx") == "/b.bx"
@@ -1067,10 +949,7 @@ fn joined(directory: String, name: String) -> String {
     directory + "/" + name
 }
 
-/// The directory a file sits in, which is where a module beside it is written.
-///
-/// A file named with no directory sits in `""`, which reads every name against the directory the
-/// compiler was started in, and the root and the empty path have no directory, so they sit in `.`.
+// A bare file name sits in `""`, which the JVM reads as the directory that the compiler started in.
 // example: directory_of("/tmp/app/main.bx") == "/tmp/app"
 // example: directory_of("main.bx") == ""
 // example: directory_of("/main.bx") == "/"
@@ -1092,7 +971,6 @@ fn directory_of(path: String) -> String {
     above
 }
 
-/// The last part of `path`, after its last `/`.
 // example: last_part("a/b.bx/") == "b.bx"
 fn last_part(path: String) -> String {
     let trimmed = without_slashes_after(path)
@@ -1100,9 +978,7 @@ fn last_part(path: String) -> String {
     or(strings.cut(trimmed, slash + 1, strings.length(trimmed)), trimmed)
 }
 
-/// `path` without the `/` and the `/.` it ends with, however many of them there are.
-///
-/// A `.` part names the directory it is in, so a path ending in one names what is before it.
+// A `.` part names the directory it is in, so a path that ends in one names what is before it.
 // example: without_slashes_after("a//") == "a"
 // example: without_slashes_after("a/./.") == "a"
 fn without_slashes_after(path: String) -> String {
@@ -1113,7 +989,6 @@ fn without_slashes_after(path: String) -> String {
     or(strings.cut(path, 0, end), path)
 }
 
-/// Whether the code unit before `end` is a `/`, or a `.` that is a whole part of the path.
 // example: is_an_empty_end(path: "a/.", end: 3)
 // example: !is_an_empty_end(path: "a.", end: 2)
 fn is_an_empty_end(path: String, end: Int) -> Bool {
@@ -1124,7 +999,6 @@ fn is_an_empty_end(path: String, end: Int) -> Bool {
     last == 46 && end >= 2 && or(strings.at(path, end - 2), 0) == 47
 }
 
-/// Where `text` last holds `unit`, and `-1` where it holds none.
 // example: last_unit(text: "a/b/c", unit: 47) == 3
 // example: last_unit(text: "abc", unit: 47) == -1
 fn last_unit(text: String, unit: Int) -> Int {
@@ -1139,9 +1013,7 @@ fn last_unit(text: String, unit: Int) -> Int {
     found
 }
 
-/// Why a program could not be loaded: a file not read, or a refusal of a file that was.
-///
-/// A refusal carries the text of the file it is about, which is what a rendering points into.
+// A refusal carries the text of its file, because a rendering points into that text.
 type NotLoaded =
     | Unreadable {
         path: String
@@ -1171,7 +1043,6 @@ type Loader = {
     following: List<String>
 }
 
-/// One file, read and parsed, under the name the file gives it.
 type Module = {
     name: String
     path: String
@@ -1192,33 +1063,27 @@ type PackageRoot = {
     manifest: Manifest
 }
 
-/// A path as the imports reached it, and as the JVM's canonical path of it.
 type Route = {
     shown: String
     found: String
 }
 
-/// The archives found so far, and the canonical path of each package already read for them.
 type Gathering = {
     found: List<Reached>
     read: List<String>
 }
 
-/// One archive a build reaches: the file, read against its package, and the line and manifest
-/// that state it, which a refusal of it points into.
 type Reached = {
     file: String
     archive: Archive
     manifest: Manifest
 }
 
-/// What the lines of a manifest after `version` state: its dependencies, then its archives.
 type Stated = {
     depends: List<At>
     archives: List<Archive>
 }
 
-/// One Java archive a `jar` line states: its path as written, its hash, and the line.
 type Archive = {
     path: String
     digest: Digest
@@ -1227,34 +1092,29 @@ type Archive = {
 
 derive Eq for Digest
 
-/// The 64 lowercase hexadecimal digits of a SHA-256, which only a line that parsed holds.
+// Only a line that parsed makes a `Digest`, so it always holds 64 lowercase hexadecimal digits.
 type Digest = Digest(String)
 
-/// One manifest as it was read: the file it is, and the text a refusal points into.
 type Manifest = {
     path: String
     source: String
 }
 
-/// One word a manifest states, and the line it states it on.
 type At = {
     word: String
     span: lexer.Span
 }
 
-/// One line of a manifest, without its line break, and where in the file it is written.
 type Line = {
     text: String
     span: lexer.Span
 }
 
-/// Why loading refused, and the import or the manifest line it points at.
 type LoadError = {
     kind: LoadErrorKind
     span: lexer.Span
 }
 
-/// What went wrong, in the words the reader sees.
 type LoadErrorKind =
     | NoSuchModule(String)
     | Ring(List<String>)
@@ -1273,7 +1133,6 @@ type LoadErrorKind =
     | BesideTheManifest(String)
     | ManifestWithin(String)
 
-/// What a line of a manifest opens with.
 type Keyword =
     | Package
     | Version

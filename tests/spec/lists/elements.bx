@@ -9,13 +9,11 @@ fn main(arguments: List<String>) -> Int {
     0
 }
 
-/// The baskets an order came in, each one a record written straight into the list.
 // example: total(baskets()) == 7
 fn baskets() -> List<Basket> {
     [Basket { apples: 3 }, Basket { apples: 4 }]
 }
 
-/// How many apples the baskets hold between them.
 // example: total([Basket { apples: 1 }]) == 1
 fn total(held: List<Basket>) -> Int {
     var picked = 0
@@ -25,7 +23,6 @@ fn total(held: List<Basket>) -> Int {
     picked
 }
 
-/// A whole number as a word, which is all version 0.1 can say about one.
 // example: named(7) == "7"
 // example: named(1) == "many"
 fn named(count: Int) -> String {

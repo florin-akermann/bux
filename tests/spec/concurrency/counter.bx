@@ -14,7 +14,6 @@ fn main(arguments: List<String>) -> Int {
     0
 }
 
-/// A total that each `Add` grows, and that `Stop` ends.
 process Counter {
     fn start(initial: Int) -> Int {
         initial
@@ -28,7 +27,6 @@ process Counter {
     }
 }
 
-/// What a counter is sent.
 type Counted =
     | Add(Int)
     | Stop

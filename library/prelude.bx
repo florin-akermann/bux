@@ -12,7 +12,6 @@ fn or<T>(maybe: Option<T>, fallback: T) -> T {
     }
 }
 
-/// The value an answer holds, or `fallback` where it holds why it failed instead.
 // example: ok_or(Ok(1), 0) == 1
 // example: ok_or(Err("no"), 0) == 0
 fn ok_or<T, E>(answer: Result<T, E>, fallback: T) -> T {
@@ -284,28 +283,22 @@ type Result<T, E> =
     | Ok(T)
     | Err(E)
 
-/// What `receive` gives back: the next state of a process, or the end of it.
 type Next<T> =
     | Continue(T)
     | Done
 
-/// What became of one message that `send` put toward a process.
 type Sent =
     | Delivered
     | MailboxFull
     | ProcessEnded
 
-/// How long `send` waits while the mailbox is full.
 type Waiting =
     | NoWait
     | Milliseconds(Int)
     | NoLimit
 
-/// `value` as the text a JVM writes a truth value as, which is `true` or `false`.
 extern static shown_truth(value: Bool) -> String = "java.lang.String.valueOf"
 
-/// `value` as the text a JVM writes a whole number as, which is its digits and a sign.
 extern static shown_number(value: Int) -> String = "java.lang.String.valueOf"
 
-/// The whole number a JVM reads `value` off the characters of, widened from the `int` it gives.
 extern method int hashed_text(value: String) -> Int = "hashCode"

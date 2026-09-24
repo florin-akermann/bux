@@ -10,7 +10,6 @@ fn main(arguments: List<String>) -> Int {
     0
 }
 
-/// Whether the `()` a `Result` carries survives a `?`.
 // example: is_saved()
 fn is_saved() -> Bool {
     match saved() {
@@ -19,20 +18,17 @@ fn is_saved() -> Bool {
     }
 }
 
-/// A `()` carried through a `?` and put back in an `Ok`.
 // example: is_saved()
 fn saved() -> Result<(), String> {
     let inside = kept()?
     Ok(inside)
 }
 
-/// A `()` in an `Ok`.
 // example: is_saved()
 fn kept() -> Result<(), String> {
     Ok(())
 }
 
-/// Nothing is given, and there is nothing to say about it but that it arrived.
 // example: is_given(())
 fn is_given(given: ()) -> Bool {
     _ = given

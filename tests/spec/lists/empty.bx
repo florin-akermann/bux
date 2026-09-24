@@ -11,13 +11,11 @@ fn main(arguments: List<String>) -> Int {
     0
 }
 
-/// The fruit an order holds, which is none of it.
 // example: is_empty(picked())
 fn picked() -> List<String> {
     []
 }
 
-/// Whether a list holds nothing, which walking it and setting a flag answers.
 // example: is_empty([])
 // example: !is_empty(["a"])
 fn is_empty(fruit: List<String>) -> Bool {

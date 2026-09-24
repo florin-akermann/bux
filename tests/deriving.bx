@@ -9,7 +9,6 @@ import lexer
 import list
 import strings
 
-/// Whichever trait is derived, a record of fields that all have it derives it too.
 // example: a_record_whose_every_field_has_the_trait_derives_it(2, ir.little_library()).cases == 2
 fn a_record_whose_every_field_has_the_trait_derives_it(cases: Int, library: ir.Library) -> held.Held {
     var found = held.nothing_failed(cases)
@@ -19,7 +18,6 @@ fn a_record_whose_every_field_has_the_trait_derives_it(cases: Int, library: ir.L
     found
 }
 
-/// A drawn standard trait, derived for a record of one to four drawn fields that have it.
 // example: derived_tried(drawn.seeded(1), ir.little_library()).input != ""
 fn derived_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
     let standard = drawn.picked(draw, standards(), eq())
@@ -32,7 +30,6 @@ fn derived_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
     checking.Tried { input: source, why: "" }
 }
 
-/// Whichever trait is derived, a field without it is refused naming the field and the trait.
 // example: a_field_without_the_trait_is_refused_naming_both(2, ir.little_library()).cases == 2
 fn a_field_without_the_trait_is_refused_naming_both(cases: Int, library: ir.Library) -> held.Held {
     var found = held.nothing_failed(cases)
@@ -42,7 +39,6 @@ fn a_field_without_the_trait_is_refused_naming_both(cases: Int, library: ir.Libr
     found
 }
 
-/// A drawn standard trait, derived for a record with one field without it at a drawn place.
 // example: underived_tried(drawn.seeded(1), ir.little_library()).input != ""
 fn underived_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
     let standard = drawn.picked(draw, standards(), eq())
@@ -57,7 +53,6 @@ fn underived_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
     checking.Tried { input: source, why: "" }
 }
 
-/// A trait method resolves to the instance of the type its use settled on, and to no other.
 // example: a_trait_method_reaches_the_instance_of_its_type(2, ir.little_library()).cases == 2
 fn a_trait_method_reaches_the_instance_of_its_type(cases: Int, library: ir.Library) -> held.Held {
     var found = held.nothing_failed(cases)
@@ -67,7 +62,6 @@ fn a_trait_method_reaches_the_instance_of_its_type(cases: Int, library: ir.Libra
     found
 }
 
-/// A comparison of two values of a drawn type through `Eq`.
 // example: reached_tried(drawn.seeded(1), ir.little_library()).input != ""
 fn reached_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
     let of = drawn.picked(draw, ["Bool", "Int", "String", "Point"], "Int")
@@ -79,7 +73,6 @@ fn reached_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
     checking.Tried { input: source, why: "" }
 }
 
-/// A trait with no instance for a type is refused there, whatever else the module says.
 // example: a_type_with_no_instance_is_refused_where_the_trait_is_asked(2, ir.little_library()).cases == 2
 fn a_type_with_no_instance_is_refused_where_the_trait_is_asked(cases: Int, library: ir.Library) -> held.Held {
     var found = held.nothing_failed(cases)
@@ -89,7 +82,6 @@ fn a_type_with_no_instance_is_refused_where_the_trait_is_asked(cases: Int, libra
     found
 }
 
-/// A comparison of two circles, beside a comparison of two values of a drawn type.
 // example: circle_tried(drawn.seeded(1), ir.little_library()).input != ""
 fn circle_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
     let of = drawn.picked(draw, ["Bool", "Int", "String", "Point"], "Int")
@@ -101,7 +93,6 @@ fn circle_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
     checking.Tried { input: source, why: "" }
 }
 
-/// Every standard trait's method is accepted over each of the three types the prelude supplies.
 // example: each_standard_method_is_accepted_over_every_supplied_type(2, ir.little_library()).cases == 2
 fn each_standard_method_is_accepted_over_every_supplied_type(cases: Int, library: ir.Library) -> held.Held {
     var found = held.nothing_failed(cases)
@@ -111,7 +102,6 @@ fn each_standard_method_is_accepted_over_every_supplied_type(cases: Int, library
     found
 }
 
-/// A drawn standard method, asked of two values of a drawn type the prelude supplies.
 // example: supplied_tried(drawn.seeded(1), ir.little_library()).input != ""
 fn supplied_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
     let standard = drawn.picked(draw, standards(), eq())
@@ -125,7 +115,6 @@ fn supplied_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
     checking.Tried { input: source, why: "" }
 }
 
-/// A declared type without an instance is refused wherever a standard method is asked of it.
 // example: each_standard_method_is_refused_over_a_type_with_no_instance(2, ir.little_library()).cases == 2
 fn each_standard_method_is_refused_over_a_type_with_no_instance(cases: Int, library: ir.Library) -> held.Held {
     var found = held.nothing_failed(cases)
@@ -135,7 +124,6 @@ fn each_standard_method_is_refused_over_a_type_with_no_instance(cases: Int, libr
     found
 }
 
-/// A drawn standard method, asked of two circles.
 // example: unsupplied_tried(drawn.seeded(1), ir.little_library()).input != ""
 fn unsupplied_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
     let standard = drawn.picked(draw, standards(), eq())
@@ -148,9 +136,6 @@ fn unsupplied_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
     checking.Tried { input: source, why: "" }
 }
 
-/// Every instance body the prelude writes has the type its trait gives it, and so does its name.
-///
-/// The methods are read once, and each case draws one of them.
 // example: every_instance_body_of_the_prelude_has_the_type_its_trait_gives(2, ir.little_library()).cases == 2
 fn every_instance_body_of_the_prelude_has_the_type_its_trait_gives(cases: Int, library: ir.Library) -> held.Held {
     let methods = instance_methods(library)
@@ -161,7 +146,6 @@ fn every_instance_body_of_the_prelude_has_the_type_its_trait_gives(cases: Int, l
     found
 }
 
-/// A drawn instance method of the prelude, read where it writes its name and its value.
 // example: method_tried(draw: drawn.seeded(1), methods: [], library: ir.little_library()).why == ""
 fn method_tried(draw: drawn.Draw, methods: List<Method>, library: ir.Library) -> checking.Tried {
     if list.length(methods) == 0 {
@@ -176,7 +160,6 @@ fn method_tried(draw: drawn.Draw, methods: List<Method>, library: ir.Library) ->
     checking.Tried { input: method.reads_as, why: "" }
 }
 
-/// Every method every instance of the prelude writes, in the order the prelude writes them.
 // example: list.length(instance_methods(ir.little_library())) >= 0
 fn instance_methods(library: ir.Library) -> List<Method> {
     var found = []
@@ -186,7 +169,6 @@ fn instance_methods(library: ir.Library) -> List<Method> {
     found
 }
 
-/// Each method `item` writes, where it is an instance, and none where it is not.
 // example: list.length(item_methods(item: ast.Instance(ast.InstanceDeclaration { trait_name: named("Eq"), type_parameters: [], for_type: named("Int"), arguments: [], methods: [], span: nowhere() }), traits: [])) == 0
 fn item_methods(item: ast.Item, traits: List<ast.TraitDeclaration>) -> List<Method> {
     match item {
@@ -195,7 +177,6 @@ fn item_methods(item: ast.Item, traits: List<ast.TraitDeclaration>) -> List<Meth
     }
 }
 
-/// Each method one instance writes: where it is, what its trait gives it, and what it reads as.
 // example: list.length(methods_of(of: ast.InstanceDeclaration { trait_name: named("Eq"), type_parameters: [], for_type: named("Int"), arguments: [], methods: [], span: nowhere() }, traits: [])) == 0
 fn methods_of(of: ast.InstanceDeclaration, traits: List<ast.TraitDeclaration>) -> List<Method> {
     let standing = Standing { parameter: trait_parameter(of: of, traits: traits), settled: written_over(of) }
@@ -207,7 +188,6 @@ fn methods_of(of: ast.InstanceDeclaration, traits: List<ast.TraitDeclaration>) -
     found
 }
 
-/// The parameter of the trait `of` answers for, or `""` where the prelude declares no such trait.
 // example: trait_parameter(of: ast.InstanceDeclaration { trait_name: named("Eq"), type_parameters: [], for_type: named("Int"), arguments: [], methods: [], span: nowhere() }, traits: []) == ""
 fn trait_parameter(of: ast.InstanceDeclaration, traits: List<ast.TraitDeclaration>) -> String {
     for declaration in traits {
@@ -218,7 +198,6 @@ fn trait_parameter(of: ast.InstanceDeclaration, traits: List<ast.TraitDeclaratio
     ""
 }
 
-/// The signature the trait `of` answers for gives the method called `method`, where it has one.
 // example: signature_text(signature: signature_of(of: ast.InstanceDeclaration { trait_name: named("Eq"), type_parameters: [], for_type: named("Int"), arguments: [], methods: [], span: nowhere() }, traits: [], method: "is_equal"), standing: Standing { parameter: "T", settled: "Int" }) == "no signature"
 fn signature_of(of: ast.InstanceDeclaration, traits: List<ast.TraitDeclaration>, method: String) -> Option<ast.Signature> {
     for declaration in traits {
@@ -229,7 +208,6 @@ fn signature_of(of: ast.InstanceDeclaration, traits: List<ast.TraitDeclaration>,
     None
 }
 
-/// The signature `declaration` gives the method called `method`, where it declares one.
 // example: signature_text(signature: method_named(declaration: ast.TraitDeclaration { name: named("Eq"), parameter: named("T"), methods: [], span: nowhere(), visibility: ast.Public }, method: "is_equal"), standing: Standing { parameter: "T", settled: "Int" }) == "no signature"
 fn method_named(declaration: ast.TraitDeclaration, method: String) -> Option<ast.Signature> {
     for one in declaration.methods {
@@ -240,7 +218,6 @@ fn method_named(declaration: ast.TraitDeclaration, method: String) -> Option<ast
     None
 }
 
-/// The type the instance is for, as it writes it: its name, and the arguments it writes.
 // example: written_over(ast.InstanceDeclaration { trait_name: named("Eq"), type_parameters: [], for_type: named("List"), arguments: [named("T")], methods: [], span: nowhere() }) == "List<T>"
 fn written_over(of: ast.InstanceDeclaration) -> String {
     if list.length(of.arguments) == 0 {
@@ -253,9 +230,7 @@ fn written_over(of: ast.InstanceDeclaration) -> String {
     of.for_type.text + "<" + strings.join(written, ", ") + ">"
 }
 
-/// One trait method as text, with the trait's own parameter standing for the instance's type.
-///
-/// A method its trait does not declare is `no signature`, which no inferred type is.
+// A method that its trait does not declare gives `no signature`, which no inferred type is.
 // example: signature_text(signature: None, standing: Standing { parameter: "T", settled: "Int" }) == "no signature"
 fn signature_text(signature: Option<ast.Signature>, standing: Standing) -> String {
     match signature {
@@ -264,7 +239,6 @@ fn signature_text(signature: Option<ast.Signature>, standing: Standing) -> Strin
     }
 }
 
-/// The type of each parameter as text, with `_` where a parameter states none.
 // example: list.length(parameter_texts(parameters: [], standing: Standing { parameter: "T", settled: "Int" })) == 0
 fn parameter_texts(parameters: List<ast.Parameter>, standing: Standing) -> List<String> {
     var texts = []
@@ -274,7 +248,6 @@ fn parameter_texts(parameters: List<ast.Parameter>, standing: Standing) -> List<
     texts
 }
 
-/// A written type as text, and `()` where nothing is written.
 // example: result_text(result: None, standing: Standing { parameter: "T", settled: "Int" }) == "()"
 fn result_text(result: Option<ast.TypeRef>, standing: Standing) -> String {
     match result {
@@ -283,7 +256,6 @@ fn result_text(result: Option<ast.TypeRef>, standing: Standing) -> String {
     }
 }
 
-/// One written type as text, with the trait's parameter standing for the instance's type.
 // example: standing_for(written: ast.TypeRef { kind: ast.UnitType, span: nowhere() }, standing: Standing { parameter: "T", settled: "Int" }) == "()"
 fn standing_for(written: ast.TypeRef, standing: Standing) -> String {
     match written.kind {
@@ -292,7 +264,6 @@ fn standing_for(written: ast.TypeRef, standing: Standing) -> String {
     }
 }
 
-/// The instance's type where `name` is the trait's parameter, and `name` where it is not.
 // example: name_standing(name: "T", standing: Standing { parameter: "T", settled: "Int" }) == "Int"
 // example: name_standing(name: "Bool", standing: Standing { parameter: "T", settled: "Int" }) == "Bool"
 fn name_standing(name: String, standing: Standing) -> String {
@@ -302,7 +273,6 @@ fn name_standing(name: String, standing: Standing) -> String {
     name
 }
 
-/// `name` with `arguments` written after it in angle brackets, where it has any.
 // example: applied(name: "Int", arguments: [], standing: Standing { parameter: "T", settled: "Int" }) == "Int"
 fn applied(name: String, arguments: List<ast.TypeRef>, standing: Standing) -> String {
     if list.length(arguments) == 0 {
@@ -315,10 +285,8 @@ fn applied(name: String, arguments: List<ast.TypeRef>, standing: Standing) -> St
     name + "<" + strings.join(texts, ", ") + ">"
 }
 
-/// Where the value `method` gives back is written, which is its last statement.
-///
-/// Every method the prelude writes leaves one expression, so where one does not, the stretch is
-/// the method's name, which has the signature's type and not the value's.
+// Each prelude method ends in one expression; where one does not, the stretch is the method name,
+// which has the type of the signature and not of the value.
 // example: leaves(ast.FunctionDeclaration { name: named("f"), type_parameters: [], parameters: [], result: None, body: ast.Block { statements: [], span: nowhere() }, span: nowhere(), visibility: ast.Public }).start == -1
 fn leaves(method: ast.FunctionDeclaration) -> lexer.Span {
     let last = list.at(method.body.statements, list.length(method.body.statements) - 1)
@@ -328,7 +296,6 @@ fn leaves(method: ast.FunctionDeclaration) -> lexer.Span {
     }
 }
 
-/// The stretch of the value `statement` leaves, or `fallback` where it leaves none.
 // example: left_by(statement: ast.Statement { kind: ast.Break, span: nowhere() }, fallback: nowhere()).start == -1
 fn left_by(statement: ast.Statement, fallback: lexer.Span) -> lexer.Span {
     match statement.kind {
@@ -337,14 +304,12 @@ fn left_by(statement: ast.Statement, fallback: lexer.Span) -> lexer.Span {
     }
 }
 
-/// What a signature written as text gives back, which is the text after its first arrow.
 // example: gives("(Bool) -> Int") == "Int"
 fn gives(signature: String) -> String {
     let arrow = checking.occurrence(signature, "-> ", 1)
     or(strings.cut(signature, arrow.start + 3, strings.length(signature)), "")
 }
 
-/// The methods of `first`, then those of `second`.
 // example: list.length(both(first: [], second: [])) == 0
 fn both(first: List<Method>, second: List<Method>) -> List<Method> {
     var found = first
@@ -354,27 +319,22 @@ fn both(first: List<Method>, second: List<Method>) -> List<Method> {
     found
 }
 
-/// A name written nowhere, which a hand-built declaration of an example carries.
 // example: named("Eq").text == "Eq"
 fn named(text: String) -> ast.Name {
     ast.Name { text: text, span: nowhere() }
 }
 
-/// A stretch that is in no source.
 // example: nowhere().start == -1
 fn nowhere() -> lexer.Span {
     lexer.Span { start: -1, length: 0 }
 }
 
-/// A call of `standard`'s method over a module that derives it for the type `declared`.
-///
-/// A function that gives back a `Bool` is named as the question it answers.
+// A function that gives back a `Bool` must have a name that asks a question.
 // example: strings.length(deriving(standard: eq(), declared: record(["Int"]))) > 0
 fn deriving(standard: Standard, declared: String) -> String {
     "fn " + named_for(standard) + "(" + parameters_for(standard) + ") -> " + standard.gives + " {\n    " + called(standard: standard, one: "one", other: "other") + "\n}\n\nderive " + standard.of + " for Held\n\n" + declared + "\n"
 }
 
-/// The parameters of a function that calls `standard`'s method: two where it takes two values.
 // example: parameters_for(eq()) == "one: Held, other: Held"
 fn parameters_for(standard: Standard) -> String {
     if standard.is_taking == TakesTwo {
@@ -383,13 +343,11 @@ fn parameters_for(standard: Standard) -> String {
     "one: Held"
 }
 
-/// A module whose one function asks `written` of its standard trait, named as its answer asks.
 // example: asking(standard: eq(), written: "is_equal(1, 2)") == "fn is_read() -> Bool {\n    is_equal(1, 2)\n}\n"
 fn asking(standard: Standard, written: String) -> String {
     "fn " + named_for(standard) + "() -> " + standard.gives + " {\n    " + written + "\n}\n"
 }
 
-/// The name of a function that gives back what `standard` gives: a question for a `Bool`.
 // example: named_for(eq()) == "is_read"
 fn named_for(standard: Standard) -> String {
     if standard.gives == "Bool" {
@@ -398,7 +356,6 @@ fn named_for(standard: Standard) -> String {
     "read"
 }
 
-/// The call of `standard`'s method over `one`, and over `other` where it takes two values.
 // example: called(standard: eq(), one: "1", other: "2") == "is_equal(1, 2)"
 fn called(standard: Standard, one: String, other: String) -> String {
     if standard.is_taking == TakesTwo {
@@ -407,16 +364,12 @@ fn called(standard: Standard, one: String, other: String) -> String {
     standard.method + "(" + one + ")"
 }
 
-/// The module both trait properties are drawn against, which compares two values of `of`.
-///
-/// `Point` is the one type it gives an instance to, so every other type is answered by the
-/// prelude's instances or by nothing at all.
+// Only `Point` gets an instance here, so for each other type the prelude or nothing answers.
 // example: strings.length(comparing("Int")) > 0
 fn comparing(of: String) -> String {
     "fn is_same(one: " + of + ", other: " + of + ") -> Bool {\n    is_equal(one, other)\n}\n\ninstance Eq<Point> {\n    fn is_equal(one: Point, other: Point) -> Bool {\n        one.across == other.across\n    }\n}\n\ntype Point = {\n    across: Int\n}\n"
 }
 
-/// A record of the written fields, named `value0`, `value1`, and so on.
 // example: record(["Int"]) == "type Held = {\n    value0: Int\n}"
 fn record(fields: List<String>) -> String {
     var lines = ""
@@ -428,7 +381,6 @@ fn record(fields: List<String>) -> String {
     "type Held = {\n" + lines + "}"
 }
 
-/// `count` drawn field types, each of which has every standard trait and needs no declaration.
 // example: list.length(drawn_fields(draw: drawn.seeded(1), count: 3)) == 3
 fn drawn_fields(draw: drawn.Draw, count: Int) -> List<String> {
     var fields = []
@@ -440,7 +392,6 @@ fn drawn_fields(draw: drawn.Draw, count: Int) -> List<String> {
     fields
 }
 
-/// `fields` with `field` put in at the place `at`.
 // example: inserted(fields: ["Int"], at: 0, field: "()") == ["()", "Int"]
 fn inserted(fields: List<String>, at: Int, field: String) -> List<String> {
     var found = []
@@ -458,25 +409,21 @@ fn inserted(fields: List<String>, at: Int, field: String) -> List<String> {
     found
 }
 
-/// The four standard traits, which `docs/specs/traits.md` declares.
 // example: list.length(standards()) == 4
 fn standards() -> List<Standard> {
     [eq(), Standard { of: "Ord", method: "is_less", is_taking: TakesTwo, gives: "Bool" }, Standard { of: "Hash", method: "hashed", is_taking: TakesOne, gives: "Int" }, Standard { of: "Show", method: "shown", is_taking: TakesOne, gives: "String" }]
 }
 
-/// The standard trait `Eq`.
 // example: eq().of == "Eq"
 fn eq() -> Standard {
     Standard { of: "Eq", method: "is_equal", is_taking: TakesTwo, gives: "Bool" }
 }
 
-/// Two values of each type the prelude supplies all four standard instances for.
 // example: list.length(supplied()) == 3
 fn supplied() -> List<Supplied> {
     [Supplied { one: "true", other: "false" }, Supplied { one: "1", other: "2" }, Supplied { one: "\"one\"", other: "\"two\"" }]
 }
 
-/// One standard trait: its name, its one method, how many values it takes, and what it gives.
 type Standard = {
     of: String
     method: String
@@ -486,18 +433,15 @@ type Standard = {
 
 derive Eq for Taking
 
-/// How many values a standard method takes.
 type Taking =
     | TakesOne
     | TakesTwo
 
-/// Two values of one type the prelude supplies.
 type Supplied = {
     one: String
     other: String
 }
 
-/// One method one instance of the prelude writes: where it is, and what its trait says.
 type Method = {
     written: lexer.Span
     leaves: lexer.Span
@@ -505,7 +449,6 @@ type Method = {
     reads_as: String
 }
 
-/// The trait's own parameter, and the type the instance settles it on, as the instance writes it.
 type Standing = {
     parameter: String
     settled: String

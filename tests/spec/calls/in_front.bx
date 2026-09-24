@@ -9,7 +9,6 @@ fn main(arguments: List<String>) -> Int {
     0
 }
 
-/// How many of something there are, as a line a reader reads.
 // example: described(count: 3, said: "apples") == "3 apples"
 fn described(count: Int, said: String) -> String {
     shown(count) + " " + said

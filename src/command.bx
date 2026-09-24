@@ -29,17 +29,12 @@ import strings
 import surface
 import types
 
-/// What the command line says to `arguments`, with the library the compiler carries.
 // example: said_by(answered(["--version"])).output == "bux 0.1.0\n"
 fn answered(arguments: List<String>) -> Answer {
     answered_within(arguments, ir.library_read(or(modules.carried("prelude"), "")))
 }
 
-/// What the command line says to `arguments`, with `library` read once for many commands.
-///
-/// Every command but `run` answers with the text each stream is given and the status the command
-/// ends with. `run` answers with the program to start, because that program reads and writes the
-/// streams of the command line itself.
+// `run` gives back the program to start, because that program uses the streams of this process.
 // example: said_by(answered_within(["--version"], ir.little_library())).status == 0
 // example: said_by(answered_within([], ir.little_library())).status == 2
 fn answered_within(arguments: List<String>, library: ir.Library) -> Answer {
@@ -50,11 +45,7 @@ fn answered_within(arguments: List<String>, library: ir.Library) -> Answer {
     }
 }
 
-/// What one command other than `run` says, or the refusal of a path it cannot take.
-///
-/// The JVM reads `main.bx/` as `main.bx`, but the answer is that the path is not a directory,
-/// so the path is looked at before it is read. A file whose name does not end in `.bx` is no
-/// Bux source, so it is refused before it is read too.
+// The JVM reads `main.bx/` as `main.bx`, so this function examines the path before it reads it.
 // example: path_said(Fmt("/"), ir.little_library()).status == 2
 fn path_said(command: Command, library: ir.Library) -> Said {
     let path = path_of(command)
@@ -67,7 +58,6 @@ fn path_said(command: Command, library: ir.Library) -> Said {
     command_said(command, library)
 }
 
-/// What `run` says, or the refusal of a path it cannot take, as `path_said` refuses it.
 // example: said_by(run_said(Started { file: "no-such-directory/a.bx", arguments: [] }, ir.little_library())).status == 2
 fn run_said(asked: Started, library: ir.Library) -> Answer {
     if is_a_file_as_a_directory(asked.file) {
@@ -82,7 +72,6 @@ fn run_said(asked: Started, library: ir.Library) -> Answer {
     started(asked, library)
 }
 
-/// The path a command reads, which is no path for `explain`.
 // example: path_of(Explain("L0100")) == ""
 fn path_of(command: Command) -> String {
     match command {
@@ -95,16 +84,12 @@ fn path_of(command: Command) -> String {
     }
 }
 
-/// Whether `path` names a file and ends with a slash, as only the path of a directory does.
 // example: !is_a_file_as_a_directory("/")
 fn is_a_file_as_a_directory(path: String) -> Bool {
     let place = files.named(path)
     has_trailing_slash(path) && files.is_there(place) && !files.is_directory(place)
 }
 
-/// Whether `path` names a file whose name does not end in `.bx`, which is no Bux source.
-///
-/// A directory is a package, and a path that names nothing is refused when it is read.
 // example: !is_misnamed("no-such-directory/a.lm")
 // example: !is_misnamed("")
 fn is_misnamed(path: String) -> Bool {
@@ -112,9 +97,7 @@ fn is_misnamed(path: String) -> Bool {
     files.is_there(place) && !files.is_directory(place) && !modules.is_a_module_name(modules.last_part(path))
 }
 
-/// The refusal of the file at `path`, whose name is not that of a Bux source, shown in `form`.
-///
-/// The name is what is wrong, not the text, so the diagnostic points at the start of the file.
+// The name is wrong and the text is not, so the diagnostic points at the start of the file.
 // example: misnamed_said("no-such-directory/a.lm", AsPage).errors == "error[L0605]: `a.lm` is not a Bux source, because its name does not end in `.bx`\n  --> no-such-directory/a.lm:1:1\n\n  1 | \n    | ^\n\nhelp: rename the file to `a.bx`\n"
 // example: misnamed_said("no-such-directory/a.lm", AsData).status == 1
 fn misnamed_said(path: String, form: Form) -> Said {
@@ -123,7 +106,6 @@ fn misnamed_said(path: String, form: Form) -> Said {
     refused_in_form(Refusal { diagnostics: [diagnostic], page: Page { source: ok_or(files.read(path), ""), path: path } }, form)
 }
 
-/// The form a command shows a refusal in, which only `check --json` asks to be data.
 // example: form_asked(Check { path: "a.bx", form: AsData }) == AsData
 // example: form_asked(Build("a.bx")) == AsPage
 fn form_asked(command: Command) -> Form {
@@ -133,10 +115,7 @@ fn form_asked(command: Command) -> Form {
     }
 }
 
-/// What `answer` says, which for a program to start is what that program ends with.
-///
-/// The program is started with the streams of this one, so what it reads and writes never passes
-/// through here, and its status is the status the command ends with.
+// The program uses the streams of this process, so its output does not pass through here.
 // example: said_by(Spoken(nothing_said())).status == 0
 fn said_by(answer: Answer) -> Said {
     match answer {
@@ -145,7 +124,6 @@ fn said_by(answer: Answer) -> Said {
     }
 }
 
-/// The status of the program `line` starts, with the streams of this process.
 // example: program_ended(["no-such-program-at-all"]).status == 2
 fn program_ended(line: List<String>) -> Said {
     let builder = programs.of_command(line)
@@ -156,7 +134,6 @@ fn program_ended(line: List<String>) -> Said {
     }
 }
 
-/// What one command other than `run` says, having done what it was asked.
 // example: command_said(Explain("L9999"), ir.little_library()).errors == "error: there is no diagnostic L9999\n"
 fn command_said(command: Command, library: ir.Library) -> Said {
     match command {
@@ -169,7 +146,6 @@ fn command_said(command: Command, library: ir.Library) -> Said {
     }
 }
 
-/// Writes the canonical text of `path` back to it, leaving a canonical file untouched.
 // example: formatted("no-such-directory/main.bx", ir.little_library().prelude.names).errors == "error: no-such-directory/main.bx: No such file or directory (os error 2)\n"
 fn formatted(path: String, names: resolver.Prelude) -> Said {
     match files.read(path) {
@@ -178,7 +154,6 @@ fn formatted(path: String, names: resolver.Prelude) -> Said {
     }
 }
 
-/// The canonical text of `page` written back to its file, where it differs from what is there.
 // example: source_formatted(Page { source: "fn (", path: "a.bx" }, ir.little_library().prelude.names).status == 1
 fn source_formatted(page: Page, names: resolver.Prelude) -> Said {
     match repaired(page.source, names) {
@@ -187,11 +162,7 @@ fn source_formatted(page: Page, names: resolver.Prelude) -> Said {
     }
 }
 
-/// The text `bux fmt` writes for `source`, or the error the parser refuses it with.
-///
-/// The formatter writes canonical form with each import and each test in place. The resolver then
-/// says which declaration uses which, and each declaration moves below what uses it. A module the
-/// resolver refuses keeps the order of its declarations, and `bux build` reports the refusal.
+// A module that the resolver refuses keeps its order, because `bux build` reports the refusal.
 // example: ok_or(repaired("fn one() -> Int {\n    1\n}\n\nfn two() -> Int {\n    one()\n}\n", ir.little_library().prelude.names), "") == "fn two() -> Int {\n    one()\n}\n\nfn one() -> Int {\n    1\n}\n"
 // example: ok_or(repaired("fn one() -> Int {\n    missing()\n}\n\nfn two() -> Int {\n    one()\n}\n", ir.little_library().prelude.names), "") == "fn one() -> Int {\n    missing()\n}\n\nfn two() -> Int {\n    one()\n}\n"
 fn repaired(source: String, names: resolver.Prelude) -> Result<String, parser.ParseError> {
@@ -203,7 +174,6 @@ fn repaired(source: String, names: resolver.Prelude) -> Result<String, parser.Pa
     }
 }
 
-/// `canonical` written over the file of `page`, and nothing written where the two are the same.
 // example: rewritten(Page { source: "a", path: "no-such-directory/a.bx" }, "a").status == 0
 fn rewritten(page: Page, canonical: String) -> Said {
     if canonical == page.source {
@@ -215,10 +185,6 @@ fn rewritten(page: Page, canonical: String) -> Said {
     }
 }
 
-/// Reports the first thing about a file or a package the compiler will not have.
-///
-/// A directory is a package, so every module of it is checked rather than one file, which
-/// `docs/specs/packages.md` states.
 // example: checked_said(Checking { path: "no-such-directory/a.bx", form: AsPage }, ir.little_library()).status == 2
 fn checked_said(checking: Checking, library: ir.Library) -> Said {
     if files.is_directory(files.named(checking.path)) {
@@ -230,7 +196,6 @@ fn checked_said(checking: Checking, library: ir.Library) -> Said {
     }
 }
 
-/// Writes the class files of `path` under `target/` in its directory, one for each class.
 // example: built_said("no-such-directory/a.bx", ir.little_library()).status == 2
 fn built_said(path: String, library: ir.Library) -> Said {
     if files.is_directory(files.named(path)) {
@@ -272,7 +237,6 @@ fn every_module_said(paths: List<String>, over: Over, library: ir.Library) -> Sa
     nothing_said()
 }
 
-/// What one module of a package says, under the command the package was given to.
 // example: module_said("no-such-directory/a.bx", Building, ir.little_library()).status == 2
 fn module_said(path: String, over: Over, library: ir.Library) -> Said {
     match over {
@@ -281,10 +245,8 @@ fn module_said(path: String, over: Over, library: ir.Library) -> Said {
     }
 }
 
-/// Builds `started.file` and names the program it holds, which ends however that program ends.
-///
-/// The program is compiled before the JDK is looked for, so a program that does not compile is
-/// told so on a machine that could not have run it anyway.
+// The program compiles before the search for the JDK.
+// So a machine without a JDK still reports a program that does not compile.
 // example: said_by(started(Started { file: "no-such-directory/a.bx", arguments: [] }, ir.little_library())).status == 2
 fn started(asked: Started, library: ir.Library) -> Answer {
     match built(asked.file, library) {
@@ -293,7 +255,6 @@ fn started(asked: Started, library: ir.Library) -> Answer {
     }
 }
 
-/// The program `done` holds, started with the words `asked` gives it, where it is one.
 // example: said_by(built_started(Built { module: "a", target: "", archives: [], starts: false }, Started { file: "a.bx", arguments: [] })).errors == "error: a.bx: a module is run through `fn main(arguments: List<String>) -> Int`, which this one does not declare\n"
 fn built_started(done: Built, asked: Started) -> Answer {
     if !done.starts {
@@ -305,11 +266,6 @@ fn built_started(done: Built, asked: Started) -> Answer {
     }
 }
 
-/// Compiles `path` and every module it reaches, writing every class into the one `target_of(path)`.
-///
-/// A module is a class of its own, so a program of several modules is several classes, and a JVM
-/// is started on the one the command named. `docs/specs/modules.md` states the order. Each Java
-/// archive the package states is held to its line before anything is written.
 // example: is_refused(built("no-such-directory/a.bx", ir.little_library()))
 fn built(path: String, library: ir.Library) -> Result<Built, Said> {
     let program = page_said(checked(path, library))?
@@ -322,7 +278,6 @@ fn built(path: String, library: ir.Library) -> Result<Built, Said> {
     Ok(Built { module: module, target: target, archives: reached, starts: is_a_program(lowered) })
 }
 
-/// Whether a build was refused, which is what the examples of a build that fails read.
 // example: is_refused(Err(nothing_said()))
 private fn is_refused<T>(answer: Result<T, Said>) -> Bool {
     match answer {
@@ -331,7 +286,6 @@ private fn is_refused<T>(answer: Result<T, Said>) -> Bool {
     }
 }
 
-/// A refusal of compiling said as a page for a reader, where there is one.
 // example: is_refused(page_said(Err(Unusable("error: gone\n"))))
 fn page_said<T>(answer: Result<T, NotCompiled>) -> Result<T, Said> {
     match answer {
@@ -340,10 +294,8 @@ fn page_said<T>(answer: Result<T, NotCompiled>) -> Result<T, Said> {
     }
 }
 
-/// Whether the last module lowered declares `main` in the one shape a program starts at.
-///
-/// The module is the one the command named, which lowers last, and its class is the first it
-/// writes. `main` takes the arguments as a `String[]`, which is what a JVM starts a class with.
+// The named module lowers last, and its class is the first class that it writes.
+// A JVM starts a class with a `String[]`, so `main` must take the arguments as one.
 // example: !is_a_program([])
 fn is_a_program(lowered: List<ir.Lowered>) -> Bool {
     match list.at(lowered, list.length(lowered) - 1) {
@@ -352,7 +304,6 @@ fn is_a_program(lowered: List<ir.Lowered>) -> Bool {
     }
 }
 
-/// Whether the first of `classes` has a `main` that takes the arguments a JVM starts it with.
 // example: !has_main([])
 fn has_main(classes: List<ir.Class>) -> Bool {
     match list.at(classes, 0) {
@@ -361,7 +312,6 @@ fn has_main(classes: List<ir.Class>) -> Bool {
     }
 }
 
-/// Whether one of `methods` is `main`, taking an array of strings and nothing else.
 // example: !has_starting_method([])
 fn has_starting_method(methods: List<ir.Method>) -> Bool {
     for method in methods {
@@ -372,12 +322,6 @@ fn has_starting_method(methods: List<ir.Method>) -> Bool {
     false
 }
 
-/// Runs every example and every test of the module in `path`, or of every module of the package
-/// in the directory `path`, and reports each that did not hold.
-///
-/// `docs/specs/doc-examples.md` says what an example is, and `docs/specs/testing.md` says what a
-/// test is and how a run of a package is reported. A module that states neither has nothing to
-/// run, which is a run that held.
 // example: tested("no-such-directory/a.bx", ir.little_library()).status == 2
 fn tested(path: String, library: ir.Library) -> Said {
     if has_a_split_archive(path) {
@@ -389,11 +333,7 @@ fn tested(path: String, library: ir.Library) -> Said {
     reported(module_tested(path, Typing { library: library, memo: no_memo() }).tried)
 }
 
-/// Whether an archive that the package at `path` reaches is at a path that holds a `:`.
-///
-/// `test` writes its classes into a directory of its own, so only an archive, read against the
-/// directory of the package, puts that directory on its class path. A manifest that is refused is
-/// refused again when the module is compiled.
+// `test` writes classes to its own directory, so only an archive puts the package on a class path.
 // example: !has_a_split_archive("no-such-directory:a/main.bx")
 fn has_a_split_archive(path: String) -> Bool {
     for one in ok_or(modules.archives_reached(package_directory_of(path)), []) {
@@ -411,9 +351,7 @@ fn has_a_split_directory(path: String) -> Bool {
     files.is_there(files.named(path)) && modules.can_split_the_class_path(modules.package_directory(path))
 }
 
-/// The refusal of the module or the package at `path`, whose directory holds a `:`.
-///
-/// The directory is what is wrong, not the text, so the diagnostic points at the start of the file.
+// The directory is wrong and the text is not, so the diagnostic points at the start of the file.
 // example: split_said("no-such-directory:a/main.bx").errors == "error[L0610]: `no-such-directory:a` holds `:`, which a class path reads as two paths\n  --> no-such-directory:a/main.bx:1:1\n\n  1 | \n    | ^\n\nhelp: move the module to a directory whose path holds no `:`\n"
 fn split_said(path: String) -> Said {
     let diagnostic = Diagnostic { code: "L0610", message: "`" + package_directory_of(path) + "` holds `:`, which a class path reads as two paths", span: lexer.Span { start: 0, length: 0 }, help: Some("move the module to a directory whose path holds no `:`"), fix: None }
@@ -428,10 +366,7 @@ fn package_directory_of(path: String) -> String {
     modules.package_directory(path)
 }
 
-/// Runs the examples and the tests of every module of the package in `directory`, on one worker
-/// for each two processors, and reports what every module found, in the order `across` takes them.
-///
-/// A module that is refused does not stop the run, so one report names every module that fails.
+// A refused module does not stop the run, so one report names each module that fails.
 // example: package_tested("no-such-directory", ir.little_library()).status == 2
 fn package_tested(directory: String, library: ir.Library) -> Said {
     match package_found(directory) {
@@ -502,10 +437,8 @@ fn every_module_tested(paths: List<String>, library: ir.Library, workers: Int) -
     in_file_order(paths, ended(pooling).answers)
 }
 
-/// What the runs of `paths` found together, each answer taken by the number of its module.
-///
-/// A module with no answer is a refusal of the command, which a pool that ends only when its
-/// workers leave never gives.
+// A module without an answer is a refusal of the command.
+// The pool ends only when each worker leaves, so it never gives that refusal.
 // example: in_file_order(["a.bx"], map.empty()).said.errors == "error: a.bx: no worker gave an answer\n"
 fn in_file_order(paths: List<String>, answers: map.Map<Int, Tried>) -> Tried {
     var found = only_said(nothing_said())
@@ -517,8 +450,6 @@ fn in_file_order(paths: List<String>, answers: map.Map<Int, Tried>) -> Tried {
     found
 }
 
-/// The pool of `bux test`: it hands each module to a worker that asks, holds each answer by the
-/// number of its module, and ends when every worker has left.
 process Pool {
     fn start(paths: List<String>, workers: Int) -> Pooling {
         Pooling { paths: paths, handed: 0, answers: map.empty(), workers: workers }
@@ -533,13 +464,11 @@ process Pool {
     }
 }
 
-/// `pooling` with `answer` held by the number of its module, and `worker` handed the next module.
 // example: every_module_tested(["no-such-directory/a.bx", "no-such-directory/b.bx"], ir.little_library(), 2).said.errors == "error: no-such-directory/a.bx: No such file or directory (os error 2)\n\nerror: no-such-directory/b.bx: No such file or directory (os error 2)\n"
 fn answer_kept(pooling: Pooling, answer: Answered, worker: Process<Work, Working>) -> Pooling {
     handed_to(pooling { answers: map.insert(pooling.answers, answer.number, answer.tried) }, worker)
 }
 
-/// `pooling` after `worker` is sent the next module, or told to stop where no module is left.
 // example: every_module_tested(["no-such-directory/a.bx"], ir.little_library(), 2).said.status == 2
 fn handed_to(pooling: Pooling, worker: Process<Work, Working>) -> Pooling {
     match list.at(pooling.paths, pooling.handed) {
@@ -548,21 +477,18 @@ fn handed_to(pooling: Pooling, worker: Process<Work, Working>) -> Pooling {
     }
 }
 
-/// `pooling` once the module of `handed` is sent to its worker, with one more module handed.
 // example: every_module_tested(["no-such-directory/a.bx", "no-such-directory/b.bx"], ir.little_library(), 2).said.status == 2
 fn handed_module(pooling: Pooling, handed: Handed) -> Pooling {
     _ = send(handed.worker, Give(handed), NoLimit)
     pooling { handed: pooling.handed + 1 }
 }
 
-/// `pooling` once `worker` is told to stop.
 // example: every_module_tested([], ir.little_library(), 2).said.status == 0
 fn stopped(pooling: Pooling, worker: Process<Work, Working>) -> Pooling {
     _ = send(worker, Stop, NoLimit)
     pooling
 }
 
-/// The pool with one worker fewer, which has ended where that worker was the last.
 // example: every_module_tested([], ir.little_library(), 2).said.output == ""
 fn worker_left(pooling: Pooling) -> Next<Pooling> {
     if pooling.workers == 1 {
@@ -571,9 +497,7 @@ fn worker_left(pooling: Pooling) -> Next<Pooling> {
     Continue(pooling { workers: pooling.workers - 1 })
 }
 
-/// A worker of `bux test`: it runs each module it is handed, sends the answer to the pool, and
-/// leaves when told to stop. Its memo goes from one module to the next, so it types each module
-/// that its modules import once.
+// The memo goes from one module to the next, so the worker types each imported module once.
 process Worker {
     fn start(pool: Process<Pooled, Pooling>, library: ir.Library) -> Working {
         Working { pool: pool, typing: Typing { library: library, memo: no_memo() } }
@@ -587,7 +511,6 @@ process Worker {
     }
 }
 
-/// `working`, with the memo the run of the module of `handed` left, once its answer is sent.
 // example: every_module_tested(["no-such-directory/a.bx"], ir.little_library(), 2).said.errors == "error: no-such-directory/a.bx: No such file or directory (os error 2)\n"
 fn worked(working: Working, handed: Handed) -> Working {
     let ran = module_tested(handed.path, working.typing)
@@ -596,15 +519,12 @@ fn worked(working: Working, handed: Handed) -> Working {
     working { typing: typing { memo: ran.memo } }
 }
 
-/// The end of a worker, once it tells the pool that it has left.
 // example: every_module_tested([], ir.little_library(), 2).said.errors == ""
 fn quit(working: Working) -> Next<Working> {
     _ = send(working.pool, Left, NoLimit)
     Done
 }
 
-/// What the run of the module in `path` found, or the refusal of the module, with each module
-/// typed once: a module that `typing.memo` holds is not typed again.
 // example: module_tested("no-such-directory/a.bx", Typing { library: ir.little_library(), memo: no_memo() }).tried.said.status == 2
 fn module_tested(path: String, typing: Typing) -> Tested {
     let loaded = checked_once(path, typing.library, typing.memo)
@@ -614,7 +534,6 @@ fn module_tested(path: String, typing: Typing) -> Tested {
     }
 }
 
-/// `tried`, with the line that counts what it tried after its errors where anything failed.
 // example: reported(Tried { said: nothing_said(), tests: 2, examples: 1, failed: 1 }).errors == "test: 2 tests, 1 examples; 1 failed\n"
 // example: reported(Tried { said: nothing_said(), tests: 2, examples: 1, failed: 0 }).errors == ""
 fn reported(tried: Tried) -> Said {
@@ -626,10 +545,6 @@ fn reported(tried: Tried) -> Said {
     said { errors: said.errors + counted }
 }
 
-/// What two runs found together: the output and the errors of `first` before those of `second`,
-/// the worse of the two statuses, and the counts of both.
-///
-/// A blank line comes between the errors of the two, as it comes between two refusals of one.
 // example: tried_both(first: only_said(unusable("gone")), second: only_said(nothing_said())).said.status == 2
 // example: tried_both(first: only_said(unusable("a")), second: only_said(unusable("b"))).said.errors == "error: a\n\nerror: b\n"
 fn tried_both(first: Tried, second: Tried) -> Tried {
@@ -641,8 +556,6 @@ fn tried_both(first: Tried, second: Tried) -> Tried {
     Tried { said: said, tests: first.tests + second.tests, examples: first.examples + second.examples, failed: first.failed + second.failed }
 }
 
-/// The examples and the tests of the module `program` was checked for, run, or the reason there is
-/// no run.
 // example: program_tested(Checked { modules: [], root: Typed { module: modules.Module { name: "main", path: "main.bx", source: "", program: ast.Program { items: [] } }, inferred: types.checked_of("") } }, Typing { library: ir.little_library(), memo: no_memo() }).tried.said.status == 0
 fn program_tested(program: Checked, typing: Typing) -> Tested {
     let root = program.root
@@ -652,7 +565,6 @@ fn program_tested(program: Checked, typing: Typing) -> Tested {
     }
 }
 
-/// What the run of the examples and the tests found, and nothing where the module states none.
 // example: run_held(None, Typed { module: modules.Module { name: "main", path: "main.bx", source: "", program: ast.Program { items: [] } }, inferred: types.checked_of("") }, Typing { library: ir.little_library(), memo: no_memo() }).tried.said.status == 0
 fn run_held(found: Option<Run>, root: Typed, typing: Typing) -> Tested {
     match found {
@@ -661,10 +573,7 @@ fn run_held(found: Option<Run>, root: Typed, typing: Typing) -> Tested {
     }
 }
 
-/// The run that tries the examples `root` states and each of `tests`, where there is one to try.
-///
-/// `bux test` passes every test of the module. `tests/documented.bx` passes none for an example of
-/// `tests/spec`, because a golden answer holds what `bux test` says of the tests there.
+// `tests/documented.bx` gives no tests for `tests/spec`, because a golden answer holds them.
 // example: is_none_run(stated_in(Typed { module: modules.Module { name: "main", path: "main.bx", source: "", program: ast.Program { items: [] } }, inferred: types.checked_of("") }, []))
 fn stated_in(root: Typed, tests: List<ast.TestDeclaration>) -> Result<Option<Run>, List<Diagnostic>> {
     let source = root.module.source
@@ -679,7 +588,6 @@ fn stated_in(root: Typed, tests: List<ast.TestDeclaration>) -> Result<Option<Run
     }
 }
 
-/// Whether reading the examples found no run to start.
 // example: is_none_run(Ok(None))
 private fn is_none_run(found: Result<Option<Run>, List<Diagnostic>>) -> Bool {
     match found {
@@ -688,12 +596,8 @@ private fn is_none_run(found: Result<Option<Run>, List<Diagnostic>>) -> Bool {
     }
 }
 
-/// Compiles the module `run` wrote, starts it, and reports every example and every test that did
-/// not hold.
-///
-/// The class files go somewhere of the run's own, so nothing a build wrote is touched, and that
-/// place is taken away again whether the examples held or not. Every module the one under test
-/// imports is written there too, because the run reaches them as the module does.
+// The classes go to a directory of the run's own, so the run touches nothing that a build wrote.
+// Each imported module goes there too, because the run reaches it as the module does.
 // example: examples_held(Run { source: "", stretches: [], examples: [], tests: [], module: lexer.Span { start: 0, length: 0 } }, Typed { module: modules.Module { name: "main", path: "a.b.bx", source: "", program: ast.Program { items: [] } }, inferred: types.checked_of("") }, Typing { library: ir.little_library(), memo: no_memo() }).tried.said.status == 2
 fn examples_held(run: Run, root: Typed, typing: Typing) -> Tested {
     match named_module(root.module.path) {
@@ -702,14 +606,12 @@ fn examples_held(run: Run, root: Typed, typing: Typing) -> Tested {
     }
 }
 
-/// The run, compiled with the modules `typing.memo` holds, as the class `module`, then started.
 // example: named_held("main", Run { source: "fn (", stretches: [], examples: [], tests: [], module: lexer.Span { start: 0, length: 0 } }, Typed { module: modules.Module { name: "main", path: "no-such-directory/main.bx", source: "", program: ast.Program { items: [] } }, inferred: types.checked_of("") }, Typing { library: ir.little_library(), memo: no_memo() }).tried.said.status == 1
 fn named_held(module: String, run: Run, root: Typed, typing: Typing) -> Tested {
     let classes = run_classes_once(run, root, typing.library, typing.memo)
     Tested { tried: settled(classes_held(Named { module: module, classes: classes.found }, run, root)), memo: classes.memo }
 }
 
-/// What the run found, or the refusal that stopped it, as a run that tried nothing.
 // example: settled(Err(nothing_said())).said.status == 0
 fn settled(answer: Result<Tried, Said>) -> Tried {
     match answer {
@@ -718,7 +620,6 @@ fn settled(answer: Result<Tried, Said>) -> Tried {
     }
 }
 
-/// The classes of `named` written somewhere of the run's own and started, and what that found.
 // example: is_refused(classes_held(Named { module: "main", classes: Err(Unusable("")) }, Run { source: "", stretches: [], examples: [], tests: [], module: lexer.Span { start: 0, length: 0 } }, Typed { module: modules.Module { name: "main", path: "main.bx", source: "", program: ast.Program { items: [] } }, inferred: types.checked_of("") }))
 fn classes_held(named: Named, run: Run, root: Typed) -> Result<Tried, Said> {
     let classes = refusing(named.classes, run, root)?
@@ -730,10 +631,6 @@ fn classes_held(named: Named, run: Run, root: Typed) -> Result<Tried, Said> {
     Ok(tried)
 }
 
-/// The file of each Java archive the package of `path` reaches, or the refusal of the first that
-/// is not held to its line, shown against the manifest that states it.
-///
-/// `docs/specs/packages.md` states the `jar` line, and `docs/specs/run.md` the class path.
 // example: list.length(ok_or(page_said(archives_of("no-such-directory/a.bx")), ["x"])) == 0
 fn archives_of(path: String) -> Result<List<String>, NotCompiled> {
     archive_said(archives.reached(modules.package_directory(path)))
@@ -747,7 +644,6 @@ fn target_of(path: String) -> String {
     modules.joined(modules.package_directory(path), "target")
 }
 
-/// The `java` of the JDK `JAVA_HOME` names, which is the only JVM a run ever reaches for.
 // example: ok_or(java_found(), "") != "java"
 fn java_found() -> Result<String, Said> {
     let home = or(environment.read("JAVA_HOME"), "")
@@ -761,10 +657,7 @@ fn java_found() -> Result<String, Said> {
     Ok(java)
 }
 
-/// The module `path` names, which is the name of its file without what follows the last dot.
-///
-/// A module class is named after the file, so a file whose name is not one a class may have
-/// leaves nothing to write: a JVM would refuse to load what came out.
+// The class takes the name of the file, and a JVM refuses to load a class with a bad name.
 // example: ok_or(named_module("a/b.bx"), "") == "b"
 // example: is_refused(named_module("a.b.bx"))
 fn named_module(path: String) -> Result<String, Said> {
@@ -775,7 +668,6 @@ fn named_module(path: String) -> Result<String, Said> {
     Ok(stem)
 }
 
-/// Whether `text` holds one of the code units `units` lists.
 // example: has_unit_of("a;b", [59])
 fn has_unit_of(text: String, units: List<Int>) -> Bool {
     var index = 0
@@ -788,11 +680,7 @@ fn has_unit_of(text: String, units: List<Int>) -> Bool {
     false
 }
 
-/// The class files of the modules of the run, checked as the run wrote them, lowered, and
-/// written, each module typed once.
-///
-/// The run stands where the module under test stands, and it is typed anew, because its text is
-/// not the text of that module. Every module it imports is taken from `memo` where it is there.
+// The run has the path of the module under test but not its text, so the run is typed again.
 // example: !is_refused(page_said(run_classes_once(Run { source: "", stretches: [], examples: [], tests: [], module: lexer.Span { start: 0, length: 0 } }, Typed { module: modules.Module { name: "main", path: "no-such-directory/main.bx", source: "", program: ast.Program { items: [] } }, inferred: types.checked_of("") }, ir.little_library(), no_memo()).found))
 fn run_classes_once(run: Run, root: Typed, library: ir.Library, memo: Memo) -> Memoed<List<jvm.ClassFile>> {
     let written = written_once(Page { source: run.source, path: root.module.path }, library, memo)
@@ -802,11 +690,8 @@ fn run_classes_once(run: Run, root: Typed, library: ir.Library, memo: Memo) -> M
     }
 }
 
-/// A refusal of the run, shown against the file a reader would go and change.
-///
-/// A refusal of the run's own module points into the module the compiler wrote, so it is put back
-/// into the file the author wrote first. One of a module the run imports points into that
-/// module's own file already, and is shown there.
+// A refusal of the run's own module points into text that the compiler wrote.
+// So this function moves it back to the file that the author wrote.
 // example: !is_refused(refusing(Ok(1), Run { source: "", stretches: [], examples: [], tests: [], module: lexer.Span { start: 0, length: 0 } }, Typed { module: modules.Module { name: "main", path: "main.bx", source: "", program: ast.Program { items: [] } }, inferred: types.checked_of("") }))
 fn refusing<T>(answer: Result<T, NotCompiled>, run: Run, root: Typed) -> Result<T, Said> {
     match answer {
@@ -815,7 +700,6 @@ fn refusing<T>(answer: Result<T, NotCompiled>, run: Run, root: Typed) -> Result<
     }
 }
 
-/// What a refusal of the run says, put back into the file of the module under test.
 // example: run_refused(Unusable("error: gone\n"), Run { source: "", stretches: [], examples: [], tests: [], module: lexer.Span { start: 0, length: 0 } }, Typed { module: modules.Module { name: "main", path: "main.bx", source: "", program: ast.Program { items: [] } }, inferred: types.checked_of("") }).status == 2
 fn run_refused(not: NotCompiled, run: Run, root: Typed) -> Said {
     match not {
@@ -824,7 +708,6 @@ fn run_refused(not: NotCompiled, run: Run, root: Typed) -> Said {
     }
 }
 
-/// The refusals of the run, each about the line in the file it was written from.
 // example: put_back(Refusal { diagnostics: [], page: Page { source: "", path: "b.bx" } }, Run { source: "", stretches: [], examples: [], tests: [], module: lexer.Span { start: 0, length: 0 } }, Typed { module: modules.Module { name: "main", path: "main.bx", source: "", program: ast.Program { items: [] } }, inferred: types.checked_of("") }).status == 1
 fn put_back(refused: Refusal, run: Run, root: Typed) -> Said {
     if refused.page.path != root.module.path {
@@ -837,7 +720,6 @@ fn put_back(refused: Refusal, run: Run, root: Typed) -> Said {
     refused_each(about, page_of(root))
 }
 
-/// The classes written into `beside.beside`, the run started there, and what it found.
 // example: ran_in(Beside { java: "no-such-java", module: "a", beside: "/dev/null/a", archives: [] }, [], Run { source: "", stretches: [], examples: [], tests: [], module: lexer.Span { start: 0, length: 0 } }, Typed { module: modules.Module { name: "main", path: "main.bx", source: "", program: ast.Program { items: [] } }, inferred: types.checked_of("") }).said.status == 2
 fn ran_in(beside: Beside, classes: List<jvm.ClassFile>, run: Run, root: Typed) -> Tried {
     match written_whole(classes, beside.beside) {
@@ -846,10 +728,6 @@ fn ran_in(beside: Beside, classes: List<jvm.ClassFile>, run: Run, root: Typed) -
     }
 }
 
-/// What the program `line` starts wrote, and the status it ended with, or why it never started.
-///
-/// The program reads the standard input of this process, as a program that `programs.run` starts
-/// does, and it starts with the environment that `cleared` leaves.
 // example: ok_or(program_finished(["no-such-program-at-all"]), programs.Finished { code: 9, output: "", errors: "" }).code == 9
 fn program_finished(line: List<String>) -> Result<programs.Finished, String> {
     let builder = programs.of_command(line)
@@ -861,11 +739,6 @@ fn program_finished(line: List<String>) -> Result<programs.Finished, String> {
     Ok(programs.Finished { code: code, output: output, errors: errors })
 }
 
-/// The line that starts a JVM on the class `module`, which `arguments` then follow.
-///
-/// `docs/specs/run.md` states each flag: the preview that a value class needs, no module outside
-/// `java.base`, and no class that a stream of serialized bytes names. The class path is `classes`
-/// and nothing else, in the order given: the one `target/` of the build, then each archive.
 // example: list.length(program_line(java: "java", classes: ["a"], module: "b", arguments: ["c"])) == 9
 // example: or(list.at(program_line(java: "java", classes: ["a"], module: "b", arguments: []), 4), "") == "-Djdk.serialFilter=!*"
 // example: or(list.at(program_line(java: "java", classes: ["target", "x.jar"], module: "b", arguments: []), 6), "") == "target:x.jar"
@@ -892,11 +765,8 @@ private fn line_of(java: String, flags: List<String>, classes: List<String>, mod
     all_of(values: guarded, more: all_of(values: ["-cp", strings.join(classes, ":"), module], more: arguments))
 }
 
-/// Removes from the environment of `builder` each variable that a JVM reads options from.
-///
-/// Each of the three can add a `-javaagent` to the program, and `docs/specs/run.md` states why.
-/// No other variable of the environment changes. The builder changes in place, and the caller
-/// keeps it: a foreign reference is never given back, which `docs/specs/interop.md` states.
+// Each of these variables can add a `-javaagent` to the program, which `docs/specs/run.md` refuses.
+// The builder changes in place, because a foreign reference is never given back.
 fn cleared(builder: programs.ProcessBuilder) -> () {
     let variables = programs.variables_of(builder)
     for name in injecting() {
@@ -904,17 +774,13 @@ fn cleared(builder: programs.ProcessBuilder) -> () {
     }
 }
 
-/// The variables of the environment that a JVM reads options from.
 // example: list.length(injecting()) == 3
 // example: or(list.at(injecting(), 0), "") == "JAVA_TOOL_OPTIONS"
 fn injecting() -> List<String> {
     ["JAVA_TOOL_OPTIONS", "JDK_JAVA_OPTIONS", "_JAVA_OPTIONS"]
 }
 
-/// Writes each class into the directory `into`, and beside the classes each resource the
-/// compiler reads, so a class path that holds the classes holds the resources too.
-///
-/// `docs/specs/run.md` states why: a program that calls the compiler reads its resources there.
+// A program that calls the compiler reads its resources from the class path, so they go there.
 // example: is_refused(written_whole([], "/dev/null/target"))
 fn written_whole(classes: List<jvm.ClassFile>, into: String) -> Result<(), Said> {
     _ = classes_written(classes, into)?
@@ -924,13 +790,11 @@ fn written_whole(classes: List<jvm.ClassFile>, into: String) -> Result<(), Said>
     Ok(())
 }
 
-/// The directories of resources that the compiler reads and a build copies beside its classes.
 // example: resource_names() == ["library", "help", "explanations"]
 fn resource_names() -> List<String> {
     ["library", "help", "explanations"]
 }
 
-/// The directory `name` that the compiler reads its resources from, or why there is none.
 // example: is_refused(resource_found("no/such/directory"))
 fn resource_found(name: String) -> Result<String, Said> {
     match modules.resource_directory(name) {
@@ -939,12 +803,8 @@ fn resource_found(name: String) -> Result<String, Said> {
     }
 }
 
-/// Makes the directory `into` hold each resource of the directory `from`, with the same name, and
-/// nothing more.
-///
-/// A file that an earlier copy wrote and `from` no longer holds is deleted, so no resource that
-/// the checkout took out stays readable. Where `from` is `into`, it holds the copy already. Only
-/// a resource is copied, so another file there, such as one a file manager wrote, stops no build.
+// The copy deletes a stale file, so a resource that the checkout removed does not stay readable.
+// It copies only resources, so another file, such as one of a file manager, stops no build.
 // example: is_refused(directory_copied(from: "no-such-directory", into: "/dev/null/resources"))
 // example: !is_refused(directory_copied(from: "src", into: "src/../src"))
 fn directory_copied(from: String, into: String) -> Result<(), Said> {
@@ -962,7 +822,6 @@ fn directory_copied(from: String, into: String) -> Result<(), Said> {
     Ok(())
 }
 
-/// Writes the text of the file `from` into the file `into`.
 // example: is_refused(file_copied(from: "no-such-directory/a.md", into: "/dev/null/a.md"))
 fn file_copied(from: String, into: String) -> Result<(), Said> {
     let text = text_or_said(from)?
@@ -972,7 +831,6 @@ fn file_copied(from: String, into: String) -> Result<(), Said> {
     Ok(())
 }
 
-/// Whether the file called `name` is one the compiler reads as a resource: a module or a page.
 // example: is_resource_name("list.bx")
 // example: is_resource_name("L0100.md")
 // example: !is_resource_name(".DS_Store")
@@ -983,14 +841,12 @@ fn is_resource_name(name: String) -> Bool {
     dot > 0 && (extension == "bx" || extension == "md")
 }
 
-/// Whether the paths `one` and `other` name the same place, however each is spelled.
 // example: is_same_place(one: "src", other: "src/../src")
 // example: !is_same_place(one: "src", other: "library")
 fn is_same_place(one: String, other: String) -> Bool {
     ok_or(files.canonical_path(files.named(one)), one) == ok_or(files.canonical_path(files.named(other)), other)
 }
 
-/// The name of each entry of the directory `path`, or why it could not be listed.
 // example: is_refused(listed_or_said("no-such-directory"))
 fn listed_or_said(path: String) -> Result<List<String>, Said> {
     match files.listed(path) {
@@ -999,7 +855,6 @@ fn listed_or_said(path: String) -> Result<List<String>, Said> {
     }
 }
 
-/// The text of the file at `path`, or why it could not be read.
 // example: is_refused(text_or_said("no-such-directory/a.md"))
 fn text_or_said(path: String) -> Result<String, Said> {
     match files.read(path) {
@@ -1008,7 +863,6 @@ fn text_or_said(path: String) -> Result<String, Said> {
     }
 }
 
-/// Writes each class into the directory `into`, at the path its name gives it there.
 // example: !is_refused(classes_written([], "no-such-directory"))
 fn classes_written(classes: List<jvm.ClassFile>, into: String) -> Result<(), Said> {
     for class in classes {
@@ -1021,7 +875,6 @@ fn classes_written(classes: List<jvm.ClassFile>, into: String) -> Result<(), Sai
     Ok(())
 }
 
-/// Makes the directory `path`, and each one above it that is missing, where it is not there.
 // example: !is_refused(folder_made("/"))
 fn folder_made(path: String) -> Result<(), Said> {
     if !files.is_directory(files.named(path)) && !files.has_made_all(files.named(path)) {
@@ -1030,7 +883,6 @@ fn folder_made(path: String) -> Result<(), Said> {
     Ok(())
 }
 
-/// Whether a write did not reach its file.
 // example: is_refused_write(Err("gone"))
 fn is_refused_write(answer: Result<String, String>) -> Bool {
     match answer {
@@ -1039,11 +891,7 @@ fn is_refused_write(answer: Result<String, String>) -> Bool {
     }
 }
 
-/// What the run wrote, read for every example and every test that did not hold, or why it could
-/// not be read.
-///
-/// A run that did not end with status 0 did not reach the end of what it tries, so what it wrote
-/// is passed on and the command cannot say whether they hold.
+// A run with a status other than 0 did not try each example, so its output goes on unchanged.
 // example: run_ended(Err("gone"), "java", Run { source: "", stretches: [], examples: [], tests: [], module: lexer.Span { start: 0, length: 0 } }, Typed { module: modules.Module { name: "main", path: "main.bx", source: "", program: ast.Program { items: [] } }, inferred: types.checked_of("") }).said.errors == "error: java: gone\n"
 fn run_ended(completion: Result<programs.Finished, String>, java: String, run: Run, root: Typed) -> Tried {
     match completion {
@@ -1052,10 +900,6 @@ fn run_ended(completion: Result<programs.Finished, String>, java: String, run: R
     }
 }
 
-/// Every example and every test the run wrote a line about, which is every one that did not hold.
-///
-/// An example that did not hold is refused as `L0603`, where it is written. A test that did not
-/// hold is one line that names its module, its line, and its name, after every refusal.
 // example: finished_read(programs.Finished { code: 1, output: "", errors: "boom\n" }, Run { source: "", stretches: [], examples: [], tests: [], module: lexer.Span { start: 0, length: 0 } }, Typed { module: modules.Module { name: "main", path: "main.bx", source: "", program: ast.Program { items: [] } }, inferred: types.checked_of("") }).said.errors == "boom\n"
 fn finished_read(finished: programs.Finished, run: Run, root: Typed) -> Tried {
     if finished.code != 0 {
@@ -1104,20 +948,17 @@ fn is_a_mark(line: String) -> Bool {
     or(marked_ordinal(line: line, marker: "bux: example "), -1) >= 0 || or(marked_ordinal(line: line, marker: "bux: test "), -1) >= 0
 }
 
-/// `said`, as a run that tried nothing.
 // example: only_said(nothing_said()).failed == 0
 fn only_said(said: Said) -> Tried {
     Tried { said: said, tests: 0, examples: 0, failed: 0 }
 }
 
-/// The line that says a test did not hold: the module, the line of the test, and its name.
 // example: test_failed(ast.TestDeclaration { name: ast.Name { text: "a", span: lexer.Span { start: 7, length: 3 } }, body: ast.Block { statements: [], span: lexer.Span { start: 11, length: 2 } }, span: lexer.Span { start: 2, length: 11 } }, Page { source: "\n\ntest \"a\" {}", path: "b.bx" }) == "b.bx:3: test \"a\" did not hold\n"
 fn test_failed(stated: ast.TestDeclaration, page: Page) -> String {
     let place = place_of(stated.span, measured_of(page.source))
     page.path + ":" + shown(place.line) + ": test " + ast.quoted(stated.name.text) + " did not hold\n"
 }
 
-/// Every line of `text`, each without its line break.
 // example: list.length(lines_of("a\nb\n")) == 2
 fn lines_of(text: String) -> List<String> {
     var lines = []
@@ -1136,10 +977,8 @@ fn lines_of(text: String) -> List<String> {
     lines
 }
 
-/// A directory made for one run, which nothing else holds.
-///
-/// It is made here rather than found, so a run never opens one that was already there: the
-/// temporary directory is shared, and what a run writes into it is deleted whole.
+// The temporary directory is shared, and a run deletes its own directory whole.
+// So a run makes a new directory and never uses one that was there before.
 // example: !is_refused(somewhere_of_its_own())
 fn somewhere_of_its_own() -> Result<String, Said> {
     let shared = or(environment.read("TMPDIR"), "/tmp")
@@ -1155,7 +994,6 @@ fn somewhere_of_its_own() -> Result<String, Said> {
     Err(unusable(shared + ": nowhere to write the classes a run starts"))
 }
 
-/// Deletes `path` and everything it holds.
 fn removed_whole(path: String) -> () {
     if files.is_directory(files.named(path)) {
         for name in ok_or(files.listed(path), []) {
@@ -1165,7 +1003,6 @@ fn removed_whole(path: String) -> () {
     _ = files.removed(path)
 }
 
-/// Prints every name `path` declares at the top level, with the type it has.
 // example: surface_said("no-such-directory/a.bx", ir.little_library()).status == 2
 fn surface_said(path: String, library: ir.Library) -> Said {
     match checked(path, library) {
@@ -1174,7 +1011,6 @@ fn surface_said(path: String, library: ir.Library) -> Said {
     }
 }
 
-/// Prints what one diagnostic code means, at more length than its `help:` line has room for.
 // example: explained("L9999").status == 2
 fn explained(code: String) -> Said {
     match explanation_of(code) {
@@ -1183,9 +1019,7 @@ fn explained(code: String) -> Said {
     }
 }
 
-/// The long form of `code`, which the compiler carries as a resource, and `None` for no code.
-///
-/// A code is `L` and four digits, so no text reaches a resource other than an explanation.
+// Only `L` and four digits is a code, so no other text can reach a resource.
 // example: or(explanation_of("../x"), "none") == "none"
 fn explanation_of(code: String) -> Option<String> {
     if !is_code_shaped(code) {
@@ -1194,7 +1028,6 @@ fn explanation_of(code: String) -> Option<String> {
     modules.resource_text("explanations/" + code + ".md")
 }
 
-/// Whether `code` is written as a code is: `L` and four digits.
 // example: is_code_shaped("L0100")
 // example: !is_code_shaped("L01")
 fn is_code_shaped(code: String) -> Bool {
@@ -1211,7 +1044,6 @@ fn is_code_shaped(code: String) -> Bool {
     true
 }
 
-/// What a refusal of compiling says, as a page for a reader or as data for a tool.
 // example: not_compiled_said(Unusable("error: gone\n"), AsPage).errors == "error: gone\n"
 fn not_compiled_said(not: NotCompiled, form: Form) -> Said {
     match not {
@@ -1220,9 +1052,7 @@ fn not_compiled_said(not: NotCompiled, form: Form) -> Said {
     }
 }
 
-/// A refusal shown in `form`: every diagnostic as a page, or the first as one line of JSON.
-///
-/// Checking stops at the first refusal, so with `--json` there is the one to write.
+// A check stops at the first refusal, so `--json` has only one diagnostic to write.
 // example: refused_in_form(Refusal { diagnostics: [], page: Page { source: "", path: "a.bx" } }, AsData).status == 1
 fn refused_in_form(refused: Refusal, form: Form) -> Said {
     match form {
@@ -1231,7 +1061,6 @@ fn refused_in_form(refused: Refusal, form: Form) -> Said {
     }
 }
 
-/// The first diagnostic of `refused`, as JSON.
 // example: first_as_data(Refusal { diagnostics: [], page: Page { source: "", path: "a.bx" } }) == ""
 fn first_as_data(refused: Refusal) -> String {
     match list.at(refused.diagnostics, 0) {
@@ -1240,9 +1069,7 @@ fn first_as_data(refused: Refusal) -> String {
     }
 }
 
-/// Refuses every one rather than the first, because a build is how a reader learns what is left.
-///
-/// The blank line between two blocks is what keeps them two blocks.
+// A build refuses each diagnostic, not only the first, because a build tells a reader what is left.
 // example: refused_each([], Page { source: "", path: "a.bx" }).status == 1
 fn refused_each(diagnostics: List<Diagnostic>, page: Page) -> Said {
     var errors = ""
@@ -1255,40 +1082,28 @@ fn refused_each(diagnostics: List<Diagnostic>, page: Page) -> Said {
     Said { output: "", errors: errors, status: 1 }
 }
 
-/// Nothing said, and status 0.
 // example: nothing_said().output == ""
 fn nothing_said() -> Said {
     Said { output: "", errors: "", status: 0 }
 }
 
-/// One line on standard error, and the status of a command that could not do its job at all.
 // example: unusable("gone").errors == "error: gone\n"
 fn unusable(line: String) -> Said {
     Said { output: "", errors: "error: " + line + "\n", status: 2 }
 }
 
-/// The program at `path` and every module it reaches, each held to everything a check holds.
-///
-/// Each module is held to canonical form, then resolved, typed, and checked for exhaustiveness, in
-/// the order they load, so a module is checked after everything it imports.
 // example: is_refused(page_said(checked("no-such-directory/a.bx", ir.little_library())))
 fn checked(path: String, library: ir.Library) -> Result<Checked, NotCompiled> {
     checked_once(path, library, no_memo()).found
 }
 
-/// The program at `path`, checked as `checked` checks it, with each module typed once.
-///
-/// A module that `memo` holds is not typed again, and each module typed here is added to it. A
-/// caller that hands the memo on from one call to the next types each module once, and
-/// `tests/documented.bx` does so. A command starts with an empty memo, so what it says never
-/// depends on one.
+// A command starts with an empty memo, so what a command says never depends on a memo.
 // example: is_refused(page_said(checked_once("no-such-directory/a.bx", ir.little_library(), no_memo()).found))
 fn checked_once(path: String, library: ir.Library, memo: Memo) -> Memoed<Checked> {
     let found = loaded_checked(path, library, memo)
     Memoed { found: found, memo: remembered(memo: memo, found: found, form: ToCanonicalForm) }
 }
 
-/// The program at `path`, loaded, and each of its modules accepted or taken from `memo`.
 // example: is_refused(page_said(loaded_checked("no-such-directory/a.bx", ir.little_library(), no_memo())))
 fn loaded_checked(path: String, library: ir.Library, memo: Memo) -> Result<Checked, NotCompiled> {
     let loaded = loaded_or_refused(modules.load(path))?
@@ -1296,24 +1111,18 @@ fn loaded_checked(path: String, library: ir.Library, memo: Memo) -> Result<Check
     each_accepted(loaded, Accepting { imported: surface.nothing_imported(), form: ToCanonicalForm, archived: archived }, library, memo)
 }
 
-/// The modules `page.source` reaches, as though it were the file at `page.path`, each checked.
-///
-/// `bux test` writes a module out of the module under test, and that module is compiled as it
-/// was written: it is held to everything but canonical form, which the run does not keep.
+// The written module is not in canonical form, so it is held to each rule except canonical form.
 // example: !is_refused(page_said(checked_as_written(Page { source: "fn one() -> Int {\n    1\n}\n", path: "no-such-directory/main.bx" }, ir.little_library())))
 fn checked_as_written(page: Page, library: ir.Library) -> Result<Checked, NotCompiled> {
     written_once(page, library, no_memo()).found
 }
 
-/// The modules `page.source` reaches, checked as `checked_as_written` checks them, with each
-/// module but the one written typed once.
 // example: !is_refused(page_said(written_once(Page { source: "fn one() -> Int {\n    1\n}\n", path: "no-such-directory/main.bx" }, ir.little_library(), no_memo()).found))
 fn written_once(page: Page, library: ir.Library, memo: Memo) -> Memoed<Checked> {
     let found = loaded_written(page, library, memo)
     Memoed { found: found, memo: remembered(memo: memo, found: found, form: AsWritten) }
 }
 
-/// The modules `page.source` reaches, loaded, and each accepted or taken from `memo`.
 // example: !is_refused(page_said(loaded_written(Page { source: "fn one() -> Int {\n    1\n}\n", path: "no-such-directory/main.bx" }, ir.little_library(), no_memo())))
 fn loaded_written(page: Page, library: ir.Library, memo: Memo) -> Result<Checked, NotCompiled> {
     let loaded = loaded_or_refused(modules.load_written(page.source, page.path))?
@@ -1321,10 +1130,6 @@ fn loaded_written(page: Page, library: ir.Library, memo: Memo) -> Result<Checked
     each_accepted(loaded, Accepting { imported: surface.nothing_imported(), form: AsWritten, archived: archived }, library, memo)
 }
 
-/// Each class that an `extern` of `loaded` names outside the list, where an archive the package
-/// of `path` reaches holds it, which `docs/specs/interop.md` states.
-///
-/// A program that names no such class opens no archive here.
 // example: set.has_value(ok_or(archived_of("no-such-directory/a.bx", []), set.insert(set.empty(), "x")), "x") == false
 fn archived_of(path: String, loaded: List<modules.Module>) -> Result<set.Set<String>, NotCompiled> {
     var named = []
@@ -1336,8 +1141,6 @@ fn archived_of(path: String, loaded: List<modules.Module>) -> Result<set.Set<Str
     archive_said(archives.classes_held(modules.package_directory(path), named))
 }
 
-/// What the archives of a package gave, or the refusal of the first that is not held to its line,
-/// shown against the manifest that states it.
 // example: list.length(ok_or(archive_said(Ok([])), ["x"])) == 0
 fn archive_said<T>(answer: Result<T, archives.Unreached>) -> Result<T, NotCompiled> {
     match answer {
@@ -1347,14 +1150,11 @@ fn archive_said<T>(answer: Result<T, archives.Unreached>) -> Result<T, NotCompil
     }
 }
 
-/// A refusal of an archive as the diagnostic the reader is shown.
 // example: archive_diagnostic(archives.ArchiveError { kind: archives.Missing("x.jar"), span: lexer.Span { start: 0, length: 1 } }).code == "L0606"
 fn archive_diagnostic(error: archives.ArchiveError) -> Diagnostic {
     Diagnostic { code: archives.code_of(error.kind), message: archives.message(error.kind), span: error.span, help: help_written(archives.help_of(error.kind)), fix: None }
 }
 
-/// Every module of `loaded` accepted in turn, or taken from `memo`, the last of them held to the
-/// form `root` gives, with what `root` says is imported before the first.
 // example: is_refused(page_said(each_accepted([], Accepting { imported: surface.nothing_imported(), form: ToCanonicalForm, archived: set.empty() }, ir.little_library(), no_memo())))
 fn each_accepted(loaded: List<modules.Module>, root: Accepting, library: ir.Library, memo: Memo) -> Result<Checked, NotCompiled> {
     var imported = root.imported
@@ -1373,7 +1173,6 @@ fn each_accepted(loaded: List<modules.Module>, root: Accepting, library: ir.Libr
     rooted(typed)
 }
 
-/// The modules checked, with the last of them, which is the one the command named, as the root.
 // example: is_refused(page_said(rooted([])))
 fn rooted(typed: List<Typed>) -> Result<Checked, NotCompiled> {
     match list.at(typed, list.length(typed) - 1) {
@@ -1382,7 +1181,6 @@ fn rooted(typed: List<Typed>) -> Result<Checked, NotCompiled> {
     }
 }
 
-/// `answer`, with a refusal of it said about the file of `module`.
 // example: is_refused(page_said(refused_in(Err(no_diagnostic()), modules.Module { name: "main", path: "main.bx", source: "", program: ast.Program { items: [] } })))
 fn refused_in<T>(answer: Result<T, Diagnostic>, module: modules.Module) -> Result<T, NotCompiled> {
     match answer {
@@ -1391,7 +1189,6 @@ fn refused_in<T>(answer: Result<T, Diagnostic>, module: modules.Module) -> Resul
     }
 }
 
-/// The modules a load found, or why it found none: a file not read, or a refusal of one that was.
 // example: is_refused(page_said(loaded_or_refused(Err(modules.Unreadable { path: "no-such-directory/a.bx", why: "" }))))
 fn loaded_or_refused(answer: Result<List<modules.Module>, modules.NotLoaded>) -> Result<List<modules.Module>, NotCompiled> {
     match answer {
@@ -1400,10 +1197,6 @@ fn loaded_or_refused(answer: Result<List<modules.Module>, modules.NotLoaded>) ->
     }
 }
 
-/// What a load that stopped says: the file it could not read, or the refusal of one it read.
-///
-/// The reason a file could not be read is the one the Rust compiler gave, found by looking at
-/// the path, because the JVM says it in words of its own.
 // example: not_compiled_said(not_loaded(modules.Unreadable { path: "no-such-directory/a.bx", why: "" }), AsPage).errors == "error: no-such-directory/a.bx: No such file or directory (os error 2)\n"
 fn not_loaded(not: modules.NotLoaded) -> NotCompiled {
     match not {
@@ -1413,10 +1206,7 @@ fn not_loaded(not: modules.NotLoaded) -> NotCompiled {
     }
 }
 
-/// One module accepted, or the inference `typing.memo` holds of it already.
-///
-/// Only a module held to canonical form is looked up, because only such a module is remembered.
-/// The inference is taken only where the text is the text that was typed.
+// Only a module in canonical form is in the memo, and an inference is used only for the same text.
 // example: code_refused(accepted_once(modules.Module { name: "main", path: "main.bx", source: "fn (", program: ast.Program { items: [] } }, Accepting { imported: surface.nothing_imported(), form: AsWritten, archived: set.empty() }, Typing { library: ir.little_library(), memo: no_memo() })) == ""
 fn accepted_once(module: modules.Module, accepting: Accepting, typing: Typing) -> Result<infer.Inference, Diagnostic> {
     var found = None
@@ -1433,7 +1223,6 @@ fn accepted_once(module: modules.Module, accepting: Accepting, typing: Typing) -
     }
 }
 
-/// One module held to `accepting.form`, then resolved, typed, and checked for exhaustiveness.
 // example: code_refused(accepted(modules.Module { name: "main", path: "main.bx", source: "fn (", program: ast.Program { items: [] } }, Accepting { imported: surface.nothing_imported(), form: ToCanonicalForm, archived: set.empty() }, ir.little_library())) == "L0100"
 fn accepted(module: modules.Module, accepting: Accepting, library: ir.Library) -> Result<infer.Inference, Diagnostic> {
     if accepting.form == ToCanonicalForm {
@@ -1445,10 +1234,7 @@ fn accepted(module: modules.Module, accepting: Accepting, library: ir.Library) -
     Ok(inferred)
 }
 
-/// `module`, resolved, where a module name that an example writes before a dot reads its import.
-///
-/// Only an unread import is an answer that the examples can change, and the source is lexed once
-/// more to find them, so that is done only where the first answer is an unread import.
+// Only an unread import can change because of the examples, so the second lex is only for it.
 // example: resolver.answer_printed(resolved_in(modules.Module { name: "main", path: "main.bx", source: "import io\n\n// example: io.shown(1) == \"1\"\nfn f() -> Int {\n    1\n}\n", program: ok_or(parser.parse("import io\n"), ast.Program { items: [] }) }, ir.little_library().prelude.names)) == "resolved\n7..9 value module declared 7..9\n"
 fn resolved_in(module: modules.Module, names: resolver.Prelude) -> Result<resolver.Resolved, resolver.ResolveError> {
     match resolver.resolve(module.program, module.name, names, set.empty()) {
@@ -1461,9 +1247,7 @@ fn resolved_in(module: modules.Module, names: resolver.Prelude) -> Result<resolv
     }
 }
 
-/// Each module name an example of `source` writes before a dot.
-///
-/// An example is compiled in the module's scope with the module's imports, so it reads them.
+// An example compiles in the scope of the module, so an import that only an example uses is read.
 // example: set.has_value(examples_read("// example: list.length([]) == 0\n"), "list")
 // example: set.has_value(examples_read("// list.length([]) == 0\n"), "list") == false
 fn examples_read(source: String) -> set.Set<String> {
@@ -1474,7 +1258,6 @@ fn examples_read(source: String) -> set.Set<String> {
     read
 }
 
-/// The code a refusal carries, and `""` where there is none.
 // example: code_refused(Err(no_diagnostic())) == "L0000"
 private fn code_refused<T>(answer: Result<T, Diagnostic>) -> String {
     match answer {
@@ -1483,7 +1266,6 @@ private fn code_refused<T>(answer: Result<T, Diagnostic>) -> String {
     }
 }
 
-/// Nothing where `source` is in canonical form, and the first thing about it that is not otherwise.
 // example: code_refused(in_canonical_form("import files\n\nimport io\n")) == "L0200"
 fn in_canonical_form(source: String) -> Result<(), Diagnostic> {
     match format.check(source) {
@@ -1492,7 +1274,6 @@ fn in_canonical_form(source: String) -> Result<(), Diagnostic> {
     }
 }
 
-/// The program resolved, or the refusal of resolving it.
 // example: code_refused(resolved_of(resolver.resolve(ast.Program { items: [] }, "main", types.little_prelude().names, set.empty()))) == ""
 fn resolved_of(answer: Result<resolver.Resolved, resolver.ResolveError>) -> Result<resolver.Resolved, Diagnostic> {
     match answer {
@@ -1501,7 +1282,6 @@ fn resolved_of(answer: Result<resolver.Resolved, resolver.ResolveError>) -> Resu
     }
 }
 
-/// The program typed, or the refusal of typing it.
 // example: code_refused(inferred_of(Ok(types.checked_of("")))) == ""
 fn inferred_of(answer: Result<infer.Inference, refusal.TypeError>) -> Result<infer.Inference, Diagnostic> {
     match answer {
@@ -1510,7 +1290,6 @@ fn inferred_of(answer: Result<infer.Inference, refusal.TypeError>) -> Result<inf
     }
 }
 
-/// Nothing where every `match` answers for every value, or the refusal of the first that does not.
 // example: code_refused(exhaustive(Ok(()))) == ""
 fn exhaustive(answer: Result<(), exhaustiveness.MatchError>) -> Result<(), Diagnostic> {
     match answer {
@@ -1519,28 +1298,22 @@ fn exhaustive(answer: Result<(), exhaustiveness.MatchError>) -> Result<(), Diagn
     }
 }
 
-/// A parse error as the diagnostic the reader is shown.
 // example: parse_diagnostic(parser.ParseError { kind: parser.ChainedComparison, span: lexer.Span { start: 0, length: 1 } }).code == "L0105"
 fn parse_diagnostic(error: parser.ParseError) -> Diagnostic {
     Diagnostic { code: parser.code_of(error.kind), message: parser.message(error.kind), span: error.span, help: help_written(parser.help_of(error.kind)), fix: None }
 }
 
-/// A refusal of loading as the diagnostic the reader is shown.
 // example: load_diagnostic(modules.LoadError { kind: modules.Ring(["main"]), span: lexer.Span { start: 0, length: 1 } }).code == "L0307"
 fn load_diagnostic(error: modules.LoadError) -> Diagnostic {
     Diagnostic { code: modules.code_of(error.kind), message: modules.message(error.kind), span: error.span, help: help_written(modules.help_of(error.kind)), fix: None }
 }
 
-/// A refusal of canonical form as the diagnostic the reader is shown, with its edit.
-///
-/// The one refusal that carries an edit is a file that departs from canonical form, because the
-/// compiler knows the answer: the canonical text, in place of the whole file.
+// Only a refusal of canonical form carries an edit, because only there the compiler knows the fix.
 // example: is_fixed(check_diagnostic(format.NotCanonical { deviation: format.Ending(lexer.Span { start: 0, length: 1 }), canonical: "a\n" }, "a"))
 fn check_diagnostic(refused: format.CheckError, source: String) -> Diagnostic {
     Diagnostic { code: format.code_of(refused), message: format.message_of(refused), span: format.span_of(refused), help: help_written(format.help_of(refused)), fix: fix_of(refused, source) }
 }
 
-/// Whether a diagnostic carries an edit.
 // example: !is_fixed(no_diagnostic())
 private fn is_fixed(diagnostic: Diagnostic) -> Bool {
     match diagnostic.fix {
@@ -1549,7 +1322,6 @@ private fn is_fixed(diagnostic: Diagnostic) -> Bool {
     }
 }
 
-/// The edit that answers `refused`, where there is one: the canonical text for the whole file.
 // example: is_fixed(Diagnostic { code: "", message: "", span: lexer.Span { start: 0, length: 0 }, help: None, fix: fix_of(format.NotCanonical { deviation: format.ExtraLine(lexer.Span { start: 0, length: 1 }), canonical: "a\n" }, "a") })
 fn fix_of(refused: format.CheckError, source: String) -> Option<Fix> {
     match refused {
@@ -1558,7 +1330,6 @@ fn fix_of(refused: format.CheckError, source: String) -> Option<Fix> {
     }
 }
 
-/// The `help:` line of a diagnostic, and `None` where the phase that refused has none to give.
 // example: !is_stated(help_written(""))
 fn help_written(help: String) -> Option<String> {
     if help == "" {
@@ -1567,7 +1338,6 @@ fn help_written(help: String) -> Option<String> {
     Some(help)
 }
 
-/// Every module of `program` lowered as `lowered_once` lowers it, then written as class files.
 // example: list.length(ok_or(classes_once(Checked { modules: [], root: Typed { module: modules.Module { name: "main", path: "main.bx", source: "", program: ast.Program { items: [] } }, inferred: types.checked_of("") } }, ir.little_library(), no_memo()).found, [])) > 0
 fn classes_once(program: Checked, library: ir.Library, memo: Memo) -> Memoed<List<jvm.ClassFile>> {
     let lowered = lowered_once(program, library, memo)
@@ -1577,18 +1347,12 @@ fn classes_once(program: Checked, library: ir.Library, memo: Memo) -> Memoed<Lis
     }
 }
 
-/// Every module of `program` checked for holes and examples, root first, then lowered.
-///
-/// A build refuses a hole, and it refuses a function that states no example and an example that
-/// documents nothing. Each is refused whole, every hole or every example of one module, because a
-/// build is how a reader learns what is left. Lowering refuses nothing.
+// A build refuses each hole and each example of a module, because a build tells what is left.
 // example: list.length(ok_or(lowered_of(Checked { modules: [], root: Typed { module: modules.Module { name: "main", path: "main.bx", source: "", program: ast.Program { items: [] } }, inferred: types.checked_of("") } }, ir.little_library()), [])) == 1
 fn lowered_of(program: Checked, library: ir.Library) -> Result<List<ir.Lowered>, NotCompiled> {
     lowered_once(program, library, no_memo()).found
 }
 
-/// Every module of `program` checked for holes and examples, as `lowered_of` checks them, then
-/// lowered, with each module that `memo` found whole already not checked again.
 // example: list.length(ok_or(lowered_once(Checked { modules: [], root: Typed { module: modules.Module { name: "main", path: "main.bx", source: "", program: ast.Program { items: [] } }, inferred: types.checked_of("") } }, ir.little_library(), no_memo()).found, [])) == 1
 fn lowered_once(program: Checked, library: ir.Library, memo: Memo) -> Memoed<List<ir.Lowered>> {
     match each_whole(program.modules, memo) {
@@ -1597,11 +1361,7 @@ fn lowered_once(program: Checked, library: ir.Library, memo: Memo) -> Memoed<Lis
     }
 }
 
-/// `memo` with every module of `typed` found whole, root first, or the refusal of the first
-/// that is not.
-///
-/// A module is marked whole only where `memo` holds it with the same text. A run stands at the
-/// path of the module it tests, and its text is not that module's, so it is never marked.
+// A run has the path of the module under test but not its text, so a run is never marked whole.
 // example: !is_refused(page_said(each_whole([], no_memo())))
 fn each_whole(typed: List<Typed>, memo: Memo) -> Result<Memo, NotCompiled> {
     var kept = memo
@@ -1616,13 +1376,11 @@ fn each_whole(typed: List<Typed>, memo: Memo) -> Result<Memo, NotCompiled> {
     Ok(kept)
 }
 
-/// Whether `memo` found the module `one` whole already, which it did only for the same text.
 // example: !is_whole_already(Typed { module: modules.Module { name: "main", path: "main.bx", source: "", program: ast.Program { items: [] } }, inferred: types.checked_of("") }, no_memo())
 fn is_whole_already(one: Typed, memo: Memo) -> Bool {
     is_remembered_as(one, memo) && set.has_value(memo.whole, key_of(one.module))
 }
 
-/// Whether `memo` holds the module `one` with the text `one` has.
 // example: !is_remembered_as(Typed { module: modules.Module { name: "main", path: "main.bx", source: "", program: ast.Program { items: [] } }, inferred: types.checked_of("") }, no_memo())
 fn is_remembered_as(one: Typed, memo: Memo) -> Bool {
     match map.get(memo.typed, key_of(one.module)) {
@@ -1631,7 +1389,6 @@ fn is_remembered_as(one: Typed, memo: Memo) -> Bool {
     }
 }
 
-/// Every module of `program` lowered, as the passes of the lowering lower a whole program.
 // example: list.length(passes_of(Checked { modules: [], root: Typed { module: modules.Module { name: "main", path: "main.bx", source: "", program: ast.Program { items: [] } }, inferred: types.checked_of("") } }, ir.little_library())) == 1
 fn passes_of(program: Checked, library: ir.Library) -> List<ir.Lowered> {
     var typed = []
@@ -1641,15 +1398,12 @@ fn passes_of(program: Checked, library: ir.Library) -> List<ir.Lowered> {
     ir.passes_lowered(typed, library)
 }
 
-/// A memo that holds no module, which is where every command starts.
 // example: !set.has_value(no_memo().whole, "main.bx")
 fn no_memo() -> Memo {
     Memo { typed: map.empty(), whole: set.empty() }
 }
 
-/// `memo` with every module of `found` that is typed as a file is typed, where `found` is a program.
-///
-/// A root held only to what it was written as is not the file at its path, so it is not remembered.
+// A root checked only as written is not the file at its path, so the memo does not keep it.
 // example: !is_typed(remembered(memo: no_memo(), found: Err(Unusable("")), form: ToCanonicalForm), "main.bx")
 fn remembered(memo: Memo, found: Result<Checked, NotCompiled>, form: RootForm) -> Memo {
     match found {
@@ -1658,9 +1412,7 @@ fn remembered(memo: Memo, found: Result<Checked, NotCompiled>, form: RootForm) -
     }
 }
 
-/// `memo` with every module of `program`, and its root only where the root is in canonical form.
-///
-/// A module `memo` holds already keeps the text it was typed from, so a mark of `whole` stays true.
+// A module in the memo keeps the text it was typed from, so a mark of `whole` stays true.
 // example: !is_typed(each_remembered(memo: no_memo(), program: Checked { modules: [], root: Typed { module: modules.Module { name: "main", path: "main.bx", source: "", program: ast.Program { items: [] } }, inferred: types.checked_of("") } }, form: AsWritten), "main.bx")
 fn each_remembered(memo: Memo, program: Checked, form: RootForm) -> Memo {
     var kept = memo
@@ -1674,13 +1426,11 @@ fn each_remembered(memo: Memo, program: Checked, form: RootForm) -> Memo {
     kept
 }
 
-/// The key a module is remembered under: the canonical path of its file.
 // example: key_of(modules.Module { name: "main", path: "no-such-directory/../main.bx", source: "", program: ast.Program { items: [] } }) != "no-such-directory/../main.bx"
 fn key_of(module: modules.Module) -> String {
     modules.route_to(module.path).found
 }
 
-/// Whether `memo` holds a module typed from the file at `path`.
 // example: !is_typed(no_memo(), "main.bx")
 fn is_typed(memo: Memo, path: String) -> Bool {
     match map.get(memo.typed, modules.route_to(path).found) {
@@ -1689,7 +1439,6 @@ fn is_typed(memo: Memo, path: String) -> Bool {
     }
 }
 
-/// The class files of `lowered`, or the refusal of the writer, shown in the module it is about.
 // example: !is_refused(page_said(written_of([], Checked { modules: [], root: Typed { module: modules.Module { name: "main", path: "main.bx", source: "", program: ast.Program { items: [] } }, inferred: types.checked_of("") } })))
 fn written_of(lowered: List<ir.Lowered>, program: Checked) -> Result<List<jvm.ClassFile>, NotCompiled> {
     match jvm.program_written(lowered) {
@@ -1698,10 +1447,6 @@ fn written_of(lowered: List<ir.Lowered>, program: Checked) -> Result<List<jvm.Cl
     }
 }
 
-/// A class the writer did not write, as a refusal of the module whose class it is.
-///
-/// It points at the function the method is written for, where the module declares one of that
-/// name, and at the start of the module otherwise. A class of the prelude is shown in the root.
 // example: first_of(unwritten_refused(jvm.Unwritten { class: "main", method: Some("f"), why: jvm.TooLarge }, Checked { modules: [], root: Typed { module: modules.Module { name: "main", path: "main.bx", source: "", program: ast.Program { items: [] } }, inferred: types.checked_of("") } })).code == "L0700"
 fn unwritten_refused(unwritten: jvm.Unwritten, program: Checked) -> Refusal {
     let one = owning(program, unwritten.class)
@@ -1709,10 +1454,7 @@ fn unwritten_refused(unwritten: jvm.Unwritten, program: Checked) -> Refusal {
     Refusal { diagnostics: [diagnostic], page: page_of(one) }
 }
 
-/// The module of `program` whose class `class` is, which is the root where no module is.
-///
-/// Where two modules have that name, it is the one loaded last, which is the program's own
-/// where the other is a module the library carries.
+// Where two modules have the name, the last loaded wins, because it is the program's own module.
 // example: owning(Checked { modules: [], root: Typed { module: modules.Module { name: "main", path: "main.bx", source: "", program: ast.Program { items: [] } }, inferred: types.checked_of("") } }, "demo/Box").module.name == "main"
 fn owning(program: Checked, class: String) -> Typed {
     var owner = program.root
@@ -1724,7 +1466,6 @@ fn owning(program: Checked, class: String) -> Typed {
     owner
 }
 
-/// The span of the name of the function `named` that `one` declares, or the start of the module.
 // example: declared_span(Typed { module: modules.Module { name: "main", path: "main.bx", source: "", program: ast.Program { items: [] } }, inferred: types.checked_of("") }, "f").length == 0
 fn declared_span(one: Typed, named: String) -> lexer.Span {
     for function in infer.functions_of(one.module.program) {
@@ -1735,13 +1476,11 @@ fn declared_span(one: Typed, named: String) -> lexer.Span {
     lexer.Span { start: 0, length: 0 }
 }
 
-/// The first diagnostic of `refused`, which a refusal of the writer holds one of.
 // example: first_of(Refusal { diagnostics: [], page: Page { source: "", path: "a.bx" } }).code == ""
 private fn first_of(refused: Refusal) -> Diagnostic {
     or(list.at(refused.diagnostics, 0), Diagnostic { code: "", message: "", span: lexer.Span { start: 0, length: 0 }, help: None, fix: None })
 }
 
-/// Nothing where `one` holds no hole and states an example for each function, else every refusal.
 // example: !is_refused(page_said(whole(Typed { module: modules.Module { name: "main", path: "main.bx", source: "", program: ast.Program { items: [] } }, inferred: types.checked_of("") })))
 fn whole(one: Typed) -> Result<(), NotCompiled> {
     let page = page_of(one)
@@ -1755,13 +1494,11 @@ fn whole(one: Typed) -> Result<(), NotCompiled> {
     }
 }
 
-/// The page a module is shown on: its source, and the path of its file.
 // example: page_of(Typed { module: modules.Module { name: "main", path: "main.bx", source: "", program: ast.Program { items: [] } }, inferred: types.checked_of("") }).path == "main.bx"
 fn page_of(one: Typed) -> Page {
     Page { source: one.module.source, path: one.module.path }
 }
 
-/// Each hole as the diagnostic the reader is shown.
 // example: list.length(holes_refused([holes.Hole { span: lexer.Span { start: 0, length: 1 } }])) == 1
 fn holes_refused(found: List<holes.Hole>) -> List<Diagnostic> {
     var refusals = []
@@ -1771,11 +1508,6 @@ fn holes_refused(found: List<holes.Hole>) -> List<Diagnostic> {
     refusals
 }
 
-/// Every example `source` states, or every refusal of how it states them, in the order written.
-///
-/// `docs/specs/doc-examples.md` states the rules. A public function other than `main` whose result
-/// is not `()` states at least one example, and every example is in the comment above a function.
-/// A `private` function may state examples, and a run holds them as any other.
 // example: list.length(ok_or(stated_by("private fn f() -> Int {\n    1\n}\n", ok_or(parser.parse("private fn f() -> Int {\n    1\n}\n"), ast.Program { items: [] })), [Example { of: "", expression: "", span: lexer.Span { start: 0, length: 0 } }])) == 0
 // example: list.length(ok_or(stated_by("", ast.Program { items: [] }), [])) == 0
 fn stated_by(source: String, program: ast.Program) -> Result<List<Example>, List<Diagnostic>> {
@@ -1796,7 +1528,6 @@ fn stated_by(source: String, program: ast.Program) -> Result<List<Example>, List
     Ok(stated)
 }
 
-/// `values`, then every value of `more`.
 // example: list.length(all_of(values: [1], more: [2, 3])) == 3
 fn all_of<T>(values: List<T>, more: List<T>) -> List<T> {
     var joined = values
@@ -1806,7 +1537,6 @@ fn all_of<T>(values: List<T>, more: List<T>) -> List<T> {
     joined
 }
 
-/// The refusals of both lists, in the order of where they start, the first list first on a tie.
 // example: list.length(in_order(first: [no_diagnostic()], second: [no_diagnostic()])) == 2
 fn in_order(first: List<Diagnostic>, second: List<Diagnostic>) -> List<Diagnostic> {
     var merged = []
@@ -1826,13 +1556,11 @@ fn in_order(first: List<Diagnostic>, second: List<Diagnostic>) -> List<Diagnosti
     merged
 }
 
-/// A diagnostic about nothing, which the examples refuse with.
 // example: no_diagnostic().code == "L0000"
 fn no_diagnostic() -> Diagnostic {
     Diagnostic { code: "L0000", message: "", span: lexer.Span { start: 0, length: 0 }, help: None, fix: None }
 }
 
-/// The functions that state examples: every one but `main`, and every one whose result is not `()`.
 // example: list.length(documented(ast.Program { items: [] })) == 0
 fn documented(program: ast.Program) -> List<ast.FunctionDeclaration> {
     var found = []
@@ -1845,7 +1573,6 @@ fn documented(program: ast.Program) -> List<ast.FunctionDeclaration> {
     found
 }
 
-/// `found`, then `function` where it states examples.
 // example: list.length(with_documented([], parsed_function("fn main() -> Int {\n    0\n}\n"))) == 0
 fn with_documented(found: List<ast.FunctionDeclaration>, function: ast.FunctionDeclaration) -> List<ast.FunctionDeclaration> {
     if function.name.text == "main" || is_unit_result(function.result) {
@@ -1854,7 +1581,6 @@ fn with_documented(found: List<ast.FunctionDeclaration>, function: ast.FunctionD
     list.push(found, function)
 }
 
-/// The first function `source` declares, which the examples read.
 // example: parsed_function("fn f() -> Int {\n    0\n}\n").name.text == "f"
 private fn parsed_function(source: String) -> ast.FunctionDeclaration {
     var first = ast.FunctionDeclaration { name: ast.Name { text: "", span: lexer.Span { start: 0, length: 0 } }, type_parameters: [], parameters: [], result: None, body: ast.Block { statements: [], span: lexer.Span { start: 0, length: 0 } }, span: lexer.Span { start: 0, length: 0 }, visibility: ast.Public }
@@ -1867,7 +1593,6 @@ private fn parsed_function(source: String) -> ast.FunctionDeclaration {
     first
 }
 
-/// Whether a function's result is written `()`, which gives nothing back to state an example of.
 // example: !is_unit_result(None)
 fn is_unit_result(result: Option<ast.TypeRef>) -> Bool {
     match result {
@@ -1876,7 +1601,6 @@ fn is_unit_result(result: Option<ast.TypeRef>) -> Bool {
     }
 }
 
-/// Whether a written type is `()`.
 // example: is_unit_type(ast.UnitType)
 fn is_unit_type(kind: ast.TypeRefKind) -> Bool {
     match kind {
@@ -1885,7 +1609,6 @@ fn is_unit_type(kind: ast.TypeRefKind) -> Bool {
     }
 }
 
-/// The examples the comments above `function` state, in the order they are written.
 // example: list.length(examples_of(commented_of("// example: f() == 0\nfn f() -> Int {\n    0\n}\n"), parsed_function("// example: f() == 0\nfn f() -> Int {\n    0\n}\n"))) == 1
 fn examples_of(written: Commented, function: ast.FunctionDeclaration) -> List<Example> {
     var found = []
@@ -1898,7 +1621,6 @@ fn examples_of(written: Commented, function: ast.FunctionDeclaration) -> List<Ex
     found
 }
 
-/// Every comment that states an example no function took up.
 // example: list.length(documenting_nothing(commented_of("// example: 1 == 1\n"), [])) == 1
 fn documenting_nothing(written: Commented, stated: List<Example>) -> List<Diagnostic> {
     var taken = set.empty()
@@ -1914,9 +1636,6 @@ fn documenting_nothing(written: Commented, stated: List<Example>) -> List<Diagno
     refusals
 }
 
-/// The expression a comment states as an example, where it states one.
-///
-/// The comment opens with its slashes and blanks, then `example:`, then the expression.
 // example: or(stated_at("// example: f() == 1 "), "") == "f() == 1"
 // example: or(stated_at("// an example: 1"), "none") == "none"
 fn stated_at(text: String) -> Option<String> {
@@ -1931,7 +1650,6 @@ fn stated_at(text: String) -> Option<String> {
     Some(trimmed_end(trimmed_start(or(strings.cut(rest, 8, strings.length(rest)), ""))))
 }
 
-/// `text` without the white space it opens with.
 // example: trimmed_start(" \ta") == "a"
 fn trimmed_start(text: String) -> String {
     var start = 0
@@ -1941,13 +1659,8 @@ fn trimmed_start(text: String) -> String {
     or(strings.cut(text, start, strings.length(text)), "")
 }
 
-/// The run of the examples and the tests of a module: a module of its own, compiled and started.
-///
-/// A run whose module declares `io` or `arguments` is refused, because the run reaches for both.
-/// It is refused as well where the module declares the name of a function the run writes for a
-/// test. The run writes `main` to try every example and then every test in turn, then every
-/// declaration but `main`, each with the comments above it, then one function for each test. So
-/// each stretch of what it writes is said about the original.
+// The run uses `io`, `arguments`, and a function name for each test.
+// So a module that declares one of these names is refused.
 // example: code_refused(result_of_run(run_of(Page { source: "", path: "a.bx" }, ok_or(parser.parse("fn io() -> Int {\n    0\n}\n"), ast.Program { items: [] }), Trying { examples: [], tests: [] }))) == "L0604"
 fn run_of(page: Page, program: ast.Program, stated: Trying) -> Result<Run, Diagnostic> {
     var reached = ["io", "arguments"]
@@ -1965,7 +1678,6 @@ fn run_of(page: Page, program: ast.Program, stated: Trying) -> Result<Run, Diagn
     Ok(run_written(page, program, stated))
 }
 
-/// A run's answer as a refusal, which is what the examples of `run_of` read.
 // example: code_refused(result_of_run(Err(no_diagnostic()))) == "L0000"
 private fn result_of_run(answer: Result<Run, Diagnostic>) -> Result<(), Diagnostic> {
     match answer {
@@ -1974,7 +1686,6 @@ private fn result_of_run(answer: Result<Run, Diagnostic>) -> Result<(), Diagnost
     }
 }
 
-/// Whether a declaration was found.
 // example: has_span(Some(lexer.Span { start: 0, length: 1 }))
 fn has_span(declared: Option<lexer.Span>) -> Bool {
     match declared {
@@ -1983,7 +1694,6 @@ fn has_span(declared: Option<lexer.Span>) -> Bool {
     }
 }
 
-/// Where `program` declares `named` as a type, a trait, a function, an extern, or a process.
 // example: has_span(declaring(ok_or(parser.parse("fn io() -> Int {\n    0\n}\n"), ast.Program { items: [] }), "io"))
 fn declaring(program: ast.Program, named: String) -> Option<lexer.Span> {
     for item in program.items {
@@ -1995,7 +1705,6 @@ fn declaring(program: ast.Program, named: String) -> Option<lexer.Span> {
     None
 }
 
-/// The name one item declares, and an empty name for an item that declares none.
 // example: name_declared(ast.Import(ast.ImportDeclaration { module: ast.Name { text: "io", span: lexer.Span { start: 7, length: 2 } }, span: lexer.Span { start: 0, length: 9 } })).text == ""
 fn name_declared(item: ast.Item) -> ast.Name {
     match item {
@@ -2008,12 +1717,8 @@ fn name_declared(item: ast.Item) -> ast.Name {
     }
 }
 
-/// The module the run is: the imports it reads, `main` trying each example and each test, the
-/// function of each test, then every declaration.
-///
-/// The run leaves out the module's `main`, and `tests/documented.bx` leaves out the tests of an
-/// example under `tests/spec`, so the run imports only each module the rest of it writes before a
-/// dot. Every import of the run is then read, as every import of a module is.
+// The run leaves out `main`, and can leave out the tests, so it imports only what it still uses.
+// An import that is not used is refused, as in each module.
 // example: run_written(Page { source: "", path: "a.bx" }, ast.Program { items: [] }, Trying { examples: [], tests: [] }).source == "\nfn main(arguments: List<String>) -> Int {\n    0\n}\n"
 fn run_written(page: Page, program: ast.Program, stated: Trying) -> Run {
     let body = body_written(page, program, stated)
@@ -2025,11 +1730,7 @@ fn run_written(page: Page, program: ast.Program, stated: Trying) -> Run {
     Run { source: imports.source + body.source, stretches: stretches, examples: stated.examples, tests: stated.tests, module: lexer.Span { start: 0, length: byte_count(page.source) } }
 }
 
-/// Every part of the run after its imports: `main`, the function of each test, then every
-/// declaration.
-///
-/// The function of a test is written above the declarations, because a function is written above
-/// what it uses.
+// A test function goes above the declarations, because a function goes above what it uses.
 // example: body_written(Page { source: "", path: "a.bx" }, ast.Program { items: [] }, Trying { examples: [], tests: [] }).source == "fn main(arguments: List<String>) -> Int {\n    0\n}\n"
 fn body_written(page: Page, program: ast.Program, stated: Trying) -> Writing {
     var writing = wrote(Writing { source: "", bytes: 0, stretches: [] }, Stretch { text: "fn main(arguments: List<String>) -> Int {\n", about: WholeModule })
@@ -2055,11 +1756,7 @@ fn body_written(page: Page, program: ast.Program, stated: Trying) -> Writing {
     writing
 }
 
-/// `writing`, with one function written after it for each of `tests`, whose body is the body of
-/// the test as `measured` holds it.
-///
-/// The run faces every rule but canonical form, and a function that gives back a value states an
-/// example. So each function states `true`, which the run never tries.
+// A function that gives back a value must state an example, so each test function states `true`.
 // example: test_functions_written(Writing { source: "", bytes: 0, stretches: [] }, ast.tests_of(ok_or(parser.parse("test \"a\" {\n    true\n}\n"), ast.Program { items: [] })), measured_of("test \"a\" {\n    true\n}\n")).source == "\n// example: true\nfn is_held_0() -> Bool {\n    true\n}\n"
 fn test_functions_written(writing: Writing, tests: List<ast.TestDeclaration>, measured: Measured) -> Writing {
     var written = writing
@@ -2074,13 +1771,11 @@ fn test_functions_written(writing: Writing, tests: List<ast.TestDeclaration>, me
     written
 }
 
-/// The name of the function the run writes for the test numbered `ordinal`.
 // example: test_function(2) == "is_held_2"
 fn test_function(ordinal: Int) -> String {
     "is_held_" + shown(ordinal)
 }
 
-/// The source, with every line comment it holds and where each unit of it starts in bytes.
 // example: list.length(commented_of("// a\nfn\n").comments) == 1
 fn commented_of(source: String) -> Commented {
     var comments = []
@@ -2092,7 +1787,6 @@ fn commented_of(source: String) -> Commented {
     Commented { measured: measured_of(source), comments: comments }
 }
 
-/// `writing`, with `stretch` written after what it holds and noted as the part it is.
 // example: wrote(Writing { source: "", bytes: 0, stretches: [] }, Stretch { text: "é", about: WholeModule }).bytes == 2
 fn wrote(writing: Writing, stretch: Stretch) -> Writing {
     let width = byte_count(stretch.text)
@@ -2100,14 +1794,11 @@ fn wrote(writing: Writing, stretch: Stretch) -> Writing {
     Writing { source: writing.source + stretch.text, bytes: writing.bytes + width, stretches: list.push(writing.stretches, placed) }
 }
 
-/// How many bytes the UTF-8 form of `text` takes.
 // example: byte_count("aé") == 3
 fn byte_count(text: String) -> Int {
     lexer.byte_length(lexer.Rest { source: text, start: 0 }, strings.length(text))
 }
 
-/// Every module `program` imports, and `io`, that `read` holds, each once and in order, in one
-/// block, as the run imports them.
 // example: imports_of(ok_or(parser.parse("import list\n"), ast.Program { items: [] }), set.insert(set.insert(set.empty(), "io"), "list")) == "import io\nimport list\n\n"
 // example: imports_of(ok_or(parser.parse("import list\n"), ast.Program { items: [] }), set.insert(set.empty(), "io")) == "import io\n\n"
 fn imports_of(program: ast.Program, read: set.Set<String>) -> String {
@@ -2129,9 +1820,7 @@ fn imports_of(program: ast.Program, read: set.Set<String>) -> String {
     written + "\n"
 }
 
-/// `read` with each name `text` writes before a dot, where no dot stands before that name.
-///
-/// A name after a dot is a field or a member, so only the first name of a chain is a module.
+// A name after a dot is a field or a member, so only the first name of a chain is a module.
 // example: set.has_value(with_modules_written(set.empty(), "a.b(c.d)"), "c")
 // example: set.has_value(with_modules_written(set.empty(), "a.b.c"), "b") == false
 fn with_modules_written(read: set.Set<String>, text: String) -> set.Set<String> {
@@ -2153,7 +1842,6 @@ fn with_modules_written(read: set.Set<String>, text: String) -> set.Set<String> 
     named
 }
 
-/// The span of every declaration the run copies: every item but an import and `main`.
 // example: list.length(declarations_of(ok_or(parser.parse("import io\n\nfn main() -> Int {\n    0\n}\n"), ast.Program { items: [] }))) == 0
 fn declarations_of(program: ast.Program) -> List<lexer.Span> {
     var found = []
@@ -2173,7 +1861,6 @@ fn declarations_of(program: ast.Program) -> List<lexer.Span> {
     found
 }
 
-/// `found`, then the span of `function` unless it is `main`, which the run writes itself.
 // example: list.length(with_copied([], parsed_function("fn main() -> Int {\n    0\n}\n"))) == 0
 fn with_copied(found: List<lexer.Span>, function: ast.FunctionDeclaration) -> List<lexer.Span> {
     if function.name.text == "main" {
@@ -2182,7 +1869,6 @@ fn with_copied(found: List<lexer.Span>, function: ast.FunctionDeclaration) -> Li
     list.push(found, function.span)
 }
 
-/// A declaration with every comment directly above it, from the start of the first one's line.
 // example: block_of(commented_of("// a\nfn"), lexer.Span { start: 5, length: 2 }).start == 0
 fn block_of(written: Commented, declared: lexer.Span) -> lexer.Span {
     let opens = match list.at(comments_above(written, declared.start), 0) {
@@ -2192,10 +1878,6 @@ fn block_of(written: Commented, declared: lexer.Span) -> lexer.Span {
     lexer.Span { start: opens, length: declared.start + declared.length - opens }
 }
 
-/// The comments directly above the byte `below`, each alone on its line, in the order written.
-///
-/// A comment is directly above when one line break and nothing but blanks lie between it and
-/// what is below it; the run stops at the first blank line or at a comment after code.
 // example: list.length(comments_above(commented_of("// a\n// b\nfn"), 10)) == 2
 // example: list.length(comments_above(commented_of("// a\n\nfn"), 6)) == 0
 fn comments_above(written: Commented, below: Int) -> List<lexer.Token> {
@@ -2219,7 +1901,6 @@ fn comments_above(written: Commented, below: Int) -> List<lexer.Token> {
     turned(found)
 }
 
-/// `values`, last first.
 // example: or(list.at(turned([1, 2]), 0), 0) == 2
 fn turned<T>(values: List<T>) -> List<T> {
     var backwards = []
@@ -2234,9 +1915,7 @@ fn turned<T>(values: List<T>) -> List<T> {
     backwards
 }
 
-/// The index of the last comment that ends at or before the byte `reached`, and `-1` for none.
-///
-/// The comments are in the order written and never overlap, so where each ends only grows.
+// The comments are in source order and do not overlap, so each end is after the end before it.
 // example: last_ending_by(commented_of("// a\n// b\n").comments, 9) == 1
 fn last_ending_by(comments: List<lexer.Token>, reached: Int) -> Int {
     var low = 0
@@ -2253,13 +1932,11 @@ fn last_ending_by(comments: List<lexer.Token>, reached: Int) -> Int {
     low - 1
 }
 
-/// A token that holds nothing, which the examples fall back on.
 // example: no_token().text == ""
 fn no_token() -> lexer.Token {
     lexer.Token { kind: lexer.Unknown, span: lexer.Span { start: 0, length: 0 }, text: "" }
 }
 
-/// Whether `between` holds exactly one line break and nothing else but blanks.
 // example: is_one_line_break(" \n\t")
 // example: !is_one_line_break("\n\n")
 fn is_one_line_break(between: String) -> Bool {
@@ -2277,7 +1954,6 @@ fn is_one_line_break(between: String) -> Bool {
     breaks == 1
 }
 
-/// Whether `text` holds nothing but blanks.
 // example: is_blank_run(" \t")
 fn is_blank_run(text: String) -> Bool {
     var index = 0
@@ -2290,13 +1966,11 @@ fn is_blank_run(text: String) -> Bool {
     true
 }
 
-/// Whether `unit` is a blank: a space, a tab, or a carriage return.
 // example: is_blank(13)
 fn is_blank(unit: Int) -> Bool {
     unit == 32 || unit == 9 || unit == 13
 }
 
-/// The byte where the line holding the byte `at` opens.
 // example: opening_of(measured_of("ab\ncd"), 4) == 3
 fn opening_of(measured: Measured, at: Int) -> Int {
     var unit = unit_of(measured, at)
@@ -2306,13 +1980,11 @@ fn opening_of(measured: Measured, at: Int) -> Int {
     byte_of(measured, unit)
 }
 
-/// The text between two bytes.
 // example: measured_cut(measured_of("aé!"), Stretched { from: 1, to: 3 }) == "é"
 fn measured_cut(measured: Measured, stretched: Stretched) -> String {
     or(strings.cut(measured.source, unit_of(measured, stretched.from), unit_of(measured, stretched.to)), "")
 }
 
-/// The example a line the run wrote names, where it names one.
 // example: is_named(named_in(Run { source: "", stretches: [], examples: [], tests: [], module: lexer.Span { start: 0, length: 0 } }, "bux: example 0")) == false
 fn named_in(run: Run, line: String) -> Option<Example> {
     match marked_ordinal(line: line, marker: "bux: example ") {
@@ -2321,7 +1993,6 @@ fn named_in(run: Run, line: String) -> Option<Example> {
     }
 }
 
-/// The test a line the run wrote names, as a list of one, or none where it names none.
 // example: list.length(test_named_in(Run { source: "", stretches: [], examples: [], tests: [], module: lexer.Span { start: 0, length: 0 } }, "bux: test 0")) == 0
 fn test_named_in(run: Run, line: String) -> List<ast.TestDeclaration> {
     match marked_ordinal(line: line, marker: "bux: test ") {
@@ -2330,7 +2001,6 @@ fn test_named_in(run: Run, line: String) -> List<ast.TestDeclaration> {
     }
 }
 
-/// The number written after `marker` on `line`, where the line opens with it.
 // example: or(marked_ordinal(line: "bux: test 3 ", marker: "bux: test "), 0) == 3
 // example: or(marked_ordinal(line: "bux: example 3", marker: "bux: test "), 0) == 0
 fn marked_ordinal(line: String, marker: String) -> Option<Int> {
@@ -2341,7 +2011,6 @@ fn marked_ordinal(line: String, marker: String) -> Option<Int> {
     ordinal_read(or(strings.cut(trimmed, strings.length(marker), strings.length(trimmed)), ""))
 }
 
-/// `text` without the white space it ends with.
 // example: trimmed_end("a \r") == "a"
 fn trimmed_end(text: String) -> String {
     var end = strings.length(text)
@@ -2351,7 +2020,6 @@ fn trimmed_end(text: String) -> String {
     or(strings.cut(text, 0, end), "")
 }
 
-/// Whether `unit` is white space, as Unicode counts it.
 // example: is_white(12288)
 // example: !is_white(97)
 fn is_white(unit: Int) -> Bool {
@@ -2364,7 +2032,6 @@ fn is_white(unit: Int) -> Bool {
     list.has_value([32, 133, 160, 5760, 8232, 8233, 8239, 8287, 12288], unit)
 }
 
-/// Whether a line named an example.
 // example: !is_named(None)
 private fn is_named(found: Option<Example>) -> Bool {
     match found {
@@ -2373,7 +2040,6 @@ private fn is_named(found: Option<Example>) -> Bool {
     }
 }
 
-/// The number `text` writes in digits, with a `+` before them allowed, where it writes one.
 // example: or(ordinal_read("+12"), 0) == 12
 // example: or(ordinal_read("1a"), 0) == 0
 fn ordinal_read(text: String) -> Option<Int> {
@@ -2396,22 +2062,16 @@ fn ordinal_read(text: String) -> Option<Int> {
     Some(value)
 }
 
-/// Whether `unit` is one of the ten digits.
 // example: is_digit(48)
 fn is_digit(unit: Int) -> Bool {
     unit >= 48 && unit <= 57
 }
 
-/// The refusal of an example that did not hold, about the comment that states it.
 // example: did_not_hold(Example { of: "f", expression: "false", span: lexer.Span { start: 0, length: 1 } }).message == "the example of `f` does not hold"
 fn did_not_hold(example: Example) -> Diagnostic {
     Diagnostic { code: "L0603", message: "the example of `" + example.of + "` does not hold", span: example.span, help: Some("an example states what a function works out, and this one states what it does not"), fix: None }
 }
 
-/// Where in the file the author wrote a span of the run lies.
-///
-/// Copied text maps to the text it was copied from, the lines trying one example map to the
-/// comment that states it, and what the run wrote of its own maps to the whole module.
 // example: in_original(Run { source: "", stretches: [], examples: [], tests: [], module: lexer.Span { start: 0, length: 7 } }, lexer.Span { start: 3, length: 1 }).length == 7
 fn in_original(run: Run, written: lexer.Span) -> lexer.Span {
     for placed in run.stretches {
@@ -2422,7 +2082,6 @@ fn in_original(run: Run, written: lexer.Span) -> lexer.Span {
     run.module
 }
 
-/// `written`, which lies in `placed`, where the author wrote it.
 // example: placed_back(Run { source: "", stretches: [], examples: [], tests: [], module: lexer.Span { start: 0, length: 7 } }, Placed { span: lexer.Span { start: 2, length: 4 }, about: SameText(10) }, lexer.Span { start: 3, length: 9 }).length == 3
 fn placed_back(run: Run, placed: Placed, written: lexer.Span) -> lexer.Span {
     match placed.about {
@@ -2432,7 +2091,6 @@ fn placed_back(run: Run, placed: Placed, written: lexer.Span) -> lexer.Span {
     }
 }
 
-/// The span of the comment that states example `ordinal`.
 // example: example_span(Run { source: "", stretches: [], examples: [], tests: [], module: lexer.Span { start: 0, length: 7 } }, 0).length == 7
 fn example_span(run: Run, ordinal: Int) -> lexer.Span {
     match list.at(run.examples, ordinal) {
@@ -2441,10 +2099,6 @@ fn example_span(run: Run, ordinal: Int) -> lexer.Span {
     }
 }
 
-/// One diagnostic in the layout of `docs/specs/diagnostics.md`, against the file of `page`.
-///
-/// The first line is the code and the message, the second the place, then the source line under a
-/// row of carets, then the help where there is one.
 // example: rendered(Diagnostic { code: "L0102", message: "m", span: lexer.Span { start: 1, length: 1 }, help: None, fix: None }, Page { source: "a$b\n", path: "x.bx" }) == "error[L0102]: m\n  --> x.bx:1:2\n\n  1 | a$b\n    |  ^\n"
 fn rendered(diagnostic: Diagnostic, page: Page) -> String {
     let place = place_of(diagnostic.span, measured_of(page.source))
@@ -2457,7 +2111,6 @@ fn rendered(diagnostic: Diagnostic, page: Page) -> String {
     written + help_line(diagnostic.help) + "\n"
 }
 
-/// Where every code unit of `source` starts, in bytes, and where the source ends.
 // example: or(list.at(measured_of("é!").starts, 1), 0) == 2
 fn measured_of(source: String) -> Measured {
     var starts = []
@@ -2471,7 +2124,6 @@ fn measured_of(source: String) -> Measured {
     Measured { source: source, starts: list.push(starts, at) }
 }
 
-/// The `help:` line after a blank one, and nothing where there is no help.
 // example: help_line(Some("x")) == "\n\nhelp: x"
 fn help_line(help: Option<String>) -> String {
     match help {
@@ -2480,10 +2132,6 @@ fn help_line(help: Option<String>) -> String {
     }
 }
 
-/// Where `span` points in the source `measured` holds: its line, its column, and its carets.
-///
-/// A span past the end points at the last byte, and one that runs past its line gets one line of
-/// carets and a note naming the line it runs on to.
 // example: place_of(lexer.Span { start: 0, length: 3 }, measured_of("a\nb")).note == " this runs on to line 2"
 fn place_of(span: lexer.Span, measured: Measured) -> Pointed {
     let total = byte_of(measured, strings.length(measured.source))
@@ -2500,7 +2148,6 @@ fn place_of(span: lexer.Span, measured: Measured) -> Pointed {
     Pointed { line: line, column: column, text: text, width: larger(one: characters_of(measured.source, Stretched { from: start_unit, to: reach }), other: 1), padding: padding_of(text, column - 1), note: note_of(Lines { first: line, last: last }) }
 }
 
-/// The first code unit that starts at or after the byte `byte`, and the length past the end.
 // example: unit_of(measured_of("é!"), 2) == 1
 // example: unit_of(measured_of("é!"), 1) == 1
 fn unit_of(measured: Measured, byte: Int) -> Int {
@@ -2517,13 +2164,11 @@ fn unit_of(measured: Measured, byte: Int) -> Int {
     low
 }
 
-/// The byte where the code unit `unit` starts.
 // example: byte_of(measured_of("é!"), 1) == 2
 fn byte_of(measured: Measured, unit: Int) -> Int {
     or(list.at(measured.starts, unit), 0)
 }
 
-/// The note on a span that runs past its first line, and nothing on one that does not.
 // example: note_of(Lines { first: 1, last: 1 }) == ""
 fn note_of(lines: Lines) -> String {
     if lines.last > lines.first {
@@ -2532,7 +2177,6 @@ fn note_of(lines: Lines) -> String {
     ""
 }
 
-/// The code unit a line opens at: the one after the last line break before `unit`.
 // example: line_start("ab\ncd", 4) == 3
 fn line_start(source: String, unit: Int) -> Int {
     var at = unit
@@ -2542,7 +2186,6 @@ fn line_start(source: String, unit: Int) -> Int {
     at
 }
 
-/// The code unit a line ends at: its line break, or the end of the source.
 // example: line_end("ab\ncd", 1) == 2
 fn line_end(source: String, unit: Int) -> Int {
     var at = unit
@@ -2552,7 +2195,6 @@ fn line_end(source: String, unit: Int) -> Int {
     at
 }
 
-/// How many line breaks come before the code unit `unit`.
 // example: breaks_before("a\nb\nc", 4) == 2
 fn breaks_before(source: String, unit: Int) -> Int {
     var count = 0
@@ -2566,7 +2208,6 @@ fn breaks_before(source: String, unit: Int) -> Int {
     count
 }
 
-/// How many characters the code units of a stretch hold, where a pair of units is one.
 // example: characters_of("a😀b", Stretched { from: 0, to: 4 }) == 3
 fn characters_of(source: String, stretched: Stretched) -> Int {
     var count = 0
@@ -2581,9 +2222,7 @@ fn characters_of(source: String, stretched: Stretched) -> Int {
     count
 }
 
-/// What goes before the carets: a blank for each of the first `count` characters of `text`.
-///
-/// A tab stays a tab, so the carets line up under the text however wide a tab is shown.
+// A tab stays a tab, so the carets align under the text for each tab width.
 // example: padding_of("\tab", 2) == "\t "
 fn padding_of(text: String, count: Int) -> String {
     var written = ""
@@ -2604,7 +2243,6 @@ fn padding_of(text: String, count: Int) -> String {
     written
 }
 
-/// One diagnostic as one line of JSON, which `docs/specs/diagnostics.md` states field for field.
 // example: json_of(no_diagnostic(), "a.bx") == "{\"file\":\"a.bx\",\"code\":\"L0000\",\"message\":\"\",\"span\":{\"start\":0,\"len\":0}}\n"
 fn json_of(diagnostic: Diagnostic, path: String) -> String {
     var written = "{" + json_field(name: "file", value: path) + "," + json_field(name: "code", value: diagnostic.code) + "," + json_field(name: "message", value: diagnostic.message)
@@ -2613,13 +2251,11 @@ fn json_of(diagnostic: Diagnostic, path: String) -> String {
     written + "}\n"
 }
 
-/// A span as its start and its length in bytes.
 // example: json_span(lexer.Span { start: 1, length: 2 }) == "{\"start\":1,\"len\":2}"
 fn json_span(span: lexer.Span) -> String {
     "{\"start\":" + shown(span.start) + ",\"len\":" + shown(span.length) + "}"
 }
 
-/// The `help` field, and nothing where there is no help.
 // example: json_help(None) == ""
 fn json_help(help: Option<String>) -> String {
     match help {
@@ -2628,13 +2264,11 @@ fn json_help(help: Option<String>) -> String {
     }
 }
 
-/// One field that holds text.
 // example: json_field(name: "a", value: "b") == "\"a\":\"b\""
 fn json_field(name: String, value: String) -> String {
     "\"" + name + "\":" + quoted(value)
 }
 
-/// The `fix` field, and nothing where there is no edit.
 // example: json_fix(Some(Fix { span: lexer.Span { start: 0, length: 1 }, text: "a" })) == ",\"fix\":{\"start\":0,\"len\":1,\"text\":\"a\"}"
 fn json_fix(fix: Option<Fix>) -> String {
     match fix {
@@ -2643,9 +2277,7 @@ fn json_fix(fix: Option<Fix>) -> String {
     }
 }
 
-/// `text` as a JSON string: quoted, with a quote, a backslash, and each control escaped.
-///
-/// The text between two escapes is copied whole, so a long text is not rebuilt one unit at a time.
+// The text between two escapes is copied whole, so a long text is not built one unit at a time.
 // example: quoted("a\"\n") == "\"a\\\"\\n\""
 fn quoted(text: String) -> String {
     var written = "\""
@@ -2662,7 +2294,6 @@ fn quoted(text: String) -> String {
     written + or(strings.cut(text, plain, strings.length(text)), "") + "\""
 }
 
-/// How JSON writes the code unit `unit` inside a string, and `""` where it is written as it is.
 // example: escape_of(9) == "\\t"
 // example: escape_of(31) == "\\u001f"
 // example: escape_of(97) == ""
@@ -2688,17 +2319,12 @@ fn escape_of(unit: Int) -> String {
     ""
 }
 
-/// One digit of a number written in base sixteen, in lowercase.
 // example: hex_digit(11) == "b"
 fn hex_digit(value: Int) -> String {
     or(strings.cut("0123456789abcdef", value, value + 1), "0")
 }
 
-/// The command `arguments` ask for, or what the command line answers without running one.
-///
-/// The surface is the one `docs/specs/run.md` states: a word names a command, `-h` and `--help`
-/// ask for help, `-V` and `--version` for the version, and `--` ends the flags. Every refusal of
-/// the words reads as the Rust binary wrote it, tip and usage line alike.
+// Each refusal of the words reads as the Rust binary wrote it, with the same tip and usage line.
 // example: is_told(asked_by(["-V"]))
 // example: !is_told(asked_by(["check", "a.bx"]))
 fn asked_by(arguments: List<String>) -> Parsed {
@@ -2717,7 +2343,6 @@ fn asked_by(arguments: List<String>) -> Parsed {
     Told(Said { output: "", errors: top_short_help(), status: 2 })
 }
 
-/// Whether the words were answered without a command.
 // example: is_told(Told(nothing_said()))
 private fn is_told(parsed: Parsed) -> Bool {
     match parsed {
@@ -2726,7 +2351,6 @@ private fn is_told(parsed: Parsed) -> Bool {
     }
 }
 
-/// What the first word that is not `--` asks for: a command, a flag, or a word no command names.
 // example: is_told(unescaped_parsed("chek", []))
 fn unescaped_parsed(word: String, rest: List<String>) -> Parsed {
     match subcommand_named(word) {
@@ -2735,7 +2359,6 @@ fn unescaped_parsed(word: String, rest: List<String>) -> Parsed {
     }
 }
 
-/// What the words after a command's name ask for.
 // example: !is_told(subcommand_parsed(or(subcommand_named("fmt"), help_subcommand()), ["a.bx"]))
 fn subcommand_parsed(sub: Subcommand, rest: List<String>) -> Parsed {
     if sub.name == "help" {
@@ -2750,7 +2373,6 @@ fn subcommand_parsed(sub: Subcommand, rest: List<String>) -> Parsed {
     }
 }
 
-/// A top-level flag, or a word that names no command.
 // example: flag_or_word("-V", []).output == "bux 0.1.0\n"
 fn flag_or_word(word: String, rest: List<String>) -> Said {
     if is_long(word) {
@@ -2762,7 +2384,6 @@ fn flag_or_word(word: String, rest: List<String>) -> Said {
     unrecognized(word)
 }
 
-/// A long flag written before any command.
 // example: top_long(long_of("--version"), []).output == "bux 0.1.0\n"
 fn top_long(long: Long, rest: List<String>) -> Said {
     if long.name == "help" || long.name == "version" {
@@ -2775,7 +2396,6 @@ fn top_long(long: Long, rest: List<String>) -> Said {
     }
 }
 
-/// `--help` or `--version` written before any command, which takes no value.
 // example: top_flag(Long { name: "help", value: Some("x") }).status == 2
 fn top_flag(long: Long) -> Said {
     match long.value {
@@ -2784,7 +2404,6 @@ fn top_flag(long: Long) -> Said {
     }
 }
 
-/// What `--help` or `--version` prints.
 // example: top_flag_said("version").output == "bux 0.1.0\n"
 fn top_flag_said(name: String) -> Said {
     if name == "version" {
@@ -2793,9 +2412,6 @@ fn top_flag_said(name: String) -> Said {
     Said { output: top_long_help(), errors: "", status: 0 }
 }
 
-/// The tip that names a command a flag belongs to, where one of the words after it is that command.
-///
-/// Of the commands written after the flag with a flag like it, the one written first is named.
 // example: or(flag_of_a_command("jsn", ["check"]), "") == "'check --json' exists"
 fn flag_of_a_command(name: String, rest: List<String>) -> Option<String> {
     var best = None
@@ -2811,7 +2427,6 @@ fn flag_of_a_command(name: String, rest: List<String>) -> Option<String> {
     best
 }
 
-/// A short flag written before any command: `-h` for help, `-V` for the version.
 // example: top_short("-x").errors == "error: unexpected argument '-x' found\n\nUsage: bux <COMMAND>\n\nFor more information, try '--help'.\n"
 fn top_short(word: String) -> Said {
     let letter = first_letter(word)
@@ -2824,13 +2439,11 @@ fn top_short(word: String) -> Said {
     complained(Complaint { message: "unexpected argument '-" + letter + "' found", tip: None, usage: "bux <COMMAND>", offers_help: true })
 }
 
-/// The version, which `-V` and `--version` print.
 // example: version_said().status == 0
 fn version_said() -> Said {
     Said { output: "bux 0.1.0\n", errors: "", status: 0 }
 }
 
-/// A word after `--` where a command's name belongs.
 // example: escaped_word("check").errors == "error: unexpected argument 'check' found\n\n  tip: subcommand 'check' exists; to use it, remove the '--' before it\n\nUsage: bux <COMMAND>\n\nFor more information, try '--help'.\n"
 fn escaped_word(word: String) -> Said {
     match subcommand_named(word) {
@@ -2839,14 +2452,12 @@ fn escaped_word(word: String) -> Said {
     }
 }
 
-/// A word that names no command, with the commands spelled like it.
 // example: unrecognized("chek").errors == "error: unrecognized subcommand 'chek'\n\n  tip: a similar subcommand exists: 'check'\n\nUsage: bux <COMMAND>\n\nFor more information, try '--help'.\n"
 fn unrecognized(word: String) -> Said {
     let similar = all_similar(word, subcommand_names())
     complained(Complaint { message: "unrecognized subcommand '" + word + "'", tip: commands_tip(similar), usage: "bux <COMMAND>", offers_help: true })
 }
 
-/// The tip that names the commands spelled like a word, where there are any.
 // example: or(commands_tip(["a", "b"]), "") == "some similar subcommands exist: 'a', 'b'"
 fn commands_tip(similar: List<String>) -> Option<String> {
     if list.length(similar) == 0 {
@@ -2862,7 +2473,6 @@ fn commands_tip(similar: List<String>) -> Option<String> {
     Some("some similar subcommands exist: " + strings.join(quoted_names, ", "))
 }
 
-/// The name of every command, in the order the help lists them.
 // example: list.length(subcommand_names()) == 8
 fn subcommand_names() -> List<String> {
     var names = []
@@ -2872,9 +2482,6 @@ fn subcommand_names() -> List<String> {
     names
 }
 
-/// The command a subcommand with one argument names, or what the command line answers instead.
-///
-/// The words are a flag, `--`, or the one argument. After `--` every word is the argument.
 // example: is_refused(positional_read(or(subcommand_named("fmt"), help_subcommand()), []))
 fn positional_read(sub: Subcommand, rest: List<String>) -> Result<Command, Said> {
     var used = []
@@ -2903,7 +2510,6 @@ fn positional_read(sub: Subcommand, rest: List<String>) -> Result<Command, Said>
     }
 }
 
-/// The value `found` holds, as a list of one, or none.
 // example: at_most_one(Some(3)) == [3]
 fn at_most_one<T>(found: Option<T>) -> List<T> {
     match found {
@@ -2912,7 +2518,6 @@ fn at_most_one<T>(found: Option<T>) -> List<T> {
     }
 }
 
-/// The command `sub` names, given its argument and the flags written with it.
 // example: command_of(or(subcommand_named("explain"), help_subcommand()), Given { value: "L0100", used: [] }) == Explain("L0100")
 fn command_of(sub: Subcommand, given: Given) -> Command {
     let value = given.value
@@ -2926,7 +2531,6 @@ fn command_of(sub: Subcommand, given: Given) -> Command {
     }
 }
 
-/// The form a refusal is shown in: as data where `--json` was written, else as a page.
 // example: form_of(["json"]) == AsData
 fn form_of(used: List<String>) -> Form {
     if list.has_value(used, "json") {
@@ -2935,7 +2539,6 @@ fn form_of(used: List<String>) -> Form {
     AsPage
 }
 
-/// The flags after one more flag of `sub` is read, or what the command line answers instead.
 // example: ok_or(flag_read(or(subcommand_named("check"), help_subcommand()), Flagged { word: "--json", used: [] }), []) == ["json"]
 fn flag_read(sub: Subcommand, flagged: Flagged) -> Result<List<String>, Said> {
     if is_short(flagged.word) {
@@ -2951,7 +2554,6 @@ fn flag_read(sub: Subcommand, flagged: Flagged) -> Result<List<String>, Said> {
     Err(unknown_long(sub, Held { long: long, used: flagged.used }))
 }
 
-/// A short flag of a command: `-h` for its short help, and a refusal of any other letter.
 // example: short_read(or(subcommand_named("fmt"), help_subcommand()), "-h").status == 0
 fn short_read(sub: Subcommand, word: String) -> Said {
     let letter = first_letter(word)
@@ -2962,7 +2564,6 @@ fn short_read(sub: Subcommand, word: String) -> Said {
     complained(Complaint { message: "unexpected argument '" + shown_flag + "' found", tip: Some("to pass '" + shown_flag + "' as a value, use '-- " + shown_flag + "'"), usage: sub.usage, offers_help: true })
 }
 
-/// `--help` after a command: its long help, and a refusal where it is given a value.
 // example: help_flag_said(or(subcommand_named("fmt"), help_subcommand()), Held { long: Long { name: "help", value: Some("") }, used: [] }).status == 2
 fn help_flag_said(sub: Subcommand, held: Held) -> Said {
     match held.long.value {
@@ -2971,7 +2572,6 @@ fn help_flag_said(sub: Subcommand, held: Held) -> Said {
     }
 }
 
-/// `--json` after `check`: the flag noted, or a refusal of a value or of a second one.
 // example: is_refused(json_read(or(subcommand_named("check"), help_subcommand()), Held { long: Long { name: "json", value: None }, used: ["json"] }))
 fn json_read(sub: Subcommand, held: Held) -> Result<List<String>, Said> {
     match held.long.value {
@@ -2980,15 +2580,11 @@ fn json_read(sub: Subcommand, held: Held) -> Result<List<String>, Said> {
     }
 }
 
-/// A flag given a value it takes none of, with the usage line `complaint` carries.
-///
-/// The message of `complaint` is the flag, which the refusal names.
 // example: too_many("x", Complaint { message: "--help", tip: None, usage: "u", offers_help: false }).errors == "error: unexpected value 'x' for '--help' found; no more were expected\n\nUsage: u\n"
 fn too_many(value: String, complaint: Complaint) -> Said {
     complained(complaint { message: "unexpected value '" + value + "' for '" + complaint.message + "' found; no more were expected" })
 }
 
-/// The flags with `--json` among them, and a refusal where it is there already.
 // example: ok_or(json_noted(or(subcommand_named("check"), help_subcommand()), []), []) == ["json"]
 fn json_noted(sub: Subcommand, used: List<String>) -> Result<List<String>, Said> {
     if list.has_value(used, "json") {
@@ -2997,10 +2593,7 @@ fn json_noted(sub: Subcommand, used: List<String>) -> Result<List<String>, Said>
     Ok(list.push(used, "json"))
 }
 
-/// The usage line of a flag given a value, which names that flag.
-///
-/// Where `--json` was written before, the Rust binary's usage line joined the argument and the flag
-/// as `<PATH|--json>`, and this one writes the same.
+// The Rust binary wrote `<PATH|--json>` after an earlier `--json`, and this usage line does too.
 // example: value_usage(or(subcommand_named("check"), help_subcommand()), Held { long: Long { name: "help", value: None }, used: ["json"] }) == "bux check --help <PATH|--json>"
 fn value_usage(sub: Subcommand, held: Held) -> String {
     if list.has_value(held.used, "json") {
@@ -3012,7 +2605,6 @@ fn value_usage(sub: Subcommand, held: Held) -> String {
     smart_usage(sub, [held.long.name])
 }
 
-/// A long flag no command has, with the flag spelled like it, or the way to pass it as a value.
 // example: unknown_long(or(subcommand_named("fmt"), help_subcommand()), Held { long: Long { name: "hlp", value: None }, used: [] }).errors == "error: unexpected argument '--hlp' found\n\n  tip: a similar argument exists: '--help'\n\nUsage: bux fmt --help <FILE>\n\nFor more information, try '--help'.\n"
 fn unknown_long(sub: Subcommand, held: Held) -> Said {
     let shown_flag = "--" + held.long.name
@@ -3023,7 +2615,6 @@ fn unknown_long(sub: Subcommand, held: Held) -> Said {
     }
 }
 
-/// `used`, with `flag` after them where it is not among them.
 // example: list.length(with_flag(["json"], "json")) == 1
 fn with_flag(used: List<String>, flag: String) -> List<String> {
     if list.has_value(used, flag) {
@@ -3032,7 +2623,6 @@ fn with_flag(used: List<String>, flag: String) -> List<String> {
     list.push(used, flag)
 }
 
-/// The usage line after a refusal: the command's own, or one naming the flags written.
 // example: used_usage(or(subcommand_named("check"), help_subcommand()), []) == "bux check [OPTIONS] <PATH>"
 fn used_usage(sub: Subcommand, used: List<String>) -> String {
     if list.length(used) == 0 {
@@ -3041,7 +2631,6 @@ fn used_usage(sub: Subcommand, used: List<String>) -> String {
     smart_usage(sub, used)
 }
 
-/// The usage line naming the flags written, then the argument the command takes.
 // example: smart_usage(or(subcommand_named("check"), help_subcommand()), ["json"]) == "bux check --json <PATH>"
 fn smart_usage(sub: Subcommand, used: List<String>) -> String {
     var written = "bux " + sub.name + " "
@@ -3051,11 +2640,6 @@ fn smart_usage(sub: Subcommand, used: List<String>) -> String {
     written + argument_written(sub)
 }
 
-/// The program `run` names and the words it is run with, or what the command line answers.
-///
-/// `run` has no flag of its own. Before the file, `--` may be written once, and a word that reads
-/// as a flag is refused. After the file every word belongs to the program, except a `--` written
-/// before the first of them.
 // example: is_told(run_parsed([]))
 fn run_parsed(rest: List<String>) -> Parsed {
     var escaped = false
@@ -3081,21 +2665,18 @@ fn run_parsed(rest: List<String>) -> Parsed {
     }
 }
 
-/// Whether `word` is one or more short flags: one dash and at least one letter.
 // example: is_short("-h")
 // example: !is_short("-")
 fn is_short(word: String) -> Bool {
     has_prefix(text: word, opening: "-") && !has_prefix(text: word, opening: "--") && strings.length(word) > 1
 }
 
-/// A flag written before the file `run` names, which is refused.
 // example: run_flag_refused("--x=1").errors == "error: unexpected argument '--x' found\n\n  tip: to pass '--x' as a value, use '-- --x'\n\nUsage: bux run <FILE> [ARGUMENTS]...\n"
 fn run_flag_refused(word: String) -> Said {
     let shown_flag = flag_shown(word)
     complained(Complaint { message: "unexpected argument '" + shown_flag + "' found", tip: Some("to pass '" + shown_flag + "' as a value, use '-- " + shown_flag + "'"), usage: "bux run <FILE> [ARGUMENTS]...", offers_help: false })
 }
 
-/// A flag as a refusal names it: a long flag without its value, a short one by its first letter.
 // example: flag_shown("-xy") == "-x"
 fn flag_shown(word: String) -> String {
     if is_long(word) {
@@ -3104,21 +2685,18 @@ fn flag_shown(word: String) -> String {
     "-" + first_letter(word)
 }
 
-/// Whether `word` is a long flag: two dashes and a name.
 // example: is_long("--json")
 // example: !is_long("--")
 fn is_long(word: String) -> Bool {
     has_prefix(text: word, opening: "--") && strings.length(word) > 2
 }
 
-/// Whether `text` opens with `opening`.
 // example: has_prefix(text: "--json", opening: "--")
 // example: !has_prefix(text: "-", opening: "--")
 fn has_prefix(text: String, opening: String) -> Bool {
     lexer.has_prefix(lexer.Rest { source: text, start: 0 }, opening)
 }
 
-/// A long flag's name and the value written after `=`, where one is.
 // example: or(long_of("--help=x").value, "") == "x"
 fn long_of(word: String) -> Long {
     var index = 2
@@ -3131,7 +2709,6 @@ fn long_of(word: String) -> Long {
     Long { name: or(strings.cut(word, 2, strings.length(word)), ""), value: None }
 }
 
-/// The first letter after the dash of a short flag, a pair of code units where it takes two.
 // example: first_letter("-xy") == "x"
 fn first_letter(word: String) -> String {
     let unit = or(strings.at(word, 1), 0)
@@ -3141,7 +2718,6 @@ fn first_letter(word: String) -> String {
     or(strings.cut(word, 1, 2), "")
 }
 
-/// `help`, with the command it names or none.
 // example: help_asked([]).status == 0
 // example: help_asked(["nope"]).status == 2
 fn help_asked(rest: List<String>) -> Said {
@@ -3151,7 +2727,6 @@ fn help_asked(rest: List<String>) -> Said {
     }
 }
 
-/// Every value of `values` from `index` on.
 // example: list.length(after([1, 2, 3], 1)) == 2
 fn after<T>(values: List<T>, index: Int) -> List<T> {
     var rest = []
@@ -3166,7 +2741,6 @@ fn after<T>(values: List<T>, index: Int) -> List<T> {
     rest
 }
 
-/// The long help of the command called `name`, where there is one and nothing follows it.
 // example: help_named("fmt", ["x"]).errors == "error: unrecognized subcommand 'x'\n\nUsage: bux fmt <FILE>\n\nFor more information, try '--help'.\n"
 fn help_named(name: String, more: List<String>) -> Said {
     match subcommand_named(name) {
@@ -3175,9 +2749,6 @@ fn help_named(name: String, more: List<String>) -> Said {
     }
 }
 
-/// The help of the part of the language called `name`, where there is one and nothing follows it.
-///
-/// `process` is the one such topic: it names no command, and `bux help process` prints it.
 // example: help_of_topic("process", []).status == 0
 // example: help_of_topic("proces", []).status == 2
 fn help_of_topic(name: String, more: List<String>) -> Said {
@@ -3190,7 +2761,6 @@ fn help_of_topic(name: String, more: List<String>) -> Said {
     }
 }
 
-/// The command called `word`, where one is.
 // example: or(subcommand_named("check"), help_subcommand()).value == "PATH"
 fn subcommand_named(word: String) -> Option<Subcommand> {
     for sub in subcommands() {
@@ -3201,7 +2771,6 @@ fn subcommand_named(word: String) -> Option<Subcommand> {
     None
 }
 
-/// The long help of `sub`, and a refusal of a word after it.
 // example: help_of_command(help_subcommand(), []).output == "Print this message or the help of the given subcommand(s)\n\nUsage: bux help [COMMAND]...\n\nArguments:\n  [COMMAND]...  Print help for the subcommand(s)\n"
 fn help_of_command(sub: Subcommand, more: List<String>) -> Said {
     match list.at(more, 0) {
@@ -3210,7 +2779,6 @@ fn help_of_command(sub: Subcommand, more: List<String>) -> Said {
     }
 }
 
-/// A refusal of the words, in the layout the Rust binary wrote: message, tip, usage, pointer.
 // example: complained(Complaint { message: "m", tip: Some("t"), usage: "u", offers_help: false }).errors == "error: m\n\n  tip: t\n\nUsage: u\n"
 fn complained(complaint: Complaint) -> Said {
     var written = "error: " + complaint.message + "\n"
@@ -3222,7 +2790,6 @@ fn complained(complaint: Complaint) -> Said {
     Said { output: "", errors: written, status: 2 }
 }
 
-/// The tip after a blank line, and nothing where there is none.
 // example: tip_line(None) == ""
 fn tip_line(tip: Option<String>) -> String {
     match tip {
@@ -3231,19 +2798,16 @@ fn tip_line(tip: Option<String>) -> String {
     }
 }
 
-/// The help `bux -h` prints: the one-line summary, the usage, the commands, and the flags.
 // example: has_prefix(text: top_short_help(), opening: "The Bux compiler")
 fn top_short_help() -> String {
     "The Bux compiler: Go's simplicity, Haskell's types, the JVM's runtime\n\nUsage: bux <COMMAND>\n\nCommands:\n" + commands_listed() + "\n\nOptions:\n  -h, --help     Print help (see more with '--help')\n  -V, --version  Print version\n"
 }
 
-/// The help `bux --help` prints: the long topic, then the usage, the commands, and the flags.
 // example: has_prefix(text: top_long_help(), opening: "")
 fn top_long_help() -> String {
     topic_text("bux") + "\n\nUsage: bux <COMMAND>\n\nCommands:\n" + commands_listed() + "\n\nOptions:\n  -h, --help\n          Print help (see a summary with '-h')\n\n  -V, --version\n          Print version\n"
 }
 
-/// Every command on a line of its own, with the line that says what it does.
 // example: has_prefix(text: commands_listed(), opening: "  fmt      Rewrite")
 fn commands_listed() -> String {
     var lines = []
@@ -3253,7 +2817,6 @@ fn commands_listed() -> String {
     strings.join(lines, "\n")
 }
 
-/// `text`, `times` times over.
 // example: repeated(text: "^", times: 3) == "^^^"
 fn repeated(text: String, times: Int) -> String {
     var written = ""
@@ -3265,7 +2828,6 @@ fn repeated(text: String, times: Int) -> String {
     written
 }
 
-/// The help `-h` after a command prints.
 // example: short_help(or(subcommand_named("fmt"), help_subcommand())) == "Rewrite a source file in canonical form\n\nUsage: bux fmt <FILE>\n\nArguments:\n  <FILE>  \n\nOptions:\n  -h, --help  Print help (see more with '--help')\n"
 fn short_help(sub: Subcommand) -> String {
     var options = ""
@@ -3275,7 +2837,6 @@ fn short_help(sub: Subcommand) -> String {
     sub.about + "\n\nUsage: " + sub.usage + "\n\nArguments:\n  " + argument_written(sub) + "  \n\nOptions:\n" + options + "  -h, --help  Print help (see more with '--help')\n"
 }
 
-/// The help `--help` after a command, or `help` and the command's name, prints.
 // example: strings.length(long_help(or(subcommand_named("run"), help_subcommand()))) > 0
 fn long_help(sub: Subcommand) -> String {
     if sub.name == "help" {
@@ -3296,8 +2857,6 @@ fn long_help(sub: Subcommand) -> String {
     written + options + "  -h, --help\n          Print help (see a summary with '-h')\n"
 }
 
-/// The argument a command takes as its usage line writes it: `[PATH]` where it may be left out,
-/// else `<PATH>`.
 // example: argument_written(or(subcommand_named("test"), help_subcommand())) == "[PATH]"
 // example: argument_written(or(subcommand_named("fmt"), help_subcommand())) == "<FILE>"
 fn argument_written(sub: Subcommand) -> String {
@@ -3307,36 +2866,28 @@ fn argument_written(sub: Subcommand) -> String {
     }
 }
 
-/// The text of one help topic, which the compiler carries as a resource.
 // example: topic_text("no-such-topic") == ""
 fn topic_text(topic: String) -> String {
     or(modules.resource_text("help/" + topic + ".md"), "")
 }
 
-/// Every command, in the order the help lists them.
 // example: list.length(subcommands()) == 8
 fn subcommands() -> List<Subcommand> {
     [Subcommand { name: "fmt", about: "Rewrite a source file in canonical form", value: "FILE", absent: None, usage: "bux fmt <FILE>", topics: ["fmt"], longs: ["help"] }, Subcommand { name: "check", about: "Report the first thing about a source file or a package the compiler will not have", value: "PATH", absent: None, usage: "bux check [OPTIONS] <PATH>", topics: ["check", "packages"], longs: ["json", "help"] }, Subcommand { name: "build", about: "Compile a source file or a package to the class files a JVM loads", value: "PATH", absent: None, usage: "bux build <PATH>", topics: ["build", "packages"], longs: ["help"] }, Subcommand { name: "run", about: "Compile a source file and run the program it holds", value: "FILE", absent: None, usage: "bux run <FILE> [ARGUMENTS]...", topics: ["run"], longs: [] }, Subcommand { name: "test", about: "Run the examples and the tests of a module or a package", value: "PATH", absent: Some("."), usage: "bux test [PATH]", topics: ["test"], longs: ["help"] }, Subcommand { name: "api", about: "Print the public surface of a module", value: "FILE", absent: None, usage: "bux api <FILE>", topics: ["api"], longs: ["help"] }, Subcommand { name: "explain", about: "Print the long form of one diagnostic code", value: "CODE", absent: None, usage: "bux explain <CODE>", topics: ["explain"], longs: ["help"] }, help_subcommand()]
 }
 
-/// `help`, which prints the help of the command it names.
 // example: help_subcommand().name == "help"
 fn help_subcommand() -> Subcommand {
     Subcommand { name: "help", about: "Print this message or the help of the given subcommand(s)", value: "COMMAND", absent: None, usage: "bux help [COMMAND]...", topics: [], longs: [] }
 }
 
-/// The most similar of `known` to `written`, where one is similar enough.
 // example: or(most_similar("hlp", ["json", "help"]), "") == "help"
 fn most_similar(written: String, known: List<String>) -> Option<String> {
     let similar = all_similar(written, known)
     list.at(similar, list.length(similar) - 1)
 }
 
-/// Every one of `known` similar enough to `written`, the least similar first.
-///
-/// Two names are similar when their Jaro similarity is above 0.7, which is the measure and the
-/// bound the Rust binary's argument parser used. Of two equally similar names the one listed
-/// later in `known` comes later.
+// The bound 0.7 on the Jaro similarity is the one that the Rust argument parser used.
 // example: all_similar("tst", ["fmt", "test"]) == ["test"]
 fn all_similar(written: String, known: List<String>) -> List<String> {
     var found = []
@@ -3353,7 +2904,6 @@ fn all_similar(written: String, known: List<String>) -> List<String> {
     names
 }
 
-/// `found`, with `one` after every name that scores no higher than it.
 // example: list.length(placed_by_score([], Scored { name: "a", score: Score { numerator: 1, denominator: 1 } })) == 1
 fn placed_by_score(found: List<Scored>, one: Scored) -> List<Scored> {
     var placed = []
@@ -3371,16 +2921,11 @@ fn placed_by_score(found: List<Scored>, one: Scored) -> List<Scored> {
     placed
 }
 
-/// Whether `score` is higher than `than`.
 // example: is_higher(score: Score { numerator: 2, denominator: 3 }, than: Score { numerator: 1, denominator: 2 })
 fn is_higher(score: Score, than: Score) -> Bool {
     score.numerator * than.denominator > than.numerator * score.denominator
 }
 
-/// The Jaro similarity of two words, as a fraction.
-///
-/// Two letters match where they are equal and no further apart than half the longer word, less
-/// one. The similarity is the mean of the matches over each length and of the matches in order.
 // example: is_higher(score: jaro(Compared { written: "chek", known: "check" }), than: Score { numerator: 7, denominator: 10 })
 // example: jaro(Compared { written: "", known: "" }).numerator == 1
 fn jaro(compared: Compared) -> Score {
@@ -3401,7 +2946,6 @@ fn jaro(compared: Compared) -> Score {
     Score { numerator: count * count * known_length + count * count * written_length + (count - swapped) * written_length * known_length, denominator: 3 * written_length * known_length * count }
 }
 
-/// Which letters of each word match a letter of the other, in the order of each word.
 // example: list.length(matches_of(Compared { written: "chek", known: "check" }).written) == 4
 fn matches_of(compared: Compared) -> Matched {
     let written_length = strings.length(compared.written)
@@ -3434,7 +2978,6 @@ fn matches_of(compared: Compared) -> Matched {
     Matched { written: written_matched, known: known_matched }
 }
 
-/// The smaller of two numbers.
 // example: smaller(one: 2, other: 3) == 2
 fn smaller(one: Int, other: Int) -> Int {
     if other < one {
@@ -3443,7 +2986,6 @@ fn smaller(one: Int, other: Int) -> Int {
     one
 }
 
-/// The larger of two numbers.
 // example: larger(one: 2, other: 3) == 3
 fn larger(one: Int, other: Int) -> Int {
     if other > one {
@@ -3452,7 +2994,6 @@ fn larger(one: Int, other: Int) -> Int {
     one
 }
 
-/// How many matched letters, read in order in each word, differ from their partner.
 // example: transpositions(Compared { written: "ab", known: "ba" }, Matched { written: [0, 1], known: [0, 1] }) == 2
 fn transpositions(compared: Compared, matched: Matched) -> Int {
     var count = 0
@@ -3468,10 +3009,7 @@ fn transpositions(compared: Compared, matched: Matched) -> Int {
     count
 }
 
-/// Why the file at `path` could not be read, in the words the Rust compiler gave.
-///
-/// The JVM names a failure in words of its own, so the reason is found by looking at the path: a
-/// directory, a file that cannot be opened, a file that is not UTF-8, or no file at all.
+// The JVM gives a read failure in its own words, so this function finds the reason from the path.
 // example: read_refusal("no-such-directory/a.bx") == "No such file or directory (os error 2)"
 fn read_refusal(path: String) -> String {
     let place = files.named(path)
@@ -3490,7 +3028,6 @@ fn read_refusal(path: String) -> String {
     "No such file or directory (os error 2)"
 }
 
-/// Why the file at `path` could not be written, in the words the Rust compiler gave.
 // example: write_refusal("no-such-directory/a.bx") == "No such file or directory (os error 2)"
 fn write_refusal(path: String) -> String {
     if files.is_directory(files.named(path)) {
@@ -3505,7 +3042,6 @@ fn write_refusal(path: String) -> String {
     "Permission denied (os error 13)"
 }
 
-/// Why the directory at `path` could not be made, in the words the Rust compiler gave.
 // example: making_refusal("/") == "File exists (os error 17)"
 fn making_refusal(path: String) -> String {
     if files.is_there(files.named(path)) {
@@ -3517,13 +3053,11 @@ fn making_refusal(path: String) -> String {
     "Permission denied (os error 13)"
 }
 
-/// Whether `path` ends with a slash, which names a directory.
 // example: has_trailing_slash("a/")
 fn has_trailing_slash(path: String) -> Bool {
     or(strings.at(path, strings.length(path) - 1), 0) == 47
 }
 
-/// Whether a directory `path` passes through is a file, which no path goes on from.
 // example: !is_under_a_file("no-such-directory/a.bx")
 fn is_under_a_file(path: String) -> Bool {
     var above = files.parent_path(files.named(path))
@@ -3537,7 +3071,6 @@ fn is_under_a_file(path: String) -> Bool {
     false
 }
 
-/// Whether a comment states an example.
 // example: is_stated(Some("1 == 1"))
 fn is_stated(expression: Option<String>) -> Bool {
     match expression {
@@ -3546,7 +3079,6 @@ fn is_stated(expression: Option<String>) -> Bool {
     }
 }
 
-/// The answer of the command line: the text of each stream and a status, or a program to start.
 type Answer =
     | Spoken(Said)
     | Starts(List<String>)
@@ -3555,57 +3087,46 @@ derive Eq for Command
 
 derive Eq for Form
 
-/// What the words ask for: an answer given at once, a command, or a program to run.
 type Parsed =
     | Told(Said)
     | Asked(Command)
     | Running(Started)
 
-/// What the run of one module found, and the memo as that run left it.
 type Tested = {
     tried: Tried
     memo: Memo
 }
 
-/// The class a run is named, and its class files, or why the run was not compiled.
 type Named = {
     module: String
     classes: Result<List<jvm.ClassFile>, NotCompiled>
 }
 
-/// What the pool of `bux test` is sent: a worker that asks for a module, an answer and its worker,
-/// or a worker that has left.
 type Pooled =
     | Joined(Process<Work, Working>)
     | Finished(Answered, Process<Work, Working>)
     | Left
 
-/// What a worker of `bux test` is sent: a module to run, or the word to stop.
 type Work =
     | Give(Handed)
     | Stop
 
-/// A module to run, the number it has in the order of the package, and the worker it goes to.
 type Handed = {
     number: Int
     path: String
     worker: Process<Work, Working>
 }
 
-/// What the run of one module found, and the number of that module.
 type Answered = {
     number: Int
     tried: Tried
 }
 
-/// The state of a worker: the pool it answers to, the library, and the memo it keeps.
 type Working = {
     pool: Process<Pooled, Pooling>
     typing: Typing
 }
 
-/// The state of the pool: every module, how many are handed, each answer by the number of its
-/// module, and how many workers have not left.
 type Pooling = {
     paths: List<String>
     handed: Int
@@ -3613,8 +3134,6 @@ type Pooling = {
     workers: Int
 }
 
-/// What a run of one module or of a package found: what it says, how many tests and examples it
-/// tried, and how many of them did not hold.
 type Tried = {
     said: Said
     tests: Int
@@ -3622,14 +3141,12 @@ type Tried = {
     failed: Int
 }
 
-/// What a command writes on standard output and standard error, and the status it ends with.
 type Said = {
     output: String
     errors: String
     status: Int
 }
 
-/// A command the words ask for, other than `run`.
 type Command =
     | Fmt(String)
     | Check {
@@ -3641,29 +3158,24 @@ type Command =
     | Api(String)
     | Explain(String)
 
-/// `check` over one path, in the form its refusal is shown in.
 type Checking = {
     path: String
     form: Form
 }
 
-/// The command a package is given: `check` in one form, or `build`.
 type Over =
     | CheckingAs(Form)
     | Building
 
-/// How a refusal is shown: as a page for a reader, or as one line of JSON for a tool.
 type Form =
     | AsPage
     | AsData
 
-/// A program to run, and the words it is run with.
 type Started = {
     file: String
     arguments: List<String>
 }
 
-/// A module built: the class a JVM starts, where its classes are, and whether it is a program.
 type Built = {
     module: String
     target: String
@@ -3671,56 +3183,46 @@ type Built = {
     starts: Bool
 }
 
-/// Every module of a program, checked, and the one the command named.
 type Checked = {
     modules: List<Typed>
     root: Typed
 }
 
-/// What a step found, and the memo as that step left it.
 type Memoed<T> = {
     found: Result<T, NotCompiled>
     memo: Memo
 }
 
-/// What a module is typed with: the library, and the modules typed already.
 type Typing = {
     library: ir.Library
     memo: Memo
 }
 
-/// Every module typed so far, by the canonical path of its file, and the paths of those whole.
-///
-/// A module is whole where it holds no hole and each of its functions states an example.
+// A module is whole when it holds no hole and each of its functions states an example.
 type Memo = {
     typed: map.Map<String, Typed>
     whole: set.Set<String>
 }
 
-/// One module, and what inference settled of it.
 type Typed = {
     module: modules.Module
     inferred: infer.Inference
 }
 
-/// Why a program was not compiled: a file not read, said already, or a refusal of one that was.
 type NotCompiled =
     | Unusable(String)
     | Refused(Refusal)
 
-/// Every diagnostic of one refusal, and the page they point into.
 type Refusal = {
     diagnostics: List<Diagnostic>
     page: Page
 }
 
-/// A source and the path of its file, which is what a refusal is shown against.
 type Page = {
     source: String
     path: String
 }
 
-/// One thing the compiler will not have: its code, its message, where it is, and what helps.
 type Diagnostic = {
     code: String
     message: String
@@ -3729,13 +3231,11 @@ type Diagnostic = {
     fix: Option<Fix>
 }
 
-/// The edit that answers a diagnostic: `text` in place of the bytes `span` covers.
 type Fix = {
     span: lexer.Span
     text: String
 }
 
-/// Where the run of the examples is written and started: the JDK, the class, and the directory.
 type Beside = {
     java: String
     module: String
@@ -3745,39 +3245,31 @@ type Beside = {
 
 derive Eq for RootForm
 
-/// What one module is checked with: what the modules before it offer, the form it is held to,
-/// and the classes the archives of the build hold.
 type Accepting = {
     imported: surface.Imported
     form: RootForm
     archived: set.Set<String>
 }
 
-/// What the module a command named is held to: canonical form, or only what it was written as.
 type RootForm =
     | ToCanonicalForm
     | AsWritten
 
-/// A source with the line comments it holds.
 type Commented = {
     measured: Measured
     comments: List<lexer.Token>
 }
 
-/// A source, with the byte each of its code units starts at and the byte it ends at.
 type Measured = {
     source: String
     starts: List<Int>
 }
 
-/// A stretch between two offsets.
 type Stretched = {
     from: Int
     to: Int
 }
 
-/// The run of the examples and the tests: its source, where each stretch of it came from, and
-/// what it tries.
 type Run = {
     source: String
     stretches: List<Placed>
@@ -3786,45 +3278,38 @@ type Run = {
     module: lexer.Span
 }
 
-/// What a run tries: the examples a module states, then its tests.
 type Trying = {
     examples: List<Example>
     tests: List<ast.TestDeclaration>
 }
 
-/// One example: the function it documents, the expression it states, and the comment it is in.
 type Example = {
     of: String
     expression: String
     span: lexer.Span
 }
 
-/// The run as it is written: its source so far, how many bytes that is, and its stretches.
 type Writing = {
     source: String
     bytes: Int
     stretches: List<Placed>
 }
 
-/// Text the run writes, and what in the original it is about.
 type Stretch = {
     text: String
     about: About
 }
 
-/// Where a stretch of the run lies, and what in the original it is about.
 type Placed = {
     span: lexer.Span
     about: About
 }
 
-/// What a stretch of the run is about: copied text, the trying of one example, or the module.
 type About =
     | SameText(Int)
     | OneExample(Int)
     | WholeModule
 
-/// Where a diagnostic points: its line and column, the line's text, and the carets under it.
 type Pointed = {
     line: Int
     column: Int
@@ -3834,14 +3319,11 @@ type Pointed = {
     note: String
 }
 
-/// The line a span opens on and the line it ends on.
 type Lines = {
     first: Int
     last: Int
 }
 
-/// A command a word names: what it says of itself, and the flags and the argument it takes, with
-/// the argument it is given where none is written.
 type Subcommand = {
     name: String
     about: String
@@ -3852,31 +3334,26 @@ type Subcommand = {
     longs: List<String>
 }
 
-/// One word read as a flag, and the flags read before it.
 type Flagged = {
     word: String
     used: List<String>
 }
 
-/// A long flag, and the flags read before it.
 type Held = {
     long: Long
     used: List<String>
 }
 
-/// A long flag: its name, and the value written after `=`, where one is.
 type Long = {
     name: String
     value: Option<String>
 }
 
-/// The argument of a command, and the flags written with it.
 type Given = {
     value: String
     used: List<String>
 }
 
-/// A refusal of the words: the message, a tip, the usage line, and whether it points at `--help`.
 type Complaint = {
     message: String
     tip: Option<String>
@@ -3884,25 +3361,22 @@ type Complaint = {
     offers_help: Bool
 }
 
-/// A name, and how similar it is to the word written.
 type Scored = {
     name: String
     score: Score
 }
 
-/// A similarity as a fraction, so two are compared exactly.
+// A score is a fraction, so a comparison of two scores is exact.
 type Score = {
     numerator: Int
     denominator: Int
 }
 
-/// A word written, and a name it is compared with.
 type Compared = {
     written: String
     known: String
 }
 
-/// The letters of each word that match one of the other, by index, in order.
 type Matched = {
     written: List<Int>
     known: List<Int>

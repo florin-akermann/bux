@@ -11,61 +11,51 @@ import jvm
 import list
 import strings
 
-/// The same module, lowered twice, gives the same classes, which are written as the same bytes.
 // example: held.is_held(lowering_one_module_twice_gives_the_same_classes(0, ir.little_library()))
 fn lowering_one_module_twice_gives_the_same_classes(cases: Int, library: ir.Library) -> held.Held {
     checked(property: Twice, cases: cases, library: library)
 }
 
-/// No two classes one module writes share a name.
 // example: held.is_held(every_class_a_module_writes_is_named_once(0, ir.little_library()))
 fn every_class_a_module_writes_is_named_once(cases: Int, library: ir.Library) -> held.Held {
     checked(property: NamedOnce, cases: cases, library: library)
 }
 
-/// Every method of every class a module writes ends with a return.
 // example: held.is_held(every_method_ends_by_leaving_it(0, ir.little_library()))
 fn every_method_ends_by_leaving_it(cases: Int, library: ir.Library) -> held.Held {
     checked(property: Leaving, cases: cases, library: library)
 }
 
-/// A module is written with an entry point exactly when it declares `main` at the one shape.
 // example: held.is_held(a_module_has_an_entry_point_exactly_when_it_declares_main(0, ir.little_library()))
 fn a_module_has_an_entry_point_exactly_when_it_declares_main(cases: Int, library: ir.Library) -> held.Held {
     checked(property: EntryPoint, cases: cases, library: library)
 }
 
-/// No class a module writes declares a method that every JVM class inherits.
 // example: held.is_held(no_class_declares_a_method_the_object_model_gives_it(0, ir.little_library()))
 fn no_class_declares_a_method_the_object_model_gives_it(cases: Int, library: ir.Library) -> held.Held {
     checked(property: Inherited, cases: cases, library: library)
 }
 
-/// Every `equals` a module calls is the one of `java/lang/String`, which compares what it holds.
 // example: held.is_held(the_one_equality_a_module_calls_is_the_one_string_declares(0, ir.little_library()))
 fn the_one_equality_a_module_calls_is_the_one_string_declares(cases: Int, library: ir.Library) -> held.Held {
     checked(property: StringEquality, cases: cases, library: library)
 }
 
-/// A written list makes an array as long as its elements, stores each, and builds one list.
 // example: held.is_held(a_written_list_stores_each_element_and_builds_one_list(0, ir.little_library()))
 fn a_written_list_stores_each_element_and_builds_one_list(cases: Int, library: ir.Library) -> held.Held {
     checked(property: ListWritten, cases: cases, library: library)
 }
 
-/// One value stands for each `()` a list writes, because a `()` is carried by nothing.
 // example: held.is_held(as_many_values_stand_for_nothing_as_a_list_writes_units(0, ir.little_library()))
 fn as_many_values_stand_for_nothing_as_a_list_writes_units(cases: Int, library: ir.Library) -> held.Held {
     checked(property: Units, cases: cases, library: library)
 }
 
-/// A record literal with a field written bare and one with `name: name` write the same classes.
 // example: held.is_held(a_bare_field_lowers_as_the_field_written_whole(0, ir.little_library()))
 fn a_bare_field_lowers_as_the_field_written_whole(cases: Int, library: ir.Library) -> held.Held {
     checked(property: BareField, cases: cases, library: library)
 }
 
-/// `property` checked over `cases` drawn modules, each drawn from a seed of its own.
 // example: checked(property: Twice, cases: 0, library: ir.little_library()).cases == 0
 fn checked(property: Property, cases: Int, library: ir.Library) -> held.Held {
     var found = held.nothing_failed(cases)
@@ -79,7 +69,6 @@ fn checked(property: Property, cases: Int, library: ir.Library) -> held.Held {
     found
 }
 
-/// The module `property` draws with `draw`, and what went wrong with it, which is empty if nothing.
 // example: drawing(property: Units, draw: drawn.seeded(1), library: ir.little_library()).why == ""
 fn drawing(property: Property, draw: drawn.Draw, library: ir.Library) -> Drawing {
     match property {
@@ -95,7 +84,6 @@ fn drawing(property: Property, draw: drawn.Draw, library: ir.Library) -> Drawing
     }
 }
 
-/// The name a failure of `property` is reported with.
 // example: name_of(Twice) == "lowering_one_module_twice_gives_the_same_classes"
 fn name_of(property: Property) -> String {
     match property {
@@ -111,14 +99,12 @@ fn name_of(property: Property) -> String {
     }
 }
 
-/// One module lowered twice, which must be written as the same bytes both times.
 // example: twice(drawn.seeded(1), ir.little_library()).source != ""
 fn twice(draw: drawn.Draw, library: ir.Library) -> Drawing {
     let source = drawn.picked(draw, sources(), "")
     Drawing { source: source, why: compiled.differing(compiled.written_alone(source, library), compiled.written_alone(source, library)) }
 }
 
-/// No class name twice among the classes of one module.
 // example: named_once(drawn.seeded(1), ir.little_library()).source != ""
 fn named_once(draw: drawn.Draw, library: ir.Library) -> Drawing {
     let source = drawn.picked(draw, sources(), "")
@@ -137,7 +123,6 @@ fn named_once(draw: drawn.Draw, library: ir.Library) -> Drawing {
     Drawing { source: source, why: why }
 }
 
-/// Every method of every module ending with a return.
 // example: leaving(drawn.seeded(1), ir.little_library()).source != ""
 fn leaving(draw: drawn.Draw, library: ir.Library) -> Drawing {
     let source = drawn.picked(draw, sources(), "")
@@ -155,7 +140,6 @@ fn leaving(draw: drawn.Draw, library: ir.Library) -> Drawing {
     Drawing { source: source, why: why }
 }
 
-/// Whether `instruction` gives back from the method.
 // example: is_return(jvm.Return(None))
 // example: !is_return(jvm.Copy)
 fn is_return(instruction: jvm.Instruction) -> Bool {
@@ -165,7 +149,6 @@ fn is_return(instruction: jvm.Instruction) -> Bool {
     }
 }
 
-/// The class `demo` with a `main` that gives back nothing exactly when the source has `main`.
 // example: entry_point(drawn.seeded(1), ir.little_library()).source != ""
 fn entry_point(draw: drawn.Draw, library: ir.Library) -> Drawing {
     let source = drawn.picked(draw, sources(), "")
@@ -178,7 +161,6 @@ fn entry_point(draw: drawn.Draw, library: ir.Library) -> Drawing {
     Drawing { source: source, why: why }
 }
 
-/// Whether the class `demo` writes a `main` that gives back nothing, which is where the JVM starts.
 // example: !is_entered([])
 fn is_entered(lowered: List<ir.Lowered>) -> Bool {
     for class in compiled.demo_classes(lowered) {
@@ -191,7 +173,6 @@ fn is_entered(lowered: List<ir.Lowered>) -> Bool {
     false
 }
 
-/// No method named as one of the methods every JVM class inherits.
 // example: inherited(drawn.seeded(1), ir.little_library()).source != ""
 fn inherited(draw: drawn.Draw, library: ir.Library) -> Drawing {
     let source = drawn.picked(draw, sources(), "")
@@ -208,7 +189,6 @@ fn inherited(draw: drawn.Draw, library: ir.Library) -> Drawing {
     Drawing { source: source, why: why }
 }
 
-/// Every `equals` called, in every method of every module, being the one of `java/lang/String`.
 // example: string_equality(drawn.seeded(1), ir.little_library()).source != ""
 fn string_equality(draw: drawn.Draw, library: ir.Library) -> Drawing {
     let source = drawn.picked(draw, sources(), "")
@@ -224,7 +204,6 @@ fn string_equality(draw: drawn.Draw, library: ir.Library) -> Drawing {
     Drawing { source: source, why: why }
 }
 
-/// `why`, or what is wrong where `reference` is an `equals` of a class other than `String`.
 // example: equality_why(no_call(), "") == ""
 fn equality_why(reference: jvm.MethodRef, why: String) -> String {
     if reference.name == "equals" && reference.class != "java/lang/String" {
@@ -233,7 +212,6 @@ fn equality_why(reference: jvm.MethodRef, why: String) -> String {
     why
 }
 
-/// A list of a drawn length: an array that long, one store for each element, and one list built.
 // example: list_written(drawn.seeded(1), ir.little_library()).why == ""
 fn list_written(draw: drawn.Draw, library: ir.Library) -> Drawing {
     let many = drawn.picked(draw, [0, 1, 2, 3, 7], 0)
@@ -247,7 +225,6 @@ fn list_written(draw: drawn.Draw, library: ir.Library) -> Drawing {
     Drawing { source: source, why: listing_why(body, many) }
 }
 
-/// What is wrong with `body` as the writing of a list of `many` elements, or nothing.
 // example: listing_why([], 0) == "it makes no array of 0"
 fn listing_why(body: List<jvm.Instruction>, many: Int) -> String {
     if !is_integer(or(list.at(body, 0), jvm.Copy), many) {
@@ -269,7 +246,6 @@ fn listing_why(body: List<jvm.Instruction>, many: Int) -> String {
     ""
 }
 
-/// Whether `instruction` pushes the `int` `value`.
 // example: is_integer(jvm.IntegerOf(2), 2)
 // example: !is_integer(jvm.LongOf(2), 2)
 fn is_integer(instruction: jvm.Instruction, value: Int) -> Bool {
@@ -279,7 +255,6 @@ fn is_integer(instruction: jvm.Instruction, value: Int) -> Bool {
     }
 }
 
-/// Whether `instruction` stores a value in an array.
 // example: is_stored_in_array(jvm.StoreInArray)
 // example: !is_stored_in_array(jvm.Copy)
 fn is_stored_in_array(instruction: jvm.Instruction) -> Bool {
@@ -289,7 +264,6 @@ fn is_stored_in_array(instruction: jvm.Instruction) -> Bool {
     }
 }
 
-/// Each call in `body` that builds a list from an array, which is `bux/List.of`.
 // example: listed_calls([jvm.Copy]) == []
 fn listed_calls(body: List<jvm.Instruction>) -> List<String> {
     var calls = []
@@ -302,13 +276,11 @@ fn listed_calls(body: List<jvm.Instruction>) -> List<String> {
     calls
 }
 
-/// A call of nothing, which stands where an instruction calls no method.
 // example: no_call().name == ""
 fn no_call() -> jvm.MethodRef {
     jvm.MethodRef { class: "", name: "", descriptor: jvm.MethodDescriptor { parameters: [], result: None } }
 }
 
-/// A list of a drawn number of `()`, each of which a bare `java/lang/Object` stands for.
 // example: units(drawn.seeded(1), ir.little_library()).why == ""
 fn units(draw: drawn.Draw, library: ir.Library) -> Drawing {
     let many = drawn.picked(draw, [0, 1, 2, 3, 7], 0)
@@ -331,7 +303,6 @@ fn units(draw: drawn.Draw, library: ir.Library) -> Drawing {
     Drawing { source: source, why: why }
 }
 
-/// Whether `instruction` makes a new instance.
 // example: is_new(jvm.New("a/B"))
 // example: !is_new(jvm.Copy)
 fn is_new(instruction: jvm.Instruction) -> Bool {
@@ -341,9 +312,6 @@ fn is_new(instruction: jvm.Instruction) -> Bool {
     }
 }
 
-/// A record built and updated with each field drawn bare or whole, beside one with none bare.
-///
-/// The two write the same classes as the same bytes, so the two forms type and lower alike.
 // example: bare_field(drawn.seeded(1), ir.little_library()).why == ""
 fn bare_field(draw: drawn.Draw, library: ir.Library) -> Drawing {
     let many = drawn.picked(draw, [1, 2, 3, 4], 1)
@@ -356,8 +324,6 @@ fn bare_field(draw: drawn.Draw, library: ir.Library) -> Drawing {
     Drawing { source: source, why: compiled.differing(compiled.written_alone(source, library), compiled.written_alone(whole, library)) }
 }
 
-/// A module that builds a record of `many` fields and updates its first, each field in the form
-/// `forms` holds at its index, and written `name: name` where it holds none.
 // example: record_built(1, [Bare]) == "fn built(first: Int) -> Record {\n    let made = Record { first }\n    made { first }\n}\n\ntype Record = {\n    first: Int\n}\n"
 fn record_built(many: Int, forms: List<FieldForm>) -> String {
     var parameters = []
@@ -374,7 +340,6 @@ fn record_built(many: Int, forms: List<FieldForm>) -> String {
     "fn built(" + strings.join(parameters, ", ") + ") -> Record {\n    let made = Record { " + strings.join(given, ", ") + " }\n    made { " + or(list.at(given, 0), "") + " }\n}\n\ntype Record = {\n" + declared + "}\n"
 }
 
-/// The field `name` of a record literal, written in `form`.
 // example: field_given("id", Bare) == "id"
 // example: field_given("id", Whole) == "id: id"
 fn field_given(name: String, form: FieldForm) -> String {
@@ -384,13 +349,11 @@ fn field_given(name: String, form: FieldForm) -> String {
     }
 }
 
-/// The modules most properties draw from, each written in one construct or another.
 // example: list.length(sources()) == 10
 fn sources() -> List<String> {
     ["fn written() -> List<Int> {\n    [1, 2, 3]\n}\n", "fn saved() -> Result<(), String> {\n    Ok(())\n}\n", "fn answer() -> Int {\n    7\n}\n", "fn held(user: User) -> Int {\n    user.id\n}\n\ntype User = {\n    id: Int\n    active: Bool\n}\n", "fn told(payment: Payment) -> String {\n    match payment {\n        Pending => \"waiting\"\n        Failed(reason) => reason\n    }\n}\n\ntype Payment =\n    | Pending\n    | Failed(String)\n", "fn walked(counts: List<Int>) -> Int {\n    var total = 0\n    for count in counts {\n        total += count\n    }\n    total\n}\n", "fn used() -> Result<Int, String> {\n    let value = held()?\n    Ok(value + 1)\n}\n\nfn held() -> Result<Int, String> {\n    Ok(1)\n}\n", "fn wrapped() -> Option<Int> {\n    Some(identity(2))\n}\n\nfn identity<T>(value: T) -> T {\n    value\n}\n", "fn counted() -> Int {\n    2\n}\n\nfn main(arguments: List<String>) -> Int {\n    0\n}\n", "fn is_same(word: String, count: Int) -> Bool {\n    word == \"one\" && count != 2\n}\n"]
 }
 
-/// `the compiler refused it` where nothing was lowered, and nothing where something was.
 // example: refused([]) == "the compiler refused it"
 fn refused(lowered: List<ir.Lowered>) -> String {
     if list.length(lowered) == 0 {
@@ -399,18 +362,15 @@ fn refused(lowered: List<ir.Lowered>) -> String {
     ""
 }
 
-/// One drawn module, and what went wrong with it, which is empty where the property held.
 type Drawing = {
     source: String
     why: String
 }
 
-/// The form of one field of a drawn record literal: a bare `name`, or `name: name`.
 type FieldForm =
     | Bare
     | Whole
 
-/// Each property of the lowering, which names the module it draws and the invariant it holds.
 type Property =
     | Twice
     | NamedOnce

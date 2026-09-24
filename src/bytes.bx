@@ -6,10 +6,6 @@
 import list
 import strings
 
-/// `bytes` with `value` after them as eight bytes, the highest one first, as a `long` is held.
-///
-/// A negative value is its complement: the value plus the whole range, which is the value plus
-/// the lowest one twice, taken with the highest bit set.
 // example: u8(bytes: [], value: 1) == [0, 0, 0, 0, 0, 0, 0, 1]
 // example: u8(bytes: [], value: -1) == [255, 255, 255, 255, 255, 255, 255, 255]
 fn u8(bytes: List<Int>, value: Int) -> List<Int> {
@@ -20,7 +16,6 @@ fn u8(bytes: List<Int>, value: Int) -> List<Int> {
     u4(bytes: u4(bytes: bytes, value: or(lifted / 4294967296, 0) + 2147483648), value: lifted)
 }
 
-/// `bytes` with `value` after them as four bytes, the highest one first.
 // example: u4(bytes: [], value: 3405691582) == [202, 254, 186, 190]
 // example: u4(bytes: [], value: -2) == [255, 255, 255, 254]
 fn u4(bytes: List<Int>, value: Int) -> List<Int> {
@@ -28,7 +23,6 @@ fn u4(bytes: List<Int>, value: Int) -> List<Int> {
     u2(bytes: u2(bytes: bytes, value: or(held / 65536, 0)), value: held)
 }
 
-/// `bytes` with `value` after them as two bytes, the high one first.
 // example: u2(bytes: [], value: 258) == [1, 2]
 // example: u2(bytes: [], value: -1) == [255, 255]
 fn u2(bytes: List<Int>, value: Int) -> List<Int> {
@@ -36,13 +30,11 @@ fn u2(bytes: List<Int>, value: Int) -> List<Int> {
     u1(bytes: u1(bytes: bytes, value: or(held / 256, 0)), value: held)
 }
 
-/// `bytes` with one byte of `value` after them.
 // example: u1(bytes: [], value: 300) == [44]
 fn u1(bytes: List<Int>, value: Int) -> List<Int> {
     list.push(bytes, wrapped(value: value, range: 256))
 }
 
-/// `value` modulo `range`, which is never negative.
 // example: wrapped(value: -1, range: 256) == 255
 fn wrapped(value: Int, range: Int) -> Int {
     let left = or(value % range, 0)
@@ -52,10 +44,8 @@ fn wrapped(value: Int, range: Int) -> Int {
     left
 }
 
-/// `text` in the encoding a class file calls UTF-8, which is not quite the standard one.
-///
-/// A zero is written as two bytes, so no text holds a zero byte. A character above the basic
-/// plane is written as the two halves Java holds it as, three bytes each, not as four bytes.
+// A class file writes a zero as two bytes, and a char above the basic plane as its two UTF-16
+// halves, with three bytes for each half.
 // example: modified_utf8("A") == [65]
 // example: modified_utf8("é") == [195, 169]
 fn modified_utf8(text: String) -> List<Int> {
@@ -68,7 +58,6 @@ fn modified_utf8(text: String) -> List<Int> {
     written
 }
 
-/// `bytes`, then each of `more`.
 // example: all(bytes: [1], more: [2, 3]) == [1, 2, 3]
 fn all(bytes: List<Int>, more: List<Int>) -> List<Int> {
     var written = bytes
@@ -78,7 +67,6 @@ fn all(bytes: List<Int>, more: List<Int>) -> List<Int> {
     written
 }
 
-/// One unit of UTF-16 text, as the one to three bytes modified UTF-8 writes it as.
 // example: unit_written(0) == [192, 128]
 // example: unit_written(8364) == [226, 130, 172]
 fn unit_written(unit: Int) -> List<Int> {

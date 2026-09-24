@@ -14,7 +14,6 @@ import modules
 import strings
 import walk
 
-/// Each drawn `jar` line reads back as the path and the hash it was printed with, in line order.
 // example: a_printed_jar_line_reads_back(2).cases == 2
 fn a_printed_jar_line_reads_back(cases: Int) -> held.Held {
     var found = held.nothing_failed(cases)
@@ -24,7 +23,6 @@ fn a_printed_jar_line_reads_back(cases: Int) -> held.Held {
     found
 }
 
-/// From one to four drawn archives, printed as `jar` lines and read back out of the manifest.
 // example: printed_tried(drawn.seeded(1)).why == ""
 fn printed_tried(draw: drawn.Draw) -> checking.Tried {
     let printed = drawn_archives(draw)
@@ -38,7 +36,6 @@ fn printed_tried(draw: drawn.Draw) -> checking.Tried {
     }
 }
 
-/// `""` where `stated` holds the path and the hash of each of `printed`, in order, and why not.
 // example: read_back(printed: [], stated: []) == ""
 fn read_back(printed: List<Printed>, stated: List<modules.Archive>) -> String {
     if list.length(printed) != list.length(stated) {
@@ -55,7 +52,6 @@ fn read_back(printed: List<Printed>, stated: List<modules.Archive>) -> String {
     ""
 }
 
-/// Each malformed `jar` line is refused as L0315, at the line itself.
 // example: a_malformed_jar_line_is_refused(2).cases == 2
 fn a_malformed_jar_line_is_refused(cases: Int) -> held.Held {
     var found = held.nothing_failed(cases)
@@ -65,7 +61,6 @@ fn a_malformed_jar_line_is_refused(cases: Int) -> held.Held {
     found
 }
 
-/// One drawn malformed shape, or a repeat of the well-formed `jar` line before it, refused there.
 // example: malformed_tried(drawn.seeded(1)).why == ""
 fn malformed_tried(draw: drawn.Draw) -> checking.Tried {
     let first = drawn_archive(draw)
@@ -79,7 +74,6 @@ fn malformed_tried(draw: drawn.Draw) -> checking.Tried {
     }
 }
 
-/// Each `depends` or `jar` path with a `:` at a drawn place is refused as L0315, at its line.
 // example: a_path_with_a_colon_is_refused(2).cases == 2
 fn a_path_with_a_colon_is_refused(cases: Int) -> held.Held {
     var found = held.nothing_failed(cases)
@@ -89,9 +83,7 @@ fn a_path_with_a_colon_is_refused(cases: Int) -> held.Held {
     found
 }
 
-/// One drawn path with a `:` put in at a drawn place, stated by a drawn `depends` or `jar` line.
-///
-/// A well-formed `depends` line comes first, so the refused line is the fourth line.
+// A well-formed `depends` line comes first, so the refused line is the fourth line.
 // example: colon_tried(drawn.seeded(1)).why == ""
 fn colon_tried(draw: drawn.Draw) -> checking.Tried {
     let archive = drawn_archive(draw)
@@ -107,7 +99,6 @@ fn colon_tried(draw: drawn.Draw) -> checking.Tried {
     }
 }
 
-/// `""` where `error` is L0315 at byte `start` and says `path` holds `:`, and why not otherwise.
 // example: split_at(error: modules.LoadError { kind: modules.SplitsTheClassPath("a:b"), span: span_at(3) }, start: 3, path: "a:b") == ""
 fn split_at(error: modules.LoadError, start: Int, path: String) -> String {
     let at = refused_at(error: error, start: start)
@@ -121,7 +112,6 @@ fn split_at(error: modules.LoadError, start: Int, path: String) -> String {
     ""
 }
 
-/// `""` where `error` is L0315 and starts at byte `start`, and what it is otherwise.
 // example: refused_at(error: modules.LoadError { kind: modules.NotAnArchiveLine, span: span_at(3) }, start: 3) == ""
 fn refused_at(error: modules.LoadError, start: Int) -> String {
     let code = modules.code_of(error.kind)
@@ -131,9 +121,7 @@ fn refused_at(error: modules.LoadError, start: Int) -> String {
     ""
 }
 
-/// The digest of each drawn file is the one `shasum -a 256` gives for it.
-///
-/// Every file is written first, so `shasum` runs once; where it is not there, this is skipped.
+// All files are written first, so `shasum` runs once. Where `shasum` is not there, the check skips.
 // example: every_digest_is_the_one_shasum_gives(0).cases == 0
 fn every_digest_is_the_one_shasum_gives(cases: Int) -> held.Held {
     match command.somewhere_of_its_own() {
@@ -142,7 +130,6 @@ fn every_digest_is_the_one_shasum_gives(cases: Int) -> held.Held {
     }
 }
 
-/// The same, with every drawn file written into `directory`, which is removed whole afterwards.
 // example: digests_held(cases: 0, directory: "no-such-directory").cases == 0
 fn digests_held(cases: Int, directory: String) -> held.Held {
     var names = []
@@ -156,7 +143,6 @@ fn digests_held(cases: Int, directory: String) -> held.Held {
     found
 }
 
-/// Each of `names` in `directory` hashed here and by `shasum`, one case for each name.
 // example: against_shasum(names: [], directory: "no-such-directory").cases == 0
 fn against_shasum(names: List<String>, directory: String) -> held.Held {
     if list.length(names) == 0 {
@@ -168,7 +154,6 @@ fn against_shasum(names: List<String>, directory: String) -> held.Held {
     }
 }
 
-/// One case for each of `names`, which holds where its digest opens its line of `reference`.
 // example: each_digest_held(names: [], directory: "", reference: []).cases == 0
 fn each_digest_held(names: List<String>, directory: String, reference: List<String>) -> held.Held {
     var found = held.nothing_failed(list.length(names))
@@ -185,13 +170,12 @@ fn each_digest_held(names: List<String>, directory: String, reference: List<Stri
     found
 }
 
-/// From none to 300 drawn bytes, which crosses the one-block and two-block edges of the padding.
+// The draw goes up to 300 bytes to cross the one-block and two-block edges of the padding.
 // example: list.length(drawn_bytes(drawn.seeded(1))) < 300
 fn drawn_bytes(draw: drawn.Draw) -> List<Int> {
     drawn.numbers(drawn.next(draw), drawn.number(draw, 300), 256)
 }
 
-/// From one to four drawn archives, each after the one before it, and each at a path of its own.
 // example: list.length(drawn_archives(drawn.seeded(1))) > 0
 fn drawn_archives(draw: drawn.Draw) -> List<Printed> {
     var printed = []
@@ -204,14 +188,12 @@ fn drawn_archives(draw: drawn.Draw) -> List<Printed> {
     printed
 }
 
-/// One drawn archive: a path of up to eight pieces ending in `.jar`, and 64 hexadecimal digits.
 // example: strings.length(drawn_archive(drawn.seeded(1)).hash) == 64
 fn drawn_archive(draw: drawn.Draw) -> Printed {
     let path = drawn.text_of(drawn.next(draw), path_pieces(), drawn.number(draw, 8)) + ".jar"
     Printed { path: path, hash: drawn.text_of(checking.after(draw, 2), hex_digits(), 64) }
 }
 
-/// Each malformed shape of a line after a `jar` line, the path and hash taken from `archive`.
 // example: list.length(malformed_lines(Printed { path: "x.jar", hash: "0" })) == 15
 fn malformed_lines(archive: Printed) -> List<String> {
     let hash = "sha256:" + archive.hash
@@ -220,37 +202,31 @@ fn malformed_lines(archive: Printed) -> List<String> {
     ["jar", "jar " + path, "jar " + hash, "jar " + path + " " + archive.hash, "jar " + path + " sha256:" + short, "jar " + path + " " + hash + "0", "jar " + path + " sha256:A" + short, "jar " + path + " sha256:g" + short, "jar " + path + " sha512:" + archive.hash, "jar  " + path + " " + hash, "jar " + path + " " + hash + " ", "jar c:" + path + " " + hash, "jar lib/*" + " " + hash, "jar " + path + "*" + " " + hash, "depends ../lender"]
 }
 
-/// `archive` printed as the line of a manifest that states it, without the line break.
 // example: jar_line(Printed { path: "x.jar", hash: "0" }) == "jar x.jar sha256:0"
 fn jar_line(archive: Printed) -> String {
     "jar " + archive.path + " sha256:" + archive.hash
 }
 
-/// The two lines every manifest opens with.
 // example: heading() == "package app\nversion 0.1.0\n"
 fn heading() -> String {
     "package app\nversion 0.1.0\n"
 }
 
-/// The pieces a drawn path is made of, which hold no blank and no `:`.
 // example: list.length(path_pieces()) == 8
 fn path_pieces() -> List<String> {
     ["lib/", "a", "Z", "0", "-", "_", ".", "é"]
 }
 
-/// The sixteen lowercase hexadecimal digits.
 // example: list.length(hex_digits()) == 16
 fn hex_digits() -> List<String> {
     ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f"]
 }
 
-/// A span at `start`, one unit long, for an example.
 // example: span_at(3).start == 3
 fn span_at(start: Int) -> lexer.Span {
     lexer.Span { start: start, length: 1 }
 }
 
-/// A drawn archive as its `jar` line prints it: the path and the 64 digits after `sha256:`.
 type Printed = {
     path: String
     hash: String

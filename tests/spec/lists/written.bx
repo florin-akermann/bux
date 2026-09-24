@@ -13,13 +13,11 @@ fn main(arguments: List<String>) -> Int {
     0
 }
 
-/// The fruit an order holds, which is the one place this program writes a list.
 // example: counted(picked()) == 3
 fn picked() -> List<String> {
     ["apples", "pears", "plums"]
 }
 
-/// How many a list holds, which is what walking one and counting says.
 // example: counted(["a", "b"]) == 2
 fn counted(fruit: List<String>) -> Int {
     var many = 0

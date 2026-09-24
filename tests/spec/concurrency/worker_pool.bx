@@ -24,7 +24,6 @@ fn main(arguments: List<String>) -> Int {
     0
 }
 
-/// Every answer `collector` holds, once it is sent `Finish` and has ended.
 // example: list.length(collected(spawn Collector())) == 0
 fn collected(collector: Process<Collected, List<Int>>) -> List<Int> {
     _ = send(collector, Finish, NoLimit)
@@ -40,7 +39,6 @@ fn total(answers: List<Int>) -> Int {
     sum
 }
 
-/// A worker squares each number it is sent, and sends the square to the collector it holds.
 process Worker {
     fn start(collector: Process<Collected, List<Int>>) -> Process<Collected, List<Int>> {
         collector
@@ -54,14 +52,12 @@ process Worker {
     }
 }
 
-/// `collector`, after the square of `number` is sent to it.
 // example: total(collected(answered(spawn Collector(), 3))) == 9
 fn answered(collector: Process<Collected, List<Int>>, number: Int) -> Process<Collected, List<Int>> {
     _ = send(collector, Answer(number * number), NoLimit)
     collector
 }
 
-/// A collector holds each answer it is sent, until `Finish` ends it.
 process Collector {
     fn start() -> List<Int> {
         []
@@ -75,12 +71,10 @@ process Collector {
     }
 }
 
-/// What a worker is sent.
 type Job =
     | Square(Int)
     | Quit
 
-/// What the collector is sent.
 type Collected =
     | Answer(Int)
     | Finish

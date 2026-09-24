@@ -14,7 +14,6 @@ import strings
 import typed
 import types
 
-/// `property` tried on `cases` cases, each drawn from a seed of its own.
 // example: held.is_held(held_over(property: Deterministic, cases: 2, prelude: types.little_prelude()))
 fn held_over(property: Property, cases: Int, prelude: types.Prelude) -> held.Held {
     var found = held.nothing_failed(cases)
@@ -30,7 +29,6 @@ fn held_over(property: Property, cases: Int, prelude: types.Prelude) -> held.Hel
     found
 }
 
-/// One case of `property`, drawn from `draw`, typed against `prelude`.
 // example: tried_by(property: Deterministic, draw: drawn.seeded(1), prelude: types.little_prelude()).why == ""
 fn tried_by(property: Property, draw: drawn.Draw, prelude: types.Prelude) -> Tried {
     match property {
@@ -44,7 +42,6 @@ fn tried_by(property: Property, draw: drawn.Draw, prelude: types.Prelude) -> Tri
     }
 }
 
-/// The name a failure of `property` is reported with.
 // example: name_of(Deterministic) == "checking_never_panics_and_is_deterministic"
 fn name_of(property: Property) -> String {
     match property {
@@ -58,10 +55,7 @@ fn name_of(property: Property) -> String {
     }
 }
 
-/// A `match` of drawn arms and drawn text that types is checked to one answer, the same each time.
-///
-/// The arms are whole lines, so most cases type. Drawn text between them is written so that some
-/// cases do not parse, and a case that does not type holds at once.
+// The arms are whole lines, so most cases type, and drawn text between them stops some parses.
 // example: checking_never_panics_and_is_deterministic(drawn.seeded(1), types.little_prelude()).why == ""
 fn checking_never_panics_and_is_deterministic(draw: drawn.Draw, prelude: types.Prelude) -> Tried {
     let pieces = [payment_arm(0), payment_arm(1), payment_arm(2), "        other => describe(other)\n", "        _ => \"any\"\n", "        Pending | Failed(_) => \"two\"\n", "        Failed(\"no\") => \"no\"\n", "é", "(", "=> "]
@@ -69,7 +63,6 @@ fn checking_never_panics_and_is_deterministic(draw: drawn.Draw, prelude: types.P
     Tried { case: source, why: answered_alike(source, prelude) }
 }
 
-/// A `match` whose arms are rotated out of the order the type declares its variants is refused.
 // example: a_match_whose_arms_are_rotated_out_of_the_declared_order_is_refused(drawn.seeded(1), types.little_prelude()).why == ""
 fn a_match_whose_arms_are_rotated_out_of_the_declared_order_is_refused(draw: drawn.Draw, prelude: types.Prelude) -> Tried {
     let rotation = 1 + drawn.number(draw, 2)
@@ -88,7 +81,6 @@ fn a_match_whose_arms_are_rotated_out_of_the_declared_order_is_refused(draw: dra
     Tried { case: source, why: why }
 }
 
-/// A `match` with one variant of the payment left out is refused.
 // example: a_match_with_one_of_its_variants_left_out_is_refused(drawn.seeded(1), types.little_prelude()).why == ""
 fn a_match_with_one_of_its_variants_left_out_is_refused(draw: drawn.Draw, prelude: types.Prelude) -> Tried {
     let source = payments(all_but(drawn.number(draw, 3)))
@@ -100,7 +92,6 @@ fn a_match_with_one_of_its_variants_left_out_is_refused(draw: drawn.Draw, prelud
     Tried { case: source, why: why }
 }
 
-/// A name that binds, written after any of the arms in order, covers every payment.
 // example: a_name_that_binds_covers_whatever_else_is_written(drawn.seeded(1), types.little_prelude()).why == ""
 fn a_name_that_binds_covers_whatever_else_is_written(draw: drawn.Draw, prelude: types.Prelude) -> Tried {
     var arms = ""
@@ -118,14 +109,12 @@ fn a_name_that_binds_covers_whatever_else_is_written(draw: drawn.Draw, prelude: 
     Tried { case: source, why: why }
 }
 
-/// The refusal of a `match` with a variant left out points at a stretch inside the source.
 // example: a_refusal_points_inside_the_source(drawn.seeded(1), types.little_prelude()).why == ""
 fn a_refusal_points_inside_the_source(draw: drawn.Draw, prelude: types.Prelude) -> Tried {
     let source = payments(all_but(drawn.number(draw, 3)))
     Tried { case: source, why: pointed_inside(source, prelude) }
 }
 
-/// `A | B` in one arm covers exactly what `A` and `B` cover in two arms.
 // example: one_arm_of_alternatives_covers_what_the_same_arms_cover_separately(drawn.seeded(1), types.little_prelude()).why == ""
 fn one_arm_of_alternatives_covers_what_the_same_arms_cover_separately(draw: drawn.Draw, prelude: types.Prelude) -> Tried {
     let named = first_colours(1 + drawn.number(draw, 3))
@@ -143,7 +132,6 @@ fn one_arm_of_alternatives_covers_what_the_same_arms_cover_separately(draw: draw
     Tried { case: strings.join(named, " | "), why: why }
 }
 
-/// The first `count` colours, in the order the type declares them.
 // example: first_colours(2) == ["Red", "Green"]
 fn first_colours(count: Int) -> List<String> {
     var named = []
@@ -155,17 +143,13 @@ fn first_colours(count: Int) -> List<String> {
     named
 }
 
-/// A module matching on a colour, each variant of which carries nothing, with `arms` as the arms.
 // example: has_text(text: colours(""), piece: "type Colour")
 fn colours(arms: String) -> String {
     "fn described(colour: Colour) -> String {\n    match colour {\n" + arms + "    }\n}\n\ntype Colour =\n    | Red\n    | Green\n    | Blue\n"
 }
 
-/// A drawn `match` of up to four arms over one of four parameters is checked alike twice, and a
-/// refusal of it points at a stretch inside it.
-///
-/// The patterns are the ones the comparison of the two checks drew, so the arms cover some of
-/// the values, all of them, or all of them out of order.
+// The patterns come from the comparison of two checks, so the arms cover some values, all values,
+// or all values out of order.
 // example: has_text(text: a_drawn_match_is_checked_alike_twice_and_a_refusal_points_inside_it(drawn.seeded(1), types.little_prelude()).case, piece: "match ")
 fn a_drawn_match_is_checked_alike_twice_and_a_refusal_points_inside_it(draw: drawn.Draw, prelude: types.Prelude) -> Tried {
     let source = drawn_match(draw)
@@ -179,7 +163,6 @@ fn a_drawn_match_is_checked_alike_twice_and_a_refusal_points_inside_it(draw: dra
     Tried { case: source, why: why }
 }
 
-/// Why two checks of `source` differ, and `""` where they agree or `source` does not type.
 // example: answered_alike("fn f() -> Int {\n    1\n}\n", types.little_prelude()) == ""
 fn answered_alike(source: String, prelude: types.Prelude) -> String {
     let first = answer_of(source, prelude)
@@ -190,7 +173,6 @@ fn answered_alike(source: String, prelude: types.Prelude) -> String {
     ""
 }
 
-/// Why the refusal of `source` does not point at a stretch inside it, and `""` where it does.
 // example: pointed_inside("fn f() -> Int {\n    1\n}\n", types.little_prelude()) == "the check refuses nothing"
 fn pointed_inside(source: String, prelude: types.Prelude) -> String {
     match checked(source, prelude) {
@@ -199,7 +181,6 @@ fn pointed_inside(source: String, prelude: types.Prelude) -> String {
     }
 }
 
-/// Why `span` is empty or runs past `bytes`, and `""` where it is neither.
 // example: span_outside(span: lexer.Span { start: 1, length: 0 }, bytes: 3) == "1..1 is empty"
 // example: span_outside(span: lexer.Span { start: 1, length: 2 }, bytes: 3) == ""
 fn span_outside(span: lexer.Span, bytes: Int) -> String {
@@ -212,10 +193,7 @@ fn span_outside(span: lexer.Span, bytes: Int) -> String {
     ""
 }
 
-/// A module of one `match` of up to four drawn arms over one of four values, which the function
-/// takes as its one parameter.
-///
-/// The truth is a field of a record, because a `Bool` parameter is refused before the check.
+// The truth value is a record field, because a `Bool` parameter is refused before the check.
 // example: has_text(text: drawn_match(drawn.seeded(1)), piece: "type Status")
 fn drawn_match(draw: drawn.Draw) -> String {
     let over = drawn.number(draw, 4)
@@ -233,9 +211,7 @@ fn drawn_match(draw: drawn.Draw) -> String {
     "fn check(" + parameter + ") -> Int {\n    match " + scrutinee + " {\n" + body + "    }\n}\n\ntype Status =\n    | Pending\n    | Running(Int)\n    | Failed(Int, Bool)\n\ntype Given = {\n    flag: Bool\n}\n"
 }
 
-/// The arm of `pattern` in a drawn `match`, whose value is a hole where the pattern binds `other`.
-///
-/// A hole reads every name in scope, so the name the pattern binds is read.
+// A hole reads every name in scope, so the name that the pattern binds is read.
 // example: arm_of("_") == "        _ => 1\n"
 // example: arm_of("Some(other)") == "        Some(other) => todo(\"the value is not the point\")\n"
 fn arm_of(pattern: String) -> String {
@@ -245,7 +221,6 @@ fn arm_of(pattern: String) -> String {
     "        " + pattern + " => 1\n"
 }
 
-/// The patterns an arm over each parameter of a drawn `match` writes, in the order of the four.
 // example: list.length(patterns_over()) == 4
 fn patterns_over() -> List<List<String>> {
     let status = ["Pending", "Running(_)", "Running(1)", "Failed(_, true)", "Failed(0, _)", "Failed(_, _)", "Pending | Running(_)", "Running(_) | Pending", "Failed(_, false) | Pending", "other", "_"]
@@ -253,7 +228,6 @@ fn patterns_over() -> List<List<String>> {
     [status, maybe, ["0", "1 | 2", "other", "_"], ["true", "false", "false | true", "_"]]
 }
 
-/// Every arm of the payment in declared order but the one at `left_out`.
 // example: all_but(1) == payment_arm(0) + payment_arm(2)
 fn all_but(left_out: Int) -> String {
     var arms = ""
@@ -265,21 +239,17 @@ fn all_but(left_out: Int) -> String {
     arms
 }
 
-/// The arm for the variant of the payment at `index`, in the order the type declares them.
 // example: payment_arm(0) == "        Pending => \"waiting\"\n"
 fn payment_arm(index: Int) -> String {
     let arms = ["        Pending => \"waiting\"\n", "        Authorized { authorization_id } => authorization_id\n", "        Failed(reason) => reason\n"]
     or(list.at(arms, index), "")
 }
 
-/// A module declaring the payment type of `docs/design.md`, and a `match` on one with `arms`.
 // example: has_text(text: payments(""), piece: "type Payment")
 fn payments(arms: String) -> String {
     "fn describe(payment: Payment) -> String {\n    match payment {\n" + arms + "    }\n}\n\ntype Payment =\n    | Pending\n    | Authorized {\n        authorization_id: String\n    }\n    | Failed(String)\n"
 }
 
-/// What the check says of `source`: `""` where it accepts, the refusal printed where it does
-/// not, and `does not type` where a phase before it refuses.
 // example: is_opening(text: answer_of(payments(all_but(0)), types.little_prelude()), opening: "L0500 ")
 fn answer_of(source: String, prelude: types.Prelude) -> String {
     match checked(source, prelude) {
@@ -288,19 +258,16 @@ fn answer_of(source: String, prelude: types.Prelude) -> String {
     }
 }
 
-/// Whether the check accepted a module that typed.
 // example: is_accepted("")
 fn is_accepted(answer: String) -> Bool {
     answer == ""
 }
 
-/// Whether a module typed, which every module but drawn text does.
 // example: !is_typed_answer("does not type")
 fn is_typed_answer(answer: String) -> Bool {
     answer != "does not type"
 }
 
-/// The answer of the check of `source`, and nothing where `source` does not type.
 // example: is_checked(checked("fn f() -> Int {\n    1\n}\n", types.little_prelude()))
 fn checked(source: String, prelude: types.Prelude) -> Option<Result<(), exhaustiveness.MatchError>> {
     match typed.inferred(source, prelude) {
@@ -309,7 +276,6 @@ fn checked(source: String, prelude: types.Prelude) -> Option<Result<(), exhausti
     }
 }
 
-/// Whether a module typed and was checked.
 // example: !is_checked(None)
 fn is_checked(found: Option<Result<(), exhaustiveness.MatchError>>) -> Bool {
     match found {
@@ -318,13 +284,11 @@ fn is_checked(found: Option<Result<(), exhaustiveness.MatchError>>) -> Bool {
     }
 }
 
-/// Whether `text` opens with `opening`.
 // example: is_opening(text: "ab", opening: "a")
 fn is_opening(text: String, opening: String) -> Bool {
     or(strings.cut(text, 0, strings.length(opening)), "") == opening
 }
 
-/// Whether `piece` is somewhere in `text`.
 // example: has_text(text: "abc", piece: "bc")
 // example: !has_text(text: "abc", piece: "ca")
 fn has_text(text: String, piece: String) -> Bool {
@@ -338,13 +302,11 @@ fn has_text(text: String, piece: String) -> Bool {
     false
 }
 
-/// One case of a property: the drawn input as text, and why it failed, which is `""` where it held.
 type Tried = {
     case: String
     why: String
 }
 
-/// Each property of the exhaustiveness check.
 type Property =
     | Deterministic
     | RotatedRefused

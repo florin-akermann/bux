@@ -16,13 +16,11 @@ import refusal
 import surface
 import unify
 
-/// The code and span of the first break of the shape `source` writes, or `""`.
 // example: shape_code("process Counter {\n    fn start() -> Int {\n        0\n    }\n\n    fn receive(total: Int, message: Int) -> Next<Int> {\n        match message {\n            _ => Done\n        }\n    }\n}\n") == ""
 private fn shape_code(source: String) -> String {
     refusal.code_given(every_process_shaped(ok_or(parser.parse(source), ast.Program { items: [] })))
 }
 
-/// Refuses the first process of `program` that breaks the shape.
 // example: shape_code("process Counter {\n    fn begin() -> Int {\n        0\n    }\n}\n") == "L0802 25..30"
 fn every_process_shaped(program: ast.Program) -> Result<(), refusal.TypeError> {
     for item in program.items {
@@ -31,7 +29,6 @@ fn every_process_shaped(program: ast.Program) -> Result<(), refusal.TypeError> {
     Ok(())
 }
 
-/// Refuses `item` where it is a process that breaks the shape.
 // example: refusal.code_given(item_shaped(ast.Import(ast.ImportDeclaration { module: ast.Name { text: "io", span: lexer.Span { start: 7, length: 2 } }, span: lexer.Span { start: 0, length: 9 } }))) == ""
 fn item_shaped(item: ast.Item) -> Result<(), refusal.TypeError> {
     match item {
@@ -40,8 +37,6 @@ fn item_shaped(item: ast.Item) -> Result<(), refusal.TypeError> {
     }
 }
 
-/// Refuses the first break of the shape `declaration` writes: the functions, then each signature,
-/// then the body of `receive`.
 // example: shape_code("process Counter {\n    fn start<T>() -> Int {\n        0\n    }\n\n    fn receive(total: Int, message: Int) -> Next<Int> {\n        match message {\n            _ => Done\n        }\n    }\n}\n") == "L0805 25..30"
 fn shaped(declaration: ast.ProcessDeclaration) -> Result<(), refusal.TypeError> {
     _ = in_their_places(declaration)?
@@ -51,8 +46,6 @@ fn shaped(declaration: ast.ProcessDeclaration) -> Result<(), refusal.TypeError> 
     received(declaration)
 }
 
-/// Refuses a process whose first function is not `start`, whose second is not `receive`, or that
-/// declares a third.
 // example: shape_code("process Counter {\n    fn start() -> Int {\n        0\n    }\n}\n") == "L0803 8..15"
 // example: shape_code("process Counter {\n    fn start() -> Int {\n        0\n    }\n\n    fn receive(total: Int, message: Int) -> Next<Int> {\n        match message {\n            _ => Done\n        }\n    }\n\n    fn more() -> Int {\n        0\n    }\n}\n") == "L0804 185..189"
 fn in_their_places(declaration: ast.ProcessDeclaration) -> Result<(), refusal.TypeError> {
@@ -71,9 +64,6 @@ fn in_their_places(declaration: ast.ProcessDeclaration) -> Result<(), refusal.Ty
     Ok(())
 }
 
-/// The function at `index` of `declaration`, and whether it is called `wanted`.
-///
-/// Where the process declares no function at `index`, the name is the process's own.
 // example: named_at(ast.ProcessDeclaration { name: ast.Name { text: "P", span: lexer.Span { start: 8, length: 1 } }, functions: [], span: lexer.Span { start: 0, length: 12 }, visibility: ast.Public }, 0, "start").name.text == "P"
 fn named_at(declaration: ast.ProcessDeclaration, index: Int, wanted: String) -> Found {
     match list.at(declaration.functions, index) {
@@ -82,7 +72,6 @@ fn named_at(declaration: ast.ProcessDeclaration, index: Int, wanted: String) -> 
     }
 }
 
-/// Refuses a function of a process that declares a type parameter or leaves a type unwritten.
 // example: shape_code("process Counter {\n    fn start<T>() -> Int {\n        0\n    }\n\n    fn receive(total: Int, message: Int) -> Next<Int> {\n        match message {\n            _ => Done\n        }\n    }\n}\n") == "L0805 25..30"
 // example: shape_code("process Counter {\n    fn start(initial) -> Int {\n        0\n    }\n\n    fn receive(total: Int, message: Int) -> Next<Int> {\n        match message {\n            _ => Done\n        }\n    }\n}\n") == "L0806 31..38"
 fn signature_written(function: ast.FunctionDeclaration) -> Result<(), refusal.TypeError> {
@@ -100,7 +89,6 @@ fn signature_written(function: ast.FunctionDeclaration) -> Result<(), refusal.Ty
     Ok(())
 }
 
-/// Whether a type is written.
 // example: !is_written(None)
 fn is_written(written: Option<ast.TypeRef>) -> Bool {
     match written {
@@ -109,8 +97,6 @@ fn is_written(written: Option<ast.TypeRef>) -> Bool {
     }
 }
 
-/// Refuses a `receive` that takes other than a state and a message, or whose body is more than one
-/// `match` on the message, each arm one call or one name.
 // example: shape_code("process Counter {\n    fn start() -> Int {\n        0\n    }\n\n    fn receive(total: Int) -> Next<Int> {\n        Done\n    }\n}\n") == "L0807 66..73"
 fn received(declaration: ast.ProcessDeclaration) -> Result<(), refusal.TypeError> {
     let receive = or(list.at(declaration.functions, 1), empty_function(declaration.name))
@@ -127,7 +113,6 @@ fn received(declaration: ast.ProcessDeclaration) -> Result<(), refusal.TypeError
     Ok(())
 }
 
-/// The one `match` on `message` that `body` is, or the refusal of a body that is anything else.
 // example: shape_code("process Counter {\n    fn start() -> Int {\n        0\n    }\n\n    fn receive(total: Int, message: Int) -> Next<Int> {\n        Done\n    }\n}\n") == "L0808 113..133"
 fn one_match_on(body: ast.Block, message: String) -> Result<ast.MatchExpr, refusal.TypeError> {
     let refused = refusal.TypeError { kind: refusal.ReceivesWithoutAMatch(message), span: body.span }
@@ -141,7 +126,6 @@ fn one_match_on(body: ast.Block, message: String) -> Result<ast.MatchExpr, refus
     }
 }
 
-/// The `match` `written` is, where it matches the name `message` and nothing else.
 // example: shape_code("process Counter {\n    fn start() -> Int {\n        0\n    }\n\n    fn receive(total: Int, message: Int) -> Next<Int> {\n        match total {\n            _ => Done\n        }\n    }\n}\n") == "L0808 113..174"
 fn match_on(written: ast.Expr, message: String, refused: refusal.TypeError) -> Result<ast.MatchExpr, refusal.TypeError> {
     match written.kind {
@@ -154,7 +138,6 @@ fn match_on(written: ast.Expr, message: String, refused: refusal.TypeError) -> R
     }
 }
 
-/// Whether `written` is the bare name `named`.
 // example: !is_name_of(ast.Expr { kind: ast.Unit, span: lexer.Span { start: 0, length: 2 } }, "message")
 fn is_name_of(written: ast.Expr, named: String) -> Bool {
     match written.kind {
@@ -163,7 +146,6 @@ fn is_name_of(written: ast.Expr, named: String) -> Bool {
     }
 }
 
-/// Whether an arm's body is one call or one name, which is all an arm of `receive` holds.
 // example: shape_code("process Counter {\n    fn start() -> Int {\n        0\n    }\n\n    fn receive(total: Int, message: Int) -> Next<Int> {\n        match message {\n            _ => if true {\n                Done\n            } else {\n                Done\n            }\n        }\n    }\n}\n") == "L0809 156..242"
 fn is_one_call_or_one_name(body: ast.Expr) -> Bool {
     match body.kind {
@@ -173,11 +155,8 @@ fn is_one_call_or_one_name(body: ast.Expr) -> Bool {
     }
 }
 
-/// Refuses the first process of `program` that holds a foreign reference.
-///
-/// A process holds what `start` takes, its state, and its message. A `spawn` gives what `start`
-/// takes to the process, and `start` need not keep it in the state, so each is checked on its own.
-/// `reached` is each type another module offers, which a process of this module can hold.
+// A `spawn` gives what `start` takes to the process, and `start` need not keep it in the state,
+// so each is checked on its own.
 // example: refusal.code_given(nothing_foreign_held(declared.little_environment(), ast.Program { items: [] }, [])) == ""
 fn nothing_foreign_held(environment: declared.Environment, program: ast.Program, reached: List<surface.OfferedType>) -> Result<(), refusal.TypeError> {
     let holding = escapes.held_by(environment, program, reached)
@@ -189,7 +168,6 @@ fn nothing_foreign_held(environment: declared.Environment, program: ast.Program,
     Ok(())
 }
 
-/// The process `item` declares, and nothing for any other item.
 // example: list.length(process_of_item(ast.Import(ast.ImportDeclaration { module: ast.Name { text: "io", span: lexer.Span { start: 7, length: 2 } }, span: lexer.Span { start: 0, length: 9 } }))) == 0
 fn process_of_item(item: ast.Item) -> List<ast.ProcessDeclaration> {
     match item {
@@ -198,7 +176,6 @@ fn process_of_item(item: ast.Item) -> List<ast.ProcessDeclaration> {
     }
 }
 
-/// Refuses the first of `held` that is or holds a foreign reference.
 // example: refusal.code_given(holds_values(escapes.Holding { foreign: map.insert(map.empty(), "File", ast.AsAClass), carried: map.empty() }, "Keeper", [Held { held: unify.list_of(unify.Named { name: "File", arguments: [] }), span: lexer.Span { start: 3, length: 4 } }])) == "L0811 3..7"
 fn holds_values(holding: escapes.Holding, called: String, held: List<Held>) -> Result<(), refusal.TypeError> {
     for one in held {
@@ -210,8 +187,6 @@ fn holds_values(holding: escapes.Holding, called: String, held: List<Held>) -> R
     Ok(())
 }
 
-/// Each type a process holds, where it is written: what `start` takes, then the state, then the
-/// message.
 // example: list.length(each_held(declared.little_environment(), ast.ProcessDeclaration { name: ast.Name { text: "P", span: lexer.Span { start: 8, length: 1 } }, functions: [], span: lexer.Span { start: 0, length: 12 }, visibility: ast.Public })) == 2
 fn each_held(environment: declared.Environment, declaration: ast.ProcessDeclaration) -> List<Held> {
     let spawned = or(map.get(environment.values, declared.declared_at(environment, declaration.name)), unify.monomorphic(unify.Unit)).body
@@ -228,7 +203,6 @@ fn each_held(environment: declared.Environment, declaration: ast.ProcessDeclarat
     list.push(held, Held { held: or(list.at(handle, 0), unify.Unit), span: or(list.at(receive.parameters, 1), empty_parameter(receive.name)).span })
 }
 
-/// Where a type is written, and where `name` is where it is not.
 // example: shown(written_at(None, ast.Name { text: "start", span: lexer.Span { start: 3, length: 5 } })) == "3..8"
 fn written_at(written: Option<ast.TypeRef>, name: ast.Name) -> lexer.Span {
     match written {
@@ -237,25 +211,21 @@ fn written_at(written: Option<ast.TypeRef>, name: ast.Name) -> lexer.Span {
     }
 }
 
-/// A function of no parameters and an empty body, named as the process is.
 // example: empty_function(ast.Name { text: "P", span: lexer.Span { start: 8, length: 1 } }).name.text == "P"
 fn empty_function(name: ast.Name) -> ast.FunctionDeclaration {
     ast.FunctionDeclaration { name: name, type_parameters: [], parameters: [], result: None, body: ast.Block { statements: [], span: name.span }, span: name.span, visibility: ast.Public }
 }
 
-/// A parameter of no type, named as the function is.
 // example: empty_parameter(ast.Name { text: "receive", span: lexer.Span { start: 8, length: 7 } }).name.text == "receive"
 fn empty_parameter(name: ast.Name) -> ast.Parameter {
     ast.Parameter { name: name, type_ref: None, span: name.span }
 }
 
-/// One type a process holds, and where it is written.
 type Held = {
     held: unify.Type
     span: lexer.Span
 }
 
-/// The function at one place of a process, and whether it has the name that place wants.
 type Found = {
     name: ast.Name
     is_named: Bool

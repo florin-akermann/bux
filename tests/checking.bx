@@ -26,7 +26,6 @@ fn carried_library() -> ir.Library {
     ir.library_read(or(modules.carried("prelude"), ""))
 }
 
-/// The seed of each case of a property that tries `cases` of them, in order.
 // example: seeds(3) == [1, 2, 3]
 fn seeds(cases: Int) -> List<Int> {
     var found = []
@@ -36,7 +35,6 @@ fn seeds(cases: Int) -> List<Int> {
     found
 }
 
-/// `found`, with the failure of `tried` where it failed, reported under `property` and `seed`.
 // example: held.is_held(noted(found: held.nothing_failed(1), property: "p", seed: 1, tried: Tried { input: "", why: "" }))
 // example: !held.is_held(noted(found: held.nothing_failed(1), property: "p", seed: 1, tried: Tried { input: "", why: "gone" }))
 fn noted(found: held.Held, property: String, seed: Int, tried: Tried) -> held.Held {
@@ -46,23 +44,18 @@ fn noted(found: held.Held, property: String, seed: Int, tried: Tried) -> held.He
     held.with_failure(found, held.drawn_failure(property, seed, tried.input, tried.why))
 }
 
-/// Whether `source` is a module the phases up to inference accept.
 // example: is_accepted("fn one() -> Int {\n    1\n}\n", ir.little_library())
 // example: !is_accepted("fn one() -> Int {\n    \"one\"\n}\n", ir.little_library())
 fn is_accepted(source: String, library: ir.Library) -> Bool {
     code_of(checked(source, library)) == ""
 }
 
-/// The type inference gave the `count`th `written` of `source`, counting from one.
-///
-/// A module that is refused gives `refused` and the message, and a place inference gave no type
-/// gives `no type`, so a comparison with a type fails and says why.
+// A refusal or a missing type gives a text that is not a type, so a comparison fails and says why.
 // example: type_written(source: "fn one() -> Int {\n    1\n}\n", written: "1", count: 1, library: ir.little_library()) == "Int"
 fn type_written(source: String, written: String, count: Int, library: ir.Library) -> String {
     type_in(checked(source, library), occurrence(source: source, written: written, count: count))
 }
 
-/// `source`, parsed, resolved, and inferred as one module, or the first refusal of it.
 // example: code_of(checked("fn one() -> Int {\n    1\n}\n", ir.little_library())) == ""
 // example: code_of(checked("fn one() -> Int {\n    \"one\"\n}\n", ir.little_library())) == "L0400"
 fn checked(source: String, library: ir.Library) -> Result<infer.Inference, command.Diagnostic> {
@@ -71,7 +64,6 @@ fn checked(source: String, library: ir.Library) -> Result<infer.Inference, comma
     command.inferred_of(types.check(resolved, surface.nothing_imported(), library.prelude))
 }
 
-/// The program `source` is, or the refusal of parsing it.
 // example: code_of(parsed("fn (")) == "L0100"
 fn parsed(source: String) -> Result<ast.Program, command.Diagnostic> {
     match parser.parse(source) {
@@ -80,9 +72,6 @@ fn parsed(source: String) -> Result<ast.Program, command.Diagnostic> {
     }
 }
 
-/// `source`, checked as the file `demo.bx` in `directory` is, with every module it imports.
-///
-/// The library modules it imports are read from the class path, as the compiler reads them.
 // example: code_of(reaching(source: "fn one() -> Int {\n    1\n}\n", directory: "no-such-directory", library: ir.little_library())) == ""
 fn reaching(source: String, directory: String, library: ir.Library) -> Result<infer.Inference, command.Diagnostic> {
     match command.checked_as_written(command.Page { source: source, path: modules.joined(directory, "demo.bx") }, library) {
@@ -91,7 +80,6 @@ fn reaching(source: String, directory: String, library: ir.Library) -> Result<in
     }
 }
 
-/// The first diagnostic of `not`, or one that holds what it says where it holds none.
 // example: first_diagnostic(command.Unusable("error: gone\n")).message == "error: gone\n"
 fn first_diagnostic(not: command.NotCompiled) -> command.Diagnostic {
     match not {
@@ -100,13 +88,11 @@ fn first_diagnostic(not: command.NotCompiled) -> command.Diagnostic {
     }
 }
 
-/// A diagnostic of no code that says `said`.
 // example: said_as_diagnostic("gone").code == ""
 fn said_as_diagnostic(said: String) -> command.Diagnostic {
     command.Diagnostic { code: "", message: said, span: lexer.Span { start: 0, length: 0 }, help: None, fix: None }
 }
 
-/// The code of the refusal `answer` holds, and `""` where it holds none.
 // example: code_of(Ok(1)) == ""
 fn code_of<T>(answer: Result<T, command.Diagnostic>) -> String {
     match answer {
@@ -115,7 +101,6 @@ fn code_of<T>(answer: Result<T, command.Diagnostic>) -> String {
     }
 }
 
-/// The message of the refusal `answer` holds, and `accepted` where it holds none.
 // example: message_of(Ok(1)) == "accepted"
 fn message_of<T>(answer: Result<T, command.Diagnostic>) -> String {
     match answer {
@@ -124,7 +109,6 @@ fn message_of<T>(answer: Result<T, command.Diagnostic>) -> String {
     }
 }
 
-/// The help of the refusal `answer` holds, and `accepted` where it holds none.
 // example: help_of(Ok(1)) == "accepted"
 fn help_of<T>(answer: Result<T, command.Diagnostic>) -> String {
     match answer {
@@ -133,7 +117,6 @@ fn help_of<T>(answer: Result<T, command.Diagnostic>) -> String {
     }
 }
 
-/// The type the inference `answer` holds gave the stretch `at`.
 // example: type_in(Err(said_as_diagnostic("gone")), lexer.Span { start: 0, length: 1 }) == "refused: gone"
 fn type_in(answer: Result<infer.Inference, command.Diagnostic>, at: lexer.Span) -> String {
     match answer {
@@ -142,7 +125,6 @@ fn type_in(answer: Result<infer.Inference, command.Diagnostic>, at: lexer.Span) 
     }
 }
 
-/// The type the call of a trait method at `at` asked its trait of, which names the instance.
 // example: instance_in(Err(said_as_diagnostic("gone")), lexer.Span { start: 0, length: 1 }) == "refused: gone"
 fn instance_in(answer: Result<infer.Inference, command.Diagnostic>, at: lexer.Span) -> String {
     match answer {
@@ -151,7 +133,6 @@ fn instance_in(answer: Result<infer.Inference, command.Diagnostic>, at: lexer.Sp
     }
 }
 
-/// A type as a message writes it, and `no type` where there is none.
 // example: type_text(None) == "no type"
 // example: type_text(Some(unify.int())) == "Int"
 fn type_text(found: Option<unify.Type>) -> String {
@@ -161,8 +142,6 @@ fn type_text(found: Option<unify.Type>) -> String {
     }
 }
 
-/// The stretch of the `count`th `written` in `source`, counting from one, which starts at `-1`
-/// where `source` does not write it that often.
 // example: occurrence(source: "a b a", written: "a", count: 2).start == 4
 // example: occurrence(source: "a b a", written: "a", count: 3).start == -1
 fn occurrence(source: String, written: String, count: Int) -> lexer.Span {
@@ -181,7 +160,6 @@ fn occurrence(source: String, written: String, count: Int) -> lexer.Span {
     lexer.Span { start: -1, length: length }
 }
 
-/// Why the stretch `at` is not at least one byte inside `source`, and `""` where it is.
 // example: outside(at: lexer.Span { start: 1, length: 2 }, source: "abc") == ""
 // example: outside(at: lexer.Span { start: 1, length: 0 }, source: "abc") == "the refusal points at 1..1"
 fn outside(at: lexer.Span, source: String) -> String {
@@ -191,7 +169,6 @@ fn outside(at: lexer.Span, source: String) -> String {
     "the refusal points at " + shown(at.start) + ".." + shown(at.start + at.length)
 }
 
-/// A module of the distinct pieces drawn from `among`; a piece drawn twice is written once.
 // example: list.has_value(["a", ""], module_of(drawn.seeded(1), ["a"]))
 fn module_of(draw: drawn.Draw, among: List<String>) -> String {
     let count = drawn.number(draw, list.length(among) + 2)
@@ -207,7 +184,6 @@ fn module_of(draw: drawn.Draw, among: List<String>) -> String {
     strings.join(chosen, "\n\n")
 }
 
-/// The draw `steps` draws after `draw`.
 // example: after(drawn.seeded(1), 2).state == drawn.next(drawn.next(drawn.seeded(1))).state
 fn after(draw: drawn.Draw, steps: Int) -> drawn.Draw {
     var at = draw
@@ -217,7 +193,6 @@ fn after(draw: drawn.Draw, steps: Int) -> drawn.Draw {
     at
 }
 
-/// The whole numbers from 0 up to `count`, and below it.
 // example: numbers_below(3) == [0, 1, 2]
 fn numbers_below(count: Int) -> List<Int> {
     var found = []
@@ -227,8 +202,6 @@ fn numbers_below(count: Int) -> List<Int> {
     found
 }
 
-/// One case of a property: the input it drew, as text, and why it failed, which is `""` where
-/// it held.
 type Tried = {
     input: String
     why: String

@@ -10,13 +10,11 @@ fn main(arguments: List<String>) -> Int {
     0
 }
 
-/// Whether the nothing a record field left open holds is read back out.
 // example: is_boxed(Boxed { held: () })
 fn is_boxed(boxed: Boxed<()>) -> Bool {
     is_given(boxed.held)
 }
 
-/// Whether the nothing a variant left open carries is read back out.
 // example: is_held(Held(()))
 fn is_held(box: Box<()>) -> Bool {
     match box {
@@ -24,7 +22,6 @@ fn is_held(box: Box<()>) -> Bool {
     }
 }
 
-/// Nothing is given, and there is nothing to say about it but that it arrived.
 // example: is_given(())
 fn is_given(given: ()) -> Bool {
     _ = given

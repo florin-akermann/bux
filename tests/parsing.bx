@@ -11,7 +11,6 @@ import list
 import parser
 import strings
 
-/// A drawn `extern` declaration parses to no function, and a body written after it is refused.
 // example: held.is_held(no_extern_declaration_writes_a_body(3))
 fn no_extern_declaration_writes_a_body(cases: Int) -> held.Held {
     var found = held.nothing_failed(cases)
@@ -27,7 +26,6 @@ fn no_extern_declaration_writes_a_body(cases: Int) -> held.Held {
     found
 }
 
-/// Why the declaration `source` has a function or takes a body, and `""` where it does neither.
 // example: bodied_fault("extern new opened(path: String) -> Int\n") == ""
 // example: bodied_fault("fn f() {\n}\n") == "a declaration parses to a function"
 fn bodied_fault(source: String) -> String {
@@ -47,7 +45,6 @@ fn bodied_fault(source: String) -> String {
     ""
 }
 
-/// Whether `program` holds a function, which is the one item that holds a body.
 // example: !has_function(ast.Program { items: [] })
 fn has_function(program: ast.Program) -> Bool {
     for declared in program.items {
@@ -62,7 +59,6 @@ fn has_function(program: ast.Program) -> Bool {
     false
 }
 
-/// Whether `source` parses.
 // example: is_parsed("import io\n")
 // example: !is_parsed("fn (")
 fn is_parsed(source: String) -> Bool {
@@ -72,7 +68,6 @@ fn is_parsed(source: String) -> Bool {
     }
 }
 
-/// `text` without the line break it ends with, where it ends with one.
 // example: without_the_last_line_break("a\n") == "a"
 // example: without_the_last_line_break("a") == "a"
 fn without_the_last_line_break(text: String) -> String {
@@ -83,8 +78,6 @@ fn without_the_last_line_break(text: String) -> String {
     text
 }
 
-/// One `extern` declaration, drawn from `seed`, under a name and giving back a type the boundary
-/// carries, after the declaration of the type it reaches.
 // example: strings.length(declaration(1)) > 0
 fn declaration(seed: Int) -> String {
     let first = drawn.seeded(seed)
@@ -101,7 +94,6 @@ fn declaration(seed: Int) -> String {
     "extern type " + class + "File = \"java.io.File\"\n\nextern " + member + " -> " + result + reached + "\n"
 }
 
-/// Parsing a drawn text twice gives the same answer, and parsing never stops the program.
 // example: held.is_held(parsing_is_deterministic(3))
 fn parsing_is_deterministic(cases: Int) -> held.Held {
     var found = held.nothing_failed(cases)
@@ -116,8 +108,6 @@ fn parsing_is_deterministic(cases: Int) -> held.Held {
     found
 }
 
-/// The span of a parse error holds at least one byte, ends inside the text, and starts and ends
-/// on a character boundary.
 // example: held.is_held(an_error_span_is_not_empty_and_lies_within_the_source(3))
 fn an_error_span_is_not_empty_and_lies_within_the_source(cases: Int) -> held.Held {
     var found = held.nothing_failed(cases)
@@ -133,7 +123,6 @@ fn an_error_span_is_not_empty_and_lies_within_the_source(cases: Int) -> held.Hel
     found
 }
 
-/// Why the span of the error `source` is refused with is empty or out of place, and `""` where not.
 // example: error_span_fault("fn (") == ""
 // example: error_span_fault("import io\n") == ""
 fn error_span_fault(source: String) -> String {
@@ -143,7 +132,6 @@ fn error_span_fault(source: String) -> String {
     }
 }
 
-/// Why `span` is empty or does not lie on character boundaries of `source`, and `""` where not.
 // example: span_fault("é", lexer.Span { start: 1, length: 1 }) != ""
 fn span_fault(source: String, span: lexer.Span) -> String {
     let boundaries = lexing.character_boundaries(source)
@@ -156,7 +144,6 @@ fn span_fault(source: String, span: lexer.Span) -> String {
     ""
 }
 
-/// An opening and 8 to 48 pieces run together, drawn from `seed`.
 // example: strings.length(drawn_text(1)) > 0
 fn drawn_text(seed: Int) -> String {
     let draw = drawn.seeded(seed)
@@ -165,19 +152,17 @@ fn drawn_text(seed: Int) -> String {
     opening + drawn.text_of(drawn.next(drawn.next(draw)), pieces(), count)
 }
 
-/// How a drawn text opens, so that most texts reach past the first item before they fail.
+// Each opening starts an item, so most texts go past the first item before they fail.
 // example: list.length(openings()) == 8
 fn openings() -> List<String> {
     ["", "fn f(a: Int) -> Int {\n", "type T = ", "extern ", "trait T<A> {\n", "fn g() {\n    match x {\n", "fn k() -> Int {\n    9223372036854775807 + ", "fn h() {\n    let x = \"é́​\"\n"]
 }
 
-/// What a drawn text is made of: a word, a literal, or a token of each part of the grammar.
 // example: list.length(pieces()) == 47
 fn pieces() -> List<String> {
     ["fn", "f", "x", "Int", "demo", "(", ")", "{", "}", "[", "]", "<", ">", ",", ":", "=", "let", "+=", "->", "=>", "|", ".", "?", "!", "-", "+", "*", "==", "&&", "match", "if", "else", "for", "in", "var", "return", "_", "static", "int", "1", "\"a\"", "\"\\q\"", "@", " ", "\n", "\n", "//\n"]
 }
 
-/// A program of well-formed items parses, to as many items as it is written with.
 // example: held.is_held(a_well_formed_program_parses(3))
 fn a_well_formed_program_parses(cases: Int) -> held.Held {
     var found = held.nothing_failed(cases)
@@ -194,8 +179,6 @@ fn a_well_formed_program_parses(cases: Int) -> held.Held {
     found
 }
 
-/// Each item of a well-formed program starts at or after the end of the item before it, holds
-/// at least one byte, and ends inside the text.
 // example: held.is_held(item_spans_are_ordered_and_within_the_source(3))
 fn item_spans_are_ordered_and_within_the_source(cases: Int) -> held.Held {
     var found = held.nothing_failed(cases)
@@ -211,7 +194,6 @@ fn item_spans_are_ordered_and_within_the_source(cases: Int) -> held.Held {
     found
 }
 
-/// Why the item spans of `source` overlap, are empty, or run past it, and `""` where not.
 // example: item_spans_fault("import io\n\nimport list") == ""
 fn item_spans_fault(source: String) -> String {
     let length = lexing.byte_length(source)
@@ -227,7 +209,6 @@ fn item_spans_fault(source: String) -> String {
     ""
 }
 
-/// The program `parsed` holds, and a program of no items where it holds an error.
 // example: list.length(or_nothing(parser.parse("fn (")).items) == 0
 fn or_nothing(parsed: Result<ast.Program, parser.ParseError>) -> ast.Program {
     match parsed {
@@ -236,8 +217,6 @@ fn or_nothing(parsed: Result<ast.Program, parser.ParseError>) -> ast.Program {
     }
 }
 
-/// A test written among the statements of a body is refused as `L0110`, at the word `test`,
-/// wherever among them it is written.
 // example: held.is_held(a_test_inside_a_body_is_refused_at_its_word(3))
 fn a_test_inside_a_body_is_refused_at_its_word(cases: Int) -> held.Held {
     var found = held.nothing_failed(cases)
@@ -253,8 +232,6 @@ fn a_test_inside_a_body_is_refused_at_its_word(cases: Int) -> held.Held {
     found
 }
 
-/// Why the parse of `source`, whose one test is inside a body, is not the refusal of that test at
-/// its word, and `""` where it is.
 // example: inner_test_fault("fn f() {\n    test \"a\" {\n        true\n    }\n}\n") == ""
 fn inner_test_fault(source: String) -> String {
     let start = lexing.byte_length(before_the_test(source))
@@ -266,7 +243,6 @@ fn inner_test_fault(source: String) -> String {
     ""
 }
 
-/// The text of `source` before the first `test`.
 // example: before_the_test("ab test") == "ab "
 fn before_the_test(source: String) -> String {
     var index = 0
@@ -276,7 +252,6 @@ fn before_the_test(source: String) -> String {
     or(strings.cut(source, 0, index), "")
 }
 
-/// A function of up to 4 statements drawn from `seed`, with a test written among them.
 // example: strings.length(body_with_a_test(1)) > 0
 fn body_with_a_test(seed: Int) -> String {
     let draw = drawn.seeded(seed)
@@ -297,13 +272,11 @@ fn body_with_a_test(seed: Int) -> String {
     written + "}\n"
 }
 
-/// The statements a drawn body is made of, none of which holds the word `test`.
 // example: list.length(statement_shapes()) == 4
 fn statement_shapes() -> List<String> {
     ["let total = 1", "var count = 2", "count += 1", "_ = f(x: \"é\")"]
 }
 
-/// Up to 8 well-formed items, drawn from `seed`.
 // example: list.length(chosen_items(1)) < 9
 fn chosen_items(seed: Int) -> List<String> {
     let draw = drawn.seeded(seed)
@@ -314,7 +287,6 @@ fn chosen_items(seed: Int) -> List<String> {
     chosen
 }
 
-/// The item shapes a well-formed program is built from, each in canonical form.
 // example: list.length(items()) == 10
 fn items() -> List<String> {
     ["import io", "test \"adds up\" {\n    let total = 1 + 2\n    total == 3\n}", "type UserId = UserId(Int)", "type User = {\n    id: UserId\n}", "type Payment =\n    | Pending\n    | Failed(String)", "fn identity(x) {\n    x\n}", "fn named(a: Int) -> Int {\n    joined(first: a, second: a)\n}", "fn total(users: List<User>) -> Int {\n    var total = 0\n    for user in users {\n        total += 1\n    }\n    total\n}", "fn describe(p: Payment) -> String {\n    match p {\n        Pending =>\n            \"waiting\"\n\n        Failed(reason) =>\n            reason\n    }\n}", "fn pick(a: Int) -> Int {\n    if a > 1 {\n        return a\n    } else {\n        return 0\n    }\n}"]

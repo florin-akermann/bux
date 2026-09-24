@@ -14,58 +14,48 @@ import jvm
 import list
 import modules
 
-/// An operator over a type with an instance calls that instance's method, and no other.
 // example: held.is_held(an_operator_over_a_type_with_an_instance_calls_that_instance_and_no_other(0, ir.little_library()))
 fn an_operator_over_a_type_with_an_instance_calls_that_instance_and_no_other(cases: Int, library: ir.Library) -> held.Held {
     checked(property: Operator, cases: cases, library: library)
 }
 
-/// Each of the four comparisons is one call of the instance's `is_less`, however it is written.
 // example: held.is_held(a_comparison_is_one_call_of_is_less_whichever_way_round_it_is_written(0, ir.little_library()))
 fn a_comparison_is_one_call_of_is_less_whichever_way_round_it_is_written(cases: Int, library: ir.Library) -> held.Held {
     checked(property: Comparison, cases: cases, library: library)
 }
 
-/// A literal at a type whose instance a module wrote is one call of that instance, wherever it is.
 // example: held.is_held(a_literal_at_a_declared_type_is_one_call_of_its_from_literal(0, ir.little_library()))
 fn a_literal_at_a_declared_type_is_one_call_of_its_from_literal(cases: Int, library: ir.Library) -> held.Held {
     checked(property: Literal, cases: cases, library: library)
 }
 
-/// A whole number written where an `Int` is expected is pushed as it is, and calls nothing.
 // example: held.is_held(a_whole_number_where_an_int_is_expected_is_that_number_and_nothing_more(0, ir.little_library()))
 fn a_whole_number_where_an_int_is_expected_is_that_number_and_nothing_more(cases: Int, library: ir.Library) -> held.Held {
     checked(property: WholeNumber, cases: cases, library: library)
 }
 
-/// For each derived trait, a record of any shape reads every field in the order it declares.
 // example: held.is_held(a_record_of_any_shape_derives_a_body_that_reads_every_field_in_order(0, ir.little_library()))
 fn a_record_of_any_shape_derives_a_body_that_reads_every_field_in_order(cases: Int, library: ir.Library) -> held.Held {
     checked(property: Derived, cases: cases, library: library)
 }
 
-/// A generic constrained by `Eq`, written for a set, calls the instance each type of the set has.
-///
-/// The method is written into the module that declares the generic, and it calls the instance in
-/// the module that declares the type. A type the JVM holds has no instance method to call.
+// The module of the generic has the method, and it calls the instance in the module of the type.
+// A type that the JVM holds has no instance method to call.
 // example: held.is_held(a_method_written_for_a_set_calls_the_instance_each_type_in_that_set_has(0, ir.little_library()))
 fn a_method_written_for_a_set_calls_the_instance_each_type_in_that_set_has(cases: Int, library: ir.Library) -> held.Held {
     beside(property: Constrained, cases: cases, library: library)
 }
 
-/// The module declaring a generic writes each method a use in another module asks it for.
 // example: held.is_held(every_method_a_use_asks_for_is_one_the_module_asked_writes(0, ir.little_library()))
 fn every_method_a_use_asks_for_is_one_the_module_asked_writes(cases: Int, library: ir.Library) -> held.Held {
     beside(property: Specialised, cases: cases, library: library)
 }
 
-/// `property` checked over `cases` drawn modules, each drawn from a seed of its own.
 // example: checked(property: Literal, cases: 0, library: ir.little_library()).cases == 0
 fn checked(property: Property, cases: Int, library: ir.Library) -> held.Held {
     checked_beside(property: property, cases: cases, place: Place { directory: "no-such-directory", library: library })
 }
 
-/// `property` checked with the module `holder` in a directory of its own, which is removed after.
 // example: held.is_held(beside(property: Specialised, cases: 0, library: ir.little_library()))
 fn beside(property: Property, cases: Int, library: ir.Library) -> held.Held {
     if cases == 0 {
@@ -77,7 +67,6 @@ fn beside(property: Property, cases: Int, library: ir.Library) -> held.Held {
     }
 }
 
-/// `property` checked with `holder` written in `place`, which is removed once it has been checked.
 // example: list.length(held_beside(property: Specialised, cases: 1, place: Place { directory: "no-such-directory", library: ir.little_library() }).failures) == 1
 fn held_beside(property: Property, cases: Int, place: Place) -> held.Held {
     _ = files.write(modules.joined(place.directory, "holder.bx"), holder())
@@ -86,16 +75,11 @@ fn held_beside(property: Property, cases: Int, place: Place) -> held.Held {
     found
 }
 
-/// A module declaring generics, which a drawn module reaches through an import.
-///
-/// `held` writes its type parameter out, `counted` writes one that reaches no further than the
-/// inside of a `List`, and `is_same` constrains one by `Eq`.
 // example: holder() != ""
 fn holder() -> String {
     "fn held<T>(value: T) -> T {\n    value\n}\n\nfn counted<T>(values: List<T>) -> Int {\n    var count = 0\n    for _ in values {\n        count += 1\n    }\n    count\n}\n\nfn is_same<T: Eq<T>>(one: T, other: T) -> Bool {\n    one == other\n}\n"
 }
 
-/// `property` checked over `cases` modules drawn beside `place`.
 // example: checked_beside(property: Literal, cases: 0, place: Place { directory: "no-such-directory", library: ir.little_library() }).cases == 0
 fn checked_beside(property: Property, cases: Int, place: Place) -> held.Held {
     var found = held.nothing_failed(cases)
@@ -109,7 +93,6 @@ fn checked_beside(property: Property, cases: Int, place: Place) -> held.Held {
     found
 }
 
-/// The module `property` draws with `draw`, and what went wrong with it, which is empty if nothing.
 // example: drawing(property: Literal, draw: drawn.seeded(1), place: Place { directory: "no-such-directory", library: ir.little_library() }).source != ""
 fn drawing(property: Property, draw: drawn.Draw, place: Place) -> Drawing {
     match property {
@@ -123,7 +106,6 @@ fn drawing(property: Property, draw: drawn.Draw, place: Place) -> Drawing {
     }
 }
 
-/// The name a failure of `property` is reported with.
 // example: name_of(Literal) == "a_literal_at_a_declared_type_is_one_call_of_its_from_literal"
 fn name_of(property: Property) -> String {
     match property {
@@ -137,7 +119,6 @@ fn name_of(property: Property) -> String {
     }
 }
 
-/// A drawn operator over `Money`, which calls the one instance method it is written for.
 // example: operator(drawn.seeded(1), ir.little_library()).source != ""
 fn operator(draw: drawn.Draw, library: ir.Library) -> Drawing {
     let at = drawn.number(draw, 10)
@@ -147,7 +128,6 @@ fn operator(draw: drawn.Draw, library: ir.Library) -> Drawing {
     Drawing { source: source, why: instances_why(found: instances_called(compiled.lowered_alone(source, library)), wanted: called) }
 }
 
-/// A drawn comparison over `Money`, which is one call of `is_less` whichever way round it is.
 // example: comparison(drawn.seeded(1), ir.little_library()).source != ""
 fn comparison(draw: drawn.Draw, library: ir.Library) -> Drawing {
     let written = drawn.picked(draw, ["one < other", "one <= other", "one > other", "one >= other"], "")
@@ -155,19 +135,16 @@ fn comparison(draw: drawn.Draw, library: ir.Library) -> Drawing {
     Drawing { source: source, why: instances_why(found: instances_called(compiled.lowered_alone(source, library)), wanted: "Ord$Money$is_less") }
 }
 
-/// A module writing `written` over `Money`, which has an instance of every operator's trait.
 // example: owning("-one") != ""
 fn owning(written: String) -> String {
     "fn worked_out(one: Money, other: Money) -> () {\n    _ = " + written + "\n    _ = other\n}\n" + money_owns()
 }
 
-/// `Money` with an instance of every trait an operator is, so any operator may be written over it.
 // example: money_owns() != ""
 fn money_owns() -> String {
     "\ninstance Add<Money> {\n    fn add(one: Money, other: Money) -> Money {\n        one\n    }\n}\n\ninstance Sub<Money> {\n    fn subtract(one: Money, other: Money) -> Money {\n        one\n    }\n}\n\ninstance Mul<Money> {\n    fn multiply(one: Money, other: Money) -> Money {\n        one\n    }\n}\n\ninstance Div<Money> {\n    fn divide(one: Money, other: Money) -> Option<Money> {\n        Some(one)\n    }\n}\n\ninstance Rem<Money> {\n    fn remainder(one: Money, other: Money) -> Option<Money> {\n        Some(one)\n    }\n}\n\ninstance Neg<Money> {\n    fn negate(value: Money) -> Money {\n        value\n    }\n}\n\ninstance Ord<Money> {\n    fn is_less(one: Money, other: Money) -> Bool {\n        one.cents < other.cents\n    }\n}\n\ntype Money = {\n    cents: Int\n}\n"
 }
 
-/// The instance methods `worked_out` calls, in the order it calls them.
 // example: instances_called([]) == []
 fn instances_called(lowered: List<ir.Lowered>) -> List<String> {
     var names = []
@@ -179,7 +156,6 @@ fn instances_called(lowered: List<ir.Lowered>) -> List<String> {
     names
 }
 
-/// A drawn literal at `Int32`, which is one call of the `from_literal` of its instance.
 // example: literal(drawn.seeded(1), ir.little_library()).source != ""
 fn literal(draw: drawn.Draw, library: ir.Library) -> Drawing {
     let written = drawn.picked(draw, ["42", "-1", "2147483647"], "")
@@ -188,7 +164,6 @@ fn literal(draw: drawn.Draw, library: ir.Library) -> Drawing {
     Drawing { source: source, why: instances_why(found: calls, wanted: "IntegerLiteral$Int32$from_literal") }
 }
 
-/// What is wrong where `found` is not the one call `wanted`, which is empty where it is.
 // example: instances_why(found: ["a"], wanted: "a") == ""
 // example: instances_why(found: [], wanted: "a") == "it calls [], not a"
 fn instances_why(found: List<String>, wanted: String) -> String {
@@ -198,13 +173,11 @@ fn instances_why(found: List<String>, wanted: String) -> String {
     "it calls " + shown(found) + ", not " + wanted
 }
 
-/// A type of its own with an instance of `IntegerLiteral`, so a whole number may be written at it.
 // example: int32() != ""
 fn int32() -> String {
     "\ninstance IntegerLiteral<Int32> {\n    fn lowest() -> Int {\n        -2147483648\n    }\n\n    fn highest() -> Int {\n        2147483647\n    }\n\n    fn from_literal(literal: Int) -> Int32 {\n        Int32(literal)\n    }\n}\n\ntype Int32 = Int32(Int)\n"
 }
 
-/// A drawn whole number at `Int`, which is pushed as it is written and calls nothing.
 // example: whole_number(drawn.seeded(1), ir.little_library()).why == ""
 fn whole_number(draw: drawn.Draw, library: ir.Library) -> Drawing {
     let value = whole_drawn(draw)
@@ -220,7 +193,6 @@ fn whole_number(draw: drawn.Draw, library: ir.Library) -> Drawing {
     Drawing { source: source, why: why }
 }
 
-/// A whole number from 0 up to the largest `Int`, of a drawn number of digits.
 // example: whole_drawn(drawn.seeded(1)) >= 0
 fn whole_drawn(draw: drawn.Draw) -> Int {
     let digits = drawn.number(draw, 19)
@@ -230,7 +202,6 @@ fn whole_drawn(draw: drawn.Draw) -> Int {
     or(whole % power_of_ten(digits), 0)
 }
 
-/// Ten times itself `digits` times, the least of which is one.
 // example: power_of_ten(0) == 1
 // example: power_of_ten(3) == 1000
 fn power_of_ten(digits: Int) -> Int {
@@ -243,7 +214,6 @@ fn power_of_ten(digits: Int) -> Int {
     power
 }
 
-/// Whether `body` pushes the `long` `value`.
 // example: has_long([jvm.LongOf(3)], 3)
 // example: !has_long([jvm.IntegerOf(3)], 3)
 fn has_long(body: List<jvm.Instruction>, value: Int) -> Bool {
@@ -255,7 +225,6 @@ fn has_long(body: List<jvm.Instruction>, value: Int) -> Bool {
     false
 }
 
-/// Whether `instruction` pushes the `long` `value`.
 // example: is_long_of(jvm.LongOf(3), 3)
 // example: !is_long_of(jvm.LongOf(4), 3)
 fn is_long_of(instruction: jvm.Instruction, value: Int) -> Bool {
@@ -265,7 +234,6 @@ fn is_long_of(instruction: jvm.Instruction, value: Int) -> Bool {
     }
 }
 
-/// A record of drawn fields deriving a drawn trait, whose method reads every field in order.
 // example: derived(drawn.seeded(1), ir.little_library()).source != ""
 fn derived(draw: drawn.Draw, library: ir.Library) -> Drawing {
     let at = drawn.number(draw, 4)
@@ -291,14 +259,13 @@ fn derived(draw: drawn.Draw, library: ir.Library) -> Drawing {
     Drawing { source: source, why: why }
 }
 
-/// How often a derive of the trait at `at` reads a field: `Eq` reads two values, `Ord` both ways.
+// `Eq` reads each field of two values, and `Ord` reads the two values both ways.
 // example: times_read(0) == 2
 // example: times_read(3) == 1
 fn times_read(at: Int) -> Int {
     or(list.at([2, 4, 1, 1], at), 1)
 }
 
-/// `name`, `times` times over.
 // example: repeated(name: "a", times: 2) == ["a", "a"]
 fn repeated(name: String, times: Int) -> List<String> {
     var names = []
@@ -308,7 +275,6 @@ fn repeated(name: String, times: Int) -> List<String> {
     names
 }
 
-/// The names of the fields `body` reads, in the order it reads them.
 // example: fields_read([jvm.GetField(jvm.FieldRef { class: "a", name: "b", of: jvm.Long })]) == ["b"]
 fn fields_read(body: List<jvm.Instruction>) -> List<String> {
     var names = []
@@ -318,7 +284,6 @@ fn fields_read(body: List<jvm.Instruction>) -> List<String> {
     names
 }
 
-/// The field `instruction` reads off an instance, where it reads one.
 // example: field_named(jvm.Copy) == []
 fn field_named(instruction: jvm.Instruction) -> List<String> {
     match instruction {
@@ -327,7 +292,6 @@ fn field_named(instruction: jvm.Instruction) -> List<String> {
     }
 }
 
-/// A drawn use of `holder.is_same`, whose method calls the instance of the type it settles.
 // example: constrained(drawn.seeded(1), Place { directory: "no-such-directory", library: ir.little_library() }).source != ""
 fn constrained(draw: drawn.Draw, place: Place) -> Drawing {
     let at = drawn.number(draw, 4)
@@ -351,7 +315,6 @@ fn constrained(draw: drawn.Draw, place: Place) -> Drawing {
     Drawing { source: source, why: why }
 }
 
-/// Every instance method `body` calls as a static method, as its class and name, in order.
 // example: instances_reached([jvm.Copy]) == []
 fn instances_reached(body: List<jvm.Instruction>) -> List<String> {
     var reached = []
@@ -361,7 +324,6 @@ fn instances_reached(body: List<jvm.Instruction>) -> List<String> {
     reached
 }
 
-/// The class and name of the instance method `instruction` calls as a static method, where it does.
 // example: instance_reached(jvm.Copy) == []
 fn instance_reached(instruction: jvm.Instruction) -> List<String> {
     match instruction {
@@ -370,7 +332,6 @@ fn instance_reached(instruction: jvm.Instruction) -> List<String> {
     }
 }
 
-/// The class and name of `reference` where its name says it is an instance method, else nothing.
 // example: instance_named(jvm.MethodRef { class: "a", name: "Eq$A$is_equal", descriptor: jvm.MethodDescriptor { parameters: [], result: None } }) == ["a.Eq$A$is_equal"]
 fn instance_named(reference: jvm.MethodRef) -> List<String> {
     if compiled.is_holding(reference.name, "$") {
@@ -379,7 +340,6 @@ fn instance_named(reference: jvm.MethodRef) -> List<String> {
     []
 }
 
-/// A drawn use of a generic of `holder`, which `holder` writes as the use reaches it.
 // example: specialised(drawn.seeded(1), Place { directory: "no-such-directory", library: ir.little_library() }).source != ""
 fn specialised(draw: drawn.Draw, place: Place) -> Drawing {
     let at = drawn.number(draw, 7)
@@ -390,7 +350,6 @@ fn specialised(draw: drawn.Draw, place: Place) -> Drawing {
     Drawing { source: source, why: asked_why(lowered) }
 }
 
-/// What is wrong where `holder` writes no method as `go` reaches it, which is empty where it does.
 // example: asked_why([]) == "go calls nothing of holder"
 fn asked_why(lowered: List<ir.Lowered>) -> String {
     for instruction in compiled.instructions_of(lowered, "go") {
@@ -402,13 +361,11 @@ fn asked_why(lowered: List<ir.Lowered>) -> String {
     "go calls nothing of holder"
 }
 
-/// A call of nothing, which stands where an instruction calls no method.
 // example: no_call().name == ""
 fn no_call() -> jvm.MethodRef {
     jvm.MethodRef { class: "", name: "", descriptor: jvm.MethodDescriptor { parameters: [], result: None } }
 }
 
-/// What is wrong where `classes` write no method as `reference` reaches it, or nothing.
 // example: written_why(classes: [], reference: no_call()) == "holder writes no "
 fn written_why(classes: List<ir.Class>, reference: jvm.MethodRef) -> String {
     for class in classes {
@@ -421,7 +378,6 @@ fn written_why(classes: List<ir.Class>, reference: jvm.MethodRef) -> String {
     "holder writes no " + reference.name
 }
 
-/// What sets the descriptor `written` apart from the one `reached`, or nothing.
 // example: descriptor_why(written: no_call().descriptor, reached: no_call().descriptor) == ""
 fn descriptor_why(written: jvm.MethodDescriptor, reached: jvm.MethodDescriptor) -> String {
     if written.parameters != reached.parameters || !is_same_result(written: written.result, reached: reached.result) {
@@ -430,7 +386,6 @@ fn descriptor_why(written: jvm.MethodDescriptor, reached: jvm.MethodDescriptor) 
     ""
 }
 
-/// Whether `written` and `reached` give back the same, which may be nothing for both.
 // example: is_same_result(written: None, reached: None)
 // example: !is_same_result(written: Some(jvm.Long), reached: None)
 fn is_same_result(written: Option<jvm.Descriptor>, reached: Option<jvm.Descriptor>) -> Bool {
@@ -440,19 +395,16 @@ fn is_same_result(written: Option<jvm.Descriptor>, reached: Option<jvm.Descripto
     or(written, jvm.Long) == or(reached, jvm.Long)
 }
 
-/// Where a drawn module is checked: the directory it is written into, and the library it reaches.
 type Place = {
     directory: String
     library: ir.Library
 }
 
-/// One drawn module, and what went wrong with it, which is empty where the property held.
 type Drawing = {
     source: String
     why: String
 }
 
-/// Each property of what an instance becomes.
 type Property =
     | Operator
     | Comparison

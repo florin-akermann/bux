@@ -15,7 +15,6 @@ import resolver
 import set
 import strings
 
-/// A drawn module that parses resolves to one answer, however many times it is resolved.
 // example: held.is_held(resolving_is_deterministic(2, ir.little_library().prelude.names))
 fn resolving_is_deterministic(cases: Int, names: resolver.Prelude) -> held.Held {
     var found = held.nothing_failed(cases)
@@ -31,7 +30,6 @@ fn resolving_is_deterministic(cases: Int, names: resolver.Prelude) -> held.Held 
     found
 }
 
-/// A module of distinct pieces, each of which resolves on its own, resolves.
 // example: held.is_held(a_module_of_pieces_resolves(2, ir.little_library().prelude.names))
 fn a_module_of_pieces_resolves(cases: Int, names: resolver.Prelude) -> held.Held {
     var found = held.nothing_failed(cases)
@@ -47,8 +45,6 @@ fn a_module_of_pieces_resolves(cases: Int, names: resolver.Prelude) -> held.Held
     found
 }
 
-/// A piece that is refused however sound the module around it is gives a refusal that points
-/// at a stretch of at least one byte inside the source.
 // example: held.is_held(a_refusal_points_inside_the_source(2, ir.little_library().prelude.names))
 fn a_refusal_points_inside_the_source(cases: Int, names: resolver.Prelude) -> held.Held {
     var found = held.nothing_failed(cases)
@@ -66,7 +62,6 @@ fn a_refusal_points_inside_the_source(cases: Int, names: resolver.Prelude) -> he
     found
 }
 
-/// Why the refusal of `source` does not point inside it, and `""` where it does.
 // example: refusal_outside("fn f() -> Int {\n    gone\n}\n", ir.little_library().prelude.names) == ""
 // example: refusal_outside("fn f() -> Int {\n    1\n}\n", ir.little_library().prelude.names) == "it resolves"
 fn refusal_outside(source: String, names: resolver.Prelude) -> String {
@@ -76,7 +71,6 @@ fn refusal_outside(source: String, names: resolver.Prelude) -> String {
     }
 }
 
-/// Why the refusal `answer` holds is not a stretch of at least one byte within `length` bytes.
 // example: span_outside(Err(resolver.ResolveError { kind: resolver.NoValue("x"), span: stretch(start: 2, length: 0) }), 5) == "the refusal points at 2..2"
 fn span_outside(answer: Result<resolver.Resolved, resolver.ResolveError>, length: Int) -> String {
     match answer {
@@ -85,7 +79,6 @@ fn span_outside(answer: Result<resolver.Resolved, resolver.ResolveError>, length
     }
 }
 
-/// Why `span` is not a stretch of at least one byte within `length` bytes, and `""` where it is.
 // example: stretch_outside(stretch(start: 1, length: 2), 3) == ""
 // example: stretch_outside(stretch(start: 1, length: 3), 3) == "the refusal points at 1..4"
 fn stretch_outside(span: lexer.Span, length: Int) -> String {
@@ -95,8 +88,6 @@ fn stretch_outside(span: lexer.Span, length: Int) -> String {
     "the refusal points at " + shown(span.start) + ".." + shown(span.start + span.length)
 }
 
-/// Every name a drawn module of pieces declares is resolved, at the place it is written, to the
-/// definition that place declares.
 // example: held.is_held(every_declared_name_is_declared_there(2, ir.little_library().prelude.names))
 fn every_declared_name_is_declared_there(cases: Int, names: resolver.Prelude) -> held.Held {
     var found = held.nothing_failed(cases)
@@ -112,7 +103,6 @@ fn every_declared_name_is_declared_there(cases: Int, names: resolver.Prelude) ->
     found
 }
 
-/// The first name `source` declares that is not resolved to its own declaration, and `""`.
 // example: undeclared_name("fn f() -> Int {\n    1\n}\n", ir.little_library().prelude.names) == ""
 // example: undeclared_name("fn (", ir.little_library().prelude.names) == "it does not parse"
 fn undeclared_name(source: String, names: resolver.Prelude) -> String {
@@ -122,7 +112,6 @@ fn undeclared_name(source: String, names: resolver.Prelude) -> String {
     }
 }
 
-/// The first declared name `answer` does not resolve to its own declaration, and `""`.
 // example: resolved_undeclared(Err(resolver.ResolveError { kind: resolver.NoValue("x"), span: stretch(start: 2, length: 0) }), "") == "it does not resolve"
 fn resolved_undeclared(answer: Result<resolver.Resolved, resolver.ResolveError>, source: String) -> String {
     match answer {
@@ -131,7 +120,6 @@ fn resolved_undeclared(answer: Result<resolver.Resolved, resolver.ResolveError>,
     }
 }
 
-/// The first declared name of `resolved` that its own place does not declare, and `""`.
 // example: first_undeclared(resolver.Resolved { module: "demo", program: ast.Program { items: [] }, found: map.empty() }, "") == ""
 fn first_undeclared(resolved: resolver.Resolved, source: String) -> String {
     for one in declared_names(resolved.program) {
@@ -143,7 +131,6 @@ fn first_undeclared(resolved: resolver.Resolved, source: String) -> String {
     ""
 }
 
-/// Why `one` is not declared at the place it is written in `source`, and `""` where it is.
 // example: declared_elsewhere(resolver.Resolved { module: "demo", program: ast.Program { items: [] }, found: map.empty() }, Declaring { namespace: resolver.ValueNamespace, name: ast.Name { text: "f", span: stretch(start: 0, length: 1) } }, "f") == "`f` resolves to nothing"
 fn declared_elsewhere(resolved: resolver.Resolved, one: Declaring, source: String) -> String {
     let name = one.name
@@ -156,7 +143,6 @@ fn declared_elsewhere(resolved: resolver.Resolved, one: Declaring, source: Strin
     }
 }
 
-/// Why `origin` is not the declaration at `name`, and `""` where it is.
 // example: origin_elsewhere(resolver.Declared(stretch(start: 0, length: 1)), ast.Name { text: "f", span: stretch(start: 0, length: 1) }) == ""
 // example: origin_elsewhere(resolver.InPrelude, ast.Name { text: "f", span: stretch(start: 0, length: 1) }) == "`f` is declared elsewhere"
 fn origin_elsewhere(origin: resolver.Origin, name: ast.Name) -> String {
@@ -166,7 +152,6 @@ fn origin_elsewhere(origin: resolver.Origin, name: ast.Name) -> String {
     }
 }
 
-/// `""` where `span` is where `name` is written, and why not otherwise.
 // example: same_place(stretch(start: 0, length: 1), ast.Name { text: "f", span: stretch(start: 0, length: 1) }) == ""
 // example: same_place(stretch(start: 1, length: 1), ast.Name { text: "f", span: stretch(start: 0, length: 1) }) == "`f` is declared elsewhere"
 fn same_place(span: lexer.Span, name: ast.Name) -> String {
@@ -176,10 +161,7 @@ fn same_place(span: lexer.Span, name: ast.Name) -> String {
     "`" + name.text + "` is declared elsewhere"
 }
 
-/// Every name `program` writes as a declaration, with the namespace it declares into.
-///
-/// Neither an instance nor a derive declares a name: the trait declares the one its methods
-/// answer for.
+// An instance and a derive declare no name: the trait declares the name of each method.
 // example: list.length(declared_names(ok_or(parser.parse("import io\n\ntrait Area<T> {\n    fn covered(shape: T) -> Int\n}\n"), ast.Program { items: [] }))) == 3
 fn declared_names(program: ast.Program) -> List<Declaring> {
     var found = []
@@ -191,7 +173,6 @@ fn declared_names(program: ast.Program) -> List<Declaring> {
     found
 }
 
-/// The names one item declares.
 // example: list.length(names_of(ast.Import(ast.ImportDeclaration { module: ast.Name { text: "io", span: stretch(start: 7, length: 2) }, span: stretch(start: 0, length: 9) }))) == 1
 fn names_of(item: ast.Item) -> List<Declaring> {
     match item {
@@ -205,7 +186,6 @@ fn names_of(item: ast.Item) -> List<Declaring> {
     }
 }
 
-/// The trait's own name, then the name of each method it declares.
 // example: list.length(trait_names(ast.TraitDeclaration { name: ast.Name { text: "A", span: stretch(start: 6, length: 1) }, parameter: ast.Name { text: "T", span: stretch(start: 8, length: 1) }, methods: [], span: stretch(start: 0, length: 9), visibility: ast.Public })) == 1
 fn trait_names(declaration: ast.TraitDeclaration) -> List<Declaring> {
     var found = [Declaring { namespace: resolver.TypeNamespace, name: declaration.name }]
@@ -215,20 +195,17 @@ fn trait_names(declaration: ast.TraitDeclaration) -> List<Declaring> {
     found
 }
 
-/// `name`, declared into the value namespace.
 // example: value_named(ast.Name { text: "f", span: stretch(start: 0, length: 1) }).name.text == "f"
 fn value_named(name: ast.Name) -> Declaring {
     Declaring { namespace: resolver.ValueNamespace, name: name }
 }
 
-/// Whether the resolver's printed answer is that the module resolved.
 // example: is_resolved("resolved\n")
 // example: !is_resolved("refused\n")
 fn is_resolved(answer: String) -> Bool {
     or(strings.cut(answer, 0, 9), "") == "resolved\n"
 }
 
-/// A module of the distinct pieces drawn from `among`; a piece drawn twice is written once.
 // example: list.has_value(["a", ""], module_of(drawn.seeded(1), ["a"]))
 fn module_of(draw: drawn.Draw, among: List<String>) -> String {
     let count = drawn.number(draw, list.length(among) + 2)
@@ -246,22 +223,18 @@ fn module_of(draw: drawn.Draw, among: List<String>) -> String {
     strings.join(chosen, "\n\n")
 }
 
-/// The pieces a drawn module is built from, each of which resolves on its own and declares its
-/// own names, so any set of them is a module that resolves.
+// Each piece resolves alone and declares its own names, so any set of pieces resolves.
 // example: list.length(pieces()) == 6
 fn pieces() -> List<String> {
     ["import io\n\nfn greet() -> () {\n    io.println(\"hello\")\n}", "type UserId = UserId(Int)", "type User = {\n    id: Int\n}", "fn identity<T>(value: T) -> T {\n    value\n}", "fn total(counts: List<Int>) -> Int {\n    var sum = 0\n    for count in counts {\n        sum += count\n    }\n    sum\n}", "fn describe(payment: Payment) -> String {\n    match payment {\n        Pending => \"waiting\"\n        Failed(reason) => reason\n    }\n}\n\ntype Payment =\n    | Pending\n    | Failed(String)\n"]
 }
 
-/// The pieces that are refused however sound the module around them is.
 // example: list.length(refusals()) == 4
 fn refusals() -> List<String> {
     ["fn refused() -> Int {\n    nothing_names_this\n}", "fn refused() -> Missing {\n    1\n}", "fn refused(seen: Int) -> Int {\n    let seen = 1\n    seen\n}", "fn Ok() -> Int {\n    1\n}"]
 }
 
-/// A module of one to five drawn declarations, written as the grammar writes them.
-///
-/// The names clash, hide, and go missing often, so a drawn module is refused as often as not.
+// The names often clash, hide, and go missing, so the resolver refuses about half of the modules.
 // example: strings.length(drawn_source(drawn.seeded(1))) > 0
 fn drawn_source(draw: drawn.Draw) -> String {
     let count = drawn.number(draw, 5) + 1
@@ -274,7 +247,6 @@ fn drawn_source(draw: drawn.Draw) -> String {
     strings.join(items, "\n\n") + "\n"
 }
 
-/// One declaration of a kind the resolver walks, drawn from `draw`.
 // example: strings.length(drawn_item(drawn.seeded(3))) > 0
 fn drawn_item(draw: drawn.Draw) -> String {
     let name = drawn.picked(after(draw, 1), declared(), "f")
@@ -291,7 +263,6 @@ fn drawn_item(draw: drawn.Draw) -> String {
     }
 }
 
-/// A function whose body binds, assigns, loops, calls, and matches drawn names.
 // example: strings.length(drawn_function(draw: drawn.seeded(1), name: "f", type_name: "Int")) > 0
 fn drawn_function(draw: drawn.Draw, name: String, type_name: String) -> String {
     let count = drawn.number(draw, 4)
@@ -306,7 +277,6 @@ fn drawn_function(draw: drawn.Draw, name: String, type_name: String) -> String {
     "fn " + name + "<T: " + trait_drawn(at) + "<T>>(held: " + type_name + ") -> Int {\n" + body + "    " + drawn_expression(drawn.next(at)) + "\n}"
 }
 
-/// One statement of a drawn body.
 // example: strings.length(drawn_statement(drawn.seeded(1))) > 0
 fn drawn_statement(draw: drawn.Draw) -> String {
     let bound = drawn.picked(after(draw, 1), written(), "held")
@@ -321,7 +291,6 @@ fn drawn_statement(draw: drawn.Draw) -> String {
     }
 }
 
-/// A name, a call, a dotted call, a dotted name, or a record, over drawn names.
 // example: strings.length(drawn_expression(drawn.seeded(1))) > 0
 fn drawn_expression(draw: drawn.Draw) -> String {
     let one = drawn.picked(after(draw, 1), written(), "held")
@@ -335,7 +304,6 @@ fn drawn_expression(draw: drawn.Draw) -> String {
     }
 }
 
-/// A binding, a constructor, an or-pattern, a record, or a dotted name, over a drawn name.
 // example: strings.length(drawn_pattern(drawn.seeded(1))) > 0
 fn drawn_pattern(draw: drawn.Draw) -> String {
     let one = drawn.picked(after(draw, 1), written(), "held")
@@ -348,31 +316,26 @@ fn drawn_pattern(draw: drawn.Draw) -> String {
     }
 }
 
-/// A trait a drawn declaration names: from the prelude, from the module, or from nowhere.
 // example: strings.length(trait_drawn(drawn.seeded(1))) > 0
 fn trait_drawn(draw: drawn.Draw) -> String {
     drawn.picked(draw, ["Eq", "Show", "Area", "Sized", "Add"], "Eq")
 }
 
-/// The names a drawn declaration is called.
 // example: list.length(declared()) == 7
 fn declared() -> List<String> {
     ["f", "g", "h", "Id", "Box", "Pair", "Some"]
 }
 
-/// The names a drawn body writes, which are declared, supplied by the prelude, or nowhere.
 // example: list.length(written()) == 10
 fn written() -> List<String> {
     ["held", "total", "f", "g", "Id", "Box", "io", "None", "or", "missing"]
 }
 
-/// The types a drawn declaration writes.
 // example: list.length(written_types()) == 7
 fn written_types() -> List<String> {
     ["Int", "Id", "Box", "Eq", "T", "io.Box", "Missing"]
 }
 
-/// The draw `steps` draws after `draw`.
 // example: after(drawn.seeded(1), 0).state == drawn.seeded(1).state
 // example: after(drawn.seeded(1), 2).state == drawn.next(drawn.next(drawn.seeded(1))).state
 fn after(draw: drawn.Draw, steps: Int) -> drawn.Draw {
@@ -385,13 +348,11 @@ fn after(draw: drawn.Draw, steps: Int) -> drawn.Draw {
     at
 }
 
-/// A stretch of `length` bytes from `start`.
 // example: stretch(start: 1, length: 2).length == 2
 fn stretch(start: Int, length: Int) -> lexer.Span {
     lexer.Span { start: start, length: length }
 }
 
-/// One name a module declares, and the namespace it declares it into.
 type Declaring = {
     namespace: resolver.Namespace
     name: ast.Name

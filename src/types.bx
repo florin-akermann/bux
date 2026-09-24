@@ -21,7 +21,6 @@ import strings
 import surface
 import unify
 
-/// The prelude a program is checked against, read out of the prelude's own `source`.
 // example: !has_names(prelude_read("fn ("))
 fn prelude_read(source: String) -> Prelude {
     let program = ok_or(parser.parse(source), ast.Program { items: [] })
@@ -32,7 +31,6 @@ fn prelude_read(source: String) -> Prelude {
     }
 }
 
-/// What a checked module offers the modules that import it.
 // example: list.length(surface_of(checked_of("fn count() -> Int {\n    1\n}\n")).functions) == 1
 fn surface_of(checked: infer.Inference) -> surface.Surface {
     let environment = checked.environment
@@ -40,8 +38,6 @@ fn surface_of(checked: infer.Inference) -> surface.Surface {
     surface.Surface { functions: declared.offered_functions(environment, program), processes: declared.offered_processes(environment, program), types: declared.offered_types(environment, program), instances: declared.given_instances(environment, checked.resolved), kept: declared.kept_by(program) }
 }
 
-/// The API page of a checked module: every item but an import and a `private` declaration, with one
-/// blank line between two.
 // example: page_of(checked_of("fn count() -> Int {\n    1\n}\n\ntype Box = Box\n")) == "fn count() -> Int\n\ntype Box = Box\n"
 // example: page_of(checked_of("private fn count() -> Int {\n    1\n}\n\ntype Box = Box\n")) == "type Box = Box\n"
 fn page_of(checked: infer.Inference) -> String {
@@ -57,8 +53,6 @@ fn page_of(checked: infer.Inference) -> String {
     page
 }
 
-/// What one item puts on the page, which is nothing at all for an import or a test, and for a
-/// declaration that is `private` or that gives an instance of a trait or for a type in `kept`.
 // example: stanza_of(checked_of(""), declared.first_item("derive Eq, Ord for Box\n"), []) == "instance Eq<Box>\ninstance Ord<Box>\n"
 fn stanza_of(checked: infer.Inference, item: ast.Item, kept: List<surface.KeptName>) -> String {
     if ast.is_kept(item) || is_about_kept(item, kept) {
@@ -77,7 +71,6 @@ fn stanza_of(checked: infer.Inference, item: ast.Item, kept: List<surface.KeptNa
     }
 }
 
-/// Whether `item` gives an instance of a trait in `kept`, or for a type in `kept`.
 // example: is_about_kept(declared.first_item("derive Eq for Box\n"), [surface.KeptType("Box")])
 // example: !is_about_kept(declared.first_item("derive Eq for Box\n"), [surface.KeptValue("Box")])
 fn is_about_kept(item: ast.Item, kept: List<surface.KeptName>) -> Bool {
@@ -88,7 +81,6 @@ fn is_about_kept(item: ast.Item, kept: List<surface.KeptName>) -> Bool {
     }
 }
 
-/// `instance Eq<User>`, one line for each trait a derive names.
 // example: derived_heads(ast.DeriveDeclaration { traits: [], for_type: ast.Name { text: "Box", span: lexer.Span { start: 0, length: 3 } }, span: lexer.Span { start: 0, length: 3 } }) == ""
 fn derived_heads(declaration: ast.DeriveDeclaration) -> String {
     var page = ""
@@ -98,13 +90,11 @@ fn derived_heads(declaration: ast.DeriveDeclaration) -> String {
     page
 }
 
-/// Whether a prelude declares any value, which one read out of a source it cannot parse does not.
 // example: !has_names(Prelude { names: resolver.prelude_of(ast.Program { items: [] }), declared: declared.little_environment() })
 private fn has_names(prelude: Prelude) -> Bool {
     has_value_named(prelude.names, "Some")
 }
 
-/// Whether `names` holds a value called `named`.
 // example: has_value_named(little_prelude().names, "or")
 private fn has_value_named(names: resolver.Prelude, named: String) -> Bool {
     match map.get(names.values, named) {
@@ -113,7 +103,6 @@ private fn has_value_named(names: resolver.Prelude, named: String) -> Bool {
     }
 }
 
-/// `source`, checked as one module against the small prelude, and nothing where it is refused.
 // example: list.length(checked_of("fn count() -> Int {\n    1\n}\n").functions) == 1
 fn checked_of(source: String) -> infer.Inference {
     let resolved = declared.resolved_of(source)
@@ -121,18 +110,11 @@ fn checked_of(source: String) -> infer.Inference {
     ok_or(check(resolved, surface.nothing_imported(), little_prelude()), empty)
 }
 
-/// The code and span of the refusal `source` earns against the small prelude, or `""`.
 // example: page_code("fn count() -> Int {\n    1\n}\n") == ""
 private fn page_code(source: String) -> String {
     refusal.code_given(check(declared.resolved_of(source), surface.nothing_imported(), little_prelude()))
 }
 
-/// Every expression of `resolved` given its type, or the first refusal.
-///
-/// A record that holds itself is refused first, then a process that breaks its shape, then a
-/// declaration, then a process that holds a foreign reference, then a body, then a signature
-/// that leaves a type out, then a declaration that lets a foreign reference escape, and then an
-/// `Option<()>` or an escape that inference reached.
 // example: page_code("fn count() -> Int {\n    \"one\"\n}\n") == "L0400 18..31"
 // example: page_code("fn is_there() -> Bool {\n    _ = Some(())\n    true\n}\n") == "L0432 32..40"
 fn check(resolved: resolver.Resolved, imported: surface.Imported, prelude: Prelude) -> Result<infer.Inference, refusal.TypeError> {
@@ -146,10 +128,8 @@ fn check(resolved: resolver.Resolved, imported: surface.Imported, prelude: Prelu
     carried.nothing_carried(inference)
 }
 
-/// Nothing, or the refusal of the first function whose signature leaves a type out.
-///
-/// Each function writes its whole signature, which `docs/specs/types.md` states. The check runs
-/// after inference, so the help spells the signature inference settled, with `_` where it did not.
+// The check runs after inference, so the help spells the signature that inference settled,
+// with `_` where it settled none.
 // example: page_code("fn same<T>(value) -> T {\n    value\n}\n") == "L0436 11..16"
 // example: page_code("fn count() {\n    1\n}\n") == "L0436 3..8"
 // example: page_code("test \"a\" {\n    true\n}\n") == ""
@@ -160,9 +140,6 @@ fn every_signature_written(checked: infer.Inference) -> Result<(), refusal.TypeE
     Ok(())
 }
 
-/// Nothing, or the refusal of the first type the signature of `function` leaves out.
-///
-/// A parameter is refused where it is written, and a missing result at the name of the function.
 // example: page_code("fn count(held: Int, more) -> Int {\n    held + more\n}\n") == "L0436 20..24"
 fn signature_written(checked: infer.Inference, function: ast.FunctionDeclaration) -> Result<(), refusal.TypeError> {
     for parameter in function.parameters {
@@ -176,14 +153,12 @@ fn signature_written(checked: infer.Inference, function: ast.FunctionDeclaration
     Ok(())
 }
 
-/// The refusal of `function` at `at`, where its signature leaves out what `omitted` names.
 // example: page_code("instance Eq<Box> {\n    fn is_equal(one: Box, other: Box) {\n        true\n    }\n}\n\ntype Box = Box\n") == "L0436 26..34"
 fn left_out(checked: infer.Inference, function: ast.FunctionDeclaration, omitted: refusal.Omission, at: lexer.Span) -> refusal.TypeError {
     let unwritten = refusal.Unwritten { function: function.name.text, omitted: omitted, settled: signature_of(checked, function) }
     refusal.TypeError { kind: refusal.SignatureLeftOut(unwritten), span: at }
 }
 
-/// `fn shared(total: Int, people: Int) -> Int`, with the types inference settled on.
 // example: page_of(checked_of("fn pick<T>(first: T, second: Int) -> T {\n    _ = second\n    first\n}\n")) == "fn pick<T>(first: T, second: Int) -> T\n"
 fn signature_of(checked: infer.Inference, function: ast.FunctionDeclaration) -> String {
     let whole = unify.solved(checked.table, or(map.get(checked.named, function.name.span.start), unify.Unit))
@@ -197,21 +172,16 @@ fn signature_of(checked: infer.Inference, function: ast.FunctionDeclaration) -> 
     "fn " + function.name.text + format.constrained_text(function.type_parameters) + "(" + strings.join(takes, ", ") + ") -> " + unify.text_of(unify.result_of(whole))
 }
 
-/// `prelude`, with the classes the archives of a build hold, which an `extern` may name.
-///
-/// `docs/specs/interop.md` states the rule, and `archives.classes_held` finds the classes.
 // example: page_code("extern type Clock = \"com.example.Clock\"\n") == "L0434 20..39"
 fn with_archived(prelude: Prelude, archived: set.Set<String>) -> Prelude {
     prelude { declared: declared.with_archived(prelude.declared, archived) }
 }
 
-/// The small prelude of the examples of the type inference.
 // example: has_names(little_prelude())
 fn little_prelude() -> Prelude {
     Prelude { names: resolver.prelude_of(declared.little_prelude()), declared: declared.little_environment() }
 }
 
-/// What a program is checked against: the names in scope everywhere, and what they declare.
 type Prelude = {
     names: resolver.Prelude
     declared: declared.Environment

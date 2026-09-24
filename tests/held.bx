@@ -6,13 +6,11 @@ import io
 import list
 import strings
 
-/// `found` with one more failure, which names where it is and what went wrong there.
 // example: list.length(with_failure(nothing_failed(1), "a.bx:1: gone").failures) == 1
 fn with_failure(found: Held, line: String) -> Held {
     found { failures: list.push(found.failures, line) }
 }
 
-/// `found` with one more case that could not be tried, and the reason, which its test writes.
 // example: list.length(with_skip(nothing_failed(0), "a.bx: no JDK").skipped) == 1
 fn with_skip(found: Held, line: String) -> Held {
     found { skipped: list.push(found.skipped, line) }
@@ -31,7 +29,6 @@ fn is_held_reported(found: Held) -> Bool {
     is_held(found)
 }
 
-/// Whether every case of `found` held.
 // example: is_held(nothing_failed(2))
 // example: !is_held(with_failure(nothing_failed(1), "a.bx:1: gone"))
 fn is_held(found: Held) -> Bool {
@@ -52,19 +49,16 @@ fn together(parts: List<Held>) -> Held {
     found
 }
 
-/// A check that tried `cases` cases, every one of which held.
 // example: nothing_failed(3).cases == 3
 fn nothing_failed(cases: Int) -> Held {
     Held { cases: cases, failures: [], skipped: [] }
 }
 
-/// The cases and the failures of both, the failures of `first` before those of `second`.
 // example: added(first: nothing_failed(1), second: nothing_failed(2)).cases == 3
 fn added(first: Held, second: Held) -> Held {
     Held { cases: first.cases + second.cases, failures: both(first: first.failures, second: second.failures), skipped: both(first: first.skipped, second: second.skipped) }
 }
 
-/// The lines of `first`, then the lines of `second`.
 // example: both(first: ["a"], second: ["b"]) == ["a", "b"]
 fn both(first: List<String>, second: List<String>) -> List<String> {
     var lines = first
@@ -74,21 +68,17 @@ fn both(first: List<String>, second: List<String>) -> List<String> {
     lines
 }
 
-/// The line a failure is reported with: where it is, what was expected, and what happened.
-///
-/// Both texts are shown quoted, so a line break or a space at the end is visible on the one line.
+// Both texts are shown in quotes, so a line break or a space at the end is visible.
 // example: failure(at: "a.bx:3", expected: "1", found: "2") == "a.bx:3: expected \"1\", found \"2\""
 fn failure(at: String, expected: String, found: String) -> String {
     at + ": expected " + quoted(expected) + ", found " + quoted(found)
 }
 
-/// The line a drawn property is reported with, naming the seed and the case it was drawn with.
 // example: drawn_failure(property: "p", seed: 7, case: "x", why: "gone") == "property p, seed 7: gone, drawing \"x\""
 fn drawn_failure(property: String, seed: Int, case: String, why: String) -> String {
     "property " + property + ", seed " + shown(seed) + ": " + why + ", drawing " + quoted(case)
 }
 
-/// `text` between double quotes, with each quote, backslash, line break, tab, and return escaped.
 // example: quoted("a\nb") == "\"a\\nb\""
 fn quoted(text: String) -> String {
     var written = "\""
@@ -100,7 +90,6 @@ fn quoted(text: String) -> String {
     written + "\""
 }
 
-/// One character of a quoted text, written so that it stays on the line.
 // example: escaped("\t") == "\\t"
 // example: escaped("a") == "a"
 fn escaped(character: String) -> String {
@@ -114,7 +103,6 @@ fn escaped(character: String) -> String {
     }
 }
 
-/// What a check found.
 type Held = {
     cases: Int
     failures: List<String>

@@ -14,7 +14,6 @@ fn main(arguments: List<String>) -> Int {
     0
 }
 
-/// The whole numbers from one up to `last`, each pushed onto the list the loop keeps.
 // example: list.length(counting(3)) == 3
 fn counting(last: Int) -> List<Int> {
     var counted = []

@@ -12,7 +12,6 @@ fn main(arguments: List<String>) -> Int {
     0
 }
 
-/// The text the file at `path` holds after one line is written whole and two are appended.
 // example: ok_or(grown(""), "nothing") == "nothing"
 fn grown(path: String) -> Result<String, String> {
     _ = files.write(path, "one\n")?

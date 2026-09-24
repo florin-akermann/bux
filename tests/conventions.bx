@@ -15,10 +15,7 @@ import list
 import modules
 import walk
 
-/// Every `.bx` file under `root` outside `library/` and `tests/spec/` declares no `extern`.
-///
-/// `tests/spec/` is exempt, because its files are the executable examples of the language, and
-/// the examples of `docs/specs/interop.md` declare an `extern` each.
+// `tests/spec/` is exempt: each example of `docs/specs/interop.md` declares an `extern`.
 // example: held.is_held(only_the_library_has_an_extern("no-such-directory"))
 // example: !held.is_held(only_the_library_has_an_extern("tests/spec/interop"))
 fn only_the_library_has_an_extern(root: String) -> held.Held {
@@ -32,11 +29,7 @@ fn only_the_library_has_an_extern(root: String) -> held.Held {
     found
 }
 
-/// Every `.bx` file under `directory` that the rule of the library holds to, in the order names
-/// sort.
-///
-/// `library/` and `tests/spec/` are not walked. Nor is a `target/`, which a build writes and which
-/// holds a copy of `library/`, or a directory whose name opens with a dot, which no source is in.
+// `target/` holds a copy of `library/`, and a dot directory holds no source, so neither is walked.
 // example: list.length(held_to_the_library_rule("no-such-directory")) == 0
 // example: list.has_value(held_to_the_library_rule("tests"), "tests/walk.bx")
 // example: !list.has_value(held_to_the_library_rule("tests"), "tests/spec/interop/optional.bx")
@@ -57,7 +50,6 @@ fn held_to_the_library_rule(directory: String) -> List<String> {
     found
 }
 
-/// The path a listing of `directory` reads, which is `.` for the root, written as no directory.
 // example: listing_of("") == "."
 // example: listing_of("tests") == "tests"
 fn listing_of(directory: String) -> String {
@@ -67,7 +59,6 @@ fn listing_of(directory: String) -> String {
     directory
 }
 
-/// Whether the directory at `path`, called `name`, is walked for the rule of the library.
 // example: is_walked(path: "src", name: "src")
 // example: !is_walked(path: "library", name: "library")
 // example: !is_walked(path: "tests/spec", name: "spec")
@@ -77,7 +68,7 @@ fn is_walked(path: String, name: String) -> Bool {
     !list.has_value(["library", "tests/spec"], path) && name != "target" && !lexer.has_prefix(lexer.Rest { source: name, start: 0 }, ".")
 }
 
-/// Whether `source` declares an `extern`, which in canonical form opens a line of its own.
+// In canonical form an `extern` starts a line, so a check of each line start is enough.
 // example: has_an_extern("fn now() -> Int {\n    1\n}\n\nextern static f() -> Int = \"a.B.c\"\n")
 // example: !has_an_extern("// an `extern` is refused here\nfn now() -> Int {\n    1\n}\n")
 fn has_an_extern(source: String) -> Bool {
@@ -89,7 +80,6 @@ fn has_an_extern(source: String) -> Bool {
     false
 }
 
-/// A statement above the last one is refused exactly where it leaves something other than `()`.
 // example: held.is_held(a_statement_that_leaves_a_value_is_refused_above_the_last(2, ir.little_library()))
 fn a_statement_that_leaves_a_value_is_refused_above_the_last(cases: Int, library: ir.Library) -> held.Held {
     var found = held.nothing_failed(cases)
@@ -99,7 +89,6 @@ fn a_statement_that_leaves_a_value_is_refused_above_the_last(cases: Int, library
     found
 }
 
-/// A drawn statement above a `()`.
 // example: above_tried(drawn.seeded(1), ir.little_library()).why == ""
 fn above_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
     let above = drawn.picked(draw, statements(), Left { written: "()", leaves: "()" })
@@ -111,7 +100,6 @@ fn above_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
     checking.Tried { input: source, why: "" }
 }
 
-/// The last statement of a body is the value its function gives back, whatever that value is.
 // example: held.is_held(the_last_statement_is_the_value_given_back(2, ir.little_library()))
 fn the_last_statement_is_the_value_given_back(cases: Int, library: ir.Library) -> held.Held {
     var found = held.nothing_failed(cases)
@@ -123,7 +111,6 @@ fn the_last_statement_is_the_value_given_back(cases: Int, library: ir.Library) -
     found
 }
 
-/// `_ = ` in front of any statement throws its value away, so the body compiles.
 // example: held.is_held(an_underscore_makes_any_statement_compile(2, ir.little_library()))
 fn an_underscore_makes_any_statement_compile(cases: Int, library: ir.Library) -> held.Held {
     var found = held.nothing_failed(cases)
@@ -135,7 +122,6 @@ fn an_underscore_makes_any_statement_compile(cases: Int, library: ir.Library) ->
     found
 }
 
-/// A declaration that repeats a type is called with its arguments named, and never in order.
 // example: held.is_held(a_repeated_type_is_called_by_name_only(2, ir.little_library()))
 fn a_repeated_type_is_called_by_name_only(cases: Int, library: ir.Library) -> held.Held {
     var found = held.nothing_failed(cases)
@@ -145,7 +131,6 @@ fn a_repeated_type_is_called_by_name_only(cases: Int, library: ir.Library) -> he
     found
 }
 
-/// A drawn type, taken twice, and called both ways.
 // example: repeated_tried(drawn.seeded(1), ir.little_library()).why == ""
 fn repeated_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
     let value = drawn.picked(draw, passable(), Left { written: "1", leaves: "Int" })
@@ -157,7 +142,6 @@ fn repeated_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
     refused_tried(taking(pair, in_order_call(pair)), library)
 }
 
-/// A declaration whose two parameter types differ is called named or in order, either way.
 // example: held.is_held(differing_types_are_called_either_way(2, ir.little_library()))
 fn differing_types_are_called_either_way(cases: Int, library: ir.Library) -> held.Held {
     var found = held.nothing_failed(cases)
@@ -167,7 +151,6 @@ fn differing_types_are_called_either_way(cases: Int, library: ir.Library) -> hel
     found
 }
 
-/// Two drawn types, and where they differ, a call of each spelling.
 // example: differing_tried(drawn.seeded(1), ir.little_library()).why == ""
 fn differing_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
     let pair = pair_drawn(draw)
@@ -181,7 +164,6 @@ fn differing_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
     accepted_tried(taking(pair, in_order_call(pair)), library)
 }
 
-/// A call that compiles with its arguments in order still compiles with them named.
 // example: held.is_held(a_call_that_compiles_compiles_named(2, ir.little_library()))
 fn a_call_that_compiles_compiles_named(cases: Int, library: ir.Library) -> held.Held {
     var found = held.nothing_failed(cases)
@@ -191,7 +173,6 @@ fn a_call_that_compiles_compiles_named(cases: Int, library: ir.Library) -> held.
     found
 }
 
-/// Two drawn types, called in order, and where that compiles, called with names.
 // example: named_tried(drawn.seeded(1), ir.little_library()).why == ""
 fn named_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
     let pair = pair_drawn(draw)
@@ -202,7 +183,6 @@ fn named_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
     accepted_tried(taking(pair, named_call(pair)), library)
 }
 
-/// Two values, each drawn from the values a parameter may take.
 // example: pair_drawn(drawn.seeded(1)).first.leaves != ""
 fn pair_drawn(draw: drawn.Draw) -> Pair {
     let first = drawn.picked(draw, passable(), Left { written: "1", leaves: "Int" })
@@ -210,25 +190,21 @@ fn pair_drawn(draw: drawn.Draw) -> Pair {
     Pair { first: first, second: second }
 }
 
-/// The call of `takes` that names its two arguments.
 // example: named_call(Pair { first: Left { written: "1", leaves: "Int" }, second: Left { written: "2", leaves: "Int" } }) == "takes(first: 1, second: 2)"
 fn named_call(pair: Pair) -> String {
     "takes(first: " + pair.first.written + ", second: " + pair.second.written + ")"
 }
 
-/// The call of `takes` that passes its two arguments in order.
 // example: in_order_call(Pair { first: Left { written: "1", leaves: "Int" }, second: Left { written: "2", leaves: "Int" } }) == "takes(1, 2)"
 fn in_order_call(pair: Pair) -> String {
     "takes(" + pair.first.written + ", " + pair.second.written + ")"
 }
 
-/// A declaration taking the types of `pair`, beside a function that writes `call`.
 // example: taking(Pair { first: Left { written: "1", leaves: "Int" }, second: Left { written: "2", leaves: "Int" } }, "takes(1, 2)") == "fn main() -> Int {\n    takes(1, 2)\n}\n\nfn takes(first: Int, second: Int) -> Int {\n    _ = first\n    _ = second\n    1\n}\n"
 fn taking(pair: Pair, call: String) -> String {
     "fn main() -> Int {\n    " + call + "\n}\n\nfn takes(first: " + pair.first.leaves + ", second: " + pair.second.leaves + ") -> Int {\n    _ = first\n    _ = second\n    1\n}\n"
 }
 
-/// A `Bool` parameter compiles only where every type the signature writes is `Bool`.
 // example: held.is_held(a_bool_parameter_compiles_only_in_an_all_bool_signature(2, ir.little_library()))
 fn a_bool_parameter_compiles_only_in_an_all_bool_signature(cases: Int, library: ir.Library) -> held.Held {
     var found = held.nothing_failed(cases)
@@ -238,7 +214,6 @@ fn a_bool_parameter_compiles_only_in_an_all_bool_signature(cases: Int, library: 
     found
 }
 
-/// A drawn signature of `Bool` and `Int`, refused as a flag or accepted.
 // example: flag_tried(drawn.seeded(1), ir.little_library()).why == ""
 fn flag_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
     let takes = drawn_takes(draw)
@@ -254,15 +229,11 @@ fn flag_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
     checking.Tried { input: source, why: "" }
 }
 
-/// Up to four parameter types, each `Bool` or `Int`.
 // example: list.length(drawn_takes(drawn.seeded(1))) < 5
 fn drawn_takes(draw: drawn.Draw) -> List<String> {
     drawn.picked(draw, [[], ["Bool"], ["Int"]], [])
 }
 
-/// Whether a signature taking `takes` and giving `gives` takes a flag, as the spec states it.
-///
-/// A `Bool` parameter is a flag unless every type the signature writes is `Bool`.
 // example: is_a_flag(takes: ["Bool", "Int"], gives: "Bool")
 // example: !is_a_flag(takes: ["Bool", "Bool"], gives: "Bool")
 // example: !is_a_flag(takes: ["Int"], gives: "Bool")
@@ -270,7 +241,6 @@ fn is_a_flag(takes: List<String>, gives: String) -> Bool {
     list.has_value(takes, "Bool") && (list.has_value(takes, "Int") || gives != "Bool")
 }
 
-/// The parameters `p0`, `p1`, and so on, each of the type `takes` gives it.
 // example: parameters_of(["Bool", "Int"]) == "p0: Bool, p1: Int"
 fn parameters_of(takes: List<String>) -> String {
     var written = ""
@@ -283,7 +253,6 @@ fn parameters_of(takes: List<String>) -> String {
     written
 }
 
-/// A function that gives back a `Bool` compiles exactly where its name asks a question.
 // example: a_bool_function_compiles_where_its_name_asks(2, ir.little_library()).cases == 2
 fn a_bool_function_compiles_where_its_name_asks(cases: Int, library: ir.Library) -> held.Held {
     var found = held.nothing_failed(cases)
@@ -293,7 +262,6 @@ fn a_bool_function_compiles_where_its_name_asks(cases: Int, library: ir.Library)
     found
 }
 
-/// A drawn name, opened with a question or not, over a drawn result.
 // example: question_tried(drawn.seeded(1), ir.little_library()).input != ""
 fn question_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
     let opener = drawn.picked(draw, ["is_", "has_", "can_", "should_", "was_", ""], "")
@@ -311,7 +279,6 @@ fn question_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
     checking.Tried { input: source, why: "" }
 }
 
-/// A case that holds where `source` is accepted, and fails with the refusal otherwise.
 // example: accepted_tried("fn one() -> Int {\n    1\n}\n", ir.little_library()).why == ""
 fn accepted_tried(source: String, library: ir.Library) -> checking.Tried {
     if checking.is_accepted(source, library) {
@@ -320,7 +287,6 @@ fn accepted_tried(source: String, library: ir.Library) -> checking.Tried {
     checking.Tried { input: source, why: "refused: " + checking.message_of(checking.checked(source, library)) }
 }
 
-/// A case that holds where `source` is refused, and fails where it is accepted.
 // example: refused_tried("fn one() -> Int {\n    \"one\"\n}\n", ir.little_library()).why == ""
 fn refused_tried(source: String, library: ir.Library) -> checking.Tried {
     if checking.is_accepted(source, library) {
@@ -329,33 +295,28 @@ fn refused_tried(source: String, library: ir.Library) -> checking.Tried {
     checking.Tried { input: source, why: "" }
 }
 
-/// The statements a drawn body is built from, each with the type it leaves behind.
 // example: list.length(statements()) == 4
 fn statements() -> List<Left> {
     [Left { written: "log(1)", leaves: "()" }, Left { written: "()", leaves: "()" }, Left { written: "save(1)", leaves: "Result<(), String>" }, Left { written: "1 == 2", leaves: "Bool" }]
 }
 
-/// A value of each type a parameter may have, with that type; a `Bool` is a flag, so none is.
+// A `Bool` is a flag, so no `Bool` value is here.
 // example: list.length(passable()) == 3
 fn passable() -> List<Left> {
     [Left { written: "1", leaves: "Int" }, Left { written: "\"two\"", leaves: "String" }, Left { written: "Some(1)", leaves: "Option<Int>" }]
 }
 
-/// A module whose one function gives back `result` and holds `written`, over the ones it calls.
-///
-/// The function asks a question in its name, because its result is drawn and may be a `Bool`.
+// The result is drawn and can be a `Bool`, so the function name asks a question.
 // example: body(result: "()", written: "    ()") == "fn is_done() -> () {\n    ()\n}\n\nfn log(value: Int) -> () {\n    _ = save(value)\n}\n\nfn save(value: Int) -> Result<(), String> {\n    if value == 0 {\n        return Err(\"nothing to save\")\n    }\n    Ok(())\n}\n"
 fn body(result: String, written: String) -> String {
     "fn is_done() -> " + result + " {\n" + written + "\n}\n\nfn log(value: Int) -> () {\n    _ = save(value)\n}\n\nfn save(value: Int) -> Result<(), String> {\n    if value == 0 {\n        return Err(\"nothing to save\")\n    }\n    Ok(())\n}\n"
 }
 
-/// The two values a call of `takes` passes.
 type Pair = {
     first: Left
     second: Left
 }
 
-/// What is written, and the type of what it leaves behind.
 type Left = {
     written: String
     leaves: String

@@ -13,9 +13,6 @@ import list
 import modules
 import strings
 
-/// One `Held` for each property of a file read in parts, in a fixed order.
-///
-/// Where no directory of its own can be made, each property is skipped with the reason.
 // example: list.length(every_property(1)) == 2
 fn every_property(cases: Int) -> List<held.Held> {
     match command.somewhere_of_its_own() {
@@ -24,7 +21,6 @@ fn every_property(cases: Int) -> List<held.Held> {
     }
 }
 
-/// Every property, each case written under `directory`, which is removed whole afterwards.
 // example: list.length(every_property_in(0, "no-such-directory")) == 2
 fn every_property_in(cases: Int, directory: String) -> List<held.Held> {
     let found = [the_parts_of_a_drawn_file_joined_are_its_bytes(cases, directory), the_parts_of_a_utf_8_file_joined_spell_what_a_read_of_it_gives(cases, directory)]
@@ -32,14 +28,12 @@ fn every_property_in(cases: Int, directory: String) -> List<held.Held> {
     found
 }
 
-/// One skipped `Held` for each property, each with `why`.
 // example: list.length(every_skipped("no directory")) == 2
 fn every_skipped(why: String) -> List<held.Held> {
     let skipped = held.with_skip(held.nothing_failed(0), "parted: " + why)
     [skipped, skipped]
 }
 
-/// The parts of a drawn file, read one after another and joined, are what `files.read_bytes` gives.
 // example: held.is_held(the_parts_of_a_drawn_file_joined_are_its_bytes(0, "no-such-directory"))
 fn the_parts_of_a_drawn_file_joined_are_its_bytes(cases: Int, directory: String) -> held.Held {
     var found = held.nothing_failed(cases)
@@ -50,7 +44,6 @@ fn the_parts_of_a_drawn_file_joined_are_its_bytes(cases: Int, directory: String)
     found
 }
 
-/// The parts of a drawn UTF-8 file, joined, spell under `strings.from_utf_8` what `files.read` gives.
 // example: held.is_held(the_parts_of_a_utf_8_file_joined_spell_what_a_read_of_it_gives(0, "no-such-directory"))
 fn the_parts_of_a_utf_8_file_joined_spell_what_a_read_of_it_gives(cases: Int, directory: String) -> held.Held {
     var found = held.nothing_failed(cases)
@@ -61,7 +54,6 @@ fn the_parts_of_a_utf_8_file_joined_spell_what_a_read_of_it_gives(cases: Int, di
     found
 }
 
-/// Drawn bytes written at `path`, and whether its parts, joined, are what a read of its bytes gives.
 // example: bytes_tried(drawn.seeded(1), "no-such-directory/drawn.bin").why != ""
 fn bytes_tried(draw: drawn.Draw, path: String) -> checking.Tried {
     let bytes = drawn.numbers(drawn.next(draw), drawn.number(draw, 300), 256)
@@ -72,8 +64,6 @@ fn bytes_tried(draw: drawn.Draw, path: String) -> checking.Tried {
     }
 }
 
-/// What is wrong where the bytes at `path` are not `bytes`, or its parts, joined, are other than
-/// its bytes.
 // example: bytes_why(path: "no-such-directory/drawn.bin", bytes: [1], draw: drawn.seeded(1)) != ""
 fn bytes_why(path: String, bytes: List<Int>, draw: drawn.Draw) -> String {
     let whole = one_char_each(ok_or(files.read_bytes(path), []))
@@ -87,7 +77,6 @@ fn bytes_why(path: String, bytes: List<Int>, draw: drawn.Draw) -> String {
     }
 }
 
-/// A drawn UTF-8 text written at `path`, and whether its parts spell what a read of it gives.
 // example: spelled_tried(drawn.seeded(1), "no-such-directory/drawn.txt").why != ""
 fn spelled_tried(draw: drawn.Draw, path: String) -> checking.Tried {
     let text = drawn.text_of(drawn.next(draw), pieces(), drawn.number(draw, 40) + 1)
@@ -97,8 +86,6 @@ fn spelled_tried(draw: drawn.Draw, path: String) -> checking.Tried {
     }
 }
 
-/// What is wrong where a read of the file at `path` is not `text`, or its parts, joined, spell
-/// other than that read.
 // example: spelled_why(path: "no-such-directory/drawn.txt", text: "a", draw: drawn.seeded(1)) != ""
 fn spelled_why(path: String, text: String, draw: drawn.Draw) -> String {
     match files.read(path) {
@@ -107,7 +94,6 @@ fn spelled_why(path: String, text: String, draw: drawn.Draw) -> String {
     }
 }
 
-/// What is wrong where `read` is not `text`, or the parts of the file at `path` spell other than it.
 // example: read_back_why(path: "no-such-directory/drawn.txt", text: "a", draw: drawn.seeded(1), read: "b") != ""
 fn read_back_why(path: String, text: String, draw: drawn.Draw, read: String) -> String {
     if read != text {
@@ -116,7 +102,6 @@ fn read_back_why(path: String, text: String, draw: drawn.Draw, read: String) -> 
     spelled_parts_why(path: path, draw: draw, read: read)
 }
 
-/// What is wrong where the parts of the file at `path`, joined, spell other than `read`.
 // example: spelled_parts_why(path: "no-such-directory/drawn.txt", draw: drawn.seeded(1), read: "a") != ""
 fn spelled_parts_why(path: String, draw: drawn.Draw, read: String) -> String {
     match parts_joined(path, draw) {
@@ -125,7 +110,6 @@ fn spelled_parts_why(path: String, draw: drawn.Draw, read: String) -> String {
     }
 }
 
-/// What is wrong where `joined` is other than `whole`, and nothing where the two are the same.
 // example: unlike_why(joined: "a", whole: "a") == ""
 // example: unlike_why(joined: "a", whole: "b") == "the parts joined are \"a\", and the whole is \"b\""
 fn unlike_why(joined: String, whole: String) -> String {
@@ -135,9 +119,6 @@ fn unlike_why(joined: String, whole: String) -> String {
     ""
 }
 
-/// The parts of the file at `path`, each read at drawn offsets, joined in the order read.
-///
-/// Each part starts where the one before it stopped, and the last one can stop past the end.
 // example: ok_or(parts_joined("no-such-directory/drawn.bin", drawn.seeded(1)), "none") == "none"
 fn parts_joined(path: String, draw: drawn.Draw) -> Result<String, String> {
     let size = ok_or(files.size(path), -1)
@@ -160,7 +141,6 @@ fn parts_joined(path: String, draw: drawn.Draw) -> Result<String, String> {
     Ok(joined)
 }
 
-/// Whether `answer` is an `Err`.
 // example: is_refused(Err("no"))
 // example: !is_refused(Ok("part"))
 fn is_refused(answer: Result<String, String>) -> Bool {
@@ -170,7 +150,6 @@ fn is_refused(answer: Result<String, String>) -> Bool {
     }
 }
 
-/// The text of one char for each of `bytes`, each of the same value as its byte.
 // example: one_char_each([66, 233]) == "Bé"
 fn one_char_each(bytes: List<Int>) -> String {
     var text = ""
@@ -180,7 +159,6 @@ fn one_char_each(bytes: List<Int>) -> String {
     text
 }
 
-/// The pieces a drawn text is made of: one, two, three, and four bytes of UTF-8 each.
 // example: list.length(pieces()) == 8
 fn pieces() -> List<String> {
     ["a", "Z", " ", "\n", "é", "€", "日", "😀"]

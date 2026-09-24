@@ -26,7 +26,6 @@ fn main(arguments: List<String>) -> Int {
     0
 }
 
-/// What `sent` says of a message.
 // example: told(Delivered) == "delivered"
 fn told(sent: Sent) -> String {
     match sent {
@@ -36,7 +35,6 @@ fn told(sent: Sent) -> String {
     }
 }
 
-/// A process that waits on the first process it is sent, and never takes a second message.
 process Holder {
     fn start() -> Int {
         0
@@ -50,7 +48,6 @@ process Holder {
     }
 }
 
-/// A process that ends only when it is sent `Stop`.
 process Idle {
     fn start() -> Int {
         0
@@ -63,10 +60,8 @@ process Idle {
     }
 }
 
-/// What a holder is sent.
 type Held =
     | Hold(Process<Stopped, Int>)
     | Release
 
-/// What an idle process is sent.
 type Stopped = Stop
