@@ -1,23 +1,33 @@
-// The drawn properties of what crosses into a module: a name a library module declares, and a
-// type a Java member takes or gives, which `docs/specs/io.md` and `docs/specs/interop.md` state.
+// The drawn properties of what crosses into a module: a name a library module declares, a type
+// a Java member takes or gives, and a class an `extern` names, which `docs/specs/io.md` and
+// `docs/specs/interop.md` state.
 //
 // A module that imports a library module is checked as the file `demo.bx` in a directory of its
 // own under the temporary directory, which is removed whole when every property has run.
+import ast
+import boundary
 import checking
 import command
 import drawn
+import files
 import held
+import infer
 import ir
 import list
+import resolver
+import set
 import strings
+import surface
+import types
+import walk
 
 /// One `Held` for each property of what crosses into a module, in a fixed order.
 ///
 /// Where no directory of its own can be made, the two properties that need one are skipped.
-// example: list.length(every_property(0, ir.little_library())) == 4
+// example: list.length(every_property(0, ir.little_library())) == 6
 fn every_property(cases: Int, library: ir.Library) -> List<held.Held> {
     let library_ones = library_reached(cases, library)
-    [or(list.at(library_ones, 0), held.nothing_failed(0)), or(list.at(library_ones, 1), held.nothing_failed(0)), a_type_that_does_not_cross_is_refused_in_every_position(cases, library), a_list_crosses_only_where_a_member_takes_one(cases, library)]
+    [or(list.at(library_ones, 0), held.nothing_failed(0)), or(list.at(library_ones, 1), held.nothing_failed(0)), a_type_that_does_not_cross_is_refused_in_every_position(cases, library), a_list_crosses_only_where_a_member_takes_one(cases, library), every_class_the_tree_names_is_on_the_list(cases), a_class_on_no_list_is_refused_and_accepted_from_an_archive(cases, library)]
 }
 
 /// The two properties of the names a library module declares, each case written under a
@@ -135,6 +145,113 @@ fn list_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
         return checking.Tried { input: source, why: "accepted is " + shown(is_accepted) + ": " + checking.message_of(checking.checked(source, library)) }
     }
     checking.Tried { input: source, why: "" }
+}
+
+/// Every class that a module of the tree names in an `extern` is on the list of `java.base`,
+/// because the tree states no archive.
+// example: every_class_the_tree_names_is_on_the_list(2).cases == 2
+fn every_class_the_tree_names_is_on_the_list(cases: Int) -> held.Held {
+    let modules_of_the_tree = tree_modules()
+    var found = held.nothing_failed(cases)
+    for seed in checking.seeds(cases) {
+        found = checking.noted(found, "every_class_the_tree_names_is_on_the_list", seed, tree_tried(drawn.picked(drawn.seeded(seed), modules_of_the_tree, "")))
+    }
+    found
+}
+
+/// The module at `path`, whose every class an `extern` names is on the list.
+// example: tree_tried("no-such-directory/a.bx").why != ""
+fn tree_tried(path: String) -> checking.Tried {
+    match files.read(path) {
+        Ok(source) => source_tried(path: path, source: source)
+        Err(_) => checking.Tried { input: path, why: "the module cannot be read" }
+    }
+}
+
+/// The module at `path`, which holds `source`, whose every class an `extern` names is on the list.
+// example: source_tried(path: "a.bx", source: "fn (").why == "the module does not parse"
+fn source_tried(path: String, source: String) -> checking.Tried {
+    match checking.parsed(source) {
+        Ok(program) => classes_listed(path, program)
+        Err(_) => checking.Tried { input: path, why: "the module does not parse" }
+    }
+}
+
+/// Nothing where every class `program` names in an `extern` is on the list, and the first else.
+// example: classes_listed("a.bx", ast.Program { items: [] }).why == ""
+fn classes_listed(path: String, program: ast.Program) -> checking.Tried {
+    for item in program.items {
+        let class = boundary.class_named(item)
+        if class != "" && !boundary.is_listed(class) {
+            return checking.Tried { input: path, why: "`" + class + "` is on no list" }
+        }
+    }
+    checking.Tried { input: path, why: "" }
+}
+
+/// Every module of the tree that the runner builds: the compiler, the library, and the runner.
+// example: list.length(tree_modules()) > 0
+fn tree_modules() -> List<String> {
+    var found = []
+    for directory in ["compiler", "library", "tests"] {
+        for path in walk.files_in(directory, ".bx") {
+            found = list.push(found, path)
+        }
+    }
+    found
+}
+
+/// A drawn class that is on no list is `L0434`, and it is accepted where an archive holds it.
+// example: a_class_on_no_list_is_refused_and_accepted_from_an_archive(2, ir.little_library()).cases == 2
+fn a_class_on_no_list_is_refused_and_accepted_from_an_archive(cases: Int, library: ir.Library) -> held.Held {
+    var found = held.nothing_failed(cases)
+    for seed in checking.seeds(cases) {
+        found = checking.noted(found, "a_class_on_no_list_is_refused_and_accepted_from_an_archive", seed, unlisted_tried(drawn.seeded(seed), library))
+    }
+    found
+}
+
+/// A drawn class on no list, named by an `extern type`, checked with no archive and with one.
+///
+/// A class of a package the JDK holds is refused with an archive too, and any other is accepted.
+// example: unlisted_tried(drawn.seeded(1), ir.little_library()).input != ""
+fn unlisted_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
+    let class = unlisted_class(draw)
+    let source = "extern type Drawn = \"" + class + "\"\n"
+    let bare = checked_with(source: source, archived: set.empty(), library: library)
+    if checking.code_of(bare) != "L0434" || checking.message_of(bare) != "`" + class + "` is a class this build cannot account for" {
+        return checking.Tried { input: source, why: "with no archive, the answer is " + checking.code_of(bare) + " " + held.quoted(checking.message_of(bare)) }
+    }
+    let expected = if boundary.is_of_the_platform(class) {
+        "L0434"
+    } else {
+        ""
+    }
+    let archived = checking.code_of(checked_with(source: source, archived: set.insert(set.empty(), class), library: library))
+    if archived != expected {
+        return checking.Tried { input: source, why: "with an archive that holds it, the answer is " + held.quoted(archived) }
+    }
+    checking.Tried { input: source, why: "" }
+}
+
+/// A drawn class on no list: a drawn name in a package on no list, or a class the list leaves out.
+// example: !boundary.is_listed(unlisted_class(drawn.seeded(1)))
+fn unlisted_class(draw: drawn.Draw) -> String {
+    let nested = drawn.picked(checking.after(draw, 4), ["", "$Inner"], "")
+    if drawn.number(draw, 3) == 0 {
+        return drawn.picked(drawn.next(draw), ["java.io.ObjectInputStream", "java.lang.Class", "java.lang.ClassLoader", "java.util.ServiceLoader"], "java.lang.Class") + nested
+    }
+    let package = drawn.picked(drawn.next(draw), ["javax.naming", "java.lang.invoke", "java.lang.reflect", "java.net", "java.security", "com.example", "sun.misc"], "java.net")
+    let name = drawn.picked(checking.after(draw, 2), ["A", "Clock", "Q"], "A") + drawn.text_of(checking.after(draw, 3), ["a", "e", "n", "r", "t", "1", "_"], drawn.number(checking.after(draw, 5), 6))
+    package + "." + name + nested
+}
+
+/// `source`, checked as `checking.checked` checks it, with `archived` as the classes of its archives.
+// example: checking.code_of(checked_with(source: "extern type Drawn = \"a.B\"\n", archived: set.insert(set.empty(), "a.B"), library: ir.little_library())) == ""
+fn checked_with(source: String, archived: set.Set<String>, library: ir.Library) -> Result<infer.Inference, command.Diagnostic> {
+    let program = checking.parsed(source)?
+    let resolved = command.resolved_of(resolver.resolve(program, "demo", library.prelude.names))?
+    command.inferred_of(types.check(resolved, surface.nothing_imported(), types.with_archived(library.prelude, archived)))
 }
 
 /// Whether one of the rows declares `name`.

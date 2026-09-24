@@ -428,7 +428,7 @@ fn offered_by_another_module(environment: Environment, offered: surface.OfferedT
     reached = match offered.built_by {
         surface.Record(built) => reached { records: map.insert(reached.records, offered.name, built.name) }
         surface.Variants(_) => reached
-        surface.ForeignClass { class, called } => reached { foreign: map.insert(reached.foreign, offered.name, called) }
+        surface.ForeignClass { class, called } => foreign_noted(reached, ForeignType { name: offered.name, class: class, called: called })
     }
     for built in surface.constructors(offered) {
         reached = reached { labels: map.insert(reached.labels, built.name, built.labels) }
@@ -599,7 +599,7 @@ fn derive_holds(environment: Environment, resolved: resolver.Resolved, item: ast
 }
 
 /// One derive, held to the declaration of the type it names.
-// example: declared_code("derive Eq for Box\n\nextern type Box = \"a.B\"\n") == "L0427 14..17"
+// example: declared_code("derive Eq for Box\n\nextern type Box = \"java.lang.Object\"\n") == "L0427 14..17"
 fn derived_holds(environment: Environment, resolved: resolver.Resolved, declaration: ast.DeriveDeclaration) -> Result<(), refusal.TypeError> {
     for declared_one in declared_type(resolved.program, declaration.for_type.text) {
         for of in declaration.traits {
@@ -868,9 +868,23 @@ fn type_noted(environment: Environment, item: ast.Item) -> Environment {
 fn arity_noted(environment: Environment, declaration: ast.TypeDeclaration) -> Environment {
     let noted = environment { arities: map.insert(environment.arities, declared_at(environment, declaration.name), list.length(declaration.parameters)) }
     match declaration.definition {
-        ast.Foreign { class, called } => noted { foreign: map.insert(noted.foreign, declaration.name.text, called) }
+        ast.Foreign { class, called } => foreign_noted(noted, ForeignType { name: declaration.name.text, class: class.text, called: called })
         _ => noted
     }
+}
+
+/// The environment with one extern type noted: how it is called, and the Java class it names.
+// example: or(map.get(foreign_noted(empty_environment(ByName), ForeignType { name: "File", class: "java.io.File", called: ast.AsAClass }).accounting.classes, "File"), "") == "java.io.File"
+fn foreign_noted(environment: Environment, foreign: ForeignType) -> Environment {
+    let accounting = environment.accounting
+    environment { foreign: map.insert(environment.foreign, foreign.name, foreign.called), accounting: accounting { classes: map.insert(accounting.classes, foreign.name, foreign.class) } }
+}
+
+/// The environment checked against the classes the archives of a build hold.
+// example: set.has_value(with_archived(empty_environment(ByName), set.insert(set.empty(), "a.B")).accounting.archived, "a.B")
+fn with_archived(environment: Environment, archived: set.Set<String>) -> Environment {
+    let accounting = environment.accounting
+    environment { accounting: accounting { archived: archived } }
 }
 
 /// Every trait the module declares, which an instance below it is read against.
@@ -951,7 +965,7 @@ fn definition_declared(environment: Environment, resolved: resolver.Resolved, de
 /// A Java class, whose name is held to what a class name is.
 // example: refusal.code_given(class_declared(empty_environment(ByName), ast.JavaName { text: "java.io.File", span: lexer.Span { start: 0, length: 14 } })) == ""
 fn class_declared(environment: Environment, named: ast.JavaName) -> Result<Environment, refusal.TypeError> {
-    _ = boundary.class(named)?
+    _ = boundary.extern_class(named, environment.accounting.archived)?
     Ok(environment)
 }
 
@@ -1082,6 +1096,7 @@ fn extern_declared(declaring: Declaring, resolved: resolver.Resolved, declaratio
     let given = type_written(environment, resolved, declaration.result)?
     _ = boundary.crosses(given, boundary.crossing_of(declaration), environment.foreign, declaration.result.span)?
     _ = boundary.gives_back_checked(declaration, taken, given, environment.foreign)?
+    _ = boundary.reached_member(declaration, taken, environment.accounting)?
     let signature = unify.Function { parameters: taken, result: given }
     Ok(declaring { environment: bound(environment, declared_at(environment, declaration.name), unify.monomorphic(signature)) })
 }
@@ -1452,7 +1467,7 @@ fn todo_scheme() -> unify.Scheme {
 /// An environment that files nothing yet.
 // example: !has_value(empty_environment(ByName), "todo")
 fn empty_environment(keyed: Keyed) -> Environment {
-    Environment { keyed: keyed, values: map.empty(), labels: map.empty(), records: map.empty(), arities: map.empty(), methods: map.empty(), instances: map.empty(), holds: map.empty(), written_at: set.empty(), written_as: map.empty(), declares: map.empty(), declared: map.empty(), foreign: map.empty(), traits: set.empty() }
+    Environment { keyed: keyed, values: map.empty(), labels: map.empty(), records: map.empty(), arities: map.empty(), methods: map.empty(), instances: map.empty(), holds: map.empty(), written_at: set.empty(), written_as: map.empty(), declares: map.empty(), declared: map.empty(), foreign: map.empty(), accounting: boundary.no_accounting(), traits: set.empty() }
 }
 
 /// The small prelude, resolved as the prelude.
@@ -1556,7 +1571,15 @@ type Environment = {
     declares: map.Map<String, String>
     declared: map.Map<String, unify.Scheme>
     foreign: map.Map<String, ast.Called>
+    accounting: boundary.Accounting
     traits: set.Set<String>
+}
+
+/// An extern type: its name, the Java class it names, and how that class is called.
+type ForeignType = {
+    name: String
+    class: String
+    called: ast.Called
 }
 
 /// How a declaration of the source being read is filed: by its place, or by its spelling.

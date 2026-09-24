@@ -64,7 +64,8 @@ The command line below writes the class path as `<dir>[:<archive>...]`.
 
 A program reaches its library, its stated archives, and the `java.base` module of the JDK.
 It reaches nothing more.
-An `extern` declaration can name any class, so the JVM itself must refuse the classes outside.
+The compiler refuses an `extern` that names a class outside, which `docs/specs/interop.md` states.
+A class in a stated archive can still reach a class outside, so the JVM itself refuses those too.
 The runner starts every compiled program with this command line, in this order:
 
 ```text
@@ -93,7 +94,7 @@ The JVM of the compiler still reads the three variables, because `bin/bux` start
 
 `run` and `test` build the command line with one function, `program_line`.
 Both remove the variables with one function, `cleared`, in `compiler/command.bx`.
-`tests/spec/interop/outside_java_base.bx` shows that no class of `java.naming` loads.
+`tests/spec/interop/outside_java_base.bx` shows that the compiler refuses a class of `java.naming`.
 `tests/started.bx` starts `run` and `test` with `JAVA_TOOL_OPTIONS` set.
 It shows that the program sees no such variable and that its JVM writes nothing about one.
 

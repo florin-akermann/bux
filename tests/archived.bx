@@ -45,16 +45,17 @@ fn stated_reached(library: ir.Library, limit: Int) -> held.Held {
     enacted.facts_held("run reaches a class in an archive the manifest states", facts)
 }
 
-/// `run` reaches no archive the manifest does not state, though the file is beside it.
+/// `run` refuses a class that no archive the manifest states holds, though an archive beside it
+/// holds the class, and runs nothing.
 // example: strings_joined([manifest_text([])]) != ""
 fn unstated_unreached(library: ir.Library, limit: Int) -> held.Held {
     let scene = enacted.scene_of([enacted.Written { at: "main.bx", text: program_text() }])
     _ = packed(scene: scene, library: library, limit: limit, manifest: "")
     _ = files.write(modules.joined(scene, "bux.package"), manifest_text([]))
     let said = ran(["run", modules.joined(scene, "main.bx")], scene, library, limit)
+    let facts = refused_facts(said: said, scene: scene, opening: "error[L0434]: `shouting` is a class this build cannot account for")
     command.removed_whole(scene)
-    let facts = [enacted.status_fact(said, 1), enacted.within_fact("errors", said.errors, "NoClassDefFoundError: shouting")]
-    enacted.facts_held("run reaches no archive the manifest does not state", facts)
+    enacted.facts_held("run refuses a class in no archive the manifest states", facts)
 }
 
 /// `build` refuses an archive that is not there.

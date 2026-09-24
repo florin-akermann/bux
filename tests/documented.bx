@@ -1,5 +1,5 @@
 // Every `// example:` line and every test of every module, each module's run written as
-// `bux test <file>` writes it, and every run started in one JVM.
+// `bux test <file>` writes it, and every run started in a JVM of its own.
 //
 // `docs/specs/doc-examples.md` states what an example line is and what running one amounts to, and
 // `docs/specs/testing.md` states a test. The modules are those under `tests/spec`, `library/`,
@@ -7,7 +7,7 @@
 // cannot be run, so its lines are not either. The tests of an example under `tests/spec` are left
 // out, because a golden answer of `bux test` holds what is said of them.
 // `docs/implementation.md` section 7 states how the runs share one memo of typed modules, and how
-// `examined.bx` starts each run in turn.
+// each run starts as `bux test` starts it.
 import ast
 import command
 import files
@@ -22,15 +22,15 @@ import programs
 import strings
 import walk
 
-/// Every example line and every test of every module `paths` names, each module typed once, in one
-/// JVM: what the example lines held, then how many tests there were.
+/// Every example line and every test of every module `paths` names, each module typed once, each
+/// run in a JVM of its own: what the example lines held, then how many tests there were.
 ///
 /// A test that did not hold is a failure of the first, because a run reports both kinds alike.
 // example: list.length(every_line_held(paths: ["no-such-directory/a.bx"], library: ir.little_library(), memo: command.no_memo(), limit: 1)) == 2
 fn every_line_held(paths: List<String>, library: ir.Library, memo: command.Memo, limit: Int) -> List<held.Held> {
     match command.somewhere_of_its_own() {
         Ok(directory) => held_within(paths, Setting { library: library, limit: limit, directory: directory }, memo)
-        Err(said) => [with_failures(held.nothing_failed(0), reported(errors: said.errors, path: entry_path())), held.nothing_failed(0)]
+        Err(said) => [with_failures(held.nothing_failed(0), reported(errors: said.errors, path: own_path())), held.nothing_failed(0)]
     }
 }
 
@@ -39,7 +39,7 @@ fn every_line_held(paths: List<String>, library: ir.Library, memo: command.Memo,
 // example: with_failures(held.nothing_failed(1), ["a.bx: error: gone"]).failures == ["a.bx: error: gone"]
 fn held_within(paths: List<String>, setting: Setting, memo: command.Memo) -> List<held.Held> {
     let staging = every_run_staged(paths, setting, memo)
-    let found = held.added(staging.found, runs_held(staging, setting))
+    let found = held.added(staging.found, runs_held(staging, setting.limit))
     command.removed_whole(setting.directory)
     [found, held.nothing_failed(staging.tests)]
 }
@@ -171,193 +171,71 @@ fn written_as(written: Result<(), command.Said>, staged: Staged) -> Result<Stage
     }
 }
 
-/// Every run of `staging`, started through the entry program, and every example that failed.
-// example: runs_held(Staging { found: held.nothing_failed(0), tests: 0, runs: [], memo: command.no_memo() }, Setting { library: ir.little_library(), limit: 1, directory: "no-such-directory" }).failures == []
-fn runs_held(staging: Staging, setting: Setting) -> held.Held {
+/// Every run of `staging`, each started in a JVM of its own, and every example that failed.
+// example: runs_held(Staging { found: held.nothing_failed(0), tests: 0, runs: [], memo: command.no_memo() }, 1).failures == []
+fn runs_held(staging: Staging, limit: Int) -> held.Held {
     if list.length(staging.runs) == 0 {
         return held.nothing_failed(0)
     }
-    match entry_line(staging.memo, setting) {
-        Ok(line) => every_run_held(staging.runs, line, setting)
-        Err(failures) => with_failures(held.nothing_failed(0), failures)
+    match command.java_found() {
+        Ok(java) => every_run_held(runs: staging.runs, java: java, limit: limit)
+        Err(said) => with_failures(held.nothing_failed(0), failed_as(said, own_path()))
     }
 }
 
-/// The command line that starts the entry program, once its classes are written, or why not.
+/// Every run of `runs`, each started in turn by `java`, and every failure.
 ///
-/// Its classes go into a directory of their own, so none of them is on the path of any run.
-// example: entry_path() == "tests/examined.bx"
-fn entry_line(memo: command.Memo, setting: Setting) -> Result<List<String>, List<String>> {
-    let java = failing(command.java_found(), entry_path())?
-    let beside = modules.joined(setting.directory, "entry")
-    let checked = command.checked_once(entry_path(), setting.library, memo)
-    let program = refused_as(checked.found, entry_path())?
-    let classes = refused_as(command.classes_once(program, setting.library, checked.memo).found, entry_path())?
-    _ = failing(command.classes_written(classes, beside), entry_path())?
-    Ok([java, "--enable-preview", "-cp", beside, "examined"])
-}
-
-/// Every run of `runs` started through the entry program that `line` starts, and every failure.
-///
-/// A run past the limit of `setting` is reported, and the entry program starts again with the
-/// runs after it, so one run that never ends does not stop the others.
-// example: every_run_held([], ["no-such-program-at-all"], Setting { library: ir.little_library(), limit: 1, directory: "no-such-directory" }).failures == []
-fn every_run_held(runs: List<Staged>, line: List<String>, setting: Setting) -> held.Held {
+/// A run past `limit` is stopped and reported, so one run that never ends does not stop the others.
+// example: every_run_held(runs: [], java: "no-such-java", limit: 1).failures == []
+fn every_run_held(runs: List<Staged>, java: String, limit: Int) -> held.Held {
     var found = held.nothing_failed(0)
-    var rest = runs
-    for list.length(rest) > 0 {
-        let ran = entry_ran(rest, line, setting)
-        found = with_failures(found, ran.failures)
-        rest = ran.rest
-    }
-    found
-}
-
-/// The entry program started once over `runs`: what failed, and the runs it did not reach.
-// example: arguments_of(line: ["java"], runs: []) == ["java"]
-fn entry_ran(runs: List<Staged>, line: List<String>, setting: Setting) -> Ran {
-    match walk.completed(arguments_of(line: line, runs: runs), setting.directory, setting.limit) {
-        Ok(completion) => ended_read(runs, Outcome { output: completion.output, why: why_ended(completion.status) })
-        Err(walk.NotStarted) => Ran { failures: each_failed(runs, "error: the JVM that runs the examples could not be started"), rest: [] }
-        Err(walk.PastLimit(limit, output)) => ended_read(runs, Outcome { output: output, why: "error: the run of its examples did not end within " + shown(limit) + " s, and was stopped" })
-    }
-}
-
-/// `line`, followed by the directory and the class of each of `runs`.
-// example: arguments_of(line: ["java", "examined"], runs: []) == ["java", "examined"]
-fn arguments_of(line: List<String>, runs: List<Staged>) -> List<String> {
-    var found = line
     for staged in runs {
-        found = list.push(list.push(found, staged.beside), staged.class)
+        found = with_failures(found, run_held(staged: staged, java: java, limit: limit))
     }
     found
 }
 
-/// What stopped the entry program where it ended with `status`, and `""` where nothing did.
-// example: why_ended(0) == ""
-// example: why_ended(1) == "error: the JVM that runs the examples ended with status 1"
-fn why_ended(status: Int) -> String {
-    if status == 0 {
-        return ""
-    }
-    "error: the JVM that runs the examples ended with status " + shown(status)
-}
-
-/// What the entry program wrote, read for each run it opened, and the runs it did not open.
+/// What the run `staged` found, started as `bux test` starts it, and a line for each failure.
 ///
-/// The last run it opened is the one `outcome.why` names, where the entry program was stopped.
-// example: segments_of("bux: run 0\na\nbux: run 1\n") == ["a\n", ""]
-fn ended_read(runs: List<Staged>, outcome: Outcome) -> Ran {
-    let segments = segments_of(outcome.output)
-    let opened = list.length(segments)
-    if opened == 0 {
-        return Ran { failures: each_failed(runs, never_opened(outcome.why)), rest: [] }
+/// The JVM starts in the directory of the runner, so a run finds a file where `bux test` finds it.
+/// What the JVM writes goes into the directory of the run, which no other run writes into.
+// example: unended_line(walk.NotStarted) == "error: the run of its examples could not be started\n"
+fn run_held(staged: Staged, java: String, limit: Int) -> List<String> {
+    let line = command.program_line(java, [staged.beside], staged.class, [])
+    match walk.completed_from(line, ".", staged.beside, limit) {
+        Ok(completion) => ended_read(programs.Finished { code: completion.status, output: completion.output, errors: completion.errors }, staged)
+        Err(unended) => reported(errors: unended_line(unended), path: staged.path)
     }
-    var failures = []
-    var rest = []
-    var number = 0
-    for staged in runs {
-        if number >= opened {
-            rest = list.push(rest, staged)
-        } else if number == opened - 1 && outcome.why != "" {
-            failures = held.both(failures, reported(errors: outcome.why + "\n", path: staged.path))
-        } else {
-            failures = held.both(failures, segment_read(or(list.at(segments, number), ""), staged))
-        }
-        number += 1
-    }
-    Ran { failures: failures, rest: rest }
 }
 
-/// Why no run was opened: what `why` says, or that the entry program opened none.
-// example: never_opened("") == "error: the JVM that runs the examples ran none of them"
-// example: never_opened("error: gone") == "error: gone"
-fn never_opened(why: String) -> String {
-    if why == "" {
-        return "error: the JVM that runs the examples ran none of them"
-    }
-    why
-}
-
-/// The line `why` gives, said about each of `runs`.
-// example: each_failed([], "error: gone") == []
-fn each_failed(runs: List<Staged>, why: String) -> List<String> {
-    var failures = []
-    for staged in runs {
-        failures = held.both(failures, reported(errors: why + "\n", path: staged.path))
-    }
-    failures
+/// The line that says why a run gave no status back.
+// example: unended_line(walk.PastLimit(2, "")) == "error: the run of its examples did not end within 2 s, and was stopped\n"
+fn unended_line(unended: walk.Unended) -> String {
+    "error: " + walk.unended_said(unended, "the run of its examples") + "\n"
 }
 
 /// What one run wrote, read as `bux test` reads it, with a line for each example that failed.
-// example: stopped_in("bux: stopped java.lang.StackOverflowError\n") == "java.lang.StackOverflowError"
-fn segment_read(segment: String, staged: Staged) -> List<String> {
-    let stopped = stopped_in(segment)
-    var finished = programs.Finished { code: 0, output: segment, errors: "" }
-    if stopped != "" {
-        finished = programs.Finished { code: 1, output: "", errors: "error: the run of its examples stopped: " + stopped + "\n" }
+///
+/// A run that ended with a status other than 0 stopped before its end, which is a failure too.
+// example: stopped_line(1) == "error: the run of its examples ended with status 1\n"
+fn ended_read(finished: programs.Finished, staged: Staged) -> List<String> {
+    let failures = failed_as(command.finished_read(finished, staged.run, staged.root).said, staged.path)
+    if finished.code == 0 {
+        return failures
     }
-    failed_as(command.finished_read(finished, staged.run, staged.root).said, staged.path)
+    held.both(reported(errors: stopped_line(finished.code), path: staged.path), failures)
 }
 
-/// What the entry program wrote, cut into what each run wrote, in the order it opened them.
-// example: segments_of("") == []
-// example: segments_of("bux: run 0\nbux: example 2\n") == ["bux: example 2\n"]
-fn segments_of(output: String) -> List<String> {
-    var segments = []
-    var current = ""
-    var is_open = false
-    for line in walk.lines_of(output) {
-        if command.has_prefix(line, "bux: run ") {
-            if is_open {
-                segments = list.push(segments, current)
-            }
-            current = ""
-            is_open = true
-        } else {
-            current = current + line + "\n"
-        }
-    }
-    if is_open {
-        segments = list.push(segments, current)
-    }
-    segments
+/// The line that says a run ended with `status`, which is not 0.
+// example: stopped_line(134) == "error: the run of its examples ended with status 134\n"
+fn stopped_line(status: Int) -> String {
+    "error: the run of its examples ended with status " + shown(status) + "\n"
 }
 
-/// What stopped a run, as the entry program wrote it after the run, and `""` where nothing did.
-// example: stopped_in("bux: example 1\n") == ""
-fn stopped_in(segment: String) -> String {
-    let marker = "bux: stopped "
-    for line in walk.lines_of(segment) {
-        if command.has_prefix(line, marker) {
-            return or(strings.cut(line, strings.length(marker), strings.length(line)), "")
-        }
-    }
-    ""
-}
-
-/// The module the runner starts every run through.
-// example: entry_path() == "tests/examined.bx"
-fn entry_path() -> String {
-    "tests/examined.bx"
-}
-
-/// The value `answer` holds, or a line for each refusal of the module at `path`.
-// example: ok_or(refused_as(Ok(1), "a.bx"), 0) == 1
-fn refused_as<T>(answer: Result<T, command.NotCompiled>, path: String) -> Result<T, List<String>> {
-    match answer {
-        Ok(value) => Ok(value)
-        Err(not) => Err(reported(errors: command.not_compiled_said(not, command.AsPage).errors, path: path))
-    }
-}
-
-/// The value `answer` holds, or a line for each error it says about the module at `path`.
-// example: ok_or(failing(Ok(1), "a.bx"), 0) == 1
-fn failing<T>(answer: Result<T, command.Said>, path: String) -> Result<T, List<String>> {
-    match answer {
-        Ok(value) => Ok(value)
-        Err(said) => Err(failed_as(said, path))
-    }
+/// The module that starts the runs, which a failure that belongs to no run names.
+// example: own_path() == "tests/documented.bx"
+fn own_path() -> String {
+    "tests/documented.bx"
 }
 
 /// A line for each error `said` holds about the module at `path`.
@@ -456,12 +334,6 @@ type Readied = {
     memo: command.Memo
 }
 
-/// What one start of the entry program found, and the runs it did not reach.
-type Ran = {
-    failures: List<String>
-    rest: List<Staged>
-}
-
 /// The run of one module: the module, its run, where its classes are, and the class it starts at.
 type Staged = {
     path: String
@@ -477,7 +349,7 @@ type Place = {
     beside: String
 }
 
-/// What every run shares: the library, the limit of a start, and the directory made for the runs.
+/// What every run shares: the library, the limit of a run, and the directory made for the runs.
 type Setting = {
     library: ir.Library
     limit: Int
@@ -488,10 +360,4 @@ type Setting = {
 type Typing = {
     library: ir.Library
     memo: command.Memo
-}
-
-/// What the entry program wrote, and what stopped it, which is `""` where nothing did.
-type Outcome = {
-    output: String
-    why: String
 }
