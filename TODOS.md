@@ -6,19 +6,6 @@
 
 ## Open
 
-## 🔴 Item 108: A top-level function writes its signature
-`docs/design.md` section 6 asks for a signature "when useful".
-`bux api` prints `_` where nothing settled a type, so a reader of the page opens the file.
-An inference error then surfaces at a distant call instead of inside the body that caused it.
-A written signature is a contract at the boundary, and inference keeps its work inside a body.
-[108][a] - `docs/design.md` section 6 and `docs/specs/types.md` state the rule.
-A top-level function writes every parameter type and its result type; a nested one stays inferred.
-[108][b] - A diagnostic refuses a top-level function whose signature omits a type.
-Its `help:` line spells the inferred type where inference settled one.
-[108][c] - `docs/specs/api-surface.md` drops the `_` case, because no top-level function has one.
-[108][d] - `tests/spec/type_inference/` shows the refusal.
-Every `.bx` under `compiler/` and `tests/` writes its signatures.
-
 ## 🔴 Item 109: An unused import, binding, or parameter is refused
 No spec states what happens to a name that nothing reads.
 An edit that replaces a body leaves the imports and bindings the old body used.
