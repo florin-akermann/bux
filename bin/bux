@@ -26,7 +26,7 @@ if [ ! -x "$JAVA_HOME/bin/java" ]; then
     exit 2
 fi
 # The heap bound keeps one compiler from the quarter of the memory that the JDK gives it by default.
-# docs/implementation.md section 7 records the measurement behind it.
-heap=-Xmx4g
+# docs/implementation.md section 7, "The share of the machine", records why it is 3 GB.
+heap=-Xmx3g
 exec "$JAVA_HOME/bin/java" --enable-preview "$heap" -Dstdout.encoding=UTF-8 -Dstderr.encoding=UTF-8 \
     -cp "$root/compiler/target" main "$@"

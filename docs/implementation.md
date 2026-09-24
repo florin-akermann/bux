@@ -295,7 +295,7 @@ A check gives back a `Held`: the cases it tried, a line for each failure, and ea
 The test holds where no case failed.
 `bux test` passes on the lines that a test writes, so a failure names its place and its cause.
 A skip is a line `skipped: <why>`, and the test holds, as `library/prelude.bx` shows.
-`bux test` runs the modules on a pool of one worker for each processor, as Item 112 made it.
+`bux test` runs the modules on a pool of one worker for each two processors, since Item 136.
 The long checks are in modules of their own, so the pool runs them beside each other.
 The order of the report is the order of the modules, so no line depends on which worker ends first.
 
@@ -431,24 +431,52 @@ The load was 72 when the run started and 43 when it ended, on the same machine a
 ### The share of the machine
 
 Item 136 bounds the heap of each JVM, because the JDK gives each one a quarter of the memory.
-On 2026-09-24 two runners at once held 8 GB, and each worktree agent starts runners of its own.
-The numbers are peaks of `ps -o rss`, on 12 processors and 24 GB, under a load of 30 to 140.
+On 2026-09-24 two runners at once held 8 GB, and each worktree agent starts runs of its own.
+The machine was an Apple M4 Pro with 12 processors and 24 GB, on JDK 28-ea+16.
+Each number is a peak of `ps -o rss` or `ru_maxrss`, and the load is on 12 cores from other work.
 
-| JVM | Heap before | RSS before | Heap after | RSS after |
-|-----|-------------|------------|------------|-----------|
-| The runner | 6 GB | 6.7 GB | 4 GB | 4.6 GB |
-| `bux test tests` | 6 GB | 6.7 GB | 4 GB | 4.6 GB |
-| One compile of `bin/bootstrap` | 6 GB | 1.5 GB | 1 GB | 0.7 GB to 0.9 GB |
-| The largest JVM the runner starts | 6 GB | 0.9 GB | 256 MB for a run | 0.1 GB |
+| JVM | RSS before | Bound after | RSS after | Load |
+|-----|------------|-------------|-----------|------|
+| The runner, until Item 114 | 6.7 GB | `-Xmx4g` | 4.6 GB | 41 to 115 |
+| `bux test tests` | 6.7 GB | `-Xmx3g` | 3.9 GB | 16 to 20 |
+| One compile of `bin/bootstrap` | 3.6 GB | `-Xmx256m` | 0.5 GB | 5 |
+| The largest run of a test module | 2.1 GB | `-Xmx256m` | 0.3 GB | 11 to 31 |
+| All runs of test modules at once | 5.2 GB | `-Xmx256m` | 1.2 GB | 11 to 31 |
 
-With no bound, the runner held 5.5 GB after a collection, and 3.5 GB after a remark.
-It ran out of heap at 2 GB and passed at 3 GB, and `bux test tests` ran out at 1 GB.
-So `bin/runner` and `bin/bux` get 4 GB, and each compile of `bin/bootstrap` gets 1 GB.
-Item 114 then deleted `bin/runner`, so `bin/bux test tests` holds the checks it held.
-Each module of `tests/` runs in a JVM of its own, and that JVM has no bound yet.
-`bin/runner` took 183 s at a load of 115 and 110 s after, at a load of 41; the load makes both vague.
-A short run gets `-Xmx256m`, `-XX:+UseSerialGC`, and `-XX:TieredStopAtLevel=1`.
-`-Xshare:auto` is refused, because the JVM turns class-data sharing off beside `--limit-modules`.
+A compile of the compiler held 139 MB after a collection, and its wall time is the same from 192 MB.
+The medians of six builds, in turns, at a load of 5, were 3.1 s with no bound and 2.9 s at 256 MB.
+So `bin/bootstrap` gets 256 MB; 192 MB measured the same, but leaves less room for a larger one.
+With no bound, `bux test tests` held 3.9 GB after a collection, and the runner 3.5 GB.
+On the full pool, `bux test tests` ran out of heap at 2 GB, and the runner at 2 GB too.
+The medians of three, in turns, on the half pool, are in the table below, at a load of 11 to 23.
+
+| Bound of `bux test tests` | 1 GB | 2 GB | 3 GB | None |
+|---------------------------|------|------|------|------|
+| Wall time | 97.5 s | 92.5 s | 81.4 s | 82.2 s |
+| Processor time | 716 s | 507 s | 470 s | 453 s |
+
+So `bin/bux` gets 3 GB, the smallest bound within 5% of the wall time with no bound.
+The flags of a short run, and the pool, were measured on `bux test tests` in four rounds of turns.
+Each variant ran from a copy of the checkout, built with its own flags or its own pool.
+The load came mostly from the variants themselves, so it is a result as much as a condition.
+
+| Short run flags, pool | Wall time | Peak of one run | Peak of all runs | Load |
+|-----------------------|-----------|-----------------|------------------|------|
+| None, full | 78.8 s | 2109 MB | 5198 MB | 16 to 31 |
+| `-Xmx256m`, full | 81.0 s | 855 MB | 2965 MB | 22 to 34 |
+| `-Xmx256m -XX:+UseSerialGC`, full | 78.7 s | 798 MB | 2764 MB | 21 to 33 |
+| `-Xmx256m -XX:TieredStopAtLevel=1`, full | 66.8 s | 335 MB | 2092 MB | 18 to 27 |
+| All three, full | 65.5 s | 319 MB | 1268 MB | 11 to 18 |
+| All three, half | 59.6 s | 319 MB | 1212 MB | 13 to 16 |
+
+The heap bound cuts the memory of a run, and C1 alone cuts its time, since C2 never pays back.
+The serial collector cuts the memory of all runs at once by 40%, as it has no collector threads.
+So a run keeps all three flags, and each is kept by its number in the table.
+`-Xshare:auto` is refused: JDK 28 turns class-data sharing off beside `--limit-modules`.
+So a class-data sharing archive of the JDK's classes would never be read, and none is written.
+The half pool took 59.6 s against 65.5 s for the full pool, 9% less, so `bux test` keeps the half.
+A likely cause: each worker compiles in the JVM of `bux test`, and its JIT needs processors too.
+`command.pool_size` is the one place that states the size of the pool.
 
 ### Drawn properties
 
