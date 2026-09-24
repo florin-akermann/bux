@@ -519,7 +519,7 @@ The constant pool is built in the order entries are first asked for, which the l
 `compiler/ir.bx` lowers, `compiler/jvm.bx` writes each class, and `compiler/bytes.bx` its bytes.
 
 `ir.program_lowered(path, library)` lowers the module at `path` and each module that it reaches.
-It gives `skipped` when a phase before the lowering refuses the program, or a module holds a hole.
+It gives `exhaustiveness.Unchecked` when an earlier phase refuses it, or a module holds a hole.
 It does not check the examples of a function, which `bux build` checks before the lowering.
 
 The Bux lowering runs in passes.
