@@ -24,6 +24,15 @@ fn read_bytes(path: String) -> Result<List<Int>, String> {
     }
 }
 
+/// How many bytes the file at `path` holds, or what went wrong asking the file system.
+// example: ok_or(size("no-such-file.bin"), -1) == -1
+fn size(path: String) -> Result<Int, String> {
+    match as_a_path(named(path)) {
+        Ok(found) => byte_count(found)
+        Err(why) => Err(why)
+    }
+}
+
 /// The value of each char of `answer`, which ISO-8859-1 reads as the one byte of that value.
 // example: ok_or(each_byte(Ok("AB")), []) == [65, 66]
 fn each_byte(answer: Result<String, String>) -> Result<List<Int>, String> {
@@ -162,6 +171,9 @@ extern static read_whole(path: Path) -> Result<String, String> = "java.nio.file.
 
 /// The whole file at `path`, read in `encoding`.
 extern static read_whole_as(path: Path, encoding: Encoding) -> Result<String, String> = "java.nio.file.Files.readString"
+
+/// How many bytes the file at `path` holds, which the file system answers without a read.
+extern static byte_count(path: Path) -> Result<Int, String> = "java.nio.file.Files.size"
 
 /// A file at `path` opened to be written whole, which is a file emptied of whatever it held.
 extern new opened(path: String, written_as: Encoding) -> Result<Writer, String>

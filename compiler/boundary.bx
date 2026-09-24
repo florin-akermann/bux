@@ -479,7 +479,7 @@ fn first_of(text: String, unit: Int) -> Int {
 /// `docs/specs/interop.md` states this list and the two below, and they are the same lists.
 // example: list.has_value(listed_packages(), "java.util")
 fn listed_packages() -> List<String> {
-    ["java.io", "java.lang", "java.nio", "java.nio.charset", "java.nio.file", "java.util", "java.util.concurrent", "java.util.jar", "java.util.stream", "java.util.zip"]
+    ["java.io", "java.lang", "java.nio", "java.nio.channels", "java.nio.charset", "java.nio.file", "java.util", "java.util.concurrent", "java.util.jar", "java.util.stream", "java.util.zip"]
 }
 
 /// The classes of a listed package that the list leaves out: reflection, class loaders, and

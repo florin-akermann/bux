@@ -90,6 +90,7 @@ The packages on the list are these:
 - `java.io`
 - `java.lang`
 - `java.nio`
+- `java.nio.channels`
 - `java.nio.charset`
 - `java.nio.file`
 - `java.util`
@@ -100,6 +101,8 @@ The packages on the list are these:
 
 A package is on the list only by its whole name.
 So `java.lang.invoke` and `java.lang.reflect` are not on it, and `java.net` is not on it.
+`java.nio.channels` is on it for `FileChannel`, which reads a file at a position.
+A socket channel of that package reaches no address, because no class of `java.net` is listed.
 A class of a module other than `java.base`, such as `javax.naming.InitialContext`, is on no list.
 
 These classes of a listed package are out, each with every class nested in it:
