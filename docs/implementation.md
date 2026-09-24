@@ -114,10 +114,10 @@ Java interop should be powerful but should not determine the design of the langu
 ## 4. Standard library
 
 The standard library is small, and its data structures are smaller still.
-The fewer methods a type has, the better; a method earns its place, and a `for` loop does the rest.
-A method lands only where a plain loop over what the type already exposes cannot write it.
+The fewer functions a module offers, the better; a `for` loop does the rest.
+A function lands only where a plain loop over what the type already exposes cannot write it.
 A map has no iterator, and the same holds for every convenience a loop already writes.
-`docs/principles.md` question 12 is what a proposed method answers.
+`docs/principles.md` question 12 is what a proposed function answers.
 
 A data structure the library holds has the best asymptotic cost known for what it does.
 A map looks a key up in constant time, and a list is read at an index in constant time.

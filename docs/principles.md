@@ -101,10 +101,11 @@ A feature that would crash on some input is refused until its type carries that 
 
 ### 12. Could a `for` loop write it instead?
 
-The standard library is small, and the fewer methods a type has, the better.
-A method lands only where a plain loop over what the type already exposes cannot write it.
+The standard library is small, and the fewer functions a module offers for a type, the better.
+A function lands only where a plain loop over what the type already exposes cannot write it.
 A map has no iterator, and no type has a `for_each`: the `for` loop is what Bux is built around.
-A method that only saves the reader a loop is refused, the same as sugar under question 9.
+A function that only saves the reader a loop is refused, the same as sugar under question 9.
+A method is a trait method only; `list.push` is a function of the module `list`, not a method.
 `docs/implementation.md` section 4 states the library's scope.
 
 ---
