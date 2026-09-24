@@ -6,6 +6,7 @@ import compiled
 import drawn
 import held
 import ir
+import jvm
 import list
 
 /// Every property of the paths a body takes, each checked over `cases` drawn modules, in order.
@@ -95,14 +96,14 @@ fn tested(draw: drawn.Draw, library: ir.Library) -> Drawing {
 }
 
 /// `why`, or what is wrong where a division of `body` divides by a slot it did not test for zero.
-// example: untested([ir.Load { slot: 2, of: ir.Long }, ir.Arithmetic(ir.Divide)], "") == "it divides by slot 2 untested"
-// example: untested([ir.Load { slot: 2, of: ir.Long }, ir.LongOf(0), ir.CompareLongs(ir.Equal), ir.Load { slot: 2, of: ir.Long }, ir.Arithmetic(ir.Divide)], "") == ""
-fn untested(body: List<ir.Instruction>, why: String) -> String {
+// example: untested([jvm.Load { slot: 2, of: jvm.Long }, jvm.Arithmetic(ir.Divide)], "") == "it divides by slot 2 untested"
+// example: untested([jvm.Load { slot: 2, of: jvm.Long }, jvm.LongOf(0), jvm.CompareLongs(ir.Equal), jvm.Load { slot: 2, of: jvm.Long }, jvm.Arithmetic(ir.Divide)], "") == ""
+fn untested(body: List<jvm.Instruction>, why: String) -> String {
     var at = 0
     var said = why
     for instruction in body {
         if is_dividing(instruction) {
-            let divisor = slot_loaded(or(list.at(body, at - 1), ir.Copy))
+            let divisor = slot_loaded(or(list.at(body, at - 1), jvm.Copy))
             if divisor < 0 || !is_tested_before(body: body, at: at, divisor: divisor) {
                 said = "it divides by slot " + shown(divisor) + " untested"
             }
@@ -113,23 +114,23 @@ fn untested(body: List<ir.Instruction>, why: String) -> String {
 }
 
 /// Whether `instruction` divides or takes a remainder, which is what has no answer for zero.
-// example: is_dividing(ir.Arithmetic(ir.Remainder))
-// example: !is_dividing(ir.Arithmetic(ir.Add))
-fn is_dividing(instruction: ir.Instruction) -> Bool {
+// example: is_dividing(jvm.Arithmetic(ir.Remainder))
+// example: !is_dividing(jvm.Arithmetic(ir.Add))
+fn is_dividing(instruction: jvm.Instruction) -> Bool {
     match instruction {
-        ir.Arithmetic(ir.Divide) => true
-        ir.Arithmetic(ir.Remainder) => true
+        jvm.Arithmetic(ir.Divide) => true
+        jvm.Arithmetic(ir.Remainder) => true
         _ => false
     }
 }
 
 /// Whether, before `at`, `body` loads `divisor` as a `long`, pushes zero, and compares them.
 // example: !is_tested_before(body: [], at: 0, divisor: 1)
-fn is_tested_before(body: List<ir.Instruction>, at: Int, divisor: Int) -> Bool {
+fn is_tested_before(body: List<jvm.Instruction>, at: Int, divisor: Int) -> Bool {
     var from = 0
     for from + 2 < at {
-        let loaded = is_long_loaded(or(list.at(body, from), ir.Copy), divisor)
-        if loaded && is_long_zero(or(list.at(body, from + 1), ir.Copy)) && is_long_equality(or(list.at(body, from + 2), ir.Copy)) {
+        let loaded = is_long_loaded(or(list.at(body, from), jvm.Copy), divisor)
+        if loaded && is_long_zero(or(list.at(body, from + 1), jvm.Copy)) && is_long_equality(or(list.at(body, from + 2), jvm.Copy)) {
             return true
         }
         from += 1
@@ -138,31 +139,31 @@ fn is_tested_before(body: List<ir.Instruction>, at: Int, divisor: Int) -> Bool {
 }
 
 /// Whether `instruction` loads `wanted` as a `long`.
-// example: is_long_loaded(ir.Load { slot: 1, of: ir.Long }, 1)
-// example: !is_long_loaded(ir.Load { slot: 1, of: ir.Integer }, 1)
-fn is_long_loaded(instruction: ir.Instruction, wanted: Int) -> Bool {
+// example: is_long_loaded(jvm.Load { slot: 1, of: jvm.Long }, 1)
+// example: !is_long_loaded(jvm.Load { slot: 1, of: jvm.Integer }, 1)
+fn is_long_loaded(instruction: jvm.Instruction, wanted: Int) -> Bool {
     match instruction {
-        ir.Load { slot, of } => slot == wanted && of == ir.Long
+        jvm.Load { slot, of } => slot == wanted && of == jvm.Long
         _ => false
     }
 }
 
 /// Whether `instruction` pushes the `long` zero.
-// example: is_long_zero(ir.LongOf(0))
-// example: !is_long_zero(ir.LongOf(1))
-fn is_long_zero(instruction: ir.Instruction) -> Bool {
+// example: is_long_zero(jvm.LongOf(0))
+// example: !is_long_zero(jvm.LongOf(1))
+fn is_long_zero(instruction: jvm.Instruction) -> Bool {
     match instruction {
-        ir.LongOf(value) => value == 0
+        jvm.LongOf(value) => value == 0
         _ => false
     }
 }
 
 /// Whether `instruction` asks whether two `long` values are equal.
-// example: is_long_equality(ir.CompareLongs(ir.Equal))
-// example: !is_long_equality(ir.CompareLongs(ir.Less))
-fn is_long_equality(instruction: ir.Instruction) -> Bool {
+// example: is_long_equality(jvm.CompareLongs(ir.Equal))
+// example: !is_long_equality(jvm.CompareLongs(ir.Less))
+fn is_long_equality(instruction: jvm.Instruction) -> Bool {
     match instruction {
-        ir.CompareLongs(how) => how == ir.Equal
+        jvm.CompareLongs(how) => how == ir.Equal
         _ => false
     }
 }
@@ -212,7 +213,7 @@ fn written_out(draw: drawn.Draw, library: ir.Library) -> Drawing {
 
 /// What is wrong with `body` as an `or` written out in place, which is empty where nothing is.
 // example: called_or_why([]) == "it never asks which variant it was handed"
-fn called_or_why(body: List<ir.Instruction>) -> String {
+fn called_or_why(body: List<jvm.Instruction>) -> String {
     if list.has_value(compiled.calls_named(body), "or") {
         return "it calls `or`, which has no class to be called on"
     }
@@ -228,10 +229,10 @@ fn called_or_why(body: List<ir.Instruction>) -> String {
 }
 
 /// The name of the field `instruction` reads off an instance, and nothing where it reads none.
-// example: field_read(ir.Copy) == ""
-fn field_read(instruction: ir.Instruction) -> String {
+// example: field_read(jvm.Copy) == ""
+fn field_read(instruction: jvm.Instruction) -> String {
     match instruction {
-        ir.GetField(field) => field.name
+        jvm.GetField(field) => field.name
         _ => ""
     }
 }
@@ -252,9 +253,9 @@ fn fallback_first(draw: drawn.Draw, library: ir.Library) -> Drawing {
 }
 
 /// Where `body` first asks whether two `int` values are equal, and -1 where it never does.
-// example: position_of_equality([ir.Copy, ir.CompareIntegers(ir.Equal)]) == 1
+// example: position_of_equality([jvm.Copy, jvm.CompareIntegers(ir.Equal)]) == 1
 // example: position_of_equality([]) == -1
-fn position_of_equality(body: List<ir.Instruction>) -> Int {
+fn position_of_equality(body: List<jvm.Instruction>) -> Int {
     var at = 0
     for instruction in body {
         if is_integer_equality(instruction) {
@@ -266,9 +267,9 @@ fn position_of_equality(body: List<ir.Instruction>) -> Int {
 }
 
 /// Where `body` first does the arithmetic `operator` is written as, and -1 where it never does.
-// example: position_of_arithmetic([ir.Arithmetic(ir.Multiply)], "*") == 0
-// example: position_of_arithmetic([ir.Arithmetic(ir.Multiply)], "+") == -1
-fn position_of_arithmetic(body: List<ir.Instruction>, operator: String) -> Int {
+// example: position_of_arithmetic([jvm.Arithmetic(ir.Multiply)], "*") == 0
+// example: position_of_arithmetic([jvm.Arithmetic(ir.Multiply)], "+") == -1
+fn position_of_arithmetic(body: List<jvm.Instruction>, operator: String) -> Int {
     var at = 0
     for instruction in body {
         if arithmetic_written(instruction) == operator {
@@ -280,13 +281,13 @@ fn position_of_arithmetic(body: List<ir.Instruction>, operator: String) -> Int {
 }
 
 /// The operator `instruction` is written as where it adds, subtracts, or multiplies, else nothing.
-// example: arithmetic_written(ir.Arithmetic(ir.Subtract)) == "-"
-// example: arithmetic_written(ir.Copy) == ""
-fn arithmetic_written(instruction: ir.Instruction) -> String {
+// example: arithmetic_written(jvm.Arithmetic(ir.Subtract)) == "-"
+// example: arithmetic_written(jvm.Copy) == ""
+fn arithmetic_written(instruction: jvm.Instruction) -> String {
     match instruction {
-        ir.Arithmetic(ir.Add) => "+"
-        ir.Arithmetic(ir.Subtract) => "-"
-        ir.Arithmetic(ir.Multiply) => "*"
+        jvm.Arithmetic(ir.Add) => "+"
+        jvm.Arithmetic(ir.Subtract) => "-"
+        jvm.Arithmetic(ir.Multiply) => "*"
         _ => ""
     }
 }
@@ -337,13 +338,13 @@ fn propagating() -> List<String> {
 /// Where each test of `body` for the `None` a `?` hands back begins.
 ///
 /// The test reads the tag of an `Option`, pushes the tag of `None`, compares, and jumps past.
-// example: none_tests([ir.GetField(ir.FieldRef { class: "bux/Option", name: "tag", of: ir.Integer }), ir.IntegerOf(1), ir.CompareIntegers(ir.Equal), ir.JumpIfFalse(2)]) == [0]
-fn none_tests(body: List<ir.Instruction>) -> List<Int> {
+// example: none_tests([jvm.GetField(jvm.FieldRef { class: "bux/Option", name: "tag", of: jvm.Integer }), jvm.IntegerOf(1), jvm.CompareIntegers(ir.Equal), jvm.JumpIfFalse(2)]) == [0]
+fn none_tests(body: List<jvm.Instruction>) -> List<Int> {
     var found = []
     var at = 0
     for at + 3 < list.length(body) {
-        let tag = is_option_tag(or(list.at(body, at), ir.Copy)) && is_none_tag(or(list.at(body, at + 1), ir.Copy))
-        if tag && is_integer_equality(or(list.at(body, at + 2), ir.Copy)) && is_jump_if_false(or(list.at(body, at + 3), ir.Copy)) {
+        let tag = is_option_tag(or(list.at(body, at), jvm.Copy)) && is_none_tag(or(list.at(body, at + 1), jvm.Copy))
+        if tag && is_integer_equality(or(list.at(body, at + 2), jvm.Copy)) && is_jump_if_false(or(list.at(body, at + 3), jvm.Copy)) {
             found = list.push(found, at)
         }
         at += 1
@@ -352,40 +353,40 @@ fn none_tests(body: List<ir.Instruction>) -> List<Int> {
 }
 
 /// Whether `instruction` asks whether two `int` values are equal.
-// example: is_integer_equality(ir.CompareIntegers(ir.Equal))
-// example: !is_integer_equality(ir.CompareLongs(ir.Equal))
-fn is_integer_equality(instruction: ir.Instruction) -> Bool {
+// example: is_integer_equality(jvm.CompareIntegers(ir.Equal))
+// example: !is_integer_equality(jvm.CompareLongs(ir.Equal))
+fn is_integer_equality(instruction: jvm.Instruction) -> Bool {
     match instruction {
-        ir.CompareIntegers(how) => how == ir.Equal
+        jvm.CompareIntegers(how) => how == ir.Equal
         _ => false
     }
 }
 
 /// Whether `instruction` reads the tag of an `Option`.
-// example: !is_option_tag(ir.Copy)
-fn is_option_tag(instruction: ir.Instruction) -> Bool {
+// example: !is_option_tag(jvm.Copy)
+fn is_option_tag(instruction: jvm.Instruction) -> Bool {
     match instruction {
-        ir.GetField(field) => field.class == "bux/Option" && field.name == "tag"
+        jvm.GetField(field) => field.class == "bux/Option" && field.name == "tag"
         _ => false
     }
 }
 
 /// Whether `instruction` pushes the tag of `None`, its place in the declaration of `Option`.
-// example: is_none_tag(ir.IntegerOf(1))
-// example: !is_none_tag(ir.IntegerOf(0))
-fn is_none_tag(instruction: ir.Instruction) -> Bool {
+// example: is_none_tag(jvm.IntegerOf(1))
+// example: !is_none_tag(jvm.IntegerOf(0))
+fn is_none_tag(instruction: jvm.Instruction) -> Bool {
     match instruction {
-        ir.IntegerOf(value) => value == 1
+        jvm.IntegerOf(value) => value == 1
         _ => false
     }
 }
 
 /// Whether `instruction` jumps where the value on the stack is false.
-// example: is_jump_if_false(ir.JumpIfFalse(0))
-// example: !is_jump_if_false(ir.Jump(0))
-fn is_jump_if_false(instruction: ir.Instruction) -> Bool {
+// example: is_jump_if_false(jvm.JumpIfFalse(0))
+// example: !is_jump_if_false(jvm.Jump(0))
+fn is_jump_if_false(instruction: jvm.Instruction) -> Bool {
     match instruction {
-        ir.JumpIfFalse(_) => true
+        jvm.JumpIfFalse(_) => true
         _ => false
     }
 }
@@ -395,44 +396,44 @@ fn is_jump_if_false(instruction: ir.Instruction) -> Bool {
 /// What the test read was loaded from a slot just before it, and the case that hands it back
 /// loads the same slot and gives it back as an `Option`.
 // example: propagation_why(body: [], at: 0, why: "") == "a `?` reads the tag of what it did not load"
-fn propagation_why(body: List<ir.Instruction>, at: Int, why: String) -> String {
-    let slot = slot_loaded(or(list.at(body, at - 1), ir.Copy))
+fn propagation_why(body: List<jvm.Instruction>, at: Int, why: String) -> String {
+    let slot = slot_loaded(or(list.at(body, at - 1), jvm.Copy))
     if slot < 0 {
         return "a `?` reads the tag of what it did not load"
     }
-    let loaded = is_option_loaded(or(list.at(body, at + 4), ir.Copy), slot)
-    if !loaded || !is_option_returned(or(list.at(body, at + 5), ir.Copy)) {
+    let loaded = is_option_loaded(or(list.at(body, at + 4), jvm.Copy), slot)
+    if !loaded || !is_option_returned(or(list.at(body, at + 5), jvm.Copy)) {
         return "a `?` builds a `None` rather than give back the one in slot " + shown(slot)
     }
     why
 }
 
 /// The slot `instruction` loads, and -1 where it loads none.
-// example: slot_loaded(ir.Load { slot: 3, of: ir.Long }) == 3
-// example: slot_loaded(ir.Copy) == -1
-fn slot_loaded(instruction: ir.Instruction) -> Int {
+// example: slot_loaded(jvm.Load { slot: 3, of: jvm.Long }) == 3
+// example: slot_loaded(jvm.Copy) == -1
+fn slot_loaded(instruction: jvm.Instruction) -> Int {
     match instruction {
-        ir.Load { slot } => slot
+        jvm.Load { slot } => slot
         _ => -1
     }
 }
 
 /// Whether `instruction` loads `wanted` as an `Option`.
-// example: is_option_loaded(ir.Load { slot: 2, of: ir.Reference("bux/Option") }, 2)
-// example: !is_option_loaded(ir.Load { slot: 2, of: ir.Long }, 2)
-fn is_option_loaded(instruction: ir.Instruction, wanted: Int) -> Bool {
+// example: is_option_loaded(jvm.Load { slot: 2, of: jvm.Reference("bux/Option") }, 2)
+// example: !is_option_loaded(jvm.Load { slot: 2, of: jvm.Long }, 2)
+fn is_option_loaded(instruction: jvm.Instruction, wanted: Int) -> Bool {
     match instruction {
-        ir.Load { slot, of } => slot == wanted && of == ir.Reference("bux/Option")
+        jvm.Load { slot, of } => slot == wanted && of == jvm.Reference("bux/Option")
         _ => false
     }
 }
 
 /// Whether `instruction` gives back an `Option`.
-// example: is_option_returned(ir.Return(Some(ir.Reference("bux/Option"))))
-// example: !is_option_returned(ir.Return(None))
-fn is_option_returned(instruction: ir.Instruction) -> Bool {
+// example: is_option_returned(jvm.Return(Some(jvm.Reference("bux/Option"))))
+// example: !is_option_returned(jvm.Return(None))
+fn is_option_returned(instruction: jvm.Instruction) -> Bool {
     match instruction {
-        ir.Return(Some(of)) => of == ir.Reference("bux/Option")
+        jvm.Return(Some(of)) => of == jvm.Reference("bux/Option")
         _ => false
     }
 }

@@ -6,6 +6,7 @@ import compiled
 import drawn
 import held
 import ir
+import jvm
 import list
 import strings
 
@@ -131,10 +132,11 @@ fn named_once(draw: drawn.Draw, library: ir.Library) -> Drawing {
     for module in lowered {
         var names = []
         for class in module.classes {
-            if list.has_value(names, class.name) {
-                why = "two classes are named " + class.name
+            let name = jvm.class_of(class.of)
+            if list.has_value(names, name) {
+                why = "two classes are named " + name
             }
-            names = list.push(names, class.name)
+            names = list.push(names, name)
         }
     }
     Drawing { source: source, why: why }
@@ -148,9 +150,10 @@ fn leaving(draw: drawn.Draw, library: ir.Library) -> Drawing {
     var why = refused(lowered)
     for class in compiled.every_class(lowered) {
         for method in class.methods {
-            let last = list.at(method.body.instructions, list.length(method.body.instructions) - 1)
-            if !is_return(or(last, ir.Copy)) {
-                why = class.name + "." + method.name + " ends with no return"
+            let instructions = compiled.spelled_of(method, class).instructions
+            let last = list.at(instructions, list.length(instructions) - 1)
+            if !is_return(or(last, jvm.Copy)) {
+                why = jvm.class_of(class.of) + "." + method.name + " ends with no return"
             }
         }
     }
@@ -158,11 +161,11 @@ fn leaving(draw: drawn.Draw, library: ir.Library) -> Drawing {
 }
 
 /// Whether `instruction` gives back from the method.
-// example: is_return(ir.Return(None))
-// example: !is_return(ir.Copy)
-fn is_return(instruction: ir.Instruction) -> Bool {
+// example: is_return(jvm.Return(None))
+// example: !is_return(jvm.Copy)
+fn is_return(instruction: jvm.Instruction) -> Bool {
     match instruction {
-        ir.Return(_) => true
+        jvm.Return(_) => true
         _ => false
     }
 }
@@ -185,7 +188,7 @@ fn entry_point(draw: drawn.Draw, library: ir.Library) -> Drawing {
 fn is_entered(lowered: List<ir.Lowered>) -> Bool {
     for class in compiled.demo_classes(lowered) {
         for method in class.methods {
-            if method.name == "main" && compiled.is_none(method.descriptor.result) {
+            if method.name == "main" && compiled.is_none(method.result) {
                 return true
             }
         }
@@ -203,7 +206,7 @@ fn inherited(draw: drawn.Draw, library: ir.Library) -> Drawing {
     for class in compiled.every_class(lowered) {
         for method in class.methods {
             if list.has_value(object, method.name) {
-                why = class.name + " declares " + method.name + ", which the object model gives it"
+                why = jvm.class_of(class.of) + " declares " + method.name + ", which the object model gives it"
             }
         }
     }
@@ -218,7 +221,7 @@ fn string_equality(draw: drawn.Draw, library: ir.Library) -> Drawing {
     var why = refused(lowered)
     for class in compiled.every_class(lowered) {
         for method in class.methods {
-            for instruction in method.body.instructions {
+            for instruction in compiled.spelled_of(method, class).instructions {
                 why = equality_why(or(compiled.called(instruction), no_call()), why)
             }
         }
@@ -228,7 +231,7 @@ fn string_equality(draw: drawn.Draw, library: ir.Library) -> Drawing {
 
 /// `why`, or what is wrong where `reference` is an `equals` of a class other than `String`.
 // example: equality_why(no_call(), "") == ""
-fn equality_why(reference: ir.MethodRef, why: String) -> String {
+fn equality_why(reference: jvm.MethodRef, why: String) -> String {
     if reference.name == "equals" && reference.class != "java/lang/String" {
         return "it calls equals of " + reference.class + ", which answers by identity"
     }
@@ -251,8 +254,8 @@ fn list_written(draw: drawn.Draw, library: ir.Library) -> Drawing {
 
 /// What is wrong with `body` as the writing of a list of `many` elements, or nothing.
 // example: listing_why([], 0) == "it makes no array of 0"
-fn listing_why(body: List<ir.Instruction>, many: Int) -> String {
-    if !is_integer(or(list.at(body, 0), ir.Copy), many) {
+fn listing_why(body: List<jvm.Instruction>, many: Int) -> String {
+    if !is_integer(or(list.at(body, 0), jvm.Copy), many) {
         return "it makes no array of " + shown(many)
     }
     var stored = 0
@@ -272,28 +275,28 @@ fn listing_why(body: List<ir.Instruction>, many: Int) -> String {
 }
 
 /// Whether `instruction` pushes the `int` `value`.
-// example: is_integer(ir.IntegerOf(2), 2)
-// example: !is_integer(ir.LongOf(2), 2)
-fn is_integer(instruction: ir.Instruction, value: Int) -> Bool {
+// example: is_integer(jvm.IntegerOf(2), 2)
+// example: !is_integer(jvm.LongOf(2), 2)
+fn is_integer(instruction: jvm.Instruction, value: Int) -> Bool {
     match instruction {
-        ir.IntegerOf(pushed) => pushed == value
+        jvm.IntegerOf(pushed) => pushed == value
         _ => false
     }
 }
 
 /// Whether `instruction` stores a value in an array.
-// example: is_stored_in_array(ir.StoreInArray)
-// example: !is_stored_in_array(ir.Copy)
-fn is_stored_in_array(instruction: ir.Instruction) -> Bool {
+// example: is_stored_in_array(jvm.StoreInArray)
+// example: !is_stored_in_array(jvm.Copy)
+fn is_stored_in_array(instruction: jvm.Instruction) -> Bool {
     match instruction {
-        ir.StoreInArray => true
+        jvm.StoreInArray => true
         _ => false
     }
 }
 
 /// Each call in `body` that builds a list from an array, which is `bux/List.of`.
-// example: listed_calls([ir.Copy]) == []
-fn listed_calls(body: List<ir.Instruction>) -> List<String> {
+// example: listed_calls([jvm.Copy]) == []
+fn listed_calls(body: List<jvm.Instruction>) -> List<String> {
     var calls = []
     for instruction in body {
         let reference = or(compiled.called(instruction), no_call())
@@ -306,8 +309,8 @@ fn listed_calls(body: List<ir.Instruction>) -> List<String> {
 
 /// A call of nothing, which stands where an instruction calls no method.
 // example: no_call().name == ""
-fn no_call() -> ir.MethodRef {
-    ir.MethodRef { class: "", name: "", descriptor: ir.MethodDescriptor { parameters: [], result: None } }
+fn no_call() -> jvm.MethodRef {
+    jvm.MethodRef { class: "", name: "", descriptor: jvm.MethodDescriptor { parameters: [], result: None } }
 }
 
 /// A list of a drawn number of `()`, each of which a bare `java/lang/Object` stands for.
@@ -334,11 +337,11 @@ fn units(draw: drawn.Draw, library: ir.Library) -> Drawing {
 }
 
 /// Whether `instruction` makes a new instance.
-// example: is_new(ir.New("a/B"))
-// example: !is_new(ir.Copy)
-fn is_new(instruction: ir.Instruction) -> Bool {
+// example: is_new(jvm.New("a/B"))
+// example: !is_new(jvm.Copy)
+fn is_new(instruction: jvm.Instruction) -> Bool {
     match instruction {
-        ir.New(_) => true
+        jvm.New(_) => true
         _ => false
     }
 }

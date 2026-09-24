@@ -6,6 +6,7 @@ import compiled
 import drawn
 import held
 import ir
+import jvm
 import list
 import strings
 
@@ -139,7 +140,7 @@ fn spec_named(draw: drawn.Draw, library: ir.Library) -> Drawing {
     }
     for class in classes {
         for method in class.methods {
-            why = unnamed_why(compiled.reached_in(method.body.instructions), why)
+            why = unnamed_why(compiled.reached_in(compiled.spelled_of(method, class).instructions), why)
         }
     }
     Drawing { source: source, why: why }
@@ -180,7 +181,7 @@ fn guarded(draw: drawn.Draw, library: ir.Library) -> Drawing {
     let wrap = drawn.picked(drawn.next(draw), ["{held}", "Option<{held}>", "Result<{held}, String>"], "")
     let result = compiled.replaced(wrap, "{held}", or(list.at(reached_types(), at), ""))
     let source = declaring(declared: or(list.at(reaching(), at), ""), result: result)
-    let body = or(compiled.body_of(compiled.lowered_alone(source, library), or(list.at(reaching_names(), at), "")), no_body())
+    let body = or(compiled.body_of(compiled.lowered_alone(source, library), or(list.at(reaching_names(), at), "")), compiled.no_spelled())
     var guards = 0
     if or(strings.cut(result, 0, 7), "") == "Result<" {
         guards = 1
@@ -190,8 +191,8 @@ fn guarded(draw: drawn.Draw, library: ir.Library) -> Drawing {
         why = "it guards " + shown(list.length(body.guards)) + " spans, not " + shown(guards)
     }
     for guard in body.guards {
-        if guard.catching != "java/lang/Throwable" {
-            why = "a guard catches " + guard.catching
+        if jvm.class_of(guard.catching) != "java/lang/Throwable" {
+            why = "a guard catches " + jvm.class_of(guard.catching)
         }
     }
     Drawing { source: source, why: why }
@@ -203,7 +204,7 @@ fn both_paths(draw: drawn.Draw, library: ir.Library) -> Drawing {
     let at = drawn.number(draw, 4)
     let result = "Result<" + or(list.at(reached_types(), at), "") + ", String>"
     let source = declaring(declared: or(list.at(reaching(), at), ""), result: result)
-    let body = or(compiled.body_of(compiled.lowered_alone(source, library), or(list.at(reaching_names(), at), "")), no_body())
+    let body = or(compiled.body_of(compiled.lowered_alone(source, library), or(list.at(reaching_names(), at), "")), compiled.no_spelled())
     Drawing { source: source, why: paths_why(body) }
 }
 
@@ -225,19 +226,13 @@ fn reaching_names() -> List<String> {
     ["held", "worded", "trimmed", "named"]
 }
 
-/// A body of no instruction, which stands where a module wrote no method.
-// example: list.length(no_body().guards) == 0
-fn no_body() -> ir.Body {
-    ir.Body { instructions: [], locals: 0, guards: [] }
-}
-
 /// What is wrong with the paths of `body`, which is empty where it holds one guard and both paths.
-// example: paths_why(no_body()) == "it guards 0 spans, not one"
-fn paths_why(body: ir.Body) -> String {
+// example: paths_why(compiled.no_spelled()) == "it guards 0 spans, not one"
+fn paths_why(body: jvm.Spelled) -> String {
     if list.length(body.guards) != 1 {
         return "it guards " + shown(list.length(body.guards)) + " spans, not one"
     }
-    let handler = or(list.at(body.guards, 0), ir.Guard { from: 0, to: 0, handler: 0, catching: "" }).handler
+    let handler = or(list.at(body.guards, 0), ir.Guard { from: 0, to: 0, handler: 0, catching: ir.Anything }).handler
     let at = label_at(body.instructions, handler)
     let taken = results_built(compiled.part(body.instructions, 0, at))
     let thrown = results_built(compiled.part(body.instructions, at, list.length(body.instructions)))
@@ -248,8 +243,8 @@ fn paths_why(body: ir.Body) -> String {
 }
 
 /// The `Result` variants `instructions` build, in the order they build them.
-// example: results_built([ir.New("bux/Result$Ok"), ir.New("bux/Option$None")]) == ["bux/Result$Ok"]
-fn results_built(instructions: List<ir.Instruction>) -> List<String> {
+// example: results_built([jvm.New("bux/Result$Ok"), jvm.New("bux/Option$None")]) == ["bux/Result$Ok"]
+fn results_built(instructions: List<jvm.Instruction>) -> List<String> {
     var built = []
     for instruction in instructions {
         let class = class_made(instruction)
@@ -261,11 +256,11 @@ fn results_built(instructions: List<ir.Instruction>) -> List<String> {
 }
 
 /// The class `instruction` makes a new instance of, and nothing where it makes none.
-// example: class_made(ir.New("a/B")) == "a/B"
-// example: class_made(ir.Copy) == ""
-fn class_made(instruction: ir.Instruction) -> String {
+// example: class_made(jvm.New("a/B")) == "a/B"
+// example: class_made(jvm.Copy) == ""
+fn class_made(instruction: jvm.Instruction) -> String {
     match instruction {
-        ir.New(class) => class
+        jvm.New(class) => class
         _ => ""
     }
 }
@@ -279,12 +274,12 @@ fn widened(draw: drawn.Draw, library: ir.Library) -> Drawing {
     let written = compiled.replaced(or(list.at(numbers(), at), ""), "{width}", width)
     let source = declaring(declared: written, result: result)
     let body = compiled.instructions_of(compiled.lowered_alone(source, library), or(list.at(["held", "worded", "trimmed"], at), ""))
-    var gives = ir.Long
+    var gives = jvm.Long
     if width == "int " {
-        gives = ir.Integer
+        gives = jvm.Integer
     }
     if width == "char " {
-        gives = ir.Character
+        gives = jvm.Character
     }
     Drawing { source: source, why: width_why(body: body, gives: gives, width: width) }
 }
@@ -296,13 +291,13 @@ fn numbers() -> List<String> {
 }
 
 /// What is wrong with `body` as a reach of a member that `gives` at `width`, or nothing.
-// example: width_why(body: [], gives: ir.Long, width: "") == "it reaches no member"
-fn width_why(body: List<ir.Instruction>, gives: ir.Descriptor, width: String) -> String {
+// example: width_why(body: [], gives: jvm.Long, width: "") == "it reaches no member"
+fn width_why(body: List<jvm.Instruction>, gives: jvm.Descriptor, width: String) -> String {
     let given = gives_back(body)
     if compiled.is_none(given) {
         return "it reaches no member"
     }
-    if or(given, ir.Array(ir.Long)) != gives {
+    if or(given, jvm.Array(jvm.Long)) != gives {
         return "it reaches a member for what it does not say that member gives back"
     }
     let widens = width != ""
@@ -313,9 +308,9 @@ fn width_why(body: List<ir.Instruction>, gives: ir.Descriptor, width: String) ->
 }
 
 /// Whether `body` widens an `int` to a `long`.
-// example: has_widen([ir.Widen])
-// example: !has_widen([ir.Narrow])
-fn has_widen(body: List<ir.Instruction>) -> Bool {
+// example: has_widen([jvm.Widen])
+// example: !has_widen([jvm.Narrow])
+fn has_widen(body: List<jvm.Instruction>) -> Bool {
     for instruction in body {
         if is_widen(instruction) {
             return true
@@ -325,10 +320,10 @@ fn has_widen(body: List<ir.Instruction>) -> Bool {
 }
 
 /// Whether `instruction` widens.
-// example: is_widen(ir.Widen)
-fn is_widen(instruction: ir.Instruction) -> Bool {
+// example: is_widen(jvm.Widen)
+fn is_widen(instruction: jvm.Instruction) -> Bool {
     match instruction {
-        ir.Widen => true
+        jvm.Widen => true
         _ => false
     }
 }
@@ -362,7 +357,7 @@ fn taking() -> List<String> {
 /// An argument outside the `int` range lands on the label 4, and the path from there to the answer
 /// it gives back reaches only the classes the compiler writes.
 // example: narrowing_why(body: [], taken: "") == "it reaches no member"
-fn narrowing_why(body: List<ir.Instruction>, taken: String) -> String {
+fn narrowing_why(body: List<jvm.Instruction>, taken: String) -> String {
     let narrows = taken != ""
     if compiled.is_none(gives_back(body)) {
         return "it reaches no member"
@@ -383,9 +378,9 @@ fn narrowing_why(body: List<ir.Instruction>, taken: String) -> String {
 }
 
 /// Where `instructions` write the label `label`, and -1 where they write none.
-// example: label_at([ir.Copy, ir.Label(3)], 3) == 1
+// example: label_at([jvm.Copy, jvm.Label(3)], 3) == 1
 // example: label_at([], 3) == -1
-fn label_at(instructions: List<ir.Instruction>, label: Int) -> Int {
+fn label_at(instructions: List<jvm.Instruction>, label: Int) -> Int {
     var at = 0
     for instruction in instructions {
         if is_label(instruction, label) {
@@ -397,18 +392,18 @@ fn label_at(instructions: List<ir.Instruction>, label: Int) -> Int {
 }
 
 /// Whether `instruction` is the label `label`.
-// example: is_label(ir.Label(2), 2)
-// example: !is_label(ir.Jump(2), 2)
-fn is_label(instruction: ir.Instruction, label: Int) -> Bool {
+// example: is_label(jvm.Label(2), 2)
+// example: !is_label(jvm.Jump(2), 2)
+fn is_label(instruction: jvm.Instruction, label: Int) -> Bool {
     match instruction {
-        ir.Label(written) => written == label
+        jvm.Label(written) => written == label
         _ => false
     }
 }
 
 /// What the member `body` reaches gives back: the field it reads, or the result of its method.
-// example: compiled.is_none(gives_back([ir.Copy]))
-fn gives_back(body: List<ir.Instruction>) -> Option<ir.Descriptor> {
+// example: compiled.is_none(gives_back([jvm.Copy]))
+fn gives_back(body: List<jvm.Instruction>) -> Option<jvm.Descriptor> {
     for instruction in body {
         let given = member_gives(instruction)
         if !compiled.is_none(given) {
@@ -419,17 +414,17 @@ fn gives_back(body: List<ir.Instruction>) -> Option<ir.Descriptor> {
 }
 
 /// What one instruction's member gives back, where it reaches one that gives something.
-// example: compiled.is_none(member_gives(ir.Copy))
-fn member_gives(instruction: ir.Instruction) -> Option<ir.Descriptor> {
+// example: compiled.is_none(member_gives(jvm.Copy))
+fn member_gives(instruction: jvm.Instruction) -> Option<jvm.Descriptor> {
     match instruction {
-        ir.GetStatic(field) => Some(field.of)
+        jvm.GetStatic(field) => Some(field.of)
         _ => result_of(compiled.called(instruction))
     }
 }
 
 /// What `reference` gives back, where there is a reference.
 // example: compiled.is_none(result_of(None))
-fn result_of(reference: Option<ir.MethodRef>) -> Option<ir.Descriptor> {
+fn result_of(reference: Option<jvm.MethodRef>) -> Option<jvm.Descriptor> {
     match reference {
         Some(one) => one.descriptor.result
         None => None
@@ -437,9 +432,9 @@ fn result_of(reference: Option<ir.MethodRef>) -> Option<ir.Descriptor> {
 }
 
 /// Whether `body` narrows a `long` to an `int`.
-// example: has_narrow([ir.Narrow])
-// example: !has_narrow([ir.Widen])
-fn has_narrow(body: List<ir.Instruction>) -> Bool {
+// example: has_narrow([jvm.Narrow])
+// example: !has_narrow([jvm.Widen])
+fn has_narrow(body: List<jvm.Instruction>) -> Bool {
     for instruction in body {
         if is_narrow(instruction) {
             return true
@@ -449,18 +444,18 @@ fn has_narrow(body: List<ir.Instruction>) -> Bool {
 }
 
 /// Whether `instruction` narrows.
-// example: is_narrow(ir.Narrow)
-fn is_narrow(instruction: ir.Instruction) -> Bool {
+// example: is_narrow(jvm.Narrow)
+fn is_narrow(instruction: jvm.Instruction) -> Bool {
     match instruction {
-        ir.Narrow => true
+        jvm.Narrow => true
         _ => false
     }
 }
 
 /// The path of `body` from `from` up to the first return, which is none where `from` is -1.
-// example: list.length(answered_from([ir.Copy, ir.Return(None), ir.Copy], 0)) == 2
-// example: list.length(answered_from([ir.Copy], -1)) == 0
-fn answered_from(body: List<ir.Instruction>, from: Int) -> List<ir.Instruction> {
+// example: list.length(answered_from([jvm.Copy, jvm.Return(None), jvm.Copy], 0)) == 2
+// example: list.length(answered_from([jvm.Copy], -1)) == 0
+fn answered_from(body: List<jvm.Instruction>, from: Int) -> List<jvm.Instruction> {
     if from < 0 {
         return []
     }
@@ -475,10 +470,10 @@ fn answered_from(body: List<ir.Instruction>, from: Int) -> List<ir.Instruction> 
 }
 
 /// Whether `instruction` gives back from the method.
-// example: is_return(ir.Return(None))
-fn is_return(instruction: ir.Instruction) -> Bool {
+// example: is_return(jvm.Return(None))
+fn is_return(instruction: jvm.Instruction) -> Bool {
     match instruction {
-        ir.Return(_) => true
+        jvm.Return(_) => true
         _ => false
     }
 }
@@ -499,8 +494,8 @@ fn interface(draw: drawn.Draw, library: ir.Library) -> Drawing {
 }
 
 /// What is wrong with `call` as the call of a member of the type written `class`, or nothing.
-// example: interface_why(ir.InvokeInterface(ir.MethodRef { class: "a", name: "b", descriptor: ir.MethodDescriptor { parameters: [], result: None } }), "interface ") == ""
-fn interface_why(call: ir.Instruction, class: String) -> String {
+// example: interface_why(jvm.InvokeInterface(jvm.MethodRef { class: "a", name: "b", descriptor: jvm.MethodDescriptor { parameters: [], result: None } }), "interface ") == ""
+fn interface_why(call: jvm.Instruction, class: String) -> String {
     let is_an_interface = class != ""
     if is_interface_call(call) != is_an_interface {
         return "it is called as an interface: " + shown(is_interface_call(call)) + ", and the type is one: " + shown(is_an_interface)
@@ -509,10 +504,10 @@ fn interface_why(call: ir.Instruction, class: String) -> String {
 }
 
 /// Whether `instruction` calls a method the way the JVM calls an interface's.
-// example: !is_interface_call(ir.Copy)
-fn is_interface_call(instruction: ir.Instruction) -> Bool {
+// example: !is_interface_call(jvm.Copy)
+fn is_interface_call(instruction: jvm.Instruction) -> Bool {
     match instruction {
-        ir.InvokeInterface(_) => true
+        jvm.InvokeInterface(_) => true
         _ => false
     }
 }

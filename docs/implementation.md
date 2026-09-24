@@ -247,9 +247,20 @@ ResolvedAst
 TypedAst
     ↓
 LoweredIr
+    ↓
+ClassFile
 ```
 
 rather than one mutable AST that means different things at different stages.
+
+The last two phases are the lowering, `compiler/ir.bx`, and the writer, `compiler/jvm.bx`.
+The lowering names a local by its name, a call by its function, and a type by its Bux type.
+So its tree has no field for a JVM class, a descriptor, a slot, or a `java/` string.
+The writer names each of them: it gives each local its slot and each call its descriptor.
+It holds every JVM spelling, such as the class of a mailbox and the `<init>` of a constructor.
+Then it assembles the instructions and writes the class file.
+So a change to how a class file spells a thing is a change to the writer alone.
+Two Bux values can have one descriptor, so the writer keeps one method of each name and descriptor.
 
 ---
 
@@ -357,6 +368,11 @@ Item 110 compares them with one `diff -rq` over the two `target/` directories.
 On 2026-09-24 it compared 923 classes, and one `diff -rq` took 0.08 s.
 The median of three `bin/bootstrap` wall times was 7.6 s before Item 110 and 6.2 s after.
 The runs of before and after took turns, under a load of 11 to 12 on 12 cores from other work.
+On 2026-09-24 `bux build compiler/main.bx` took 18.8 s before Item 126 and 18.9 s after it.
+Each is the median wall time of three runs that took turns, under a load of 54 to 68.
+The medians of processor time were 15.2 s and 17.5 s, but after built its own tree, which is larger.
+On the sources of before, the two compilers used 16.8 s and 16.9 s, the medians of three runs.
+So the writer that gives each slot and descriptor costs no time that this load can show.
 
 ### The profile of 2026-09-24
 

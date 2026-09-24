@@ -325,10 +325,26 @@ fn far_branch(draw: drawn.Draw) -> Drawing {
     let many = 5455 + drawn.number(draw, 12)
     var instructions = [ir.BooleanOf(true), ir.JumpIfFalse(0)]
     for list.length(instructions) < many + 2 {
-        instructions = list.push(instructions, ir.Increment(300))
+        instructions = list.push(instructions, ir.Increment(small_local(300)))
     }
-    instructions = list.push(list.push(list.push(instructions, ir.Label(0)), ir.LongOf(1)), ir.Return(Some(ir.Long)))
-    Drawing { source: "a branch over " + shown(many) + " increments", why: refusal_why(answer: jvm.program_written([one_body(instructions, 302)]), code: "L0700", side: side_of(amount: 3 + 6 * many, limit: 32767)) }
+    instructions = list.push(list.push(list.push(instructions, ir.Label(0)), ir.LongOf(1)), ir.Return(Some(ir.Whole)))
+    Drawing { source: "a branch over " + shown(many) + " increments", why: refusal_why(answer: jvm.program_written([one_body(instructions, small_locals(302))]), code: "L0700", side: side_of(amount: 3 + 6 * many, limit: 32767)) }
+}
+
+/// `many` locals of a small whole number, which take the slots from zero up to `many`.
+// example: list.length(small_locals(3)) == 3
+fn small_locals(many: Int) -> List<ir.Local> {
+    var locals = []
+    for list.length(locals) < many {
+        locals = list.push(locals, small_local(list.length(locals)))
+    }
+    locals
+}
+
+/// The local of a small whole number that the slot `at` holds, where each slot before it holds one.
+// example: small_local(3).name == "small3"
+fn small_local(at: Int) -> ir.Local {
+    ir.Local { name: "small" + shown(at), of: ir.Small }
 }
 
 /// A drawn text of three-byte characters, which takes 65535 bytes at 21845 of them.
@@ -336,8 +352,8 @@ fn far_branch(draw: drawn.Draw) -> Drawing {
 fn long_text(draw: drawn.Draw) -> Drawing {
     let many = 21840 + drawn.number(draw, 12)
     let text = or(strings.cut(doubled("€", 15), 0, many), "")
-    let instructions = [ir.TextOf(text), ir.Drop(ir.Reference("java/lang/String")), ir.LongOf(1), ir.Return(Some(ir.Long))]
-    Drawing { source: "a text of " + shown(many) + " characters of three bytes", why: refusal_why(answer: jvm.program_written([one_body(instructions, 0)]), code: "L0701", side: side_of(amount: 3 * many, limit: 65535)) }
+    let instructions = [ir.TextOf(text), ir.Drop(ir.Of(ir.Text)), ir.LongOf(1), ir.Return(Some(ir.Whole))]
+    Drawing { source: "a text of " + shown(many) + " characters of three bytes", why: refusal_why(answer: jvm.program_written([one_body(instructions, [])]), code: "L0701", side: side_of(amount: 3 * many, limit: 65535)) }
 }
 
 /// `text` joined to itself `times` times, so `2` to the power `times` copies of it.
@@ -410,15 +426,15 @@ fn is_box_in_other_case(name: String) -> Bool {
 }
 
 /// The record `demo/Box`, which holds one whole number under the name `field`.
-// example: boxed("held").name == "demo/Box"
+// example: jvm.class_of(boxed("held").of) == "demo/Box"
 fn boxed(field: String) -> ir.Class {
     named_box(name: "demo/Box", field: field)
 }
 
 /// The record `name`, which holds one whole number under the name `field`.
-// example: named_box(name: "demo/box", field: "held").name == "demo/box"
+// example: jvm.class_of(named_box(name: "demo/box", field: "held").of) == "demo/box"
 fn named_box(name: String, field: String) -> ir.Class {
-    ir.Class { name: name, extends: "java/lang/Object", extending: ir.Never, implements: [], fields: [ir.Field { name: field, of: ir.Long }], methods: [] }
+    ir.Class { of: program_type(name), extends: ir.Anything, extending: ir.Never, implements: [], fields: [ir.Field { name: field, of: ir.Whole }], methods: [] }
 }
 
 /// A method that passes a drawn number of `long` values to a call or a constructor, then adds.
@@ -431,9 +447,10 @@ fn long_stack(draw: drawn.Draw) -> Drawing {
     let taken = 1 + drawn.number(draw, 4)
     let added = drawn.number(drawn.next(draw), 4)
     let is_built = drawn.number(drawn.next(drawn.next(draw)), 2) == 0
+    let box = program_type("demo/Box")
     var longs = []
     for list.length(longs) < taken {
-        longs = list.push(longs, ir.Long)
+        longs = list.push(longs, ir.Whole)
     }
     var instructions = []
     var needed = 2 * taken
@@ -441,26 +458,26 @@ fn long_stack(draw: drawn.Draw) -> Drawing {
         needed = greater(one: needed, other: 4)
     }
     if is_built {
-        instructions = [ir.New("demo/Box"), ir.Copy]
+        instructions = [ir.New(box), ir.Copy]
         needed = 2 + 2 * taken
     }
     for longs_pushed(instructions) < taken {
         instructions = list.push(instructions, ir.LongOf(7))
     }
     if is_built {
-        instructions = list.push(list.push(instructions, ir.Construct(ir.MethodRef { class: "demo/Box", name: "<init>", descriptor: ir.MethodDescriptor { parameters: longs, result: None } })), ir.Drop(ir.Reference("demo/Box")))
+        instructions = list.push(list.push(instructions, ir.Construct { built: box, taken: longs }), ir.Drop(ir.Of(box)))
         instructions = list.push(instructions, ir.LongOf(1))
     } else {
-        instructions = list.push(instructions, ir.InvokeStatic(ir.MethodRef { class: "demo", name: "taking", descriptor: ir.MethodDescriptor { parameters: longs, result: Some(ir.Long) } }))
+        instructions = list.push(instructions, ir.Call(ir.Function { owner: ir.ModuleOf(ir.OfTheProgram("demo")), name: "taking", taken: longs, gives: Some(ir.Whole) }))
         var more = 0
         for more < added {
             instructions = list.push(list.push(instructions, ir.LongOf(1)), ir.Arithmetic(ir.Add))
             more += 1
         }
     }
-    instructions = list.push(instructions, ir.Return(Some(ir.Long)))
-    var why = compiled_why(compiled.classes_of([one_body(instructions, 0)]))
-    for method in reader.read(module_bytes(compiled.classes_of([one_body(instructions, 0)]))).methods {
+    instructions = list.push(instructions, ir.Return(Some(ir.Whole)))
+    var why = compiled_why(compiled.classes_of([one_body(instructions, [])]))
+    for method in reader.read(module_bytes(compiled.classes_of([one_body(instructions, [])]))).methods {
         if method.stack != needed {
             why = "the method declares a stack of " + shown(method.stack) + ", and it needs " + shown(needed)
         }
@@ -468,8 +485,18 @@ fn long_stack(draw: drawn.Draw) -> Drawing {
     Drawing { source: shown(taken) + " values taken, " + shown(added) + " added, built: " + shown(is_built), why: why }
 }
 
+/// The type whose class is `name`, such as `demo/Box`, which the module before the `/` declares.
+// example: jvm.class_of(program_type("Demo/Box")) == "Demo/Box"
+fn program_type(name: String) -> ir.Kind {
+    var at = 0
+    for at < strings.length(name) && or(strings.at(name, at), 47) != 47 {
+        at += 1
+    }
+    ir.TypeOf { module: ir.OfTheProgram(or(strings.cut(name, 0, at), "")), name: or(strings.cut(name, at + 1, strings.length(name)), "") }
+}
+
 /// How many `long` values `instructions` put on the stack as constants.
-// example: longs_pushed([ir.New("demo/Box"), ir.LongOf(7)]) == 1
+// example: longs_pushed([ir.New(program_type("demo/Box")), ir.LongOf(7)]) == 1
 fn longs_pushed(instructions: List<ir.Instruction>) -> Int {
     var count = 0
     for instruction in instructions {
@@ -490,12 +517,12 @@ fn greater(one: Int, other: Int) -> Int {
     other
 }
 
-/// The module `demo` of one method, `answer0`, that runs `instructions` over `locals` locals.
-// example: list.length(one_body([ir.LongOf(1), ir.Return(Some(ir.Long))], 0).classes) == 1
-fn one_body(instructions: List<ir.Instruction>, locals: Int) -> ir.Lowered {
+/// The module `demo` of one method, `answer0`, that runs `instructions` over `locals`.
+// example: list.length(one_body([ir.LongOf(1), ir.Return(Some(ir.Whole))], []).classes) == 1
+fn one_body(instructions: List<ir.Instruction>, locals: List<ir.Local>) -> ir.Lowered {
     let body = ir.Body { instructions: instructions, locals: locals, guards: [] }
-    let method = ir.Method { name: "answer0", descriptor: ir.MethodDescriptor { parameters: [], result: Some(ir.Long) }, reached: ir.ThroughTheClass, body: body }
-    jvm.one_class(ir.Class { name: "demo", extends: "java/lang/Object", extending: ir.Never, implements: [], fields: [], methods: [method] })
+    let method = ir.Method { name: "answer0", parameters: [], result: Some(ir.Whole), reached: ir.ThroughTheClass, body: body }
+    jvm.one_class(demo_class([method]))
 }
 
 /// Why `answer` is not refused with `code` past the limit, or not written within it, or nothing.
@@ -606,10 +633,16 @@ fn a_module(draw: drawn.Draw) -> ir.Lowered {
     let chosen = list.push(drawn.numbers(drawn.next(draw), many, 4), 0)
     var methods = []
     for which in chosen {
-        let body = ir.Body { instructions: list.push(body_of_kind(which), ir.Return(Some(ir.Long))), locals: 0, guards: [] }
-        methods = list.push(methods, ir.Method { name: "answer" + shown(list.length(methods)), descriptor: ir.MethodDescriptor { parameters: [], result: Some(ir.Long) }, reached: ir.ThroughTheClass, body: body })
+        let body = ir.Body { instructions: list.push(body_of_kind(which), ir.Return(Some(ir.Whole))), locals: [], guards: [] }
+        methods = list.push(methods, ir.Method { name: "answer" + shown(list.length(methods)), parameters: [], result: Some(ir.Whole), reached: ir.ThroughTheClass, body: body })
     }
-    ir.Lowered { classes: [ir.Class { name: "demo", extends: "java/lang/Object", extending: ir.Never, implements: [], fields: [], methods: methods }], asks: ir.no_asks() }
+    jvm.one_class(demo_class(methods))
+}
+
+/// The class of the module `demo`, which declares `methods`.
+// example: jvm.class_of(demo_class([]).of) == "demo"
+fn demo_class(methods: List<ir.Method>) -> ir.Class {
+    ir.Class { of: ir.ModuleOf(ir.OfTheProgram("demo")), extends: ir.Anything, extending: ir.Never, implements: [], fields: [], methods: methods }
 }
 
 /// The body of the kind `which`, each of which leaves one whole number on the stack.
@@ -619,7 +652,7 @@ fn body_of_kind(which: Int) -> List<ir.Instruction> {
         0 => [ir.LongOf(0)]
         1 => [ir.LongOf(-9000000000)]
         2 => [ir.LongOf(2), ir.LongOf(3), ir.Arithmetic(ir.Add)]
-        _ => [ir.BooleanOf(true), ir.JumpIfFalse(0), ir.LongOf(1), ir.Return(Some(ir.Long)), ir.Label(0), ir.LongOf(2)]
+        _ => [ir.BooleanOf(true), ir.JumpIfFalse(0), ir.LongOf(1), ir.Return(Some(ir.Whole)), ir.Label(0), ir.LongOf(2)]
     }
 }
 
