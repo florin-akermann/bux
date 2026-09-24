@@ -540,6 +540,29 @@ The half pool took 59.6 s against 65.5 s for the full pool, 9% less, so `bux tes
 A likely cause: each worker compiles in the JVM of `bux test`, and its JIT needs processors too.
 `command.pool_size` is the one place that states the size of the pool.
 
+### The price of a `String` over bytes
+
+Item 127 priced `==`, `length`, `cut_out`, and `+` over `java.lang.String` and over bytes.
+The price is the build of the compiler, `bux build src/main.bx`, before and after the change.
+The prototype declared `String` in the prelude as a record over a `List<Int>` of its UTF-8 bytes.
+`Eq`, `Ord`, `Hash`, and `Add` of `String` were Bux loops over the bytes, with no intrinsic.
+`strings.length` read the length of the list, and `strings.cut_out` copied a part of it.
+A literal built its list of bytes each time it ran, and each `extern` with text converted it.
+The prelude converted a Java string with `Charset.encode`, and then read one char at a time.
+The compiler over bytes built itself, and stage 3 was stage 2 byte for byte.
+Each number is a median of five builds that took turns, on JDK 28-ea+16 and 12 processors.
+
+| Build of the compiler | Processor time | Wall time | Load |
+|-----------------------|----------------|-----------|------|
+| `String` is `java.lang.String` | 13.5 s | 3.4 s | 6.6 to 8.0 |
+| `String` is a record over bytes | 17.1 s | 4.6 s | 6.6 to 8.0 |
+
+The processor time grew by 27%.
+With three more builds of each, at a load of 6.7 to 11.0, the medians of all eight differ by 28%.
+The class files of the compiler grew from 1.70 MB to 1.97 MB, as each literal writes its bytes.
+Each byte is a reference to a boxed `Long` in a slot of the list, where a Java string holds a byte.
+So section 12 keeps `java.lang.String`, and the patch of the prototype is not in the repository.
+
 ### Drawn properties
 
 A property is a Bux function that tries one invariant on drawn input.
@@ -709,6 +732,9 @@ The same holds for `Int` and `Bool` over the words a target has, and for any typ
 The cost is measured first: the intrinsics of `String`, and a conversion at each `extern` with text.
 `docs/design.md` section 3 already holds a prelude type to what a declared type can do.
 So the language changes nothing, and only what carries a value moves.
+Item 127 measured the cost, and section 7 records it in "The price of a `String` over bytes".
+A `String` over a `List<Int>` of bytes made the build of the compiler 27% slower in processor time.
+So `java.lang.String` stays: Item 127 kept it for a build more than 5% slower.
 
 ### A native target
 
