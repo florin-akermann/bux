@@ -537,6 +537,7 @@ The high byte comes first, and a negative value is written as its complement.
 The writer patches nothing and cuts nothing, and these are its rules:
 
 - Two modules that write one class write it once; two different classes of one name are `L0702`.
+- Two class names that differ only in ASCII case are `L0702` on every disk, as some hold one file.
 - A call takes one value off the stack for each parameter, and a `long` counts as two words.
 - A method holds 65535 bytes of code, and a branch reaches 32767 bytes; past either is `L0700`.
 - A text in the constant pool holds 65535 bytes, because two bytes write its length, or is `L0701`.
@@ -583,11 +584,10 @@ These hold and are checked by drawn properties in the runner:
 14. A written list of `n` elements gathers them into an array of `n` and builds one list.
 15. As many values stand for nothing as there are `()`s written where a reference is wanted.
 16. A call of `list.length`, `list.push`, or `list.at` asks `bux/library/list` for no method.
-    A push is a call of `bux.List.push`, and `at` calls nothing but a constructor of `Option`.
-    `length` calls nothing.
+    A push calls `bux.List.push`, `at` calls only a constructor of `Option`, and `length` nothing.
 17. A method written for a set of types calls the instance each type in that set has.
 18. A branch or a text past its limit is `L0700` or `L0701`, and one within its limit is written.
-19. Two modules that write one class name write it once, or are refused as `L0702` if they differ.
+19. One class written twice is written once; two of one name, or alike but for case, are `L0702`.
 20. The deepest stack a method declares is the stack it needs, with two words for each `long`.
 
 That a constrained type parameter settled on two types with one head is written as two methods is
