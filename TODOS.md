@@ -92,18 +92,6 @@ Item 091 measured the writer at 0.31 s, so it stays on one thread unless the pro
 [116][c] - A drawn property holds that a program lowered in a pool gives the classes of one thread.
 [116][d] - Section 7 records `bux build compiler/main.bx` and `bin/bootstrap` before and after.
 
-## 🔴 Item 118: `docs/design.md` splits into rules and rationale
-`docs/design.md` is 1367 lines, and most of it argues with Erlang, Go, and Rust.
-Every agent session loads that text before it writes a line of Bux, and the arguments cost tokens.
-The sugar rule is stated in `AGENTS.md`, `docs/principles.md`, and `docs/design.md`.
-A rule is stated once, in the document that is the specification.
-A reason is opened only when a change to the rule is proposed.
-[118][a] - `docs/design.md` keeps every normative sentence and drops every comparison and defence.
-Each section keeps its number, so every `docs/specs/*.md` reference still lands.
-[118][b] - `docs/rationale.md` holds the reasons, one section per section of `docs/design.md`.
-[118][c] - `docs/principles.md` and `AGENTS.md` point at a rule instead of restating it.
-[118][d] - `AGENTS.md` says when an agent opens `docs/rationale.md`: to propose a language change.
-
 ## 🔴 Item 119: `bux fmt` repairs every order the compiler can compute
 `docs/specs/formatting.md` says that order is checked and never rewritten.
 Import order, the place of a test, and declaration order each have one answer the compiler knows.
@@ -124,7 +112,7 @@ Every name a module declares is public, so every helper is API, and every helper
 `compiler/exhaustiveness.bx` shows the cost.
 Five helpers exist only to keep the examples of other functions on one line.
 They are `said_in`, `found_printed`, `no_reading`, `no_space`, and `status_module`.
-`docs/design.md` section 11 says the `test` block was added to prevent that shape.
+`docs/rationale.md` section 11 says the `test` block was added to prevent that shape.
 One keyword is a smaller surface than the helpers it removes, and `bux api` lists less.
 [120][a] - `docs/design.md` sections 11 and 16 state `private` and narrow the example rule.
 [120][b] - `docs/specs/modules.md` states that a `private` name is reached only in its module.
