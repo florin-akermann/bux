@@ -97,10 +97,13 @@ fn boundary_code(kind: TypeErrorKind) -> String {
     }
 }
 
-/// The code of a refusal of the one shape a process has, which `docs/specs/concurrency.md` states.
+/// The code of a refusal of a process, which `docs/specs/concurrency.md` states.
 // example: process_code(ReceivesAnotherState { state: unify.int(), receive: unify.Unit }) == "L0810"
+// example: process_code(SpawnsNoProcess("demo.count")) == "L0800"
 fn process_code(kind: TypeErrorKind) -> String {
     match kind {
+        SpawnsNoProcess(_) => "L0800"
+        ProcessNotSpawned(_) => "L0801"
         StartsWithoutStart(_) => "L0802"
         ReceivesNothing(_) => "L0803"
         DeclaresMore(_) => "L0804"
@@ -185,10 +188,13 @@ fn what_java_is_not(kind: TypeErrorKind) -> String {
     }
 }
 
-/// The message of a refusal of the one shape a process has.
+/// The message of a refusal of a process: its shape, or how it is reached.
 // example: what_a_process_is_not(DeclaresMore("Counter")) == "`Counter` declares a function after `receive`"
+// example: what_a_process_is_not(ProcessNotSpawned("demo.Counter")) == "`demo.Counter` is a process, so `spawn` starts it"
 fn what_a_process_is_not(kind: TypeErrorKind) -> String {
     match kind {
+        SpawnsNoProcess(written) => "`spawn` starts a process, and `" + written + "` is not one"
+        ProcessNotSpawned(written) => "`" + written + "` is a process, so `spawn` starts it"
         StartsWithoutStart(called) => "the first function of `" + called + "` is not `start`"
         ReceivesNothing(called) => "the second function of `" + called + "` is not `receive`"
         DeclaresMore(called) => "`" + called + "` declares a function after `receive`"
@@ -354,10 +360,12 @@ fn the_rule_of_java(kind: TypeErrorKind) -> String {
     }
 }
 
-/// The rule of a refusal of the one shape a process has.
+/// The rule of a refusal of a process: its shape, or how it is reached.
 // example: the_shape_of_a_process(GenericProcess("start")) == "a process has one type of state and one type of message; write them out"
 fn the_shape_of_a_process(kind: TypeErrorKind) -> String {
     match kind {
+        SpawnsNoProcess(_) => "declare a `process`, or import the module that declares one, and name it after `spawn`"
+        ProcessNotSpawned(_) => "write `spawn` before the call; a process is never called or held as a value"
         StartsWithoutStart(_) => "a process declares `start`, then `receive`, and nothing else"
         ReceivesNothing(_) => "a process declares `start`, then `receive`, and nothing else"
         DeclaresMore(_) => "a process declares `start`, then `receive`, and nothing else; move the function out"
@@ -474,6 +482,8 @@ type TypeErrorKind =
     | Unaccounted(String)
     | LeftOutMember(String)
     | UnitInOption
+    | SpawnsNoProcess(String)
+    | ProcessNotSpawned(String)
     | StartsWithoutStart(String)
     | ReceivesNothing(String)
     | DeclaresMore(String)

@@ -49,6 +49,8 @@ way.
 
 What a loaded module offers is every function it declares, reached through the module's name.
 `demo.helper(2)` is that call, written exactly as `io.print("hi")` is written.
+A module offers each process it declares in the same way, and `spawn demo.Ticker(5)` starts one.
+`docs/specs/concurrency.md` states how a process is reached.
 
 A generic function is offered like any other, and a use of one through an import is a call of the
 method the module declaring it writes for the set of types that use settled.

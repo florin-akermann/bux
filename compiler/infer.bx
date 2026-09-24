@@ -425,7 +425,19 @@ fn expr_written(inference: Inference, written: ast.Expr) -> Result<Typed, refusa
         ast.Record { base, fields } => record_walked(inference, base, fields, written.span)
         ast.If(chain) => if_walked(inference, chain)
         ast.Match(matched) => match_walked(inference, matched)
-        ast.Spawn(started) => walked_expr(inference, started)
+        ast.Spawn(started) => spawn_walked(inference, started)
+    }
+}
+
+/// `spawn`, which calls a process: one this module declares, or one reached through a module.
+///
+/// The resolver has held what `spawn` is written before to a call, so the call is typed as one,
+/// with the name after a dot looked up among the processes the module offers.
+// example: typed_code("import demo\n\nfn count() -> Int {\n    _ = spawn demo.Counter()\n    1\n}\n") == "L0800 52..59"
+fn spawn_walked(inference: Inference, started: ast.Expr) -> Result<Typed, refusal.TypeError> {
+    match started.kind {
+        ast.Call { callee, arguments } => call_typed(callee_type(inference, callee, AsASpawn)?, callee, arguments, started.span)
+        _ => walked_expr(inference, started)
     }
 }
 
@@ -468,7 +480,12 @@ fn binary_walked(inference: Inference, operator: ast.BinaryOperator, operands: O
 // example: typed_code("fn count(held: Int) -> Int {\n    count(1, 2)\n}\n") == "L0401 33..38"
 fn call_walked(inference: Inference, callee: ast.Expr, arguments: ast.Arguments, at: lexer.Span) -> Result<Typed, refusal.TypeError> {
     _ = called_plainly(inference, callee, arguments, at)?
-    let signature = callee_type(inference, callee)?
+    call_typed(callee_type(inference, callee, AsACall)?, callee, arguments, at)
+}
+
+/// A call whose callee has the type `signature` found, met against the type of each value it passes.
+// example: typed_code("fn count(held: Int) -> Int {\n    count(\"one\")\n}\n") == "L0400 39..44"
+fn call_typed(signature: Typed, callee: ast.Expr, arguments: ast.Arguments, at: lexer.Span) -> Result<Typed, refusal.TypeError> {
     let passed = values_of(arguments)
     var walking = signature.inference
     var given = []
@@ -490,11 +507,12 @@ fn call_walked(inference: Inference, callee: ast.Expr, arguments: ast.Arguments,
     Ok(Typed { inference: named, found: unify.result_of(shape) })
 }
 
-/// The type of what a call calls, which is the one place a function of a module is written.
+/// The type of what a call calls, which is the one place a function or a process of a module is
+/// written.
 // example: typed_code("import demo\n\nfn count() -> Int {\n    demo.total()\n}\n") == "L0414 42..47"
-fn callee_type(inference: Inference, callee: ast.Expr) -> Result<Typed, refusal.TypeError> {
+fn callee_type(inference: Inference, callee: ast.Expr, how: ReachedAs) -> Result<Typed, refusal.TypeError> {
     match callee.kind {
-        ast.Field { receiver, name } => kept_at(field_walked(inference, receiver, name, AsACall), callee.span)
+        ast.Field { receiver, name } => kept_at(field_walked(inference, receiver, name, how), callee.span)
         _ => walked_expr(inference, callee)
     }
 }
@@ -1158,12 +1176,37 @@ fn unreachable_field(through: unify.Type, field: ast.Name) -> refusal.TypeError 
     refusal.TypeError { kind: refusal.UnknownField { of: through, field: field.text }, span: field.span }
 }
 
-/// A name reached inside a loaded module, which is a function where it is called.
+/// A name reached inside a loaded module, which is a function where it is called, and a process
+/// where `spawn` calls it.
 // example: typed_code("import demo\n\nfn count() -> Int {\n    demo.total\n}\n") == "L0414 42..47"
 fn inside(inference: Inference, module: String, lookup: Lookup) -> Result<Inference, refusal.TypeError> {
-    match reached_inside(inference, module, lookup.field) {
-        Some(reached) => found_inside(reached, module, lookup)
-        None => Err(refusal.TypeError { kind: refusal.NotInModule { module: module, name: lookup.field.text }, span: lookup.field.span })
+    let offering = or(surface.surface_of(inference.imported, module), surface.no_surface())
+    let spawnable = map.get(offering.processes, lookup.field.text)
+    match lookup.how {
+        AsASpawn => process_inside(inference, spawnable, Reaching { module: module, field: lookup.field }, lookup)
+        _ => match offered_inside(inference, offering, module, lookup.field) {
+            Some(reached) => found_inside(reached, module, lookup)
+            None => Err(refusal.TypeError { kind: unoffered(spawnable, module, lookup.field), span: lookup.field.span })
+        }
+    }
+}
+
+/// Why a module reached without `spawn` offers nothing as `field`: it is a process, or nothing.
+// example: refusal.code_of(unoffered(None, "demo", no_name())) == "L0414"
+// example: refusal.code_of(unoffered(Some(surface.Plain(unify.monomorphic(unify.int()))), "demo", no_name())) == "L0801"
+fn unoffered(spawnable: Option<surface.Offered>, module: String, field: ast.Name) -> refusal.TypeErrorKind {
+    match spawnable {
+        Some(_) => refusal.ProcessNotSpawned(module + "." + field.text)
+        None => refusal.NotInModule { module: module, name: field.text }
+    }
+}
+
+/// The process a module offers where `spawn` names one through it, met against the call's use.
+// example: refusal.code_given(process_inside(nothing_inferred(), None, Reaching { module: "demo", field: no_name() }, Lookup { through: unify.Unit, field: no_name(), found: unify.Unit, how: AsASpawn })) == "L0800 0..0"
+fn process_inside(inference: Inference, spawnable: Option<surface.Offered>, reaching: Reaching, lookup: Lookup) -> Result<Inference, refusal.TypeError> {
+    match spawnable {
+        Some(offered) => found_inside(offered_use(inference, offered, reaching), reaching.module, lookup)
+        None => Err(refusal.TypeError { kind: refusal.SpawnsNoProcess(reaching.module + "." + reaching.field.text), span: lookup.field.span })
     }
 }
 
@@ -1181,16 +1224,8 @@ fn found_inside(reached: Typed, module: String, lookup: Lookup) -> Result<Infere
 fn is_a_value(how: ReachedAs) -> Bool {
     match how {
         AsACall => false
+        AsASpawn => false
         AsAValue => true
-    }
-}
-
-/// The type a loaded module gives `field` at this one use, where it offers one at all.
-// example: !is_reached(reached_inside(nothing_inferred(), "demo", no_name()))
-fn reached_inside(inference: Inference, module: String, field: ast.Name) -> Option<Typed> {
-    match surface.surface_of(inference.imported, module) {
-        Some(reached) => offered_inside(inference, reached, module, field)
-        None => None
     }
 }
 
@@ -2205,6 +2240,7 @@ type Asked =
 /// Where a name reached through a `.` is written, which says what may be found there.
 type ReachedAs =
     | AsACall
+    | AsASpawn
     | AsAValue
 
 /// Which case a `?` hands back.

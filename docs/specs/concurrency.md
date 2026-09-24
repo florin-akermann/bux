@@ -76,14 +76,19 @@ The rule forces the work out of the branch, and the name of the work into the so
 let counting = spawn Counter(10)
 ```
 
-`spawn` is followed by a call of a process the module declares.
+`spawn` is followed by a call of a process.
 The arguments are the values `start` takes, and each is passed by value.
 `start` runs on the new process, so `spawn` never waits for it.
 
 The arguments follow the rules of a call to `start`, so they are named where two share a type.
 `spawn` of anything else is refused as `L0800`, and so is a process name with no call after it.
 A process named without `spawn`, as a call or as a value, is refused as `L0801`.
-A process of another module cannot be spawned, and `L0800` says so.
+
+A module offers each process it declares, and a module that imports it reaches one by its name.
+`spawn ticks.Ticker(5)` starts `Ticker` of the module `ticks`, as `ticks.count(5)` calls a function.
+The arguments follow the rules of a call through a module, so they are passed in order.
+`L0800` refuses `spawn ticks.count(5)`, and `L0801` refuses `ticks.Ticker(5)` without `spawn`.
+A process is reached through a module name only, because no value holds a process.
 
 ## The handle
 
@@ -187,3 +192,4 @@ Each writes the same bytes, as each module writes the same class of a list.
 4. The shape check accepts every well-formed drawn process, and refuses each drawn break.
 
 `tests/spec/concurrency/` holds a counter, a worker pool, a full mailbox, and each refused shape.
+`tests/spec/concurrency/elsewhere/` spawns a process that another module declares.

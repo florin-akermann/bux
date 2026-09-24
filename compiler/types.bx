@@ -37,7 +37,7 @@ fn prelude_read(source: String) -> Prelude {
 fn surface_of(checked: infer.Inference) -> surface.Surface {
     let environment = checked.environment
     let program = checked.resolved.program
-    surface.Surface { functions: declared.offered_functions(environment, program), types: declared.offered_types(environment, program), instances: declared.given_instances(environment, checked.resolved) }
+    surface.Surface { functions: declared.offered_functions(environment, program), processes: declared.offered_processes(environment, program), types: declared.offered_types(environment, program), instances: declared.given_instances(environment, checked.resolved) }
 }
 
 /// The API page of a checked module: every item but an import, with one blank line between two.

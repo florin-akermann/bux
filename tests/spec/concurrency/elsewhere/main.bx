@@ -1,0 +1,16 @@
+// expect-run
+// > 16
+// A process of another module is spawned through the module's name, as its functions are called.
+// The messages are built through the same name, because the module declares their type too.
+import io
+import tally
+
+fn main(arguments: List<String>) -> Int {
+    let counting = spawn tally.Tally(10)
+    for amount in [1, 2, 3] {
+        _ = send(counting, tally.Add(amount), NoLimit)
+    }
+    _ = send(counting, tally.Stop, NoLimit)
+    io.println(shown(ended(counting)))
+    0
+}

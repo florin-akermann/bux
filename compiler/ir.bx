@@ -2127,15 +2127,35 @@ fn expr_built(builder: Builder, written: ast.Expr) -> Left {
 // example: held_text(spawn_built(little_builder(""), no_expr()).held) == "Lbux/Process;"
 fn spawn_built(builder: Builder, started: ast.Expr) -> Left {
     let requested = match started.kind {
-        ast.Call { callee, arguments } => callee_of(callee, infer.values_of(arguments))
-        _ => callee_of(started, [])
+        ast.Call { callee, arguments } => Spawning { callee: callee, passed: infer.values_of(arguments) }
+        _ => Spawning { callee: started, passed: [] }
     }
-    let declaration = spawned_declaration(builder.lowering, value_definition(builder, requested.name).origin)
-    let signature = signature_of_process(builder.lowering, declaration, 0)
-    let handing = each_handed(builder, requested.passed, signature.parameters)
-    let taken = descriptor_of(Signature { parameters: signature.parameters, result: None }).parameters
-    let spawned = MethodRef { class: process_class_name(module: builder.lowering.shapes.class, named: declaration.name.text), name: "spawned", descriptor: MethodDescriptor { parameters: taken, result: Some(handle_descriptor()) } }
+    let reached = spawned_process(builder, requested.callee)
+    let handing = each_handed(builder, requested.passed, reached.parameters)
+    let taken = descriptor_of(Signature { parameters: reached.parameters, result: None }).parameters
+    let spawned = MethodRef { class: reached.class, name: "spawned", descriptor: MethodDescriptor { parameters: taken, result: Some(handle_descriptor()) } }
     Left { builder: emit(handing, InvokeStatic(spawned)), held: Some(handle_descriptor()) }
+}
+
+/// The class of the process `callee` names, and what its `start` takes.
+///
+/// A process of another module is named by that module's class, and what `start` takes is read
+/// off the type the call of it has here, which is the type that module offers it with.
+// example: spawned_process(little_builder(""), no_expr()).class == "main/process$"
+fn spawned_process(builder: Builder, callee: ast.Expr) -> SpawnedProcess {
+    let lowering = builder.lowering
+    match reached_inside(builder, callee) {
+        Some(through) => SpawnedProcess { class: process_class_name(module: module_named(lowering.shapes.classes, through.module.text), named: through.name.text), parameters: signature_of(lowering, callee.span, whole()).parameters }
+        None => process_of_this_module(builder, callee_of(callee, []).name)
+    }
+}
+
+/// The class of the process this module declares as `name`, and what its `start` takes.
+// example: process_of_this_module(little_builder(""), infer.no_name()).class == "main/process$"
+fn process_of_this_module(builder: Builder, name: ast.Name) -> SpawnedProcess {
+    let declaration = spawned_declaration(builder.lowering, value_definition(builder, name).origin)
+    let parameters = signature_of_process(builder.lowering, declaration, 0).parameters
+    SpawnedProcess { class: process_class_name(module: builder.lowering.shapes.class, named: declaration.name.text), parameters: parameters }
 }
 
 /// The process declared at `origin`, which the resolver holds `spawn` to.
@@ -5526,6 +5546,18 @@ type Asides = {
 type Callee = {
     name: ast.Name
     passed: List<ast.Expr>
+}
+
+/// What `spawn` is written before: the name of a process, and the values `start` takes.
+type Spawning = {
+    callee: ast.Expr
+    passed: List<ast.Expr>
+}
+
+/// The class a process runs as, and what carries each value its `start` takes.
+type SpawnedProcess = {
+    class: String
+    parameters: List<Option<Descriptor>>
 }
 
 /// A name reached through a module: the module, the name, and where the use is written.
