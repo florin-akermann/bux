@@ -1179,6 +1179,9 @@ status 1
 !
 ! help: a name is declared in this file, imported, or supplied by the prelude
 
+$ check tests/spec/name_resolution/case_only.bx
+status 0
+
 $ check tests/spec/name_resolution/constraint_of_a_type.bx
 status 1
 ! error[L0310]: `Square` is not a trait
@@ -3158,6 +3161,9 @@ status 1
 $ check --json tests/spec/name_resolution/binding_sees_itself.bx
 status 1
 > {"file":"tests/spec/name_resolution/binding_sees_itself.bx","code":"L0300","message":"there is nothing named `count`","span":{"start":152,"len":5},"help":"a name is declared in this file, imported, or supplied by the prelude"}
+
+$ check --json tests/spec/name_resolution/case_only.bx
+status 0
 
 $ check --json tests/spec/name_resolution/constraint_of_a_type.bx
 status 1
@@ -5684,6 +5690,18 @@ status 1
 !     |                 ^^^^^
 !
 ! help: a name is declared in this file, imported, or supplied by the prelude
+
+$ api tests/spec/name_resolution/case_only.bx
+status 0
+> fn main(arguments: List<String>) -> Int
+>
+> type Setup = {
+>     steps: Int
+> }
+>
+> type SetUp = {
+>     steps: Int
+> }
 
 $ api tests/spec/name_resolution/constraint_of_a_type.bx
 status 1
@@ -9495,6 +9513,9 @@ status 1
 !
 ! help: a name is declared in this file, imported, or supplied by the prelude
 
+$ test tests/spec/name_resolution/case_only.bx
+status 0
+
 $ test tests/spec/name_resolution/constraint_of_a_type.bx
 status 1
 ! error[L0310]: `Square` is not a trait
@@ -12979,6 +13000,9 @@ status 0
 $ fmt tests/spec/name_resolution/binding_sees_itself.bx
 status 0
 
+$ fmt tests/spec/name_resolution/case_only.bx
+status 0
+
 $ fmt tests/spec/name_resolution/constraint_of_a_type.bx
 status 0
 
@@ -15250,6 +15274,16 @@ status 1
 !     |                 ^^^^^
 !
 ! help: a name is declared in this file, imported, or supplied by the prelude
+
+$ build tests/spec/name_resolution/case_only.bx
+status 1
+! error[L0702]: two names in `case_only` differ only in case: `case_only/SetUp` and `case_only/Setup`
+!   --> tests/spec/name_resolution/case_only.bx:1:1
+!
+!   1 | // Two types whose names differ only in case are two names, and a build refuses them as `L0702`.
+!     | ^
+!
+! help: rename one of the two, so that their names differ in more than case
 
 $ build tests/spec/name_resolution/constraint_of_a_type.bx
 status 1

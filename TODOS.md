@@ -6,17 +6,6 @@
 
 ## Open
 
-## 🔴 Item 084: An `extern` names only a class that the build can account for
-**Depends on:** Item 083 — an accepted class is in a stated archive or on the allow list.
-Today an `extern` can name `java.lang.Class.forName` and load a class whose name comes at run time.
-The same form reaches `javax.naming.InitialContext.doLookup`, which is the Log4Shell call.
-An accepted class is in a stated archive, or in a `java.base` package on a fixed allow list.
-The allow list leaves out reflection, class loaders, method handles, and deserialization.
-[084][a] - `docs/design.md` section 17 states the rule in the target-neutral words of Item 086.
-[084][b] - `docs/specs/interop.md` states the JVM form, the allow list, and the new code.
-[084][c] - The Bux phases read the entry names of each stated archive and refuse other classes.
-[084][d] - A spec example shows an `extern` on `java.lang.Class.forName` that is refused.
-
 ## 🔴 Item 100: `spawn` starts a process that another module declares
 Item 091 found it: `L0800` refuses a `spawn` of a process outside the module that declares it.
 A library process, such as a ticker or a bus, is then out of reach, and section 15 wants both.
@@ -46,15 +35,6 @@ The example-line jobs of `compiler/` and `tests/` write the same classes again, 
 [103][a] - The runner prints each part line when that part ends, and the line order is stable.
 [103][b] - The example-line runs of one module share one set of written classes.
 [103][c] - `tests/launched.bx` holds its 2 s window under a full pool, or states a wider one.
-
-## 🔴 Item 104: `L0702` sees a clash of two class names that differ only in case
-Item 099 found it: on a file system that ignores case, `List.class` and `list.class` are one file.
-A build then writes one class over the other, and `L0702` compares the two names exactly.
-The library no longer has such a pair, but a program's own types and modules can still meet.
-The `L0702` message also names `bux` for a library class, because it reads up to the first `/`.
-[104][a] - `docs/specs/codegen.md` states that two class names that differ only in case clash.
-[104][b] - `L0702` refuses such a pair, and its message names the module that owns the class.
-[104][c] - A `tests/spec/` example shows a program whose type and module differ only in case.
 
 ## 🔴 Item 105: A golden file holds every command on every example, and `fmt` changes no later answer
 Item 092 found it: `tests/commanded.bx` runs every command line of a golden file in one stage.

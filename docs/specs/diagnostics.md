@@ -199,7 +199,7 @@ class that the writer cannot write:
 
 - `L0700` — a function is too large to compile as one function.
 - `L0701` — a text or a name takes more than 65535 bytes.
-- `L0702` — two parts of one program, a module or the library, have one name.
+- `L0702` — two parts of one program have one name, or two class names differ only in case.
 - `L0703` — the compiler did not write a function, which is a defect of the compiler.
 
 Name resolution raises the first two of these, in `compiler/resolver.bx`.

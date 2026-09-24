@@ -1,0 +1,18 @@
+// Two types whose names differ only in case are two names, and a build refuses them as `L0702`.
+// The class of the type `Setup` of this module is `case_only/Setup`.
+// A disk that ignores case holds it and the class of `SetUp` as one file.
+// A module is spelled in `snake_case` and its class holds no `/`, so it never meets a type.
+// `bux check` writes no class, so it accepts this module, and `bux build` refuses it.
+fn main(arguments: List<String>) -> Int {
+    let first = Setup { steps: 1 }
+    let second = SetUp { steps: 2 }
+    first.steps + second.steps - 3
+}
+
+type Setup = {
+    steps: Int
+}
+
+type SetUp = {
+    steps: Int
+}
