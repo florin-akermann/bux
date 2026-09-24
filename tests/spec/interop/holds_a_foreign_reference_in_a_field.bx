@@ -1,0 +1,13 @@
+// expect-error: L0435
+// A field holds no foreign reference, because a record outlives the function that builds it.
+// The field holds the path, and the function that needs the file reaches it from the path.
+fn main(arguments: List<String>) -> Int {
+    0
+}
+
+/// A file a program keeps, by the reference to it.
+type Kept = {
+    file: File
+}
+
+extern type File = "java.io.File"

@@ -170,21 +170,54 @@ What a list holds is held to this same table, so `List<String>` and `List<Int>` 
 The JVM writes no element type into a descriptor, so which Java type the elements are is the
 author's claim, exactly as the member itself is.
 
-An extern type is a type like any other from where a program stands.
-It is held, handed on, given back, and matched by nothing, because it declares no variants and no
-fields.
+An extern type is a type like any other from where a program stands, except where it may go.
+It is matched by nothing, because it declares no variants and no fields.
 It has no identity a program can reach, as every type a program declares has none.
-It is compared, hashed, or shown only where an `instance` written over `extern` declarations says
-how, and a `derive` naming one is `L0427`: a derive reads what a type holds, and what this one
-holds is the JVM's.
+It is compared, hashed, or shown only where an `instance` over `extern` declarations says how.
+A `derive` naming one is `L0427`: a derive reads what a type holds, and this one holds the JVM's.
+
+## Where a foreign reference goes
 
 What a program cannot reach, the Java object still has: identity, and mutation.
-A value of an extern type is a foreign reference, and section 14 of `docs/design.md` refuses one
-that escapes the block it was reached in.
-That check is stated there and not restated here, because it is one check over a resource and a
-foreign reference alike rather than a rule this boundary writes for itself.
-`L0811` holds one clause of it: a process holds no foreign reference, as `concurrency.md` states.
-The rest of the check is not written yet, so a foreign reference can still be returned or stored.
+So a value of an extern type is a foreign reference, and it stays in the function that reaches it.
+Section 14 of `docs/design.md` states that escape check, and this section states what is built.
+
+A foreign reference goes to these places, and to no other:
+
+- An `extern` declaration reaches it, and a call of that declaration gives it back.
+- A `let`, a `var`, a parameter, a `match` binding, or a `for` binding holds it.
+- A call takes it as an argument.
+
+A type is or holds an extern type where it is one, or where a type argument is or holds one.
+It holds one too where a field or a variant position its declaration writes is or holds one.
+The check follows each declared type once, exactly as `L0811` follows it.
+
+`L0435` refuses a foreign reference in two kinds of place, and its message names the place.
+
+The first kind is a declaration:
+
+- the result of a function that the program declares, as inference settles it;
+- a field of a record, or a field of a variant;
+- a position of a variant.
+
+The span is the written type, or the name of a function whose result is not written.
+The result of an `extern` declaration is not refused, because that is how a program reaches one.
+So `Option<T>` and `Result<T, String>` over an extern type stay results of an `extern`.
+The two mappings below state them.
+
+The second kind is a call of a function or a constructor whose settled result is or holds one.
+That closes the route through a type parameter.
+For `fn same<T>(value: T) -> T`, `same(file)` is refused.
+`Some(file)` is refused, and so is `Box { value: file }` for `type Box<T> = { value: T }`.
+A call of an `extern` declaration is not refused, and the span of a refused call is the whole call.
+The check knows a call of an `extern` by the result that its callee declares.
+Only an `extern` may declare a result that holds one, because the first kind refuses the rest.
+
+A name, `?`, `match`, `if`, and a list literal are not calls, and none of them is refused.
+Each of them moves the reference inside the function, and nothing more.
+Every route out of the function is a result, a field, a call, or a process.
+The first three are `L0435`.
+The fourth is `L0811`: a process holds no foreign reference, as `concurrency.md` states.
 
 ## The two widths
 
@@ -367,6 +400,7 @@ says the wrong one is the author's claim failing the way naming a member the JVM
 | builds an interface   | `L0430` | a `new` builds a class, and `Path` is an interface          |
 | narrows, no `Option`  | `L0431` | an `int` parameter narrows an `Int`, and this gives back `Int` |
 | no account of a class | `L0434` | `java.lang.Class` is a class this build cannot account for |
+| a reference escapes   | `L0435` | `opened` gives back `File`, and the `extern` type `File` is a foreign reference |
 
 `L0425` helps with ``a boundary carries `Bool`, `Int`, `String`, a `List`, and a type an `extern`
 names``.
@@ -416,6 +450,14 @@ A member that the list leaves out is `L0434` with another message and help.
 The message is ``the member `java.lang.System.load` is one the list of `java.base` leaves out``.
 The help is ``the list in `docs/specs/interop.md` leaves this member out; reach another member``.
 
+The help of `L0435` has two clauses with a `;` between them.
+The first is ``a foreign reference stays in the function that reaches it``.
+The second is ``bind it, and pass it as an argument``.
+Its message begins with the place, then names the type there and the extern type it holds.
+The place is `` `opened` gives back``, `` `Kept.file` holds``, or `` `There.0` holds``.
+For a call it is ``this call of `same` gives back``, and for a record literal ``this `Box` is``.
+A field of a record is named with its type, and a field or a position of a variant with its variant.
+
 A class on the list that the JDK does not have is not refused, because no JDK is read.
 An `extern` naming a member the JVM does not have is a class file the JVM refuses to link, which
 is the author's claim failing rather than a program's.
@@ -437,3 +479,5 @@ These hold and are checked by drawn properties in the runner:
     range, and reaches its member for none of them.
 11. Every class that the tree names in an `extern` is accepted.
 12. A drawn class on no list is `L0434`, and an archive accounts for it outside the JDK packages.
+13. An extern type drawn into a result, a field, a variant, or a call is `L0435` naming that place.
+14. A drawn program that only reaches, binds, and passes a foreign reference compiles.

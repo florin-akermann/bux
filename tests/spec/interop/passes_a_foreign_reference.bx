@@ -1,0 +1,38 @@
+// expect-run
+// > notes.txt
+// > letters
+// A foreign reference is reached by an `extern`, bound to a local, and passed as an argument.
+// `?` and `match` read one where it is reached, because neither takes it out of the function.
+import io
+
+fn main(arguments: List<String>) -> Int {
+    io.println(ok_or(described("letters/notes.txt"), "no such file"))
+    io.println(folder_of("letters/notes.txt"))
+    0
+}
+
+// example: ok_or(described("letters/notes.txt"), "") == "notes.txt"
+fn described(path: String) -> Result<String, String> {
+    let file = canonical(named(path))?
+    Ok(name_of(file))
+}
+
+// example: folder_of("letters/notes.txt") == "letters"
+// example: folder_of("notes.txt") == "no folder"
+fn folder_of(path: String) -> String {
+    let file = named(path)
+    match parent_of(file) {
+        Some(parent) => name_of(parent)
+        None => "no folder"
+    }
+}
+
+extern new named(path: String) -> File
+
+extern method canonical(file: File) -> Result<File, String> = "getCanonicalFile"
+
+extern method name_of(file: File) -> String = "getName"
+
+extern method parent_of(file: File) -> Option<File> = "getParentFile"
+
+extern type File = "java.io.File"

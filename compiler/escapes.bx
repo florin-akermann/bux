@@ -1,0 +1,256 @@
+// The escape check of a foreign reference: a value of an `extern` type stays in the function that
+// reaches it.
+//
+// `docs/specs/interop.md` states the rule, and `tests/confined.bx` holds it on drawn programs.
+// A foreign reference is reached by an `extern`, bound to a local, and passed to a call, and it
+// goes nowhere else. So a declared result, a field, and a variant position are refused where they
+// are or hold an `extern` type, and so is a call that gives one back through a type parameter.
+// `compiler/processes.bx` refuses a process that holds one, with `L0811`, through the same walk.
+import ast
+import boundary
+import declared
+import infer
+import lexer
+import list
+import map
+import refusal
+import set
+import surface
+import unify
+
+/// The code and span of the first escape `source` declares, against the small prelude, or `""`.
+// example: escapes_code("fn opened(path: String) -> File {\n    named(path)\n}\n\nextern new named(path: String) -> File\n\nextern type File = \"java.io.File\"\n") == "L0435 27..31"
+// example: escapes_code("fn size(path: String) -> Int {\n    _ = named(path)\n    1\n}\n\nextern new named(path: String) -> File\n\nextern type File = \"java.io.File\"\n") == ""
+fn escapes_code(source: String) -> String {
+    let resolved = declared.resolved_of(source)
+    match declared.environment_of(declared.little_environment(), resolved, [], [], unify.empty_table()) {
+        Ok(declaring) => refusal.code_given(inferred_and_declared(infer.module_inferred(resolved, surface.nothing_imported(), declaring)))
+        Err(refused) => infer.code_of_error(refused)
+    }
+}
+
+/// `inferred`, held to the escape check of its declarations where inference accepted it.
+// example: refusal.code_given(inferred_and_declared(Ok(infer.nothing_inferred()))) == ""
+fn inferred_and_declared(inferred: Result<infer.Inference, refusal.TypeError>) -> Result<(), refusal.TypeError> {
+    nothing_declared_escapes(inferred?)
+}
+
+/// Refuses the first declaration of the module `inference` settled that lets a foreign reference
+/// escape: a field or a variant position, then the result of a function.
+///
+/// A result is read as inference settled it, so a result the function does not write is held too.
+// example: escapes_code("type Box = {\n    value: Option<File>\n}\n\nextern type File = \"java.io.File\"\n") == "L0435 24..36"
+// example: escapes_code("type Pair =\n    | Pair(Int, File)\n\nextern type File = \"java.io.File\"\n") == "L0435 28..32"
+// example: escapes_code("fn opened(path: String) {\n    named(path)\n}\n\nextern new named(path: String) -> File\n\nextern type File = \"java.io.File\"\n") == "L0435 3..9"
+fn nothing_declared_escapes(inference: infer.Inference) -> Result<(), refusal.TypeError> {
+    let holding = holding_of(inference)
+    for item in inference.resolved.program.items {
+        _ = fields_held(holding, inference, item)?
+    }
+    for function in infer.functions_of(inference.resolved.program) {
+        _ = result_held(holding, inference, function)?
+    }
+    Ok(())
+}
+
+/// Refuses the first field or variant position of `item` that is or holds a foreign reference.
+// example: refusal.code_given(fields_held(holding_of(infer.nothing_inferred()), infer.nothing_inferred(), declared.first_item("type Box = Box\n"))) == ""
+fn fields_held(holding: Holding, inference: infer.Inference, item: ast.Item) -> Result<(), refusal.TypeError> {
+    for declaration in declared.type_of_item(item) {
+        for held in declared.holds_of(declaration) {
+            let written = ok_or(declared.type_written(inference.environment, inference.resolved, held.written), unify.Unit)
+            _ = refused_where_found(holding, written, refusal.HeldAt(field_named(declaration, held.held_as)), held.written.span)?
+        }
+    }
+    Ok(())
+}
+
+/// The name a field or a position is known by: `Box.value` for a record, `Pair.0` for a variant.
+// example: field_named(declared.first_type("type Box = {\n    value: Int\n}\n"), "value") == "Box.value"
+// example: field_named(declared.first_type("type Pair =\n    | Pair(Int)\n"), "Pair.0") == "Pair.0"
+fn field_named(declaration: ast.TypeDeclaration, held_as: String) -> String {
+    match declaration.definition {
+        ast.RecordType(_) => declaration.name.text + "." + held_as
+        _ => held_as
+    }
+}
+
+/// Refuses a function whose result, as inference settled it, is or holds a foreign reference.
+///
+/// The span is the written result, or the name of the function where it writes none.
+// example: escapes_code("fn count() -> Option<Int> {\n    None\n}\n") == ""
+fn result_held(holding: Holding, inference: infer.Inference, function: ast.FunctionDeclaration) -> Result<(), refusal.TypeError> {
+    let whole = unify.solved(inference.table, or(map.get(inference.named, function.name.span.start), unify.Unit))
+    let span = match function.result {
+        Some(written) => written.span
+        None => function.name.span
+    }
+    refused_where_found(holding, unify.result_of(whole), refusal.GivenBackBy(function.name.text), span)
+}
+
+/// Refuses a call or a record literal whose type `found` holds a foreign reference that only a type
+/// parameter could have brought in.
+///
+/// A call whose callee declares a result holding one is exempt: that is an `extern`, since the
+/// result of any other function holding one is refused where it is declared. A record literal is
+/// never an `extern`, and a record type holding one is refused where it is declared.
+// example: refusal.code_given(built_refused(holding_of(infer.nothing_inferred()), infer.nothing_inferred(), ast.Expr { kind: ast.Unit, span: lexer.Span { start: 0, length: 2 } }, unify.int())) == ""
+fn built_refused(holding: Holding, inference: infer.Inference, written: ast.Expr, found: unify.Type) -> Result<(), refusal.TypeError> {
+    match written.kind {
+        ast.Call { callee, arguments } => called_refused(holding, inference, callee, Found { found: found, at: written.span })
+        ast.Record { base, fields } => refused_where_found(holding, found, refusal.BuiltAs(ast.path_text(base)), written.span)
+        _ => Ok(())
+    }
+}
+
+/// Refuses a call of `callee` that gives back `built.found`, unless its callee declares that result.
+// example: refusal.code_given(called_refused(holding_of(infer.nothing_inferred()), infer.nothing_inferred(), ast.Expr { kind: ast.Unit, span: lexer.Span { start: 0, length: 2 } }, Found { found: unify.int(), at: lexer.Span { start: 0, length: 2 } })) == ""
+fn called_refused(holding: Holding, inference: infer.Inference, callee: ast.Expr, built: Found) -> Result<(), refusal.TypeError> {
+    if foreign_found(holding, declared_result(inference, callee)) != "" {
+        return Ok(())
+    }
+    refused_where_found(holding, built.found, refusal.GivenBackByACall(callee_named(callee)), built.at)
+}
+
+/// The result the callee of a call declares: a function or a constructor of this module or of the
+/// prelude, or a function of another module, and `()` for anything else.
+// example: declared_result(infer.nothing_inferred(), ast.Expr { kind: ast.Unit, span: lexer.Span { start: 0, length: 2 } }) == unify.Unit
+fn declared_result(inference: infer.Inference, callee: ast.Expr) -> unify.Type {
+    let scheme = match callee.kind {
+        ast.NameExpr(named) => map.get(inference.environment.values, infer.key_of_name(inference, named))
+        ast.Field { receiver, name } => offered_scheme(inference, receiver, name)
+        _ => None
+    }
+    match scheme {
+        Some(declared_one) => unify.result_of(unify.solved(inference.table, declared_one.body))
+        None => unify.Unit
+    }
+}
+
+/// The type another module offers a function under, where `receiver` names that module.
+// example: or(offered_scheme(infer.nothing_inferred(), ast.Expr { kind: ast.Unit, span: lexer.Span { start: 0, length: 2 } }, infer.no_name()), unify.monomorphic(unify.int())).body == unify.int()
+fn offered_scheme(inference: infer.Inference, receiver: ast.Expr, name: ast.Name) -> Option<unify.Scheme> {
+    let module = match receiver.kind {
+        ast.NameExpr(named) => named.text
+        _ => ""
+    }
+    match surface.surface_of(inference.imported, module) {
+        Some(reached) => scheme_named(reached, name.text)
+        None => None
+    }
+}
+
+/// The type of the function `named` that a module offers, where it offers one.
+// example: or(scheme_named(surface.no_surface(), "count"), unify.monomorphic(unify.int())).body == unify.int()
+fn scheme_named(reached: surface.Reached, named: String) -> Option<unify.Scheme> {
+    match map.get(reached.functions, named) {
+        Some(offered) => Some(surface.scheme_offered(offered))
+        None => None
+    }
+}
+
+/// The name a call is written with: `same`, or `demo.same` through a module.
+// example: callee_named(ast.Expr { kind: ast.Unit, span: lexer.Span { start: 0, length: 2 } }) == ""
+fn callee_named(callee: ast.Expr) -> String {
+    match callee.kind {
+        ast.NameExpr(named) => named.text
+        ast.Field { receiver, name } => callee_named(receiver) + "." + name.text
+        _ => ""
+    }
+}
+
+/// Refuses `found` at `at` as an escape to `place`, where it is or holds a foreign reference.
+// example: refusal.code_given(refused_where_found(Holding { foreign: map.insert(map.empty(), "File", ast.AsAClass), carried: map.empty() }, unify.list_of(unify.Named { name: "File", arguments: [] }), refusal.HeldAt("Box.value"), lexer.Span { start: 3, length: 4 })) == "L0435 3..7"
+fn refused_where_found(holding: Holding, found: unify.Type, place: refusal.Escape, at: lexer.Span) -> Result<(), refusal.TypeError> {
+    let foreign = foreign_found(holding, found)
+    if foreign == "" {
+        return Ok(())
+    }
+    Err(refusal.TypeError { kind: refusal.Escapes { place: place, held: found, foreign: foreign }, span: at })
+}
+
+/// What the walk reads for the module `inference` settled: its extern types, and what each type
+/// it declares or reaches carries.
+// example: foreign_found(holding_of(infer.nothing_inferred()), unify.int()) == ""
+fn holding_of(inference: infer.Inference) -> Holding {
+    held_by(inference.environment, inference.resolved.program, surface.every_type(inference.imported))
+}
+
+/// What the walk reads: the extern types of `environment`, and what each type `program` declares
+/// and each of `reached` carries.
+// example: list.length(or(map.get(held_by(declared.little_environment(), ast.Program { items: [] }, []).carried, "Box"), [])) == 0
+fn held_by(environment: declared.Environment, program: ast.Program, reached: List<surface.OfferedType>) -> Holding {
+    var types = declared.offered_types(environment, program)
+    for offered in reached {
+        types = list.push(types, offered)
+    }
+    Holding { foreign: environment.foreign, carried: carried_by_name(types) }
+}
+
+/// What each constructor of each type in `types` carries, under the name of the type.
+// example: list.length(or(map.get(carried_by_name([surface.OfferedType { name: "Box", over: [], declared: unify.Unit, built_by: surface.Record(surface.OfferedConstructor { name: "Box", labels: [], carries: [unify.int()] }) }]), "Box"), [])) == 1
+fn carried_by_name(types: List<surface.OfferedType>) -> map.Map<String, List<unify.Type>> {
+    var carried = map.empty()
+    for offered in types {
+        var carries = []
+        for built in surface.constructors(offered) {
+            for one in built.carries {
+                carries = list.push(carries, one)
+            }
+        }
+        carried = map.insert(carried, offered.name, carries)
+    }
+    carried
+}
+
+/// The first extern type `held` is or holds, or `""`.
+// example: foreign_found(Holding { foreign: map.insert(map.empty(), "File", ast.AsAClass), carried: map.empty() }, unify.option_of(unify.Named { name: "File", arguments: [] })) == "File"
+fn foreign_found(holding: Holding, held: unify.Type) -> String {
+    foreign_in(holding, Walk { seen: set.empty(), found: "" }, held).found
+}
+
+/// The walk after `held`: the first foreign type it is or holds is found, where there is one.
+///
+/// A type is gone into once, so a type that holds itself ends the walk. Its arguments are read at
+/// each use, because `List<File>` holds what `List<Int>` does not.
+// example: foreign_in(Holding { foreign: map.insert(map.empty(), "File", ast.AsAClass), carried: map.empty() }, Walk { seen: set.empty(), found: "" }, unify.Named { name: "File", arguments: [] }).found == "File"
+// example: foreign_in(Holding { foreign: map.empty(), carried: map.insert(map.empty(), "Box", [unify.Named { name: "Box", arguments: [] }]) }, Walk { seen: set.empty(), found: "" }, unify.Named { name: "Box", arguments: [] }).found == ""
+fn foreign_in(holding: Holding, walk: Walk, held: unify.Type) -> Walk {
+    let name = boundary.name_of(held)
+    if walk.found != "" || name == "" {
+        return walk
+    }
+    if boundary.is_foreign(holding.foreign, name) {
+        return walk { found: name }
+    }
+    var walking = walk
+    for argument in boundary.arguments_of(held) {
+        walking = foreign_in(holding, walking, argument)
+    }
+    if set.has_value(walking.seen, name) {
+        return walking
+    }
+    walking = walking { seen: set.insert(walking.seen, name) }
+    for carried in or(map.get(holding.carried, name), []) {
+        walking = foreign_in(holding, walking, carried)
+    }
+    walking
+}
+
+/// What the walk of a type reads: which types are foreign, and what each declared type carries.
+type Holding = {
+    foreign: map.Map<String, ast.Called>
+    carried: map.Map<String, List<unify.Type>>
+}
+
+/// The walk so far: each type gone into, and the first foreign type found, or `""`.
+type Walk = {
+    seen: set.Set<String>
+    found: String
+}
+
+/// The type a call gives back, and where the call is written.
+type Found = {
+    found: unify.Type
+    at: lexer.Span
+}

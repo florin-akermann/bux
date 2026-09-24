@@ -147,7 +147,9 @@ fn said_by(answer: Answer) -> Said {
 /// The status of the program `line` starts, with the streams of this process.
 // example: program_ended(["no-such-program-at-all"]).status == 2
 fn program_ended(line: List<String>) -> Said {
-    match programs.started(inheriting(cleared(programs.of_command(line)))) {
+    let builder = programs.of_command(line)
+    cleared(builder)
+    match programs.started(inheriting(builder)) {
         Ok(ran) => Said { output: "", errors: "", status: ok_or(programs.waited_for(ran), 2) }
         Err(why) => unusable(or(list.at(line, 0), "") + ": " + why)
     }
@@ -706,7 +708,9 @@ fn ran_in(beside: Beside, classes: List<jvm.ClassFile>, run: Run, root: Typed) -
 /// does, and it starts with the environment that `cleared` leaves.
 // example: ok_or(program_finished(["no-such-program-at-all"]), programs.Finished { code: 9, output: "", errors: "" }).code == 9
 fn program_finished(line: List<String>) -> Result<programs.Finished, String> {
-    let ran = programs.started(programs.reading_from(cleared(programs.of_command(line)), programs.inherited()))?
+    let builder = programs.of_command(line)
+    cleared(builder)
+    let ran = programs.started(programs.reading_from(builder, programs.inherited()))?
     let output = programs.whole(programs.output_of(ran))
     let errors = programs.whole(programs.errors_of(ran))
     let code = programs.waited_for(ran)?
@@ -725,21 +729,21 @@ fn program_line(java: String, classes: List<String>, module: String, arguments: 
     all_of(values: [java, "--enable-preview", "--limit-modules", "java.base", "-Djdk.serialFilter=!*", "-cp", strings.join(classes, ":"), module], more: arguments)
 }
 
-/// The builder, with each variable removed that a JVM reads options from.
+/// Removes from the environment of `builder` each variable that a JVM reads options from.
 ///
 /// Each of the three can add a `-javaagent` to the program, and `docs/specs/run.md` states why.
-/// No other variable of the environment changes.
-// example: or(list.at(injecting(), 0), "") == "JAVA_TOOL_OPTIONS"
-fn cleared(builder: programs.ProcessBuilder) -> programs.ProcessBuilder {
+/// No other variable of the environment changes. The builder changes in place, and the caller
+/// keeps it: a foreign reference is never given back, which `docs/specs/interop.md` states.
+fn cleared(builder: programs.ProcessBuilder) -> () {
     let variables = variables_of(builder)
     for name in injecting() {
         _ = removed(variables, as_object(held_as_constant(name)))
     }
-    builder
 }
 
 /// The variables of the environment that a JVM reads options from.
 // example: list.length(injecting()) == 3
+// example: or(list.at(injecting(), 0), "") == "JAVA_TOOL_OPTIONS"
 fn injecting() -> List<String> {
     ["JAVA_TOOL_OPTIONS", "JDK_JAVA_OPTIONS", "_JAVA_OPTIONS"]
 }

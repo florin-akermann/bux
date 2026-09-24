@@ -1,0 +1,112 @@
+// The drawn properties of where a foreign reference may go, which `docs/specs/interop.md` states.
+//
+// A value of an `extern` type stays in the function that reaches it. Each case draws a type that
+// is or holds `File` and a place for it, and holds that `L0435` names that place, or draws a body
+// that only reaches, binds, and passes a `File`, and holds that the module is accepted.
+import checking
+import compiled
+import drawn
+import held
+import ir
+import list
+
+/// One `Held` for each property of where a foreign reference may go, in a fixed order.
+// example: list.length(every_property(0, ir.little_library())) == 2
+fn every_property(cases: Int, library: ir.Library) -> List<held.Held> {
+    [a_foreign_reference_drawn_into_a_place_it_escapes_to_is_refused_naming_that_place(cases, library), a_foreign_reference_reached_bound_and_passed_compiles(cases, library)]
+}
+
+/// A drawn type that is or holds `File`, in a drawn place it would escape to, is `L0435` there.
+// example: a_foreign_reference_drawn_into_a_place_it_escapes_to_is_refused_naming_that_place(2, ir.little_library()).cases == 2
+fn a_foreign_reference_drawn_into_a_place_it_escapes_to_is_refused_naming_that_place(cases: Int, library: ir.Library) -> held.Held {
+    var found = held.nothing_failed(cases)
+    for seed in checking.seeds(cases) {
+        found = checking.noted(found, "a_foreign_reference_drawn_into_a_place_it_escapes_to_is_refused_naming_that_place", seed, escape_tried(drawn.seeded(seed), library))
+    }
+    found
+}
+
+/// A drawn type holding `File`, written in a drawn place, and the refusal read for that place.
+// example: escape_tried(drawn.seeded(1), ir.little_library()).input != ""
+fn escape_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
+    let holding = drawn.picked(draw, holdings(), Holding { written: "File", value: "named(path)" })
+    let place = drawn.picked(drawn.next(draw), places(), Place { source: "", said: "" })
+    let source = filled(place.source, holding) + reaching()
+    let answer = checking.checked(source, library)
+    let message = filled(place.said, holding) + ", and the `extern` type `File` is a foreign reference"
+    if checking.code_of(answer) != "L0435" || checking.message_of(answer) != message {
+        return checking.Tried { input: source, why: "the refusal is " + checking.code_of(answer) + " " + held.quoted(checking.message_of(answer)) }
+    }
+    checking.Tried { input: source, why: "" }
+}
+
+/// `text`, with the written type of `holding` at each `{type}` and its value at each `{value}`.
+// example: filled("{type} {value}", Holding { written: "File", value: "named(path)" }) == "File named(path)"
+fn filled(text: String, holding: Holding) -> String {
+    compiled.replaced(compiled.replaced(text, "{type}", holding.written), "{value}", holding.value)
+}
+
+/// Each type drawn that is or holds `File`, with a value of it that only `extern` calls give.
+// example: list.length(holdings()) == 4
+fn holdings() -> List<Holding> {
+    [Holding { written: "File", value: "named(path)" }, Holding { written: "Option<File>", value: "parent_of(named(path))" }, Holding { written: "List<File>", value: "[named(path)]" }, Holding { written: "List<Option<File>>", value: "[parent_of(named(path))]" }]
+}
+
+/// Each place a foreign reference would escape to, with the start of the message that names it.
+// example: list.length(places()) == 5
+fn places() -> List<Place> {
+    [Place { source: "fn kept(path: String) -> {type} {\n    {value}\n}\n", said: "`kept` gives back `{type}`" }, Place { source: "/// A kept value.\ntype Kept = {\n    held: {type}\n}\n", said: "`Kept.held` holds `{type}`" }, Place { source: "/// A kept value, or none.\ntype Kept =\n    | Held(Int, {type})\n    | Gone\n", said: "`Held.1` holds `{type}`" }, Place { source: "fn go(path: String) -> Int {\n    _ = same({value})\n    1\n}\n\nfn same<T>(value: T) -> T {\n    value\n}\n", said: "this call of `same` gives back `{type}`" }, Place { source: "fn go(path: String) -> Int {\n    _ = Kept { value: {value} }\n    1\n}\n\n/// One value of any type.\ntype Kept<T> = {\n    value: T\n}\n", said: "this `Kept` is `Kept<{type}>`" }]
+}
+
+/// A drawn body that only reaches, binds, and passes a `File` is accepted.
+// example: a_foreign_reference_reached_bound_and_passed_compiles(2, ir.little_library()).cases == 2
+fn a_foreign_reference_reached_bound_and_passed_compiles(cases: Int, library: ir.Library) -> held.Held {
+    var found = held.nothing_failed(cases)
+    for seed in checking.seeds(cases) {
+        found = checking.noted(found, "a_foreign_reference_reached_bound_and_passed_compiles", seed, passed_tried(drawn.seeded(seed), library))
+    }
+    found
+}
+
+/// A body of the drawn uses of a `File`, each of which keeps it in the function.
+// example: passed_tried(drawn.seeded(1), ir.little_library()).input != ""
+fn passed_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
+    var body = "    let file = named(path)\n"
+    var at = draw
+    for one in uses() {
+        if drawn.number(at, 2) == 1 {
+            body += one
+        }
+        at = drawn.next(at)
+    }
+    let source = "fn go(path: String) -> Option<String> {\n" + body + "    Some(name_of(file))\n}\n\nfn size_of(file: File) -> Int {\n    1\n}\n" + reaching()
+    let answer = checking.checked(source, library)
+    if checking.code_of(answer) != "" {
+        return checking.Tried { input: source, why: "the module is refused: " + checking.code_of(answer) + " " + held.quoted(checking.message_of(answer)) }
+    }
+    checking.Tried { input: source, why: "" }
+}
+
+/// Each use of `file` that keeps it in the function, written as statements of a body.
+// example: list.length(uses()) == 6
+fn uses() -> List<String> {
+    ["    _ = name_of(file)\n", "    _ = size_of(file)\n", "    let parent = parent_of(file)?\n    _ = name_of(parent)\n", "    _ = match parent_of(file) {\n        Some(found) => name_of(found)\n        None => \"\"\n    }\n", "    for each in [file, named(path)] {\n        _ = size_of(each)\n    }\n", "    var held = file\n    held = named(path)\n    _ = name_of(held)\n"]
+}
+
+/// The `extern` declarations every drawn module reaches a `File` through.
+// example: reaching() != ""
+fn reaching() -> String {
+    "\nextern new named(path: String) -> File\n\nextern method name_of(file: File) -> String = \"getName\"\n\nextern method parent_of(file: File) -> Option<File> = \"getParentFile\"\n\nextern type File = \"java.io.File\"\n"
+}
+
+/// A type drawn to be or to hold `File`, and a value of it that only `extern` calls give.
+type Holding = {
+    written: String
+    value: String
+}
+
+/// A module that puts a drawn type in one place, and the start of the message that names it.
+type Place = {
+    source: String
+    said: String
+}

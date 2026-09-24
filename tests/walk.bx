@@ -95,7 +95,9 @@ fn completed(line: List<String>, directory: String, limit: Int) -> Result<Ended,
 fn completed_from(line: List<String>, directory: String, written: String, limit: Int) -> Result<Ended, Unended> {
     let output = modules.joined(written, ".output")
     let errors = modules.joined(written, ".errors")
-    let starting = errors_to(output_to(input_from(within(command.cleared(programs.of_command(line)), place(directory)), place("/dev/null")), place(output)), place(errors))
+    let builder = programs.of_command(line)
+    command.cleared(builder)
+    let starting = errors_to(output_to(input_from(within(builder, place(directory)), place("/dev/null")), place(output)), place(errors))
     match started(starting) {
         Ok(running) => ended_or_stopped(running, limit, Streams { output: output, errors: errors })
         Err(_) => Err(NotStarted)

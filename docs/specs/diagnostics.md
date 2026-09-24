@@ -159,6 +159,9 @@ Type inference raises these, and `compiler/refusal.bx` words them:
 - `L0432` — a program writes `Option<()>`, or inference gives an expression a type that holds it.
 - `L0433` — a call is written with a value in front of the name, where a dot reads a field.
 - `L0434` — an `extern` names a class in no stated archive and not on the list, or a member out.
+- `L0435` — a result, a field, a variant, or a call gives back or holds an `extern` type.
+
+`compiler/escapes.bx` decides `L0435` after inference, because a call is read at its settled type.
 
 Exhaustiveness raises these, in `compiler/exhaustiveness.bx`:
 
