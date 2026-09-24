@@ -326,6 +326,8 @@ fn virtual_thread_started() -> MethodRef {
 /// The method the virtual thread runs: `start`, then `receive` of each message the mailbox gives,
 /// until `receive` gives `Done`, and then the state it held completes the end.
 ///
+/// Each message comes out of the envelope that `sent` put it in, before `receive` takes it.
+///
 /// The state is held as an object between two messages, and each call is given it as it takes it.
 // example: run_method(no_shapes(), process_shape("main/process$Counter", Signature { parameters: [], result: Some(Long) }), Ran { module: "main", named: "Counter", started: Signature { parameters: [], result: Some(Long) }, received: Signature { parameters: [Some(Long), Some(Long)], result: Some(object()) } }).name == "run"
 fn run_method(shapes: Shapes, shape: Shape, ran: Ran) -> Method {
@@ -344,7 +346,7 @@ fn run_method(shapes: Shapes, shape: Shape, ran: Ran) -> Method {
     let module = ran.module
     let named = ran.named
     let started = concatenated(first: list.push(starting, InvokeStatic(MethodRef { class: module, name: named + "$start", descriptor: descriptor_of(ran.started) })), second: as_object(ran.started.result))
-    let taking = [Store { slot: 1, of: object() }, Label(0), Load { slot: 0, of: this }, GetField(FieldRef { class: shape.class, name: "mailbox", of: mailbox_descriptor() }), InvokeVirtual(MethodRef { class: mailbox_class(), name: "take", descriptor: MethodDescriptor { parameters: [], result: Some(object()) } }), Store { slot: 2, of: object() }]
+    let taking = [Store { slot: 1, of: object() }, Label(0), Load { slot: 0, of: this }, GetField(FieldRef { class: shape.class, name: "mailbox", of: mailbox_descriptor() }), InvokeVirtual(MethodRef { class: mailbox_class(), name: "take", descriptor: MethodDescriptor { parameters: [], result: Some(object()) } }), Cast(envelope_class()), InvokeVirtual(MethodRef { class: envelope_class(), name: "get", descriptor: MethodDescriptor { parameters: [], result: Some(object()) } }), Store { slot: 2, of: object() }]
     let receiving = concatenated(first: concatenated(first: object_as(1, or(list.at(ran.received.parameters, 0), None)), second: object_as(2, or(list.at(ran.received.parameters, 1), None))), second: [InvokeStatic(MethodRef { class: module, name: named + "$receive", descriptor: descriptor_of(ran.received) }), Store { slot: 3, of: next_descriptor() }])
     let again = built_shape(shapes, "Continue")
     let tested = carrying_tag(again, Slot { at: 3, of: next_descriptor() }, 1)
@@ -402,12 +404,11 @@ fn handle_class(shapes: Shapes) -> Class {
 ///
 /// A wait without limit offers the message a tenth of a second at a time and looks for the end
 /// in between, so a process that ends while the sender waits is told as ended.
-/// The end is looked for again once the mailbox takes the message, so `Delivered` means that the
-/// mailbox took it before the end.
+/// The message goes in the mailbox in an envelope of its own, and `taken_answer` says why.
 // example: sent_method(no_shapes()).name == "sent"
 fn sent_method(shapes: Shapes) -> Method {
     let waiting = Slot { at: 2, of: named_descriptor(shapes, "Waiting") }
-    let opened = concatenated(first: ended_test(shapes, 0), second: [Label(0)])
+    let opened = concatenated(first: ended_test(shapes, 0), second: concatenated(first: [Label(0)], second: enveloped()))
     let unlimited = concatenated(first: carrying_tag(built_shape(shapes, "NoLimit"), waiting, 2), second: [Label(1)])
     let offered = concatenated(first: offer_within(within: [LongOf(100)], shapes: shapes, missed: 5, taken: 7), second: [Label(5)])
     let again = concatenated(first: ended_test(shapes, 1), second: [Label(2), LongOf(0), Store { slot: 3, of: Long }])
@@ -420,26 +421,55 @@ fn sent_method(shapes: Shapes) -> Method {
     Method { name: "sent", descriptor: MethodDescriptor { parameters: taken, result: Some(named_descriptor(shapes, "Sent")) }, reached: ThroughTheClass, body: Body { instructions: instructions, locals: 2, guards: [] } }
 }
 
-/// `Delivered` where the mailbox takes the message within the milliseconds `within` loads, and a
-/// jump to `missed` where it does not.
-///
-/// A message taken once the process has ended is never read, so it gives `ProcessEnded`, and the
-/// label `taken` is where the process was found not ended.
-// example: list.length(offer_within(within: [LongOf(0)], shapes: no_shapes(), missed: 0, taken: 1)) == 20
+/// The message in slot 1 put in a new envelope, which slot 1 then holds in its place.
+// example: list.length(enveloped()) == 5
+fn enveloped() -> List<Instruction> {
+    let opened = MethodRef { class: envelope_class(), name: "<init>", descriptor: MethodDescriptor { parameters: [object()], result: None } }
+    [New(envelope_class()), Copy, Load { slot: 1, of: object() }, Construct(opened), Store { slot: 1, of: object() }]
+}
+
+/// The class of an envelope: one object, with an identity that no other envelope has.
+// example: envelope_class() == "java/util/concurrent/atomic/AtomicReference"
+fn envelope_class() -> String {
+    "java/util/concurrent/atomic/AtomicReference"
+}
+
+/// What `taken_answer` gives where the mailbox takes the envelope in slot 1 within the
+/// milliseconds `within` loads, and a jump to `missed` where it does not.
+// example: list.length(offer_within(within: [LongOf(0)], shapes: no_shapes(), missed: 0, taken: 1)) == 25
 fn offer_within(within: List<Instruction>, shapes: Shapes, missed: Int, taken: Int) -> List<Instruction> {
     let unit = GetStatic(FieldRef { class: "java/util/concurrent/TimeUnit", name: "MILLISECONDS", of: Reference("java/util/concurrent/TimeUnit") })
     let offer = MethodRef { class: mailbox_class(), name: "offer", descriptor: MethodDescriptor { parameters: [object(), Long, Reference("java/util/concurrent/TimeUnit")], result: Some(Boolean) } }
     let loaded = concatenated(first: [Load { slot: 0, of: handle_descriptor() }, GetField(handle_mailbox()), Load { slot: 1, of: object() }], second: within)
-    let checked = concatenated(first: ended_test(shapes, taken), second: [Label(taken)])
-    concatenated(first: concatenated(first: loaded, second: [unit, InvokeVirtual(offer), JumpIfFalse(missed)]), second: concatenated(first: checked, second: sent_answer(shapes, "Delivered")))
+    concatenated(first: concatenated(first: loaded, second: [unit, InvokeVirtual(offer), JumpIfFalse(missed)]), second: taken_answer(shapes, taken))
+}
+
+/// `Delivered` where the process of the handle in slot 0 has not ended, or took the envelope in
+/// slot 1 before it ended, and `ProcessEnded` where the envelope still waits in its mailbox.
+///
+/// No process takes from the mailbox of an ended process, so an envelope left there is never
+/// read, and `remove` takes it out. The envelope is found by its identity, because a message is
+/// a value, and a second message equal to it can wait in the same mailbox.
+/// The label `taken` is where `send` gives `Delivered`.
+// example: list.length(taken_answer(no_shapes(), 1)) == 18
+fn taken_answer(shapes: Shapes, taken: Int) -> List<Instruction> {
+    let removed = MethodRef { class: mailbox_class(), name: "remove", descriptor: MethodDescriptor { parameters: [object()], result: Some(Boolean) } }
+    let left = [Load { slot: 0, of: handle_descriptor() }, GetField(handle_mailbox()), Load { slot: 1, of: object() }, InvokeVirtual(removed), JumpIfFalse(taken)]
+    let answered = concatenated(first: list.push(sent_answer(shapes, "ProcessEnded"), Label(taken)), second: sent_answer(shapes, "Delivered"))
+    concatenated(first: concatenated(first: unended_jump(taken), second: left), second: answered)
 }
 
 /// `ProcessEnded` where the process of the handle in slot 0 has ended, and a jump to `open` where
 /// it has not.
 // example: list.length(ended_test(no_shapes(), 0)) == 8
 fn ended_test(shapes: Shapes, open: Int) -> List<Instruction> {
-    let tested = [Load { slot: 0, of: handle_descriptor() }, GetField(handle_finished()), InvokeVirtual(MethodRef { class: finished_class(), name: "isDone", descriptor: MethodDescriptor { parameters: [], result: Some(Boolean) } }), JumpIfFalse(open)]
-    concatenated(first: tested, second: sent_answer(shapes, "ProcessEnded"))
+    concatenated(first: unended_jump(open), second: sent_answer(shapes, "ProcessEnded"))
+}
+
+/// A jump to `open` where the process of the handle in slot 0 has not ended.
+// example: list.length(unended_jump(0)) == 4
+fn unended_jump(open: Int) -> List<Instruction> {
+    [Load { slot: 0, of: handle_descriptor() }, GetField(handle_finished()), InvokeVirtual(MethodRef { class: finished_class(), name: "isDone", descriptor: MethodDescriptor { parameters: [], result: Some(Boolean) } }), JumpIfFalse(open)]
 }
 
 /// The variant `named` of `Sent`, built and given back.
