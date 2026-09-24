@@ -3,10 +3,11 @@
 //
 // `docs/implementation.md` section 7 states the runner, and `bin/runner` starts it from the root
 // of the repository. It splits the parts into jobs, and a pool hands each job to a worker, one
-// worker for each processor. When the pool ends, the runner writes a line for each part, then a
-// line for each check it skipped and for each failure, then a line that counts what it held. It
-// ends with status 0 only where nothing failed. With the word `golden`, it writes the golden files
-// under `tests/commands` again and holds nothing.
+// worker for each processor. The pool writes the line of each part when that part ends, in one
+// order every run. When the pool ends, the runner writes a line for each check it skipped and for
+// each failure, then a line that counts what it held. It ends with status 0 only where nothing
+// failed. With the word `golden`, it writes the golden files under `tests/commands` again and
+// holds nothing.
 import archived
 import boundaries
 import branching
@@ -55,9 +56,6 @@ fn main(arguments: List<String>) -> Int {
         return 0
     }
     let counted = every_part_held(Setting { library: library, limit: start_limit() })
-    for line in counted.told {
-        io.println(line)
-    }
     for skipped in counted.all.skipped {
         io.println("skipped: " + skipped)
     }
@@ -82,12 +80,15 @@ fn every_part_held(setting: Setting) -> Counted {
 /// Every job of the runner, those that took longest on 2026-09-24 first, so that no long job
 /// starts after the short ones.
 ///
-/// The example lines and the examples are each split into `chunks` jobs at most.
-// example: list.length(every_job(chunks: 1, root: "no-such-directory")) == 10
+/// The examples are split into `chunks` jobs at most. The example lines of each place are split
+/// so too, because a module of the runner or the compiler costs far more than one of `tests/spec`.
+// example: list.length(every_job(chunks: 1, root: "no-such-directory")) == 13
 fn every_job(chunks: Int, root: String) -> List<Job> {
     var jobs = []
-    for paths in chunks_of(values: documented.modules_of("tests/spec", ["library", "compiler", "tests"]), count: chunks) {
-        jobs = list.push(jobs, LinesOf(paths))
+    for group in documented.module_groups("tests/spec", ["tests", "compiler", "library"]) {
+        for paths in chunks_of(values: group, count: chunks) {
+            jobs = list.push(jobs, LinesOf(paths))
+        }
     }
     for path in commanded.golden_files() {
         jobs = list.push(jobs, GoldenOf(path))
@@ -143,11 +144,11 @@ fn pooled(jobs: List<Job>, setting: Setting, workers: Int) -> Pooling {
     ended(pooling)
 }
 
-/// The pool: it hands each job to a worker that asks, and holds each answer by the number of its
-/// job. It ends when every worker it was given has left.
+/// The pool: it hands each job to a worker that asks, holds each answer by the number of its job,
+/// and writes the line of each part that has ended. It ends when every worker has left.
 process Pool {
     fn start(jobs: List<Job>, workers: Int) -> Pooling {
-        Pooling { jobs: jobs, handed: 0, answers: map.empty(), workers: workers }
+        each_ended_told(Pooling { jobs: jobs, handed: 0, answers: map.empty(), workers: workers, told: 0 })
     }
 
     fn receive(pooling: Pooling, message: Pooled) -> Next<Pooling> {
@@ -159,10 +160,87 @@ process Pool {
     }
 }
 
-/// `pooling` with `answer` held by the number of its job, and `worker` handed the next job.
+/// `pooling` with `answer` held by the number of its job, the line of each part that has ended
+/// written, and `worker` handed the next job.
 // example: or(map.get(pooled([ExamplesOf([])], Setting { library: ir.little_library(), limit: 1 }, 1).answers, 0), unanswered(5)).number == 0
 fn answer_kept(pooling: Pooling, answer: Answer, worker: Process<Work, Working>) -> Pooling {
-    handed_to(pooling { answers: map.insert(pooling.answers, answer.number, answer) }, worker)
+    handed_to(each_ended_told(pooling { answers: map.insert(pooling.answers, answer.number, answer) }), worker)
+}
+
+/// `pooling` once the line of each part that has ended is written, in the order of `told_parts`.
+///
+/// A part is written only after every part before it, so a part that ends first waits, and the
+/// lines come out in the same order every run.
+// example: pooled([ExamplesOf([])], Setting { library: ir.little_library(), limit: 1 }, 1).told == 5
+fn each_ended_told(pooling: Pooling) -> Pooling {
+    match list.at(told_parts(), pooling.told) {
+        Some(part) => told_where_ended(pooling, part)
+        None => pooling
+    }
+}
+
+/// `pooling` with the line of `part` written where every job of it has an answer, and then the
+/// line of each part after it that has ended too.
+// example: told_where_ended(Pooling { jobs: [SiblingsOf], handed: 1, answers: map.empty(), workers: 1, told: 1 }, Siblings).told == 1
+fn told_where_ended(pooling: Pooling, part: Part) -> Pooling {
+    if !is_ended(part, pooling) {
+        return pooling
+    }
+    io.println(part_line(part, part_tally(part, pooling.jobs, pooling.answers)))
+    each_ended_told(pooling { told: pooling.told + 1 })
+}
+
+/// Whether `pooling` holds an answer to every job of `part`.
+// example: is_ended(Siblings, Pooling { jobs: [ExamplesOf([])], handed: 1, answers: map.empty(), workers: 1, told: 0 })
+// example: !is_ended(Examples, Pooling { jobs: [ExamplesOf([])], handed: 1, answers: map.empty(), workers: 1, told: 0 })
+fn is_ended(part: Part, pooling: Pooling) -> Bool {
+    var number = 0
+    for job in pooling.jobs {
+        if part_of(job) == part && !is_answered(pooling.answers, number) {
+            return false
+        }
+        number += 1
+    }
+    true
+}
+
+/// Whether `answers` holds the answer of the job numbered `number`.
+// example: !is_answered(map.empty(), 0)
+fn is_answered(answers: map.Map<Int, Answer>, number: Int) -> Bool {
+    match map.get(answers, number) {
+        Some(_) => true
+        None => false
+    }
+}
+
+/// The parts that have a line of their own, in the order the lines are written.
+// example: list.length(told_parts()) == 5
+fn told_parts() -> List<Part> {
+    [Examples, Siblings, Lines, Properties, Commands]
+}
+
+/// The line of `part`, from its `tally`: the properties count each property, and every other part
+/// counts its cases.
+// example: part_line(Properties, Tally { found: [held.nothing_failed(100)], nanoseconds: 0 }) == "properties: 1 held in 0 s"
+// example: part_line(Lines, Tally { found: [held.nothing_failed(3)], nanoseconds: 0 }) == "example lines: 3 held in 0 s"
+fn part_line(part: Part, tally: Tally) -> String {
+    if part == Properties {
+        return progress_line(part: part_name(part), cases: list.length(tally.found), nanoseconds: tally.nanoseconds)
+    }
+    told_line(part_name(part), tally)
+}
+
+/// The name a line gives `part`.
+// example: part_name(Commands) == "command lines"
+fn part_name(part: Part) -> String {
+    match part {
+        Examples => "examples"
+        Siblings => "siblings"
+        Lines => "example lines"
+        Tests => "tests"
+        Properties => "properties"
+        Commands => "command lines"
+    }
 }
 
 /// `pooling` after `worker` is sent the next job, or told to stop where no job is left.
@@ -251,7 +329,7 @@ fn processors() -> Int {
 }
 
 /// What each part held, counted from the `answers` of the pool in the order of `jobs`.
-// example: list.length(counted_of([], map.empty()).told) == 5
+// example: counted_of([], map.empty()).all.cases == 0
 fn counted_of(jobs: List<Job>, answers: map.Map<Int, Answer>) -> Counted {
     let examples = part_tally(Examples, jobs, answers)
     let beside = part_tally(Siblings, jobs, answers)
@@ -260,8 +338,7 @@ fn counted_of(jobs: List<Job>, answers: map.Map<Int, Answer>) -> Counted {
     let properties = part_tally(Properties, jobs, answers)
     let commands = part_tally(Commands, jobs, answers)
     let each = [every_of(examples.found), every_of(beside.found), every_of(lines.found), every_of(tests.found), every_of(properties.found), every_of(commands.found)]
-    let told = [told_line("examples", examples), told_line("siblings", beside), told_line("example lines", lines), progress_line(part: "properties", cases: list.length(properties.found), nanoseconds: properties.nanoseconds), told_line("command lines", commands)]
-    Counted { examples: every_of(examples.found), siblings: every_of(beside.found), lines: every_of(lines.found), tests: every_of(tests.found), properties: properties.found, commands: every_of(commands.found), all: every_of(each), told: told }
+    Counted { examples: every_of(examples.found), siblings: every_of(beside.found), lines: every_of(lines.found), tests: every_of(tests.found), properties: properties.found, commands: every_of(commands.found), all: every_of(each) }
 }
 
 /// Every answer of `part`, in the order of `jobs`, and the time the workers spent on the jobs it
@@ -373,7 +450,7 @@ fn every_property_held(library: ir.Library) -> List<held.Held> {
 }
 
 /// The line that counts what the runner held, what it could not try, and what failed.
-// example: summary(Counted { examples: held.nothing_failed(2), siblings: held.nothing_failed(1), lines: held.nothing_failed(3), tests: held.nothing_failed(5), properties: [held.nothing_failed(100)], commands: held.nothing_failed(4), all: held.nothing_failed(115), told: [] }) == "runner: 2 examples, 1 siblings, 3 example lines, 5 tests, 1 properties of 100 drawn cases, 4 command lines; 0 failed, 0 skipped"
+// example: summary(Counted { examples: held.nothing_failed(2), siblings: held.nothing_failed(1), lines: held.nothing_failed(3), tests: held.nothing_failed(5), properties: [held.nothing_failed(100)], commands: held.nothing_failed(4), all: held.nothing_failed(115) }) == "runner: 2 examples, 1 siblings, 3 example lines, 5 tests, 1 properties of 100 drawn cases, 4 command lines; 0 failed, 0 skipped"
 fn summary(counted: Counted) -> String {
     let drawn = shown(list.length(counted.properties)) + " properties of " + shown(every_of(counted.properties).cases) + " drawn cases"
     let held_part = shown(counted.examples.cases) + " examples, " + shown(counted.siblings.cases) + " siblings, " + shown(counted.lines.cases) + " example lines, " + shown(counted.tests.cases) + " tests, " + drawn + ", " + shown(counted.commands.cases) + " command lines"
@@ -409,7 +486,7 @@ extern method int processors_of(running: Machine) -> Int = "availableProcessors"
 /// The JVM this program runs on.
 extern type Machine = "java.lang.Runtime"
 
-/// What each part of the runner held, all of it together, and the line written for each part.
+/// What each part of the runner held, and all of it together.
 type Counted = {
     examples: held.Held
     siblings: held.Held
@@ -418,7 +495,6 @@ type Counted = {
     properties: List<held.Held>
     commands: held.Held
     all: held.Held
-    told: List<String>
 }
 
 derive Eq for Part
@@ -464,13 +540,14 @@ type Working = {
     setting: Setting
 }
 
-/// The state of the pool: every job, how many are handed, each answer by its job, and how many
-/// workers have not left.
+/// The state of the pool: every job, how many are handed, each answer by its job, how many
+/// workers have not left, and how many part lines are written.
 type Pooling = {
     jobs: List<Job>
     handed: Int
     answers: map.Map<Int, Answer>
     workers: Int
+    told: Int
 }
 
 /// One piece of the work of the runner, which one worker holds.
