@@ -635,7 +635,7 @@ fn is_continuing(point: Int) -> Bool {
 // example: is_opening(95)
 // example: !is_opening(48)
 fn is_opening(point: Int) -> Bool {
-    point == 95 || point == 36 || or(is_alphabetic(point), false)
+    point == 95 || point == 36 || or(strings.is_alphabetic(point), false)
 }
 
 /// Whether `point` is a number: a decimal digit, a letter number, or another number.
@@ -644,7 +644,7 @@ fn is_opening(point: Int) -> Bool {
 // example: is_numeric(1637)
 // example: !is_numeric(97)
 fn is_numeric(point: Int) -> Bool {
-    let category = or(general_category(point), 0)
+    let category = or(strings.general_category(point), 0)
     category == 9 || category == 10 || category == 11
 }
 
@@ -714,9 +714,3 @@ type Boundary = {
 type Segments =
     | AtLeast(Int)
     | Exactly(Int)
-
-/// Whether Java takes `code` for a letter, which is `None` for a number no `int` holds.
-extern static is_alphabetic(int code: Int) -> Option<Bool> = "java.lang.Character.isAlphabetic"
-
-/// The general category Java gives `code`, which is `None` for a number no `int` holds.
-extern static int general_category(int code: Int) -> Option<Int> = "java.lang.Character.getType"

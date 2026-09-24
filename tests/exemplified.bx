@@ -208,7 +208,7 @@ fn first_line(text: String) -> String {
 // example: is_a_jdk_named() || !is_a_jdk_named()
 fn is_a_jdk_named() -> Bool {
     let home = or(environment.read("JAVA_HOME"), "")
-    home != "" && modules.is_file(modules.file_at(modules.joined(modules.joined(home, "bin"), "java")))
+    home != "" && files.is_file(files.named(modules.joined(modules.joined(home, "bin"), "java")))
 }
 
 /// An example, the directory of its own it is copied into to be run, and the seconds it has.

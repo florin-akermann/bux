@@ -15,7 +15,7 @@ fn every_file(directory: String, ending: String) -> List<String> {
     var found = []
     for name in ok_or(files.listed(directory), []) {
         let path = modules.joined(directory, name)
-        if command.is_folder(command.place_at(path)) {
+        if files.is_directory(files.named(path)) {
             for below in every_file(directory: path, ending: ending) {
                 found = list.push(found, below)
             }
@@ -32,7 +32,7 @@ fn files_in(directory: String, ending: String) -> List<String> {
     var found = []
     for name in ok_or(files.listed(directory), []) {
         let path = modules.joined(directory, name)
-        if is_ending_in(text: name, ending: ending) && !command.is_folder(command.place_at(path)) {
+        if is_ending_in(text: name, ending: ending) && !files.is_directory(files.named(path)) {
             found = list.push(found, path)
         }
     }
@@ -97,8 +97,8 @@ fn completed_from(line: List<String>, directory: String, written: String, limit:
     let errors = modules.joined(written, ".errors")
     let builder = programs.of_command(line)
     command.cleared(builder)
-    let starting = errors_to(output_to(input_from(within(builder, place(directory)), place("/dev/null")), place(output)), place(errors))
-    match started(starting) {
+    let starting = programs.errors_to(programs.output_to(programs.input_from(programs.within(builder, files.named(directory)), files.named("/dev/null")), files.named(output)), files.named(errors))
+    match programs.started(starting) {
         Ok(running) => ended_or_stopped(running, limit, Streams { output: output, errors: errors })
         Err(_) => Err(NotStarted)
     }
@@ -109,12 +109,12 @@ fn completed_from(line: List<String>, directory: String, written: String, limit:
 /// A program that does not end by then is stopped, and the runner waits until it is gone. What
 /// it wrote on its standard output until then is kept, so a caller can see how far it came.
 // example: unended_said(PastLimit(2, ""), "the program") == "the program did not end within 2 s, and was stopped"
-fn ended_or_stopped(running: Running, limit: Int, streams: Streams) -> Result<Ended, Unended> {
-    if ok_or(is_ended_within(running, limit, seconds()), false) {
-        return Ok(read_after(status: ok_or(waited(running), -1), output: streams.output, errors: streams.errors))
+fn ended_or_stopped(running: programs.Running, limit: Int, streams: Streams) -> Result<Ended, Unended> {
+    if ok_or(programs.is_ended_within(running, limit, programs.seconds()), false) {
+        return Ok(read_after(status: ok_or(programs.waited_for(running), -1), output: streams.output, errors: streams.errors))
     }
-    _ = stopped(running)
-    _ = waited(running)
+    _ = programs.stopped(running)
+    _ = programs.waited_for(running)
     Err(PastLimit(limit, ok_or(files.read(streams.output), "")))
 }
 
@@ -135,36 +135,6 @@ fn read_after(status: Int, output: String, errors: String) -> Ended {
     Ended { output: ok_or(files.read(output), ""), errors: ok_or(files.read(errors), ""), status: status }
 }
 
-/// The same builder, starting the program in `directory`.
-extern method within(builder: programs.ProcessBuilder, directory: Place) -> programs.ProcessBuilder = "directory"
-
-/// The same builder, with the program reading `file` as its standard input.
-extern method input_from(builder: programs.ProcessBuilder, file: Place) -> programs.ProcessBuilder = "redirectInput"
-
-/// The same builder, with the program writing its standard output into `file`.
-extern method output_to(builder: programs.ProcessBuilder, file: Place) -> programs.ProcessBuilder = "redirectOutput"
-
-/// The same builder, with the program writing its standard error into `file`.
-extern method errors_to(builder: programs.ProcessBuilder, file: Place) -> programs.ProcessBuilder = "redirectError"
-
-/// The program started, or why it could not be.
-extern method started(builder: programs.ProcessBuilder) -> Result<Running, String> = "start"
-
-/// The status the program ends with, once it has ended.
-extern method int waited(running: Running) -> Result<Int, String> = "waitFor"
-
-/// Whether the program ended within `limit` of `unit`, having waited no longer than that.
-extern method is_ended_within(running: Running, limit: Int, unit: Unit) -> Result<Bool, String> = "waitFor"
-
-/// The program stopped at once, as the platform stops a program that is not asked.
-extern method stopped(running: Running) -> Running = "destroyForcibly"
-
-/// The unit a limit is counted in.
-extern field seconds() -> Unit = "java.util.concurrent.TimeUnit.SECONDS"
-
-/// The file or directory `path` names.
-extern new place(path: String) -> Place
-
 /// What a started program wrote on each stream, and the status it ended with.
 type Ended = {
     output: String
@@ -184,12 +154,3 @@ type Streams = {
     output: String
     errors: String
 }
-
-/// A unit of time, which a limit is counted in.
-extern type Unit = "java.util.concurrent.TimeUnit"
-
-/// A program that was started.
-extern type Running = "java.lang.Process"
-
-/// A place in the file system, named rather than opened.
-extern type Place = "java.io.File"

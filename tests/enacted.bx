@@ -651,7 +651,7 @@ fn scene_of(written: List<Written>) -> String {
     let scene = ok_or(command.somewhere_of_its_own(), "/no-such-directory-for-a-scene")
     for file in written {
         let path = modules.joined(scene, file.at)
-        _ = command.has_made_all(command.place_at(modules.directory_of(path)))
+        _ = files.has_made_all(files.named(modules.directory_of(path)))
         _ = files.write(path, file.text)
     }
     scene
@@ -776,7 +776,7 @@ fn absence(scene: String, at: String) -> Fact {
 /// Whether a file is written at `at` under `scene`, in words.
 // example: presence(scene: "no-such-directory", at: "a") == "not written"
 fn presence(scene: String, at: String) -> String {
-    if command.is_there(command.place_at(modules.joined(scene, at))) {
+    if files.is_there(files.named(modules.joined(scene, at))) {
         return "written"
     }
     "not written"
@@ -875,8 +875,8 @@ fn occurrences(text: String, part: String) -> Int {
 /// Each byte of the file at `path`, read as one code unit, which is how a class file is read.
 // example: !is_readable(read_as_bytes("no-such-directory/a.class"))
 fn read_as_bytes(path: String) -> Result<String, String> {
-    match as_path(file_at(path)) {
-        Ok(found) => read_as(found, latin_1())
+    match files.as_a_path(files.named(path)) {
+        Ok(found) => files.read_whole_as(found, strings.as_latin_1())
         Err(why) => Err(why)
     }
 }
@@ -889,18 +889,6 @@ fn is_readable(read: Result<String, String>) -> Bool {
         Err(_) => false
     }
 }
-
-/// The file `path` names.
-extern new file_at(path: String) -> File
-
-/// The same file, as a path a file is read through.
-extern method as_path(file: File) -> Result<Path, String> = "toPath"
-
-/// Every byte of the file at `path`, each read as the code unit of the same number.
-extern static read_as(path: Path, encoding: Encoding) -> Result<String, String> = "java.nio.file.Files.readString"
-
-/// The encoding that reads each byte as the code unit of the same number.
-extern field latin_1() -> Encoding = "java.nio.charset.StandardCharsets.ISO_8859_1"
 
 derive Eq for Fact
 
@@ -922,12 +910,3 @@ type Headed = {
     source: String
     read: header.Expectation
 }
-
-/// A file, named rather than opened.
-extern type File = "java.io.File"
-
-/// A path a file is read through.
-extern type interface Path = "java.nio.file.Path"
-
-/// An encoding of text as bytes.
-extern type Encoding = "java.nio.charset.Charset"

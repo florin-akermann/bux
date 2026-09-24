@@ -7,6 +7,7 @@
 import archives
 import ast
 import boundary
+import clock
 import environment
 import exhaustiveness
 import files
@@ -97,8 +98,8 @@ fn path_of(command: Command) -> String {
 /// Whether `path` names a file and ends with a slash, as only the path of a directory does.
 // example: !is_a_file_as_a_directory("/")
 fn is_a_file_as_a_directory(path: String) -> Bool {
-    let place = place_at(path)
-    has_trailing_slash(path) && is_there(place) && !is_folder(place)
+    let place = files.named(path)
+    has_trailing_slash(path) && files.is_there(place) && !files.is_directory(place)
 }
 
 /// Whether `path` names a file whose name does not end in `.bx`, which is no Bux source.
@@ -107,8 +108,8 @@ fn is_a_file_as_a_directory(path: String) -> Bool {
 // example: !is_misnamed("no-such-directory/a.lm")
 // example: !is_misnamed("")
 fn is_misnamed(path: String) -> Bool {
-    let place = place_at(path)
-    is_there(place) && !is_folder(place) && !is_a_module_name(modules.last_part(path))
+    let place = files.named(path)
+    files.is_there(place) && !files.is_directory(place) && !is_a_module_name(modules.last_part(path))
 }
 
 /// The refusal of the file at `path`, whose name is not that of a Bux source, shown in `form`.
@@ -149,7 +150,7 @@ fn said_by(answer: Answer) -> Said {
 fn program_ended(line: List<String>) -> Said {
     let builder = programs.of_command(line)
     cleared(builder)
-    match programs.started(inheriting(builder)) {
+    match programs.started(programs.inheriting(builder)) {
         Ok(ran) => Said { output: "", errors: "", status: ok_or(programs.waited_for(ran), 2) }
         Err(why) => unusable(or(list.at(line, 0), "") + ": " + why)
     }
@@ -204,7 +205,7 @@ fn rewritten(page: Page, canonical: String) -> Said {
 /// `docs/specs/packages.md` states.
 // example: checked_said(Checking { path: "no-such-directory/a.bx", form: AsPage }, ir.little_library()).status == 2
 fn checked_said(checking: Checking, library: ir.Library) -> Said {
-    if is_folder(place_at(checking.path)) {
+    if files.is_directory(files.named(checking.path)) {
         return across(checking.path, CheckingAs(checking.form), library)
     }
     match checked(checking.path, library) {
@@ -216,7 +217,7 @@ fn checked_said(checking: Checking, library: ir.Library) -> Said {
 /// Writes the class files of `path` under `target/` in its directory, one for each class.
 // example: built_said("no-such-directory/a.bx", ir.little_library()).status == 2
 fn built_said(path: String, library: ir.Library) -> Said {
-    if is_folder(place_at(path)) {
+    if files.is_directory(files.named(path)) {
         return across(path, Building, library)
     }
     match built(path, library) {
@@ -362,7 +363,7 @@ fn tested(path: String, library: ir.Library) -> Said {
     if has_a_split_archive(path) {
         return split_said(path)
     }
-    if is_folder(place_at(path)) {
+    if files.is_directory(files.named(path)) {
         return package_tested(path, library)
     }
     reported(module_tested(path, Typing { library: library, memo: no_memo() }).tried)
@@ -389,7 +390,7 @@ fn has_a_split_archive(path: String) -> Bool {
 /// one path. A path that names nothing is refused when it is read.
 // example: !has_a_split_directory("no-such-directory:a/main.bx")
 fn has_a_split_directory(path: String) -> Bool {
-    is_there(place_at(path)) && modules.can_split_the_class_path(modules.directory_of(path))
+    files.is_there(files.named(path)) && modules.can_split_the_class_path(modules.directory_of(path))
 }
 
 /// The refusal of the module or the package at `path`, whose directory holds a `:`.
@@ -404,7 +405,7 @@ fn split_said(path: String) -> Said {
 /// The directory of the module at `path`, or `path` itself where it names a package.
 // example: package_directory_of("no-such-directory/main.bx") == "no-such-directory"
 fn package_directory_of(path: String) -> String {
-    if is_folder(place_at(path)) {
+    if files.is_directory(files.named(path)) {
         return path
     }
     modules.directory_of(path)
@@ -417,7 +418,7 @@ fn package_directory_of(path: String) -> String {
 // example: package_tested("no-such-directory", ir.little_library()).status == 2
 fn package_tested(directory: String, library: ir.Library) -> Said {
     match package_found(directory) {
-        Ok(package) => reported(every_module_tested(package, library, processors()))
+        Ok(package) => reported(every_module_tested(package, library, environment.processors()))
         Err(said) => said
     }
 }
@@ -425,7 +426,7 @@ fn package_tested(directory: String, library: ir.Library) -> Said {
 /// The package in `directory` and the entries of that directory, or why there is none to read.
 // example: is_refused(package_found("no-such-directory"))
 fn package_found(directory: String) -> Result<Package, Said> {
-    if !modules.is_file(modules.file_at(modules.joined(directory, "bux.package"))) {
+    if !files.is_file(files.named(modules.joined(directory, "bux.package"))) {
         return Err(unusable(directory + ": there is no package here, which is a directory holding `bux.package`"))
     }
     match files.listed(directory) {
@@ -566,12 +567,6 @@ fn worked(working: Working, handed: Handed) -> Working {
 fn quit(working: Working) -> Next<Working> {
     _ = send(working.pool, Left, NoLimit)
     Done
-}
-
-/// The processors the JVM may use, which is how many workers a pool has.
-// example: processors() > 0
-fn processors() -> Int {
-    processors_of(machine())
 }
 
 /// Whether a file called `name` is a module: its extension is `bx`, after a dot that opens no name.
@@ -736,7 +731,7 @@ fn java_found() -> Result<String, Said> {
         return Err(unusable("JAVA_HOME is not set, and running a program needs the JDK it names"))
     }
     let java = modules.joined(modules.joined(home, "bin"), "java")
-    if !modules.is_file(modules.file_at(java)) {
+    if !files.is_file(files.named(java)) {
         return Err(unusable(java + ": JAVA_HOME names no JDK"))
     }
     Ok(java)
@@ -860,9 +855,9 @@ fn program_line(java: String, classes: List<String>, module: String, arguments: 
 /// No other variable of the environment changes. The builder changes in place, and the caller
 /// keeps it: a foreign reference is never given back, which `docs/specs/interop.md` states.
 fn cleared(builder: programs.ProcessBuilder) -> () {
-    let variables = variables_of(builder)
+    let variables = programs.variables_of(builder)
     for name in injecting() {
-        _ = removed(variables, as_object(held_as_constant(name)))
+        _ = programs.removed(variables, programs.as_object(programs.held_as_constant(name)))
     }
 }
 
@@ -963,7 +958,7 @@ fn last_dot(name: String) -> Int {
 // example: is_same_place(one: "compiler", other: "compiler/../compiler")
 // example: !is_same_place(one: "compiler", other: "library")
 fn is_same_place(one: String, other: String) -> Bool {
-    ok_or(modules.canonical_path(modules.file_at(one)), one) == ok_or(modules.canonical_path(modules.file_at(other)), other)
+    ok_or(files.canonical_path(files.named(one)), one) == ok_or(files.canonical_path(files.named(other)), other)
 }
 
 /// The name of each entry of the directory `path`, or why it could not be listed.
@@ -1000,7 +995,7 @@ fn classes_written(classes: List<jvm.ClassFile>, into: String) -> Result<(), Sai
 /// Makes the directory `path`, and each one above it that is missing, where it is not there.
 // example: !is_refused(folder_made("/"))
 fn folder_made(path: String) -> Result<(), Said> {
-    if !is_folder(place_at(path)) && !has_made_all(place_at(path)) {
+    if !files.is_directory(files.named(path)) && !files.has_made_all(files.named(path)) {
         return Err(unusable(path + ": " + making_refusal(path)))
     }
     Ok(())
@@ -1101,11 +1096,11 @@ fn lines_of(text: String) -> List<String> {
 // example: !is_refused(somewhere_of_its_own())
 fn somewhere_of_its_own() -> Result<String, Said> {
     let shared = or(environment.read("TMPDIR"), "/tmp")
-    let now = nanoseconds()
+    let now = clock.nanoseconds()
     var attempt = 0
     for attempt < 16 {
         let beside = modules.joined(shared, "bux-test-" + shown(now) + "-" + shown(attempt))
-        if is_made(place_at(beside)) {
+        if files.make(files.named(beside)) {
             return Ok(beside)
         }
         attempt += 1
@@ -1115,7 +1110,7 @@ fn somewhere_of_its_own() -> Result<String, Said> {
 
 /// Deletes `path` and everything it holds.
 fn removed_whole(path: String) -> () {
-    if is_folder(place_at(path)) {
+    if files.is_directory(files.named(path)) {
         for name in ok_or(files.listed(path), []) {
             removed_whole(modules.joined(path, name))
         }
@@ -3457,14 +3452,14 @@ fn transpositions(compared: Compared, matched: Matched) -> Int {
 /// directory, a file that cannot be opened, a file that is not UTF-8, or no file at all.
 // example: read_refusal("no-such-directory/a.bx") == "No such file or directory (os error 2)"
 fn read_refusal(path: String) -> String {
-    let place = place_at(path)
-    if is_folder(place) {
+    let place = files.named(path)
+    if files.is_directory(place) {
         return "Is a directory (os error 21)"
     }
-    if is_there(place) && !is_readable(place) {
+    if files.is_there(place) && !files.is_readable(place) {
         return "Permission denied (os error 13)"
     }
-    if is_there(place) {
+    if files.is_there(place) {
         return "stream did not contain valid UTF-8"
     }
     if is_under_a_file(path) {
@@ -3476,13 +3471,13 @@ fn read_refusal(path: String) -> String {
 /// Why the file at `path` could not be written, in the words the Rust compiler gave.
 // example: write_refusal("no-such-directory/a.bx") == "No such file or directory (os error 2)"
 fn write_refusal(path: String) -> String {
-    if is_folder(place_at(path)) {
+    if files.is_directory(files.named(path)) {
         return "Is a directory (os error 21)"
     }
     if is_under_a_file(path) {
         return "Not a directory (os error 20)"
     }
-    if !is_folder(place_at(modules.directory_of(path))) {
+    if !files.is_directory(files.named(modules.directory_of(path))) {
         return "No such file or directory (os error 2)"
     }
     "Permission denied (os error 13)"
@@ -3491,7 +3486,7 @@ fn write_refusal(path: String) -> String {
 /// Why the directory at `path` could not be made, in the words the Rust compiler gave.
 // example: making_refusal("/") == "File exists (os error 17)"
 fn making_refusal(path: String) -> String {
-    if is_there(place_at(path)) {
+    if files.is_there(files.named(path)) {
         return "File exists (os error 17)"
     }
     if is_under_a_file(path) {
@@ -3509,13 +3504,13 @@ fn has_trailing_slash(path: String) -> Bool {
 /// Whether a directory `path` passes through is a file, which no path goes on from.
 // example: !is_under_a_file("no-such-directory/a.bx")
 fn is_under_a_file(path: String) -> Bool {
-    var above = parent_path(place_at(path))
+    var above = files.parent_path(files.named(path))
     for is_stated(above) {
-        let place = place_at(or(above, ""))
-        if is_there(place) && !is_folder(place) {
+        let place = files.named(or(above, ""))
+        if files.is_there(place) && !files.is_directory(place) {
             return true
         }
-        above = parent_path(place)
+        above = files.parent_path(place)
     }
     false
 }
@@ -3896,63 +3891,3 @@ type Matched = {
     written: List<Int>
     known: List<Int>
 }
-
-/// The file or directory at `path`, whether or not there is one.
-extern new place_at(path: String) -> Entry
-
-/// Whether there is anything at the place.
-extern method is_there(place: Entry) -> Bool = "exists"
-
-/// Whether the place is a directory.
-extern method is_folder(place: Entry) -> Bool = "isDirectory"
-
-/// Whether this process may read the place.
-extern method is_readable(place: Entry) -> Bool = "canRead"
-
-/// Whether the directory, and every one above it that was missing, was made.
-extern method has_made_all(place: Entry) -> Bool = "mkdirs"
-
-/// Whether the one directory was made, which it is not where anything is there already.
-extern method is_made(place: Entry) -> Bool = "mkdir"
-
-/// The path of the directory above the place, and `None` where the path names none.
-extern method parent_path(place: Entry) -> Option<String> = "getParent"
-
-/// A clock that only goes forward, in nanoseconds, which names a directory no run has used.
-extern static nanoseconds() -> Int = "java.lang.System.nanoTime"
-
-/// The builder, with the program reading and writing the streams of this process.
-extern method inheriting(builder: programs.ProcessBuilder) -> programs.ProcessBuilder = "inheritIO"
-
-/// The environment that the builder starts a program with, which a change to it changes.
-extern method variables_of(builder: programs.ProcessBuilder) -> Variables = "environment"
-
-/// Removes the variable `name`, and gives back its value where it held one.
-extern method removed(variables: Variables, name: VariableName) -> Option<VariableName> = "remove"
-
-/// The text as a constant, which is how a `String` becomes a value that `removed` takes.
-extern method held_as_constant(text: String) -> Constant = "describeConstable"
-
-/// The text that the constant holds, as the `java.lang.Object` that `Map.remove` takes.
-extern method as_object(constant: Constant) -> VariableName = "orElseThrow"
-
-/// The JVM this program runs on, which says how many processors it may use.
-extern static machine() -> Machine = "java.lang.Runtime.getRuntime"
-
-/// How many processors the JVM may use, which is never fewer than one.
-extern method int processors_of(running: Machine) -> Int = "availableProcessors"
-
-/// A file or a directory, named by its path.
-extern type Entry = "java.io.File"
-
-/// The JVM this program runs on.
-extern type Machine = "java.lang.Runtime"
-
-/// The environment of a program not started yet, from the name of a variable to its value.
-extern type interface Variables = "java.util.Map"
-
-/// A constant that a `String` describes itself as, which holds that `String`.
-extern type Constant = "java.util.Optional"
-
-/// A value as a JVM object, which is what `java.util.Map` takes as the name of a variable.
-extern type VariableName = "java.lang.Object"

@@ -485,7 +485,7 @@ fn lowercase(letter: String, unit: Int) -> String {
     if !is_uppercase(unit) {
         return letter
     }
-    or(one_letter(unit + 32), letter)
+    or(strings.one_char(unit + 32), letter)
 }
 
 /// `lowered` with its first letter in uppercase, which is how `PascalCase` writes a word.
@@ -495,7 +495,7 @@ fn capitalized(lowered: String) -> String {
     if !is_lowercase(first) {
         return lowered
     }
-    or(one_letter(first - 32), "") + or(strings.cut(lowered, 1, strings.length(lowered)), "")
+    or(strings.one_char(first - 32), "") + or(strings.cut(lowered, 1, strings.length(lowered)), "")
 }
 
 /// Whether `unit` is an ASCII uppercase letter.
@@ -1619,9 +1619,6 @@ fn type_of(source: String) -> ast.TypeRef {
         Err(_) => unit
     }
 }
-
-/// The one-letter text of the code point `code`, and `None` where `code` is no code point.
-extern static one_letter(int code: Int) -> Option<String> = "java.lang.Character.toString"
 
 /// The state the printer carries while it writes: the text so far, and what it still has to write.
 ///
