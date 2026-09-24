@@ -104,28 +104,6 @@ The README and `tests/started.bx` run `example/src/main.bx`.
 [134][g] - `tests/spec/packages/` shows each refusal, and a drawn package in the layout loads.
 `tests/commands/fixtures.txt` holds the goldens of each command on a package in the layout.
 
-## 🔴 Item 136: A runner, a build, and a run use a bounded share of the machine
-The compiler's own JVMs have no bound, so two runners at once held 8 GB on 2026-09-24.
-`bin/runner`, `bin/bux`, and `bin/bootstrap` start a JVM with no `-Xmx`.
-JDK ergonomics give each JVM a quarter of the memory, 6 GB, and G1 grows to it before it collects.
-So a runner held 4 GB, a `bux build compiler/main.bx` held 1.4 GB, and the bound is per JVM.
-Nothing bounds the sum, and each worktree agent starts runners of its own beside the others.
-A pass starts 401 short JVMs, one for each run, each with the flags of a long program.
-Each gets G1 with 10 collector threads, C2 with 4 compiler threads, and no class-data sharing.
-A pool of 12 workers starts up to 12 of them at once, on 12 processors that other pools share.
-Section 7 priced a start at 0.064 s, but not what the 12 at once cost the runner's own JIT.
-The count of JVMs is by design since Item 084, and this item does not change it.
-It bounds what one JVM takes, and it measures whether a smaller pool costs wall time.
-[136][a] - `docs/implementation.md` section 7 records the RSS of each JVM and the pass wall time.
-It records them before and after, at the load the run had, with the flags of each JVM.
-[136][b] - `bin/runner`, `bin/bux`, and `bin/bootstrap` start the compiler with a heap bound.
-The measurement of [136][a] says what the bound is.
-[136][c] - `command.program_line` starts each run with the flags of a short program.
-Class-data sharing, the serial collector, and C1 only are tried, and each stays where it measures.
-The runner starts its runs with the same line, so `bux test` and the runner agree.
-[136][d] - A measurement says what a pool of half the processors costs in wall time.
-The smaller pool stays where the cost is small, and the measurement is recorded either way.
-
 ## 🔴 Item 137: A comment above a declaration says why, or it is not there
 Nearly every declaration in the Bux sources carries a `///` comment that says what it gives back.
 2372 of the 2460 functions of `compiler/`, `library/`, and `1brc/` carry one, and `tests/` alike.
