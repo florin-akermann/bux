@@ -36,15 +36,6 @@ The example-line jobs of `compiler/` and `tests/` write the same classes again, 
 [103][b] - The example-line runs of one module share one set of written classes.
 [103][c] - `tests/launched.bx` holds its 2 s window under a full pool, or states a wider one.
 
-## 🔴 Item 104: `L0702` sees a clash of two class names that differ only in case
-Item 099 found it: on a file system that ignores case, `List.class` and `list.class` are one file.
-A build then writes one class over the other, and `L0702` compares the two names exactly.
-The library no longer has such a pair, but a program's own types and modules can still meet.
-The `L0702` message also names `bux` for a library class, because it reads up to the first `/`.
-[104][a] - `docs/specs/codegen.md` states that two class names that differ only in case clash.
-[104][b] - `L0702` refuses such a pair, and its message names the module that owns the class.
-[104][c] - A `tests/spec/` example shows a program whose type and module differ only in case.
-
 ## 🔴 Item 105: A golden file holds every command on every example, and `fmt` changes no later answer
 Item 092 found it: `tests/commanded.bx` runs every command line of a golden file in one stage.
 So `$ fmt` rewrites the staged copy, and `$ build` of a refused file then records status 0.
