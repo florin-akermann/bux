@@ -390,112 +390,45 @@ The runs of before and after took turns, under a load of 11 to 12 on 12 cores fr
 
 ### The profile of 2026-09-24
 
-Item 111 measured where a build and a runner pass spend their time, and later items cite it.
-The machine was an Apple M4 Pro with 12 processors, 8 of performance and 4 of efficiency.
-Other runners used it at the same time, with a load of 10 to 30 on the 12 processors.
-So a wall time here can be twice that of a quiet machine, but a share of a profile is stable.
-Each measurement ran at least twice, and each number is the median of its runs.
-The JDK was 28-ea+16, and the recorder was JFR, which the JDK holds.
+Item 111 profiled an Apple M4 Pro with 12 processors, on JDK 28-ea+16, under a load of 10 to 30.
+Each number is the median of two runs or more; a wall time grows with load, but a share does not.
+A recorded command is the line that `bin/bux` or `bin/runner` starts, with the next flag added.
+`-XX:StartFlightRecording=filename=build.jfr,settings=profile,jdk.ExecutionSample#period=1ms`.
+`jfr print --json --stack-depth 4096 --events jdk.ExecutionSample build.jfr` gives the samples.
+A script outside the repository gave each sample to its top frame in a module of the compiler.
+Loading is `lexer`, `parser`, `format`, `ast`, `modules`, and the rest of `command`.
+Resolving is `resolver`, lowering is `ir`, and class writing is `jvm`, `bytes`, and disk writes.
+Typing is `declared`, `infer`, `unify`, `types`, `surface`, `exhaustiveness`, and `holes`.
+It is also `escapes`, `carried`, `boundary`, `refusal`, and `processes`.
+The job held the 25 modules of `compiler/`, and it staged 24 runs with the class path of the runner.
+A temporary driver timed `documented.every_run_staged` and then `documented.runs_held`.
 
-A recorded command is the command that `bin/bux` or `bin/runner` starts, with one flag added:
+| Phase | Build of `compiler/main.bx` | Job over `compiler/` | Runner pass |
+|-------|-----------------------------|----------------------|-------------|
+| Typing | 37%, 1.28 s | 22%, 2.4 s | 22% |
+| Loading | 26%, 0.89 s | 31%, 3.4 s | 28% |
+| Class writing | 16%, 0.54 s | 21%, 2.4 s | 20% |
+| Of it, disk writes | 2% to 4% | 2%, 0.2 s | 4% |
+| Lowering | 13%, 0.46 s | 22%, 2.5 s | 24% |
+| Resolving | 9%, 0.32 s | 4%, 0.5 s | 5% |
+| JVM starts and runs | none | 24 runs, 3.3 s | 401 JVMs |
 
-```sh
-$JAVA_HOME/bin/java \
-    -XX:StartFlightRecording=filename=build.jfr,settings=profile,jdk.ExecutionSample#period=1ms \
-    --enable-preview -Dstdout.encoding=UTF-8 -Dstderr.encoding=UTF-8 \
-    -cp compiler/target:compiler:. main build compiler/main.bx
-```
-
-`jfr print --json --stack-depth 4096 --events jdk.ExecutionSample build.jfr` gives each sample.
-A sample belongs to the first frame, from the top, whose class is a module of the compiler.
-A frame of the library or of the JDK is skipped, so a call to `list.push` belongs to its caller.
-`command.classes_written`, which writes the class files to disk, counts as class writing.
-The modules make five phases:
-
-- Loading: `lexer`, `parser`, `format`, `ast`, `modules`, and the rest of `command`.
-- Resolving: `resolver`.
-- Typing: `declared`, `infer`, `unify`, `types`, `surface`, `exhaustiveness`, `holes`, `escapes`,
-  `carried`, `boundary`, `refusal`, and `processes`.
-- Lowering: `ir`.
-- Class writing: `jvm`, `bytes`, and `command.classes_written`.
-
-A short Python script outside the repository did this count, because no later item repeats it.
-Less than 1% of the samples had no frame of the compiler.
-
-#### One build of the compiler
-
-Six `bux build compiler/main.bx` without the recorder took 3.1 s to 7.9 s, with a median of 5.6 s.
-Three with the recorder took 3.5 s, 6.5 s, and 7.4 s, and the shares of their samples agree.
-The seconds below are the median share of the three, times the 3.5 s of the least loaded run.
-
-| Phase | Share | Seconds |
-|-------|-------|---------|
-| Typing | 37% | 1.28 |
-| Loading | 26% | 0.89 |
-| Class writing | 16% | 0.54 |
-| Lowering | 13% | 0.46 |
-| Resolving | 9% | 0.32 |
-
-The largest modules were `lexer` with 16%, `ir` and `infer` with 13% each, and `escapes` with 12%.
-The lexer runs three times on each source.
-The callers are `parser.over`, `format.printer_of`, and `command.commented_of`.
-`escapes` is reached from `carried.settled_refused`, once for each expression inference settled.
-The writes of the class files to disk were 2% to 4% of the build.
-The collector paused the build for 0.1 s in all, and it used 0.6 s of processor time.
-A build used 12 s to 17 s of processor time for its 3 s to 7 s of wall time.
-Most of it is the JIT: with `-XX:TieredStopAtLevel=1` a build used 5.9 s, not 14.8 s.
-So a pool of workers in a build shares the processors with the compiler threads of the JIT.
-
-#### One job of example lines over `compiler/`
-
-One job held the 25 modules of `compiler/`, as `every_job` makes it with one chunk.
-A driver called `documented.every_run_staged` and then `documented.runs_held`.
-It read the clock before, between, and after the two calls.
-It started as `bin/runner` starts the runner, with `tests/target`, `compiler/`, and the root.
-The driver was temporary, and it is not in the repository.
-The job staged 24 runs: each module was loaded, typed, lowered, and written, in one memo.
-Then it started one JVM for each run.
-Three runs with the recorder took 15.4 s of wall time, of which 11.2 s staged and 3.3 s ran.
-Two runs without the recorder took 19.3 s and 16.0 s.
-
-| Part of the job | Share of the samples | Seconds |
-|-----------------|----------------------|---------|
-| Loading | 31% | 3.4 |
-| Lowering | 22% | 2.5 |
-| Typing | 22% | 2.4 |
-| Class writing | 21% | 2.4 |
-| Resolving | 4% | 0.5 |
-| The 24 JVM starts and their runs | | 3.3 |
-
-The memo holds each typed module, but each run loads and parses its whole import closure again.
-So loading is the largest part of a job, and the memo does not reach it.
-Of the class writing, the writes to disk were 2% of the samples, or 0.2 s.
-The encoding of the class files, in `jvm` and `bytes`, was 19%, or 2.2 s.
-Each of the 24 runs took 0.14 s, of which a bare JVM start is 0.06 s.
-
-#### The JVMs of one runner pass
-
-Two `bin/runner` passes with the recorder took 79.4 s and 77.9 s of wall time.
-Each used 368 s of processor time, of which 275 s were in the JVM of the runner.
-The event `jdk.ProcessStart` counts the processes that the runner started.
-Each pass started 393 `java` processes, 6 `jar` processes, and 2 JVMs through `bin/bux`.
-So one runner pass starts 401 JVMs.
-
-| Part | JVMs |
-|------|------|
-| Example lines (`documented.bx`), one for each module | 163 |
-| Command lines (`commanded.bx`) | 102 |
-| Examples headed `expect-run` (`exemplified.bx`) | 90 |
-| Started programs (`started.bx`) | 30 |
-| The other parts, with `jar` and `bin/bux` | 16 |
-
-A JVM that runs a trivial `main` took 0.064 s of wall time and 0.08 s of processor time.
-It started with the line that a run of `bux test` uses, and 40 starts gave the median.
-So the 401 starts cost about 32 s of the 368 s of processor time, or 9%.
-In the JVM of the runner, the samples of all workers gave loading 28% and lowering 24%.
-They gave typing 22%, class writing 20%, and resolving 5%.
-Of the class writing, the writes to disk were 4%, and the encoding was 16%.
-The collector used 27 s of processor time and paused the runner for 3.8 s in all.
+The seconds of the build are its shares of 3.5 s, the wall time of its least loaded run.
+With JFR the build took 3.5 s, 6.5 s, and 7.4 s, and six builds without it had a median of 5.6 s.
+The seconds of the job are its shares of the 11.2 s it staged, before its 3.3 s of runs.
+With JFR the job took 15.4 s, and without it 19.3 s and 16.0 s; the runner took 79.4 s and 77.9 s.
+The lexer reads each source three times: `parser.over`, `format.printer_of`, `command.commented_of`.
+Each run of a job loads and parses its import closure again, because the memo holds only types.
+`escapes`, reached once for each expression that inference settled, is 11% to 12% of a build.
+A build used 12 s to 17 s of processor time, and 5.9 s, not 14.8 s, with `-XX:TieredStopAtLevel=1`.
+So the C2 JIT uses about 9 s of each build, and a pool of workers shares the processors with it.
+The collector paused a build for 0.1 s and a runner pass for 3.8 s, and used 0.6 s and 27 s.
+A runner pass used 368 s of processor time, of which 275 s were in the JVM of the runner.
+`jdk.ProcessStart` counts the JVMs of one pass: 393 `java`, 6 `jar`, and 2 through `bin/bux`.
+Of the `java` ones, 163 ran example lines, 102 command lines, and 90 examples headed `expect-run`.
+The other 38 are 30 of `started.bx` and 8 of the other parts.
+A JVM that runs a trivial `main` with the line of `bux test` took 0.064 s, the median of 40 starts.
+It used 0.08 s of processor time, so the 401 starts of a pass cost about 32 s, or 9% of it.
 
 ### Drawn properties
 
