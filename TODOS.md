@@ -17,22 +17,6 @@ The allow list leaves out reflection, class loaders, method handles, and deseria
 [084][c] - The Bux phases read the entry names of each stated archive and refuse other classes.
 [084][d] - A spec example shows an `extern` on `java.lang.Class.forName` that is refused.
 
-## 🔴 Item 089: A `test` block states a test, and `bux test` runs every test and example in a package
-**Depends on:** Item 081 — `bux test` runs `.bx` files.
-Today `bux test` takes one file and runs only the `// example:` lines of that module.
-One example line cannot hold a test that needs setup over several statements or needs `io`.
-A `test "name" { … }` block at the top level of a module holds such a test, and its body is `Bool`.
-A block is not a function, so it has no signature, no example, and no caller but the runner.
-[089][a] - `docs/design.md` states the block and why an example line is not enough for it.
-[089][b] - `docs/specs/testing.md` states the block, the run order, the report, and the exit codes.
-[089][c] - The Bux lexer, parser, and formatter accept the block.
-[089][d] - `bux build` and `bux run` leave every block out, so a test never ships in a program.
-[089][e] - `bux test` with no argument runs the package in the current directory.
-[089][f] - `bux test` on a directory runs every example and every block of every module in it.
-[089][g] - The run reports every test that did not hold, with its module, its name, and its line.
-[089][h] - `tests/spec/testing/` shows a block that holds, one that does not, and a refused one.
-[089][i] - `bux help test` states the block and the package run, and `packages.md` agrees.
-
 ## 🔴 Item 100: `spawn` starts a process that another module declares
 Item 091 found it: `L0800` refuses a `spawn` of a process outside the module that declares it.
 A library process, such as a ticker or a bus, is then out of reach, and section 15 wants both.
