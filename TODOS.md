@@ -20,15 +20,6 @@ It settles a `main` that reads no arguments the same way.
 [109][d] - `tests/spec/name_resolution/` shows each refusal.
 A drawn property holds that every name the compiler accepts is read at least once.
 
-## 🔴 Item 110: `bin/bootstrap` compares the two stages with one `diff`, not one `cmp` per class
-On 2026-09-24 `bin/bootstrap` took 7.3 s, and its loop of 918 `cmp` calls took 2.6 s of them.
-One `diff -rq` over the two `target/` directories takes 0.03 s and names every file that differs.
-The script keeps its contract: it names the first class that differs and ends with status 1.
-[110][a] - `docs/specs/run.md` section "The bootstrap" states that one `diff` compares the stages.
-[110][b] - `bin/bootstrap` runs one `diff -rq`, and it names the first class of the answer.
-It still refuses with status 1 when one stage holds a class the other does not.
-[110][c] - `docs/implementation.md` section 7 records the wall time before and after.
-
 ## 🔴 Item 111: A profile says where a build and a runner pass spend their time
 Item 091 put the class writer on 1400 processes and measured no gain, because the guess was wrong.
 So the speed-up starts with a measurement, and every item after this one cites it.
