@@ -100,13 +100,13 @@ fn derived_heads(declaration: ast.DeriveDeclaration) -> String {
 
 /// Whether a prelude declares any value, which one read out of a source it cannot parse does not.
 // example: !has_names(Prelude { names: resolver.prelude_of(ast.Program { items: [] }), declared: declared.little_environment() })
-fn has_names(prelude: Prelude) -> Bool {
+private fn has_names(prelude: Prelude) -> Bool {
     has_value_named(prelude.names, "Some")
 }
 
 /// Whether `names` holds a value called `named`.
 // example: has_value_named(little_prelude().names, "or")
-fn has_value_named(names: resolver.Prelude, named: String) -> Bool {
+private fn has_value_named(names: resolver.Prelude, named: String) -> Bool {
     match map.get(names.values, named) {
         Some(_) => true
         None => false
@@ -123,7 +123,7 @@ fn checked_of(source: String) -> infer.Inference {
 
 /// The code and span of the refusal `source` earns against the small prelude, or `""`.
 // example: page_code("fn count() -> Int {\n    1\n}\n") == ""
-fn page_code(source: String) -> String {
+private fn page_code(source: String) -> String {
     refusal.code_given(check(declared.resolved_of(source), surface.nothing_imported(), little_prelude()))
 }
 

@@ -13,7 +13,7 @@ import types
 
 /// The spans of the holes `source` holds, one after another.
 // example: holes_of("fn f() -> Int {\n    todo(todo(\"x\"))\n}\n") == "20..35 25..34 "
-fn holes_of(source: String) -> String {
+private fn holes_of(source: String) -> String {
     var written = ""
     for hole in of_module(declared_resolved(source)) {
         written += shown(hole.span) + " "
@@ -23,7 +23,7 @@ fn holes_of(source: String) -> String {
 
 /// `source`, resolved against the small prelude of the examples.
 // example: declared_resolved("").module == "main"
-fn declared_resolved(source: String) -> resolver.Resolved {
+private fn declared_resolved(source: String) -> resolver.Resolved {
     types.checked_of(source).resolved
 }
 

@@ -27,7 +27,7 @@ fn printed(source: String, prelude: Prelude) -> String {
 
 /// What the resolver says of the prelude's own `source`, which is resolved as the prelude.
 // example: prelude_printed("fn f() -> Int {\n    1\n}\n") == "resolved\n3..4 value function declared 3..4\n10..13 type type prelude\n"
-fn prelude_printed(source: String) -> String {
+private fn prelude_printed(source: String) -> String {
     match parser.parse(source) {
         Ok(program) => answer_printed(prelude_resolved(program))
         Err(_) => "unparsed\n"
@@ -1618,7 +1618,7 @@ fn meant_by(placed: List<Placed>, resolution: Option<Resolution>) -> Option<Inde
 
 /// Whether nothing is there.
 // example: is_none(None)
-fn is_none(found: Option<Indexed>) -> Bool {
+private fn is_none(found: Option<Indexed>) -> Bool {
     match found {
         Some(_) => false
         None => true
@@ -1773,7 +1773,7 @@ fn origin_words(origin: Origin) -> String {
 
 /// The refusal `answer` holds, printed, and `not refused` where it holds none.
 // example: refused_printed(Ok(1)) == "not refused\n"
-fn refused_printed<T>(answer: Result<T, ResolveError>) -> String {
+private fn refused_printed<T>(answer: Result<T, ResolveError>) -> String {
     match answer {
         Ok(_) => "not refused\n"
         Err(refused) => refusal_printed(refused)

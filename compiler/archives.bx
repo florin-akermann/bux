@@ -208,7 +208,7 @@ fn help_of(kind: ArchiveErrorKind) -> String {
 
 /// The kind of refusal `answer` holds, and a missing archive where it holds none.
 // example: code_of(refused_kind(Ok("x.jar"))) == "L0606"
-fn refused_kind<T>(answer: Result<T, Unreached>) -> ArchiveErrorKind {
+private fn refused_kind<T>(answer: Result<T, Unreached>) -> ArchiveErrorKind {
     match answer {
         Err(Refused { error }) => error.kind
         _ => Missing("")
@@ -217,7 +217,7 @@ fn refused_kind<T>(answer: Result<T, Unreached>) -> ArchiveErrorKind {
 
 /// Whether `answer` holds a file that could not be read.
 // example: !is_unread(Ok(1))
-fn is_unread<T>(answer: Result<T, Unreached>) -> Bool {
+private fn is_unread<T>(answer: Result<T, Unreached>) -> Bool {
     match answer {
         Err(Unread(_)) => true
         _ => false
@@ -226,7 +226,7 @@ fn is_unread<T>(answer: Result<T, Unreached>) -> Bool {
 
 /// An archive at `file`, stated with a hash of zeros by the line at the start of a manifest.
 // example: one_at("x.jar").file == "x.jar"
-fn one_at(file: String) -> modules.Reached {
+private fn one_at(file: String) -> modules.Reached {
     let archive = modules.Archive { path: file, digest: modules.Digest(modules.repeated_zero(64)), span: lexer.Span { start: 0, length: 0 } }
     modules.Reached { file: file, archive: archive, manifest: modules.Manifest { path: "bux.package", source: "" } }
 }

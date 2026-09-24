@@ -19,7 +19,7 @@ fn unit_refused(found: unify.Type, at: lexer.Span) -> Result<unify.Type, TypeErr
 
 /// A refusal as the harness compares it: the code, the span, and the message, then the help.
 // example: printed(TypeError { kind: DivisorIsZero, span: lexer.Span { start: 4, length: 1 } }) == "L0407 4..5 this divisor is zero, so there is no answer\nhelp: a zero written here is never anything else; drop the division\n"
-fn printed(refused: TypeError) -> String {
+private fn printed(refused: TypeError) -> String {
     code_of(refused.kind) + " " + shown(refused.span) + " " + message(refused.kind) + "\nhelp: " + help_of(refused.kind) + "\n"
 }
 

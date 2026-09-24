@@ -206,7 +206,7 @@ fn is_asked_more_of(asked: Asked, module: String, before: Asked) -> Bool {
 
 /// One ask of the module `main`, for `pick` settled on `Int`.
 // example: little_ask().function == "pick"
-fn little_ask() -> Specialisation {
+private fn little_ask() -> Specialisation {
     Specialisation { module: "main", function: "pick", settled: [unify.int()], foreign: [] }
 }
 
@@ -587,7 +587,7 @@ fn instance_named(lowering: Lowering, named: String) -> Option<Answers> {
 
 /// Whether nothing answers.
 // example: is_nothing_answered(None)
-fn is_nothing_answered(answers: Option<Answers>) -> Bool {
+private fn is_nothing_answered(answers: Option<Answers>) -> Bool {
     match answers {
         Some(_) => false
         None => true
@@ -700,7 +700,7 @@ fn arguments_descriptor() -> Descriptor {
 
 /// Whether nothing answered.
 // example: is_unanswered(Answered { lowering: little_lowering(""), answered_by: None })
-fn is_unanswered(answered: Answered) -> Bool {
+private fn is_unanswered(answered: Answered) -> Bool {
     match answered.answered_by {
         Some(_) => false
         None => true
@@ -709,7 +709,7 @@ fn is_unanswered(answered: Answered) -> Bool {
 
 /// Whether no generic function was found.
 // example: is_plain(None)
-fn is_plain(found: Option<ast.FunctionDeclaration>) -> Bool {
+private fn is_plain(found: Option<ast.FunctionDeclaration>) -> Bool {
     match found {
         Some(_) => false
         None => true
@@ -724,13 +724,13 @@ fn plainly_owed(lowering: Lowering, written_at: lexer.Span) -> Lowering {
 
 /// An `extern` of no name, which reaches a constructor of nothing.
 // example: no_extern().name.text == ""
-fn no_extern() -> ast.ExternDeclaration {
+private fn no_extern() -> ast.ExternDeclaration {
     ast.ExternDeclaration { name: infer.no_name(), reaches: ast.Constructor, gives: ast.GivesAsDeclared, parameters: [], result: ast.TypeRef { kind: ast.UnitType, span: infer.no_name().span }, span: infer.no_name().span }
 }
 
 /// A builder of the body of the first function `source` writes, typed against the small prelude.
 // example: little_builder("fn f() -> Int {\n    1\n}\n").next_slot == 0
-fn little_builder(source: String) -> Builder {
+private fn little_builder(source: String) -> Builder {
     let lowering = little_lowering(source)
     let function = or(list.at(infer.functions_of(lowering.typed.resolved.program), 0), no_function())
     builder_entering(lowering, function, signature_of(lowering, function.name.span, whole()), whole())
@@ -748,7 +748,7 @@ fn builder_entering(lowering: Lowering, function: ast.FunctionDeclaration, signa
 
 /// The first expression the first function `source` writes gives back.
 // example: first_expr("fn f() -> Int {\n    1\n}\n").span.start == 20
-fn first_expr(source: String) -> ast.Expr {
+private fn first_expr(source: String) -> ast.Expr {
     let function = or(list.at(infer.functions_of(declared.first_program(source)), 0), no_function())
     var found = []
     for statement in function.body.statements {
@@ -770,19 +770,19 @@ fn body_built(builder: Builder, block: ast.Block) -> Builder {
 
 /// The body of the first function `source` writes.
 // example: list.length(first_function_body("fn f() -> Int {\n    1\n}\n").statements) == 1
-fn first_function_body(source: String) -> ast.Block {
+private fn first_function_body(source: String) -> ast.Block {
     or(list.at(infer.functions_of(declared.first_program(source)), 0), no_function()).body
 }
 
 /// A function of no name, which takes nothing and does nothing.
 // example: no_function().name.text == ""
-fn no_function() -> ast.FunctionDeclaration {
+private fn no_function() -> ast.FunctionDeclaration {
     ast.FunctionDeclaration { name: infer.no_name(), type_parameters: [], parameters: [], result: None, body: ast.Block { statements: [], span: infer.no_name().span }, span: infer.no_name().span, visibility: ast.Public }
 }
 
 /// Whether no span was found.
 // example: is_whole(None)
-fn is_whole(found: Option<lexer.Span>) -> Bool {
+private fn is_whole(found: Option<lexer.Span>) -> Bool {
     match found {
         Some(_) => false
         None => true
@@ -791,7 +791,7 @@ fn is_whole(found: Option<lexer.Span>) -> Bool {
 
 /// The name of the method `instruction` calls, and `""` where it calls none.
 // example: method_named(Copy) == ""
-fn method_named(instruction: Instruction) -> String {
+private fn method_named(instruction: Instruction) -> String {
     match instruction {
         Construct(reached) => reached.name
         InvokeStatic(reached) => reached.name
@@ -804,7 +804,7 @@ fn method_named(instruction: Instruction) -> String {
 
 /// Whether no slot was found.
 // example: is_unslotted(None)
-fn is_unslotted(found: Option<Slot>) -> Bool {
+private fn is_unslotted(found: Option<Slot>) -> Bool {
     match found {
         Some(_) => false
         None => true
@@ -813,7 +813,7 @@ fn is_unslotted(found: Option<Slot>) -> Bool {
 
 /// Whether no instance was found.
 // example: is_unfound(Found { builder: little_builder(""), answered_by: None })
-fn is_unfound(found: Found) -> Bool {
+private fn is_unfound(found: Found) -> Bool {
     match found.answered_by {
         Some(_) => false
         None => true
@@ -822,7 +822,7 @@ fn is_unfound(found: Found) -> Bool {
 
 /// Whether nothing was reached through a module.
 // example: is_not_through(None)
-fn is_not_through(found: Option<Through>) -> Bool {
+private fn is_not_through(found: Option<Through>) -> Bool {
     match found {
         Some(_) => false
         None => true
@@ -831,7 +831,7 @@ fn is_not_through(found: Option<Through>) -> Bool {
 
 /// Whether no shape was found.
 // example: is_unshaped(None)
-fn is_unshaped(found: Option<Shape>) -> Bool {
+private fn is_unshaped(found: Option<Shape>) -> Bool {
     match found {
         Some(_) => false
         None => true
@@ -840,7 +840,7 @@ fn is_unshaped(found: Option<Shape>) -> Bool {
 
 /// Whether nothing was written.
 // example: is_unwritten(None)
-fn is_unwritten(found: Option<Left>) -> Bool {
+private fn is_unwritten(found: Option<Left>) -> Bool {
     match found {
         Some(_) => false
         None => true
@@ -1092,7 +1092,7 @@ fn is_record_constructor(shapes: Shapes, named: String) -> Bool {
 
 /// Whether no dot was found.
 // example: is_undotted(None)
-fn is_undotted(found: Option<Home>) -> Bool {
+private fn is_undotted(found: Option<Home>) -> Bool {
     match found {
         Some(_) => false
         None => true
@@ -1269,7 +1269,7 @@ fn parameters_width(method: MethodDescriptor) -> Int {
 
 /// Whether no type was found.
 // example: is_unsettled(None)
-fn is_unsettled(found: Option<unify.Type>) -> Bool {
+private fn is_unsettled(found: Option<unify.Type>) -> Bool {
     match found {
         Some(_) => false
         None => true
@@ -1295,25 +1295,25 @@ fn derived_body(lowering: Lowering, of: String, declaration: ast.TypeDeclaration
 
 /// A derived body with nothing written yet, over a lowering of `source`.
 // example: writing_over(box_module()).lowering.module == "main"
-fn writing_over(source: String) -> Writing {
+private fn writing_over(source: String) -> Writing {
     Writing { lowering: little_lowering(source), instructions: [], next_label: 0 }
 }
 
 /// A module that declares the record `Box`, which holds one whole number.
 // example: box_module() == "type Box = {\n    at: Int\n}\n"
-fn box_module() -> String {
+private fn box_module() -> String {
     "type Box = {\n    at: Int\n}\n"
 }
 
 /// A derived body with nothing written yet, over a lowering of nothing.
 // example: no_writing().next_label == 0
-fn no_writing() -> Writing {
+private fn no_writing() -> Writing {
     Writing { lowering: little_lowering(""), instructions: [], next_label: 0 }
 }
 
 /// The lowering of `source`, typed against the small prelude as the module `main`.
 // example: little_lowering("fn f() -> Int {\n    1\n}\n").shapes.module == "main"
-fn little_lowering(source: String) -> Lowering {
+private fn little_lowering(source: String) -> Lowering {
     let typed = types.checked_of(source)
     let library = little_library()
     lowering_of(typed, library, "main", shapes_of(typed, main_naming(), library))
@@ -1734,13 +1734,13 @@ fn simple(reached: String) -> String {
 
 /// The type `()`, as the source writes it.
 // example: is_unit_written(unit_written())
-fn unit_written() -> ast.TypeRef {
+private fn unit_written() -> ast.TypeRef {
     ast.TypeRef { kind: ast.UnitType, span: infer.no_name().span }
 }
 
 /// Whether `written` is the type `()`.
 // example: is_unit_written(unit_written())
-fn is_unit_written(written: ast.TypeRef) -> Bool {
+private fn is_unit_written(written: ast.TypeRef) -> Bool {
     match written.kind {
         ast.UnitType => true
         _ => false
@@ -5057,20 +5057,20 @@ fn built_shape(shapes: Shapes, constructor: String) -> Shape {
 
 /// The shapes of the module `main`, which declares the type `Box`.
 // example: main_shapes().module == "main"
-fn main_shapes() -> Shapes {
+private fn main_shapes() -> Shapes {
     let shapes = no_shapes()
     shapes { module: "main", class: "main", own: set.insert(set.empty(), "Box") }
 }
 
 /// How the module `main` of the examples is named, in a program that reaches only the prelude.
 // example: main_naming().class == "main"
-fn main_naming() -> Naming {
+private fn main_naming() -> Naming {
     Naming { module: "main", class: "main", classes: only_the_prelude() }
 }
 
 /// Shapes of nothing, for no module and no prelude.
 // example: no_shapes().module == ""
-fn no_shapes() -> Shapes {
+private fn no_shapes() -> Shapes {
     Shapes { module: "", class: "", classes: only_the_prelude(), declarations: [], built_by: map.empty(), records: map.empty(), record_builders: set.empty(), own: set.empty(), foreign: map.empty(), prelude_types: set.empty() }
 }
 
@@ -5092,7 +5092,7 @@ fn library_class_added(classes: map.Map<String, String>, name: String) -> map.Ma
 
 /// The shape of the second variant `C` of the type `a.B`.
 // example: tagged_shape().class == "a/B$C"
-fn tagged_shape() -> Shape {
+private fn tagged_shape() -> Shape {
     Shape { class: "a/B$C", base: "a/B", tag: Some(1), carries: [] }
 }
 

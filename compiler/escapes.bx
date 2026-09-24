@@ -21,7 +21,7 @@ import unify
 /// The code and span of the first escape `source` declares, against the small prelude, or `""`.
 // example: escapes_code("fn opened(path: String) -> File {\n    named(path)\n}\n\nextern new named(path: String) -> File\n\nextern type File = \"java.io.File\"\n") == "L0435 27..31"
 // example: escapes_code("fn size(path: String) -> Int {\n    _ = named(path)\n    1\n}\n\nextern new named(path: String) -> File\n\nextern type File = \"java.io.File\"\n") == ""
-fn escapes_code(source: String) -> String {
+private fn escapes_code(source: String) -> String {
     let resolved = declared.resolved_of(source)
     match declared.environment_of(declared.little_environment(), resolved, [], [], unify.empty_table()) {
         Ok(declaring) => refusal.code_given(inferred_and_declared(infer.module_inferred(resolved, surface.nothing_imported(), declaring)))
@@ -31,7 +31,7 @@ fn escapes_code(source: String) -> String {
 
 /// `inferred`, held to the escape check of its declarations where inference accepted it.
 // example: refusal.code_given(inferred_and_declared(Ok(infer.nothing_inferred()))) == ""
-fn inferred_and_declared(inferred: Result<infer.Inference, refusal.TypeError>) -> Result<(), refusal.TypeError> {
+private fn inferred_and_declared(inferred: Result<infer.Inference, refusal.TypeError>) -> Result<(), refusal.TypeError> {
     nothing_declared_escapes(inferred?)
 }
 

@@ -24,7 +24,7 @@ fn nothing_inferred() -> Inference {
 
 /// The type one step found, or `()` where the step was refused.
 // example: found_after(Ok(Typed { inference: nothing_inferred(), found: unify.int() })) == unify.int()
-fn found_after(walked: Result<Typed, refusal.TypeError>) -> unify.Type {
+private fn found_after(walked: Result<Typed, refusal.TypeError>) -> unify.Type {
     match walked {
         Ok(typed) => typed.found
         Err(_) => unify.Unit
@@ -45,7 +45,7 @@ fn no_name() -> ast.Name {
 
 /// Whether there is a name.
 // example: !is_named(None)
-fn is_named(found: Option<ast.Name>) -> Bool {
+private fn is_named(found: Option<ast.Name>) -> Bool {
     match found {
         Some(_) => true
         None => false
@@ -54,7 +54,7 @@ fn is_named(found: Option<ast.Name>) -> Bool {
 
 /// Whether a function is there.
 // example: !is_declared(None)
-fn is_declared(found: Option<ast.FunctionDeclaration>) -> Bool {
+private fn is_declared(found: Option<ast.FunctionDeclaration>) -> Bool {
     match found {
         Some(_) => true
         None => false
@@ -63,7 +63,7 @@ fn is_declared(found: Option<ast.FunctionDeclaration>) -> Bool {
 
 /// Whether something was reached.
 // example: !is_reached(None)
-fn is_reached(found: Option<Typed>) -> Bool {
+private fn is_reached(found: Option<Typed>) -> Bool {
     match found {
         Some(_) => true
         None => false
@@ -72,7 +72,7 @@ fn is_reached(found: Option<Typed>) -> Bool {
 
 /// Whether a kind is there.
 // example: is_propagating(Some(Absence))
-fn is_propagating(found: Option<Propagated>) -> Bool {
+private fn is_propagating(found: Option<Propagated>) -> Bool {
     match found {
         Some(_) => true
         None => false
@@ -83,7 +83,7 @@ fn is_propagating(found: Option<Propagated>) -> Bool {
 ///
 /// It is `""` where the module types, and `unresolved` where resolution refuses it.
 // example: typed_code("fn count() -> Int {\n    1\n}\n") == ""
-fn typed_code(source: String) -> String {
+private fn typed_code(source: String) -> String {
     let program = declared.first_program(source)
     match resolver.resolve(program, "main", resolver.prelude_of(declared.little_prelude()), set.empty()) {
         Ok(resolved) => declared_and_typed(resolved)
@@ -93,7 +93,7 @@ fn typed_code(source: String) -> String {
 
 /// The code and span of the refusal `resolved` earns, or `""` where it types.
 // example: declared_and_typed(declared.resolved_of("fn count() -> Int {\n    1\n}\n")) == ""
-fn declared_and_typed(resolved: resolver.Resolved) -> String {
+private fn declared_and_typed(resolved: resolver.Resolved) -> String {
     match declared.environment_of(declared.little_environment(), resolved, [], [], unify.empty_table()) {
         Ok(declaring) => refusal.code_given(module_inferred(resolved, surface.nothing_imported(), declaring))
         Err(refused) => code_of_error(refused)

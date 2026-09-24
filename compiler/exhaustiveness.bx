@@ -60,7 +60,7 @@ fn refused_in(module: String, answer: Result<(), MatchError>) -> Result<(), Unch
 
 /// The code, the span, and the message `source` is refused with against the small prelude, or `""`.
 // example: refusal_of("fn f(held: Bool) -> Int {\n    match held {\n        true => 1\n    }\n}\n") == "L0500 30..66 this `match` does not cover `false`"
-fn refusal_of(source: String) -> String {
+private fn refusal_of(source: String) -> String {
     match check(types.checked_of(source)) {
         Ok(_) => ""
         Err(refused) => code_of(refused) + " " + shown(span_of(refused)) + " " + message_of(refused)
@@ -78,7 +78,7 @@ fn said(answer: Result<(), MatchError>) -> String {
 
 /// The same, once the refusal is held as the answer of a module.
 // example: said_in(Err(Skipped)) == "skipped\n"
-fn said_in(answer: Result<(), Unchecked>) -> String {
+private fn said_in(answer: Result<(), Unchecked>) -> String {
     match answer {
         Ok(_) => ""
         Err(unchecked) => unchecked_printed(unchecked)
@@ -96,7 +96,7 @@ fn unchecked_printed(unchecked: Unchecked) -> String {
 
 /// The arm found out of place, printed, and nothing where none is.
 // example: found_printed(None) == ""
-fn found_printed(found: Option<MatchError>) -> String {
+private fn found_printed(found: Option<MatchError>) -> String {
     match found {
         Some(refused) => refusal_printed(refused)
         None => ""
@@ -105,19 +105,19 @@ fn found_printed(found: Option<MatchError>) -> String {
 
 /// A module that matches a `Status` of three variants with `arms`, each written on its own line.
 // example: refusal_of(status_module("        Pending => 1\n        Running(_) => 2\n        Failed(_, _) => 3\n")) == ""
-fn status_module(arms: String) -> String {
+private fn status_module(arms: String) -> String {
     "fn f(held: Status) -> Int {\n    match held {\n" + arms + "    }\n}\n\ntype Status =\n    | Pending\n    | Running(Int)\n    | Failed(Int, Int)\n"
 }
 
 /// What the examples read patterns against: no name resolved, and the prelude's constructors.
 // example: carried_by(no_reading().space, "Some") == 1
-fn no_reading() -> Reading {
+private fn no_reading() -> Reading {
     Reading { found: map.empty(), space: no_space() }
 }
 
 /// The constructors of the types of the prelude, and nothing else.
 // example: or(declared_at(no_space(), "true"), -1) == 1
-fn no_space() -> Space {
+private fn no_space() -> Space {
     space_of(ast.Program { items: [] }, [])
 }
 

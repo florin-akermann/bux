@@ -18,7 +18,7 @@ import unify
 
 /// The code and span of the first break of the shape `source` writes, or `""`.
 // example: shape_code("process Counter {\n    fn start() -> Int {\n        0\n    }\n\n    fn receive(total: Int, message: Int) -> Next<Int> {\n        match message {\n            _ => Done\n        }\n    }\n}\n") == ""
-fn shape_code(source: String) -> String {
+private fn shape_code(source: String) -> String {
     refusal.code_given(every_process_shaped(ok_or(parser.parse(source), ast.Program { items: [] })))
 }
 

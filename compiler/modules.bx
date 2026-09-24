@@ -61,7 +61,7 @@ fn loaded_printed(loaded: List<Module>) -> String {
 /// One step of the walk gives back what it reached or why it stopped, and this is what an example
 /// of such a step reads.
 // example: refused_printed(Ok(1)) == "not refused\n"
-fn refused_printed<T>(answer: Result<T, NotLoaded>) -> String {
+private fn refused_printed<T>(answer: Result<T, NotLoaded>) -> String {
     match answer {
         Ok(_) => "not refused\n"
         Err(refused) => refusal_printed(refused)
@@ -446,7 +446,7 @@ fn manifest_in(directory: String) -> Result<Option<Manifest>, NotLoaded> {
 
 /// Whether nothing is there, which is what a directory with no manifest in it holds.
 // example: has_no_manifest(None)
-fn has_no_manifest(held: Option<Manifest>) -> Bool {
+private fn has_no_manifest(held: Option<Manifest>) -> Bool {
     match held {
         Some(_) => false
         None => true
@@ -609,7 +609,7 @@ fn first_unit(text: String, unit: Int) -> Int {
 
 /// The error an archive line was refused with, and an error pointing nowhere where it was not.
 // example: refused_with_archive(Ok(Archive { path: "", digest: Digest(""), span: lexer.Span { start: 0, length: 0 } })).span.length == 0
-fn refused_with_archive(read: Result<Archive, LoadError>) -> LoadError {
+private fn refused_with_archive(read: Result<Archive, LoadError>) -> LoadError {
     match read {
         Ok(_) => LoadError { kind: NoSuchModule(""), span: lexer.Span { start: 0, length: 0 } }
         Err(error) => error
@@ -618,7 +618,7 @@ fn refused_with_archive(read: Result<Archive, LoadError>) -> LoadError {
 
 /// The error a manifest was refused with, and an error pointing nowhere where it was not.
 // example: refused_with(Ok(no_lines())).span.length == 0
-fn refused_with(read: Result<Stated, LoadError>) -> LoadError {
+private fn refused_with(read: Result<Stated, LoadError>) -> LoadError {
     match read {
         Ok(_) => LoadError { kind: NoSuchModule(""), span: lexer.Span { start: 0, length: 0 } }
         Err(error) => error

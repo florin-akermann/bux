@@ -19,7 +19,7 @@ import unify
 
 /// Whether the environment gives a type to the name filed under `key`.
 // example: !has_value(empty_environment(ByName), "push")
-fn has_value(environment: Environment, key: String) -> Bool {
+private fn has_value(environment: Environment, key: String) -> Bool {
     match map.get(environment.values, key) {
         Some(_) => true
         None => false
@@ -278,7 +278,7 @@ fn holds_as(environment: Environment, claim: Claim) -> Option<surface.Bounds> {
 
 /// Whether there are bounds.
 // example: is_holding(Some(surface.Bounds { least: 0, most: 1 }))
-fn is_holding(bounds: Option<surface.Bounds>) -> Bool {
+private fn is_holding(bounds: Option<surface.Bounds>) -> Bool {
     match bounds {
         Some(_) => true
         None => false
@@ -484,7 +484,7 @@ fn with_variants(kept: List<surface.KeptName>, variants: List<ast.Variant>) -> L
 ///
 /// It is `""` where the source declares what it writes, and `unresolved` where resolution refuses.
 // example: declared_code("fn f() -> Int {\n    1\n}\n") == ""
-fn declared_code(source: String) -> String {
+private fn declared_code(source: String) -> String {
     match resolver.resolve(first_program(source), "main", resolver.prelude_of(little_prelude()), set.empty()) {
         Ok(resolved) => refusal.code_given(environment_of(little_environment(), resolved, [], [], unify.empty_table()))
         Err(_) => "unresolved"
@@ -1619,7 +1619,7 @@ fn little_resolved() -> resolver.Resolved {
 
 /// The first variant of the first type `source` declares.
 // example: first_variant("type Box = Box\n").name.text == "Box"
-fn first_variant(source: String) -> ast.Variant {
+private fn first_variant(source: String) -> ast.Variant {
     let declaration = first_type(source)
     match declaration.definition {
         ast.Variants(variants) => or(list.at(variants, 0), no_variant())
@@ -1653,7 +1653,7 @@ fn no_variant() -> ast.Variant {
 
 /// The first instance `source` declares.
 // example: first_instance("instance Eq<Box> {\n    fn is_equal(one: Box, other: Box) -> Bool {\n        true\n    }\n}\n").for_type.text == "Box"
-fn first_instance(source: String) -> ast.InstanceDeclaration {
+private fn first_instance(source: String) -> ast.InstanceDeclaration {
     match first_item(source) {
         ast.Instance(declaration) => declaration
         _ => ast.InstanceDeclaration { trait_name: ast.Name { text: "", span: lexer.Span { start: 0, length: 0 } }, type_parameters: [], for_type: ast.Name { text: "", span: lexer.Span { start: 0, length: 0 } }, arguments: [], methods: [], span: lexer.Span { start: 0, length: 0 } }
