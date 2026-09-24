@@ -6,15 +6,6 @@
 
 ## Open
 
-## 🔴 Item 083: A manifest names each Java archive by path and hash, and a run reaches no other
-A package that reaches the Java ecosystem needs a way to say which archives it uses.
-Nothing is fetched, so an archive is a file already on disk, and its hash pins its content.
-[083][a] - `docs/specs/packages.md` states the manifest line, such as `jar lib/x.jar sha256:…`.
-[083][b] - The build refuses an archive that is missing or whose hash is not the one stated.
-[083][c] - The build refuses an archive whose `Class-Path` attribute names other archives.
-[083][d] - `bux run` puts only the build directory and the stated archives on the class path.
-[083][e] - `docs/implementation.md` says the archive line is for the JVM target only.
-
 ## 🔴 Item 084: An `extern` names only a class that the build can account for
 **Depends on:** Item 083 — an accepted class is in a stated archive or on the allow list.
 Today an `extern` can name `java.lang.Class.forName` and load a class whose name comes at run time.
@@ -88,3 +79,10 @@ So `$ fmt` rewrites the staged copy, and `$ build` of a refused file then record
 [105][a] - `docs/specs/executable-examples.md` states that each command sees the example as written.
 [105][b] - `bin/runner` fails when an example under `tests/spec/` has no entry in `fixtures.txt`.
 [105][c] - `bin/runner golden` adds the entries of a new example, and the missing entries are added.
+
+## 🔴 Item 106: A path that holds `:` is refused, because it would split the class path
+Item 083 found it: a `depends`, archive, or `target/` path with a `:` splits the class path.
+The JVM then reads two entries, and a run reaches a directory that no manifest names.
+[106][a] - `docs/specs/packages.md` and `run.md` state that no path on the class path holds `:`.
+[106][b] - The build refuses such a path with the manifest's malformed-line code and a plain help.
+[106][c] - A drawn property in `tests/pinned.bx` shows that a path with `:` is refused.
