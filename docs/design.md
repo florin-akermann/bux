@@ -1130,7 +1130,7 @@ A linter over that loop rejects each one after the fact, which question 7 calls 
 There is no loop here to write differently, and no `var` to hold state beside the state.
 There is no early `return` either, so no path leaves the process without a next state.
 
-Question 12 holds a library method to a `for` loop, and a `process` declaration is no method.
+Question 12 holds a library function to a `for` loop, and a `process` declaration is no function.
 Read broadly, the question still lands: a `for` loop could write this, and that is the problem.
 A process is the one place where a second shape costs a reader the whole program.
 A process is therefore written one way, and `spawn` takes no other.

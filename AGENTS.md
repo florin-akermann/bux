@@ -54,8 +54,8 @@ An example of the second half: `17 / 0` is `None`, because a panic is simpler an
 
 ## Library principles
 
-- **The standard library is small, and the fewer methods a type has, the better.**
-- A method earns its place only where a `for` loop cannot write it; the map iterator is the example.
+- **The standard library is small**: a function lands only where a `for` loop cannot write it.
+- So a map has no iterator, a method is a trait method only, and `list.push` is a module function.
 - A library data structure has the best known asymptotic cost, written plainly and never tuned.
 
 ## Simplicity in the compiler
