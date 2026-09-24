@@ -19,9 +19,9 @@ import strings
 import walk
 
 /// The properties of processes, each tried on `cases` drawn cases.
-// example: list.length(every_property(0, ir.little_library())) == 4
+// example: list.length(every_property(0, ir.little_library())) == 5
 fn every_property(cases: Int, library: ir.Library) -> List<held.Held> {
-    [each_well_formed_process_is_accepted(cases, library), each_break_of_the_shape_is_refused(cases, library), messages_arrive_in_order_and_ended_gives_the_last_state(cases, library), a_mailbox_never_holds_more_than_its_bound(cases, library)]
+    [each_well_formed_process_is_accepted(cases, library), each_break_of_the_shape_is_refused(cases, library), messages_arrive_in_order_and_ended_gives_the_last_state(cases, library), a_mailbox_never_holds_more_than_its_bound(cases, library), no_send_after_the_end_is_delivered(cases, library)]
 }
 
 /// A drawn process of the one shape passes every phase up to inference.
@@ -277,6 +277,13 @@ fn a_mailbox_never_holds_more_than_its_bound(cases: Int, library: ir.Library) ->
     run_held(property: "a_mailbox_never_holds_more_than_its_bound", source: bounded_program(cases), cases: cases, library: library)
 }
 
+/// Drawn sends race the end of a process, and after `ended` gives back, every `send` gives
+/// `ProcessEnded`, whatever it waits.
+// example: held.is_held(no_send_after_the_end_is_delivered(0, ir.little_library()))
+fn no_send_after_the_end_is_delivered(cases: Int, library: ir.Library) -> held.Held {
+    run_held(property: "no_send_after_the_end_is_delivered", source: closed_program(cases), cases: cases, library: library)
+}
+
 /// What `source` writes when it is run beside `tests/drawn.bx`, each line held as one case.
 ///
 /// A property of no cases starts no JVM, and a property is skipped where no JDK is named.
@@ -322,6 +329,16 @@ fn ordered_program(cases: Int) -> String {
     let recorded = "// example: recorded(1) == \"1 held\"\nfn recorded(seed: Int) -> String {\n    let draw = drawn.seeded(seed)\n    let sent = drawn.numbers(draw, drawn.number(drawn.next(draw), 150), 1000)\n    let recording = spawn Recorder()\n    for value in sent {\n        _ = send(recording, Record(value), NoLimit)\n    }\n    _ = send(recording, Stop, NoLimit)\n    for value in sent {\n        _ = send(recording, Record(value), NoWait)\n    }\n    let found = ended(recording)\n    if found == sent {\n        return shown(seed) + \" held\"\n    }\n    shown(seed) + \" gave \" + shown(found)\n}\n"
     let recorder = "process Recorder {\n    fn start() -> List<Int> {\n        []\n    }\n\n    fn receive(values: List<Int>, message: Recorded) -> Next<List<Int>> {\n        match message {\n            Record(value) => Continue(list.push(values, value))\n            Stop => Done\n        }\n    }\n}\n"
     "import drawn\nimport io\nimport list\n\n" + entry + "\n" + recorded + "\n" + recorder + "\ntype Recorded =\n    | Record(Int)\n    | Stop\n"
+}
+
+/// The program that ends each case's process while drawn sends race the end, then sends again.
+// example: strings.length(closed_program(1)) > 0
+fn closed_program(cases: Int) -> String {
+    let entry = "fn main(arguments: List<String>) -> Int {\n    var case = 0\n    for case < " + shown(cases) + " {\n        io.println(closed(drawn.seed_of(case)))\n        case += 1\n    }\n    0\n}\n"
+    let closed = "// example: closed(1) == \"1 held\"\nfn closed(seed: Int) -> String {\n    let draw = drawn.seeded(seed)\n    let racing = drawn.number(draw, 100)\n    let later = drawn.number(drawn.next(draw), 100) + 1\n    let closing = spawn Closer()\n    _ = send(closing, Close, NoLimit)\n    var sent = 0\n    for sent < racing {\n        _ = send(closing, Tick, NoWait)\n        sent += 1\n    }\n    _ = ended(closing)\n    var delivered = 0\n    sent = 0\n    for sent < later {\n        delivered += taken(send(closing, Tick, NoWait)) + taken(send(closing, Tick, Milliseconds(1))) + taken(send(closing, Tick, NoLimit))\n        sent += 1\n    }\n    if delivered == 0 {\n        return shown(seed) + \" held\"\n    }\n    shown(seed) + \" delivered \" + shown(delivered) + \" after the end\"\n}\n"
+    let helpers = "// example: taken(ProcessEnded) == 0\nfn taken(sent: Sent) -> Int {\n    match sent {\n        ProcessEnded => 0\n        _ => 1\n    }\n}\n"
+    let closer = "process Closer {\n    fn start() -> Int {\n        0\n    }\n\n    fn receive(held: Int, message: Closing) -> Next<Int> {\n        match message {\n            Tick => Continue(held)\n            Close => Done\n        }\n    }\n}\n"
+    "import drawn\nimport io\n\n" + entry + "\n" + closed + "\n" + helpers + "\n" + closer + "\ntype Closing =\n    | Tick\n    | Close\n"
 }
 
 /// The program that sends each case a drawn number of messages to a process that takes none.

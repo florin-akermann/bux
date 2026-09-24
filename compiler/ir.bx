@@ -352,19 +352,24 @@ fn run_method(shapes: Shapes, shape: Shape, ran: Ran) -> Method {
     let ending = [Store { slot: 1, of: object() }, Jump(0), Label(1), Load { slot: 0, of: this }, GetField(FieldRef { class: shape.class, name: "finished", of: finished_descriptor() }), Load { slot: 1, of: object() }, InvokeVirtual(MethodRef { class: finished_class(), name: "complete", descriptor: MethodDescriptor { parameters: [object()], result: Some(Boolean) } }), Drop(Boolean), Return(None)]
     let instructions = concatenated(first: concatenated(first: concatenated(first: concatenated(first: [Label(2)], second: started), second: taking), second: concatenated(first: receiving, second: tested)), second: concatenated(first: concatenated(first: kept, second: ending), second: failed_end(shape)))
     let guard = Guard { from: 2, to: 4, handler: 4, catching: "java/lang/Throwable" }
-    Method { name: "run", descriptor: MethodDescriptor { parameters: [], result: None }, reached: ThroughAnInstance, body: Body { instructions: instructions, locals: 3, guards: [guard] } }
+    let written = Guard { from: 5, to: 6, handler: 6, catching: "java/lang/Throwable" }
+    Method { name: "run", descriptor: MethodDescriptor { parameters: [], result: None }, reached: ThroughAnInstance, body: Body { instructions: instructions, locals: 3, guards: [guard, written] } }
 }
 
-/// What a throw out of `start` or `receive` becomes: the end of the process completes with the
-/// throwable, and the throwable goes on to the thread, which writes it to standard error.
+/// What a throw out of `start` or `receive` becomes: the throwable is written to standard error,
+/// and then the end of the process completes with it.
 ///
 /// So `send` to that process gives `ProcessEnded`, and `ended` on it throws in its turn, and no
-/// one waits for an end that never comes.
-// example: list.length(failed_end(process_shape("main/process$Counter", Signature { parameters: [], result: Some(Long) }))) == 9
+/// one waits for an end that never comes. The throwable is written before the end completes, so
+/// whoever learns of the end finds the throwable written already.
+/// A throw out of the write itself, such as a second out-of-memory error, is dropped between the
+/// labels 5 and 6, so the end completes whatever the write does.
+// example: list.length(failed_end(process_shape("main/process$Counter", Signature { parameters: [], result: Some(Long) }))) == 15
 fn failed_end(shape: Shape) -> List<Instruction> {
     let thrown = Reference("java/lang/Throwable")
+    let written = InvokeVirtual(MethodRef { class: "java/lang/Throwable", name: "printStackTrace", descriptor: MethodDescriptor { parameters: [], result: None } })
     let completed = InvokeVirtual(MethodRef { class: finished_class(), name: "completeExceptionally", descriptor: MethodDescriptor { parameters: [thrown], result: Some(Boolean) } })
-    [Label(4), Store { slot: 1, of: thrown }, Load { slot: 0, of: Reference(shape.class) }, GetField(FieldRef { class: shape.class, name: "finished", of: finished_descriptor() }), Load { slot: 1, of: thrown }, completed, Drop(Boolean), Load { slot: 1, of: thrown }, Throw]
+    [Label(4), Store { slot: 1, of: thrown }, Label(5), Load { slot: 1, of: thrown }, written, Jump(7), Label(6), Drop(thrown), Label(7), Load { slot: 0, of: Reference(shape.class) }, GetField(FieldRef { class: shape.class, name: "finished", of: finished_descriptor() }), Load { slot: 1, of: thrown }, completed, Drop(Boolean), Return(None)]
 }
 
 /// The instructions that turn a value `held` holds into an object, and a new object for `()`.
@@ -397,20 +402,36 @@ fn handle_class(shapes: Shapes) -> Class {
 ///
 /// A wait without limit offers the message a tenth of a second at a time and looks for the end
 /// in between, so a process that ends while the sender waits is told as ended.
+/// The end is looked for again once the mailbox takes the message, so `Delivered` means that the
+/// mailbox took it before the end.
 // example: sent_method(no_shapes()).name == "sent"
 fn sent_method(shapes: Shapes) -> Method {
     let waiting = Slot { at: 2, of: named_descriptor(shapes, "Waiting") }
     let opened = concatenated(first: ended_test(shapes, 0), second: [Label(0)])
     let unlimited = concatenated(first: carrying_tag(built_shape(shapes, "NoLimit"), waiting, 2), second: [Label(1)])
-    let offered = concatenated(first: offer_within([LongOf(100)], shapes, 5), second: [Label(5)])
+    let offered = concatenated(first: offer_within(within: [LongOf(100)], shapes: shapes, missed: 5, taken: 7), second: [Label(5)])
     let again = concatenated(first: ended_test(shapes, 1), second: [Label(2), LongOf(0), Store { slot: 3, of: Long }])
     let timed = built_shape(shapes, "Milliseconds")
     let limit = concatenated(first: carrying_tag(timed, waiting, 3), second: [Load { slot: 2, of: waiting.of }, Cast(timed.class), GetField(FieldRef { class: timed.class, name: first_carried_name(timed), of: or(first_carried(timed), Long) }), Store { slot: 3, of: Long }, Label(3)])
-    let bounded = concatenated(first: offer_within([Load { slot: 3, of: Long }], shapes, 4), second: concatenated(first: [Label(4)], second: ended_test(shapes, 6)))
+    let bounded = concatenated(first: offer_within(within: [Load { slot: 3, of: Long }], shapes: shapes, missed: 4, taken: 8), second: concatenated(first: [Label(4)], second: ended_test(shapes, 6)))
     let full = concatenated(first: [Label(6)], second: sent_answer(shapes, "MailboxFull"))
     let instructions = concatenated(first: concatenated(first: concatenated(first: opened, second: unlimited), second: concatenated(first: offered, second: again)), second: concatenated(first: concatenated(first: limit, second: bounded), second: full))
     let taken = [handle_descriptor(), object(), waiting.of]
     Method { name: "sent", descriptor: MethodDescriptor { parameters: taken, result: Some(named_descriptor(shapes, "Sent")) }, reached: ThroughTheClass, body: Body { instructions: instructions, locals: 2, guards: [] } }
+}
+
+/// `Delivered` where the mailbox takes the message within the milliseconds `within` loads, and a
+/// jump to `missed` where it does not.
+///
+/// A message taken once the process has ended is never read, so it gives `ProcessEnded`, and the
+/// label `taken` is where the process was found not ended.
+// example: list.length(offer_within(within: [LongOf(0)], shapes: no_shapes(), missed: 0, taken: 1)) == 20
+fn offer_within(within: List<Instruction>, shapes: Shapes, missed: Int, taken: Int) -> List<Instruction> {
+    let unit = GetStatic(FieldRef { class: "java/util/concurrent/TimeUnit", name: "MILLISECONDS", of: Reference("java/util/concurrent/TimeUnit") })
+    let offer = MethodRef { class: mailbox_class(), name: "offer", descriptor: MethodDescriptor { parameters: [object(), Long, Reference("java/util/concurrent/TimeUnit")], result: Some(Boolean) } }
+    let loaded = concatenated(first: [Load { slot: 0, of: handle_descriptor() }, GetField(handle_mailbox()), Load { slot: 1, of: object() }], second: within)
+    let checked = concatenated(first: ended_test(shapes, taken), second: [Label(taken)])
+    concatenated(first: concatenated(first: loaded, second: [unit, InvokeVirtual(offer), JumpIfFalse(missed)]), second: concatenated(first: checked, second: sent_answer(shapes, "Delivered")))
 }
 
 /// `ProcessEnded` where the process of the handle in slot 0 has ended, and a jump to `open` where
@@ -419,16 +440,6 @@ fn sent_method(shapes: Shapes) -> Method {
 fn ended_test(shapes: Shapes, open: Int) -> List<Instruction> {
     let tested = [Load { slot: 0, of: handle_descriptor() }, GetField(handle_finished()), InvokeVirtual(MethodRef { class: finished_class(), name: "isDone", descriptor: MethodDescriptor { parameters: [], result: Some(Boolean) } }), JumpIfFalse(open)]
     concatenated(first: tested, second: sent_answer(shapes, "ProcessEnded"))
-}
-
-/// `Delivered` where the mailbox takes the message within the milliseconds `within` loads, and a
-/// jump to `missed` where it does not.
-// example: list.length(offer_within([LongOf(0)], no_shapes(), 0)) == 11
-fn offer_within(within: List<Instruction>, shapes: Shapes, missed: Int) -> List<Instruction> {
-    let unit = GetStatic(FieldRef { class: "java/util/concurrent/TimeUnit", name: "MILLISECONDS", of: Reference("java/util/concurrent/TimeUnit") })
-    let offer = MethodRef { class: mailbox_class(), name: "offer", descriptor: MethodDescriptor { parameters: [object(), Long, Reference("java/util/concurrent/TimeUnit")], result: Some(Boolean) } }
-    let loaded = concatenated(first: [Load { slot: 0, of: handle_descriptor() }, GetField(handle_mailbox()), Load { slot: 1, of: object() }], second: within)
-    concatenated(first: concatenated(first: loaded, second: [unit, InvokeVirtual(offer), JumpIfFalse(missed)]), second: sent_answer(shapes, "Delivered"))
 }
 
 /// The variant `named` of `Sent`, built and given back.

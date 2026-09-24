@@ -1,0 +1,59 @@
+// expect-run
+// > ProcessEnded
+// ! java.lang.StackOverflowError
+// status 3
+// A platform error ends the process it stops, and the process writes the error before it ends.
+// Each `send` after the end gives `ProcessEnded`, and `main` ends before it calls `ended`.
+import io
+
+fn main(arguments: List<String>) -> Int {
+    let deep = spawn Deep()
+    var answer = send(deep, Descend, NoLimit)
+    for is_delivered(answer) {
+        answer = send(deep, Descend, NoLimit)
+    }
+    io.println(shown_sent(answer))
+    3
+}
+
+// example: !is_delivered(ProcessEnded)
+fn is_delivered(answer: Sent) -> Bool {
+    match answer {
+        Delivered => true
+        _ => false
+    }
+}
+
+// example: shown_sent(ProcessEnded) == "ProcessEnded"
+fn shown_sent(answer: Sent) -> String {
+    match answer {
+        Delivered => "Delivered"
+        MailboxFull => "MailboxFull"
+        ProcessEnded => "ProcessEnded"
+    }
+}
+
+/// A process whose one message recurses without end.
+process Deep {
+    fn start() -> Int {
+        0
+    }
+
+    fn receive(level: Int, message: Descended) -> Next<Int> {
+        match message {
+            Descend => Continue(depth(1))
+        }
+    }
+}
+
+/// The depth at which `level` comes back to zero, which it never does from above zero.
+// example: depth(0) == 0
+fn depth(level: Int) -> Int {
+    if level == 0 {
+        return 0
+    }
+    depth(level + 1)
+}
+
+/// What a deep process is sent.
+type Descended = Descend
