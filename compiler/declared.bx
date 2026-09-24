@@ -469,6 +469,7 @@ fn declare_item(declaring: Declaring, resolved: resolver.Resolved, item: ast.Ite
         ast.Function(function) => function_declared(declaring, resolved, function)
         ast.Extern(declaration) => extern_declared(declaring, resolved, declaration)
         ast.Process(declaration) => process_declared(declaring, resolved, declaration)
+        ast.Test(_) => Ok(declaring)
     }
 }
 
@@ -819,6 +820,7 @@ fn reachable_item(declaring: Declaring, resolved: resolver.Resolved, item: ast.I
         ast.Function(function) => function_declared(declaring, resolved, function)
         ast.Extern(declaration) => extern_declared(declaring, resolved, declaration)
         ast.Process(_) => Ok(declaring)
+        ast.Test(_) => Ok(declaring)
     }
 }
 

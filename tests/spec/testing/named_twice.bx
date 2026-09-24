@@ -1,0 +1,9 @@
+// expect-error: L0319
+// A report names a test by its name, so two tests of one module do not share a name.
+test "adds" {
+    1 + 1 == 2
+}
+
+test "adds" {
+    2 + 2 == 4
+}

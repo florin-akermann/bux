@@ -1,0 +1,25 @@
+// A test holds a claim that needs more than one line: it binds names, and its last value is `true`.
+// `docs/specs/testing.md` states a test; `bux test` runs both tests of this file, and both hold.
+import list
+
+// The sum of every number in `numbers`.
+// example: summed([1, 2, 3]) == 6
+fn summed(numbers: List<Int>) -> Int {
+    var total = 0
+    for number in numbers {
+        total += number
+    }
+    total
+}
+
+test "an empty list sums to nothing" {
+    summed([]) == 0
+}
+
+test "a sum does not depend on the order" {
+    var numbers = []
+    for number in [4, 5, 6] {
+        numbers = list.push(numbers, number)
+    }
+    summed(numbers) == summed([6, 5, 4])
+}

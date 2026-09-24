@@ -34,7 +34,14 @@ fn item_lines(declared: Item) -> String {
         Function(declaration) => function_lines(declaration, 0)
         Extern(declaration) => extern_lines(declaration)
         Process(declaration) => process_lines(declaration)
+        Test(declaration) => test_lines(declaration)
     }
+}
+
+/// A test block: its name, as the string it is written with, then its body one level in.
+// example: test_lines(TestDeclaration { name: Name { text: "a", span: lexer.Span { start: 5, length: 3 } }, body: Block { statements: [], span: lexer.Span { start: 9, length: 3 } }, span: lexer.Span { start: 0, length: 12 } }) == "test \"a\" 0..12\n  block 9..12\n"
+fn test_lines(declaration: TestDeclaration) -> String {
+    node(0, "test " + quoted(declaration.name.text), declaration.span) + block_lines(declaration.body, 1)
 }
 
 /// An `extern`: the member it reaches, the Java name, each parameter, and the result.
@@ -602,6 +609,35 @@ fn end_of(span: lexer.Span) -> Int {
     span.start + span.length
 }
 
+/// The source an item covers.
+// example: extent_of(Import(ImportDeclaration { module: Name { text: "io", span: lexer.Span { start: 7, length: 2 } }, span: lexer.Span { start: 0, length: 9 } })).length == 9
+fn extent_of(declared: Item) -> lexer.Span {
+    match declared {
+        Import(declaration) => declaration.span
+        Type(declaration) => declaration.span
+        Trait(declaration) => declaration.span
+        Instance(declaration) => declaration.span
+        Derive(declaration) => declaration.span
+        Function(declaration) => declaration.span
+        Extern(declaration) => declaration.span
+        Process(declaration) => declaration.span
+        Test(declaration) => declaration.span
+    }
+}
+
+/// Every test `program` states, in the order it writes them.
+// example: list.length(tests_of(Program { items: [] })) == 0
+fn tests_of(program: Program) -> List<TestDeclaration> {
+    var found = []
+    for declared in program.items {
+        found = match declared {
+            Test(declaration) => list.push(found, declaration)
+            _ => found
+        }
+    }
+    found
+}
+
 /// One source file: the items it declares, in source order.
 type Program = {
     items: List<Item>
@@ -617,6 +653,17 @@ type Item =
     | Function(FunctionDeclaration)
     | Extern(ExternDeclaration)
     | Process(ProcessDeclaration)
+    | Test(TestDeclaration)
+
+/// `test "name" { … }`: a test, named by a string, and the block whose value says it holds.
+///
+/// The name is the text the string holds, at the span of the string. Nothing calls a test but the
+/// run of `bux test`, so a test declares no name in scope and has no signature.
+type TestDeclaration = {
+    name: Name
+    body: Block
+    span: lexer.Span
+}
 
 /// `process Counter { … }`: a name, and the functions written inside the braces.
 ///

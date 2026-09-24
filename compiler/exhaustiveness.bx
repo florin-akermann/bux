@@ -112,12 +112,18 @@ fn no_space() -> Space {
 }
 
 /// Every `match` of `inferred` checked where it is written, or the first one refused.
+///
+/// The body of a test is checked as the body of a function is, because `bux test` runs it.
 // example: refusal_of("fn f(held: Int) -> Int {\n    held\n}\n") == ""
+// example: refusal_of("test \"a\" {\n    match true {\n        true => true\n    }\n}\n") == "L0500 15..54 this `match` does not cover `false`"
 fn check(inferred: infer.Inference) -> Result<(), MatchError> {
     let program = inferred.resolved.program
     let reading = Reading { found: inferred.resolved.found, space: space_of(program, surface.every_type(inferred.imported)) }
     for function in infer.functions_of(program) {
         _ = block_checked(reading, function.body)?
+    }
+    for stated in ast.tests_of(program) {
+        _ = block_checked(reading, stated.body)?
     }
     Ok(())
 }

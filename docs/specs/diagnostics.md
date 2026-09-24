@@ -79,11 +79,12 @@ The grammar raises these, in `compiler/parser.bx`:
 - `L0107` — something other than a name is written on the left of `=` or `+=`.
 - `L0108` — a call names some of its arguments and not others.
 - `L0109` — a statement binds a name with `:=`, which is not part of Bux.
+- `L0110` — a test is written inside a body, where only a statement is written.
 
 Canonical form raises these, in `compiler/format.bx`:
 
 - `L0200` — the file is not in canonical form.
-- `L0201` — an import is written after a declaration, or two imports are out of sort.
+- `L0201` — an import is after a declaration or out of sort, or a declaration is after a test.
 - `L0202` — a declared name is spelled some way other than the one canonical form spells it.
 - `L0203` — a declared name is an initial rather than a word a reader can look for.
 
@@ -114,6 +115,7 @@ Name resolution raises these, in `compiler/resolver.bx`:
 - `L0313` — a type or a pattern is reached through a name that is no module.
 - `L0314` — a name that binds is written inside an or-pattern, which binds nothing.
 - `L0318` — an instance writes an argument of its type that is no type parameter it declares.
+- `L0319` — two tests of one module have the same name.
 
 Loading raises these, in `compiler/modules.bx`, before any module is resolved:
 

@@ -22,6 +22,7 @@ function is `snake_case`, a type is `PascalCase`, and neither is rewritten.
 Sequence is part of canonical form, and the printer is not what enforces it.
 `docs/design.md` section 13 puts imports first and sorted, a declaration above what uses it, and a
 match arm in the order the type declares its variants.
+It also puts tests last, after every declaration, in the order the author writes them.
 Order is checked and never rewritten: `bux fmt` repairs whitespace, which is nobody's decision,
 while where a declaration belongs is the author's.
 
@@ -96,6 +97,9 @@ A **`for`** writes `for {`, `for condition {`, or `for name in iterable {`.
 
 A **`return`** is `return` or `return value`; `break` and `continue` are written alone.
 
+A **test** is `test "name"`, then its block, as a function writes its block.
+The name is written as the string literal it is, with its escapes as the author wrote them.
+
 ## Comments
 
 A comment is alone on its line, at the indentation of the line below it.
@@ -156,6 +160,9 @@ How a name is spelled is a rule of the same kind, and `docs/specs/naming.md` say
 those is checked.
 
 Import order is syntax, so `compiler/format.bx` checks it with canonical form and raises `L0201`.
+The place of a test is syntax too, so `compiler/format.bx` raises `L0201` below a test.
+The message is "this declaration is written after a test".
+The help is "tests come last, after every declaration".
 Whether a declaration is written above what uses it needs to know which name means which
 declaration, so `compiler/resolver.bx` checks it and raises `L0303`.
 `docs/specs/modules.md` states that rule.
@@ -183,3 +190,4 @@ These hold and are checked by drawn properties in the runner:
 3. Formatting preserves the tree: `parse(format(source))` equals `parse(source)`, up to spans.
 4. Every comment of the source appears once in the output, in source order.
 5. Formatting is deterministic.
+6. A declaration written below a test is `L0201`, and a test written last is in place.

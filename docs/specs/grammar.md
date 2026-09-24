@@ -85,7 +85,7 @@ A rule is written `name = definition`, and a quoted text in a definition is a to
 program         = { item }
 
 item            = import | type_declaration | trait | instance | derive | function
-                | extern_type | extern | process
+                | extern_type | extern | process | test
 
 import          = "import" Name
 
@@ -102,6 +102,7 @@ signature       = "fn" Name "(" [ parameters ] ")" [ "->" type ]
 instance        = "instance" Name "<" Name ">" "{" function { function } "}"
 derive          = "derive" Name { "," Name } "for" Name
 process         = "process" Name "{" { function } "}"
+test            = "test" String block
 
 extern_type     = "extern" "type" [ "interface" ] Name "=" String
 extern          = "extern" ( extern_field | extern_static | extern_method | extern_new )
@@ -157,6 +158,10 @@ alternative     = Name [ "(" pattern { "," pattern } ")" | "{" Name { "," Name }
 A binding opens with `let` for a name that never changes, or with `var` for one that can.
 Only a `var` is assigned to afterwards, and each of the two joins its name to its value with `=`.
 `total := 0` is `L0109`, because `:=` is no token; its help names `let total =` in its place.
+
+A test is an item and never a statement, which `docs/specs/testing.md` states.
+A `test` written where a statement belongs is `L0110`, at the word `test`.
+The name of a test is a string literal, and the parser reads its escapes as any string's.
 
 A comparison does not chain: `a < b < c` is a parse error, as it is in Go.
 Every other binary operator is left-associative.
@@ -230,6 +235,7 @@ Ten failures are not about which token was found, and have their own words:
 | assigned to a value | `L0107` | only a name is assigned to                 | build the value it becomes  |
 | partly named call   | `L0108` | this call names some of its arguments and not others | all of them or none |
 | binding with `:=`   | `L0109` | `` `:=` `` does not bind a name             | the `let` that binds it      |
+| test inside a body  | `L0110` | a test is written at the top level of a module, ... | move it out |
 
 An assignment names a name, which `docs/design.md` section 10 states.
 `user.name = "Bob"` and `first(users).id = 1` are `L0107`, pointing at what was written there.
@@ -278,5 +284,6 @@ These hold and are checked by drawn properties in the runner:
 2. Parsing is deterministic.
 3. An error's span is non-empty and lies within the source.
 4. A generated well-formed program parses, and its item spans are ordered and non-overlapping.
+5. A test written among the statements of a body is refused as `L0110`, at the word `test`.
 
 The round trip `parse(print(ast)) == ast` needs a printer, and lands with it in Item 003.

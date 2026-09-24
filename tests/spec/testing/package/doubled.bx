@@ -1,0 +1,10 @@
+// A module of the package whose one test holds.
+// Twice `number`.
+// example: doubled(2) == 4
+fn doubled(number: Int) -> Int {
+    number * 2
+}
+
+test "doubles a negative number" {
+    doubled(-3) == -6
+}

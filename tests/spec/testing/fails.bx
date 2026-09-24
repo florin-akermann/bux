@@ -1,0 +1,15 @@
+// A test whose last value is `false` did not hold, and `bux test` names it by its line and its name.
+// The golden answers in `tests/commands/fixtures.txt` hold the report and the status 1.
+// Half of `number`, rounded down.
+// example: halved(4) == 2
+fn halved(number: Int) -> Int {
+    or(number / 2, 0)
+}
+
+test "halves an even number" {
+    halved(8) == 4
+}
+
+test "halves an odd number up" {
+    halved(7) == 4
+}

@@ -4,7 +4,9 @@ Packages
 
 A package is a directory of modules with a manifest called `bux.package` beside them. Handed a
 directory rather than a file, `bux check` and `bux build` run over every module the package
-holds, in the order their names sort, and stop at the first refusal. A directory holding no
+holds, in the order their names sort, and stop at the first refusal. `bux test` runs the examples
+and the tests of every module in the same order, and it does not stop at the first module that
+fails; with no path, it runs the package in the current directory. A directory holding no
 manifest is no package, and a command handed one says so and stops with exit code 2.
 
     package shapes
@@ -39,5 +41,5 @@ no archive. A program reaches a class of an archive with an `extern`.
 The name and the version are stated and nothing reads either yet. A manifest that leaves one out
 is refused all the same, because a package says what it is before anything asks.
 
-`bux fmt`, `bux run`, `bux test`, and `bux api` each take a file. A package has no
-canonical text of its own, no `main` to run, no examples, and no surface beyond its modules'.
+`bux fmt`, `bux run`, and `bux api` each take a file. A package has no canonical text of its
+own, no `main` to run, and no surface beyond its modules'.

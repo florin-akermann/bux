@@ -118,7 +118,8 @@ reading it as a claim that holds would be reading a claim nobody made.
 
 ## Running them
 
-`bux test <file>` runs every example the module states.
+`bux test <file>` runs every example the module states, and then every test.
+`docs/specs/testing.md` states a test, the run of a package, and the report of a test.
 
 It runs the front end first and refuses what `bux check` refuses, with the same diagnostic.
 It then holds the module to this page, and refuses `L0601` and `L0602` as a build does.

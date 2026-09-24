@@ -1,11 +1,14 @@
-// Every `// example:` line of every module, each module's run written as `bux test <file>` writes
-// it, and every run started in one JVM.
+// Every `// example:` line and every test of every module, each module's run written as
+// `bux test <file>` writes it, and every run started in one JVM.
 //
-// `docs/specs/doc-examples.md` states what an example line is and what running one amounts to.
-// The modules are those under `tests/spec`, `library/`, `compiler/`, and `tests/` itself. An example
-// under `tests/spec` that its header says is refused cannot be run, so its lines are not either.
+// `docs/specs/doc-examples.md` states what an example line is and what running one amounts to, and
+// `docs/specs/testing.md` states a test. The modules are those under `tests/spec`, `library/`,
+// `compiler/`, and `tests/` itself. An example under `tests/spec` that its header says is refused
+// cannot be run, so its lines are not either. The tests of an example under `tests/spec` are left
+// out, because a golden answer of `bux test` holds what is said of them.
 // `docs/implementation.md` section 7 states how the runs share one memo of typed modules, and how
 // `examined.bx` starts each run in turn.
+import ast
 import command
 import files
 import header
@@ -14,27 +17,31 @@ import ir
 import jvm
 import list
 import modules
+import parser
 import programs
 import strings
 import walk
 
-/// Every example line of every module `paths` names, each module typed once, in one JVM.
-// example: every_line_held(paths: ["no-such-directory/a.bx"], library: ir.little_library(), memo: command.no_memo(), limit: 1).cases == 0
-fn every_line_held(paths: List<String>, library: ir.Library, memo: command.Memo, limit: Int) -> held.Held {
+/// Every example line and every test of every module `paths` names, each module typed once, in one
+/// JVM: what the example lines held, then how many tests there were.
+///
+/// A test that did not hold is a failure of the first, because a run reports both kinds alike.
+// example: list.length(every_line_held(paths: ["no-such-directory/a.bx"], library: ir.little_library(), memo: command.no_memo(), limit: 1)) == 2
+fn every_line_held(paths: List<String>, library: ir.Library, memo: command.Memo, limit: Int) -> List<held.Held> {
     match command.somewhere_of_its_own() {
         Ok(directory) => held_within(paths, Setting { library: library, limit: limit, directory: directory }, memo)
-        Err(said) => with_failures(held.nothing_failed(0), reported(errors: said.errors, path: entry_path()))
+        Err(said) => [with_failures(held.nothing_failed(0), reported(errors: said.errors, path: entry_path())), held.nothing_failed(0)]
     }
 }
 
-/// Every example line of every module `paths` names, the classes of each run written into the
-/// directory `setting` names, which is removed after the runs.
+/// Every example line and every test of every module `paths` names, the classes of each run
+/// written into the directory `setting` names, which is removed after the runs.
 // example: with_failures(held.nothing_failed(1), ["a.bx: error: gone"]).failures == ["a.bx: error: gone"]
-fn held_within(paths: List<String>, setting: Setting, memo: command.Memo) -> held.Held {
+fn held_within(paths: List<String>, setting: Setting, memo: command.Memo) -> List<held.Held> {
     let staging = every_run_staged(paths, setting, memo)
     let found = held.added(staging.found, runs_held(staging, setting))
     command.removed_whole(setting.directory)
-    found
+    [found, held.nothing_failed(staging.tests)]
 }
 
 /// Every module the runner tests: those under `spec` at any depth, and those directly in each of
@@ -54,7 +61,7 @@ fn modules_of(spec: String, directories: List<String>) -> List<String> {
 /// its own, with the lines counted and every module that has no run reported.
 // example: list.length(every_run_staged(["no-such-directory/a.bx"], Setting { library: ir.little_library(), limit: 1, directory: "no-such-directory" }, command.no_memo()).runs) == 0
 fn every_run_staged(paths: List<String>, setting: Setting, memo: command.Memo) -> Staging {
-    var staging = Staging { found: held.nothing_failed(0), runs: [], memo: memo }
+    var staging = Staging { found: held.nothing_failed(0), tests: 0, runs: [], memo: memo }
     var number = 0
     for path in paths {
         let beside = modules.joined(setting.directory, shown(number))
@@ -64,12 +71,14 @@ fn every_run_staged(paths: List<String>, setting: Setting, memo: command.Memo) -
     staging
 }
 
-/// `staging` with the module `place.path` names: its lines counted, and its run or its failures.
-// example: staged_one(Staging { found: held.nothing_failed(0), runs: [], memo: command.no_memo() }, Place { path: "no-such-directory/a.bx", beside: "no-such-directory/0" }, ir.little_library()).found.cases == 0
+/// `staging` with the module `place.path` names: its lines and its tests counted, and its run or
+/// its failures.
+// example: staged_one(Staging { found: held.nothing_failed(0), tests: 0, runs: [], memo: command.no_memo() }, Place { path: "no-such-directory/a.bx", beside: "no-such-directory/0" }, ir.little_library()).found.cases == 0
 fn staged_one(staging: Staging, place: Place, library: ir.Library) -> Staging {
     let source = ok_or(files.read(place.path), "")
     let count = lines_stated(source)
-    if count == 0 || is_refused(header.expectation_of(source)) {
+    let tests = list.length(tests_kept(place.path, ok_or(parser.parse(source), ast.Program { items: [] })))
+    if count == 0 && tests == 0 || is_refused(header.expectation_of(source)) {
         return staging
     }
     let why = why_skipped(place.path)
@@ -78,8 +87,8 @@ fn staged_one(staging: Staging, place: Place, library: ir.Library) -> Staging {
     }
     let readied = module_readied(place, Typing { library: library, memo: staging.memo })
     match readied.found {
-        Ok(staged) => Staging { found: held.added(staging.found, held.nothing_failed(count)), runs: list.push(staging.runs, staged), memo: readied.memo }
-        Err(failures) => Staging { found: held.added(staging.found, with_failures(held.nothing_failed(count), failures)), runs: staging.runs, memo: readied.memo }
+        Ok(staged) => Staging { found: held.added(staging.found, held.nothing_failed(count)), tests: staging.tests + tests, runs: list.push(staging.runs, staged), memo: readied.memo }
+        Err(failures) => Staging { found: held.added(staging.found, with_failures(held.nothing_failed(count), failures)), tests: staging.tests + tests, runs: staging.runs, memo: readied.memo }
     }
 }
 
@@ -105,15 +114,27 @@ fn module_readied(place: Place, typing: Typing) -> Readied {
     }
 }
 
-/// The run of the examples `root` states, its classes written into `beside`, or why there is none.
+/// The run of the examples and the tests `root` states, its classes written into `beside`, or why
+/// there is none.
 // example: failed_as(command.Said { output: "", errors: "error: gone\n", status: 2 }, "a.bx") == ["a.bx: error: gone"]
 fn run_readied(root: command.Typed, beside: String, typing: Typing) -> Readied {
     let path = root.module.path
-    match command.stated_in(root) {
+    match command.stated_in(root, tests_kept(path, root.inferred.resolved.program)) {
         Ok(Some(run)) => class_readied(Staged { path: path, run: run, root: root, beside: beside, class: "" }, typing)
         Ok(None) => Readied { found: Err([]), memo: typing.memo }
         Err(refusals) => Readied { found: Err(failed_as(command.refused_each(refusals, command.page_of(root)), path)), memo: typing.memo }
     }
+}
+
+/// The tests of `program`, the module at `path`, that the runner runs: every one, and none of an
+/// example under `tests/spec`.
+// example: list.length(tests_kept("tests/spec/testing/holds.bx", ok_or(parser.parse("test \"a\" {\n    true\n}\n"), ast.Program { items: [] }))) == 0
+// example: list.length(tests_kept("tests/a.bx", ok_or(parser.parse("test \"a\" {\n    true\n}\n"), ast.Program { items: [] }))) == 1
+fn tests_kept(path: String, program: ast.Program) -> List<ast.TestDeclaration> {
+    if command.has_prefix(path, "tests/spec/") {
+        return []
+    }
+    ast.tests_of(program)
 }
 
 /// `staged` with the class its module is named by, lowered and written, or why it cannot be.
@@ -151,7 +172,7 @@ fn written_as(written: Result<(), command.Said>, staged: Staged) -> Result<Stage
 }
 
 /// Every run of `staging`, started through the entry program, and every example that failed.
-// example: runs_held(Staging { found: held.nothing_failed(0), runs: [], memo: command.no_memo() }, Setting { library: ir.little_library(), limit: 1, directory: "no-such-directory" }).failures == []
+// example: runs_held(Staging { found: held.nothing_failed(0), tests: 0, runs: [], memo: command.no_memo() }, Setting { library: ir.little_library(), limit: 1, directory: "no-such-directory" }).failures == []
 fn runs_held(staging: Staging, setting: Setting) -> held.Held {
     if list.length(staging.runs) == 0 {
         return held.nothing_failed(0)
@@ -276,7 +297,7 @@ fn segment_read(segment: String, staged: Staged) -> List<String> {
     if stopped != "" {
         finished = programs.Finished { code: 1, output: "", errors: "error: the run of its examples stopped: " + stopped + "\n" }
     }
-    failed_as(command.finished_read(finished, staged.run, staged.root), staged.path)
+    failed_as(command.finished_read(finished, staged.run, staged.root).said, staged.path)
 }
 
 /// What the entry program wrote, cut into what each run wrote, in the order it opened them.
@@ -420,9 +441,11 @@ fn with_message(lines: List<String>, at: String, message: String) -> List<String
     list.push(lines, at + ": " + message)
 }
 
-/// What the runs found so far: the lines counted and failed, each run staged, and the memo.
+/// What the runs found so far: the lines counted and failed, the tests counted, each run staged,
+/// and the memo.
 type Staging = {
     found: held.Held
+    tests: Int
     runs: List<Staged>
     memo: command.Memo
 }

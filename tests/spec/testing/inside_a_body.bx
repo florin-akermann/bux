@@ -1,0 +1,8 @@
+// expect-error: L0110
+// A test is an item of its own, so a test written inside a function is refused.
+fn total() -> Int {
+    test "adds" {
+        true
+    }
+    1
+}

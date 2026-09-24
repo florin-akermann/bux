@@ -871,6 +871,32 @@ An example says it so the compiler can hold the function to it, and a stale one 
 example over it can compile.
 `docs/specs/doc-examples.md` is the specification.
 
+### A test states what one line cannot
+
+**A `test` block states a claim that needs more than one expression.**
+
+```text
+test "a sum does not depend on the order" {
+    var numbers = []
+    for number in [4, 5, 6] {
+        numbers = list.push(numbers, number)
+    }
+    summed(numbers) == summed([6, 5, 4])
+}
+```
+
+An example is one expression on one comment line.
+A claim that binds names, builds a value in a loop, or calls `io` does not fit on that line.
+Without a test block, such a claim becomes a function written only to be called by an example.
+That function would then need an example of its own, and it would ship in every program.
+
+A test is a top-level item with a name in quotes and a body whose value is a `Bool`.
+It has no signature, no example, and no caller but `bux test`.
+It is written after every declaration of its module, and two tests of a module have two names.
+`bux build` and `bux run` leave every test out, so a test never ships in a program.
+`bux test` runs every example and every test of a module, or of every module of a package.
+`docs/specs/testing.md` is the specification.
+
 ---
 
 ## 12. Control flow
@@ -958,6 +984,9 @@ The imports form one block, with no blank line between two of them and one blank
 **A declaration is written above what it uses**, so a helper sits below the thing it helps.
 A file reads top down: the reader meets the intent before the detail.
 Two declarations that use each other are written either way, because no order undoes a cycle.
+
+**Tests come last**, after every declaration, in the order the author writes them.
+A test uses the declarations of its module, and nothing uses a test.
 
 **A `match` lists its arms in the order the type declares its variants**.
 A new variant then has exactly one place to be handled, and no diff is ever reorder-only.
