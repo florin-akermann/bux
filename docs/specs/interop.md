@@ -183,7 +183,8 @@ A value of an extern type is a foreign reference, and section 14 of `docs/design
 that escapes the block it was reached in.
 That check is stated there and not restated here, because it is one check over a resource and a
 foreign reference alike rather than a rule this boundary writes for itself.
-Version 0.1 has neither the check nor the `spawn` it answers, so nothing here is refused yet.
+`L0811` holds one clause of it: a process holds no foreign reference, as `concurrency.md` states.
+The rest of the check is not written yet, so a foreign reference can still be returned or stored.
 
 ## The two widths
 

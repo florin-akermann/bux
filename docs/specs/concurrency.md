@@ -59,6 +59,12 @@ The compiler holds the shape before it infers a type, so each break has its own 
 - `L0808`: the body of `receive` is not one `match` on its message parameter.
 - `L0809`: an arm of that `match` is not one call or one name.
 - `L0810`: `receive` does not take the state `start` gives, or does not give `Next` of it.
+- `L0811`: what `start` takes, the state, or the message is or holds an `extern` type.
+
+A process holds values only, and a value of an `extern` type is a foreign reference.
+A foreign reference has identity and mutation, so it stays with the function that reaches it.
+`L0811` reads what `start` takes on its own, because `start` need not keep it in the state.
+The message names the process and the type, and the check follows each type into what it holds.
 
 Nothing in the source calls `start` or `receive`, so inference has no call to fill a type from.
 Each type is therefore written, and no function of a process is generic.

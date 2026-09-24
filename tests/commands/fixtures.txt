@@ -157,6 +157,16 @@ status 1
 !
 ! help: a process has one type of state and one type of message; write them out
 
+$ check tests/spec/concurrency/holds_a_foreign_reference.bx
+status 1
+! error[L0811]: `Reader` holds `File`, and the `extern` type `File` is a foreign reference
+!   --> tests/spec/concurrency/holds_a_foreign_reference.bx:10:14
+!
+!   10 |     fn start(file: File) -> Int {
+!      |              ^^^^^^^^^^
+!
+! help: a process holds values only, and a foreign reference stays with the function that reaches it
+
 $ check tests/spec/concurrency/mailbox_full.bx
 status 0
 
@@ -2616,6 +2626,10 @@ $ check --json tests/spec/concurrency/generic_start.bx
 status 1
 > {"file":"tests/spec/concurrency/generic_start.bx","code":"L0805","message":"`start` of a process declares a type parameter","span":{"start":251,"len":5},"help":"a process has one type of state and one type of message; write them out"}
 
+$ check --json tests/spec/concurrency/holds_a_foreign_reference.bx
+status 1
+> {"file":"tests/spec/concurrency/holds_a_foreign_reference.bx","code":"L0811","message":"`Reader` holds `File`, and the `extern` type `File` is a foreign reference","span":{"start":260,"len":10},"help":"a process holds values only, and a foreign reference stays with the function that reaches it"}
+
 $ check --json tests/spec/concurrency/mailbox_full.bx
 status 0
 
@@ -4098,6 +4112,16 @@ status 1
 !      |        ^^^^^
 !
 ! help: a process has one type of state and one type of message; write them out
+
+$ api tests/spec/concurrency/holds_a_foreign_reference.bx
+status 1
+! error[L0811]: `Reader` holds `File`, and the `extern` type `File` is a foreign reference
+!   --> tests/spec/concurrency/holds_a_foreign_reference.bx:10:14
+!
+!   10 |     fn start(file: File) -> Int {
+!      |              ^^^^^^^^^^
+!
+! help: a process holds values only, and a foreign reference stays with the function that reaches it
 
 $ api tests/spec/concurrency/mailbox_full.bx
 status 0
@@ -8203,6 +8227,16 @@ status 1
 !      |        ^^^^^
 !
 ! help: a process has one type of state and one type of message; write them out
+
+$ test tests/spec/concurrency/holds_a_foreign_reference.bx
+status 1
+! error[L0811]: `Reader` holds `File`, and the `extern` type `File` is a foreign reference
+!   --> tests/spec/concurrency/holds_a_foreign_reference.bx:10:14
+!
+!   10 |     fn start(file: File) -> Int {
+!      |              ^^^^^^^^^^
+!
+! help: a process holds values only, and a foreign reference stays with the function that reaches it
 
 $ test tests/spec/concurrency/mailbox_full.bx
 status 0
@@ -12494,6 +12528,9 @@ status 0
 $ fmt tests/spec/concurrency/generic_start.bx
 status 0
 
+$ fmt tests/spec/concurrency/holds_a_foreign_reference.bx
+status 0
+
 $ fmt tests/spec/concurrency/mailbox_full.bx
 status 0
 
@@ -13972,6 +14009,16 @@ status 1
 !      |        ^^^^^
 !
 ! help: a process has one type of state and one type of message; write them out
+
+$ build tests/spec/concurrency/holds_a_foreign_reference.bx
+status 1
+! error[L0811]: `Reader` holds `File`, and the `extern` type `File` is a foreign reference
+!   --> tests/spec/concurrency/holds_a_foreign_reference.bx:10:14
+!
+!   10 |     fn start(file: File) -> Int {
+!      |              ^^^^^^^^^^
+!
+! help: a process holds values only, and a foreign reference stays with the function that reaches it
 
 $ build tests/spec/concurrency/mailbox_full.bx
 status 0

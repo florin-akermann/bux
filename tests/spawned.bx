@@ -70,9 +70,9 @@ fn shown_code(code: String) -> String {
 }
 
 /// Each break of the shape a drawn process can be written with.
-// example: list.length(every_break()) == 11
+// example: list.length(every_break()) == 12
 fn every_break() -> List<Break> {
-    [SpawnOfAFunction, CallOfAProcess, StartNotFirst, ReceiveNotSecond, FunctionAfterReceive, GenericStart, UnwrittenParameter, ReceiveOfThreeValues, ReceiveNotAMatch, ArmDoesWork, ReceiveOfAnotherState]
+    [SpawnOfAFunction, CallOfAProcess, StartNotFirst, ReceiveNotSecond, FunctionAfterReceive, GenericStart, UnwrittenParameter, ReceiveOfThreeValues, ReceiveNotAMatch, ArmDoesWork, ReceiveOfAnotherState, MessageHoldsAFile]
 }
 
 /// The code the compiler refuses `broken` with, and `""` for a whole process.
@@ -92,6 +92,7 @@ fn code_of_break(broken: Break) -> String {
         ReceiveNotAMatch => "L0808"
         ArmDoesWork => "L0809"
         ReceiveOfAnotherState => "L0810"
+        MessageHoldsAFile => "L0811"
     }
 }
 
@@ -114,7 +115,7 @@ fn written(drawing: Drawing, broken: Break) -> String {
     let entry = main_written(drawing, broken)
     let functions = start_written(drawing, broken) + "\n" + receive_written(drawing, broken) + extra_written(broken)
     let helper = "fn kept(state: " + drawing.state + ", amount: Int) -> Next<" + drawing.state + "> {\n    Continue(state)\n}\n"
-    entry + "\nprocess " + drawing.named + " {\n" + functions + "}\n\n" + helper + "\n" + message_type(drawing)
+    entry + "\nprocess " + drawing.named + " {\n" + functions + "}\n\n" + helper + "\n" + message_type(drawing, broken) + file_written(broken)
 }
 
 /// `main`, which spawns the process, or breaks the shape where `broken` is a break of `spawn`.
@@ -192,6 +193,9 @@ fn receive_body(drawing: Drawing, broken: Break) -> String {
         arms += "            " + arm_written(kind: kind, broken: broken, place: place) + "\n"
         place += 1
     }
+    if broken == MessageHoldsAFile {
+        arms += "            Opened(_) => Continue(state)\n"
+    }
     "        match message {\n" + arms + "            Stop => Done\n        }\n"
 }
 
@@ -226,14 +230,27 @@ fn extra_written(broken: Break) -> String {
     ""
 }
 
-/// The type of the messages of `drawing`: each kind it draws, and `Stop`.
-// example: message_type(Drawing { named: "Counter", state: "Int", kinds: [Kind { name: "Add", carries: true }] }) == "type Asked =\n    | Add(Int)\n    | Stop\n"
-fn message_type(drawing: Drawing) -> String {
+/// The type of the messages of `drawing`: each kind it draws, `Opened` where `broken` writes it,
+/// and `Stop`.
+// example: message_type(Drawing { named: "Counter", state: "Int", kinds: [Kind { name: "Add", carries: true }] }, Whole) == "type Asked =\n    | Add(Int)\n    | Stop\n"
+fn message_type(drawing: Drawing, broken: Break) -> String {
     var variants = ""
     for kind in drawing.kinds {
         variants += "    | " + variant_of(kind) + "\n"
     }
+    if broken == MessageHoldsAFile {
+        variants += "    | Opened(Handle)\n"
+    }
     "type Asked =\n" + variants + "    | Stop\n"
+}
+
+/// A record that holds a file, which `Opened` carries, where `broken` writes it.
+// example: file_written(Whole) == ""
+fn file_written(broken: Break) -> String {
+    if broken == MessageHoldsAFile {
+        return "\ntype Handle = {\n    file: File\n}\n\nextern type File = \"java.io.File\"\n"
+    }
+    ""
 }
 
 /// The variant of `kind`, which carries an `Int` where the kind carries a number.
@@ -349,3 +366,4 @@ type Break =
     | ReceiveNotAMatch
     | ArmDoesWork
     | ReceiveOfAnotherState
+    | MessageHoldsAFile

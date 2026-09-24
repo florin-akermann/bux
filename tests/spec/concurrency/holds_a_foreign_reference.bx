@@ -1,0 +1,29 @@
+// expect-error: L0811
+// A process holds values only, so `spawn` gives it no foreign reference.
+fn main(arguments: List<String>) -> Int {
+    _ = spawn Reader(named("a.txt"))
+    0
+}
+
+/// A count of the lines read from one file.
+process Reader {
+    fn start(file: File) -> Int {
+        0
+    }
+
+    fn receive(count: Int, message: Read) -> Next<Int> {
+        match message {
+            Line => Continue(count)
+            Stop => Done
+        }
+    }
+}
+
+/// What a reader is sent.
+type Read =
+    | Line
+    | Stop
+
+extern new named(path: String) -> File
+
+extern type File = "java.io.File"

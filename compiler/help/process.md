@@ -29,6 +29,9 @@ Each break of the shape has its own code, `L0802` to `L0810`, and `bux explain` 
 `Process<Counted, Int>`: what it accepts, then its state. A handle has no `Eq` and crosses no
 `extern`. A message can carry one, which is how a process is given an address to answer on.
 
+A process holds values only: what `start` takes, the state, and the message hold no `extern`
+type, which `L0811` refuses. A foreign reference stays with the function that reaches it.
+
 `send(counting, Add(3), NoLimit)` puts a message in the mailbox and gives a `Sent`: `Delivered`,
 `MailboxFull`, or `ProcessEnded`. A mailbox holds 64 messages. While it is full, `send` waits as
 the third argument says: `NoWait`, `Milliseconds(n)`, or `NoLimit`. A process that has ended
