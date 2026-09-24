@@ -23,6 +23,7 @@ A drawn property holds that every name the compiler accepts is read at least onc
 ## 🔴 Item 112: `bux test` runs the modules of a package on a pool of workers
 **Depends on:** Item 111 — the profile says what a module run spends on typing before it starts.
 Attacks: typing, 2.4 s of the 11.2 s that one job over `compiler/` compiles (section 7).
+Item 123: `bux test tests` waited 9.9 s of 177 s on its 43 JVMs, so 94% is compile work to pool.
 `every_module_tested` in `compiler/command.bx` runs the modules of a package one after another.
 `tests/runner.bx` owns a pool of one worker per processor, and only the compiler's tests use it.
 The pool moves into `bux test`, where every package gets it, and the runner keeps working meanwhile.
@@ -68,6 +69,7 @@ A part that started JVMs still does, from inside its test, and the limit of 60 s
 ## 🔴 Item 115: The compiler types independent modules at the same time
 **Depends on:** Item 111, Item 112 — the profile prices inference, and 112 holds the pool.
 Attacks: typing, 1.3 s of the 3.5 s of `bux build compiler/main.bx`, 37% (section 7).
+Item 123: no number applies, because typing sees each of the 42 generics once, not each copy.
 `each_accepted` in `compiler/command.bx` types the modules one after another in load order.
 A module needs only the surface of each module it imports, so modules of one wave are independent.
 The pool of Item 112 types every module whose imports are typed.
@@ -81,6 +83,7 @@ It records `bin/bootstrap` with them.
 ## 🔴 Item 116: The lowering lowers the modules of one pass at the same time
 **Depends on:** Item 111, Item 115 — the profile prices lowering, and 115 pools the phases.
 Attacks: lowering, 0.46 s of the 3.5 s of `bux build compiler/main.bx`, 13% (section 7).
+Item 123: one pass lowers a build now; a module lowered alone sends its asks to a second pass.
 `pass_over` in `compiler/ir.bx` lowers each module in turn.
 The asks of one module reach the next module of the same pass.
 A pass that gives every module the asks known when the pass starts lowers each module alone.
