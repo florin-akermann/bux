@@ -105,6 +105,7 @@ The standard library is small, and the fewer functions a module offers for a typ
 A function lands only where a plain loop over what the type already exposes cannot write it.
 A map has no iterator, and no type has a `for_each`: the `for` loop is what Bux is built around.
 A function that only saves the reader a loop is refused, the same as sugar under question 9.
+A higher-order function such as `map` is a loop written twice: the loop, and a function to pass.
 A method is a trait method only; `list.push` is a function of the module `list`, not a method.
 `docs/implementation.md` section 4 states the library's scope.
 

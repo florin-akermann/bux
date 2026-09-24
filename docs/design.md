@@ -698,7 +698,7 @@ A `type` declaration writes none of them, and sections 14, 15, and 17 state what
 
 ## 11. Functions
 
-Functions are first-class values.
+A function has a name, and a call to that name is what runs it.
 
 ```text
 fn add(a: Int, b: Int) -> Int {
@@ -706,27 +706,14 @@ fn add(a: Int, b: Int) -> Int {
 }
 ```
 
-A function is a value by its name, so it can be stored, passed, and returned:
-
-```text
-fn is_active(user: User) -> Bool {
-    user.active
-}
-
-fn user_name(user: User) -> String {
-    user.name
-}
-
-let active_names = map(filter(users, is_active), user_name)
-```
+**A function is reached by a call, and no other way**.
+A function is not a value: no binding holds one, no call passes one, and no function returns one.
+A `for` loop does what `map` or `filter` does elsewhere, as section 12 shows.
 
 **There are no anonymous functions**.
-Every function has a name, and the name is written where the function is used.
+Every function has a name, and the name is written where the function is called.
 Nested named functions may be declared inside a function body when they are local to it.
 
-**Version 0.1 reaches a function by calling it, and no other way**.
-The snippet above is where the language is going, not what version 0.1 compiles.
-Passing `is_active` to `filter` waits on a function value having a type and a shape.
 A function name written as anything but the name of a call is refused rather than lowered.
 Nothing then reaches code generation that it has no way to write.
 
@@ -924,8 +911,8 @@ The control-flow surface is:
 * `match`
 * `return`
 
-Plain loops are the default idiom.
-Higher-order functions such as `map` and `filter` are library code, not a second programming model.
+Plain loops are the idiom, and the only one.
+There is no `map` and no `filter`, because no function takes another function.
 A pipeline operator (`|>`) is not part of the language until a concrete need for it is shown.
 
 ---

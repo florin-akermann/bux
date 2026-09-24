@@ -117,6 +117,7 @@ The standard library is small, and its data structures are smaller still.
 The fewer functions a module offers, the better; a `for` loop does the rest.
 A function lands only where a plain loop over what the type already exposes cannot write it.
 A map has no iterator, and the same holds for every convenience a loop already writes.
+No function takes another function, so the library has no `map` and no `filter`.
 `docs/principles.md` question 12 is what a proposed function answers.
 
 A data structure the library holds has the best asymptotic cost known for what it does.
@@ -474,7 +475,6 @@ Support:
 
 Do **not** implement initially:
 
-* a function passed as a value; version 0.1 reaches a function by calling it
 * typeclasses
 * effects
 * concurrency
@@ -540,6 +540,8 @@ Add, once the compiler is Bux:
 * JSON
 * database support
 * a native binary via GraalVM native-image, once GraalVM tracks JDK 28 and Valhalla
+
+No version adds a function value or a closure, as `docs/design.md` sections 11 and 14 state.
 
 Investigate:
 
