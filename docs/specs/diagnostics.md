@@ -160,7 +160,7 @@ Type inference raises these, and `compiler/refusal.bx` words them:
 - `L0433` — a call is written with a value in front of the name, where a dot reads a field.
 - `L0434` — an `extern` names a class in no stated archive and not on the list, or a member out.
 - `L0435` — a result, a field, a variant, or a call gives back or holds an `extern` type.
-- `L0436` — a function leaves the type of a parameter or its result out of its signature.
+- `L0436` — a function or a trait method leaves a parameter type or its result out.
 
 `compiler/escapes.bx` decides `L0435` after inference, because a call is read at its settled type.
 `compiler/types.bx` decides `L0436` after inference, so its help spells the settled signature.

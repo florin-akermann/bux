@@ -765,7 +765,7 @@ Nothing else tells two of one type apart.
 `rename(old, new)` and `rename(new, old)` both typecheck, and one of them is wrong.
 A mistake a type system can make unwriteable belongs in the language rather than in a linter.
 
-The types compared are the ones inference settled: an unwritten signature counts as a written one.
+The types compared are the ones the signature writes, which every function writes whole.
 A type parameter counts as a type.
 A constructor carries its values in order and has no names to write, so naming them is refused.
 A variant whose values want names declares them as fields and is built as a record.

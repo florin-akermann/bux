@@ -17378,3 +17378,50 @@ status 1
 !     |    ^^^^^
 !
 ! help: write the signature `fn greet(name: String) -> ()`
+
+$ check tests/spec/traits/signature_result.bx
+status 1
+! error[L0436]: `logged` states no result type, and a function writes its whole signature
+!   --> tests/spec/traits/signature_result.bx:8:8
+!
+!   8 |     fn logged(value: T)
+!     |        ^^^^^^
+!
+! help: write the signature `fn logged(value: T) -> ()`
+
+$ check --json tests/spec/traits/signature_result.bx
+status 1
+> {"file":"tests/spec/traits/signature_result.bx","code":"L0436","message":"`logged` states no result type, and a function writes its whole signature","span":{"start":192,"len":6},"help":"write the signature `fn logged(value: T) -> ()`"}
+
+$ api tests/spec/traits/signature_result.bx
+status 1
+! error[L0436]: `logged` states no result type, and a function writes its whole signature
+!   --> tests/spec/traits/signature_result.bx:8:8
+!
+!   8 |     fn logged(value: T)
+!     |        ^^^^^^
+!
+! help: write the signature `fn logged(value: T) -> ()`
+
+$ test tests/spec/traits/signature_result.bx
+status 1
+! error[L0436]: `logged` states no result type, and a function writes its whole signature
+!   --> tests/spec/traits/signature_result.bx:8:8
+!
+!   8 |     fn logged(value: T)
+!     |        ^^^^^^
+!
+! help: write the signature `fn logged(value: T) -> ()`
+
+$ fmt tests/spec/traits/signature_result.bx
+status 0
+
+$ build tests/spec/traits/signature_result.bx
+status 1
+! error[L0436]: `logged` states no result type, and a function writes its whole signature
+!   --> tests/spec/traits/signature_result.bx:8:8
+!
+!   8 |     fn logged(value: T)
+!     |        ^^^^^^
+!
+! help: write the signature `fn logged(value: T) -> ()`

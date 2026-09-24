@@ -1,0 +1,9 @@
+// expect-error: L0436
+// A trait method that gives back nothing writes `-> ()`, so a signature is written one way.
+fn main(arguments: List<String>) -> Int {
+    0
+}
+
+trait Logged<T> {
+    fn logged(value: T)
+}

@@ -48,6 +48,7 @@ Version 0.1 brings a module into scope and has no way yet to reach a name in one
 
 Every function a program writes states the type of each parameter and the type of its result.
 That holds for a function of a module, a method of an `instance`, and `start` and `receive`.
+A method of a `trait` writes its result too, and `L0436` refuses it where the trait is declared.
 A function that gives back `()` writes `-> ()`, so there is one way to write a signature.
 A `let`, a `var`, a `for` binding, and a pattern write no type, because inference works in a body.
 A test is no function, and it writes no signature.

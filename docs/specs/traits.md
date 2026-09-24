@@ -29,7 +29,7 @@ It has no body, because a trait says what a method is and an instance says what 
 A signature writes the type of every parameter it takes.
 A signature has no body, so a type left out of one is a type nothing would settle.
 `L0419` refuses it where it is missing.
-A method that gives nothing back writes no `->`, which is the one thing a signature may leave out.
+A method that gives nothing back writes `-> ()`, and `L0436` refuses a method with no result.
 
 One type parameter is what every trait the language has asks for.
 `Eq<T>`, `Ord<T>`, `Show<T>`, and `IntegerLiteral<T>` each name one type and say what it can do.
@@ -373,10 +373,11 @@ A trait's name and the type an instance is for are written in `PascalCase`, and 
 | `L0406` | An operator is written over a type that has no instance of the trait it is. |
 | `L0418` | A trait method is used at a type with no instance of its trait. |
 | `L0419` | A parameter of a method a trait declares states no type. |
+| `L0436` | A method a trait declares writes no result, where `-> ()` is the one spelling. |
 
 `L0308`, `L0309`, `L0310`, `L0311`, and `L0318` are raised by name resolution, which
 `compiler/resolver.bx` words.
-`L0401`, `L0418`, and `L0419` are raised by type inference, which `compiler/refusal.bx`
+`L0401`, `L0418`, `L0419`, and `L0436` are raised by type inference, which `compiler/refusal.bx`
 words.
 
 ## Properties
