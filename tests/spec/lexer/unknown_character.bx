@@ -1,4 +1,4 @@
 // expect-error: L0102
-fn f() {
+fn f() -> () {
     let x = 1 @ 2
 }

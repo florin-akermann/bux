@@ -1,0 +1,5 @@
+// expect-error: L0436
+// A generic function writes its type parameters into the signature, where the help puts them.
+fn same<T>(value) -> T {
+    value
+}

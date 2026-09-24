@@ -414,36 +414,32 @@ Incompleteness is then greppable and gated, rather than filled in with plausible
 
 ## 6. Type inference
 
-Type annotations should be required at public boundaries when useful.
-Local code should rely heavily on inference.
+Every function a program writes states the type of each parameter and of its result.
+A signature is a boundary: a caller and the `bux api` page read it, and neither reads the body.
+Inside a body, inference does the work, so a binding writes no type.
 
 For example:
 
 ```text
-fn identity(x) {
-    x
+fn greeting(name: String) -> String {
+    let count = 42
+    let names = [name, "Florin"]
+    let chosen = or(list.at(names, 1), name)
+    chosen + " " + shown(count)
 }
-```
-
-should infer approximately:
-
-```text
-∀T. T -> T
-```
-
-Likewise:
-
-```text
-let x = 42
-let name = "Florin"
 ```
 
 should infer:
 
 ```text
-x: Int
-name: String
+count: Int
+names: List<String>
+chosen: String
 ```
+
+`or<T>(maybe: Option<T>, fallback: T) -> T` is settled at `T = String` by its arguments.
+A signature that leaves a type out is refused, and the help spells the one inference settled.
+A nested function of section 11 stays inferred when it lands, because it is no boundary.
 
 The language should aim for Haskell/ML-level inference.
 
@@ -1242,7 +1238,7 @@ A module is one file and a file is small, so a private declaration waits for a c
 ```text
 import io
 
-fn greet(name: String) {
+fn greet(name: String) -> () {
     io.print("Hello, " + name)
 }
 ```

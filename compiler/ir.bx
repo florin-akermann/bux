@@ -2591,7 +2591,7 @@ fn through_the_operator(builder: Builder, asked: OperatorAsk, answerer: Instance
 /// Each operand is adapted to its parameter as `calling` adapts it: a `()` a type parameter stands
 /// for is put aside as a new `Object`, and an operand whose parameter is `()` is written and dropped.
 // example: held_text(the_other_way_round(little_builder(""), Instance { class: "main", reaching: Reaching { named: "is_less", signature: Signature { parameters: [], result: Some(Boolean) } } }, []).held) == "Z"
-// example: list.length(the_other_way_round(little_builder("fn f() {\n    ()\n}\n"), Instance { class: "main", reaching: Reaching { named: "is_less", signature: Signature { parameters: [Some(object()), Some(object())], result: Some(Boolean) } } }, [first_expr("fn f() {\n    ()\n}\n"), first_expr("fn f() {\n    ()\n}\n")]).builder.instructions) == 11
+// example: list.length(the_other_way_round(little_builder("fn f() -> () {\n    ()\n}\n"), Instance { class: "main", reaching: Reaching { named: "is_less", signature: Signature { parameters: [Some(object()), Some(object())], result: Some(Boolean) } } }, [first_expr("fn f() -> () {\n    ()\n}\n"), first_expr("fn f() -> () {\n    ()\n}\n")]).builder.instructions) == 11
 fn the_other_way_round(builder: Builder, answerer: Instance, operands: List<ast.Expr>) -> Left {
     var writing = builder
     var kept = []

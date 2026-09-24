@@ -2,8 +2,6 @@ fn first<A, B>(pair: Pair<A, B>) -> A
 
 fn counted() -> Int
 
-fn applied(action: (_) -> _, value: _) -> _
-
 type Pair<A, B> = {
     left: A
     right: B

@@ -27,8 +27,8 @@ A signature is a function's first line and nothing else: a name, its parameters,
 It has no body, because a trait says what a method is and an instance says what it does.
 
 A signature writes the type of every parameter it takes.
-A function may leave one out and let inference read it off the body; a signature has no body, so a
-type left out of one is a type nothing would settle, and `L0419` refuses it where it is missing.
+A signature has no body, so a type left out of one is a type nothing would settle.
+`L0419` refuses it where it is missing.
 A method that gives nothing back writes no `->`, which is the one thing a signature may leave out.
 
 One type parameter is what every trait the language has asks for.
@@ -69,8 +69,7 @@ name in scope and one of the two bodies would be reached while the other was los
 
 Each body's signature is the trait's, with the trait's type parameter standing for the instance's
 type, so `is_equal` in `instance Eq<Point>` takes two `Point`s and gives back a `Bool`.
-A body may leave a type out and let inference read it off the trait, so `fn is_equal(one, other)`
-is the same declaration written shorter.
+A body writes its whole signature, as every function does, and `L0436` refuses one that does not.
 A body that writes a type the trait does not have is a mismatch, reported where it is written.
 
 An instance declares no name.

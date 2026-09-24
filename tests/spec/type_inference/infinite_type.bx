@@ -1,6 +1,7 @@
 // expect-error: L0403
 // A list and its items are not the same type, so nothing finite is both.
-fn go(items) -> Int {
+fn go() -> Int {
+    var items = []
     for item in items {
         return counted(one: item, other: items)
     }

@@ -51,7 +51,7 @@ fn has_value<T: Eq<T>>(value: T) -> Bool {
 }
 
 // example: sized(Point { across: 1, down: 2 }, 1) == 4
-fn sized(point: Point, extra) -> Int {
+fn sized(point: Point, extra: Int) -> Int {
     var total = 0
     for total < point.across {
         total += 1

@@ -64,7 +64,7 @@ fn stanza_of(checked: infer.Inference, item: ast.Item) -> String {
         ast.Trait(declaration) => format.trait_declaration(format.printer_of(""), declaration).text
         ast.Instance(declaration) => format.instance_head(declaration) + "\n"
         ast.Derive(declaration) => derived_heads(declaration)
-        ast.Function(declaration) => signature_of(checked, declaration)
+        ast.Function(declaration) => signature_of(checked, declaration) + "\n"
         ast.Extern(declaration) => format.extern_text(declaration) + "\n"
         ast.Process(declaration) => "process " + declaration.name.text + "\n"
         ast.Test(_) => ""
@@ -79,20 +79,6 @@ fn derived_heads(declaration: ast.DeriveDeclaration) -> String {
         page += "instance " + trait_name.text + "<" + declaration.for_type.text + ">\n"
     }
     page
-}
-
-/// `fn shared(total: Int, people: Int) -> Int`, with the types inference settled on.
-// example: page_of(checked_of("fn pick<T>(first: T, second) -> T {\n    first\n}\n")) == "fn pick<T>(first: T, second: _) -> T\n"
-fn signature_of(checked: infer.Inference, function: ast.FunctionDeclaration) -> String {
-    let whole = unify.solved(checked.table, or(map.get(checked.named, function.name.span.start), unify.Unit))
-    let taken = unify.parameters_of(whole)
-    var takes = []
-    var index = 0
-    for parameter in function.parameters {
-        takes = list.push(takes, parameter.name.text + ": " + unify.text_of(or(list.at(taken, index), unify.Unit)))
-        index += 1
-    }
-    "fn " + function.name.text + format.constrained_text(function.type_parameters) + "(" + strings.join(takes, ", ") + ") -> " + unify.text_of(unify.result_of(whole)) + "\n"
 }
 
 /// Whether a prelude declares any value, which one read out of a source it cannot parse does not.
@@ -127,9 +113,9 @@ fn page_code(source: String) -> String {
 /// Every expression of `resolved` given its type, or the first refusal.
 ///
 /// A record that holds itself is refused first, then a process that breaks its shape, then a
-/// declaration, then a process that holds a foreign reference, then a body, then a declaration
-/// that lets a foreign reference escape, and then an `Option<()>` or an escape that inference
-/// reached.
+/// declaration, then a process that holds a foreign reference, then a body, then a signature
+/// that leaves a type out, then a declaration that lets a foreign reference escape, and then an
+/// `Option<()>` or an escape that inference reached.
 // example: page_code("fn count() -> Int {\n    \"one\"\n}\n") == "L0400 18..31"
 // example: page_code("fn is_there() -> Bool {\n    _ = Some(())\n    true\n}\n") == "L0432 32..40"
 fn check(resolved: resolver.Resolved, imported: surface.Imported, prelude: Prelude) -> Result<infer.Inference, refusal.TypeError> {
@@ -138,8 +124,60 @@ fn check(resolved: resolver.Resolved, imported: surface.Imported, prelude: Prelu
     let declaring = declared.environment_of(prelude.declared, resolved, surface.every_type(imported), surface.every_instance(imported), unify.empty_table())?
     _ = processes.nothing_foreign_held(declaring.environment, resolved.program, surface.every_type(imported))?
     let inference = infer.module_inferred(resolved, imported, declaring)?
+    _ = every_signature_written(inference)?
     _ = escapes.nothing_declared_escapes(inference)?
     carried.nothing_carried(inference)
+}
+
+/// Nothing, or the refusal of the first function whose signature leaves a type out.
+///
+/// Each function writes its whole signature, which `docs/specs/types.md` states. The check runs
+/// after inference, so the help spells the signature inference settled, with `_` where it did not.
+// example: page_code("fn same<T>(value) -> T {\n    value\n}\n") == "L0436 11..16"
+// example: page_code("fn count() {\n    1\n}\n") == "L0436 3..8"
+// example: page_code("test \"a\" {\n    true\n}\n") == ""
+fn every_signature_written(checked: infer.Inference) -> Result<(), refusal.TypeError> {
+    for function in infer.functions_of(checked.resolved.program) {
+        _ = signature_written(checked, function)?
+    }
+    Ok(())
+}
+
+/// Nothing, or the refusal of the first type the signature of `function` leaves out.
+///
+/// A parameter is refused where it is written, and a missing result at the name of the function.
+// example: page_code("fn count(held: Int, more) -> Int {\n    held + more\n}\n") == "L0436 20..24"
+fn signature_written(checked: infer.Inference, function: ast.FunctionDeclaration) -> Result<(), refusal.TypeError> {
+    for parameter in function.parameters {
+        if !processes.is_written(parameter.type_ref) {
+            return Err(left_out(checked, function, refusal.TypeOfParameter(parameter.name.text), parameter.span))
+        }
+    }
+    if !processes.is_written(function.result) {
+        return Err(left_out(checked, function, refusal.ResultType, function.name.span))
+    }
+    Ok(())
+}
+
+/// The refusal of `function` at `at`, where its signature leaves out what `omitted` names.
+// example: page_code("instance Eq<Box> {\n    fn is_equal(one: Box, other: Box) {\n        true\n    }\n}\n\ntype Box = Box\n") == "L0436 26..34"
+fn left_out(checked: infer.Inference, function: ast.FunctionDeclaration, omitted: refusal.Omission, at: lexer.Span) -> refusal.TypeError {
+    let unwritten = refusal.Unwritten { function: function.name.text, omitted: omitted, settled: signature_of(checked, function) }
+    refusal.TypeError { kind: refusal.SignatureLeftOut(unwritten), span: at }
+}
+
+/// `fn shared(total: Int, people: Int) -> Int`, with the types inference settled on.
+// example: page_of(checked_of("fn pick<T>(first: T, second: Int) -> T {\n    first\n}\n")) == "fn pick<T>(first: T, second: Int) -> T\n"
+fn signature_of(checked: infer.Inference, function: ast.FunctionDeclaration) -> String {
+    let whole = unify.solved(checked.table, or(map.get(checked.named, function.name.span.start), unify.Unit))
+    let taken = unify.parameters_of(whole)
+    var takes = []
+    var index = 0
+    for parameter in function.parameters {
+        takes = list.push(takes, parameter.name.text + ": " + unify.text_of(or(list.at(taken, index), unify.Unit)))
+        index += 1
+    }
+    "fn " + function.name.text + format.constrained_text(function.type_parameters) + "(" + strings.join(takes, ", ") + ") -> " + unify.text_of(unify.result_of(whole))
 }
 
 /// `prelude`, with the classes the archives of a build hold, which an `extern` may name.

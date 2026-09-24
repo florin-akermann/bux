@@ -9,9 +9,7 @@ A reader who wants to call something needs the name, what it takes, and what it 
 A file holds that among the bodies, the comments, and the order the author wrote them in.
 The page holds only the first three, so learning a signature is reading a page rather than a file.
 
-The page is also what a reader consults to see the types inference gave a module.
-A signature is written where it documents a boundary, which leaves the rest inferred, and the page
-is where the inferred ones are stated.
+Every function writes its signature, so the page states each type without a body to read.
 
 ## What is public
 
@@ -57,30 +55,17 @@ A function is written as its signature and nothing after it.
 the body.
 A function that declares type parameters keeps them: `fn first<A, B>(pair: Pair<A, B>) -> A`.
 
-A signature is spelled the way the language spells it, wherever the language has a spelling.
-Version 0.1 has no syntax for a function type, so a parameter inference made a function is printed
-the way a diagnostic prints one, as `(Int) -> Bool`.
-Nothing can call such a function: version 0.1 reaches a function by calling it, so a function is
-never an argument, and a function that takes one is a function nothing can reach.
-The page says so rather than leaving the reader to work it out.
+A signature is spelled the way the language spells it.
 
-## The types are the inferred ones
+## The types are the written ones
 
-Every type on the page is the type inference settled on, not the text the author wrote.
-
-A parameter the author annotated and one they left to inference therefore read the same.
-`fn twice(n) { n + n }` is on the page as `fn twice(n: Int) -> Int`, which is what it is.
+Every function writes its whole signature, which `docs/specs/types.md` states.
+`L0436` refuses a module that leaves a type out, so that module has no page.
+Every type on the page is therefore the type the signature writes, and no page holds a `_`.
+The page prints the type inference settled on, which for a signature is the written one.
 
 A type parameter is printed by the name its declaration gave it, because that is the name the
 caller reads in the rest of the signature.
-
-A type that nothing in the module settled is printed `_`, which is how a diagnostic spells the
-same thing.
-Two `_` on one line are not necessarily the same type: the page states what the module states, and
-a module that states nothing there has nothing for the page to print.
-Writing the signature is what turns a `_` into a type, and it is the author's to write.
-`_` is reserved for the discard of `docs/specs/discarding.md` and is no type either, so the page
-is a thing to read rather than a signature to paste.
 
 ## Exit codes
 
