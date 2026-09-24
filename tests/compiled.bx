@@ -1,4 +1,4 @@
-// A drawn source compiled in the runner's JVM: checked, lowered, and written as class files.
+// A drawn source compiled in the JVM of its test: checked, lowered, and written as class files.
 //
 // The drawn properties of the lowering and of the class-file writer read what those phases give
 // back through these. A drawn source is checked as the module `demo`, so its own class is `demo`.

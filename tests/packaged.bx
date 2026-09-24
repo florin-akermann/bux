@@ -12,12 +12,6 @@ import held
 import ir
 import list
 
-/// The one property of a package run on a pool, checked over `cases` drawn packages.
-// example: list.length(every_property(0, ir.little_library())) == 1
-fn every_property(cases: Int, library: ir.Library) -> List<held.Held> {
-    [a_package_on_a_pool_reports_what_its_modules_report_in_turn(cases, library)]
-}
-
 /// A drawn package reports on a pool of drawn size what its modules report when run in turn.
 ///
 /// A property of no cases starts no JVM, and the property is skipped where no JDK is named.
@@ -157,3 +151,7 @@ type Outcome =
     | Fails
     | Refused
     | Quiet
+
+test "a package on a pool reports what its modules report in turn" {
+    held.is_held_reported(a_package_on_a_pool_reports_what_its_modules_report_in_turn(held.drawn_cases(), checking.carried_library()))
+}

@@ -1,6 +1,6 @@
-// The files the runner reads, the copies it works in, and the programs it starts in a copy.
+// The files the tests read, the copies it works in, and the programs it starts in a copy.
 //
-// `docs/implementation.md` section 7 states the runner. A walk is in the order names sort, so two
+// `docs/implementation.md` section 7 states the tests. A walk is in the order names sort, so two
 // runs report the same failures in the same order.
 import command
 import files
@@ -37,6 +37,12 @@ fn files_in(directory: String, ending: String) -> List<String> {
         }
     }
     found
+}
+
+// `docs/implementation.md` section 7 states why it is this number.
+// example: start_limit() == 60
+fn start_limit() -> Int {
+    60
 }
 
 /// `path` with the extension after its last dot put in place of `extension`.
@@ -80,7 +86,7 @@ fn lines_of(text: String) -> List<String> {
 ///
 /// What the program writes goes into two files of the directory, so a program writing much on one
 /// stream never waits on a reader of the other. A program still running `limit` seconds after it
-/// started is stopped, so one program that never ends cannot stop the runner.
+/// started is stopped, so one program that never ends cannot stop its test.
 // example: ok_or(completed(line: ["no-such-program-at-all"], directory: "no-such-directory", limit: 1), Ended { output: "", errors: "", status: 7 }).status == 7
 fn completed(line: List<String>, directory: String, limit: Int) -> Result<Ended, Unended> {
     completed_from(line: line, directory: directory, written: directory, limit: limit)
@@ -106,7 +112,7 @@ fn completed_from(line: List<String>, directory: String, written: String, limit:
 
 /// What `running` wrote into the files `streams` names, where it ends within `limit` seconds.
 ///
-/// A program that does not end by then is stopped, and the runner waits until it is gone. What
+/// A program that does not end by then is stopped, and the caller waits until it is gone. What
 /// it wrote on its standard output until then is kept, so a caller can see how far it came.
 // example: unended_said(PastLimit(2, ""), "the program") == "the program did not end within 2 s, and was stopped"
 fn ended_or_stopped(running: programs.Running, limit: Int, streams: Streams) -> Result<Ended, Unended> {

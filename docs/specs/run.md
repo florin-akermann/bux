@@ -46,9 +46,8 @@ So a build writes the resources that its compiler read.
 A program that calls the compiler then finds the resources on its own class path.
 An example is a test of `tests/` that calls `bux help` or `bux explain`.
 
-That one `target/` is the whole class path, for a run and for each script below.
-`bin/bux` starts `compiler/target/`, and `bin/runner` starts `tests/target/`.
-Each script puts that one directory on the class path, and no other entry.
+That one `target/` is the whole class path, for a run and for the script below.
+`bin/bux` starts `compiler/target/`, with that one directory on the class path and no other entry.
 
 `bux test` is the one exception, and it writes nothing into `target/`.
 It writes the classes and the resources of its run into a directory made for that run alone.
@@ -243,7 +242,7 @@ A golden answer is the status and every line of each stream.
 `tests/enacted.bx` holds the files that each command writes, and what each command says.
 `tests/started.bx` holds each command that starts a JVM.
 `tests/launched.bx` holds the launcher where it starts the compiler and where it cannot.
-With no JDK, the runner skips each check that starts a JVM and says why.
+With no JDK, a test of `tests/` skips each check that starts a JVM and says why.
 
 ## The bootstrap
 
@@ -273,7 +272,7 @@ A difference is a defect in the compiler under `compiler/`, and the fix goes the
 The script refuses with status `2` when `JAVA_HOME` names no JDK and when the seed is missing.
 
 The script is the check of the bootstrap, because it compares the two stages itself.
-The runner runs on stage 1, so each check of the runner is a check of stage 1.
+`bin/bux test tests` runs on stage 1, so each test of `tests/` is a check of stage 1.
 
 A build copies the resources of its compiler, not those of the checkout.
 So `bin/bux build compiler/main.bx` copies the resources that `compiler/target/` holds already.

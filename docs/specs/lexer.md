@@ -109,7 +109,7 @@ Every other kind shows its name, as `Identifier` and `UnterminatedString` do.
 
 ## Properties
 
-These hold for arbitrary text and are checked by drawn properties in the runner:
+These hold for arbitrary text and are checked by drawn properties, each a test of `tests/`:
 
 1. Lexing never panics.
 2. Spans are in order, non-overlapping, non-empty, and on character boundaries.

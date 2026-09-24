@@ -3,6 +3,7 @@
 // `docs/specs/codegen.md` keeps a record that never leaves the function it is built in as one
 // local for each field, and builds it only where a second name lets it go. The property runs both
 // bodies on a small stack machine, which knows only the instructions such a body is made of.
+import checking
 import compiled
 import drawn
 import held
@@ -11,12 +12,6 @@ import jvm
 import list
 import map
 import strings
-
-/// The one property of a record kept in locals, checked over `cases` drawn records.
-// example: list.length(every_property(0, ir.little_library())) == 1
-fn every_property(cases: Int, library: ir.Library) -> List<held.Held> {
-    [a_record_kept_in_locals_computes_what_the_same_record_built_on_the_heap_computes(cases, library)]
-}
 
 /// A record read only through the name it was built for is never built, and works out the same.
 // example: held.is_held(a_record_kept_in_locals_computes_what_the_same_record_built_on_the_heap_computes(0, ir.little_library()))
@@ -277,3 +272,7 @@ type Value =
     | Number(Int)
     | Instance(List<Int>)
     | Fresh
+
+test "a record kept in locals computes what the same record built on the heap computes" {
+    held.is_held_reported(a_record_kept_in_locals_computes_what_the_same_record_built_on_the_heap_computes(held.drawn_cases(), checking.carried_library()))
+}

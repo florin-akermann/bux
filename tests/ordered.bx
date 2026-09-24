@@ -11,12 +11,6 @@ import ir
 import list
 import strings
 
-/// Every property of the repair, each tried on `cases` drawn cases, in a fixed order.
-// example: list.length(every_property(0, ir.little_library())) == 1
-fn every_property(cases: Int, library: ir.Library) -> List<held.Held> {
-    [a_module_in_any_order_is_repaired_to_one_that_builds(cases, library)]
-}
-
 /// A module written in a drawn order builds once `bux fmt` repairs it, and a second `bux fmt`
 /// writes the text it is given.
 // example: held.is_held(a_module_in_any_order_is_repaired_to_one_that_builds(0, ir.little_library()))
@@ -85,4 +79,8 @@ fn without(values: List<String>, index: Int) -> List<String> {
 // example: list.length(items()) == 12
 fn items() -> List<String> {
     ["import list", "import strings", "/// The sum and the count of `values`.\nfn total(values: List<Int>) -> Int {\n    summed(values) + counted(values)\n}", "/// The sum of `values`.\nfn summed(values: List<Int>) -> Int {\n    var sum = 0\n    for value in values {\n        sum += value\n    }\n    sum\n}", "fn counted(values: List<Int>) -> Int {\n    list.length(values)\n}", "fn is_even(count: Int) -> Bool {\n    if count == 0 {\n        return true\n    }\n    is_odd(count - 1)\n}", "fn is_odd(count: Int) -> Bool {\n    if count == 0 {\n        return false\n    }\n    is_even(count - 1)\n}", "type Shape =\n    | Dot\n    | Line(Int)", "fn length_of(shape: Shape) -> Int {\n    match shape {\n        Dot => 0\n        Line(size) => size\n    }\n}", "fn spoken(words: List<String>) -> String {\n    strings.join(words, \" \")\n}", "test \"sums\" {\n    total([1, 2]) == 5\n}", "test \"evens\" {\n    is_even(4)\n}"]
+}
+
+test "a module in any order is repaired to one that builds" {
+    held.is_held_reported(a_module_in_any_order_is_repaired_to_one_that_builds(held.drawn_cases(), checking.carried_library()))
 }

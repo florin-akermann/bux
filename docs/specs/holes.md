@@ -109,7 +109,7 @@ The `holes_refused` check of `tests/enacted.bx` holds `bux build` to its refusal
 
 ## Properties
 
-These hold and are checked by drawn properties in the runner:
+These hold and are checked by drawn properties, each a test of `tests/`:
 
 1. A module that holds no hole gives back no hole, whatever it is written out of.
 2. Every hole a module holds is found, wherever in the module it is written.

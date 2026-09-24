@@ -112,7 +112,10 @@ A module that states no example and no test has nothing to run, and it is a run 
 
 ## The report
 
-A run in which every example and every test held prints nothing.
+A run passes on each line that its tests write on standard output, in the order written.
+So a test can say why it did not hold, or which check it skipped and why.
+The lines that mark an example or a test that did not hold are read, and not passed on.
+A run in which every example and every test held, and no test wrote a line, prints nothing.
 An example that did not hold is `L0603`, as `docs/specs/doc-examples.md` states.
 A test that did not hold is one line with the module, the line of the word `test`, and the name:
 
@@ -131,12 +134,21 @@ A module that the compiler refuses is reported as `bux check` reports it.
 2  the run could not be started, or the path is no file and no package
 ```
 
-## The runner
+## The tests of the compiler
 
-`tests/documented.bx` runs the tests of every module it runs the examples of.
+The compiler's tests are the tests of `tests/`, and `bin/bux test tests` runs them all.
+`.githooks/pre-commit` runs it after `bin/bootstrap`, and a commit needs status 0 from it.
+A test there calls a check of its module, which gives back what it tried and what failed.
+The test writes a line for each failure and a line `skipped: <why>` for each check it skipped.
+A test that skips a check holds, so the reason is on standard output and the run goes on.
+A check that starts a JVM stops it after 60 s, and a JVM stopped so is a failure of the check.
+
+`tests/documented.bx` runs the examples and the tests of `library/`, `compiler/`, and `tests/spec/`.
 It leaves out the tests under `tests/spec/`, because each of those files states its own answer.
+It leaves out `tests/` itself, because `bin/bux test tests` runs those modules directly.
+It skips `library/prelude.bx`, because the run of its examples declares `or` a second time.
 The golden answers in `tests/commands/fixtures.txt` hold `bux test` on `tests/spec/testing/`.
-The summary line of the runner counts the tests that it ran.
+`bin/bux run tests/golden.bx` writes each golden file under `tests/commands/` again.
 
 ## The errors
 
@@ -149,7 +161,7 @@ The summary line of the runner counts the tests that it ran.
 
 ## Properties
 
-These hold and are checked by drawn properties in the runner:
+These hold and are checked by drawn properties, each a test of `tests/`:
 
 1. The word `test` is read as a keyword, and a longer name that opens with it is a name.
 2. A test written among the statements of a body is refused as `L0110`, at the word `test`.

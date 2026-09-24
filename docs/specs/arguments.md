@@ -318,7 +318,7 @@ A body that does not typecheck is `L0400` first, as it is before every rule here
 
 ## Properties
 
-These hold and are checked by drawn properties in the runner:
+These hold and are checked by drawn properties, each a test of `tests/`:
 
 1. A call of a declaration that repeats a type compiles when it names its arguments, and does not
    when it passes them positionally.

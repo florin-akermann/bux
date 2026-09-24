@@ -3,7 +3,7 @@
 // `docs/implementation.md` section 7 states the drawn tests. The generator is linear congruential,
 // with Knuth's MMIX constants, and a sum that does not fit wraps, which `docs/specs/arithmetic.md`
 // states. A property draws a fixed number of cases, each from a seed of its own, and a failure
-// names the seed, so the same case is drawn again whenever the runner runs. Nothing shrinks.
+// names the seed, so the same case is drawn again whenever its test runs. Nothing shrinks.
 import list
 
 /// The seed of the case numbered `case`, which is the same on every run.

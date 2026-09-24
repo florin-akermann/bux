@@ -1,7 +1,7 @@
 // The formatter: a source file to the one canonical text of the program it holds.
 //
 // `docs/specs/formatting.md` states the layout, and `tests/layout.bx` holds the formatter to it.
-// The runner holds every example under `tests/spec` to canonical form.
+// `tests/exemplified.bx` holds every example under `tests/spec` to canonical form.
 // The tree drops comments and parentheses, so the printer reads the comments from the tokens and
 // puts back only the parentheses the shape of the tree needs.
 import ast

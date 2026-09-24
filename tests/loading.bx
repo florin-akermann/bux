@@ -554,3 +554,7 @@ type Property =
     | TwoPackages
     | BesideWins
     | ManifestRead
+
+test "every property of loading holds" {
+    held.is_held_reported(held.together(every_property(held.drawn_cases())))
+}

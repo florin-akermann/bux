@@ -2,18 +2,13 @@
 //
 // A division tests its divisor, an `or` works its fallback out, and a `?` hands a `None` back:
 // each writes two paths, and `docs/specs/codegen.md` states what each path holds.
+import checking
 import compiled
 import drawn
 import held
 import ir
 import jvm
 import list
-
-/// Every property of the paths a body takes, each checked over `cases` drawn modules, in order.
-// example: list.length(every_property(0, ir.little_library())) == 5
-fn every_property(cases: Int, library: ir.Library) -> List<held.Held> {
-    [every_division_tests_its_divisor_before_it_divides(cases, library), every_division_builds_both_answers_a_divisor_can_have(cases, library), or_is_written_out_where_it_is_used_rather_than_called(cases, library), or_works_out_its_fallback_before_it_asks_which_variant_it_was_handed(cases, library), every_question_mark_on_an_option_gives_the_none_it_was_handed_back_unchanged(cases, library)]
-}
 
 /// Each division loads its divisor, and before that asks whether the same slot holds zero.
 // example: held.is_held(every_division_tests_its_divisor_before_it_divides(0, ir.little_library()))
@@ -451,3 +446,23 @@ type Property =
     | WrittenOut
     | FallbackFirst
     | HandedBack
+
+test "every division tests its divisor before it divides" {
+    held.is_held_reported(every_division_tests_its_divisor_before_it_divides(held.drawn_cases(), checking.carried_library()))
+}
+
+test "every division builds both answers a divisor can have" {
+    held.is_held_reported(every_division_builds_both_answers_a_divisor_can_have(held.drawn_cases(), checking.carried_library()))
+}
+
+test "or is written out where it is used rather than called" {
+    held.is_held_reported(or_is_written_out_where_it_is_used_rather_than_called(held.drawn_cases(), checking.carried_library()))
+}
+
+test "or works out its fallback before it asks which variant it was handed" {
+    held.is_held_reported(or_works_out_its_fallback_before_it_asks_which_variant_it_was_handed(held.drawn_cases(), checking.carried_library()))
+}
+
+test "every question mark on an option gives the none it was handed back unchanged" {
+    held.is_held_reported(every_question_mark_on_an_option_gives_the_none_it_was_handed_back_unchanged(held.drawn_cases(), checking.carried_library()))
+}

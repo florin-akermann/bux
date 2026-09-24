@@ -160,7 +160,7 @@ The commands are `check`, `check --json`, `api`, `test`, `fmt`, and `build`, in 
 
 Each command line sees the example as it is written in `tests/spec/`.
 The command lines of a golden file share one stage, which is a copy of the examples.
-`fmt` is the one command that writes a source, so the runner copies the sources again after it.
+`fmt` is the one command that writes a source, so the check copies the sources again after it.
 `build` writes only into a `target/`, and `test` writes only into a directory that it deletes.
 `check`, `api`, and `explain` write nothing, and `run` starts only `echo.bx`, which writes nothing.
 So a `build` after a `fmt` of a refused example is refused, as the example itself is.
@@ -170,6 +170,7 @@ The failure names each command line that is missing.
 A command line that names a path under `tests/spec` where there is none fails the run too.
 Each failure names the golden file and the command line, so the line to add or remove is clear.
 
-`bin/runner golden` adds the missing command lines of each example at the end of `fixtures.txt`.
+`bin/bux run tests/golden.bx` adds the missing command lines of each example to `fixtures.txt`.
+It writes them at the end of the file.
 It adds them example by example, in the order names sort, and then writes each answer again.
 It never removes a command line, because a person decides what the file holds.

@@ -2,6 +2,7 @@
 //
 // `docs/specs/codegen.md` states what the writer writes. Some properties compile a drawn source,
 // some write a module built here out of drawn bodies, and `reader` reads the bytes back.
+import checking
 import compiled
 import drawn
 import held
@@ -10,12 +11,6 @@ import jvm
 import list
 import reader
 import strings
-
-/// Every property of the class-file writer, each checked over `cases` drawn modules, in order.
-// example: list.length(every_property(0, ir.little_library())) == 16
-fn every_property(cases: Int, library: ir.Library) -> List<held.Held> {
-    [compiling_one_source_twice_gives_byte_identical_class_files(cases, library), every_class_a_module_compiles_to_begins_with_the_magic_and_the_current_version(cases, library), every_constant_a_compiled_class_names_is_one_its_own_pool_holds(cases, library), every_descriptor_a_class_asks_to_load_first_names_another_class_the_build_writes(cases, library), writing_a_class_twice_gives_the_same_bytes(cases, library), every_class_written_begins_with_the_magic_and_the_current_version(cases, library), no_method_written_for_a_function_a_module_declares_names_object(cases, library), a_generic_used_at_a_whole_number_is_written_taking_and_giving_back_a_long(cases, library), every_method_a_module_declares_is_written_as_a_method_of_it(cases, library), every_constant_a_class_names_is_one_the_pool_holds(cases, library), every_class_a_drawn_program_compiles_to_reads_back_whole(cases, library), a_branch_past_what_two_bytes_reach_is_refused_as_too_large(cases, library), a_text_past_what_the_pool_holds_is_refused_as_too_long(cases, library), two_modules_that_write_one_class_name_write_it_once_or_are_refused(cases, library), two_classes_whose_names_differ_only_in_case_are_refused(cases, library), the_deepest_stack_a_method_declares_counts_two_words_for_each_long(cases, library)]
-}
 
 /// One source compiled twice gives the same class files, as the same bytes, in the same order.
 // example: held.is_held(compiling_one_source_twice_gives_byte_identical_class_files(0, ir.little_library()))
@@ -711,3 +706,67 @@ type Property =
     | NamedTwice
     | NamedInCase
     | LongStack
+
+test "compiling one source twice gives byte identical class files" {
+    held.is_held_reported(compiling_one_source_twice_gives_byte_identical_class_files(held.drawn_cases(), checking.carried_library()))
+}
+
+test "every class a module compiles to begins with the magic and the current version" {
+    held.is_held_reported(every_class_a_module_compiles_to_begins_with_the_magic_and_the_current_version(held.drawn_cases(), checking.carried_library()))
+}
+
+test "every constant a compiled class names is one its own pool holds" {
+    held.is_held_reported(every_constant_a_compiled_class_names_is_one_its_own_pool_holds(held.drawn_cases(), checking.carried_library()))
+}
+
+test "every descriptor a class asks to load first names another class the build writes" {
+    held.is_held_reported(every_descriptor_a_class_asks_to_load_first_names_another_class_the_build_writes(held.drawn_cases(), checking.carried_library()))
+}
+
+test "writing a class twice gives the same bytes" {
+    held.is_held_reported(writing_a_class_twice_gives_the_same_bytes(held.drawn_cases(), checking.carried_library()))
+}
+
+test "every class written begins with the magic and the current version" {
+    held.is_held_reported(every_class_written_begins_with_the_magic_and_the_current_version(held.drawn_cases(), checking.carried_library()))
+}
+
+test "no method written for a function a module declares names object" {
+    held.is_held_reported(no_method_written_for_a_function_a_module_declares_names_object(held.drawn_cases(), checking.carried_library()))
+}
+
+test "a generic used at a whole number is written taking and giving back a long" {
+    held.is_held_reported(a_generic_used_at_a_whole_number_is_written_taking_and_giving_back_a_long(held.drawn_cases(), checking.carried_library()))
+}
+
+test "every method a module declares is written as a method of it" {
+    held.is_held_reported(every_method_a_module_declares_is_written_as_a_method_of_it(held.drawn_cases(), checking.carried_library()))
+}
+
+test "every constant a class names is one the pool holds" {
+    held.is_held_reported(every_constant_a_class_names_is_one_the_pool_holds(held.drawn_cases(), checking.carried_library()))
+}
+
+test "every class a drawn program compiles to reads back whole" {
+    held.is_held_reported(every_class_a_drawn_program_compiles_to_reads_back_whole(held.drawn_cases(), checking.carried_library()))
+}
+
+test "a branch past what two bytes reach is refused as too large" {
+    held.is_held_reported(a_branch_past_what_two_bytes_reach_is_refused_as_too_large(held.drawn_cases(), checking.carried_library()))
+}
+
+test "a text past what the pool holds is refused as too long" {
+    held.is_held_reported(a_text_past_what_the_pool_holds_is_refused_as_too_long(held.drawn_cases(), checking.carried_library()))
+}
+
+test "two modules that write one class name write it once or are refused" {
+    held.is_held_reported(two_modules_that_write_one_class_name_write_it_once_or_are_refused(held.drawn_cases(), checking.carried_library()))
+}
+
+test "two classes whose names differ only in case are refused" {
+    held.is_held_reported(two_classes_whose_names_differ_only_in_case_are_refused(held.drawn_cases(), checking.carried_library()))
+}
+
+test "the deepest stack a method declares counts two words for each long" {
+    held.is_held_reported(the_deepest_stack_a_method_declares_counts_two_words_for_each_long(held.drawn_cases(), checking.carried_library()))
+}

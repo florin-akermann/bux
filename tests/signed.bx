@@ -11,12 +11,6 @@ import ir
 import list
 import strings
 
-/// The one property of a signature, checked over `cases` drawn functions.
-// example: list.length(every_property(0, ir.little_library())) == 1
-fn every_property(cases: Int, library: ir.Library) -> List<held.Held> {
-    [a_type_left_out_of_a_signature_is_refused_where_it_is_left_out(cases, library)]
-}
-
 /// A drawn function that leaves one type out of its signature is `L0436` at that place.
 // example: a_type_left_out_of_a_signature_is_refused_where_it_is_left_out(2, ir.little_library()).cases == 2
 fn a_type_left_out_of_a_signature_is_refused_where_it_is_left_out(cases: Int, library: ir.Library) -> held.Held {
@@ -131,4 +125,8 @@ type Kind = {
     written: String
     kept: String
     literal: String
+}
+
+test "a type left out of a signature is refused where it is left out" {
+    held.is_held_reported(a_type_left_out_of_a_signature_is_refused_where_it_is_left_out(held.drawn_cases(), checking.carried_library()))
 }

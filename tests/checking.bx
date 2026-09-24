@@ -3,7 +3,7 @@
 // that tries a property on each drawn case.
 //
 // `docs/specs/types.md` states the inference. A module is checked as `bux check` checks it,
-// but in the runner's own JVM, against the prelude the runner reads.
+// but in the JVM of its test, against the prelude the compiler carries.
 import ast
 import command
 import drawn
@@ -20,6 +20,11 @@ import strings
 import surface
 import types
 import unify
+
+// example: is_accepted("fn one() -> Int {\n    or(Some(1), 0)\n}\n", carried_library())
+fn carried_library() -> ir.Library {
+    ir.library_read(or(modules.carried("prelude"), ""))
+}
 
 /// The seed of each case of a property that tries `cases` of them, in order.
 // example: seeds(3) == [1, 2, 3]
@@ -77,7 +82,7 @@ fn parsed(source: String) -> Result<ast.Program, command.Diagnostic> {
 
 /// `source`, checked as the file `demo.bx` in `directory` is, with every module it imports.
 ///
-/// The library modules it imports are read from the class path, as the runner reads them.
+/// The library modules it imports are read from the class path, as the compiler reads them.
 // example: code_of(reaching(source: "fn one() -> Int {\n    1\n}\n", directory: "no-such-directory", library: ir.little_library())) == ""
 fn reaching(source: String, directory: String, library: ir.Library) -> Result<infer.Inference, command.Diagnostic> {
     match command.checked_as_written(command.Page { source: source, path: modules.joined(directory, "demo.bx") }, library) {

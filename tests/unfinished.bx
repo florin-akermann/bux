@@ -2,25 +2,15 @@
 //
 // `docs/specs/holes.md` states the properties. Each case writes a module out of drawn places,
 // types, and statements, types it against the prelude, and lists its holes with the compiler's own
-// walk in the runner's JVM. The drawn body of holes is the one the Rust comparison drew.
+// walk in the JVM of its test. The drawn body of holes is the one the Rust comparison drew.
+import checking
 import drawn
 import held
 import holes
-import ir
 import list
 import strings
 import typed
 import types
-
-/// Every property of the holes over `cases` drawn cases each, in a fixed order.
-// example: list.length(every_property(0, ir.little_library())) == 4
-fn every_property(cases: Int, library: ir.Library) -> List<held.Held> {
-    var found = []
-    for property in [AnyType, AnyPlace, NoneUnfinished, DrawnBody] {
-        found = list.push(found, held_over(property: property, cases: cases, prelude: library.prelude))
-    }
-    found
-}
 
 /// `property` tried on `cases` cases, each drawn from a seed of its own.
 // example: held.is_held(held_over(property: NoneUnfinished, cases: 2, prelude: types.little_prelude()))
@@ -247,3 +237,19 @@ type Property =
     | AnyPlace
     | NoneUnfinished
     | DrawnBody
+
+test "a hole is a hole whatever type it is written in" {
+    held.is_held_reported(held_over(property: AnyType, cases: held.drawn_cases(), prelude: checking.carried_library().prelude))
+}
+
+test "every hole a module holds is found wherever it is written" {
+    held.is_held_reported(held_over(property: AnyPlace, cases: held.drawn_cases(), prelude: checking.carried_library().prelude))
+}
+
+test "a module with nothing unfinished holds no hole to refuse" {
+    held.is_held_reported(held_over(property: NoneUnfinished, cases: held.drawn_cases(), prelude: checking.carried_library().prelude))
+}
+
+test "every hole of a drawn body is found in the order it is written" {
+    held.is_held_reported(held_over(property: DrawnBody, cases: held.drawn_cases(), prelude: checking.carried_library().prelude))
+}

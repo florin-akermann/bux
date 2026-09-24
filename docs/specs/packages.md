@@ -235,7 +235,7 @@ come from.
 
 ## Properties
 
-These hold and are checked by drawn properties in the runner:
+These hold and are checked by drawn properties, each a test of `tests/`:
 
 1. A package whose modules import only downwards loads, dependencies before dependents.
 2. A module beside the importing file is the one an import reaches, however many dependencies

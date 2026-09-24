@@ -4,6 +4,7 @@
 // needs the JDK `JAVA_HOME` names, and every check is skipped where it names none. A check of what
 // the command line says where `JAVA_HOME` names no JDK starts the command line in a JVM of its
 // own, with `JAVA_HOME` taken away or changed, because this JVM reads the one it was given.
+import checking
 import command
 import enacted
 import environment
@@ -221,11 +222,13 @@ fn billion_rows_unnamed(library: ir.Library, limit: Int) -> held.Held {
 
 /// Every example of `1brc/src/main.bx` holds.
 // example: strings.length(billion_rows_text()) >= 0
+// The example of `written` writes the empty answer `{}`, and `bux test` passes that line on.
 fn billion_rows_tested(library: ir.Library) -> held.Held {
     let scene = enacted.scene_of([enacted.Written { at: "main.bx", text: billion_rows_text() }])
     let said = enacted.said_to(["test", modules.joined(scene, "main.bx")], library)
     command.removed_whole(scene)
-    enacted.facts_held("every example of 1brc/src/main.bx holds", enacted.said_facts("test", said))
+    let facts = [enacted.Fact { what: "test: status", expected: "0", found: shown(said.status) }, enacted.Fact { what: "test: output", expected: "{}\n", found: said.output }, enacted.Fact { what: "test: errors", expected: "", found: said.errors }]
+    enacted.facts_held("every example of 1brc/src/main.bx holds", facts)
 }
 
 /// Every example and every test of `1brc/src/create_measurements.bx` holds.
@@ -434,4 +437,8 @@ fn writes_a_line_text() -> String {
 // example: strings.length(twice_text()) > 0
 fn twice_text() -> String {
     "import greeting\n\n// example: twice() == \"hello, world\"\nfn twice() -> String {\n    greeting.greeting(\"world\")\n}\n"
+}
+
+test "each command that starts a JVM does what its check holds it to" {
+    held.is_held_reported(every_run_held(checking.carried_library(), walk.start_limit()))
 }

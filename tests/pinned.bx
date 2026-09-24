@@ -14,12 +14,6 @@ import modules
 import strings
 import walk
 
-/// One `Held` for each property of the `jar` line and of its hash, in a fixed order.
-// example: list.length(every_property(0)) == 4
-fn every_property(cases: Int) -> List<held.Held> {
-    [a_printed_jar_line_reads_back(cases), a_malformed_jar_line_is_refused(cases), a_path_with_a_colon_is_refused(cases), every_digest_is_the_one_shasum_gives(cases)]
-}
-
 /// Each drawn `jar` line reads back as the path and the hash it was printed with, in line order.
 // example: a_printed_jar_line_reads_back(2).cases == 2
 fn a_printed_jar_line_reads_back(cases: Int) -> held.Held {
@@ -260,4 +254,20 @@ fn span_at(start: Int) -> lexer.Span {
 type Printed = {
     path: String
     hash: String
+}
+
+test "a printed jar line reads back" {
+    held.is_held_reported(a_printed_jar_line_reads_back(held.drawn_cases()))
+}
+
+test "a malformed jar line is refused" {
+    held.is_held_reported(a_malformed_jar_line_is_refused(held.drawn_cases()))
+}
+
+test "a path with a colon is refused" {
+    held.is_held_reported(a_path_with_a_colon_is_refused(held.drawn_cases()))
+}
+
+test "every digest is the one shasum gives" {
+    held.is_held_reported(every_digest_is_the_one_shasum_gives(held.drawn_cases()))
 }

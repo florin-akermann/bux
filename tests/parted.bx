@@ -2,8 +2,8 @@
 // those parts spell as UTF-8, which `docs/specs/library.md` states.
 //
 // Each case writes a drawn file into a directory of its own under the temporary directory, and
-// the directory is removed whole when every property has run. The runner runs on a JVM already,
-// so each case calls `files` and `strings` in the runner itself, and no JDK is started.
+// the directory is removed whole when every property has run. The test runs on a JVM already,
+// so each case calls `files` and `strings` in that JVM, and no JDK is started.
 import checking
 import command
 import drawn
@@ -184,4 +184,8 @@ fn one_char_each(bytes: List<Int>) -> String {
 // example: list.length(pieces()) == 8
 fn pieces() -> List<String> {
     ["a", "Z", " ", "\n", "é", "€", "日", "😀"]
+}
+
+test "every property of the parts of a file holds" {
+    held.is_held_reported(held.together(every_property(held.drawn_cases())))
 }

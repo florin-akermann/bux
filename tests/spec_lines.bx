@@ -1,0 +1,10 @@
+// Every `// example:` line under `tests/spec`.
+//
+// `tests/documented.bx` runs them. They are a module of their own, so that `bux test` runs them
+// beside the other long checks, on a worker of their own.
+import documented
+import walk
+
+test "every example line under tests/spec holds" {
+    documented.is_every_line_held(walk.every_file("tests/spec", ".bx"))
+}

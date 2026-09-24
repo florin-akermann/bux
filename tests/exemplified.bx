@@ -1,8 +1,9 @@
 // Every example under `tests/spec`, held to what its header says.
 //
 // `docs/specs/executable-examples.md` states what an example is and what its header means. Checking
-// goes through the compiler's own functions in the runner's JVM, and a JVM is started only to run
-// an example headed `// expect-run`, from the line `bux run` would start it with.
+// goes through the compiler's own functions in the JVM of its test, and a JVM is started only to
+// run an example headed `// expect-run`, from the line `bux run` would start it with.
+import checking
 import command
 import environment
 import files
@@ -224,4 +225,8 @@ type Copied = {
 type Opened = {
     path: String
     source: String
+}
+
+test "every example under tests/spec holds to its header and to canonical form" {
+    held.is_held_reported(every_example_held("tests/spec", walk.every_file("tests/spec", ".bx"), checking.carried_library(), walk.start_limit()))
 }

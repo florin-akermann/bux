@@ -309,7 +309,7 @@ A module that the phase infers has the `bux api` page of `docs/specs/api-surface
 
 ## Properties
 
-These hold and are checked by drawn properties in the runner:
+These hold and are checked by drawn properties, each a test of `tests/`:
 
 1. Inferring a program never panics and is deterministic.
 2. A module built of pieces that each infer infers.

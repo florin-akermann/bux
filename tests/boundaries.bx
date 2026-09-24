@@ -21,15 +21,6 @@ import surface
 import types
 import walk
 
-/// One `Held` for each property of what crosses into a module, in a fixed order.
-///
-/// Where no directory of its own can be made, the two properties that need one are skipped.
-// example: list.length(every_property(0, ir.little_library())) == 6
-fn every_property(cases: Int, library: ir.Library) -> List<held.Held> {
-    let library_ones = library_reached(cases, library)
-    [or(list.at(library_ones, 0), held.nothing_failed(0)), or(list.at(library_ones, 1), held.nothing_failed(0)), a_type_that_does_not_cross_is_refused_in_every_position(cases, library), a_list_crosses_only_where_a_member_takes_one(cases, library), every_class_the_tree_names_is_on_the_list(cases), a_class_on_no_list_is_refused_and_accepted_from_an_archive(cases, library)]
-}
-
 /// The two properties of the names a library module declares, each case written under a
 /// directory of its own, which is removed whole afterwards.
 // example: list.length(library_reached(0, ir.little_library())) == 2
@@ -189,7 +180,7 @@ fn classes_listed(path: String, program: ast.Program) -> checking.Tried {
     checking.Tried { input: path, why: "" }
 }
 
-/// Every module of the tree that the runner builds: the compiler, the library, and the runner.
+/// Every module of the tree that a test builds: the compiler, the library, and the tests.
 // example: list.length(tree_modules()) > 0
 fn tree_modules() -> List<String> {
     var found = []
@@ -317,3 +308,23 @@ derive Eq for Taken
 type Taken =
     | IsTaken
     | IsGiven
+
+test "a name a library module declares has one type, and an undeclared one is refused" {
+    held.is_held_reported(held.together(library_reached(held.drawn_cases(), checking.carried_library())))
+}
+
+test "a type that does not cross is refused in every position" {
+    held.is_held_reported(a_type_that_does_not_cross_is_refused_in_every_position(held.drawn_cases(), checking.carried_library()))
+}
+
+test "a list crosses only where a member takes one" {
+    held.is_held_reported(a_list_crosses_only_where_a_member_takes_one(held.drawn_cases(), checking.carried_library()))
+}
+
+test "every class the tree names is on the list" {
+    held.is_held_reported(every_class_the_tree_names_is_on_the_list(held.drawn_cases()))
+}
+
+test "a class on no list is refused and accepted from an archive" {
+    held.is_held_reported(a_class_on_no_list_is_refused_and_accepted_from_an_archive(held.drawn_cases(), checking.carried_library()))
+}

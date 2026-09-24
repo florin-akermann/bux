@@ -107,7 +107,7 @@ Traits, `derive`, operators as trait methods, collections, modules, and packages
 Version 0.3 is self-hosting, and Item 075 completed it: the compiler in `compiler/` builds itself.
 Item 087 then deleted the Rust compiler that was the bootstrap.
 A seed, `bin/seed.jar`, builds the compiler now, and the compiler then builds itself again.
-The runner under `tests/` holds the compiler to every example and every drawn property.
+The tests under `tests/` hold the compiler to every example and every drawn property.
 Version 0.4 adds a native binary, HTTP, and JSON, and concurrency is in already.
 `TODOS.md` is the backlog, and it is the only task tracker this repository has.
 
@@ -133,13 +133,13 @@ No Cargo and no other build tool is needed.
 
 ```sh
 bin/bootstrap
-bin/runner
+bin/bux test tests
 git config core.hooksPath .githooks
 ```
 
 `bin/bootstrap` builds the compiler from the seed, and then the compiler builds itself again.
 The two builds must be the same, byte for byte.
-`bin/runner` holds the compiler to every example, every example line, and every drawn property.
+`bin/bux test tests` holds the compiler to every example, example line, and drawn property.
 `bin/bux` starts the compiler; a link to it on the `PATH` works like any other installed compiler.
 
 ## The example program

@@ -4,6 +4,7 @@
 // what `build`, `check`, `fmt`, `api`, `run`, and `test` write, say, and end with. A check writes
 // its files into a scene, a directory made for it alone, so nothing is written into the tree. It
 // names each fact it holds, and a fact that does not hold is one failure of the check.
+import checking
 import command
 import files
 import header
@@ -505,7 +506,7 @@ fn nothing_to_test(library: ir.Library) -> held.Held {
     found
 }
 
-/// What each header of an example says, held to what the runner reads it as.
+/// What each header of an example says, held to what `tests/header.bx` reads it as.
 // example: list.length(stated_headers()) > 0
 fn every_header_held() -> held.Held {
     var found = held.nothing_failed(0)
@@ -515,14 +516,14 @@ fn every_header_held() -> held.Held {
     found
 }
 
-/// Each header, and what the runner reads it as.
+/// Each header, and what `tests/header.bx` reads it as.
 // example: or(list.at(stated_headers(), 0), Headed { source: "", read: header.Compiles }).read == header.Refused("L0105")
 fn stated_headers() -> List<Headed> {
     let only = "only an example that is run states what it writes"
     [Headed { source: "// expect-error: L0105\nfn f() {\n}\n", read: header.Refused("L0105") }, Headed { source: run_of("// >   held  \n"), read: run_writing("  held  \n") }, Headed { source: run_of("// > one\n// >\n// > two\n"), read: run_writing("one\n\ntwo\n") }, Headed { source: run_of("// > > held\n"), read: run_writing("> held\n") }, Headed { source: run_of("// > one\n// a comment\n"), read: run_writing("one\n") }, Headed { source: run_of("// statuses are read elsewhere\n"), read: run_writing("") }, Headed { source: run_of("// an ordinary comment\n"), read: run_writing("") }, Headed { source: run_of("// > said\n// ! went wrong\n"), read: header.Runs(header.Ran { arguments: [], output: "said\n", errors: "went wrong\n", status: 0 }) }, Headed { source: "// expect-error: L0105\n// > one\nfn f() {\n}\n", read: header.Misstated(only) }, Headed { source: "// status 1\nimport io\n", read: header.Misstated(only) }, Headed { source: "// statuses are read elsewhere\nimport io\n", read: header.Compiles }, Headed { source: run_of("// status soon\n"), read: header.Misstated("a line stating a run comes directly under the header, and this one does not") }]
 }
 
-/// One header held to what the runner reads it as.
+/// One header held to what `tests/header.bx` reads it as.
 // example: header_held(Headed { source: "import io\n", read: header.Compiles }).failures == []
 fn header_held(stated: Headed) -> held.Held {
     let read = header.expectation_of(stated.source)
@@ -905,8 +906,12 @@ type Written = {
     text: String
 }
 
-/// A header, and what the runner reads it as.
+/// A header, and what `tests/header.bx` reads it as.
 type Headed = {
     source: String
     read: header.Expectation
+}
+
+test "each command writes, says, and ends with what its scene holds it to" {
+    held.is_held_reported(every_scene_held(checking.carried_library(), walk.start_limit()))
 }

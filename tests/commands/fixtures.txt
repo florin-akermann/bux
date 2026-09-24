@@ -10747,6 +10747,7 @@ status 0
 
 $ test tests/spec/running/let_go.bx
 status 0
+> one
 
 $ test tests/spec/running/nested_record.bx
 status 0

@@ -103,7 +103,7 @@ Tuning beyond that cost is refused until a measurement on a real program asks fo
 The library stands on files, programs, streams, the environment, the clock, and text.
 It also stands on Java archives and on the bits of a whole number, which the compiler needs.
 `docs/specs/io.md` names the module and the `extern` declarations of each of these.
-Before Item 128, `library/` declared 78 `extern` declarations, `compiler/` 43, and the runner 21.
+Before Item 128, `library/` declared 78 `extern` declarations, `compiler/` 43, and `tests/` 21.
 After it, `library/` declares 117, and no file outside it and `tests/spec/` declares one.
 The 25 that went were second declarations of a class or a member that the library held already.
 
@@ -174,10 +174,10 @@ Run `bin/bootstrap` after a change to a resource, because only it copies those o
 What remains of the repository is small, and a JDK is the one tool it needs:
 
 ```text
-bin/        bootstrap, bux, runner, and the seed seed.jar
+bin/        bootstrap, bux, and the seed seed.jar
 compiler/   the compiler, its help text, and its explanations
 library/    the standard library, read by the compiler as a resource
-tests/      the runner, and tests/spec, the executable examples
+tests/      the tests of the compiler, and tests/spec, the executable examples
 example/    the example program
 docs/       the specification, this document, and the behaviour specs
 ```
@@ -270,80 +270,60 @@ Compiler development is specification-driven, and the executable examples are th
 `docs/specs/executable-examples.md` says what an example file is and what it expects.
 An example is a `.bx` file under `tests/spec/<area>/`, and an area exists when an example needs it.
 
-### The runner
+### The tests
 
-`tests/runner.bx` is the runner, a Bux program, and `bin/runner` builds it and starts it.
-`bin/runner` starts it with `tests/target/` alone on the class path: classes and resources.
-It starts from the root of the repository and holds the compiler in one JVM.
-It calls the functions of the compiler, so it starts no compiler process for each file.
-It holds these parts, each in a module of its own under `tests/`:
+The compiler's tests are the tests of `tests/`, and `bin/bux test tests` runs them all.
+`tests/` is a package, and `docs/specs/testing.md` states a test and a run of a package.
+The run starts from the root of the repository, so each path of a test reads from there.
+Each module of `tests/` runs in a JVM of its own, which calls the functions of the compiler.
+So a test starts no compiler process for each file that it checks.
+Each check is a `test` block of the module that holds it:
 
 - `exemplified.bx`: every example under `tests/spec`, to its header and to canonical form.
 - `siblings.bx`: every sibling file, to the view of its phase: tokens, tree, surface, format.
-- `documented.bx`: every `// example:` line of `tests/spec`, `library/`, `compiler/`, and `tests/`.
-  It also runs every `test` block of those modules, except the tests under `tests/spec/`.
-- The property modules that `every_property_held` in `runner.bx` names, one for each phase.
-- `commanded.bx`: the command line, held to the golden answers under `tests/commands/`.
+- `documented.bx`, `compiler_lines.bx`, and `spec_lines.bx`: every `// example:` line.
+  They hold `library/`, `compiler/`, and `tests/spec`, one place each.
+  They also run every `test` block of those modules, except the tests under `tests/spec/`.
+- One module for each phase, with a test for each drawn property of that phase.
+- `commanded.bx` and `fixtures.bx`: the command line, held to the golden answers.
+  The golden answers are under `tests/commands/`.
+- `enacted.bx`, `started.bx`, and `archived.bx`: each command, done in a directory of its own.
 - `launched.bx`: the launcher `bin/bux`, and the time limit that a started program has.
 
-The runner splits the parts into jobs, and one pool process hands each job to a worker process.
-There is one worker for each processor that `Runtime.availableProcessors` gives.
-The examples are split into at most one job for each worker.
-The example lines are split by place: `tests/`, `compiler/`, `library/`, `tests/spec`.
-A module of `tests/` or `compiler/` costs much more than one of `tests/spec`, so no job holds many.
-Before Item 103 one job held most modules of `tests/`, and it took 47 s of the 56 s of wall time.
-On 2026-09-24 the median of three `bin/runner` wall times was 56 s before Item 103 and 43 s after.
-The runs of before and after took turns, under a load of 15 to 22 on 12 cores from other runners.
-Each golden file, each other check of the command line, the properties, and the siblings is a job.
-A worker sends the answer of its job to the pool, which holds each answer by the number of the job.
-When every worker has left, the pool ends, and the runner counts the parts from its last state.
-The runner waits for each worker before the pool, so a JVM error in a worker stops the runner.
-It counts them in the order of the jobs, so no count depends on which worker ended first.
+A check gives back a `Held`: the cases it tried, a line for each failure, and each skip.
+`held.is_held_reported` writes a line for each skip and each failure of a check.
+The test holds where no case failed.
+`bux test` passes on the lines that a test writes, so a failure names its place and its cause.
+A skip is a line `skipped: <why>`, and the test holds, as `library/prelude.bx` shows.
+`bux test` runs the modules on a pool of one worker for each processor, as Item 112 made it.
+The long checks are in modules of their own, so the pool runs them beside each other.
+The order of the report is the order of the modules, so no line depends on which worker ends first.
 
-The runner starts a JVM for an example headed `expect-run` and for a command that runs one.
-It also starts one JVM for each module whose example lines or tests run.
-The pool writes one line for each part when that part ends: the name, the count, and seconds.
-The seconds are the sum of the times of the jobs of the part, which can be more than the wall time.
-An example of such a line is `examples: 332 held in 4 s`.
-The parts are examples, siblings, example lines, properties, and command lines, in that order.
-A part ends when the pool holds the answer of each of its jobs.
-The pool writes a part only after every part before it, and a part that ends first waits.
-So the lines come in one order in every run, and the first line comes when the first part ends.
-When the pool has ended, the runner writes one line for each skipped check and for each failure.
-Then it writes one line of counts.
-The line of counts also counts the `test` blocks that the jobs of example lines ran.
-It ends with status 0 only when nothing failed.
-
-Each job of example lines holds one memo of typed modules, `command.Memo`, from call to call.
-The memo holds each module by the canonical path of its file, so each module is typed once a job.
+`documented.bx` holds one memo of typed modules, `command.Memo`, for each test, from call to call.
+The memo holds each module by the canonical path of its file, so each module is typed once a test.
 It also holds each module that `whole` found whole, and `whole` is not run on it again.
 A command starts with an empty memo, so no answer of the command line depends on one.
 `documented.bx` writes the run of each module, as `bux test` writes it, into a directory.
-Each run gets a directory of its own, inside one directory made for the runs of its job.
-Then the job starts each run in a JVM of its own, with the line that `bux test` uses.
+Each run gets a directory of its own, inside one directory made for the runs of its test.
+Then the test starts each run in a JVM of its own, with the line that `bux test` uses.
 So the class path of a run is its own directory, with the resources, and no two runs share a class.
 One build of a package that all its runs share would not be correct, so each run writes its own.
 A run asks generics for types that no build of the package asks for, such as in an example.
 The lowering writes each such generic into the class of the module that declares it.
 The JVM starts in the root of the repository, so a run finds a file where `bux test` finds it.
-The runner reads what the JVM wrote as `bux test` reads it, so a failure names its module.
+The test reads what the JVM wrote as `bux test` reads it, so a failure names its module.
 A run that ends with a status other than 0, such as after a stack overflow, is a failure.
 A run past the limit is a failure too, and in both cases the next run starts.
 A module whose run cannot be built is reported as `bux test` reports it, and the others run.
-The runner uses no reflection, no class loader, and no `java.net`, because Item 084 refuses them.
-Before Item 084, one JVM ran every run of a job, and `tests/examined.bx` loaded each run.
-On 2026-09-24 the median of three `bin/runner` wall times was 37 s before Item 084.
-After Item 084, with one JVM for each run, the median of three wall times was 40 s.
+The tests use no reflection, no class loader, and no `java.net`, because Item 084 refuses them.
 
-`walk.completed_from` starts each program that the runner starts, and gives each a time limit.
+`walk.completed_from` starts each program that a test starts, and gives each a time limit.
 Each program starts with the environment that `command.cleared` leaves, as a run of `bux test` does.
-`start_limit` in `runner.bx` is the one limit, in seconds, and every started program gets it.
+`walk.start_limit` is the one limit, in seconds, and every started program gets it.
 A program that is still running at the limit is stopped, and it is a failure that names its check.
-The runner then continues with the next check, so one program that never ends cannot stop it.
+The test then continues with the next check, so one program that never ends cannot stop it.
 The limit is 60 s, because it guards against a hang, and not against a slow program.
-Before Item 084, the longest program was `examined.bx`, which took 3.9 s on 2026-09-23.
-It ran the examples of 146 modules, and now each module runs in a JVM of its own.
-The time of a program grows with machine load, and two runners often run at the same time.
+The time of a program grows with machine load, and two suites often run at the same time.
 So a limit near the time of the longest program would stop a correct run.
 Before Item 094, the longest program took 0.14 s, and the limit was 1 s.
 `launched.bx` holds the mechanism: a program that never ends is stopped at a limit of 1 s.
@@ -353,12 +333,28 @@ A worker process that waits gets a processor back only when another worker lets 
 On 2026-09-24 the report came after 1.1 s in six runners at once, with a load of 62 on 12 cores.
 With 12 processes that never let a processor go beside it, the report came after 10.2 s.
 So the window is 60 s wide, and a limit counted in minutes, not seconds, still fails it.
-`bin/runner golden` writes each golden file again, for an answer that changes on purpose.
+`bin/bux run tests/golden.bx` writes each golden file again, for an answer that changes on purpose.
 It also adds each command line on an example that `fixtures.txt` does not hold.
+
+### The runner, until Item 114
+
+Until Item 114, `tests/runner.bx` held these checks, and `bin/runner` built it and started it.
+It split the checks into jobs and ran them on a pool of its own, one worker for each processor.
+The example lines and the examples were split into as many jobs as there were workers.
+Item 114 made each check a test, so `bux test` is the one runner, as every Bux program has.
+On 2026-09-24 `bin/runner` took 262 s, 211 s, and 147 s, and the median was 211 s.
+After Item 114, `bin/bux test tests` took 176 s, 118 s, and 118 s, and the median was 118 s.
+The runs of before and after took turns, under a load of 40 to 65 on 12 cores from other work.
+One module held every example line of `tests/spec`, `library/`, and `compiler/` at first.
+It took 91 s alone, so `compiler_lines.bx` and `spec_lines.bx` now hold two of those places.
+`fixtures.bx` holds the longest golden file, so it runs beside `commanded.bx` too.
 On 2026-09-23 `bin/runner` took 182 s before Item 093 and 97 s after it.
 On 2026-09-23 `bin/runner` took 98 s before Item 094 and 53 s after it.
 The example lines took 78 s before Item 094 and 34 s after, and no other part changed by over 1 s.
 On 2026-09-24 `bin/runner` took 64 s before Item 091 and 31 s after it.
+On 2026-09-24 the median of three `bin/runner` wall times was 56 s before Item 103 and 43 s after.
+On 2026-09-24 the median of three `bin/runner` wall times was 37 s before Item 084.
+After Item 084, with one JVM for each run, the median of three wall times was 40 s.
 On 2026-09-24 `bin/bootstrap` took 5.6 s before Item 091 and 5.8 s after it.
 Item 091 did not put the compiler on processes, because a measurement showed no gain.
 A build of the compiler wrote its 1400 classes in 0.31 s on one thread and on 1400 processes.
@@ -448,6 +444,8 @@ The numbers are peaks of `ps -o rss`, on 12 processors and 24 GB, under a load o
 With no bound, the runner held 5.5 GB after a collection, and 3.5 GB after a remark.
 It ran out of heap at 2 GB and passed at 3 GB, and `bux test tests` ran out at 1 GB.
 So `bin/runner` and `bin/bux` get 4 GB, and each compile of `bin/bootstrap` gets 1 GB.
+Item 114 then deleted `bin/runner`, so `bin/bux test tests` holds the checks it held.
+Each module of `tests/` runs in a JVM of its own, and that JVM has no bound yet.
 `bin/runner` took 183 s at a load of 115 and 110 s after, at a load of 41; the load makes both vague.
 A short run gets `-Xmx256m`, `-XX:+UseSerialGC`, and `-XX:TieredStopAtLevel=1`.
 `-Xshare:auto` is refused, because the JVM turns class-data sharing off beside `--limit-modules`.
@@ -456,13 +454,13 @@ A short run gets `-Xmx256m`, `-XX:+UseSerialGC`, and `-XX:TieredStopAtLevel=1`.
 
 A property is a Bux function that tries one invariant on drawn input.
 `tests/drawn.bx` is the generator, a linear congruential generator seeded by the case number.
-The runner tries each property on 100 cases, so two runs draw the same input.
+A test tries its property on `held.drawn_cases` cases, 100, so two runs draw the same input.
 A failure names the property, the seed, and the drawn input, so a reader can try that case again.
 Round trips come first: print then parse, a format that is idempotent, spans that cover the input.
 
-### What the Rust tests held that the runner does not
+### What the Rust tests held that the tests of `tests/` do not
 
-Item 087 moved every Rust test to the runner, and it states each loss here.
+Item 087 moved every Rust test to the runner, which Item 114 made the tests of `tests/`.
 
 - Shrinking: a failure shows the whole drawn input, not the smallest input that fails.
 - A property that compared a Bux phase with the Rust phase, because no second phase is left.
@@ -478,10 +476,11 @@ Item 087 moved every Rust test to the runner, and it states each loss here.
 - `check` and `api` on the modules of `compiler/`, which change with each compiler edit.
 - An empty file as an example, because an empty example teaches nothing.
 - Every program under `tests/spec` run under stage 2 and under the launcher, beside the Rust run.
-- The runner runs each `expect-run` example on stage 1, and `bin/bootstrap` compares stage 2.
+- A test runs each `expect-run` example on stage 1, and `bin/bootstrap` compares stage 2.
 - A check that each code a phase raises has an explanation file.
 
-The pre-commit hook runs `bin/bootstrap` and then `bin/runner`, and both must end with status 0.
+The pre-commit hook runs `bin/bootstrap`, then `bin/bux test tests`, then `mycs check`.
+It stops at the first that fails, and each must end with status 0.
 
 ---
 

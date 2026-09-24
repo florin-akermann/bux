@@ -26,9 +26,10 @@
 // command on each example of `tests/spec` and each module of `library`, each command that reads
 // a path on each directory of `tests/spec`, and each command on paths it cannot read. An example
 // that misses one of its command lines there fails, and so does a word that names no file there.
-// `golden_written` gives the text of a golden file for a list of command lines. `bin/runner golden`
+// `golden_written` gives the text of a golden file for a list of command lines. `tests/golden.bx`
 // writes each golden file again with it, which is how an answer changed on purpose is written down.
 // It adds each command line that an example misses, and it removes none.
+import checking
 import command
 import enacted
 import exemplified
@@ -59,7 +60,7 @@ fn every_golden_written(library: ir.Library, limit: Int) -> () {
     }
 }
 
-/// The golden files, in the order the runner holds them.
+/// The golden files, in the order the tests hold them.
 // example: list.length(golden_files()) == 2
 fn golden_files() -> List<String> {
     ["tests/commands/lines.txt", "tests/commands/fixtures.txt"]
@@ -93,7 +94,7 @@ fn golden_held(path: String, library: ir.Library, limit: Int) -> held.Held {
     }
     command.removed_whole(golden.stage.directory)
     for words in lines_missing(path: path, lines: lines) {
-        found = held.with_failure(found, path + ": " + words_line(words) + ": missing, and `bin/runner golden` adds it")
+        found = held.with_failure(found, path + ": " + words_line(words) + ": missing, and `bin/bux run tests/golden.bx` adds it")
     }
     if found.cases == 0 && list.length(found.skipped) == 0 {
         return held.with_failure(found, path + ": holds no command line")
@@ -428,4 +429,12 @@ test "bux help process prints the topic from the copy beside the classes" {
 test "bux explain prints the long form of a code from the copy beside the classes" {
     let said = command.said_by(command.answered(["explain", "L0100"]))
     said.status == 0 && said.output == ok_or(files.read("compiler/explanations/L0100.md"), "")
+}
+
+test "every command line of tests/commands/lines.txt gets the answer written under it" {
+    held.is_held_reported(golden_held("tests/commands/lines.txt", checking.carried_library(), walk.start_limit()))
+}
+
+test "every code there is an explanation of is explained as the file of the explanation reads" {
+    held.is_held_reported(every_explanation_held(checking.carried_library()))
 }

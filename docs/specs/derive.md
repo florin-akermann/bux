@@ -180,7 +180,7 @@ is where the claim that a derive reaches through a list is held to a running pro
 
 ## Properties
 
-These hold and are checked by drawn properties in the runner:
+These hold and are checked by drawn properties, each a test of `tests/`:
 
 1. A derive survives printing and parsing unchanged, and canonical form is idempotent over one.
 2. A record of any shape whose every field has the trait derives it, whichever of the four it is,

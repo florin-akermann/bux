@@ -328,7 +328,7 @@ The one edit is the edit above: the whole file, replaced by the text `bux fmt` w
 
 ## Properties
 
-These hold and are checked by drawn properties in the runner:
+These hold and are checked by drawn properties, each a test of `tests/`:
 
 1. A rendering names a line and a column that lie inside the source.
 2. A rendering opens with its code and ends with a newline, for any span at all.

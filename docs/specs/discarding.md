@@ -80,7 +80,7 @@ is a mistake: a `Result` almost always is, and something else may not be.
 
 ## Properties
 
-These hold and are checked by drawn properties in the runner:
+These hold and are checked by drawn properties, each a test of `tests/`:
 
 1. A statement of type `()` is accepted wherever it is written in a block.
 2. A statement of any other type is accepted as a block's last statement and refused above it.

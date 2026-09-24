@@ -1,0 +1,12 @@
+// Every command line of `tests/commands/fixtures.txt`, held to the answer written under it.
+//
+// `tests/commanded.bx` holds the golden files. This one is a module of its own, so that `bux test`
+// runs it beside the other long checks, on a worker of its own.
+import checking
+import commanded
+import held
+import walk
+
+test "every command line of tests/commands/fixtures.txt gets the answer written under it" {
+    held.is_held_reported(commanded.golden_held(commanded.fixtures(), checking.carried_library(), walk.start_limit()))
+}

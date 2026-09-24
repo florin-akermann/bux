@@ -1,8 +1,9 @@
 // The drawn properties of name resolution, which `docs/specs/modules.md` states.
 //
 // Each property draws a module from a fixed seed and resolves it with `compiler/resolver.bx`
-// against the prelude the runner reads. A failure names the seed and the module it drew.
+// against the prelude the compiler carries. A failure names the seed and the module it drew.
 import ast
+import checking
 import drawn
 import held
 import ir
@@ -13,13 +14,6 @@ import parser
 import resolver
 import set
 import strings
-
-/// One `Held` for each property of name resolution, in a fixed order.
-// example: list.length(every_property(1, ir.little_library())) == 4
-fn every_property(cases: Int, library: ir.Library) -> List<held.Held> {
-    let names = library.prelude.names
-    [resolving_is_deterministic(cases, names), a_module_of_pieces_resolves(cases, names), a_refusal_points_inside_the_source(cases, names), every_declared_name_is_declared_there(cases, names)]
-}
 
 /// A drawn module that parses resolves to one answer, however many times it is resolved.
 // example: held.is_held(resolving_is_deterministic(2, ir.little_library().prelude.names))
@@ -401,4 +395,20 @@ fn stretch(start: Int, length: Int) -> lexer.Span {
 type Declaring = {
     namespace: resolver.Namespace
     name: ast.Name
+}
+
+test "resolving is deterministic" {
+    held.is_held_reported(resolving_is_deterministic(held.drawn_cases(), checking.carried_library().prelude.names))
+}
+
+test "a module of pieces resolves" {
+    held.is_held_reported(a_module_of_pieces_resolves(held.drawn_cases(), checking.carried_library().prelude.names))
+}
+
+test "a refusal points inside the source" {
+    held.is_held_reported(a_refusal_points_inside_the_source(held.drawn_cases(), checking.carried_library().prelude.names))
+}
+
+test "every declared name is declared there" {
+    held.is_held_reported(every_declared_name_is_declared_there(held.drawn_cases(), checking.carried_library().prelude.names))
 }

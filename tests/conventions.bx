@@ -2,7 +2,7 @@
 // `docs/specs/arguments.md`, and `docs/specs/naming.md` state, and the one rule of the tree.
 //
 // Each case draws a small module from a fixed seed and asks whether the type inference accepts it,
-// in-process, against the prelude the runner reads. A failure names the seed and the module.
+// in-process, against the prelude the compiler carries. A failure names the seed and the module.
 // The rule of the tree is that only `library/` declares an `extern`, which
 // `docs/implementation.md` section 3 states, and a failure names each file that breaks it.
 import checking
@@ -14,12 +14,6 @@ import lexer
 import list
 import modules
 import walk
-
-/// One `Held` for each property of how a body and a call are written, in a fixed order.
-// example: list.length(every_property(0, ir.little_library())) == 9
-fn every_property(cases: Int, library: ir.Library) -> List<held.Held> {
-    [a_statement_that_leaves_a_value_is_refused_above_the_last(cases, library), the_last_statement_is_the_value_given_back(cases, library), an_underscore_makes_any_statement_compile(cases, library), a_repeated_type_is_called_by_name_only(cases, library), differing_types_are_called_either_way(cases, library), a_call_that_compiles_compiles_named(cases, library), a_bool_parameter_compiles_only_in_an_all_bool_signature(cases, library), a_bool_function_compiles_where_its_name_asks(cases, library), only_the_library_has_an_extern("")]
-}
 
 /// Every `.bx` file under `root` outside `library/` and `tests/spec/` declares no `extern`.
 ///
@@ -365,4 +359,40 @@ type Pair = {
 type Left = {
     written: String
     leaves: String
+}
+
+test "a statement that leaves a value is refused above the last" {
+    held.is_held_reported(a_statement_that_leaves_a_value_is_refused_above_the_last(held.drawn_cases(), checking.carried_library()))
+}
+
+test "the last statement is the value given back" {
+    held.is_held_reported(the_last_statement_is_the_value_given_back(held.drawn_cases(), checking.carried_library()))
+}
+
+test "an underscore makes any statement compile" {
+    held.is_held_reported(an_underscore_makes_any_statement_compile(held.drawn_cases(), checking.carried_library()))
+}
+
+test "a repeated type is called by name only" {
+    held.is_held_reported(a_repeated_type_is_called_by_name_only(held.drawn_cases(), checking.carried_library()))
+}
+
+test "differing types are called either way" {
+    held.is_held_reported(differing_types_are_called_either_way(held.drawn_cases(), checking.carried_library()))
+}
+
+test "a call that compiles compiles named" {
+    held.is_held_reported(a_call_that_compiles_compiles_named(held.drawn_cases(), checking.carried_library()))
+}
+
+test "a bool parameter compiles only in an all bool signature" {
+    held.is_held_reported(a_bool_parameter_compiles_only_in_an_all_bool_signature(held.drawn_cases(), checking.carried_library()))
+}
+
+test "a bool function compiles where its name asks" {
+    held.is_held_reported(a_bool_function_compiles_where_its_name_asks(held.drawn_cases(), checking.carried_library()))
+}
+
+test "only the library has an extern" {
+    held.is_held_reported(only_the_library_has_an_extern(""))
 }

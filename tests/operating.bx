@@ -9,12 +9,6 @@ import ir
 import list
 import strings
 
-/// One `Held` for each property of literals and operators, in a fixed order.
-// example: list.length(every_property(0, ir.little_library())) == 5
-fn every_property(cases: Int, library: ir.Library) -> List<held.Held> {
-    [a_literal_nothing_settles_is_an_int(cases, library), a_literal_is_accepted_exactly_inside_its_range(cases, library), a_whole_number_where_an_int_is_expected_is_an_int(cases, library), an_operator_over_ints_gives_back_what_it_always_gave(cases, library), an_operator_over_a_type_with_no_instance_is_refused(cases, library)]
-}
-
 /// A literal that nothing settles is an `Int`, whatever instance of `IntegerLiteral` is beside it.
 // example: a_literal_nothing_settles_is_an_int(2, ir.little_library()).cases == 2
 fn a_literal_nothing_settles_is_an_int(cases: Int, library: ir.Library) -> held.Held {
@@ -199,3 +193,23 @@ type Fit =
     | Fits
     | FitsNot
     | PointsElsewhere
+
+test "a literal nothing settles is an int" {
+    held.is_held_reported(a_literal_nothing_settles_is_an_int(held.drawn_cases(), checking.carried_library()))
+}
+
+test "a literal is accepted exactly inside its range" {
+    held.is_held_reported(a_literal_is_accepted_exactly_inside_its_range(held.drawn_cases(), checking.carried_library()))
+}
+
+test "a whole number where an int is expected is an int" {
+    held.is_held_reported(a_whole_number_where_an_int_is_expected_is_an_int(held.drawn_cases(), checking.carried_library()))
+}
+
+test "an operator over ints gives back what it always gave" {
+    held.is_held_reported(an_operator_over_ints_gives_back_what_it_always_gave(held.drawn_cases(), checking.carried_library()))
+}
+
+test "an operator over a type with no instance is refused" {
+    held.is_held_reported(an_operator_over_a_type_with_no_instance_is_refused(held.drawn_cases(), checking.carried_library()))
+}
