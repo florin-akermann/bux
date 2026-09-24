@@ -21,43 +21,6 @@ Item 091 measured the writer at 0.31 s, so it stays on one thread unless the pro
 [116][c] - A drawn property holds that a program lowered in a pool gives the classes of one thread.
 [116][d] - Section 7 records `bux build src/main.bx` and `bin/bootstrap` before and after.
 
-## 🔴 Item 134: A package is `src/`, `tests/`, and `target/` under its manifest
-**Depends on:** Item 133 — the compiler is a package, and it moves before the rule can refuse it.
-A package is one flat directory today, a test has no place of its own, and `target/` sits beside it.
-So every project is laid out its own way, and a reader learns each one.
-One layout, which the compiler holds every package to, is one thing to learn and nothing to choose.
-A Go or a Cargo reader expects it: `src/`, `tests/`, and `target/` under the manifest.
-`docs/` is a convention, and the compiler reads nothing under it, so it refuses nothing about it.
-A directory the compiler holds nothing to is a check that protects nothing, and there is none.
-`docs/specs/packages.md` states the rule in a section of its own, and every other page points there.
-A module of a package is a `.bx` file at the top of `src/`.
-A test module is a `.bx` file at the top of `tests/`.
-A test module reaches a module of `src/` by its name, and a module of `src/` reaches no test module.
-A `depends` reaches the `src/` of the dependency, and never its `tests/`.
-A `.bx` file beside the manifest is `L0322`, at the file, and its help names `src/` and `tests/`.
-A manifest inside `src/` or `tests/` of a package is `L0322` too, because a `tests/` is no package.
-A `.bx` file deeper than the top of `tests/` is data, as the spec files under `tests/spec/` are.
-`bux test <dir>` runs the modules of `src/` and then those of `tests/`, each in sorted name order.
-`bux build`, `bux run`, and `bux test` write into `target/` under the manifest of the package.
-A bare module, in no package, is unchanged: it writes `target/` beside itself.
-The `tests/` of the repository becomes the tests of the root package, and `tests/bux.package` goes.
-`example/` becomes a package, so a newcomer reads the layout in the program a newcomer reads.
-No module imports `main`, so the types and functions of the example move to `example/src/orders.bx`.
-`example/tests/orders.bx` holds one `test` block that reaches `orders`, which shows the import rule.
-[134][a] - `docs/design.md` section 16 and `docs/specs/packages.md` state the layout and `L0322`.
-`docs/specs/modules.md`, `run.md`, `testing.md`, and `example-program.md` are rewritten to match.
-[134][b] - The loader answers an import of a test module from `src/`, and never the other way.
-[134][c] - `L0322` refuses a module beside a manifest, and a manifest in `src/` or `tests/`.
-[134][d] - A build writes `target/` under the manifest, and `bux test` runs `src/` then `tests/`.
-[134][e] - `src/bux.package` moves to the root, and `tests/bux.package` goes.
-`bin/bux` starts the classes of `target/`.
-`bin/bootstrap` copies the root package, and it compares `target/` with the `target/` of the copy.
-The pre-commit hook runs `bin/bux test` at the root.
-[134][f] - `example/` holds `bux.package`, `src/main.bx`, `src/orders.bx`, and `tests/orders.bx`.
-The README and `tests/started.bx` run `example/src/main.bx`.
-[134][g] - `tests/spec/packages/` shows each refusal, and a drawn package in the layout loads.
-`tests/commands/fixtures.txt` holds the goldens of each command on a package in the layout.
-
 ## 🔴 Item 137: A comment above a declaration says why, or it is not there
 Nearly every declaration in the Bux sources carries a `///` comment that says what it gives back.
 2372 of the 2460 functions of `src/`, `library/`, and `1brc/` carry one, and `tests/` alike.
@@ -75,5 +38,5 @@ The `.tokens`, `.ast`, `.error`, and `.api` goldens hold byte offsets, so their 
 A kept why is rewritten as `//` lines, and `bin/bux check` accepts each file.
 [137][c] - Every `///` line above a declaration in `tests/*.bx` goes the same way.
 [137][d] - Every `///` line above a declaration in `tests/spec/` goes, except where a golden stays.
-[137][e] - `bin/bootstrap` and `bin/bux test tests` pass, and `mycs check` reports no finding.
+[137][e] - `bin/bootstrap` and `bin/bux test` pass, and `mycs check` reports no finding.
 
