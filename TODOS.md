@@ -66,41 +66,6 @@ The price is the build of the compiler before and after.
 [127][e] - `bin/bootstrap` gets a new seed, as section 6 reason two states.
 [127][f] - `tests/spec/library/` holds, and a drawn property round trips bytes through `String`.
 
-## 🔴 Item 130: `1brc/src/main.bx` answers the One Billion Row Challenge
-**Depends on:** Item 129, Item 134 — a worker reads part of the file, and 1brc keeps the layout.
-The challenge is a file of one billion `<station>;<temperature>` lines, and one line of output.
-The output is `{Abha=-23.0/18.0/59.2, Abidjan=-16.2/26.3/67.3, ...}`, sorted by station name.
-Each station shows its lowest, mean, and highest reading, each with one decimal.
-A half rounds toward positive infinity, as `Math.round` rounds, which the challenge states.
-A name is UTF-8 of at most 100 bytes, and a reading is `-99.9` to `99.9` with one decimal.
-There are at most 10 000 stations.
-`example/src/main.bx` is the program a newcomer reads, and `1brc/src/main.bx` is the one measured.
-It is the second dogfood program, written in Bux over `library/` alone, with no `extern` of its own.
-`main` reads the path from its arguments, and spawns one worker process for each processor.
-Each worker takes one contiguous part of the file, and reads it in slices with `read_between`.
-It starts after the first line end past its start, and ends after the first past its end.
-A reading is held in tenths as an `Int`, so no floating type is needed.
-The mean, and its rounding, are whole-number arithmetic.
-A worker holds a `map.Map<String, Summary>` and the list of the names it has seen.
-`main` takes each summary with `ended`, merges them by the names, sorts the names, and writes.
-Dogfooding found four gaps, and question 12 of `docs/principles.md` judges each one.
-A whole number read off text is a `for` loop over `strings.at`, so the program writes it.
-An iterator over a map is the list of names the program holds, so nothing lands.
-A sort is the loop `sorted` in `compiler/command.bx` writes, and the program would write it twice.
-`docs/specs/library.md` lands a function on that test, so `list.sorted` lands, at the cost asked.
-The count of processors is what `tests/runner.bx` reaches with an `extern` of its own.
-So that count moves to the library.
-[130][a] - `docs/specs/billion-rows.md` states the program: input, output, exit codes, and `1brc/`.
-[130][b] - `list.sorted<T: Ord<T>>(values: List<T>) -> List<T>` lands, a merge sort with loops.
-`sorted` and `inserted` in `compiler/command.bx` go, and `command.bx` calls `list.sorted`.
-[130][c] - `environment.processors() -> Int` lands, and `tests/runner.bx` calls it.
-[130][d] - `1brc/src/main.bx` is the program, and `1brc/tests/samples/` holds samples and outputs.
-One sample holds UTF-8 names, one holds a mean that is a negative half, and one holds one station.
-[130][e] - `tests/started.bx` runs `1brc/src/main.bx` over each sample, as it runs the example.
-It holds the output to the expected one, and it runs the examples and tests of the module.
-[130][f] - `docs/implementation.md` section 12 names the program as the second dogfood.
-Section 7 records the wall time over one billion rows, on the machine and the JDK it names.
-
 ## 🔴 Item 131: The profile of `1brc/src/main.bx` says what the next item attacks
 **Depends on:** Item 130 — the program must run over one billion rows before it is profiled.
 Section 7 profiled the compiler, and each item after Item 111 attacked a share the profile priced.
@@ -185,14 +150,6 @@ The pre-commit hook runs `bin/bux test` at the root.
 The README and `tests/started.bx` run `example/src/main.bx`.
 [134][g] - `tests/spec/packages/` shows each refusal, and a drawn package in the layout loads.
 `tests/commands/fixtures.txt` holds the goldens of each command on a package in the layout.
-
-## 🔴 Item 135: A module that imports itself crashes the compiler
-`import list` inside `library/list.bx` ends `bux build` with a `StackOverflowError`.
-`modules.walk` follows the import into the module it walks, and it never ends.
-The compiler never crashes, so an import of the module itself is a refusal with a code.
-[135][a] - `docs/specs/modules.md` states the refusal, its code, and its message.
-[135][b] - `modules.walk` refuses a self-import before it follows any import.
-[135][c] - `tests/spec/modules/imports_itself.bx` is the example, and the runner holds it.
 
 ## 🔴 Item 136: A runner, a build, and a run use a bounded share of the machine
 The compiler's own JVMs have no bound, so two runners at once held 8 GB on 2026-09-24.
