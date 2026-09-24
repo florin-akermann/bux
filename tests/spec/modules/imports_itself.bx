@@ -1,6 +1,6 @@
 // expect-error: L0307
 // A module that imports itself is a ring of one.
-import itself
+import imports_itself
 
 fn held() -> Int {
     1

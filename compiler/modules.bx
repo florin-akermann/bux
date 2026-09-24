@@ -135,8 +135,10 @@ fn follow(loader: Loader, imported: ast.ImportDeclaration, whence: Whence) -> Re
 /// Reads a library module out of `text`, which sits in no package at all.
 ///
 /// The prelude's name is the library's, and nothing imports it, so an import of it reaches no
-/// module a program may reach.
+/// module a program may reach. An import of a library module already being walked closes a ring,
+/// which is refused before the walk follows it, so the walk ends.
 // example: refused_printed(from_library(loader: Loader { modules: [], read: map.empty(), following: [] }, imported: ast.ImportDeclaration { module: ast.Name { text: "prelude", span: lexer.Span { start: 7, length: 7 } }, span: lexer.Span { start: 0, length: 14 } }, whence: Whence { at: route_to("main.bx"), depends: [], source: "" }, text: "")) == "refused main.bx\nL0306 7..14 there is no module named `prelude`\nhelp: a module is a file beside this one, or one of a package it depends on\n"
+// example: refused_printed(from_library(loader: Loader { modules: [], read: map.empty(), following: ["main", "list"] }, imported: ast.ImportDeclaration { module: ast.Name { text: "list", span: lexer.Span { start: 7, length: 4 } }, span: lexer.Span { start: 0, length: 11 } }, whence: Whence { at: route_to(resource_of("list")), depends: [], source: "" }, text: "")) == "refused library/list.bx\nL0307 7..11 `list` imports itself\nhelp: a module is compiled after what it imports, and a ring has no such order\n"
 fn from_library(loader: Loader, imported: ast.ImportDeclaration, whence: Whence, text: String) -> Result<Loader, NotLoaded> {
     let name = imported.module.text
     if has_read(loader, name) {
@@ -145,7 +147,23 @@ fn from_library(loader: Loader, imported: ast.ImportDeclaration, whence: Whence,
     if name == "prelude" {
         return Err(missing(imported, whence))
     }
-    walk(loader: loader, name: name, whence: Whence { at: route_to(resource_of(name)), depends: [], source: text })
+    match library_ring(loader.following, name) {
+        Some(ring) => Err(refusing(whence, LoadError { kind: Ring(ring), span: imported.module.span }))
+        None => walk(loader: loader, name: name, whence: Whence { at: route_to(resource_of(name)), depends: [], source: text })
+    }
+}
+
+/// The ring an import of the library module `name` closes, and `None` where it closes none.
+///
+/// The file a command names is walked first, and it is never the library module of its name,
+/// because a file does not shadow one; so only the modules walked after it are looked in.
+// example: or(library_ring(["main", "list", "strings"], "list"), []) == ["list", "strings"]
+// example: or(library_ring(["list"], "list"), ["none"]) == ["none"]
+fn library_ring(following: List<String>, name: String) -> Option<List<String>> {
+    match list.index_of(from_index(following, 1), name) {
+        Some(opened) => Some(from_index(following, opened + 1))
+        None => None
+    }
 }
 
 /// Reads what `imported` names out of its file, which settles before anything else about it.
@@ -320,9 +338,12 @@ fn help_of(kind: LoadErrorKind) -> String {
 }
 
 /// A ring named in the order it runs, from the module it opens at back round to that module.
-// example: ring_text(["main"]) == "`main` imports `main`"
+// example: ring_text(["main"]) == "`main` imports itself"
 fn ring_text(ring: List<String>) -> String {
     let first = "`" + or(list.at(ring, 0), "") + "`"
+    if list.length(ring) == 1 {
+        return first + " imports itself"
+    }
     var written = first + " imports "
     var index = 0
     for imported in ring {
