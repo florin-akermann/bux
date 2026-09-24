@@ -1022,16 +1022,6 @@ status 0
 $ check tests/spec/modules/holder.bx
 status 0
 
-$ check tests/spec/modules/itself.bx
-status 1
-! error[L0307]: `itself` imports `itself`
-!   --> tests/spec/modules/itself.bx:3:8
-!
-!   3 | import itself
-!     |        ^^^^^^
-!
-! help: a module is compiled after what it imports, and a ring has no such order
-
 $ check tests/spec/modules/knot.bx
 status 1
 ! error[L0307]: `knot` imports `ring`, which imports `knot`
@@ -3086,10 +3076,6 @@ status 0
 
 $ check --json tests/spec/modules/holder.bx
 status 0
-
-$ check --json tests/spec/modules/itself.bx
-status 1
-> {"file":"tests/spec/modules/itself.bx","code":"L0307","message":"`itself` imports `itself`","span":{"start":80,"len":6},"help":"a module is compiled after what it imports, and a ring has no such order"}
 
 $ check --json tests/spec/modules/knot.bx
 status 1
@@ -5509,16 +5495,6 @@ status 0
 > type Payment =
 >     | Sent(String)
 >     | Pending
-
-$ api tests/spec/modules/itself.bx
-status 1
-! error[L0307]: `itself` imports `itself`
-!   --> tests/spec/modules/itself.bx:3:8
-!
-!   3 | import itself
-!     |        ^^^^^^
-!
-! help: a module is compiled after what it imports, and a ring has no such order
 
 $ api tests/spec/modules/knot.bx
 status 1
@@ -9500,16 +9476,6 @@ status 0
 $ test tests/spec/modules/holder.bx
 status 0
 
-$ test tests/spec/modules/itself.bx
-status 1
-! error[L0307]: `itself` imports `itself`
-!   --> tests/spec/modules/itself.bx:3:8
-!
-!   3 | import itself
-!     |        ^^^^^^
-!
-! help: a module is compiled after what it imports, and a ring has no such order
-
 $ test tests/spec/modules/knot.bx
 status 1
 ! error[L0307]: `knot` imports `ring`, which imports `knot`
@@ -13078,9 +13044,6 @@ status 0
 $ fmt tests/spec/modules/holder.bx
 status 0
 
-$ fmt tests/spec/modules/itself.bx
-status 0
-
 $ fmt tests/spec/modules/knot.bx
 status 0
 
@@ -15257,16 +15220,6 @@ status 0
 
 $ build tests/spec/modules/holder.bx
 status 0
-
-$ build tests/spec/modules/itself.bx
-status 1
-! error[L0307]: `itself` imports `itself`
-!   --> tests/spec/modules/itself.bx:3:8
-!
-!   3 | import itself
-!     |        ^^^^^^
-!
-! help: a module is compiled after what it imports, and a ring has no such order
 
 $ build tests/spec/modules/knot.bx
 status 1
@@ -18676,3 +18629,50 @@ status 1
 !     |         ^^^^^^^^
 !
 ! help: `private` keeps a name in its module, and only these four declare a name that another module reaches
+
+$ check tests/spec/modules/imports_itself.bx
+status 1
+! error[L0307]: `imports_itself` imports itself
+!   --> tests/spec/modules/imports_itself.bx:3:8
+!
+!   3 | import imports_itself
+!     |        ^^^^^^^^^^^^^^
+!
+! help: a module is compiled after what it imports, and a ring has no such order
+
+$ check --json tests/spec/modules/imports_itself.bx
+status 1
+> {"file":"tests/spec/modules/imports_itself.bx","code":"L0307","message":"`imports_itself` imports itself","span":{"start":80,"len":14},"help":"a module is compiled after what it imports, and a ring has no such order"}
+
+$ api tests/spec/modules/imports_itself.bx
+status 1
+! error[L0307]: `imports_itself` imports itself
+!   --> tests/spec/modules/imports_itself.bx:3:8
+!
+!   3 | import imports_itself
+!     |        ^^^^^^^^^^^^^^
+!
+! help: a module is compiled after what it imports, and a ring has no such order
+
+$ test tests/spec/modules/imports_itself.bx
+status 1
+! error[L0307]: `imports_itself` imports itself
+!   --> tests/spec/modules/imports_itself.bx:3:8
+!
+!   3 | import imports_itself
+!     |        ^^^^^^^^^^^^^^
+!
+! help: a module is compiled after what it imports, and a ring has no such order
+
+$ fmt tests/spec/modules/imports_itself.bx
+status 0
+
+$ build tests/spec/modules/imports_itself.bx
+status 1
+! error[L0307]: `imports_itself` imports itself
+!   --> tests/spec/modules/imports_itself.bx:3:8
+!
+!   3 | import imports_itself
+!     |        ^^^^^^^^^^^^^^
+!
+! help: a module is compiled after what it imports, and a ring has no such order
