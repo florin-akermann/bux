@@ -13,10 +13,10 @@ import strings
 /// Every property of the collections over `cases` drawn cases each, in a fixed order.
 ///
 /// The collections are read in the runner's JVM, so no property needs the prelude it is handed.
-// example: list.length(every_property(1)) == 6
+// example: list.length(every_property(1)) == 7
 fn every_property(cases: Int) -> List<held.Held> {
     var found = []
-    for property in [MapReadsBack, SetHoldsWhatWentIn, WideKeysReadBack, ListReadsBack, PushLeavesTheList, LengthCountsPushes] {
+    for property in [MapReadsBack, SetHoldsWhatWentIn, WideKeysReadBack, ListReadsBack, PushLeavesTheList, LengthCountsPushes, SortedInOrder] {
         found = list.push(found, held_over(property, cases))
     }
     found
@@ -48,6 +48,7 @@ fn tried_by(property: Property, draw: drawn.Draw) -> Tried {
         ListReadsBack => a_list_grown_by_push_reads_back_at_every_index_it_holds(draw)
         PushLeavesTheList => a_push_leaves_the_list_it_was_handed_holding_what_it_held(draw)
         LengthCountsPushes => the_length_of_a_list_is_the_number_of_pushes_that_built_it(draw)
+        SortedInOrder => a_sorted_list_holds_what_it_was_handed_in_order(draw)
     }
 }
 
@@ -61,6 +62,7 @@ fn name_of(property: Property) -> String {
         ListReadsBack => "a_list_grown_by_push_reads_back_at_every_index_it_holds"
         PushLeavesTheList => "a_push_leaves_the_list_it_was_handed_holding_what_it_held"
         LengthCountsPushes => "the_length_of_a_list_is_the_number_of_pushes_that_built_it"
+        SortedInOrder => "a_sorted_list_holds_what_it_was_handed_in_order"
     }
 }
 
@@ -296,6 +298,47 @@ fn miscounted(built: List<List<Int>>, branch: List<Int>, branched: Int) -> Strin
     ""
 }
 
+/// `docs/specs/library.md` property 9: a sort gives back each value it was handed, in order.
+// example: a_sorted_list_holds_what_it_was_handed_in_order(drawn.seeded(3)).why == ""
+fn a_sorted_list_holds_what_it_was_handed_in_order(draw: drawn.Draw) -> Tried {
+    let handed = smalls_of(draw, 40)
+    Tried { case: shown(handed), why: unsorted(handed: handed, ordered: list.sorted(handed)) }
+}
+
+/// Why `ordered` is not the values of `handed` in order, and `""` where it is.
+// example: unsorted(handed: [2, 1, 2], ordered: [1, 2, 2]) == ""
+// example: unsorted(handed: [2, 1], ordered: [2, 1]) == "2 is ahead of 1"
+// example: unsorted(handed: [2, 1], ordered: [1, 1]) == "2 is held 1 times, and 0 times once sorted"
+fn unsorted(handed: List<Int>, ordered: List<Int>) -> String {
+    var last = missing()
+    for value in ordered {
+        if value < last {
+            return shown(last) + " is ahead of " + shown(value)
+        }
+        last = value
+    }
+    for value in handed {
+        let before = times_held(values: handed, value: value)
+        let after = times_held(values: ordered, value: value)
+        if before != after {
+            return shown(value) + " is held " + shown(before) + " times, and " + shown(after) + " times once sorted"
+        }
+    }
+    ""
+}
+
+/// How many times `values` holds `value`.
+// example: times_held(values: [1, 2, 1], value: 1) == 2
+fn times_held(values: List<Int>, value: Int) -> Int {
+    var count = 0
+    for held_value in values {
+        if held_value == value {
+            count += 1
+        }
+    }
+    count
+}
+
 /// Fewer than `bound` whole numbers from -99 to 99.
 // example: list.length(smalls_of(drawn.seeded(1), 3)) < 3
 fn smalls_of(draw: drawn.Draw, bound: Int) -> List<Int> {
@@ -347,3 +390,4 @@ type Property =
     | ListReadsBack
     | PushLeavesTheList
     | LengthCountsPushes
+    | SortedInOrder

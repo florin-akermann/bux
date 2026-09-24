@@ -219,7 +219,7 @@ A second decoder would need rules of its own for a malformed sequence, and the J
 `list` holds three more: `length`, `push`, and `at`, which the section above gives the compiler.
 
 ```text
-list:        length  has_value  index_of  push  at
+list:        length  has_value  index_of  push  at  sorted
 strings:     at  cut  join  length  from_utf_8
 map:         empty  insert  get
 set:         empty  insert  has_value
@@ -298,6 +298,13 @@ That is the test a library function is held to.
 It lands in the library rather than in the compiler exactly when Bux can write it, and it lands
 at all only when a reader would otherwise write the same loop twice.
 
+`list.sorted<T: Ord<T>>(values: List<T>) -> List<T>` gives the values in the order `<` gives.
+Two equal values keep the order the list holds them in.
+It is a merge sort with `for` loops and `var`: each value is a run, and each pass merges two runs.
+So it costs time `n log n` for `n` values, and no function of it calls itself.
+It lands by the test above, because a reader wrote the loop twice.
+`compiler/command.bx` sorted the modules it imports, and `1brc/src/main.bx` sorts its stations.
+
 `strings` has a `length` and so does `list`, and neither of the two is a prelude name: one name
 has one definition, and a prelude holding both would break that.
 
@@ -353,6 +360,7 @@ These hold and are checked by drawn properties in the runner:
 6. `list.push` gives back what the list held, with the value after it, and leaves the list alone.
 7. `list.length` gives the number of pushes that built a list, and a later push changes no length.
 8. The parts of a drawn UTF-8 file, joined, spell under `from_utf_8` what `files.read` gives.
+9. `list.sorted` gives each value of a drawn list as often as the list holds it, in order.
 
 The prelude is not among the modules of property 1 that compile on their own.
 Its own names are in scope in every module, so a compiler reading it as a module would refuse

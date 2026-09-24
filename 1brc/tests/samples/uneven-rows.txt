@@ -1,0 +1,97 @@
+Milan;-20.6
+Lisbon;-98.5
+Gangtok;-76.4
+Kankan;-45.3
+Fairbanks;96.6
+Wrocław;72.0
+Bamako;64.9
+Cape Town;60.3
+Bishkek;-66.6
+Bilbao;-68.7
+Suwałki;-51.6
+Libreville;54.3
+Palermo;-49.4
+Boise;-93.1
+Petropavlovsk-Kamchatsky;-31.4
+Napoli;43.1
+Bratislava;-94.4
+Wrocław;-47.7
+Moscow;-72.9
+Harare;-97.8
+Dampier;54.1
+Belize City;-16.5
+Baku;-11.2
+Suva;44.5
+Melbourne;-65.6
+Johannesburg;-36.7
+Xi'an;52.3
+Dallas;95.5
+Bridgetown;15.9
+Wichita;32.7
+Stockholm;60.5
+Sochi;14.9
+Pyongyang;18.0
+Oslo;-54.9
+Bridgetown;-2.3
+Managua;7.3
+Flores;76.4
+Gjoa Haven;34.4
+Fairbanks;18.7
+Nakhon Ratchasima;-84.8
+Atlanta;17.8
+Khartoum;64.6
+Dampier;37.1
+Chișinău;59.7
+Nairobi;-72.8
+Timbuktu;-47.5
+Denver;-80.1
+Conakry;-5.9
+Libreville;59.9
+Tokyo;-94.3
+Memphis;-76.1
+Lisbon;35.5
+Fukuoka;28.9
+Kuopio;38.7
+Cracow;9.7
+Reykjavík;33.7
+Indianapolis;-52.7
+Odienné;-6.3
+Las Palmas de Gran Canaria;-98.9
+Burnie;62.2
+Nassau;67.2
+Denpasar;59.7
+San Salvador;91.4
+Conakry;20.3
+Tirana;33.4
+Manama;-3.4
+Nouakchott;73.8
+Sarajevo;-5.7
+Christchurch;55.7
+Tashkent;3.7
+Cotonou;-6.9
+Irkutsk;64.8
+Auckland;-61.8
+Johannesburg;45.1
+Oklahoma City;9.8
+Kuala Lumpur;-85.5
+Flores;22.0
+Bloemfontein;-78.8
+Assab;73.2
+Launceston;95.0
+Riga;30.8
+Abidjan;-33.6
+Albuquerque;96.3
+Napier;-88.9
+Seoul;1.6
+Mombasa;54.3
+Mexico City;-38.1
+Hobart;-17.1
+Niigata;-20.0
+Kansas City;78.8
+Abha;-68.6
+Mahajanga;-66.5
+Vancouver;94.4
+El Paso;66.9
+Porto;-68.6
+Wichita;24.1
+Astana;-13.0

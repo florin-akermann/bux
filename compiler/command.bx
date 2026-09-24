@@ -2088,7 +2088,7 @@ fn imports_of(program: ast.Program, read: set.Set<String>) -> String {
     }
     var written = ""
     var last = ""
-    for module in sorted(named) {
+    for module in list.sorted(named) {
         if module != last && set.has_value(read, module) {
             written += "import " + module + "\n"
         }
@@ -2119,34 +2119,6 @@ fn with_modules_written(read: set.Set<String>, text: String) -> set.Set<String> 
         after_a_dot = is_dot
     }
     named
-}
-
-/// `values`, from the one that sorts first to the one that sorts last.
-// example: or(list.at(sorted(["b", "a"]), 0), "") == "a"
-fn sorted(values: List<String>) -> List<String> {
-    var ordered = []
-    for value in values {
-        ordered = inserted(ordered, value)
-    }
-    ordered
-}
-
-/// `ordered`, with `value` after every value that does not sort after it.
-// example: or(list.at(inserted(["a", "c"], "b"), 1), "") == "b"
-fn inserted(ordered: List<String>, value: String) -> List<String> {
-    var placed = []
-    var done = false
-    for one in ordered {
-        if !done && value < one {
-            placed = list.push(placed, value)
-            done = true
-        }
-        placed = list.push(placed, one)
-    }
-    if !done {
-        placed = list.push(placed, value)
-    }
-    placed
 }
 
 /// The span of every declaration the run copies: every item but an import and `main`.
