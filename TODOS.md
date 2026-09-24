@@ -66,20 +66,6 @@ A part that started JVMs still does, from inside its test, and the limit of 60 s
 [114][f] - Where one test of every spec example is slower than the chunks were, one module per area.
 [114][g] - Section 7 records the wall time of the suite before and after.
 
-## 🔴 Item 115: The compiler types independent modules at the same time
-**Depends on:** Item 111, Item 112 — the profile prices inference, and 112 holds the pool.
-Attacks: typing, 1.3 s of the 3.5 s of `bux build compiler/main.bx`, 37% (section 7).
-Item 123: no number applies, because typing sees each of the 42 generics once, not each copy.
-`each_accepted` in `compiler/command.bx` types the modules one after another in load order.
-A module needs only the surface of each module it imports, so modules of one wave are independent.
-The pool of Item 112 types every module whose imports are typed.
-The refusal a build reports stays the first one in load order, whatever process ends first.
-[115][a] - `docs/specs/types.md` states that the reported refusal does not depend on the order.
-[115][b] - The pool hands a module to a worker once its imports are typed.
-[115][c] - A drawn property holds that a program typed in waves is typed as it is in load order.
-[115][d] - Section 7 records `bux check` and `bux build` on `compiler/main.bx` before and after.
-It records `bin/bootstrap` with them.
-
 ## 🔴 Item 116: The lowering lowers the modules of one pass at the same time
 **Depends on:** Item 111, Item 115 — the profile prices lowering, and 115 pools the phases.
 Attacks: lowering, 0.46 s of the 3.5 s of `bux build compiler/main.bx`, 13% (section 7).
@@ -127,3 +113,15 @@ An import that reaches a private name is refused with a code and a help that nam
 [120][e] - `tests/spec/modules/` and `tests/spec/examples/` show the refusal and the exemption.
 [120][f] - The helpers of `compiler/exhaustiveness.bx` named above become `private` or tests.
 
+
+## 🔴 Item 125: `send` says `Delivered` for a message that the process reads
+`tests/spec/concurrency/mailbox_full.bx` sends `Stop` to an `Idle` process and expects `delivered`.
+One runner pass of Item 112 printed `the process has ended` for that line, and five printed `delivered`.
+`send` offers the message to the mailbox, and then it tests whether the process has ended.
+`offer_within` and `ended_test` in `compiler/ir.bx` write the two steps.
+`Idle` takes `Stop` and ends between the two steps, so a message the process read is reported as never read.
+`docs/specs/concurrency.md` says that a message the mailbox takes after the end gives `ProcessEnded`.
+The answer must follow what happens to the message, not the time of the test.
+[125][a] - `docs/specs/concurrency.md` states that `send` gives `ProcessEnded` only for a message that no `receive` reads.
+[125][b] - A process that ends leaves its mailbox in a state `send` can tell from a taken message.
+[125][c] - `tests/spec/concurrency/mailbox_full.bx` holds on every pass of the runner.
