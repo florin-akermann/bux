@@ -673,12 +673,27 @@ fn for_header(cursor: Cursor) -> Result<Parsed<ast.ForHeader>, ParseError> {
     }
     if is_ahead(cursor, 0, lexer.Identifier) && is_ahead(cursor, 1, lexer.Keyword(lexer.In)) {
         let bound_name = expect_name(cursor, NameWanted)?
-        let past_in = expect_keyword(bound_name.cursor, lexer.In)?
-        let iterable = expression(past_in, Forbidden)?
-        return Ok(Parsed { value: ast.Over { binding: bound_name.value, iterable: iterable.value }, cursor: iterable.cursor })
+        return looped_over(bound_name.value, bound_name.cursor)
+    }
+    if is_ahead(cursor, 0, lexer.Keyword(lexer.Underscore)) && is_ahead(cursor, 1, lexer.Keyword(lexer.In)) {
+        return looped_over(discarded_name(cursor), advanced(cursor))
     }
     let condition = expression(cursor, Forbidden)?
     Ok(Parsed { value: ast.While(condition.value), cursor: condition.cursor })
+}
+
+/// `in values`, after the name each value is bound to, which `_` binds to nothing.
+// example: position_after(looped_over(discarded_name(over("_ in users {")), advanced(over("_ in users {")))) == 3
+fn looped_over(bound: ast.Name, cursor: Cursor) -> Result<Parsed<ast.ForHeader>, ParseError> {
+    let past_in = expect_keyword(cursor, lexer.In)?
+    let iterable = expression(past_in, Forbidden)?
+    Ok(Parsed { value: ast.Over { binding: bound, iterable: iterable.value }, cursor: iterable.cursor })
+}
+
+/// The `_` a `for` writes where a loop reads none of the values, as a name no one can write.
+// example: discarded_name(over("_ in users")).text == "_"
+fn discarded_name(cursor: Cursor) -> ast.Name {
+    ast.Name { text: "_", span: lexer.Span { start: offset(cursor), length: 1 } }
 }
 
 /// `_ = save(user)`, which works the value out and throws it away on purpose.
@@ -1241,7 +1256,7 @@ fn named_pattern(cursor: Cursor) -> Result<Parsed<ast.PatternKind>, ParseError> 
         return Ok(Parsed { value: ast.TuplePattern { path: path.value, elements: elements.value }, cursor: shallower(elements.cursor) })
     }
     if is_at_punct(path.cursor, lexer.LBrace) {
-        let fields = name_list(advanced(path.cursor), lexer.RBrace)?
+        let fields = field_names(advanced(path.cursor))?
         return Ok(Parsed { value: ast.RecordPattern { path: path.value, fields: fields.value }, cursor: fields.cursor })
     }
     Ok(Parsed { value: ast.NamePattern(path.value), cursor: path.cursor })
@@ -1292,6 +1307,22 @@ fn type_parameters(cursor: Cursor) -> Result<Parsed<List<ast.Name>>, ParseError>
         return Ok(Parsed { value: [], cursor: cursor })
     }
     name_list(advanced(cursor), lexer.Gt)
+}
+
+/// The fields a record pattern binds, up to and including the `}`, which may be none.
+///
+/// `Point {}` binds no field, and matches every `Point` as a record pattern of fields does.
+// example: position_after(field_names(over("}"))) == 1
+// example: position_after(field_names(over("x, y }"))) == 4
+fn field_names(cursor: Cursor) -> Result<Parsed<List<ast.Name>>, ParseError> {
+    var names = []
+    var step = opening(cursor, lexer.RBrace, MayBeEmpty)
+    for is_open(step) {
+        let name = expect_name(cursor_of(step), NameWanted)?
+        names = list.push(names, name.value)
+        step = after_element(name.cursor, lexer.RBrace)?
+    }
+    Ok(Parsed { value: names, cursor: cursor_of(step) })
 }
 
 /// Names separated by commas, up to and including `close`, and never none.

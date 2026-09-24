@@ -1,0 +1,15 @@
+// expect-run
+// > 6
+// A `for` that reads none of the values binds `_`, and two such loops may nest.
+import io
+
+fn main(arguments: List<String>) -> Int {
+    var turns = 0
+    for _ in [1, 2, 3] {
+        for _ in ["a", "b"] {
+            turns += 1
+        }
+    }
+    io.println(shown(turns))
+    0
+}

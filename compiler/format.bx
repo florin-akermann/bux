@@ -1171,13 +1171,22 @@ fn pattern_text(pattern: ast.Pattern) -> String {
     match pattern.kind {
         ast.NamePattern(path) => ast.path_text(path)
         ast.TuplePattern { path, elements } => ast.path_text(path) + "(" + patterns_joined(elements, ", ") + ")"
-        ast.RecordPattern { path, fields } => ast.path_text(path) + " { " + strings.join(name_texts(fields), ", ") + " }"
+        ast.RecordPattern { path, fields } => ast.path_text(path) + fields_text(fields)
         ast.IntegerPattern(value) => shown(value)
         ast.TextPattern(value) => spelled(value)
         ast.TruthPattern(value) => shown(value)
         ast.Wildcard => "_"
         ast.OrPattern(alternatives) => patterns_joined(alternatives, " | ")
     }
+}
+
+/// The fields a record pattern binds, braced, and `{}` where it binds none.
+// example: fields_text([]) == " {}"
+fn fields_text(fields: List<ast.Name>) -> String {
+    if list.length(fields) == 0 {
+        return " {}"
+    }
+    " { " + strings.join(name_texts(fields), ", ") + " }"
 }
 
 /// Each pattern of a list, with `between` written between two of them.

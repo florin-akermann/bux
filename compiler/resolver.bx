@@ -613,9 +613,14 @@ fn loop_header(resolver: Resolver, header: ast.ForHeader) -> Result<Resolver, Re
 }
 
 /// `for name in values`: the list first, then the name each value of it is bound to.
+///
+/// `for _ in values` binds nothing, so two loops nested one in the other may each write `_`.
 // example: printed("fn f(counts: List<Int>) {\n    for counts in counts {\n    }\n}\n", prelude_of(ast.Program { items: [] })) == "refused\nL0302 34..40 `counts` is already in scope here\nhelp: rename the inner one; Bux never hides a name\n"
 fn looped_over(resolver: Resolver, bound: ast.Name, iterable: ast.Expr) -> Result<Resolver, ResolveError> {
     let walked = expression(resolver: resolver, walked: iterable)?
+    if bound.text == "_" {
+        return Ok(walked)
+    }
     introduce_value(walked, bound, Local)
 }
 

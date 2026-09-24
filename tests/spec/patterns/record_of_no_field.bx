@@ -1,0 +1,25 @@
+// expect-run
+// > a circle
+// > a dot
+// A record pattern names the fields its arm reads, and `Circle {}` reads none of them.
+import io
+
+fn main(arguments: List<String>) -> Int {
+    io.println(named(Circle { radius: 2 }))
+    io.println(named(Dot))
+    0
+}
+
+// example: named(Dot) == "a dot"
+fn named(shape: Shape) -> String {
+    match shape {
+        Circle {} => "a circle"
+        Dot => "a dot"
+    }
+}
+
+type Shape =
+    | Circle {
+        radius: Int
+    }
+    | Dot

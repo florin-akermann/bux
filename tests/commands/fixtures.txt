@@ -1920,14 +1920,6 @@ status 1
 !   4 |     var _ = count
 !     |         ^
 
-$ check tests/spec/parser/empty_record_pattern.bx
-status 1
-! error[L0100]: expected a name, found `}`
-!   --> tests/spec/parser/empty_record_pattern.bx:5:16
-!
-!   5 |         Point {} => 1
-!     |                ^
-
 $ check tests/spec/parser/empty_type_arguments.bx
 status 1
 ! error[L0100]: expected a type, found `>`
@@ -3521,10 +3513,6 @@ status 1
 $ check --json tests/spec/parser/discard_as_a_var.bx
 status 1
 > {"file":"tests/spec/parser/discard_as_a_var.bx","code":"L0100","message":"expected a name, found `_`","span":{"start":140,"len":1}}
-
-$ check --json tests/spec/parser/empty_record_pattern.bx
-status 1
-> {"file":"tests/spec/parser/empty_record_pattern.bx","code":"L0100","message":"expected a name, found `}`","span":{"start":176,"len":1}}
 
 $ check --json tests/spec/parser/empty_type_arguments.bx
 status 1
@@ -6597,14 +6585,6 @@ status 1
 !
 !   4 |     var _ = count
 !     |         ^
-
-$ api tests/spec/parser/empty_record_pattern.bx
-status 1
-! error[L0100]: expected a name, found `}`
-!   --> tests/spec/parser/empty_record_pattern.bx:5:16
-!
-!   5 |         Point {} => 1
-!     |                ^
 
 $ api tests/spec/parser/empty_type_arguments.bx
 status 1
@@ -10378,14 +10358,6 @@ status 1
 !   4 |     var _ = count
 !     |         ^
 
-$ test tests/spec/parser/empty_record_pattern.bx
-status 1
-! error[L0100]: expected a name, found `}`
-!   --> tests/spec/parser/empty_record_pattern.bx:5:16
-!
-!   5 |         Point {} => 1
-!     |                ^
-
 $ test tests/spec/parser/empty_type_arguments.bx
 status 1
 ! error[L0100]: expected a type, found `>`
@@ -13399,14 +13371,6 @@ status 1
 !   4 |     var _ = count
 !     |         ^
 
-$ fmt tests/spec/parser/empty_record_pattern.bx
-status 1
-! error[L0100]: expected a name, found `}`
-!   --> tests/spec/parser/empty_record_pattern.bx:5:16
-!
-!   5 |         Point {} => 1
-!     |                ^
-
 $ fmt tests/spec/parser/empty_type_arguments.bx
 status 1
 ! error[L0100]: expected a type, found `>`
@@ -16173,14 +16137,6 @@ status 1
 !   4 |     var _ = count
 !     |         ^
 
-$ build tests/spec/parser/empty_record_pattern.bx
-status 1
-! error[L0100]: expected a name, found `}`
-!   --> tests/spec/parser/empty_record_pattern.bx:5:16
-!
-!   5 |         Point {} => 1
-!     |                ^
-
 $ build tests/spec/parser/empty_type_arguments.bx
 status 1
 ! error[L0100]: expected a type, found `>`
@@ -17285,4 +17241,50 @@ $ fmt tests/spec/interop/passes_a_foreign_reference.bx
 status 0
 
 $ build tests/spec/interop/passes_a_foreign_reference.bx
+status 0
+
+$ check tests/spec/patterns/record_of_no_field.bx
+status 0
+
+$ check --json tests/spec/patterns/record_of_no_field.bx
+status 0
+
+$ api tests/spec/patterns/record_of_no_field.bx
+status 0
+> fn main(arguments: List<String>) -> Int
+>
+> fn named(shape: Shape) -> String
+>
+> type Shape =
+>     | Circle {
+>         radius: Int
+>     }
+>     | Dot
+
+$ test tests/spec/patterns/record_of_no_field.bx
+status 0
+
+$ fmt tests/spec/patterns/record_of_no_field.bx
+status 0
+
+$ build tests/spec/patterns/record_of_no_field.bx
+status 0
+
+$ check tests/spec/name_resolution/loop_that_only_counts.bx
+status 0
+
+$ check --json tests/spec/name_resolution/loop_that_only_counts.bx
+status 0
+
+$ api tests/spec/name_resolution/loop_that_only_counts.bx
+status 0
+> fn main(arguments: List<String>) -> Int
+
+$ test tests/spec/name_resolution/loop_that_only_counts.bx
+status 0
+
+$ fmt tests/spec/name_resolution/loop_that_only_counts.bx
+status 0
+
+$ build tests/spec/name_resolution/loop_that_only_counts.bx
 status 0
