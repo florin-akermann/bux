@@ -48,7 +48,7 @@ fn start_limit() -> Int {
 /// `path` with the extension after its last dot put in place of `extension`.
 // example: sibling(path: "a/b.bx", extension: "tokens") == "a/b.tokens"
 fn sibling(path: String, extension: String) -> String {
-    let dot = command.last_dot(path)
+    let dot = modules.last_unit(path, 46)
     if dot < 0 {
         return path + "." + extension
     }

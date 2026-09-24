@@ -14,8 +14,9 @@ top of `tests/`, and a build writes its classes into `target/`, beside the manif
 
 A `.bx` file beside the manifest is refused as `L0323`, and so is a manifest inside `src/` or
 `tests/`. A test module reaches a module of `src/` by its name, and a module of `src/` never
-reaches a test module. A file in no package is a bare module, and it writes `target/` beside
-itself.
+reaches a test module. A module and a test module of one stem are refused as `L0317`, because
+both would build one class. A file in no package, or deeper than the top of `src/` or `tests/`,
+is a bare module, and it writes `target/` beside itself.
 
 Handed a directory rather than a file, `bux check` and `bux build` run over every module the
 package holds: those of `src/` first, then those of `tests/`, each part in the order the names

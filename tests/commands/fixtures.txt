@@ -18987,3 +18987,97 @@ status 1
 !     | ^
 !
 ! help: a package is one manifest with `src/` and `tests/` under it; remove this manifest
+
+$ check tests/spec/packages/stems/src/shared.bx
+status 1
+! error[L0317]: `shared` is both `tests/spec/packages/stems/tests/shared.bx` and `tests/spec/packages/stems/src/shared.bx`
+!   --> tests/spec/packages/stems/tests/shared.bx:1:1
+!
+!   1 | // expect-error: L0317
+!     | ^
+!
+! help: one name has one definition; rename one of the two modules
+
+$ check --json tests/spec/packages/stems/src/shared.bx
+status 1
+> {"file":"tests/spec/packages/stems/tests/shared.bx","code":"L0317","message":"`shared` is both `tests/spec/packages/stems/tests/shared.bx` and `tests/spec/packages/stems/src/shared.bx`","span":{"start":0,"len":0},"help":"one name has one definition; rename one of the two modules"}
+
+$ api tests/spec/packages/stems/src/shared.bx
+status 1
+! error[L0317]: `shared` is both `tests/spec/packages/stems/tests/shared.bx` and `tests/spec/packages/stems/src/shared.bx`
+!   --> tests/spec/packages/stems/tests/shared.bx:1:1
+!
+!   1 | // expect-error: L0317
+!     | ^
+!
+! help: one name has one definition; rename one of the two modules
+
+$ test tests/spec/packages/stems/src/shared.bx
+status 1
+! error[L0317]: `shared` is both `tests/spec/packages/stems/tests/shared.bx` and `tests/spec/packages/stems/src/shared.bx`
+!   --> tests/spec/packages/stems/tests/shared.bx:1:1
+!
+!   1 | // expect-error: L0317
+!     | ^
+!
+! help: one name has one definition; rename one of the two modules
+
+$ fmt tests/spec/packages/stems/src/shared.bx
+status 0
+
+$ build tests/spec/packages/stems/src/shared.bx
+status 1
+! error[L0317]: `shared` is both `tests/spec/packages/stems/tests/shared.bx` and `tests/spec/packages/stems/src/shared.bx`
+!   --> tests/spec/packages/stems/tests/shared.bx:1:1
+!
+!   1 | // expect-error: L0317
+!     | ^
+!
+! help: one name has one definition; rename one of the two modules
+
+$ check tests/spec/packages/stems/tests/shared.bx
+status 1
+! error[L0317]: `shared` is both `tests/spec/packages/stems/tests/shared.bx` and `tests/spec/packages/stems/src/shared.bx`
+!   --> tests/spec/packages/stems/tests/shared.bx:1:1
+!
+!   1 | // expect-error: L0317
+!     | ^
+!
+! help: one name has one definition; rename one of the two modules
+
+$ check --json tests/spec/packages/stems/tests/shared.bx
+status 1
+> {"file":"tests/spec/packages/stems/tests/shared.bx","code":"L0317","message":"`shared` is both `tests/spec/packages/stems/tests/shared.bx` and `tests/spec/packages/stems/src/shared.bx`","span":{"start":0,"len":0},"help":"one name has one definition; rename one of the two modules"}
+
+$ api tests/spec/packages/stems/tests/shared.bx
+status 1
+! error[L0317]: `shared` is both `tests/spec/packages/stems/tests/shared.bx` and `tests/spec/packages/stems/src/shared.bx`
+!   --> tests/spec/packages/stems/tests/shared.bx:1:1
+!
+!   1 | // expect-error: L0317
+!     | ^
+!
+! help: one name has one definition; rename one of the two modules
+
+$ test tests/spec/packages/stems/tests/shared.bx
+status 1
+! error[L0317]: `shared` is both `tests/spec/packages/stems/tests/shared.bx` and `tests/spec/packages/stems/src/shared.bx`
+!   --> tests/spec/packages/stems/tests/shared.bx:1:1
+!
+!   1 | // expect-error: L0317
+!     | ^
+!
+! help: one name has one definition; rename one of the two modules
+
+$ fmt tests/spec/packages/stems/tests/shared.bx
+status 0
+
+$ build tests/spec/packages/stems/tests/shared.bx
+status 1
+! error[L0317]: `shared` is both `tests/spec/packages/stems/tests/shared.bx` and `tests/spec/packages/stems/src/shared.bx`
+!   --> tests/spec/packages/stems/tests/shared.bx:1:1
+!
+!   1 | // expect-error: L0317
+!     | ^
+!
+! help: one name has one definition; rename one of the two modules

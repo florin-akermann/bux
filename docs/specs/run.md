@@ -257,9 +257,7 @@ It unpacks the seed into a temporary directory, with the `jar` tool of the JDK.
 It then replaces the three directories of resources there with those of the checkout.
 These are `library/`, `help/`, and `explanations/`.
 The seed runs with that one directory as its class path.
-The seed then builds stage 1 from `src/main.bx`.
-The seed is older than the layout, so it writes stage 1 into `src/target/`.
-The script moves it to `target/` at the root, where `bin/bux` starts it.
+The seed then builds stage 1 from `src/main.bx` into `target/`, where `bin/bux` starts it.
 So stage 1 holds the resources of the checkout, and not the old copies that the seed holds.
 Stage 1 then builds stage 2 from a copy of `bux.package` and `src/` in a temporary directory.
 Stage 2 is in the `target/` of that copy.

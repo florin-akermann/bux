@@ -192,9 +192,7 @@ docs/          the specification, this document, and the behaviour specs
 The bootstrap has a seed and two stages, and `bin/bootstrap` runs them.
 The seed `bin/seed.jar` holds the classes of a compiler that an earlier compiler built.
 The seed runs from one temporary directory: the seed unpacked, with the resources of the checkout.
-The seed builds stage 1 from `src/main.bx`.
-The seed is older than the layout, so it writes stage 1 into `src/target/`.
-`bin/bootstrap` moves stage 1 to `target/` at the root, where `bin/bux` starts it.
+The seed builds stage 1 from `src/main.bx` into `target/` at the root, where `bin/bux` starts it.
 Stage 1 builds stage 2 from a copy of `bux.package` and `src/` outside the repository.
 Stage 2 must be stage 1 byte for byte, and `docs/specs/run.md` states the script.
 No class file other than the seed is kept in the repository, so a checkout bootstraps first.
@@ -217,6 +215,7 @@ The item builds stage 1 with the old seed, stage 2 with stage 1, and stage 3 wit
 Stage 3 must equal stage 2, and the item packs stage 2 as the new seed.
 Item 096 did this when a build moved every class from beside its source to `target/`.
 Item 113 did this when a build first copied the resources into `target/`.
+Item 134 did this when a module of a package first wrote into `target/` beside the manifest.
 The fourth reason is that canonical form changed, so the old seed refuses the sources.
 The item changes the printer, and the old seed builds stage 1 from the sources in the old form.
 The `bux fmt` of stage 1 then writes every source in the new form.

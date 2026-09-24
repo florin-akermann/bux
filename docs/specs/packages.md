@@ -46,8 +46,11 @@ shapes/
 - A module of the package is a `.bx` file at the top of `src/`.
 - A test module is a `.bx` file at the top of `tests/`.
 - `target/` holds the classes that `bux build` and `bux run` write.
-- A `.bx` file deeper than the top of `tests/` is data, as the files under `tests/spec/` are.
+- A `.bx` file deeper than the top of `src/` or of `tests/` is data, as a file of `tests/spec/` is.
 - The compiler reads nothing else, so another directory, as `docs/`, is a convention only.
+
+A command that names such a deeper file reads it as a bare module, in no package.
+No command refuses it, because the compiler holds nothing about a directory that it does not read.
 
 A test module reaches a module of `src/` by its name, as it reaches a module beside it.
 A module of `src/` never reaches a test module, so no program depends on a test.
@@ -57,9 +60,13 @@ A `depends` reaches the `src/` of the dependency, and never its `tests/`.
 Its help names `src/` and `tests/`, where a module goes.
 `L0323` also refuses a manifest inside `src/` or `tests/`, at that manifest.
 Each of the two is a part of the package above it, and a `tests/` is no package of its own.
-A module and a test module of one name are `L0317`, because one name has one definition.
+A module and a test module of one stem are `L0317`, because one name has one definition.
+Both would also build one class file of `target/`, and the second class would replace the first.
+So the check of the layout refuses the stem at the test module, before any module is read.
 
-In `src/modules.bx`, `layout_held` checks the root of a package, and `whence_of` finds its files.
+In `src/modules.bx`, `layout_held` checks the root of a package, and `placed` finds its files.
+A load holds the layout and the dependencies of each package that it reaches, by the root.
+So it reads them once, however many modules of the package it reaches.
 The root of the repository is the package of the compiler, so the compiler keeps the layout too.
 
 ## The manifest
@@ -226,6 +233,7 @@ A package out of the layout is `L0323`, before any module of it is compiled.
 | depended on twice     | `L0315` | `../geometry` is depended on twice                     |
 | no package there      | `L0316` | there is no package in `../geometry`                   |
 | module is two files   | `L0317` | `demo` is both `../shapes/src/demo.bx` and `src/demo.bx` |
+| stem in both parts    | `L0317` | `demo` is both `tests/demo.bx` and `src/demo.bx`       |
 | module beside manifest | `L0323` | `demo.bx` sits beside `bux.package`, where no module of a package is |
 | manifest in a part    | `L0323` | `tests/` holds a manifest, and it is a part of the package above it |
 | not an archive line   | `L0315` | `jar` states a path and a hash, and this line does not |

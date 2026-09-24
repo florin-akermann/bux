@@ -447,8 +447,7 @@ fn pool_size() -> Int {
     or((environment.processors() + 1) / 2, 1)
 }
 
-// The path of each module of the package in `directory`: those of `src/`, then those of `tests/`,
-// each part in the order the names sort. A package out of its layout is refused before any module.
+// The layout is held before any module is, so a stray file is refused where no module reaches it.
 // example: is_refused(page_said(package_found("no-such-directory")))
 fn package_found(directory: String) -> Result<List<String>, NotCompiled> {
     if !modules.has_manifest(directory) {
@@ -467,15 +466,11 @@ fn in_both_parts(directory: String) -> Result<List<String>, NotCompiled> {
     Ok(all_of(values: sources, more: tests))
 }
 
-// A package need not hold both parts, so a part that is not there holds no module.
 // example: list.length(ok_or(modules_of("no-such-directory/src"), ["x"])) == 0
 fn modules_of(part: String) -> Result<List<String>, NotCompiled> {
-    if !files.is_directory(files.named(part)) {
-        return Ok([])
-    }
-    match files.listed(part) {
+    match modules.listing(part) {
         Ok(names) => Ok(module_paths(directory: part, names: names))
-        Err(_) => Err(Unusable("error: " + part + ": Permission denied (os error 13)\n"))
+        Err(not) => Err(not_loaded(not))
     }
 }
 
@@ -983,23 +978,9 @@ fn file_copied(from: String, into: String) -> Result<(), Said> {
 // example: !is_resource_name(".DS_Store")
 // example: !is_resource_name("mycs.toml")
 fn is_resource_name(name: String) -> Bool {
-    let dot = last_dot(name)
+    let dot = modules.last_unit(name, 46)
     let extension = or(strings.cut(name, dot + 1, strings.length(name)), "")
     dot > 0 && (extension == "bx" || extension == "md")
-}
-
-/// Where the last dot of `name` is, and `-1` where it holds none.
-// example: last_dot("a.b.bx") == 3
-fn last_dot(name: String) -> Int {
-    var found = -1
-    var index = 0
-    for index < strings.length(name) {
-        if or(strings.at(name, index), 0) == 46 {
-            found = index
-        }
-        index += 1
-    }
-    found
 }
 
 /// Whether the paths `one` and `other` name the same place, however each is spelled.
@@ -3494,11 +3475,11 @@ fn transpositions(compared: Compared, matched: Matched) -> Int {
 // example: read_refusal("no-such-directory/a.bx") == "No such file or directory (os error 2)"
 fn read_refusal(path: String) -> String {
     let place = files.named(path)
-    if files.is_directory(place) {
-        return "Is a directory (os error 21)"
-    }
     if files.is_there(place) && !files.is_readable(place) {
         return "Permission denied (os error 13)"
+    }
+    if files.is_directory(place) {
+        return "Is a directory (os error 21)"
     }
     if files.is_there(place) {
         return "stream did not contain valid UTF-8"

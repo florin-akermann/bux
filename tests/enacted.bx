@@ -293,7 +293,8 @@ fn every_package_held(library: ir.Library, limit: Int) -> held.Held {
     found = held.added(found, package_refused(library))
     found = held.added(found, package_built(library))
     found = held.added(found, refused_package_built(library))
-    held.added(found, unlisted_package(library, limit))
+    found = held.added(found, unlisted_package(library: library, limit: limit, locked: "unlisted"))
+    held.added(found, unlisted_package(library: library, limit: limit, locked: "unlisted/src"))
 }
 
 /// `check` takes a package and accepts every module it holds.
@@ -339,19 +340,19 @@ fn refused_package_built(library: ir.Library) -> held.Held {
     found
 }
 
-/// A package whose `src/` cannot be listed is refused, and never passes as a package that holds
-/// no module. The mode `311` on `src/` lets it be found but not be listed.
+// A package whose root or `src/` cannot be listed is refused, and never passes as a package that
+// holds no module. The mode `311` on `locked` lets it be found but not be listed.
 // example: unstaged(text: "/s/a.bx", stage: "/s") == "a.bx"
-fn unlisted_package(library: ir.Library, limit: Int) -> held.Held {
+fn unlisted_package(library: ir.Library, limit: Int, locked: String) -> held.Held {
     let scene = scene_of([Written { at: "unlisted/bux.package", text: "" }, Written { at: "unlisted/src/a.bx", text: "fn main(arguments: List<String>) -> Int {\n    0\n}\n" }])
     let package = modules.joined(scene, "unlisted")
-    _ = walk.completed(["chmod", "311", modules.joined(package, "src")], scene, limit)
+    _ = walk.completed(["chmod", "311", modules.joined(scene, locked)], scene, limit)
     let checked = said_to(["check", package], library)
     let built = said_to(["build", package], library)
-    _ = walk.completed(["chmod", "755", modules.joined(package, "src")], scene, limit)
-    let refusal = "error: unlisted/src: Permission denied (os error 13)\n"
+    _ = walk.completed(["chmod", "755", modules.joined(scene, locked)], scene, limit)
+    let refusal = "error: " + locked + ": Permission denied (os error 13)\n"
     let facts = [status_fact(checked, 2), Fact { what: "check: errors", expected: refusal, found: unstaged(text: checked.errors, stage: scene) }, status_fact(built, 2), Fact { what: "build: errors", expected: refusal, found: unstaged(text: built.errors, stage: scene) }]
-    let found = facts_held("a package that cannot be listed is refused", facts)
+    let found = facts_held("a package whose " + locked + " cannot be listed is refused", facts)
     command.removed_whole(scene)
     found
 }

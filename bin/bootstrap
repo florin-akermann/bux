@@ -40,7 +40,7 @@ fi
 # the machine", records why it is 256 MB.
 heap=-Xmx256m
 cd "$root"
-rm -rf target src/target
+rm -rf target
 seed=$(mktemp -d "${TMPDIR:-/tmp}/bux-seed.XXXXXX")
 copy=$(mktemp -d "${TMPDIR:-/tmp}/bux-bootstrap.XXXXXX")
 trap 'rm -rf "$seed" "$copy"' EXIT
@@ -48,12 +48,6 @@ trap 'rm -rf "$seed" "$copy"' EXIT
 rm -rf "$seed/library" "$seed/help" "$seed/explanations"
 cp -R library help explanations "$seed"
 "$java" --enable-preview "$heap" -cp "$seed" main build src/main.bx
-# A seed older than the layout of a package writes its classes beside the module it builds, in
-# src/target/, and stage 1 belongs in target/ at the root, where bin/bux starts it.
-if [ -d src/target ]; then
-    mv src/target target
-fi
-
 cp bux.package "$copy/bux.package"
 cp -R src "$copy/src"
 "$java" --enable-preview "$heap" -cp "$root/target" main build "$copy/src/main.bx"

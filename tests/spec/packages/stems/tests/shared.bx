@@ -1,0 +1,5 @@
+// expect-error: L0317
+// A test module and a module of `src/` of one stem are one name with two definitions.
+test "a test of the shared stem" {
+    true
+}
