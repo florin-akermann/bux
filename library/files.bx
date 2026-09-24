@@ -202,6 +202,42 @@ fn bytes_sent(sink: Writer, bytes: List<Int>, to: String) -> Result<String, Stri
     Ok(to)
 }
 
+/// `text` written as UTF-8 after what the file at `path` holds, with `path` back where that worked.
+///
+/// A file that is not there is made first, so the first part of a file is appended as the rest are.
+// example: ok_or(append(path: "", text: "a"), "nothing appended") == "nothing appended"
+fn append(path: String, text: String) -> Result<String, String> {
+    match opened_to_append(path, true) {
+        Ok(stream) => appended_and_let_go(stream: stream, bytes: strings.encoded(strings.as_utf_8(), text), to: path)
+        Err(why) => Err(why)
+    }
+}
+
+/// `bytes` written at the end of the file `stream` holds open, and `stream` closed.
+///
+/// The stream goes back to the file system here, whether the write worked or did not.
+// example: ok_or(append(path: "", text: ""), "nothing appended") == "nothing appended"
+fn appended_and_let_go(stream: Sink, bytes: strings.Bytes, to: String) -> Result<String, String> {
+    let answer = drained(channel: channel_to(stream), bytes: bytes, to: to)
+    shut(stream)
+    answer
+}
+
+/// `to` where `channel` took every one of `bytes`, and what stopped it where it did not.
+///
+/// A write can take fewer bytes than are left, so the writes go on until none are left. A write
+/// that takes none ends them, so no loop waits on a file that takes no more.
+// example: ok_or(append(path: "", text: ""), "nothing appended") == "nothing appended"
+fn drained(channel: Channel, bytes: strings.Bytes, to: String) -> Result<String, String> {
+    for has_room(bytes) {
+        let count = written_from(channel, bytes)?
+        if count <= 0 {
+            return Err("the whole of the text did not reach " + to)
+        }
+    }
+    Ok(to)
+}
+
 /// The name of everything the directory at `path` holds, in order.
 // example: list.length(ok_or(listed("no-such-directory"), [])) == 0
 fn listed(path: String) -> Result<List<String>, String> {
@@ -395,8 +431,26 @@ extern type Anything = "java.lang.Object"
 /// Where a file the file system holds is, which is what a read takes.
 extern type interface Path = "java.nio.file.Path"
 
+/// A file at `path` opened to be written, after what it holds where `at_the_end` is `true`.
+extern new opened_to_append(path: String, at_the_end: Bool) -> Result<Sink, String>
+
+/// The channel of `stream`, which writes where the stream was opened to write.
+extern method channel_to(stream: Sink) -> Channel = "getChannel"
+
+/// Writes what is left of `bytes` through `channel`, and gives the count of bytes it took.
+extern method int written_from(channel: Channel, bytes: strings.Bytes) -> Result<Int, String> = "write"
+
+/// Closes `stream` and its channel, which gives the file back to the file system.
+///
+/// A close gives nothing back, so no `Result` can carry what it throws. The stream holds no
+/// buffer, so every byte is written before it, and a close that fails loses none.
+extern method shut(stream: Sink) -> () = "close"
+
+/// A file opened to be written, one byte after another or through its channel.
+extern type Sink = "java.io.FileOutputStream"
+
 /// A file opened to be read, one byte after another or at a position through its channel.
 extern type Source = "java.io.FileInputStream"
 
-/// What reads a file at a position, which a stream opened to read it gives.
+/// What reads a file at a position or writes one, which a stream opened on the file gives.
 extern type Channel = "java.nio.channels.FileChannel"

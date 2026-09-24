@@ -405,13 +405,16 @@ Item 112 put `bux test <package>` on a pool; the medians of three, before and af
 ### The One Billion Row Challenge
 
 Item 130 ran `1brc/src/main.bx` once over one billion lines; `docs/specs/billion-rows.md` states it.
-A script that is not in the repository wrote the input once: 13.5 GB with 413 stations, in 625 s.
+A script that is not in the repository wrote the input once: 13.5 GB with 412 stations, in 625 s.
 `time bin/bux run 1brc/src/main.bx <path>` took 187.3 s of wall time, and 804 s of processor time.
 That is the compile of the program and its run, on 12 workers, with no flag added to the JVM.
 The machine was an Apple M4 Pro with 12 processors and 24 GB, on JDK 28-ea+16.
 Other work ran beside it: the load was 10 when the run started and 50 when it ended.
 The line of output matched the one a Python reference script wrote from the same file.
 Item 131 profiles the run, and the program is not tuned before it.
+Item 132 wrote the input in Bux: `time bin/bux run 1brc/src/create_measurements.bx 1000000000`.
+It wrote 13.8 GB in 288.6 s of wall time and 216 s of processor time, on one thread.
+The load was 72 when the run started and 43 when it ended, on the same machine and JDK.
 
 ### The share of the machine
 

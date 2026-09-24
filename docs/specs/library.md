@@ -224,7 +224,7 @@ strings:     at  cut  join  length  from_utf_8
 map:         empty  insert  get
 set:         empty  insert  has_value
 io:          print  println  eprintln
-files:       read  read_bytes  read_between  size  write  write_bytes  listed  made  removed
+files:       read  read_bytes  read_between  size  write  write_bytes  append  listed  made  removed
 process:     run
 environment: read  processors
 ```
@@ -336,6 +336,11 @@ The module called `map` is the one that holds `Map<K, V>`, and is neither of the
 A map's size, a removal from one, and a literal for either type wait for the same test, which
 `docs/specs/collections.md` says of each of them.
 A program that cannot be written without one is what lands it.
+
+`files.append` passes question 12, because no `for` loop appends to a file.
+`files.write` empties the file each time, and a file of one billion rows is too large for a `String`.
+So `1brc/src/create_measurements.bx` could not be written without it, and that program lands it.
+`docs/specs/io.md` states what it does and the members it is written over.
 
 ## The errors
 

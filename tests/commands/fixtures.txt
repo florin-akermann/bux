@@ -7783,6 +7783,12 @@ status 0
 >
 > fn bytes_sent(sink: Writer, bytes: List<Int>, to: String) -> Result<String, String>
 >
+> fn append(path: String, text: String) -> Result<String, String>
+>
+> fn appended_and_let_go(stream: Sink, bytes: strings.Bytes, to: String) -> Result<String, String>
+>
+> fn drained(channel: Channel, bytes: strings.Bytes, to: String) -> Result<String, String>
+>
 > fn listed(path: String) -> Result<List<String>, String>
 >
 > fn names_within(found: Path) -> Result<List<String>, String>
@@ -7878,6 +7884,16 @@ status 0
 > extern type Anything = "java.lang.Object"
 >
 > extern type interface Path = "java.nio.file.Path"
+>
+> extern new opened_to_append(path: String, at_the_end: Bool) -> Result<Sink, String>
+>
+> extern method channel_to(stream: Sink) -> Channel = "getChannel"
+>
+> extern method int written_from(channel: Channel, bytes: strings.Bytes) -> Result<Int, String> = "write"
+>
+> extern method shut(stream: Sink) -> () = "close"
+>
+> extern type Sink = "java.io.FileOutputStream"
 >
 > extern type Source = "java.io.FileInputStream"
 >
@@ -18676,3 +18692,24 @@ status 1
 !     |        ^^^^^^^^^^^^^^
 !
 ! help: a module is compiled after what it imports, and a ring has no such order
+
+$ check tests/spec/io/file_appended.bx
+status 0
+
+$ check --json tests/spec/io/file_appended.bx
+status 0
+
+$ api tests/spec/io/file_appended.bx
+status 0
+> fn main(arguments: List<String>) -> Int
+>
+> fn grown(path: String) -> Result<String, String>
+
+$ test tests/spec/io/file_appended.bx
+status 0
+
+$ fmt tests/spec/io/file_appended.bx
+status 0
+
+$ build tests/spec/io/file_appended.bx
+status 0

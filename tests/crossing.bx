@@ -168,9 +168,9 @@ fn is_java(class: String) -> Bool {
 ///
 /// The last ones are what the class file itself is made of: a boxed `Bool`, what a guard catches,
 /// the arm of a `match` nothing reaches, and the boxes of a character and of a whole number.
-// example: list.length(spec_classes()) == 23
+// example: list.length(spec_classes()) == 24
 fn spec_classes() -> List<String> {
-    ["java/lang/String", "java/lang/System", "java/io/PrintStream", "java/io/PrintWriter", "java/io/File", "java/nio/file/Path", "java/nio/file/Files", "java/nio/charset/Charset", "java/nio/charset/StandardCharsets", "java/util/stream/Stream", "java/util/List", "java/util/Iterator", "java/io/FileInputStream", "java/nio/channels/FileChannel", "java/nio/ByteBuffer", "java/nio/CharBuffer", "java/lang/Object", "java/lang/Boolean", "java/lang/Throwable", "java/lang/AssertionError", "java/lang/Character", "java/lang/Long", "java/lang/Runtime"]
+    ["java/lang/String", "java/lang/System", "java/io/PrintStream", "java/io/PrintWriter", "java/io/File", "java/nio/file/Path", "java/nio/file/Files", "java/nio/charset/Charset", "java/nio/charset/StandardCharsets", "java/util/stream/Stream", "java/util/List", "java/util/Iterator", "java/io/FileInputStream", "java/io/FileOutputStream", "java/nio/channels/FileChannel", "java/nio/ByteBuffer", "java/nio/CharBuffer", "java/lang/Object", "java/lang/Boolean", "java/lang/Throwable", "java/lang/AssertionError", "java/lang/Character", "java/lang/Long", "java/lang/Runtime"]
 }
 
 /// A drawn declaration, guarded once exactly where it gives back a `Result`.
