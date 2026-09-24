@@ -1,5 +1,3 @@
 fn go() -> Int
 
 fn twice(count: Int) -> Int
-
-fn kept(value: _) -> _

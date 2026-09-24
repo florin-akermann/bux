@@ -1,0 +1,6 @@
+// expect-error: L0436
+// Every function writes the type of each parameter, so a caller reads the signature, not the body.
+// The help spells the signature that inference settled from the body.
+fn doubled(count) -> Int {
+    count + count
+}

@@ -54,57 +54,44 @@ Identity, `equals` on everything, boxing a program can see, and a special `int` 
 A feature that catches a mistake is weighed against a shape that leaves the mistake unwriteable.
 A linter reports a swappable pair of arguments after the fact, and the call still compiles.
 `docs/design.md` section 11 states what the language does instead.
-Where order alone holds two arguments apart, the call names them, and a swapped pair is refused.
 Elegance leaves the invalid case unwriteable; adequacy writes it and rejects it afterwards.
 
 ### 8. Could a library declare it?
 
 A type the prelude supplies must be a type a library could have declared instead.
 A capability the language gives `Int` and withholds from a declared type is a leak of its own kind.
-A literal, an operator, and `Eq` are the three such capabilities, and each is a trait method.
-`docs/design.md` sections 3 and 8 state how they reach every type alike.
+`docs/design.md` sections 3 and 8 name the three such capabilities and how each reaches every type.
 A feature that gives a prelude type a fourth is refused until a declared type can have it too.
 
 ### 9. Is it a second way to write something the language already writes?
 
 Syntactic sugar is a second spelling, and a second spelling is a cost with no guarantee behind it.
-A reader learns both, a formatter chooses between them, and every later feature answers to two
-forms rather than one.
-`++`, `--`, `-=`, `*=`, `/=`, `%=`, a ternary `?:`, and a compound assignment of any other operator
-are all refused: each one writes what `a = a + 1` and an `if` already write plainly.
-`+=` is the one shorthand version 0.1 kept, because a `for` loop that totals is the everyday shape
-Bux is built around, and it is the ceiling rather than the first of a set.
-A new shorthand lands only where it removes a class of mistake, never where it only removes typing.
+`docs/design.md` section 2 states the sugar rule and the test a new shorthand has to pass.
+`docs/rationale.md` section 2 gives the reasons.
 
 ### 10. Is anything exempt from it?
 
 A rule that holds for every type, function, and operator but one is a special case, and is refused.
-A prelude type is a type a library could have declared, and question 8 holds it to that.
-An operator is a function with other syntax, and `docs/design.md` section 5 gives it no exemption.
-`main` is a function like any other: it declares what it gives back, and that is `()`.
+`docs/design.md` section 2 states the rule for a prelude type, an operator, and `main`.
 A feature that needs a name, type, or operator treated apart from the rest is reshaped or refused.
 
 A rule also states the scope it holds over, because an unstated scope reads as a rule it is not.
-The no-identity rule is the one that needs saying: every type a program declares is a value.
-A process, a scoped resource, and a foreign reference have identity.
-A `type` declaration writes none of the three.
-They stand outside the rule rather than exempt from it, so the rule itself keeps no exception.
-`docs/design.md` sections 10, 14, 15, and 17 state the rule and all three of the things outside it.
+The no-identity rule is the example: `docs/design.md` section 10 states it and its scope.
+The three things with identity stand outside the rule rather than exempt from it.
 
 ### 11. Does it have an answer for every input?
 
-An operation with no answer for some of its input says so in its type, never at runtime.
-Rust panics on `x / 0` and calls the panic a design; Bux does not, so `17 / 0` is `None`.
-There is no panic, no exception, no `unwrap`, and no runtime failure a program can reach.
 A feature that would crash on some input is refused until its type carries that case instead.
 `docs/design.md` section 5 states the rule, and `docs/specs/arithmetic.md` works it through.
 
 ### 12. Could a `for` loop write it instead?
 
-The standard library is small, and the fewer methods a type has, the better.
-A method lands only where a plain loop over what the type already exposes cannot write it.
+The standard library is small, and the fewer functions a module offers for a type, the better.
+A function lands only where a plain loop over what the type already exposes cannot write it.
 A map has no iterator, and no type has a `for_each`: the `for` loop is what Bux is built around.
-A method that only saves the reader a loop is refused, the same as sugar under question 9.
+A function that only saves the reader a loop is refused, the same as sugar under question 9.
+A higher-order function such as `map` is a loop written twice: the loop, and a function to pass.
+A method is a trait method only; `list.push` is a function of the module `list`, not a method.
 `docs/implementation.md` section 4 states the library's scope.
 
 ---
@@ -168,7 +155,7 @@ The goal is:
 
 ## 3. One-sentence description
 
-> A small ML-inspired language with Go-like syntax and tooling, compiled to the JVM by a Bux compiler.
+> A small ML-inspired language with Go's philosophy and tooling, compiled to the JVM by a Bux compiler.
 
 Or more succinctly:
 

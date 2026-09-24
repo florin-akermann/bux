@@ -1022,9 +1022,6 @@ status 0
 $ check tests/spec/modules/holder.bx
 status 0
 
-$ check tests/spec/modules/inferred.bx
-status 0
-
 $ check tests/spec/modules/itself.bx
 status 1
 ! error[L0307]: `itself` imports `itself`
@@ -2378,9 +2375,9 @@ status 0
 $ check tests/spec/type_inference/infinite_type.bx
 status 1
 ! error[L0403]: this would have a type that contains itself
-!   --> tests/spec/type_inference/infinite_type.bx:5:42
+!   --> tests/spec/type_inference/infinite_type.bx:6:42
 !
-!   5 |         return counted(one: item, other: items)
+!   6 |         return counted(one: item, other: items)
 !     |                                          ^^^^^
 !
 ! help: one of these two is being used where the other was meant
@@ -2740,7 +2737,7 @@ status 1
 
 $ check --json tests/spec/format/brackets_kept.bx
 status 1
-> {"file":"tests/spec/format/brackets_kept.bx","code":"L0300","message":"there is nothing named `a`","span":{"start":146,"len":1},"help":"a name is declared in this file, imported, or supplied by the prelude"}
+> {"file":"tests/spec/format/brackets_kept.bx","code":"L0300","message":"there is nothing named `a`","span":{"start":153,"len":1},"help":"a name is declared in this file, imported, or supplied by the prelude"}
 
 $ check --json tests/spec/format/canonical_names.bx
 status 0
@@ -2960,7 +2957,7 @@ status 0
 
 $ check --json tests/spec/lexer/carriage_return.bx
 status 1
-> {"file":"tests/spec/lexer/carriage_return.bx","code":"L0101","message":"this string has no closing quote","span":{"start":144,"len":6},"help":"add a closing `\"` before the end of the line"}
+> {"file":"tests/spec/lexer/carriage_return.bx","code":"L0101","message":"this string has no closing quote","span":{"start":150,"len":6},"help":"add a closing `\"` before the end of the line"}
 
 $ check --json tests/spec/lexer/comment_at_the_end.bx
 status 1
@@ -2971,19 +2968,19 @@ status 0
 
 $ check --json tests/spec/lexer/unknown_character.bx
 status 1
-> {"file":"tests/spec/lexer/unknown_character.bx","code":"L0102","message":"this character is not part of the language","span":{"start":46,"len":1}}
+> {"file":"tests/spec/lexer/unknown_character.bx","code":"L0102","message":"this character is not part of the language","span":{"start":52,"len":1}}
 
 $ check --json tests/spec/lexer/unknown_characters.bx
 status 1
-> {"file":"tests/spec/lexer/unknown_characters.bx","code":"L0102","message":"this character is not part of the language","span":{"start":317,"len":1}}
+> {"file":"tests/spec/lexer/unknown_characters.bx","code":"L0102","message":"this character is not part of the language","span":{"start":323,"len":1}}
 
 $ check --json tests/spec/lexer/unterminated_at_the_end.bx
 status 1
-> {"file":"tests/spec/lexer/unterminated_at_the_end.bx","code":"L0101","message":"this string has no closing quote","span":{"start":120,"len":6},"help":"add a closing `\"` before the end of the line"}
+> {"file":"tests/spec/lexer/unterminated_at_the_end.bx","code":"L0101","message":"this string has no closing quote","span":{"start":126,"len":6},"help":"add a closing `\"` before the end of the line"}
 
 $ check --json tests/spec/lexer/unterminated_string.bx
 status 1
-> {"file":"tests/spec/lexer/unterminated_string.bx","code":"L0101","message":"this string has no closing quote","span":{"start":47,"len":6},"help":"add a closing `\"` before the end of the line"}
+> {"file":"tests/spec/lexer/unterminated_string.bx","code":"L0101","message":"this string has no closing quote","span":{"start":53,"len":6},"help":"add a closing `\"` before the end of the line"}
 
 $ check --json tests/spec/lexer/words.bx
 status 0
@@ -3088,9 +3085,6 @@ $ check --json tests/spec/modules/greeting.bx
 status 0
 
 $ check --json tests/spec/modules/holder.bx
-status 0
-
-$ check --json tests/spec/modules/inferred.bx
 status 0
 
 $ check --json tests/spec/modules/itself.bx
@@ -3603,15 +3597,15 @@ status 1
 
 $ check --json tests/spec/parser/unknown_character.bx
 status 1
-> {"file":"tests/spec/parser/unknown_character.bx","code":"L0102","message":"this character is not part of the language","span":{"start":44,"len":1}}
+> {"file":"tests/spec/parser/unknown_character.bx","code":"L0102","message":"this character is not part of the language","span":{"start":50,"len":1}}
 
 $ check --json tests/spec/parser/unknown_escape.bx
 status 1
-> {"file":"tests/spec/parser/unknown_escape.bx","code":"L0104","message":"`\\q` is not an escape","span":{"start":46,"len":2},"help":"the escapes are `\\\"`, `\\\\`, `\\n`, `\\t`, and `\\r`"}
+> {"file":"tests/spec/parser/unknown_escape.bx","code":"L0104","message":"`\\q` is not an escape","span":{"start":52,"len":2},"help":"the escapes are `\\\"`, `\\\\`, `\\n`, `\\t`, and `\\r`"}
 
 $ check --json tests/spec/parser/unterminated_string.bx
 status 1
-> {"file":"tests/spec/parser/unterminated_string.bx","code":"L0101","message":"this string has no closing quote","span":{"start":44,"len":17},"help":"add a closing `\"` before the end of the line"}
+> {"file":"tests/spec/parser/unterminated_string.bx","code":"L0101","message":"this string has no closing quote","span":{"start":50,"len":17},"help":"add a closing `\"` before the end of the line"}
 
 $ check --json tests/spec/parser/variant_with_empty_parentheses.bx
 status 1
@@ -3781,7 +3775,7 @@ status 0
 
 $ check --json tests/spec/type_inference/infinite_type.bx
 status 1
-> {"file":"tests/spec/type_inference/infinite_type.bx","code":"L0403","message":"this would have a type that contains itself","span":{"start":184,"len":5},"help":"one of these two is being used where the other was meant"}
+> {"file":"tests/spec/type_inference/infinite_type.bx","code":"L0403","message":"this would have a type that contains itself","span":{"start":198,"len":5},"help":"one of these two is being used where the other was meant"}
 
 $ check --json tests/spec/type_inference/many_routes.bx
 status 0
@@ -3871,8 +3865,6 @@ status 0
 > fn go() -> Int
 >
 > fn twice(count: Int) -> Int
->
-> fn kept(value: _) -> _
 
 $ api tests/spec/api/nothing_offered.bx
 status 0
@@ -3882,8 +3874,6 @@ status 0
 > fn first<A, B>(pair: Pair<A, B>) -> A
 >
 > fn counted() -> Int
->
-> fn applied(action: (_) -> _, value: _) -> _
 >
 > type Pair<A, B> = {
 >     left: A
@@ -5497,8 +5487,6 @@ status 0
 >
 > fn held<T>(value: T) -> T
 >
-> fn passed(value: _) -> _
->
 > fn labelled<T: Named<T>>(value: T) -> String
 >
 > instance Named<String>
@@ -5517,10 +5505,6 @@ status 0
 > type Payment =
 >     | Sent(String)
 >     | Pending
-
-$ api tests/spec/modules/inferred.bx
-status 0
-> fn main(arguments: List<String>) -> Int
 
 $ api tests/spec/modules/itself.bx
 status 1
@@ -6763,7 +6747,7 @@ status 0
 >
 > type Reason = Reason(String)
 >
-> fn identity(value: _) -> _
+> fn identity(value: Int) -> Int
 >
 > extern method char held(text: String, int int: Int) -> Option<Int> = "charAt"
 >
@@ -7455,9 +7439,9 @@ status 0
 $ api tests/spec/type_inference/infinite_type.bx
 status 1
 ! error[L0403]: this would have a type that contains itself
-!   --> tests/spec/type_inference/infinite_type.bx:5:42
+!   --> tests/spec/type_inference/infinite_type.bx:6:42
 !
-!   5 |         return counted(one: item, other: items)
+!   6 |         return counted(one: item, other: items)
 !     |                                          ^^^^^
 !
 ! help: one of these two is being used where the other was meant
@@ -8011,26 +7995,18 @@ status 0
 $ test tests/spec/api/inferred.bx
 status 1
 ! error[L0601]: `go` states no example
-!   --> tests/spec/api/inferred.bx:4:4
+!   --> tests/spec/api/inferred.bx:3:4
 !
-!   4 | fn go() -> Int {
+!   3 | fn go() -> Int {
 !     |    ^^
 !
 ! help: write `// example: <an expression that is true>` in the comment above it
 !
 ! error[L0601]: `twice` states no example
-!   --> tests/spec/api/inferred.bx:8:4
+!   --> tests/spec/api/inferred.bx:7:4
 !
-!   8 | fn twice(count) {
+!   7 | fn twice(count: Int) -> Int {
 !     |    ^^^^^
-!
-! help: write `// example: <an expression that is true>` in the comment above it
-!
-! error[L0601]: `kept` states no example
-!   --> tests/spec/api/inferred.bx:12:4
-!
-!   12 | fn kept(value) {
-!      |    ^^^^
 !
 ! help: write `// example: <an expression that is true>` in the comment above it
 
@@ -8040,25 +8016,17 @@ status 0
 $ test tests/spec/api/offered.bx
 status 1
 ! error[L0601]: `first` states no example
-!   --> tests/spec/api/offered.bx:7:4
+!   --> tests/spec/api/offered.bx:6:4
 !
-!   7 | fn first<A, B>(pair: Pair<A, B>) -> A {
+!   6 | fn first<A, B>(pair: Pair<A, B>) -> A {
 !     |    ^^^^^
 !
 ! help: write `// example: <an expression that is true>` in the comment above it
 !
 ! error[L0601]: `counted` states no example
-!   --> tests/spec/api/offered.bx:11:4
+!   --> tests/spec/api/offered.bx:10:4
 !
-!   11 | fn counted() -> Int {
-!      |    ^^^^^^^
-!
-! help: write `// example: <an expression that is true>` in the comment above it
-!
-! error[L0601]: `applied` states no example
-!   --> tests/spec/api/offered.bx:15:4
-!
-!   15 | fn applied(action, value) {
+!   10 | fn counted() -> Int {
 !      |    ^^^^^^^
 !
 ! help: write `// example: <an expression that is true>` in the comment above it
@@ -8648,7 +8616,7 @@ status 1
 ! error[L0601]: `go` states no example
 !   --> tests/spec/format/comments.bx:4:4
 !
-!   4 | fn go() {
+!   4 | fn go() -> Int {
 !     |    ^^
 !
 ! help: write `// example: <an expression that is true>` in the comment above it
@@ -9378,9 +9346,6 @@ $ test tests/spec/modules/greeting.bx
 status 0
 
 $ test tests/spec/modules/holder.bx
-status 0
-
-$ test tests/spec/modules/inferred.bx
 status 0
 
 $ test tests/spec/modules/itself.bx
@@ -10896,9 +10861,9 @@ status 1
 $ test tests/spec/type_inference/infinite_type.bx
 status 1
 ! error[L0403]: this would have a type that contains itself
-!   --> tests/spec/type_inference/infinite_type.bx:5:42
+!   --> tests/spec/type_inference/infinite_type.bx:6:42
 !
-!   5 |         return counted(one: item, other: items)
+!   6 |         return counted(one: item, other: items)
 !     |                                          ^^^^^
 !
 ! help: one of these two is being used where the other was meant
@@ -12961,9 +12926,6 @@ status 0
 $ fmt tests/spec/modules/holder.bx
 status 0
 
-$ fmt tests/spec/modules/inferred.bx
-status 0
-
 $ fmt tests/spec/modules/itself.bx
 status 0
 
@@ -13799,26 +13761,18 @@ status 0
 $ build tests/spec/api/inferred.bx
 status 1
 ! error[L0601]: `go` states no example
-!   --> tests/spec/api/inferred.bx:4:4
+!   --> tests/spec/api/inferred.bx:3:4
 !
-!   4 | fn go() -> Int {
+!   3 | fn go() -> Int {
 !     |    ^^
 !
 ! help: write `// example: <an expression that is true>` in the comment above it
 !
 ! error[L0601]: `twice` states no example
-!   --> tests/spec/api/inferred.bx:8:4
+!   --> tests/spec/api/inferred.bx:7:4
 !
-!   8 | fn twice(count) {
+!   7 | fn twice(count: Int) -> Int {
 !     |    ^^^^^
-!
-! help: write `// example: <an expression that is true>` in the comment above it
-!
-! error[L0601]: `kept` states no example
-!   --> tests/spec/api/inferred.bx:12:4
-!
-!   12 | fn kept(value) {
-!      |    ^^^^
 !
 ! help: write `// example: <an expression that is true>` in the comment above it
 
@@ -13828,9 +13782,9 @@ status 0
 $ build tests/spec/api/offered.bx
 status 1
 ! error[L0600]: this hole is not compiled
-!   --> tests/spec/api/offered.bx:12:5
+!   --> tests/spec/api/offered.bx:11:5
 !
-!   12 |     todo("count them")
+!   11 |     todo("count them")
 !      |     ^^^^^^^^^^^^^^^^^^
 !
 ! help: `bux check` accepts a hole; fill it in, or build a module that holds none
@@ -14420,7 +14374,7 @@ status 1
 ! error[L0601]: `go` states no example
 !   --> tests/spec/format/comments.bx:4:4
 !
-!   4 | fn go() {
+!   4 | fn go() -> Int {
 !     |    ^^
 !
 ! help: write `// example: <an expression that is true>` in the comment above it
@@ -15150,9 +15104,6 @@ $ build tests/spec/modules/greeting.bx
 status 0
 
 $ build tests/spec/modules/holder.bx
-status 0
-
-$ build tests/spec/modules/inferred.bx
 status 0
 
 $ build tests/spec/modules/itself.bx
@@ -16671,9 +16622,9 @@ status 1
 $ build tests/spec/type_inference/infinite_type.bx
 status 1
 ! error[L0403]: this would have a type that contains itself
-!   --> tests/spec/type_inference/infinite_type.bx:5:42
+!   --> tests/spec/type_inference/infinite_type.bx:6:42
 !
-!   5 |         return counted(one: item, other: items)
+!   6 |         return counted(one: item, other: items)
 !     |                                          ^^^^^
 !
 ! help: one of these two is being used where the other was meant
@@ -17288,3 +17239,191 @@ status 0
 
 $ build tests/spec/name_resolution/loop_that_only_counts.bx
 status 0
+
+$ check tests/spec/type_inference/generic_left_out.bx
+status 1
+! error[L0436]: `value` of `same` states no type, and a function writes its whole signature
+!   --> tests/spec/type_inference/generic_left_out.bx:3:12
+!
+!   3 | fn same<T>(value) -> T {
+!     |            ^^^^^
+!
+! help: write the signature `fn same<T>(value: T) -> T`
+
+$ check --json tests/spec/type_inference/generic_left_out.bx
+status 1
+> {"file":"tests/spec/type_inference/generic_left_out.bx","code":"L0436","message":"`value` of `same` states no type, and a function writes its whole signature","span":{"start":129,"len":5},"help":"write the signature `fn same<T>(value: T) -> T`"}
+
+$ api tests/spec/type_inference/generic_left_out.bx
+status 1
+! error[L0436]: `value` of `same` states no type, and a function writes its whole signature
+!   --> tests/spec/type_inference/generic_left_out.bx:3:12
+!
+!   3 | fn same<T>(value) -> T {
+!     |            ^^^^^
+!
+! help: write the signature `fn same<T>(value: T) -> T`
+
+$ test tests/spec/type_inference/generic_left_out.bx
+status 1
+! error[L0436]: `value` of `same` states no type, and a function writes its whole signature
+!   --> tests/spec/type_inference/generic_left_out.bx:3:12
+!
+!   3 | fn same<T>(value) -> T {
+!     |            ^^^^^
+!
+! help: write the signature `fn same<T>(value: T) -> T`
+
+$ fmt tests/spec/type_inference/generic_left_out.bx
+status 0
+
+$ build tests/spec/type_inference/generic_left_out.bx
+status 1
+! error[L0436]: `value` of `same` states no type, and a function writes its whole signature
+!   --> tests/spec/type_inference/generic_left_out.bx:3:12
+!
+!   3 | fn same<T>(value) -> T {
+!     |            ^^^^^
+!
+! help: write the signature `fn same<T>(value: T) -> T`
+
+$ check tests/spec/type_inference/parameter_left_out.bx
+status 1
+! error[L0436]: `count` of `doubled` states no type, and a function writes its whole signature
+!   --> tests/spec/type_inference/parameter_left_out.bx:4:12
+!
+!   4 | fn doubled(count) -> Int {
+!     |            ^^^^^
+!
+! help: write the signature `fn doubled(count: Int) -> Int`
+
+$ check --json tests/spec/type_inference/parameter_left_out.bx
+status 1
+> {"file":"tests/spec/type_inference/parameter_left_out.bx","code":"L0436","message":"`count` of `doubled` states no type, and a function writes its whole signature","span":{"start":205,"len":5},"help":"write the signature `fn doubled(count: Int) -> Int`"}
+
+$ api tests/spec/type_inference/parameter_left_out.bx
+status 1
+! error[L0436]: `count` of `doubled` states no type, and a function writes its whole signature
+!   --> tests/spec/type_inference/parameter_left_out.bx:4:12
+!
+!   4 | fn doubled(count) -> Int {
+!     |            ^^^^^
+!
+! help: write the signature `fn doubled(count: Int) -> Int`
+
+$ test tests/spec/type_inference/parameter_left_out.bx
+status 1
+! error[L0436]: `count` of `doubled` states no type, and a function writes its whole signature
+!   --> tests/spec/type_inference/parameter_left_out.bx:4:12
+!
+!   4 | fn doubled(count) -> Int {
+!     |            ^^^^^
+!
+! help: write the signature `fn doubled(count: Int) -> Int`
+
+$ fmt tests/spec/type_inference/parameter_left_out.bx
+status 0
+
+$ build tests/spec/type_inference/parameter_left_out.bx
+status 1
+! error[L0436]: `count` of `doubled` states no type, and a function writes its whole signature
+!   --> tests/spec/type_inference/parameter_left_out.bx:4:12
+!
+!   4 | fn doubled(count) -> Int {
+!     |            ^^^^^
+!
+! help: write the signature `fn doubled(count: Int) -> Int`
+
+$ check tests/spec/type_inference/result_left_out.bx
+status 1
+! error[L0436]: `greet` states no result type, and a function writes its whole signature
+!   --> tests/spec/type_inference/result_left_out.bx:5:4
+!
+!   5 | fn greet(name: String) {
+!     |    ^^^^^
+!
+! help: write the signature `fn greet(name: String) -> ()`
+
+$ check --json tests/spec/type_inference/result_left_out.bx
+status 1
+> {"file":"tests/spec/type_inference/result_left_out.bx","code":"L0436","message":"`greet` states no result type, and a function writes its whole signature","span":{"start":137,"len":5},"help":"write the signature `fn greet(name: String) -> ()`"}
+
+$ api tests/spec/type_inference/result_left_out.bx
+status 1
+! error[L0436]: `greet` states no result type, and a function writes its whole signature
+!   --> tests/spec/type_inference/result_left_out.bx:5:4
+!
+!   5 | fn greet(name: String) {
+!     |    ^^^^^
+!
+! help: write the signature `fn greet(name: String) -> ()`
+
+$ test tests/spec/type_inference/result_left_out.bx
+status 1
+! error[L0436]: `greet` states no result type, and a function writes its whole signature
+!   --> tests/spec/type_inference/result_left_out.bx:5:4
+!
+!   5 | fn greet(name: String) {
+!     |    ^^^^^
+!
+! help: write the signature `fn greet(name: String) -> ()`
+
+$ fmt tests/spec/type_inference/result_left_out.bx
+status 0
+
+$ build tests/spec/type_inference/result_left_out.bx
+status 1
+! error[L0436]: `greet` states no result type, and a function writes its whole signature
+!   --> tests/spec/type_inference/result_left_out.bx:5:4
+!
+!   5 | fn greet(name: String) {
+!     |    ^^^^^
+!
+! help: write the signature `fn greet(name: String) -> ()`
+
+$ check tests/spec/traits/signature_result.bx
+status 1
+! error[L0436]: `logged` states no result type, and a function writes its whole signature
+!   --> tests/spec/traits/signature_result.bx:8:8
+!
+!   8 |     fn logged(value: T)
+!     |        ^^^^^^
+!
+! help: write the signature `fn logged(value: T) -> ()`
+
+$ check --json tests/spec/traits/signature_result.bx
+status 1
+> {"file":"tests/spec/traits/signature_result.bx","code":"L0436","message":"`logged` states no result type, and a function writes its whole signature","span":{"start":192,"len":6},"help":"write the signature `fn logged(value: T) -> ()`"}
+
+$ api tests/spec/traits/signature_result.bx
+status 1
+! error[L0436]: `logged` states no result type, and a function writes its whole signature
+!   --> tests/spec/traits/signature_result.bx:8:8
+!
+!   8 |     fn logged(value: T)
+!     |        ^^^^^^
+!
+! help: write the signature `fn logged(value: T) -> ()`
+
+$ test tests/spec/traits/signature_result.bx
+status 1
+! error[L0436]: `logged` states no result type, and a function writes its whole signature
+!   --> tests/spec/traits/signature_result.bx:8:8
+!
+!   8 |     fn logged(value: T)
+!     |        ^^^^^^
+!
+! help: write the signature `fn logged(value: T) -> ()`
+
+$ fmt tests/spec/traits/signature_result.bx
+status 0
+
+$ build tests/spec/traits/signature_result.bx
+status 1
+! error[L0436]: `logged` states no result type, and a function writes its whole signature
+!   --> tests/spec/traits/signature_result.bx:8:8
+!
+!   8 |     fn logged(value: T)
+!     |        ^^^^^^
+!
+! help: write the signature `fn logged(value: T) -> ()`

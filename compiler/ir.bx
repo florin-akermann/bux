@@ -21,25 +21,25 @@ import surface
 import types
 import unify
 
-/// Every module of the program at `path`, lowered, or `skipped` where a phase before this refuses.
+/// Every module of the program at `path`, lowered, or why not where a phase before this refuses.
 ///
 /// A program that does not load, resolve, type, or pass the exhaustiveness check is skipped, and
 /// so is one that holds a hole, because a build refuses a hole.
 // example: list.length(ok_or(program_lowered("no-such-directory/main.bx", little_library()), [])) == 0
-fn program_lowered(path: String, library: Library) -> Result<List<Lowered>, String> {
+fn program_lowered(path: String, library: Library) -> Result<List<Lowered>, exhaustiveness.Unchecked> {
     match modules.load(path) {
         Ok(loaded) => checked_lowered(exhaustiveness.modules_checked(loaded, library.prelude), library)
-        Err(_) => Err("skipped\n")
+        Err(_) => Err(exhaustiveness.Skipped)
     }
 }
 
-/// The checked modules, lowered, or `skipped` where a check refused or a module holds a hole.
-// example: list.length(ok_or(checked_lowered(Err("refused"), little_library()), [])) == 0
-fn checked_lowered(checked: Result<List<infer.Inference>, String>, library: Library) -> Result<List<Lowered>, String> {
+/// The checked modules, lowered, or why not: the check refused, or a module holds a hole.
+// example: list.length(ok_or(checked_lowered(Err(exhaustiveness.Skipped), little_library()), [])) == 0
+fn checked_lowered(checked: Result<List<infer.Inference>, exhaustiveness.Unchecked>, library: Library) -> Result<List<Lowered>, exhaustiveness.Unchecked> {
     let typed = checked?
     for module in typed {
         if list.length(holes.of_module(module.resolved)) > 0 {
-            return Err("skipped\n")
+            return Err(exhaustiveness.Skipped)
         }
     }
     Ok(passes_lowered(typed, library))
@@ -2591,7 +2591,7 @@ fn through_the_operator(builder: Builder, asked: OperatorAsk, answerer: Instance
 /// Each operand is adapted to its parameter as `calling` adapts it: a `()` a type parameter stands
 /// for is put aside as a new `Object`, and an operand whose parameter is `()` is written and dropped.
 // example: held_text(the_other_way_round(little_builder(""), Instance { class: "main", reaching: Reaching { named: "is_less", signature: Signature { parameters: [], result: Some(Boolean) } } }, []).held) == "Z"
-// example: list.length(the_other_way_round(little_builder("fn f() {\n    ()\n}\n"), Instance { class: "main", reaching: Reaching { named: "is_less", signature: Signature { parameters: [Some(object()), Some(object())], result: Some(Boolean) } } }, [first_expr("fn f() {\n    ()\n}\n"), first_expr("fn f() {\n    ()\n}\n")]).builder.instructions) == 11
+// example: list.length(the_other_way_round(little_builder("fn f() -> () {\n    ()\n}\n"), Instance { class: "main", reaching: Reaching { named: "is_less", signature: Signature { parameters: [Some(object()), Some(object())], result: Some(Boolean) } } }, [first_expr("fn f() -> () {\n    ()\n}\n"), first_expr("fn f() -> () {\n    ()\n}\n")]).builder.instructions) == 11
 fn the_other_way_round(builder: Builder, answerer: Instance, operands: List<ast.Expr>) -> Left {
     var writing = builder
     var kept = []

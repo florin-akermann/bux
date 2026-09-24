@@ -93,11 +93,11 @@ fn held_beside(property: Property, cases: Int, place: Place) -> held.Held {
 
 /// A module declaring generics, which a drawn module reaches through an import.
 ///
-/// `held` writes its type parameter out, `passed` lets inference find it, `counted` writes one that
-/// reaches no further than the inside of a `List`, and `is_same` constrains one by `Eq`.
+/// `held` writes its type parameter out, `counted` writes one that reaches no further than the
+/// inside of a `List`, and `is_same` constrains one by `Eq`.
 // example: holder() != ""
 fn holder() -> String {
-    "fn held<T>(value: T) -> T {\n    value\n}\n\nfn passed(value) {\n    value\n}\n\nfn counted<T>(values: List<T>) -> Int {\n    1\n}\n\nfn is_same<T: Eq<T>>(one: T, other: T) -> Bool {\n    one == other\n}\n"
+    "fn held<T>(value: T) -> T {\n    value\n}\n\nfn counted<T>(values: List<T>) -> Int {\n    1\n}\n\nfn is_same<T: Eq<T>>(one: T, other: T) -> Bool {\n    one == other\n}\n"
 }
 
 /// `property` checked over `cases` modules drawn beside `place`.
@@ -387,9 +387,9 @@ fn instance_named(reference: ir.MethodRef) -> List<String> {
 /// A drawn use of a generic of `holder`, which `holder` writes as the use reaches it.
 // example: specialised(drawn.seeded(1), Place { directory: "no-such-directory", library: ir.little_library() }).source != ""
 fn specialised(draw: drawn.Draw, place: Place) -> Drawing {
-    let at = drawn.number(draw, 8)
-    let use_of_it = or(list.at(["holder.held(1)", "holder.held(\"one\")", "holder.held(Kept(\"a\"))", "holder.held([2])", "holder.passed(1)", "holder.counted([1])", "holder.counted([\"one\"])", "holder.counted([Kept(\"a\")])"], at), "")
-    let result = or(list.at(["Int", "String", "Kept", "List<Int>", "Int", "Int", "Int", "Int"], at), "")
+    let at = drawn.number(draw, 7)
+    let use_of_it = or(list.at(["holder.held(1)", "holder.held(\"one\")", "holder.held(Kept(\"a\"))", "holder.held([2])", "holder.counted([1])", "holder.counted([\"one\"])", "holder.counted([Kept(\"a\")])"], at), "")
+    let result = or(list.at(["Int", "String", "Kept", "List<Int>", "Int", "Int", "Int"], at), "")
     let source = "import holder\n\nfn go() -> " + result + " {\n    " + use_of_it + "\n}\n\ntype Kept = Kept(String)\n"
     let lowered = compiled.lowered_beside(source, place.directory, place.library)
     Drawing { source: source, why: asked_why(lowered) }

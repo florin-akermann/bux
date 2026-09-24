@@ -13,6 +13,7 @@ import parser
 import refusal
 import resolver
 import set
+import strings
 import surface
 import unify
 
@@ -963,14 +964,35 @@ fn declare_trait(environment: Environment, resolved: resolver.Resolved, declarat
 }
 
 /// One signature of a trait, which names every type it has because no body is there to infer.
-// example: declared_code("trait Sized<T> {\n    fn size(value: T)\n}\n") == ""
+///
+/// A result is written too, `-> ()` included, as every signature writes one.
+// example: declared_code("trait Sized<T> {\n    fn size(value: T) -> ()\n}\n") == ""
+// example: declared_code("trait Sized<T> {\n    fn size(value: T)\n}\n") == "L0436 24..28"
 fn signature_of(environment: Environment, resolved: resolver.Resolved, method: ast.Signature) -> Result<unify.Type, refusal.TypeError> {
     var taken = []
     for parameter in method.parameters {
         taken = list.push(taken, stated(environment, resolved, parameter)?)
     }
     let given = result_written(environment, resolved, method.result)?
-    Ok(unify.Function { parameters: taken, result: given })
+    let signature = unify.Function { parameters: taken, result: given }
+    match method.result {
+        Some(_) => Ok(signature)
+        None => Err(result_left_out(method, signature))
+    }
+}
+
+/// The refusal of a trait method that writes no result, whose help spells `-> ()`.
+// example: refusal.code_given(Err(result_left_out(ast.Signature { name: ast.Name { text: "size", span: lexer.Span { start: 3, length: 4 } }, parameters: [], result: None, span: lexer.Span { start: 0, length: 9 } }, unify.Function { parameters: [], result: unify.Unit }))) == "L0436 3..7"
+fn result_left_out(method: ast.Signature, signature: unify.Type) -> refusal.TypeError {
+    var takes = []
+    var index = 0
+    for parameter in method.parameters {
+        takes = list.push(takes, parameter.name.text + ": " + unify.text_of(or(list.at(unify.parameters_of(signature), index), unify.Unit)))
+        index += 1
+    }
+    let settled = "fn " + method.name.text + "(" + strings.join(takes, ", ") + ") -> " + unify.text_of(unify.result_of(signature))
+    let unwritten = refusal.Unwritten { function: method.name.text, omitted: refusal.ResultType, settled: settled }
+    refusal.TypeError { kind: refusal.SignatureLeftOut(unwritten), span: method.name.span }
 }
 
 /// What a signature gives back, which is `()` where it writes nothing.

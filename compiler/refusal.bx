@@ -94,6 +94,7 @@ fn boundary_code(kind: TypeErrorKind) -> String {
         Unaccounted(_) => "L0434"
         LeftOutMember(_) => "L0434"
         Escapes { place, held, foreign } => "L0435"
+        SignatureLeftOut(_) => "L0436"
         _ => process_code(kind)
     }
 }
@@ -187,6 +188,7 @@ fn what_java_is_not(kind: TypeErrorKind) -> String {
         Unaccounted(class) => "`" + class + "` is a class this build cannot account for"
         LeftOutMember(member) => "the member `" + member + "` is one the list of `java.base` leaves out"
         Escapes { place, held, foreign } => escape_text(place) + " `" + unify.text_of(held) + "`, and the `extern` type `" + foreign + "` is a foreign reference"
+        SignatureLeftOut(unwritten) => unwritten_text(unwritten)
         _ => what_a_process_is_not(kind)
     }
 }
@@ -224,6 +226,17 @@ fn escape_text(place: Escape) -> String {
         GivenBackByACall(callee) => "this call of `" + callee + "` gives back"
         BuiltAs(record) => "this `" + record + "` is"
     }
+}
+
+/// What a signature leaves out, as the message says it.
+// example: unwritten_text(Unwritten { function: "same", omitted: TypeOfParameter("value"), settled: "" }) == "`value` of `same` states no type, and a function writes its whole signature"
+// example: unwritten_text(Unwritten { function: "count", omitted: ResultType, settled: "" }) == "`count` states no result type, and a function writes its whole signature"
+fn unwritten_text(unwritten: Unwritten) -> String {
+    let left_out = match unwritten.omitted {
+        TypeOfParameter(parameter) => "`" + parameter + "` of `" + unwritten.function + "` states no type"
+        ResultType => "`" + unwritten.function + "` states no result type"
+    }
+    left_out + ", and a function writes its whole signature"
 }
 
 /// What a member does with a type where it sits in the signature.
@@ -375,6 +388,7 @@ fn the_rule_of_java(kind: TypeErrorKind) -> String {
         Unaccounted(_) => "a class is in an archive a `jar` line states, or on the list of `java.base` in `docs/specs/interop.md`, and this one is in neither"
         LeftOutMember(_) => "the list in `docs/specs/interop.md` leaves this member out; reach another member"
         Escapes { place, held, foreign } => "a foreign reference stays in the function that reaches it; bind it, and pass it as an argument"
+        SignatureLeftOut(unwritten) => "write the signature `" + unwritten.settled + "`"
         _ => the_shape_of_a_process(kind)
     }
 }
@@ -526,6 +540,19 @@ type TypeErrorKind =
         held: unify.Type
         foreign: String
     }
+    | SignatureLeftOut(Unwritten)
+
+/// A function whose signature leaves a type out, with the signature inference settled for it.
+type Unwritten = {
+    function: String
+    omitted: Omission
+    settled: String
+}
+
+/// Which type a signature leaves out, which `L0436` names.
+type Omission =
+    | TypeOfParameter(String)
+    | ResultType
 
 /// The place a foreign reference would escape its function to, which `L0435` names.
 type Escape =

@@ -17,12 +17,6 @@ fn held<T>(value: T) -> T {
     value
 }
 
-// A function nothing settled is generic too, however few angle brackets it writes.
-// example: passed(value: 1) == 1
-fn passed(value) {
-    value
-}
-
 // A trait this module declares is this module's own, and so is the constraint written over it.
 // example: labelled(value: "a") == "a"
 fn labelled<T: Named<T>>(value: T) -> String {

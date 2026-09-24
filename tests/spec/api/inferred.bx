@@ -1,14 +1,9 @@
-// A signature is written where it documents a boundary, and inference does the rest.
-// `bux api` prints the type each name has, so a page reads the same either way.
-// `kept` is the one case nothing settles, and the page says so with `_`.
+// A function writes its signature, and inference does the work inside the body.
+// `bux api` prints the type each name has, which is the type its signature writes.
 fn go() -> Int {
     twice(3)
 }
 
-fn twice(count) {
+fn twice(count: Int) -> Int {
     count + count
-}
-
-fn kept(value) {
-    value
 }

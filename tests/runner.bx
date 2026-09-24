@@ -43,6 +43,7 @@ import parsing
 import pinned
 import rendering
 import siblings
+import signed
 import spawned
 import started
 import typing
@@ -448,6 +449,7 @@ fn every_property_held(library: ir.Library) -> List<held.Held> {
     found = command.all_of(found, instances.every_property(cases, library))
     found = command.all_of(found, escaping.every_property(cases, library))
     found = command.all_of(found, written.every_property(cases, library))
+    found = command.all_of(found, signed.every_property(cases, library))
     command.all_of(found, spawned.every_property(cases, library))
 }
 

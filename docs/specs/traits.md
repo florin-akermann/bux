@@ -27,9 +27,9 @@ A signature is a function's first line and nothing else: a name, its parameters,
 It has no body, because a trait says what a method is and an instance says what it does.
 
 A signature writes the type of every parameter it takes.
-A function may leave one out and let inference read it off the body; a signature has no body, so a
-type left out of one is a type nothing would settle, and `L0419` refuses it where it is missing.
-A method that gives nothing back writes no `->`, which is the one thing a signature may leave out.
+A signature has no body, so a type left out of one is a type nothing would settle.
+`L0419` refuses it where it is missing.
+A method that gives nothing back writes `-> ()`, and `L0436` refuses a method with no result.
 
 One type parameter is what every trait the language has asks for.
 `Eq<T>`, `Ord<T>`, `Show<T>`, and `IntegerLiteral<T>` each name one type and say what it can do.
@@ -69,8 +69,7 @@ name in scope and one of the two bodies would be reached while the other was los
 
 Each body's signature is the trait's, with the trait's type parameter standing for the instance's
 type, so `is_equal` in `instance Eq<Point>` takes two `Point`s and gives back a `Bool`.
-A body may leave a type out and let inference read it off the trait, so `fn is_equal(one, other)`
-is the same declaration written shorter.
+A body writes its whole signature, as every function does, and `L0436` refuses one that does not.
 A body that writes a type the trait does not have is a mismatch, reported where it is written.
 
 An instance declares no name.
@@ -374,10 +373,11 @@ A trait's name and the type an instance is for are written in `PascalCase`, and 
 | `L0406` | An operator is written over a type that has no instance of the trait it is. |
 | `L0418` | A trait method is used at a type with no instance of its trait. |
 | `L0419` | A parameter of a method a trait declares states no type. |
+| `L0436` | A method a trait declares writes no result, where `-> ()` is the one spelling. |
 
 `L0308`, `L0309`, `L0310`, `L0311`, and `L0318` are raised by name resolution, which
 `compiler/resolver.bx` words.
-`L0401`, `L0418`, and `L0419` are raised by type inference, which `compiler/refusal.bx`
+`L0401`, `L0418`, `L0419`, and `L0436` are raised by type inference, which `compiler/refusal.bx`
 words.
 
 ## Properties

@@ -4,6 +4,7 @@
 
 Every expression of a module gets a type, and nothing in the module is written down twice to say so.
 A signature is written where it documents a boundary; inside a function, inference does the work.
+Every function a program writes is such a boundary, so it writes its whole signature.
 The phase consumes the resolved tree and yields the same tree with a type against every expression.
 
 A type is never guessed from a runtime representation.
@@ -43,10 +44,28 @@ A type written as an argument is not followed either, for the same reason: it is
 An imported module is a type of its own that has nothing inside it.
 Version 0.1 brings a module into scope and has no way yet to reach a name in one.
 
+## Every function writes its signature
+
+Every function a program writes states the type of each parameter and the type of its result.
+That holds for a function of a module, a method of an `instance`, and `start` and `receive`.
+A method of a `trait` writes its result too, and `L0436` refuses it where the trait is declared.
+A function that gives back `()` writes `-> ()`, so there is one way to write a signature.
+A `let`, a `var`, a `for` binding, and a pattern write no type, because inference works in a body.
+A test is no function, and it writes no signature.
+
+A type left out of a signature is `L0436`.
+The check runs after inference of the whole module, so the help spells the settled signature.
+For `fn same<T>(value) -> T`, the help is `` write the signature `fn same<T>(value: T) -> T` ``.
+A type that nothing settled is `_` there, as a diagnostic writes it.
+The span is the parameter that leaves its type out, or the name where the result is left out.
+The functions are read in the order the module writes them, and the first omission is refused.
+A function of a `process` that leaves a type out is `L0806` first, as `concurrency.md` states.
+`bux fmt` writes no type in, because a signature is the author's to write.
+
 ## Inference
 
 A function is inferred from its signature inward.
-A parameter with no written type gets a fresh type variable, and so does a missing result type.
+Inference runs before the signature check, so a type left out gets a fresh type variable.
 The body is inferred and its type is unified with the result type.
 
 Unification is the usual one: two types match when they are the same shape over matching parts.
@@ -136,12 +155,11 @@ A top-level function is polymorphic over the type parameters it declares.
 that unifies with nothing else.
 That is what makes `fn identity<T>(value: T) -> T { 1 }` a mismatch rather than a proof.
 
-A function with no signature to read is inferred from its body, and is then generalised over the
-variables that body left free.
+A function is then generalised over the variables that its body left free.
+A function that writes its whole signature leaves no variable free but its type parameters.
 Functions are inferred bottom up, which is the order a module is read in reverse.
 A declaration sits below what uses it, which `docs/specs/modules.md` requires, so walking upwards
-reaches a function before anything that calls it and a body with no signature has been given one
-by the time a call reads it.
+reaches a function before anything that calls it.
 
 `let total = count(users)` generalises what it binds, so a name bound this way is as polymorphic as
 the value it was given.
@@ -151,7 +169,7 @@ the value it was given.
 
 `Some(())` says only that a value is there, and `None` says that it is not.
 That is `Bool` written a second way, and at the boundary to the platform it is a flag for `null`.
-`docs/design.md` section 5 gives the reason, and the compiler refuses `Option<()>` with `L0432`.
+`docs/rationale.md` section 5 gives the reason, and the compiler refuses `Option<()>` with `L0432`.
 
 A written `Option<()>` is refused where it is written: in a signature, a field, or an `extern`.
 The span is the written type, and in `List<Option<()>>` it is the inner `Option<()>`.
@@ -202,6 +220,7 @@ An expression whose type is that field's `Option<()>` is then refused, as every 
 | trait stays in its module | `L0424` | `holder.labelled` requires `Named`, which `holder` declares and nothing here names |
 | unit in an option | `L0432` | `Option` never carries `()`, because `Some(())` says no more than `true` |
 | call on a value   | `L0433` | a dot after a value reads a field, so this call of `or` is written plainly |
+| signature left out | `L0436` | `count` of `doubled` states no type, and a function writes its whole signature |
 
 `L0406` covers every operator, because every operator is a trait method and a type is written
 with one exactly where it has that trait's instance, which `docs/specs/operators.md` states.
@@ -270,6 +289,7 @@ It asks `java.lang.Character` whether each code point of a Java name is a letter
 `compiler/declared.bx` holds what a module declares, with the checks of each declaration.
 `compiler/infer.bx` walks each function and settles what the walk left open.
 `compiler/carried.bx` reads the settled types, and refuses an `Option<()>` that inference reached.
+`compiler/types.bx` refuses a signature that leaves a type out, after the walk of the module.
 
 The unification table is a value: each step gives back a new table, and no step changes one.
 The table is a `Map` from each type variable to the type it was settled on.
@@ -284,7 +304,7 @@ The phase reads no file for the prelude, so the caller gives it the prelude.
 It stops at the first refusal, which has a code, a span, a message, and a help line.
 A module that the phase infers has the `bux api` page of `docs/specs/api-surface.md`.
 
-`tests/typing.bx` and `tests/conventions.bx` hold the phase to its properties, on drawn modules.
+`tests/typing.bx`, `tests/conventions.bx`, and `tests/signed.bx` hold the phase to its properties.
 `tests/siblings.bx` holds the page of each example to its `.api` file.
 
 ## Properties
@@ -300,3 +320,4 @@ These hold and are checked by drawn properties in the runner:
 7. A ring of declarations that hold one another by value is refused, naming the ring.
 8. A chain of declarations that never comes back round is accepted.
 9. `Option<()>`, written or inferred, is refused with `L0432`, and `Option<Bool>` there is accepted.
+10. A type left out of a drawn signature is `L0436` there, and the help spells the settled one.

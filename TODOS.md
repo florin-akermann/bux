@@ -6,19 +6,6 @@
 
 ## Open
 
-## 🔴 Item 108: A top-level function writes its signature
-`docs/design.md` section 6 asks for a signature "when useful".
-`bux api` prints `_` where nothing settled a type, so a reader of the page opens the file.
-An inference error then surfaces at a distant call instead of inside the body that caused it.
-A written signature is a contract at the boundary, and inference keeps its work inside a body.
-[108][a] - `docs/design.md` section 6 and `docs/specs/types.md` state the rule.
-A top-level function writes every parameter type and its result type; a nested one stays inferred.
-[108][b] - A diagnostic refuses a top-level function whose signature omits a type.
-Its `help:` line spells the inferred type where inference settled one.
-[108][c] - `docs/specs/api-surface.md` drops the `_` case, because no top-level function has one.
-[108][d] - `tests/spec/type_inference/` shows the refusal.
-Every `.bx` under `compiler/` and `tests/` writes its signatures.
-
 ## 🔴 Item 109: An unused import, binding, or parameter is refused
 No spec states what happens to a name that nothing reads.
 An edit that replaces a body leaves the imports and bindings the old body used.
@@ -32,3 +19,130 @@ It refuses a parameter the body never reads, and says how a `for` over a count w
 It settles a `main` that reads no arguments the same way.
 [109][d] - `tests/spec/name_resolution/` shows each refusal.
 A drawn property holds that every name the compiler accepts is read at least once.
+
+## 🔴 Item 112: `bux test` runs the modules of a package on a pool of workers
+**Depends on:** Item 111 — the profile says what a module run spends on typing before it starts.
+Attacks: typing, 2.4 s of the 11.2 s that one job over `compiler/` compiles (section 7).
+`every_module_tested` in `compiler/command.bx` runs the modules of a package one after another.
+`tests/runner.bx` owns a pool of one worker per processor, and only the compiler's tests use it.
+The pool moves into `bux test`, where every package gets it, and the runner keeps working meanwhile.
+A worker is a process, and its state is where a memo lives across the modules it runs.
+A module of `tests/` imports most of the compiler, so a memo saves about 40 000 lines of typing.
+[112][a] - `docs/specs/testing.md` states that the modules of a package run at the same time.
+It states one worker for each processor, and a report in file order.
+[112][b] - A `process` in `compiler/command.bx` hands each module to a worker.
+It holds each answer by the number of its module, as the pool of `tests/runner.bx` does.
+[112][c] - `Working` holds the memo, and a worker keeps it from one module to the next.
+[112][d] - A drawn property holds that a report on a pool is the report of modules run in turn.
+[112][e] - Section 7 records `bux test compiler` and `bux test tests` before and after.
+
+## 🔴 Item 113: The compiler finds its library, help, and explanations beside its classes
+`modules.resource_text` reads a file under each entry of the class path.
+So `bin/bux`, `bin/bootstrap`, and `bin/runner` add `compiler/` and the root to the class path.
+A run that `bux test` starts has only its own directory on the class path.
+So a test of `tests/` that calls the compiler for `bux help` or `bux explain` finds nothing.
+That is why the runner has a class path of its own, and why it cannot be `bux test tests`.
+A build writes the three resource directories into `target/` beside the classes it writes.
+Then every class path that holds the classes holds the resources, and no script adds an entry.
+[113][a] - `docs/specs/run.md` section "Where a build writes" states what a build writes too.
+[113][b] - `bux build` copies `library/`, `help/`, and `explanations/` into `target/`.
+`bux test` does the same for each run.
+[113][c] - `bin/bux`, `bin/bootstrap`, and `bin/runner` put one directory on the class path.
+[113][d] - `docs/implementation.md` section 6 states the class path, and section 7 the runner's.
+
+## 🔴 Item 114: The runner's checks become `test` blocks, and `bin/runner` goes
+**Depends on:** Item 112, Item 113 — the pool and the resources must be in `bux test` first.
+`tests/runner.bx` calls six parts, and each part is a function of a module under `tests/`.
+Each part becomes one or more `test` blocks of its module, and `bin/bux test tests` runs them all.
+Then there is one test runner in the project, and it is the one every Bux program has.
+A part that started JVMs still does, from inside its test, and the limit of 60 s stays.
+[114][a] - `docs/specs/testing.md` states that the compiler's tests are the tests of `tests/`.
+`docs/implementation.md` section 7 is rewritten to match.
+[114][b] - Each module of `tests/` that the runner calls states its checks as `test` blocks.
+[114][c] - `bin/runner golden` becomes `bin/bux run tests/golden.bx`, which rewrites the goldens.
+[114][d] - `.githooks/pre-commit` runs `bin/bootstrap` and then `bin/bux test tests`.
+[114][e] - `bin/runner` and `tests/runner.bx` are deleted.
+[114][f] - Where one test of every spec example is slower than the chunks were, one module per area.
+[114][g] - Section 7 records the wall time of the suite before and after.
+
+## 🔴 Item 115: The compiler types independent modules at the same time
+**Depends on:** Item 111, Item 112 — the profile prices inference, and 112 holds the pool.
+Attacks: typing, 1.3 s of the 3.5 s of `bux build compiler/main.bx`, 37% (section 7).
+`each_accepted` in `compiler/command.bx` types the modules one after another in load order.
+A module needs only the surface of each module it imports, so modules of one wave are independent.
+The pool of Item 112 types every module whose imports are typed.
+The refusal a build reports stays the first one in load order, whatever process ends first.
+[115][a] - `docs/specs/types.md` states that the reported refusal does not depend on the order.
+[115][b] - The pool hands a module to a worker once its imports are typed.
+[115][c] - A drawn property holds that a program typed in waves is typed as it is in load order.
+[115][d] - Section 7 records `bux check` and `bux build` on `compiler/main.bx` before and after.
+It records `bin/bootstrap` with them.
+
+## 🔴 Item 116: The lowering lowers the modules of one pass at the same time
+**Depends on:** Item 111, Item 115 — the profile prices lowering, and 115 pools the phases.
+Attacks: lowering, 0.46 s of the 3.5 s of `bux build compiler/main.bx`, 13% (section 7).
+`pass_over` in `compiler/ir.bx` lowers each module in turn.
+The asks of one module reach the next module of the same pass.
+A pass that gives every module the asks known when the pass starts lowers each module alone.
+The passes repeat until no module asks for more, as they do now, and the result is the same.
+`bin/bootstrap` holds the classes byte for byte, so it is the check that the order changed nothing.
+Item 091 measured the writer at 0.31 s, so it stays on one thread unless the profile says otherwise.
+[116][a] - `docs/implementation.md` section 6 states that a pass lowers each module alone.
+[116][b] - `pass_over` hands each module of a pass to the pool.
+[116][c] - A drawn property holds that a program lowered in a pool gives the classes of one thread.
+[116][d] - Section 7 records `bux build compiler/main.bx` and `bin/bootstrap` before and after.
+
+## 🔴 Item 119: `bux fmt` repairs every order the compiler can compute
+`docs/specs/formatting.md` says that order is checked and never rewritten.
+Import order, the place of a test, and declaration order each have one answer the compiler knows.
+Each refusal costs an agent one round trip: write, build, read the refusal, edit, build again.
+That round trip costs more than the rule saves, so `bux fmt` writes the answer it already knows.
+Naming stays a refusal, because the compiler cannot choose a name.
+Arm order stays a refusal until a case shows that the formatter needs the types.
+[119][a] - `docs/design.md` section 13 and `docs/specs/formatting.md` name each order `fmt` repairs.
+[119][b] - `compiler/format.bx` sorts the imports and moves a declaration written after a test.
+[119][c] - `bux fmt` runs the resolver and moves a declaration below what uses it.
+Two declarations that use each other keep the order the author wrote.
+[119][d] - `L0201` and `L0303` stay for `bux build`, and their help names `bux fmt`.
+[119][e] - `tests/spec/format/` shows each repair.
+A property holds that a repaired file builds, and that `fmt` of a repaired file changes nothing.
+
+## 🔴 Item 120: A `private` declaration exists, and only a public function carries an example
+Every name a module declares is public, so every helper is API, and every helper pays an example.
+`compiler/exhaustiveness.bx` shows the cost.
+Five helpers exist only to keep the examples of other functions on one line.
+They are `said_in`, `found_printed`, `no_reading`, `no_space`, and `status_module`.
+`docs/rationale.md` section 11 says the `test` block was added to prevent that shape.
+One keyword is a smaller surface than the helpers it removes, and `bux api` lists less.
+[120][a] - `docs/design.md` sections 11 and 16 state `private` and narrow the example rule.
+[120][b] - `docs/specs/modules.md` states that a `private` name is reached only in its module.
+`docs/specs/api-surface.md` leaves a private declaration out of the page.
+[120][c] - `docs/specs/doc-examples.md` requires an example of a public function only.
+A private function may state one, and `bux test` runs it.
+[120][d] - The lexer, parser, formatter, and resolver carry `private`.
+An import that reaches a private name is refused with a code and a help that names the module.
+[120][e] - `tests/spec/modules/` and `tests/spec/examples/` show the refusal and the exemption.
+[120][f] - The helpers of `compiler/exhaustiveness.bx` named above become `private` or tests.
+
+## 🔴 Item 122: Record construction puns a field as a pattern does
+A pattern writes `Authorized { authorization_id }`, and construction writes `User { id: id }`.
+That is two rules for one shape, and one of them costs a token per field.
+`docs/specs/patterns.md` says none of the pattern forms is a shorthand for another.
+Construction gets the same rule: `User { id }` and `User { id: id }` are two forms, not one.
+[122][a] - `docs/design.md` section 9 and `docs/specs/grammar.md` make `: expression` optional.
+A bare name reads the binding of that name, and a name not in scope is refused as it is now.
+[122][b] - `docs/specs/formatting.md` states that the formatter keeps the form the author wrote.
+[122][c] - The parser, formatter, resolver, and inference accept a bare field name.
+[122][d] - `tests/spec/parser/` and `tests/spec/format/` show both forms.
+A property holds that `User { id }` and `User { id: id }` type and lower alike.
+
+## 🔴 Item 123: The profile prices specialization and counts the JVM starts of one suite
+**Depends on:** Item 111 — this item adds two numbers to the profile that item records.
+A generic is compiled once for each set of types, so one body is written several times.
+`bux check compiler/main.bx` spends 2.0 s to 2.8 s on work, and none of it is priced per body.
+A run of `bux test` starts one JVM for each module, and a start costs 0.12 s before any work.
+[123][a] - Section 7 records how many specialized bodies one build of `compiler/main.bx` writes.
+It records the seconds spent on the second and later copies of one body.
+[123][b] - Section 7 records the JVM starts of one `bux test tests`, and the seconds they cost.
+[123][c] - Items 112, 115, 116, and 117 each cite the number of this item they attack, or go.
+

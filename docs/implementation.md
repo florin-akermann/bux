@@ -114,10 +114,11 @@ Java interop should be powerful but should not determine the design of the langu
 ## 4. Standard library
 
 The standard library is small, and its data structures are smaller still.
-The fewer methods a type has, the better; a method earns its place, and a `for` loop does the rest.
-A method lands only where a plain loop over what the type already exposes cannot write it.
+The fewer functions a module offers, the better; a `for` loop does the rest.
+A function lands only where a plain loop over what the type already exposes cannot write it.
 A map has no iterator, and the same holds for every convenience a loop already writes.
-`docs/principles.md` question 12 is what a proposed method answers.
+No function takes another function, so the library has no `map` and no `filter`.
+`docs/principles.md` question 12 is what a proposed function answers.
 
 A data structure the library holds has the best asymptotic cost known for what it does.
 A map looks a key up in constant time, and a list is read at an index in constant time.
@@ -381,6 +382,53 @@ On 2026-09-24 `bin/bootstrap` took 5.6 s before Item 091 and 5.8 s after it.
 Item 091 did not put the compiler on processes, because a measurement showed no gain.
 A build of the compiler wrote its 1400 classes in 0.31 s on one thread and on 1400 processes.
 The processes spent four times the processor time, most likely in code the JIT had not compiled.
+Before Item 110 `bin/bootstrap` compared the stages with one `cmp` for each class.
+Item 110 compares them with one `diff -rq` over the two `target/` directories.
+On 2026-09-24 it compared 923 classes, and one `diff -rq` took 0.08 s.
+The median of three `bin/bootstrap` wall times was 7.6 s before Item 110 and 6.2 s after.
+The runs of before and after took turns, under a load of 11 to 12 on 12 cores from other work.
+
+### The profile of 2026-09-24
+
+Item 111 profiled an Apple M4 Pro with 12 processors, on JDK 28-ea+16, under a load of 10 to 30.
+Each number is the median of two runs or more; a wall time grows with load, but a share does not.
+A recorded command is the line that `bin/bux` or `bin/runner` starts, with the next flag added.
+`-XX:StartFlightRecording=filename=build.jfr,settings=profile,jdk.ExecutionSample#period=1ms`.
+`jfr print --json --stack-depth 4096 --events jdk.ExecutionSample build.jfr` gives the samples.
+A script outside the repository gave each sample to its top frame in a module of the compiler.
+Loading is `lexer`, `parser`, `format`, `ast`, `modules`, and the rest of `command`.
+Resolving is `resolver`, lowering is `ir`, and class writing is `jvm`, `bytes`, and disk writes.
+Typing is `declared`, `infer`, `unify`, `types`, `surface`, `exhaustiveness`, and `holes`.
+It is also `escapes`, `carried`, `boundary`, `refusal`, and `processes`.
+The job held the 25 modules of `compiler/`, and it staged 24 runs with the class path of the runner.
+A temporary driver timed `documented.every_run_staged` and then `documented.runs_held`.
+
+| Phase | Build of `compiler/main.bx` | Job over `compiler/` | Runner pass |
+|-------|-----------------------------|----------------------|-------------|
+| Typing | 37%, 1.28 s | 22%, 2.4 s | 22% |
+| Loading | 26%, 0.89 s | 31%, 3.4 s | 28% |
+| Class writing | 16%, 0.54 s | 21%, 2.4 s | 20% |
+| Of it, disk writes | 2% to 4% | 2%, 0.2 s | 4% |
+| Lowering | 13%, 0.46 s | 22%, 2.5 s | 24% |
+| Resolving | 9%, 0.32 s | 4%, 0.5 s | 5% |
+| JVM starts and runs | none | 24 runs, 3.3 s | 401 JVMs |
+
+The seconds of the build are its shares of 3.5 s, the wall time of its least loaded run.
+With JFR the build took 3.5 s, 6.5 s, and 7.4 s, and six builds without it had a median of 5.6 s.
+The seconds of the job are its shares of the 11.2 s it staged, before its 3.3 s of runs.
+With JFR the job took 15.4 s, and without it 19.3 s and 16.0 s; the runner took 79.4 s and 77.9 s.
+The lexer reads each source three times: `parser.over`, `format.printer_of`, `command.commented_of`.
+Each run of a job loads and parses its import closure again, because the memo holds only types.
+`escapes`, reached once for each expression that inference settled, is 11% to 12% of a build.
+A build used 12 s to 17 s of processor time, and 5.9 s, not 14.8 s, with `-XX:TieredStopAtLevel=1`.
+So the C2 JIT uses about 9 s of each build, and a pool of workers shares the processors with it.
+The collector paused a build for 0.1 s and a runner pass for 3.8 s, and used 0.6 s and 27 s.
+A runner pass used 368 s of processor time, of which 275 s were in the JVM of the runner.
+`jdk.ProcessStart` counts the JVMs of one pass: 393 `java`, 6 `jar`, and 2 through `bin/bux`.
+Of the `java` ones, 163 ran example lines, 102 command lines, and 90 examples headed `expect-run`.
+The other 38 are 30 of `started.bx` and 8 of the other parts.
+A JVM that runs a trivial `main` with the line of `bux test` took 0.064 s, the median of 40 starts.
+It used 0.08 s of processor time, so the 401 starts of a pass cost about 32 s, or 9% of it.
 
 ### Drawn properties
 
@@ -469,7 +517,6 @@ Support:
 
 Do **not** implement initially:
 
-* a function passed as a value; version 0.1 reaches a function by calling it
 * typeclasses
 * effects
 * concurrency
@@ -535,6 +582,8 @@ Add, once the compiler is Bux:
 * JSON
 * database support
 * a native binary via GraalVM native-image, once GraalVM tracks JDK 28 and Valhalla
+
+No version adds a function value or a closure, as `docs/design.md` sections 11 and 14 state.
 
 Investigate:
 
