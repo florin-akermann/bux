@@ -245,7 +245,7 @@ A moved source changes no class, so the seed stays, and `bin/bootstrap` shows th
 [133][b] - `compiler/help/` and `compiler/explanations/` move to `help/` and `explanations/`.
 [133][c] - `tests/bux.package` depends on `../src`.
 [133][d] - `bin/bux` starts the classes of `src/target/`, and `bin/bootstrap` builds `src/main.bx`.
-[133][e] - Each doc comment, each spec, `docs/implementation.md`, and each golden names the new path.
+[133][e] - Each doc comment, spec, golden, and `docs/implementation.md` names the new path.
 [133][f] - `bin/bootstrap` holds stage 2 equal to stage 1 byte for byte across the move.
 
 ## 🔴 Item 134: A package is `src/`, `tests/`, and `target/` under its manifest
