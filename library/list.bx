@@ -7,7 +7,6 @@
 // compiler's, because none of them can be said in Bux at the cost it has.
 // `docs/specs/library.md` states why, and a module that imports `list` reaches all six alike.
 // This file writes the three bare, because a module cannot import itself.
-/// Whether the list holds a value equal to this one.
 // example: has_value([1, 2], 2)
 fn has_value<T: Eq<T>>(values: List<T>, value: T) -> Bool {
     for held in values {
@@ -18,7 +17,6 @@ fn has_value<T: Eq<T>>(values: List<T>, value: T) -> Bool {
     false
 }
 
-/// Where the list first holds a value equal to this one, and `None` where it holds none.
 // example: or(index_of([1, 2], 2), 0) == 1
 fn index_of<T: Eq<T>>(values: List<T>, value: T) -> Option<Int> {
     var index = 0
@@ -31,11 +29,7 @@ fn index_of<T: Eq<T>>(values: List<T>, value: T) -> Option<Int> {
     None
 }
 
-/// The values, from the one that sorts first to the one that sorts last, where two equal values
-/// keep the order the list holds them in.
-///
-/// It is a merge sort: each value is a run of its own, and each pass merges two neighbour runs
-/// into one until one run is left, so it costs time `n log n` for `n` values.
+// A merge sort costs time `n log n`, and two equal values keep their order.
 // example: sorted([3, 1, 2]) == [1, 2, 3]
 // example: sorted(["b", "a", "b"]) == ["a", "b", "b"]
 // example: sorted([1]) == [1]
@@ -53,7 +47,6 @@ fn sorted<T: Ord<T>>(values: List<T>) -> List<T> {
     values
 }
 
-/// `runs` with each two neighbours merged into one, so half as many runs are left, rounded up.
 // example: paired([[2], [1], [3]]) == [[1, 2], [3]]
 private fn paired<T: Ord<T>>(runs: List<List<T>>) -> List<List<T>> {
     var merged_runs = []
@@ -66,8 +59,6 @@ private fn paired<T: Ord<T>>(runs: List<List<T>>) -> List<List<T>> {
     merged_runs
 }
 
-/// The values of two sorted runs as one sorted run, where a value of `first` goes ahead of an
-/// equal value of `second`.
 // example: merged(first: [1, 3], second: [2, 3]) == [1, 2, 3, 3]
 private fn merged<T: Ord<T>>(first: List<T>, second: List<T>) -> List<T> {
     var together = []
@@ -89,7 +80,6 @@ private fn merged<T: Ord<T>>(first: List<T>, second: List<T>) -> List<T> {
     together
 }
 
-/// Whether `values` holds a value at `index`, and that value sorts ahead of `value`.
 // example: is_ahead(values: [1], index: 0, value: 2)
 // example: !is_ahead(values: [1], index: 1, value: 2)
 private fn is_ahead<T: Ord<T>>(values: List<T>, index: Int, value: T) -> Bool {

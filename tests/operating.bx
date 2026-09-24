@@ -9,7 +9,6 @@ import ir
 import list
 import strings
 
-/// A literal that nothing settles is an `Int`, whatever instance of `IntegerLiteral` is beside it.
 // example: a_literal_nothing_settles_is_an_int(2, ir.little_library()).cases == 2
 fn a_literal_nothing_settles_is_an_int(cases: Int, library: ir.Library) -> held.Held {
     var found = held.nothing_failed(cases)
@@ -19,7 +18,6 @@ fn a_literal_nothing_settles_is_an_int(cases: Int, library: ir.Library) -> held.
     found
 }
 
-/// A drawn literal from minus a million to a million, given back as an `Int`.
 // example: unsettled_tried(drawn.seeded(1), ir.little_library()).input != ""
 fn unsettled_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
     let written = shown(drawn.number(draw, 2000001) - 1000000)
@@ -31,7 +29,6 @@ fn unsettled_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
     checking.Tried { input: source, why: "" }
 }
 
-/// A literal inside the range its instance states is accepted, and one outside it is refused there.
 // example: a_literal_is_accepted_exactly_inside_its_range(2, ir.little_library()).cases == 2
 fn a_literal_is_accepted_exactly_inside_its_range(cases: Int, library: ir.Library) -> held.Held {
     var found = held.nothing_failed(cases)
@@ -41,7 +38,6 @@ fn a_literal_is_accepted_exactly_inside_its_range(cases: Int, library: ir.Librar
     found
 }
 
-/// A drawn literal at the edge of the range of an `Int32`, given back as an `Int32`.
 // example: edge_tried(drawn.seeded(1), ir.little_library()).input != ""
 fn edge_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
     let edge = drawn.picked(draw, at_the_edge(), Edge { written: "0", fits: Fits })
@@ -53,7 +49,6 @@ fn edge_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
     checking.Tried { input: source, why: "" }
 }
 
-/// Whether `answer` accepted `source`, and where it refused it, whether it points at `written`.
 // example: fit_of(answer: Err(checking.said_as_diagnostic("gone")), source: "", written: "5") == PointsElsewhere
 fn fit_of(answer: Result<infer.Inference, command.Diagnostic>, source: String, written: String) -> Fit {
     match answer {
@@ -62,7 +57,6 @@ fn fit_of(answer: Result<infer.Inference, command.Diagnostic>, source: String, w
     }
 }
 
-/// `FitsNot` where the refusal points at the literal, and `PointsElsewhere` where it does not.
 // example: refused_at(pointed: "5", written: "5") == FitsNot
 // example: refused_at(pointed: "", written: "5") == PointsElsewhere
 fn refused_at(pointed: String, written: String) -> Fit {
@@ -72,7 +66,6 @@ fn refused_at(pointed: String, written: String) -> Fit {
     PointsElsewhere
 }
 
-/// A whole number added to an `Int` is an `Int`, however large it is.
 // example: a_whole_number_where_an_int_is_expected_is_an_int(2, ir.little_library()).cases == 2
 fn a_whole_number_where_an_int_is_expected_is_an_int(cases: Int, library: ir.Library) -> held.Held {
     var found = held.nothing_failed(cases)
@@ -82,7 +75,6 @@ fn a_whole_number_where_an_int_is_expected_is_an_int(cases: Int, library: ir.Lib
     found
 }
 
-/// A drawn whole number from zero to the largest `Int`, added to an `Int`.
 // example: whole_tried(drawn.seeded(1), ir.little_library()).input != ""
 fn whole_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
     let written = shown(whole_number(draw))
@@ -94,7 +86,6 @@ fn whole_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
     checking.Tried { input: source, why: "" }
 }
 
-/// A drawn whole number from zero to the largest `Int`, cut to a drawn count of digits.
 // example: whole_number(drawn.seeded(1)) >= 0
 fn whole_number(draw: drawn.Draw) -> Int {
     var value = drawn.number(draw, 2147483648) * 4294967296 + drawn.number(drawn.next(draw), 4294967296)
@@ -104,7 +95,6 @@ fn whole_number(draw: drawn.Draw) -> Int {
     value
 }
 
-/// Each operator over two `Int`s gives back the type it gave back before it was a trait.
 // example: an_operator_over_ints_gives_back_what_it_always_gave(2, ir.little_library()).cases == 2
 fn an_operator_over_ints_gives_back_what_it_always_gave(cases: Int, library: ir.Library) -> held.Held {
     var found = held.nothing_failed(cases)
@@ -114,7 +104,6 @@ fn an_operator_over_ints_gives_back_what_it_always_gave(cases: Int, library: ir.
     found
 }
 
-/// A drawn operator written over two `Int`s.
 // example: over_ints_tried(drawn.seeded(1), ir.little_library()).input != ""
 fn over_ints_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
     let operator = drawn.picked(draw, over_ints(), Operator { written: "one + other", gives: "Int" })
@@ -126,7 +115,6 @@ fn over_ints_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
     checking.Tried { input: source, why: "" }
 }
 
-/// Each operator over a type with no instance of its trait is refused.
 // example: an_operator_over_a_type_with_no_instance_is_refused(2, ir.little_library()).cases == 2
 fn an_operator_over_a_type_with_no_instance_is_refused(cases: Int, library: ir.Library) -> held.Held {
     var found = held.nothing_failed(cases)
@@ -136,7 +124,6 @@ fn an_operator_over_a_type_with_no_instance_is_refused(cases: Int, library: ir.L
     found
 }
 
-/// A drawn operator written over two values of a record that has no instances.
 // example: over_point_tried(drawn.seeded(1), ir.little_library()).input != ""
 fn over_point_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
     let operator = drawn.picked(draw, over_ints(), Operator { written: "one + other", gives: "Int" })
@@ -148,39 +135,32 @@ fn over_point_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
     checking.Tried { input: source, why: "" }
 }
 
-/// A module that writes `written` over two values of `over`, beside what `declares` declares.
-///
-/// The value of the operator is discarded, so the module says nothing about its type.
+// The module discards the value of the operator, so it says nothing about its type.
 // example: written_over(written: "one", over: "Int", declares: "") == "fn worked_out(one: Int, other: Int) -> () {\n    _ = one\n    ()\n}\n"
 fn written_over(written: String, over: String, declares: String) -> String {
     "fn worked_out(one: " + over + ", other: " + over + ") -> () {\n    _ = " + written + "\n    ()\n}\n" + declares
 }
 
-/// Each operator as it is written between two `Int`s, and the type it gives back.
 // example: list.length(over_ints()) == 9
 fn over_ints() -> List<Operator> {
     [Operator { written: "one + other", gives: "Int" }, Operator { written: "one - other", gives: "Int" }, Operator { written: "one * other", gives: "Int" }, Operator { written: "one / other", gives: "Option<Int>" }, Operator { written: "one % other", gives: "Option<Int>" }, Operator { written: "one < other", gives: "Bool" }, Operator { written: "one <= other", gives: "Bool" }, Operator { written: "one > other", gives: "Bool" }, Operator { written: "one >= other", gives: "Bool" }]
 }
 
-/// The whole numbers an `Int32` holds at its edges, and the ones just outside them.
 // example: list.length(at_the_edge()) == 6
 fn at_the_edge() -> List<Edge> {
     [Edge { written: "-2147483649", fits: FitsNot }, Edge { written: "-2147483648", fits: Fits }, Edge { written: "-1", fits: Fits }, Edge { written: "0", fits: Fits }, Edge { written: "2147483647", fits: Fits }, Edge { written: "2147483648", fits: FitsNot }]
 }
 
-/// A declared type of 32 bits, with the range of the literals it is written as.
 // example: strings.length(int32()) > 0
 fn int32() -> String {
     "instance IntegerLiteral<Int32> {\n    fn lowest() -> Int {\n        -2147483648\n    }\n\n    fn highest() -> Int {\n        2147483647\n    }\n\n    fn from_literal(literal: Int) -> Int32 {\n        Int32(literal)\n    }\n}\n\ntype Int32 = Int32(Int)\n"
 }
 
-/// One operator as it is written between `one` and `other`, and the type it gives back.
 type Operator = {
     written: String
     gives: String
 }
 
-/// One literal at the edge of a range, and whether the range holds it.
 type Edge = {
     written: String
     fits: Fit
@@ -188,7 +168,6 @@ type Edge = {
 
 derive Eq for Fit
 
-/// Whether a literal is accepted, refused at the literal, or refused somewhere else.
 type Fit =
     | Fits
     | FitsNot

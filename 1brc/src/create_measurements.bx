@@ -19,7 +19,6 @@ fn main(arguments: List<String>) -> Int {
     }
 }
 
-/// The count of lines and the path `arguments` name, or why they name no file to write.
 // example: ok_or(asked(["3", "a.txt"]), Order { rows: 0, path: "" }) == Order { rows: 3, path: "a.txt" }
 // example: ok_or(asked(["-3", "a.txt"]), Order { rows: 0, path: "" }) == Order { rows: 0, path: "" }
 // example: ok_or(asked(["3"]), Order { rows: 0, path: "" }) == Order { rows: 0, path: "" }
@@ -30,7 +29,6 @@ fn asked(arguments: List<String>) -> Result<Order, String> {
     }
 }
 
-/// The order to write `count` lines to `path`, or why `count` is no count of lines.
 // example: ok_or(counted(count: "2", path: "a.txt"), Order { rows: 0, path: "" }).rows == 2
 // example: ok_or(counted(count: "x", path: "a.txt"), Order { rows: 0, path: "" }).rows == 0
 fn counted(count: String, path: String) -> Result<Order, String> {
@@ -40,15 +38,12 @@ fn counted(count: String, path: String) -> Result<Order, String> {
     }
 }
 
-/// How the program is run, which a run that names no file is told.
 // example: usage() == "usage: bux run 1brc/src/create_measurements.bx <rows> <path>"
 fn usage() -> String {
     "usage: bux run 1brc/src/create_measurements.bx <rows> <path>"
 }
 
-/// The whole number `text` spells in decimal digits, and `None` where it spells none.
-///
-/// Eighteen digits is the most a count holds, so no count spelled here wraps past the largest `Int`.
+// A count has at most 18 digits, so that no count can go past the largest `Int`.
 // example: or(whole_number("1000"), -1) == 1000
 // example: or(whole_number(""), -1) == -1
 // example: or(whole_number("-1"), -1) == -1
@@ -71,7 +66,6 @@ fn whole_number(text: String) -> Option<Int> {
     Some(total)
 }
 
-/// The status of a run whose file is `answer`: 0 where it was written, and 2 where it was not.
 // example: finished(Ok("a.txt")) == 0
 // example: finished(Err("no file")) == 2
 fn finished(answer: Result<String, String>) -> Int {
@@ -81,16 +75,13 @@ fn finished(answer: Result<String, String>) -> Int {
     }
 }
 
-/// The status of a run that writes `why` on standard error, which is 2.
 // example: refused("error: no file") == 2
 fn refused(why: String) -> Int {
     io.eprintln(why)
     2
 }
 
-/// `rows` lines written as the whole of the file at `path`, with `path` back where that worked.
-///
-/// The file is emptied first, so a second run over the same path writes the same file again.
+// The file is emptied first, so that a second run to the same path writes the same file.
 // example: ok_or(written(rows: 1, path: ""), "not written") == "not written"
 fn written(rows: Int, path: String) -> Result<String, String> {
     _ = files.write(path, "")?
@@ -110,13 +101,11 @@ fn written(rows: Int, path: String) -> Result<String, String> {
     Ok(path)
 }
 
-/// How many lines one part holds, which is what one `String` holds between two appends.
 // example: part_rows() == 1000000
 fn part_rows() -> Int {
     1000000
 }
 
-/// `count` lines of `stations` drawn one after the other from `draw`, and the draw after them.
 // example: drawn_part(draw: Draw { state: 1 }, count: 0, stations: every_station()).text == ""
 // example: list.length(lines_of(drawn_part(draw: Draw { state: 1 }, count: 3, stations: every_station()).text)) == 3
 fn drawn_part(draw: Draw, count: Int, stations: List<Station>) -> Drawn {
@@ -129,10 +118,8 @@ fn drawn_part(draw: Draw, count: Int, stations: List<Station>) -> Drawn {
     Drawn { text: paired_until_one(lines), after: at }
 }
 
-/// The line that `draw` and the three draws after it make: a station, and a reading of it.
-///
-/// The reading is the mean of the station plus three draws from -100 to 100 tenths. Their sum
-/// spreads with a standard deviation of about ten degrees, as the challenge's readings spread.
+// The sum of three draws from -100 to 100 tenths has a standard deviation of about ten degrees,
+// as the readings of the challenge have.
 // example: line_at(draw: Draw { state: 1 }, stations: [Station { name: "a", mean_tenths: 1500 }]) == "a;99.9\n"
 fn line_at(draw: Draw, stations: List<Station>) -> String {
     let station = or(list.at(stations, number(draw: draw, bound: list.length(stations))), Station { name: "", mean_tenths: 0 })
@@ -142,7 +129,6 @@ fn line_at(draw: Draw, stations: List<Station>) -> String {
     station.name + ";" + decimal(clamped(station.mean_tenths + offset)) + "\n"
 }
 
-/// Each line of `text`, without the line end that closes it.
 // example: lines_of("a\nb\n") == ["a", "b"]
 fn lines_of(text: String) -> List<String> {
     var lines = []
@@ -158,7 +144,6 @@ fn lines_of(text: String) -> List<String> {
     lines
 }
 
-/// `tenths` held from -999 to 999, which is every reading one decimal and two digits write.
 // example: clamped(1200) == 999
 // example: clamped(-1200) == -999
 // example: clamped(12) == 12
@@ -172,7 +157,6 @@ fn clamped(tenths: Int) -> Int {
     tenths
 }
 
-/// `tenths` written with one decimal, such as `-1.2` for `-12`.
 // example: decimal(-12) == "-1.2"
 // example: decimal(-5) == "-0.5"
 // example: decimal(0) == "0.0"
@@ -185,10 +169,8 @@ fn decimal(tenths: Int) -> String {
     shown(whole) + "." + shown(tenths - whole * 10)
 }
 
-/// The parts run together in order, two neighbours at a time until one part is left.
-///
-/// `strings.join` adds each part to the text it has so far, which copies that text again for each
-/// part. A pass here copies each char once, and a part of `n` lines takes `log n` passes.
+// `strings.join` copies the text again for each part. A pass here copies each char once,
+// and a part of `n` lines takes `log n` passes.
 // example: paired_until_one(["a", "b", "c"]) == "abc"
 // example: paired_until_one([]) == ""
 fn paired_until_one(parts: List<String>) -> String {
@@ -205,10 +187,8 @@ fn paired_until_one(parts: List<String>) -> String {
     or(list.at(runs, 0), "")
 }
 
-/// A whole number from 0 up to `bound`, and below it, which is 0 where `bound` holds no number.
-///
-/// The high half of the state is read, because the low bits of a linear congruential generator
-/// repeat after a short run.
+// The high half of the state is read, because the low bits of a linear congruential generator
+// repeat after a short run.
 // example: number(draw: Draw { state: 1 }, bound: 10) < 10
 // example: number(draw: Draw { state: 1 }, bound: 0) == 0
 fn number(draw: Draw, bound: Int) -> Int {
@@ -216,22 +196,17 @@ fn number(draw: Draw, bound: Int) -> Int {
     or(high % bound, 0)
 }
 
-/// The draw after `draw`, with Knuth's MMIX constants, as `tests/drawn.bx` steps one.
+// These are the MMIX constants of Knuth, which `tests/drawn.bx` also uses.
 // example: next(Draw { state: 0 }).state == 1442695040888963407
 fn next(draw: Draw) -> Draw {
     Draw { state: draw.state * 6364136223846793005 + 1442695040888963407 }
 }
 
-/// The stations of the challenge, each with its mean temperature in tenths of a degree.
 // example: list.length(every_station()) == 412
 fn every_station() -> List<Station> {
     [Station { name: "Abha", mean_tenths: 180 }, Station { name: "Abidjan", mean_tenths: 260 }, Station { name: "Abéché", mean_tenths: 294 }, Station { name: "Accra", mean_tenths: 264 }, Station { name: "Addis Ababa", mean_tenths: 160 }, Station { name: "Adelaide", mean_tenths: 173 }, Station { name: "Aden", mean_tenths: 291 }, Station { name: "Ahvaz", mean_tenths: 254 }, Station { name: "Albuquerque", mean_tenths: 140 }, Station { name: "Alexandra", mean_tenths: 110 }, Station { name: "Alexandria", mean_tenths: 200 }, Station { name: "Algiers", mean_tenths: 182 }, Station { name: "Alice Springs", mean_tenths: 210 }, Station { name: "Almaty", mean_tenths: 100 }, Station { name: "Amsterdam", mean_tenths: 102 }, Station { name: "Anadyr", mean_tenths: -69 }, Station { name: "Anchorage", mean_tenths: 28 }, Station { name: "Andorra la Vella", mean_tenths: 98 }, Station { name: "Ankara", mean_tenths: 120 }, Station { name: "Antananarivo", mean_tenths: 179 }, Station { name: "Antsiranana", mean_tenths: 252 }, Station { name: "Arkhangelsk", mean_tenths: 13 }, Station { name: "Ashgabat", mean_tenths: 171 }, Station { name: "Asmara", mean_tenths: 156 }, Station { name: "Assab", mean_tenths: 305 }, Station { name: "Astana", mean_tenths: 35 }, Station { name: "Athens", mean_tenths: 192 }, Station { name: "Atlanta", mean_tenths: 170 }, Station { name: "Auckland", mean_tenths: 152 }, Station { name: "Austin", mean_tenths: 207 }, Station { name: "Baghdad", mean_tenths: 228 }, Station { name: "Baguio", mean_tenths: 195 }, Station { name: "Baku", mean_tenths: 151 }, Station { name: "Baltimore", mean_tenths: 131 }, Station { name: "Bamako", mean_tenths: 278 }, Station { name: "Bangkok", mean_tenths: 286 }, Station { name: "Bangui", mean_tenths: 260 }, Station { name: "Banjul", mean_tenths: 260 }, Station { name: "Barcelona", mean_tenths: 182 }, Station { name: "Bata", mean_tenths: 251 }, Station { name: "Batumi", mean_tenths: 140 }, Station { name: "Beijing", mean_tenths: 129 }, Station { name: "Beirut", mean_tenths: 209 }, Station { name: "Belgrade", mean_tenths: 125 }, Station { name: "Belize City", mean_tenths: 267 }, Station { name: "Benghazi", mean_tenths: 199 }, Station { name: "Bergen", mean_tenths: 77 }, Station { name: "Berlin", mean_tenths: 103 }, Station { name: "Bilbao", mean_tenths: 147 }, Station { name: "Birao", mean_tenths: 265 }, Station { name: "Bishkek", mean_tenths: 113 }, Station { name: "Bissau", mean_tenths: 270 }, Station { name: "Blantyre", mean_tenths: 222 }, Station { name: "Bloemfontein", mean_tenths: 156 }, Station { name: "Boise", mean_tenths: 114 }, Station { name: "Bordeaux", mean_tenths: 142 }, Station { name: "Bosaso", mean_tenths: 300 }, Station { name: "Boston", mean_tenths: 109 }, Station { name: "Bouaké", mean_tenths: 260 }, Station { name: "Bratislava", mean_tenths: 105 }, Station { name: "Brazzaville", mean_tenths: 250 }, Station { name: "Bridgetown", mean_tenths: 270 }, Station { name: "Brisbane", mean_tenths: 214 }, Station { name: "Brussels", mean_tenths: 105 }, Station { name: "Bucharest", mean_tenths: 108 }, Station { name: "Budapest", mean_tenths: 113 }, Station { name: "Bujumbura", mean_tenths: 238 }, Station { name: "Bulawayo", mean_tenths: 189 }, Station { name: "Burnie", mean_tenths: 131 }, Station { name: "Busan", mean_tenths: 150 }, Station { name: "Cabo San Lucas", mean_tenths: 239 }, Station { name: "Cairns", mean_tenths: 250 }, Station { name: "Cairo", mean_tenths: 214 }, Station { name: "Calgary", mean_tenths: 44 }, Station { name: "Canberra", mean_tenths: 131 }, Station { name: "Cape Town", mean_tenths: 162 }, Station { name: "Changsha", mean_tenths: 174 }, Station { name: "Charlotte", mean_tenths: 161 }, Station { name: "Chiang Mai", mean_tenths: 258 }, Station { name: "Chicago", mean_tenths: 98 }, Station { name: "Chihuahua", mean_tenths: 186 }, Station { name: "Chittagong", mean_tenths: 259 }, Station { name: "Chișinău", mean_tenths: 102 }, Station { name: "Chongqing", mean_tenths: 186 }, Station { name: "Christchurch", mean_tenths: 122 }, Station { name: "City of San Marino", mean_tenths: 118 }, Station { name: "Colombo", mean_tenths: 274 }, Station { name: "Columbus", mean_tenths: 117 }, Station { name: "Conakry", mean_tenths: 264 }, Station { name: "Copenhagen", mean_tenths: 91 }, Station { name: "Cotonou", mean_tenths: 272 }, Station { name: "Cracow", mean_tenths: 93 }, Station { name: "Da Lat", mean_tenths: 179 }, Station { name: "Da Nang", mean_tenths: 258 }, Station { name: "Dakar", mean_tenths: 240 }, Station { name: "Dallas", mean_tenths: 190 }, Station { name: "Damascus", mean_tenths: 170 }, Station { name: "Dampier", mean_tenths: 264 }, Station { name: "Dar es Salaam", mean_tenths: 258 }, Station { name: "Darwin", mean_tenths: 276 }, Station { name: "Denpasar", mean_tenths: 237 }, Station { name: "Denver", mean_tenths: 104 }, Station { name: "Detroit", mean_tenths: 100 }, Station { name: "Dhaka", mean_tenths: 259 }, Station { name: "Dikson", mean_tenths: -111 }, Station { name: "Dili", mean_tenths: 266 }, Station { name: "Djibouti", mean_tenths: 299 }, Station { name: "Dodoma", mean_tenths: 227 }, Station { name: "Dolisie", mean_tenths: 240 }, Station { name: "Douala", mean_tenths: 267 }, Station { name: "Dubai", mean_tenths: 269 }, Station { name: "Dublin", mean_tenths: 98 }, Station { name: "Dunedin", mean_tenths: 111 }, Station { name: "Durban", mean_tenths: 206 }, Station { name: "Dushanbe", mean_tenths: 147 }, Station { name: "Edinburgh", mean_tenths: 93 }, Station { name: "Edmonton", mean_tenths: 42 }, Station { name: "El Paso", mean_tenths: 181 }, Station { name: "Entebbe", mean_tenths: 210 }, Station { name: "Erbil", mean_tenths: 195 }, Station { name: "Erzurum", mean_tenths: 51 }, Station { name: "Fairbanks", mean_tenths: -23 }, Station { name: "Fianarantsoa", mean_tenths: 179 }, Station { name: "Flores", mean_tenths: 264 }, Station { name: "Frankfurt", mean_tenths: 106 }, Station { name: "Fresno", mean_tenths: 179 }, Station { name: "Fukuoka", mean_tenths: 170 }, Station { name: "Gabès", mean_tenths: 195 }, Station { name: "Gaborone", mean_tenths: 210 }, Station { name: "Gangtok", mean_tenths: 152 }, Station { name: "Garissa", mean_tenths: 293 }, Station { name: "Garoua", mean_tenths: 283 }, Station { name: "George Town", mean_tenths: 279 }, Station { name: "Ghanzi", mean_tenths: 214 }, Station { name: "Gjoa Haven", mean_tenths: -144 }, Station { name: "Guadalajara", mean_tenths: 209 }, Station { name: "Guangzhou", mean_tenths: 224 }, Station { name: "Guatemala City", mean_tenths: 204 }, Station { name: "Halifax", mean_tenths: 75 }, Station { name: "Hamburg", mean_tenths: 97 }, Station { name: "Hamilton", mean_tenths: 138 }, Station { name: "Hanga Roa", mean_tenths: 205 }, Station { name: "Hanoi", mean_tenths: 236 }, Station { name: "Harare", mean_tenths: 184 }, Station { name: "Harbin", mean_tenths: 50 }, Station { name: "Hargeisa", mean_tenths: 217 }, Station { name: "Hat Yai", mean_tenths: 270 }, Station { name: "Havana", mean_tenths: 252 }, Station { name: "Helsinki", mean_tenths: 59 }, Station { name: "Heraklion", mean_tenths: 189 }, Station { name: "Hiroshima", mean_tenths: 163 }, Station { name: "Ho Chi Minh City", mean_tenths: 274 }, Station { name: "Hobart", mean_tenths: 127 }, Station { name: "Hong Kong", mean_tenths: 233 }, Station { name: "Honiara", mean_tenths: 265 }, Station { name: "Honolulu", mean_tenths: 254 }, Station { name: "Houston", mean_tenths: 208 }, Station { name: "Ifrane", mean_tenths: 114 }, Station { name: "Indianapolis", mean_tenths: 118 }, Station { name: "Iqaluit", mean_tenths: -93 }, Station { name: "Irkutsk", mean_tenths: 10 }, Station { name: "Istanbul", mean_tenths: 139 }, Station { name: "İzmir", mean_tenths: 179 }, Station { name: "Jacksonville", mean_tenths: 203 }, Station { name: "Jakarta", mean_tenths: 267 }, Station { name: "Jayapura", mean_tenths: 270 }, Station { name: "Jerusalem", mean_tenths: 183 }, Station { name: "Johannesburg", mean_tenths: 155 }, Station { name: "Jos", mean_tenths: 228 }, Station { name: "Juba", mean_tenths: 278 }, Station { name: "Kabul", mean_tenths: 121 }, Station { name: "Kampala", mean_tenths: 200 }, Station { name: "Kandi", mean_tenths: 277 }, Station { name: "Kankan", mean_tenths: 265 }, Station { name: "Kano", mean_tenths: 264 }, Station { name: "Kansas City", mean_tenths: 125 }, Station { name: "Karachi", mean_tenths: 260 }, Station { name: "Karonga", mean_tenths: 244 }, Station { name: "Kathmandu", mean_tenths: 183 }, Station { name: "Khartoum", mean_tenths: 299 }, Station { name: "Kingston", mean_tenths: 274 }, Station { name: "Kinshasa", mean_tenths: 253 }, Station { name: "Kolkata", mean_tenths: 267 }, Station { name: "Kuala Lumpur", mean_tenths: 273 }, Station { name: "Kumasi", mean_tenths: 260 }, Station { name: "Kunming", mean_tenths: 157 }, Station { name: "Kuopio", mean_tenths: 34 }, Station { name: "Kuwait City", mean_tenths: 257 }, Station { name: "Kyiv", mean_tenths: 84 }, Station { name: "Kyoto", mean_tenths: 158 }, Station { name: "La Ceiba", mean_tenths: 262 }, Station { name: "La Paz", mean_tenths: 237 }, Station { name: "Lagos", mean_tenths: 268 }, Station { name: "Lahore", mean_tenths: 243 }, Station { name: "Lake Havasu City", mean_tenths: 237 }, Station { name: "Lake Tekapo", mean_tenths: 87 }, Station { name: "Las Palmas de Gran Canaria", mean_tenths: 212 }, Station { name: "Las Vegas", mean_tenths: 203 }, Station { name: "Launceston", mean_tenths: 131 }, Station { name: "Lhasa", mean_tenths: 76 }, Station { name: "Libreville", mean_tenths: 259 }, Station { name: "Lisbon", mean_tenths: 175 }, Station { name: "Livingstone", mean_tenths: 218 }, Station { name: "Ljubljana", mean_tenths: 109 }, Station { name: "Lodwar", mean_tenths: 293 }, Station { name: "Lomé", mean_tenths: 269 }, Station { name: "London", mean_tenths: 113 }, Station { name: "Los Angeles", mean_tenths: 186 }, Station { name: "Louisville", mean_tenths: 139 }, Station { name: "Luanda", mean_tenths: 258 }, Station { name: "Lubumbashi", mean_tenths: 208 }, Station { name: "Lusaka", mean_tenths: 199 }, Station { name: "Luxembourg City", mean_tenths: 93 }, Station { name: "Lviv", mean_tenths: 78 }, Station { name: "Lyon", mean_tenths: 125 }, Station { name: "Madrid", mean_tenths: 150 }, Station { name: "Mahajanga", mean_tenths: 263 }, Station { name: "Makassar", mean_tenths: 267 }, Station { name: "Makurdi", mean_tenths: 260 }, Station { name: "Malabo", mean_tenths: 263 }, Station { name: "Malé", mean_tenths: 280 }, Station { name: "Managua", mean_tenths: 273 }, Station { name: "Manama", mean_tenths: 265 }, Station { name: "Mandalay", mean_tenths: 280 }, Station { name: "Mango", mean_tenths: 281 }, Station { name: "Manila", mean_tenths: 284 }, Station { name: "Maputo", mean_tenths: 228 }, Station { name: "Marrakesh", mean_tenths: 196 }, Station { name: "Marseille", mean_tenths: 158 }, Station { name: "Maun", mean_tenths: 224 }, Station { name: "Medan", mean_tenths: 265 }, Station { name: "Mek'ele", mean_tenths: 227 }, Station { name: "Melbourne", mean_tenths: 151 }, Station { name: "Memphis", mean_tenths: 172 }, Station { name: "Mexicali", mean_tenths: 231 }, Station { name: "Mexico City", mean_tenths: 175 }, Station { name: "Miami", mean_tenths: 249 }, Station { name: "Milan", mean_tenths: 130 }, Station { name: "Milwaukee", mean_tenths: 89 }, Station { name: "Minneapolis", mean_tenths: 78 }, Station { name: "Minsk", mean_tenths: 67 }, Station { name: "Mogadishu", mean_tenths: 271 }, Station { name: "Mombasa", mean_tenths: 263 }, Station { name: "Monaco", mean_tenths: 164 }, Station { name: "Moncton", mean_tenths: 61 }, Station { name: "Monterrey", mean_tenths: 223 }, Station { name: "Montreal", mean_tenths: 68 }, Station { name: "Moscow", mean_tenths: 58 }, Station { name: "Mumbai", mean_tenths: 271 }, Station { name: "Murmansk", mean_tenths: 6 }, Station { name: "Muscat", mean_tenths: 280 }, Station { name: "Mzuzu", mean_tenths: 177 }, Station { name: "N'Djamena", mean_tenths: 283 }, Station { name: "Naha", mean_tenths: 231 }, Station { name: "Nairobi", mean_tenths: 178 }, Station { name: "Nakhon Ratchasima", mean_tenths: 273 }, Station { name: "Napier", mean_tenths: 146 }, Station { name: "Napoli", mean_tenths: 159 }, Station { name: "Nashville", mean_tenths: 154 }, Station { name: "Nassau", mean_tenths: 246 }, Station { name: "Ndola", mean_tenths: 203 }, Station { name: "New Delhi", mean_tenths: 250 }, Station { name: "New Orleans", mean_tenths: 207 }, Station { name: "New York City", mean_tenths: 129 }, Station { name: "Ngaoundéré", mean_tenths: 220 }, Station { name: "Niamey", mean_tenths: 293 }, Station { name: "Nicosia", mean_tenths: 197 }, Station { name: "Niigata", mean_tenths: 139 }, Station { name: "Nouadhibou", mean_tenths: 213 }, Station { name: "Nouakchott", mean_tenths: 257 }, Station { name: "Novosibirsk", mean_tenths: 17 }, Station { name: "Nuuk", mean_tenths: -14 }, Station { name: "Odesa", mean_tenths: 107 }, Station { name: "Odienné", mean_tenths: 260 }, Station { name: "Oklahoma City", mean_tenths: 159 }, Station { name: "Omaha", mean_tenths: 106 }, Station { name: "Oranjestad", mean_tenths: 281 }, Station { name: "Oslo", mean_tenths: 57 }, Station { name: "Ottawa", mean_tenths: 66 }, Station { name: "Ouagadougou", mean_tenths: 283 }, Station { name: "Ouahigouya", mean_tenths: 286 }, Station { name: "Ouarzazate", mean_tenths: 189 }, Station { name: "Oulu", mean_tenths: 27 }, Station { name: "Palembang", mean_tenths: 273 }, Station { name: "Palermo", mean_tenths: 185 }, Station { name: "Palm Springs", mean_tenths: 245 }, Station { name: "Palmerston North", mean_tenths: 132 }, Station { name: "Panama City", mean_tenths: 280 }, Station { name: "Parakou", mean_tenths: 268 }, Station { name: "Paris", mean_tenths: 123 }, Station { name: "Perth", mean_tenths: 187 }, Station { name: "Petropavlovsk-Kamchatsky", mean_tenths: 19 }, Station { name: "Philadelphia", mean_tenths: 132 }, Station { name: "Phnom Penh", mean_tenths: 283 }, Station { name: "Phoenix", mean_tenths: 239 }, Station { name: "Pittsburgh", mean_tenths: 108 }, Station { name: "Podgorica", mean_tenths: 153 }, Station { name: "Pointe-Noire", mean_tenths: 261 }, Station { name: "Pontianak", mean_tenths: 277 }, Station { name: "Port Moresby", mean_tenths: 269 }, Station { name: "Port Sudan", mean_tenths: 284 }, Station { name: "Port Vila", mean_tenths: 243 }, Station { name: "Port-Gentil", mean_tenths: 260 }, Station { name: "Portland (OR)", mean_tenths: 124 }, Station { name: "Porto", mean_tenths: 157 }, Station { name: "Prague", mean_tenths: 84 }, Station { name: "Praia", mean_tenths: 244 }, Station { name: "Pretoria", mean_tenths: 182 }, Station { name: "Pyongyang", mean_tenths: 108 }, Station { name: "Rabat", mean_tenths: 172 }, Station { name: "Rangpur", mean_tenths: 244 }, Station { name: "Reggane", mean_tenths: 283 }, Station { name: "Reykjavík", mean_tenths: 43 }, Station { name: "Riga", mean_tenths: 62 }, Station { name: "Riyadh", mean_tenths: 260 }, Station { name: "Rome", mean_tenths: 152 }, Station { name: "Roseau", mean_tenths: 262 }, Station { name: "Rostov-on-Don", mean_tenths: 99 }, Station { name: "Sacramento", mean_tenths: 163 }, Station { name: "Saint Petersburg", mean_tenths: 58 }, Station { name: "Saint-Pierre", mean_tenths: 57 }, Station { name: "Salt Lake City", mean_tenths: 116 }, Station { name: "San Antonio", mean_tenths: 208 }, Station { name: "San Diego", mean_tenths: 178 }, Station { name: "San Francisco", mean_tenths: 146 }, Station { name: "San Jose", mean_tenths: 164 }, Station { name: "San José", mean_tenths: 226 }, Station { name: "San Juan", mean_tenths: 272 }, Station { name: "San Salvador", mean_tenths: 231 }, Station { name: "Sana'a", mean_tenths: 200 }, Station { name: "Santo Domingo", mean_tenths: 259 }, Station { name: "Sapporo", mean_tenths: 89 }, Station { name: "Sarajevo", mean_tenths: 101 }, Station { name: "Saskatoon", mean_tenths: 33 }, Station { name: "Seattle", mean_tenths: 113 }, Station { name: "Ségou", mean_tenths: 280 }, Station { name: "Seoul", mean_tenths: 125 }, Station { name: "Seville", mean_tenths: 192 }, Station { name: "Shanghai", mean_tenths: 167 }, Station { name: "Singapore", mean_tenths: 270 }, Station { name: "Skopje", mean_tenths: 124 }, Station { name: "Sochi", mean_tenths: 142 }, Station { name: "Sofia", mean_tenths: 106 }, Station { name: "Sokoto", mean_tenths: 280 }, Station { name: "Split", mean_tenths: 161 }, Station { name: "St. John's", mean_tenths: 50 }, Station { name: "St. Louis", mean_tenths: 139 }, Station { name: "Stockholm", mean_tenths: 66 }, Station { name: "Surabaya", mean_tenths: 271 }, Station { name: "Suva", mean_tenths: 256 }, Station { name: "Suwałki", mean_tenths: 72 }, Station { name: "Sydney", mean_tenths: 177 }, Station { name: "Tabora", mean_tenths: 230 }, Station { name: "Tabriz", mean_tenths: 126 }, Station { name: "Taipei", mean_tenths: 230 }, Station { name: "Tallinn", mean_tenths: 64 }, Station { name: "Tamale", mean_tenths: 279 }, Station { name: "Tamanrasset", mean_tenths: 217 }, Station { name: "Tampa", mean_tenths: 229 }, Station { name: "Tashkent", mean_tenths: 148 }, Station { name: "Tauranga", mean_tenths: 148 }, Station { name: "Tbilisi", mean_tenths: 129 }, Station { name: "Tegucigalpa", mean_tenths: 217 }, Station { name: "Tehran", mean_tenths: 170 }, Station { name: "Tel Aviv", mean_tenths: 200 }, Station { name: "Thessaloniki", mean_tenths: 160 }, Station { name: "Thiès", mean_tenths: 240 }, Station { name: "Tijuana", mean_tenths: 178 }, Station { name: "Timbuktu", mean_tenths: 280 }, Station { name: "Tirana", mean_tenths: 152 }, Station { name: "Toamasina", mean_tenths: 234 }, Station { name: "Tokyo", mean_tenths: 154 }, Station { name: "Toliara", mean_tenths: 241 }, Station { name: "Toluca", mean_tenths: 124 }, Station { name: "Toronto", mean_tenths: 94 }, Station { name: "Tripoli", mean_tenths: 200 }, Station { name: "Tromsø", mean_tenths: 29 }, Station { name: "Tucson", mean_tenths: 209 }, Station { name: "Tunis", mean_tenths: 184 }, Station { name: "Ulaanbaatar", mean_tenths: -4 }, Station { name: "Upington", mean_tenths: 204 }, Station { name: "Ürümqi", mean_tenths: 74 }, Station { name: "Vaduz", mean_tenths: 101 }, Station { name: "Valencia", mean_tenths: 183 }, Station { name: "Valletta", mean_tenths: 188 }, Station { name: "Vancouver", mean_tenths: 104 }, Station { name: "Veracruz", mean_tenths: 254 }, Station { name: "Vienna", mean_tenths: 104 }, Station { name: "Vientiane", mean_tenths: 259 }, Station { name: "Villahermosa", mean_tenths: 271 }, Station { name: "Vilnius", mean_tenths: 60 }, Station { name: "Virginia Beach", mean_tenths: 158 }, Station { name: "Vladivostok", mean_tenths: 49 }, Station { name: "Warsaw", mean_tenths: 85 }, Station { name: "Washington, D.C.", mean_tenths: 146 }, Station { name: "Wau", mean_tenths: 278 }, Station { name: "Wellington", mean_tenths: 129 }, Station { name: "Whitehorse", mean_tenths: -1 }, Station { name: "Wichita", mean_tenths: 139 }, Station { name: "Willemstad", mean_tenths: 280 }, Station { name: "Winnipeg", mean_tenths: 30 }, Station { name: "Wrocław", mean_tenths: 96 }, Station { name: "Xi'an", mean_tenths: 141 }, Station { name: "Yakutsk", mean_tenths: -88 }, Station { name: "Yangon", mean_tenths: 275 }, Station { name: "Yaoundé", mean_tenths: 238 }, Station { name: "Yellowknife", mean_tenths: -43 }, Station { name: "Yerevan", mean_tenths: 124 }, Station { name: "Yinchuan", mean_tenths: 90 }, Station { name: "Zagreb", mean_tenths: 107 }, Station { name: "Zanzibar City", mean_tenths: 260 }, Station { name: "Zürich", mean_tenths: 93 }]
 }
 
-/// Whether `answer` is the line `1brc/src/main.bx` writes over the stations `names` holds.
-///
-/// Each station is there once and in the order of its name, as `name=lowest/mean/highest`, and
-/// each of the three readings has one decimal.
 // example: is_an_answer(answer: "{a=1.0/-2.5/30.0}\n", names: ["a"])
 // example: !is_an_answer(answer: "{a=1/2/3}", names: ["a"])
 // example: !is_an_answer(answer: "{b=1.0/2.0/3.0}", names: ["a"])
@@ -246,9 +221,6 @@ fn is_an_answer(answer: String, names: List<String>) -> Bool {
     shape_of(answer) == shape_of(expected + "}\n")
 }
 
-/// `text` with each reading written as `0.0`, so that two answers of the same stations compare.
-///
-/// A reading is a run of digits after `=` or `/`, with an optional sign, a dot, and one digit.
 // example: shape_of("{a=-12.3/4.5/6.7}") == "{a=0.0/0.0/0.0}"
 // example: shape_of("{a=1/2}") == "{a=?1/?2}"
 fn shape_of(text: String) -> String {
@@ -271,7 +243,6 @@ fn shape_of(text: String) -> String {
     shaped
 }
 
-/// How many chars of `text` from `from` on are one reading with one decimal, and 0 where none are.
 // example: reading_length(text: "-12.3/", from: 0) == 5
 // example: reading_length(text: "12/", from: 0) == 0
 fn reading_length(text: String, from: Int) -> Int {
@@ -289,7 +260,6 @@ fn reading_length(text: String, from: Int) -> Int {
     index + 2 - from
 }
 
-/// Whether `unit` is the code of a decimal digit.
 // example: is_a_digit(48)
 // example: !is_a_digit(0)
 fn is_a_digit(unit: Int) -> Bool {
@@ -298,25 +268,21 @@ fn is_a_digit(unit: Int) -> Bool {
 
 derive Eq for Order
 
-/// The count of lines a run writes and the path it writes them to.
 type Order = {
     rows: Int
     path: String
 }
 
-/// A station of the challenge and its mean temperature, in tenths of a degree.
 type Station = {
     name: String
     mean_tenths: Int
 }
 
-/// The lines of one part, run together, and the draw that the next part starts from.
 type Drawn = {
     text: String
     after: Draw
 }
 
-/// Where a generator stands: each value it draws is worked out from this one number.
 type Draw = {
     state: Int
 }

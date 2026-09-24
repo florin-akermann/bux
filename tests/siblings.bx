@@ -14,7 +14,6 @@ import list
 import parser
 import walk
 
-/// Every sibling under `spec`, each held to what its phase makes of the example beside it.
 // example: list.length(every_sibling_held(ir.little_library(), "no-such-directory").failures) == 4
 fn every_sibling_held(library: ir.Library, spec: String) -> held.Held {
     var found = each_held(spec + "/lexer", Tokens, library)
@@ -23,7 +22,6 @@ fn every_sibling_held(library: ir.Library, spec: String) -> held.Held {
     held.added(found, each_held(spec + "/format", Unformatted, library))
 }
 
-/// Every example of `directory` held to the sibling `phase` names, where there is at least one.
 // example: each_held("no-such-directory", Tokens, ir.little_library()).failures == ["no-such-directory: holds no example with a sibling"]
 fn each_held(directory: String, phase: Phase, library: ir.Library) -> held.Held {
     var found = held.nothing_failed(0)
@@ -36,7 +34,6 @@ fn each_held(directory: String, phase: Phase, library: ir.Library) -> held.Held 
     found
 }
 
-/// The ending of the files a phase's sibling is checked from.
 // example: opened_by(Unformatted) == ".unformatted"
 // example: opened_by(Tokens) == ".bx"
 fn opened_by(phase: Phase) -> String {
@@ -46,7 +43,6 @@ fn opened_by(phase: Phase) -> String {
     }
 }
 
-/// The file at `path` held to its sibling, which is what `phase` makes of it.
 // example: list.length(one_held("no-such-directory/a.bx", Tokens, ir.little_library()).failures) == 1
 fn one_held(path: String, phase: Phase, library: ir.Library) -> held.Held {
     let source = ok_or(files.read(path), "")
@@ -56,9 +52,7 @@ fn one_held(path: String, phase: Phase, library: ir.Library) -> held.Held {
     }
 }
 
-/// The sibling `phase` reads beside `path`, or why there is not exactly one.
-///
-/// A parser example has a tree or an error beside it, and never both.
+// A parser example has a tree or an error beside it, and never both.
 // example: or_path(sibling_of("no-such-directory/a.bx", Tokens)) == "no .tokens beside it"
 fn sibling_of(path: String, phase: Phase) -> Result<Sibling, String> {
     match phase {
@@ -69,7 +63,6 @@ fn sibling_of(path: String, phase: Phase) -> Result<Sibling, String> {
     }
 }
 
-/// The path of a sibling that was read, or why none was, which is how an example reads one.
 // example: or_path(Err("gone")) == "gone"
 fn or_path(read: Result<Sibling, String>) -> String {
     match read {
@@ -78,7 +71,6 @@ fn or_path(read: Result<Sibling, String>) -> String {
     }
 }
 
-/// The `.ast` or the `.error` beside `path`, where exactly one of the two is there.
 // example: or_path(tree_or_error("no-such-directory/a.bx")) == "needs exactly one of .ast and .error beside it"
 fn tree_or_error(path: String) -> Result<Sibling, String> {
     let tree = read_sibling(path: path, extension: "ast")
@@ -89,7 +81,6 @@ fn tree_or_error(path: String) -> Result<Sibling, String> {
     }
 }
 
-/// `tree`, where there is no `.error` beside it too.
 // example: or_path(only(Sibling { path: "a.ast", text: "" }, Err("none"))) == "a.ast"
 fn only(tree: Sibling, error: Result<Sibling, String>) -> Result<Sibling, String> {
     match error {
@@ -98,7 +89,6 @@ fn only(tree: Sibling, error: Result<Sibling, String>) -> Result<Sibling, String
     }
 }
 
-/// The `.error` beside an example with no `.ast`, where there is one.
 // example: or_path(only_error(Err("none"))) == "needs exactly one of .ast and .error beside it"
 fn only_error(error: Result<Sibling, String>) -> Result<Sibling, String> {
     match error {
@@ -107,7 +97,6 @@ fn only_error(error: Result<Sibling, String>) -> Result<Sibling, String> {
     }
 }
 
-/// The sibling of `path` with `extension`, read whole.
 // example: or_path(read_sibling(path: "no-such-directory/a.bx", extension: "api")) == "no .api beside it"
 fn read_sibling(path: String, extension: String) -> Result<Sibling, String> {
     let beside = walk.sibling(path, extension)
@@ -117,7 +106,6 @@ fn read_sibling(path: String, extension: String) -> Result<Sibling, String> {
     }
 }
 
-/// What `phase` makes of `file`.
 // example: seen_by(Made { path: "a.bx", source: "fn" }, Tokens, ir.little_library()) == "Keyword(fn) 0..2 \"fn\"\n"
 // example: seen_by(Made { path: "a.bx", source: "fn (" }, Tree, ir.little_library()) == parser.printed("fn (")
 fn seen_by(file: Made, phase: Phase, library: ir.Library) -> String {
@@ -129,7 +117,6 @@ fn seen_by(file: Made, phase: Phase, library: ir.Library) -> String {
     }
 }
 
-/// Every token of `source` on a line of its own: its kind, its span, and its text quoted.
 // example: tokens_listed("let x = 1") == "Keyword(let) 0..3 \"let\"\nIdentifier 4..5 \"x\"\nPunct(=) 6..7 \"=\"\nInteger 8..9 \"1\"\n"
 fn tokens_listed(source: String) -> String {
     var written = ""
@@ -139,7 +126,6 @@ fn tokens_listed(source: String) -> String {
     written
 }
 
-/// The text `bux fmt` writes for `source`, or the error it is refused with, as the parser prints one.
 // example: formatted("fn f() {\n  1\n}\n", ir.little_library()) == "fn f() {\n    1\n}\n"
 fn formatted(source: String, library: ir.Library) -> String {
     match command.repaired(source, library.prelude.names) {
@@ -148,7 +134,6 @@ fn formatted(source: String, library: ir.Library) -> String {
     }
 }
 
-/// One case that held where `found` is `expected`, and failed naming the sibling where it is not.
 // example: compared(path: "a.tokens", expected: "a", found: "a").cases == 1
 // example: compared(path: "a.tokens", expected: "a", found: "b").failures == ["a.tokens: expected \"a\", found \"b\""]
 fn compared(path: String, expected: String, found: String) -> held.Held {
@@ -158,20 +143,17 @@ fn compared(path: String, expected: String, found: String) -> held.Held {
     held.with_failure(held.nothing_failed(1), held.failure(path, expected, found))
 }
 
-/// Which phase a sibling is the view of.
 type Phase =
     | Tokens
     | Tree
     | Surface
     | Unformatted
 
-/// A sibling file: where it is, and what it holds.
 type Sibling = {
     path: String
     text: String
 }
 
-/// The file a phase makes something of: where it is, and what it holds.
 type Made = {
     path: String
     source: String

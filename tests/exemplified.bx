@@ -16,10 +16,7 @@ import modules
 import strings
 import walk
 
-/// Every example of `paths`, which are under `directory`, each held to its header and to canonical
-/// form.
-///
-/// No example at all is a failure, because the specification is never allowed to be nothing.
+// No example at all is a failure, because the specification must never be empty.
 // example: every_example_held("no-such-directory", [], ir.little_library(), 1).failures == ["no-such-directory: holds no example"]
 fn every_example_held(directory: String, paths: List<String>, library: ir.Library, limit: Int) -> held.Held {
     if list.length(paths) == 0 {
@@ -32,7 +29,6 @@ fn every_example_held(directory: String, paths: List<String>, library: ir.Librar
     found
 }
 
-/// The example at `path`, held to its header and, where it parses, to canonical form.
 // example: example_held("no-such-directory/a.bx", ir.little_library(), 1).failures == ["no-such-directory/a.bx: expected \"accepted\", found \"error: no-such-directory/a.bx: No such file or directory (os error 2)\""]
 fn example_held(path: String, library: ir.Library, limit: Int) -> held.Held {
     let source = ok_or(files.read(path), "")
@@ -43,7 +39,6 @@ fn example_held(path: String, library: ir.Library, limit: Int) -> held.Held {
     found
 }
 
-/// Whether `source` parses and is not in the canonical form `bux fmt` would write it in.
 // example: is_departing("fn f() {\n  1\n}\n")
 // example: !is_departing("fn (")
 fn is_departing(source: String) -> Bool {
@@ -53,8 +48,6 @@ fn is_departing(source: String) -> Bool {
     }
 }
 
-/// Whether a header states `L0200` or `L0201` as the refusal, so the example may depart from
-/// canonical form: by its layout, or by where an import or a test is written.
 // example: is_stated_departing(header.Refused("L0200"))
 // example: is_stated_departing(header.Refused("L0201"))
 // example: !is_stated_departing(header.Refused("L0303"))
@@ -65,7 +58,6 @@ fn is_stated_departing(expected: header.Expectation) -> Bool {
     }
 }
 
-/// The example `opened`, held to what its header says.
 // example: stated_held(Opened { path: "a.bx", source: "// > one\n" }, ir.little_library(), 1).failures == ["a.bx: only an example that is run states what it writes"]
 fn stated_held(opened: Opened, library: ir.Library, limit: Int) -> held.Held {
     match header.expectation_of(opened.source) {
@@ -76,7 +68,6 @@ fn stated_held(opened: Opened, library: ir.Library, limit: Int) -> held.Held {
     }
 }
 
-/// The example at `path`, which the compiler must accept.
 // example: list.length(compiled("no-such-directory/a.bx", ir.little_library()).failures) == 1
 fn compiled(path: String, library: ir.Library) -> held.Held {
     match command.checked(path, library) {
@@ -85,7 +76,6 @@ fn compiled(path: String, library: ir.Library) -> held.Held {
     }
 }
 
-/// The example `opened`, which the compiler must refuse with `code` and with no other code.
 // example: list.length(refused(opened: Opened { path: "no-such-directory/a.bx", source: "" }, code: "L0100", library: ir.little_library()).failures) == 1
 fn refused(opened: Opened, code: String, library: ir.Library) -> held.Held {
     let expected = "error[" + code + "] and no other"
@@ -96,7 +86,6 @@ fn refused(opened: Opened, code: String, library: ir.Library) -> held.Held {
     }
 }
 
-/// `refusal` held to `code`: every diagnostic it holds has that code, and it holds at least one.
 // example: refused_with(opened: Opened { path: "a.bx", source: "" }, code: "L0100", refusal: command.Refusal { diagnostics: [], page: command.Page { source: "", path: "a.bx" } }).failures == ["a.bx: expected \"error[L0100] and no other\", found \"\""]
 fn refused_with(opened: Opened, code: String, refusal: command.Refusal) -> held.Held {
     var codes = ""
@@ -114,10 +103,8 @@ fn refused_with(opened: Opened, code: String, refusal: command.Refusal) -> held.
     held.with_failure(held.nothing_failed(1), held.failure(opened.path, "error[" + code + "] and no other", codes))
 }
 
-/// The example `opened`, run from a copy of its own as its header says, where a JDK is named.
-///
-/// The copy is the example and every module beside it, so a run writes nothing into the tree. It
-/// is started in that copy, so a file it names with a path of its own is written there.
+// The copy holds the example and each module beside it, so a run writes nothing into the tree.
+// The run starts in the copy, so a file that the example names with its own path goes there.
 // example: list.length(run(opened: Opened { path: "no-such-directory/a.bx", source: "" }, ran: header.Ran { arguments: [], output: "", errors: "", status: 0 }, library: ir.little_library(), limit: 1).failures) == 1
 fn run(opened: Opened, ran: header.Ran, library: ir.Library, limit: Int) -> held.Held {
     if !is_a_jdk_named() {
@@ -129,9 +116,7 @@ fn run(opened: Opened, ran: header.Ran, library: ir.Library, limit: Int) -> held
     }
 }
 
-/// The example run from `copied`, which is taken away again once it has run.
-///
-/// The copy keeps the name of the example, so an example named as a library module runs so named.
+// The copy keeps the name of the example, so an example named as a library module runs so named.
 // example: list.length(run_in(Copied { opened: Opened { path: "no-such-directory/a.bx", source: "" }, copy: "no-such-directory", limit: 1 }, header.Ran { arguments: [], output: "", errors: "", status: 0 }, ir.little_library()).failures) == 1
 fn run_in(copied: Copied, ran: header.Ran, library: ir.Library) -> held.Held {
     let example = modules.joined(copied.copy, modules.stem_of(copied.opened.path) + ".bx")
@@ -146,7 +131,6 @@ fn run_in(copied: Copied, ran: header.Ran, library: ir.Library) -> held.Held {
     found
 }
 
-/// What the run of the example found, held to what its header states.
 // example: list.length(started(Copied { opened: Opened { path: "a.bx", source: "" }, copy: "no-such-directory", limit: 1 }, header.Ran { arguments: [], output: "", errors: "", status: 0 }, command.Spoken(command.nothing_said())).failures) == 1
 fn started(copied: Copied, ran: header.Ran, answer: command.Answer) -> held.Held {
     match answer {
@@ -155,7 +139,6 @@ fn started(copied: Copied, ran: header.Ran, answer: command.Answer) -> held.Held
     }
 }
 
-/// What the program wrote and ended with, held to what the header states, or why it never ran.
 // example: ended_held("a.bx", header.Ran { arguments: [], output: "", errors: "", status: 0 }, Err(walk.NotStarted)).failures == ["a.bx: the program could not be started"]
 fn ended_held(path: String, ran: header.Ran, completion: Result<walk.Ended, walk.Unended>) -> held.Held {
     match completion {
@@ -164,7 +147,6 @@ fn ended_held(path: String, ran: header.Ran, completion: Result<walk.Ended, walk
     }
 }
 
-/// The status and both streams of `done`, each held to what `ran` states for it.
 // example: compared("a.bx", header.Ran { arguments: [], output: "x\n", errors: "", status: 0 }, walk.Ended { output: "y\n", errors: "", status: 0 }).failures == ["a.bx: standard output: expected \"x\\n\", found \"y\\n\""]
 fn compared(path: String, ran: header.Ran, done: walk.Ended) -> held.Held {
     var found = held.nothing_failed(1)
@@ -181,9 +163,7 @@ fn compared(path: String, ran: header.Ran, done: walk.Ended) -> held.Held {
     found
 }
 
-/// `errors` without the frames of a JVM trace, which are the lines that open with a tab.
-///
-/// A trace is as deep as the JVM makes it, so its first line, which names the error, is compared.
+// The JVM sets the depth of a trace, so only the first line, which names the error, is compared.
 // example: without_frames("java.lang.StackOverflowError\n\tat main.depth(Unknown Source)\n") == "java.lang.StackOverflowError\n"
 // example: without_frames("no break") == "no break"
 fn without_frames(errors: String) -> String {
@@ -200,28 +180,24 @@ fn without_frames(errors: String) -> String {
     joined
 }
 
-/// The first line of `text`, without its line break.
 // example: first_line("a\nb\n") == "a"
 // example: first_line("") == ""
 fn first_line(text: String) -> String {
     or(list.at(walk.lines_of(text), 0), "")
 }
 
-/// Whether `JAVA_HOME` names a JDK, which a run needs.
 // example: is_a_jdk_named() || !is_a_jdk_named()
 fn is_a_jdk_named() -> Bool {
     let home = or(environment.read("JAVA_HOME"), "")
     home != "" && files.is_file(files.named(modules.joined(modules.joined(home, "bin"), "java")))
 }
 
-/// An example, the directory of its own it is copied into to be run, and the seconds it has.
 type Copied = {
     opened: Opened
     copy: String
     limit: Int
 }
 
-/// What the example is.
 type Opened = {
     path: String
     source: String

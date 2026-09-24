@@ -44,9 +44,6 @@ import started
 import strings
 import walk
 
-/// Writes each golden file again: its own command lines, each with the answer it gets now.
-///
-/// An answer that changes on purpose, such as a message said in other words, is written down so.
 fn every_golden_written(library: ir.Library, limit: Int) -> () {
     for path in golden_files() {
         var lines = []
@@ -60,13 +57,11 @@ fn every_golden_written(library: ir.Library, limit: Int) -> () {
     }
 }
 
-/// The golden files, in the order the tests hold them.
 // example: list.length(golden_files()) == 2
 fn golden_files() -> List<String> {
     ["tests/commands/lines.txt", "tests/commands/fixtures.txt"]
 }
 
-/// The text of a golden file: each of `lines` and the answer it gets now.
 // example: case_written(Case { words: ["a"], said: command.unusable("b") }) == "$ a\nstatus 2\n! error: b\n"
 fn golden_written(lines: List<List<String>>, library: ir.Library, limit: Int) -> String {
     let stage = staged()
@@ -81,8 +76,6 @@ fn golden_written(lines: List<List<String>>, library: ir.Library, limit: Int) ->
     written
 }
 
-/// Every command line of the golden file at `path`, each held to the answer written under it in a
-/// stage of the file's own.
 // example: list.length(cases_read("")) == 0
 fn golden_held(path: String, library: ir.Library, limit: Int) -> held.Held {
     let golden = Golden { path: path, stage: Stage { directory: staged(), limit: limit } }
@@ -102,10 +95,7 @@ fn golden_held(path: String, library: ir.Library, limit: Int) -> held.Held {
     found
 }
 
-/// The command lines on an example of `tests/spec` that the golden file at `path` should hold
-/// and does not, of those in `lines`, example by example in the order names sort.
-///
-/// Only `fixtures.txt` holds each example, so no other golden file misses a command line.
+// Only `fixtures.txt` holds each example, so no other golden file misses a command line.
 // example: list.length(lines_missing(path: "tests/commands/lines.txt", lines: [])) == 0
 fn lines_missing(path: String, lines: List<List<String>>) -> List<List<String>> {
     if path != fixtures() {
@@ -127,21 +117,16 @@ fn lines_missing(path: String, lines: List<List<String>>) -> List<List<String>> 
     missing
 }
 
-/// The golden file that holds each command on each example of `tests/spec`.
 // example: list.has_value(golden_files(), fixtures())
 fn fixtures() -> String {
     "tests/commands/fixtures.txt"
 }
 
-/// The commands `fixtures.txt` holds each example of `tests/spec` to, each before the path of
-/// the example, in the order the file holds them.
 // example: list.length(example_commands()) == 6
 fn example_commands() -> List<List<String>> {
     [["check"], ["check", "--json"], ["api"], ["test"], ["fmt"], ["build"]]
 }
 
-/// One command line of `golden`, held to the answer written under it, where each example it names
-/// is there.
 // example: case_held(Golden { path: "a.txt", stage: Stage { directory: "no-such-directory", limit: 1 } }, Case { words: ["check", "tests/spec/no-such-example.bx"], said: command.nothing_said() }, ir.little_library()).failures == ["a.txt: $ check tests/spec/no-such-example.bx: tests/spec/no-such-example.bx is not there, so the command line is to be taken out"]
 fn case_held(golden: Golden, written: Case, library: ir.Library) -> held.Held {
     let at = golden.path + ": " + words_line(written.words)
@@ -151,7 +136,6 @@ fn case_held(golden: Golden, written: Case, library: ir.Library) -> held.Held {
     }
 }
 
-/// One command line of `golden`, held to the answer written under it.
 // example: is_jvm_needed(["run", "a.bx"])
 fn answer_held(golden: Golden, written: Case, library: ir.Library) -> held.Held {
     let at = golden.path + ": " + words_line(written.words)
@@ -161,7 +145,6 @@ fn answer_held(golden: Golden, written: Case, library: ir.Library) -> held.Held 
     enacted.said_held(at, written.said, answered_in(words: written.words, stage: golden.stage, library: library))
 }
 
-/// The first word of `words` that names a path under `tests/spec` where there is none.
 // example: or(absent_example(["check", "tests/spec/no-such-example.bx"]), "") == "tests/spec/no-such-example.bx"
 // example: or(absent_example(["check", "no/such.bx"]), "none") == "none"
 fn absent_example(words: List<String>) -> Option<String> {
@@ -173,7 +156,6 @@ fn absent_example(words: List<String>) -> Option<String> {
     None
 }
 
-/// Whether the command line `words` starts a JVM, which only `run` and `test` do.
 // example: !is_jvm_needed(["check", "a.bx"])
 // example: !is_jvm_needed([])
 fn is_jvm_needed(words: List<String>) -> Bool {
@@ -181,10 +163,7 @@ fn is_jvm_needed(words: List<String>) -> Bool {
     first == "run" || first == "test"
 }
 
-/// What the command line says to `words` in `stage`, with the path of the stage taken out.
-///
-/// A source that `fmt` wrote is copied from the tree again, so the next command line sees it as
-/// the tree holds it.
+// `fmt` can change a source, so the stage copies it again from the tree for the next command line.
 // example: placed_in(word: "-h", stage: "no-such-directory") == "-h"
 fn answered_in(words: List<String>, stage: Stage, library: ir.Library) -> command.Said {
     var placed = []
@@ -198,7 +177,6 @@ fn answered_in(words: List<String>, stage: Stage, library: ir.Library) -> comman
     command.Said { output: enacted.unstaged(said.output, stage.directory), errors: enacted.unstaged(said.errors, stage.directory), status: said.status }
 }
 
-/// `word`, read in `stage` where its first part names an entry of the stage.
 // example: placed_in(word: "a/b", stage: "no-such-directory") == "a/b"
 fn placed_in(word: String, stage: String) -> String {
     let first = first_part(word)
@@ -208,7 +186,6 @@ fn placed_in(word: String, stage: String) -> String {
     stage + "/" + word
 }
 
-/// The part of `path` before its first slash.
 // example: first_part("a/b/c") == "a"
 // example: first_part("a") == "a"
 fn first_part(path: String) -> String {
@@ -219,7 +196,6 @@ fn first_part(path: String) -> String {
     or(strings.cut(path, 0, index), "")
 }
 
-/// What `answer` says, where a program to start is started in `stage` and ends.
 // example: ended_in(command.Spoken(command.unusable("a")), Stage { directory: "no-such-directory", limit: 1 }).status == 2
 fn ended_in(answer: command.Answer, stage: Stage) -> command.Said {
     match answer {
@@ -228,7 +204,6 @@ fn ended_in(answer: command.Answer, stage: Stage) -> command.Said {
     }
 }
 
-/// A stage to answer command lines in, or a place nothing can be written into.
 // example: strings.length(echo_text()) > 0
 fn staged() -> String {
     let stage = ok_or(command.somewhere_of_its_own(), "/no-such-directory-for-a-stage")
@@ -243,13 +218,11 @@ fn staged() -> String {
     stage
 }
 
-/// Copies every source of `tests/spec` and of `library` into `stage`, over any copy there.
 fn sources_copied(stage: String) -> () {
     copied(from: "tests/spec", to: modules.joined(stage, "tests/spec"))
     copied(from: "library", to: modules.joined(stage, "library"))
 }
 
-/// Copies every file under `from` to the same place under `to`, but a class file or a hidden one.
 fn copied(from: String, to: String) -> () {
     _ = files.has_made_all(files.named(to))
     for name in ok_or(files.listed(from), []) {
@@ -262,7 +235,6 @@ fn copied(from: String, to: String) -> () {
     }
 }
 
-/// Whether a file named `name` is copied into a stage: one that is neither hidden nor a class.
 // example: is_carried("a.bx")
 // example: !is_carried("a.class")
 // example: !is_carried(".output")
@@ -270,13 +242,11 @@ fn is_carried(name: String) -> Bool {
     !command.has_prefix(name, ".") && !walk.is_ending_in(name, ".class")
 }
 
-/// A program that writes each word it is run with on a line of its own.
 // example: enacted.first_line_of(echo_text()) == "import io"
 fn echo_text() -> String {
     "import io\n\nfn main(arguments: List<String>) -> Int {\n    for argument in arguments {\n        io.println(argument)\n    }\n    0\n}\n"
 }
 
-/// Every code there is an explanation of, explained as the file of the explanation reads.
 // example: explanation_held("no-such-directory/L0100.md", ir.little_library()).cases == 1
 fn every_explanation_held(library: ir.Library) -> held.Held {
     var found = held.nothing_failed(0)
@@ -289,7 +259,6 @@ fn every_explanation_held(library: ir.Library) -> held.Held {
     found
 }
 
-/// `explain` on the code the file at `path` explains, held to the text of that file.
 // example: list.length(explanation_held("no-such-directory/L0100.md", ir.little_library()).failures) == 1
 fn explanation_held(path: String, library: ir.Library) -> held.Held {
     let code = modules.stem_of(path)
@@ -297,7 +266,6 @@ fn explanation_held(path: String, library: ir.Library) -> held.Held {
     enacted.said_held("explain " + code, expected, command.said_by(command.answered_within(["explain", code], library)))
 }
 
-/// Every command line of the golden text `text`, with the answer written under it.
 // example: case_written(or(list.at(cases_read("$ a b\nstatus 1\n> x\n!~ y\n"), 0), Case { words: [], said: command.nothing_said() })) == "$ a b\nstatus 1\n> x\n!~ y\n"
 fn cases_read(text: String) -> List<Case> {
     var cases = []
@@ -315,7 +283,6 @@ fn cases_read(text: String) -> List<Case> {
     closed(cases: cases, current: current, count: count)
 }
 
-/// `cases` with `current` after them, where `count` says a command line was read.
 // example: list.length(closed(cases: [], current: Case { words: [], said: command.nothing_said() }, count: 0)) == 0
 fn closed(cases: List<Case>, current: Case, count: Int) -> List<Case> {
     if count == 0 {
@@ -324,7 +291,6 @@ fn closed(cases: List<Case>, current: Case, count: Int) -> List<Case> {
     list.push(cases, current)
 }
 
-/// `written` with what the golden line `line` says about its answer.
 // example: with_line(Case { words: [], said: command.nothing_said() }, "status 2").said.status == 2
 // example: with_line(Case { words: [], said: command.nothing_said() }, "! a").said.errors == "a\n"
 fn with_line(written: Case, line: String) -> Case {
@@ -342,8 +308,6 @@ fn with_line(written: Case, line: String) -> Case {
     written
 }
 
-/// The text one line of a stream stands for: the line after the mark, with its line break unless
-/// the mark says it has none.
 // example: stream_line(">") == "\n"
 // example: stream_line("> a") == "a\n"
 // example: stream_line(">~ a") == "a"
@@ -358,14 +322,12 @@ fn stream_line(line: String) -> String {
     rest + "\n"
 }
 
-/// One command line and its answer, as a golden file writes them.
 // example: case_written(Case { words: [], said: command.nothing_said() }) == "$\nstatus 0\n"
 fn case_written(written: Case) -> String {
     let said = written.said
     words_line(written.words) + "\nstatus " + shown(said.status) + "\n" + stream_written(mark: ">", text: said.output) + stream_written(mark: "!", text: said.errors)
 }
 
-/// The line that opens a command line in a golden file.
 // example: words_line(["a", "b"]) == "$ a b"
 // example: words_line([]) == "$"
 fn words_line(words: List<String>) -> String {
@@ -375,7 +337,6 @@ fn words_line(words: List<String>) -> String {
     "$ " + strings.join(words, " ")
 }
 
-/// The lines of a golden file that stand for the stream `text`, each opened with `mark`.
 // example: stream_written(mark: ">", text: "a\n\nb") == "> a\n>\n>~ b\n"
 // example: stream_written(mark: "!", text: "") == ""
 fn stream_written(mark: String, text: String) -> String {
@@ -395,7 +356,6 @@ fn stream_written(mark: String, text: String) -> String {
     written
 }
 
-/// One line of a stream with its line break, opened with `mark`.
 // example: marked(mark: ">", line: "") == ">\n"
 // example: marked(mark: ">", line: "a") == "> a\n"
 fn marked(mark: String, line: String) -> String {
@@ -405,19 +365,16 @@ fn marked(mark: String, line: String) -> String {
     mark + " " + line + "\n"
 }
 
-/// A golden file, and the stage its command lines are answered in.
 type Golden = {
     path: String
     stage: Stage
 }
 
-/// The directory command lines are answered in, and the seconds a program started there has.
 type Stage = {
     directory: String
     limit: Int
 }
 
-/// One command line of a golden file, and the answer written under it.
 type Case = {
     words: List<String>
     said: command.Said

@@ -10,29 +10,22 @@ import jvm
 import list
 import strings
 
-/// Every class file of `source`, written as a build writes them, or none where it is refused.
 // example: list.length(written_alone("fn (", ir.little_library())) == 0
 fn written_alone(source: String, library: ir.Library) -> List<jvm.ClassFile> {
     classes_of(lowered_alone(source, library))
 }
 
-/// Every class file of `program`, or none where the writer refuses it.
 // example: list.length(classes_of([])) == 0
 fn classes_of(program: List<ir.Lowered>) -> List<jvm.ClassFile> {
     ok_or(jvm.program_written(program), [])
 }
 
-/// Every module of `source`, lowered as the module `demo`, which imports only the library.
 // example: list.length(lowered_alone("fn (", ir.little_library())) == 0
 fn lowered_alone(source: String, library: ir.Library) -> List<ir.Lowered> {
     lowered_beside(source: source, directory: "no-such-directory", library: library)
 }
 
-/// Every module of `source`, lowered as `demo` beside `directory`, or none where it is refused or
-/// the writer cannot spell one of its methods.
-///
-/// A module beside it in `directory` is one it may import. The lowering is the one a build runs,
-/// but a function is not held to state an example, because a drawn source states none.
+// A drawn source states no example, so a function here need not state one, as in a build it must.
 // example: list.length(lowered_beside(source: "fn (", directory: "no-such-directory", library: ir.little_library())) == 0
 fn lowered_beside(source: String, directory: String, library: ir.Library) -> List<ir.Lowered> {
     match command.checked_as_written(command.Page { source: source, path: directory + "/demo.bx" }, library) {
@@ -41,10 +34,8 @@ fn lowered_beside(source: String, directory: String, library: ir.Library) -> Lis
     }
 }
 
-/// `lowered`, or none where the writer cannot spell one of its methods.
-///
-/// A property reads each method as the writer spells it, so a method it cannot spell must
-/// refuse the whole source, and not stand as a method of no instruction.
+// A property reads each method as the writer spells it, so a method that the writer cannot spell
+// refuses the whole source, and does not stay as a method with no instruction.
 // example: list.length(spelled_whole([])) == 0
 fn spelled_whole(lowered: List<ir.Lowered>) -> List<ir.Lowered> {
     for class in every_class(lowered) {
@@ -57,7 +48,6 @@ fn spelled_whole(lowered: List<ir.Lowered>) -> List<ir.Lowered> {
     lowered
 }
 
-/// Whether the writer spelled a method.
 // example: !is_spelled(Err(jvm.Defect("")))
 fn is_spelled(spelled: Result<jvm.Spelled, jvm.Why>) -> Bool {
     match spelled {
@@ -66,7 +56,6 @@ fn is_spelled(spelled: Result<jvm.Spelled, jvm.Why>) -> Bool {
     }
 }
 
-/// What inference settled of each module of `program`, in the order the program loads them.
 // example: list.length(lowered_alone("fn f() -> Int {\n    1\n}\n", ir.little_library())) == 2
 fn inferred_of(program: command.Checked) -> List<infer.Inference> {
     var typed = []
@@ -76,7 +65,6 @@ fn inferred_of(program: command.Checked) -> List<infer.Inference> {
     typed
 }
 
-/// What sets two builds apart, which is empty where both write the same files as the same bytes.
 // example: differing(first: [], second: []) == "the compiler refused it"
 fn differing(first: List<jvm.ClassFile>, second: List<jvm.ClassFile>) -> String {
     if list.length(first) == 0 {
@@ -96,7 +84,6 @@ fn differing(first: List<jvm.ClassFile>, second: List<jvm.ClassFile>) -> String 
     ""
 }
 
-/// `found` with the failure `line` where `why` says what went wrong, and as it was where not.
 // example: list.length(noted(found: held.nothing_failed(1), why: "", line: "a").failures) == 0
 // example: list.length(noted(found: held.nothing_failed(1), why: "gone", line: "a").failures) == 1
 fn noted(found: held.Held, why: String, line: String) -> held.Held {
@@ -106,7 +93,6 @@ fn noted(found: held.Held, why: String, line: String) -> held.Held {
     held.with_failure(found, line)
 }
 
-/// Every class of every module of `lowered`, in the order the modules name them.
 // example: list.length(every_class([ir.no_lowered()])) == 0
 fn every_class(lowered: List<ir.Lowered>) -> List<ir.Class> {
     var classes = []
@@ -116,8 +102,6 @@ fn every_class(lowered: List<ir.Lowered>) -> List<ir.Class> {
     classes
 }
 
-/// The instructions of every method of every class the module `demo` among `lowered` writes, as
-/// the writer spells them.
 // example: list.length(demo_bodies([])) == 0
 fn demo_bodies(lowered: List<ir.Lowered>) -> List<List<jvm.Instruction>> {
     var bodies = []
@@ -129,7 +113,6 @@ fn demo_bodies(lowered: List<ir.Lowered>) -> List<List<jvm.Instruction>> {
     bodies
 }
 
-/// The instructions of the method `named` of the class `demo`, which are none where it has none.
 // example: list.length(instructions_of(lowered: [], named: "go")) == 0
 fn instructions_of(lowered: List<ir.Lowered>, named: String) -> List<jvm.Instruction> {
     match body_of(lowered: lowered, named: named) {
@@ -138,20 +121,16 @@ fn instructions_of(lowered: List<ir.Lowered>, named: String) -> List<jvm.Instruc
     }
 }
 
-/// The method `named` of the class `demo` among `lowered`, as the writer spells it, or `None`
-/// where it has none.
 // example: is_none(body_of(lowered: [], named: "go"))
 fn body_of(lowered: List<ir.Lowered>, named: String) -> Option<jvm.Spelled> {
     method_in(classes: demo_classes(lowered), class: "demo", named: named)
 }
 
-/// The classes of the module `demo` among `lowered`, which are none where it was not lowered.
 // example: list.length(demo_classes([])) == 0
 fn demo_classes(lowered: List<ir.Lowered>) -> List<ir.Class> {
     module_classes(lowered: lowered, named: "demo")
 }
 
-/// The classes of the module whose own class is `named` among `lowered`.
 // example: list.length(module_classes(lowered: [], named: "demo")) == 0
 fn module_classes(lowered: List<ir.Lowered>, named: String) -> List<ir.Class> {
     for module in lowered {
@@ -162,8 +141,6 @@ fn module_classes(lowered: List<ir.Lowered>, named: String) -> List<ir.Class> {
     []
 }
 
-/// The method `named` of the class `class` among `classes`, as the writer spells it, or `None`
-/// if none.
 // example: is_none(method_in(classes: [], class: "demo", named: "go"))
 fn method_in(classes: List<ir.Class>, class: String, named: String) -> Option<jvm.Spelled> {
     for one in classes {
@@ -174,8 +151,6 @@ fn method_in(classes: List<ir.Class>, class: String, named: String) -> Option<jv
     None
 }
 
-/// The method of `class` written as `named`, as the writer spells it, or `None` where it writes
-/// none.
 // example: is_none(body_named(no_class(), "go"))
 fn body_named(class: ir.Class, named: String) -> Option<jvm.Spelled> {
     for method in class.methods {
@@ -186,10 +161,8 @@ fn body_named(class: ir.Class, named: String) -> Option<jvm.Spelled> {
     None
 }
 
-/// `method` of `class` as the writer spells it, and a method of nothing where the writer refuses.
-///
-/// `lowered_beside` gives no class with a method the writer refuses, so the method of nothing
-/// stands only for a class that a test builds itself.
+// `lowered_beside` gives no class that the writer refuses, so the empty method is only for a class
+// that a test builds itself.
 // example: list.length(spelled_of(method: ir.Method { name: "go", parameters: [], result: None, reached: ir.ThroughTheClass, body: ir.Body { instructions: [ir.Return(None)], locals: [], guards: [] } }, class: no_class()).instructions) == 1
 fn spelled_of(method: ir.Method, class: ir.Class) -> jvm.Spelled {
     match jvm.method_spelled(method, jvm.class_of(class.of)) {
@@ -198,13 +171,11 @@ fn spelled_of(method: ir.Method, class: ir.Class) -> jvm.Spelled {
     }
 }
 
-/// A method of no name, no instruction, and no guard, which stands where the writer spelled none.
 // example: list.length(no_spelled().guards) == 0
 fn no_spelled() -> jvm.Spelled {
     jvm.Spelled { name: "", descriptor: jvm.MethodDescriptor { parameters: [], result: None }, receiver: None, instructions: [], slots: 0, guards: [] }
 }
 
-/// Whether `maybe` holds nothing.
 // example: is_none(None)
 // example: !is_none(Some(1))
 fn is_none<T>(maybe: Option<T>) -> Bool {
@@ -214,13 +185,11 @@ fn is_none<T>(maybe: Option<T>) -> Bool {
     }
 }
 
-/// A class of no module, with no field and no method, which stands where a module wrote no class.
 // example: jvm.class_of(no_class().of) == ""
 fn no_class() -> ir.Class {
     ir.Class { of: ir.ModuleOf(ir.OfTheProgram("")), extends: ir.Anything, extending: ir.Never, implements: [], fields: [], methods: [] }
 }
 
-/// The name of every method `instructions` call, in the order they call them.
 // example: calls_named([jvm.Copy]) == []
 fn calls_named(instructions: List<jvm.Instruction>) -> List<String> {
     var names = []
@@ -230,7 +199,6 @@ fn calls_named(instructions: List<jvm.Instruction>) -> List<String> {
     names
 }
 
-/// The name of `reference`, where there is one.
 // example: name_called(None) == []
 fn name_called(reference: Option<jvm.MethodRef>) -> List<String> {
     match reference {
@@ -239,7 +207,6 @@ fn name_called(reference: Option<jvm.MethodRef>) -> List<String> {
     }
 }
 
-/// Every class `instructions` reach: by a call, by a static field, by a `new`, or by a cast.
 // example: reached_in([jvm.New("a/B"), jvm.Copy]) == ["a/B"]
 fn reached_in(instructions: List<jvm.Instruction>) -> List<String> {
     var reached = []
@@ -249,7 +216,6 @@ fn reached_in(instructions: List<jvm.Instruction>) -> List<String> {
     reached
 }
 
-/// The class one instruction reaches, where it reaches one.
 // example: class_reached(jvm.Cast("a/B")) == ["a/B"]
 // example: class_reached(jvm.Copy) == []
 fn class_reached(instruction: jvm.Instruction) -> List<String> {
@@ -261,7 +227,6 @@ fn class_reached(instruction: jvm.Instruction) -> List<String> {
     }
 }
 
-/// The class of `reference`, where there is one.
 // example: class_called(None) == []
 fn class_called(reference: Option<jvm.MethodRef>) -> List<String> {
     match reference {
@@ -270,7 +235,6 @@ fn class_called(reference: Option<jvm.MethodRef>) -> List<String> {
     }
 }
 
-/// The method `instruction` calls, where it is a call at all.
 // example: is_none(called(jvm.Copy))
 fn called(instruction: jvm.Instruction) -> Option<jvm.MethodRef> {
     match instruction {
@@ -283,7 +247,6 @@ fn called(instruction: jvm.Instruction) -> Option<jvm.MethodRef> {
     }
 }
 
-/// The values of `first`, then those of `second`.
 // example: both(first: [1], second: [2]) == [1, 2]
 fn both<T>(first: List<T>, second: List<T>) -> List<T> {
     var joined = first
@@ -293,7 +256,6 @@ fn both<T>(first: List<T>, second: List<T>) -> List<T> {
     joined
 }
 
-/// The values of `values` from the place `from` up to the place `to`, and not the one at `to`.
 // example: part(values: [1, 2, 3, 4], from: 1, to: 3) == [2, 3]
 // example: part(values: [1, 2], from: -1, to: 1) == [1]
 fn part<T>(values: List<T>, from: Int, to: Int) -> List<T> {
@@ -308,7 +270,6 @@ fn part<T>(values: List<T>, from: Int, to: Int) -> List<T> {
     taken
 }
 
-/// Whether `text` holds `piece` anywhere.
 // example: is_holding(text: "a main b", piece: "main")
 // example: !is_holding(text: "a b", piece: "main")
 fn is_holding(text: String, piece: String) -> Bool {
@@ -322,7 +283,6 @@ fn is_holding(text: String, piece: String) -> Bool {
     false
 }
 
-/// `text` with each `from` in it replaced by `to`.
 // example: replaced(text: "a {} b", from: "{}", to: "x") == "a x b"
 fn replaced(text: String, from: String, to: String) -> String {
     var written = ""

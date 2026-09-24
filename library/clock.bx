@@ -2,7 +2,5 @@
 //
 // `docs/specs/io.md` states what it gives back. It is one `extern` declaration away from a JVM
 // method, which `docs/specs/interop.md` states.
-/// A clock that only goes forward, in nanoseconds, from a point that means nothing on its own.
-///
-/// Only the difference of two readings in one run means anything, which is a time that passed.
+// Only the difference of two readings in one run has a meaning, because the start point has none.
 extern static nanoseconds() -> Int = "java.lang.System.nanoTime"

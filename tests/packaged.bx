@@ -12,9 +12,6 @@ import held
 import ir
 import list
 
-/// A drawn package reports on a pool of drawn size what its modules report when run in turn.
-///
-/// A property of no cases starts no JVM, and the property is skipped where no JDK is named.
 // example: held.is_held(a_package_on_a_pool_reports_what_its_modules_report_in_turn(0, ir.little_library()))
 fn a_package_on_a_pool_reports_what_its_modules_report_in_turn(cases: Int, library: ir.Library) -> held.Held {
     if cases == 0 {
@@ -30,7 +27,6 @@ fn a_package_on_a_pool_reports_what_its_modules_report_in_turn(cases: Int, libra
     found
 }
 
-/// One drawn package, run on a pool and in turn, and why the two reports differ, where they do.
 // example: package_tried(drawn.seeded(1), ir.little_library()).why == ""
 fn package_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
     let outcomes = drawn.numbers(draw, drawn.number(checking.after(draw, 6), 5) + 1, list.length(every_outcome()))
@@ -50,7 +46,6 @@ fn package_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
     checking.Tried { input: "outcomes " + shown(outcomes) + ", " + shown(workers) + " workers, " + reach_name(reach), why: why_apart(pooled: pooled, turned: turned) }
 }
 
-/// The name a failure gives `reach`.
 // example: reach_name(OnTheFirst) == "each on the first"
 fn reach_name(reach: Reach) -> String {
     match reach {
@@ -59,7 +54,6 @@ fn reach_name(reach: Reach) -> String {
     }
 }
 
-/// What `bux test` reports of the package in `scene`, run on a pool of `workers` workers.
 // example: on_a_pool("no-such-directory", ir.little_library(), 1).status == 2
 fn on_a_pool(scene: String, library: ir.Library, workers: Int) -> command.Said {
     match command.package_found(scene) {
@@ -68,7 +62,6 @@ fn on_a_pool(scene: String, library: ir.Library, workers: Int) -> command.Said {
     }
 }
 
-/// What the modules of the package in `scene` report, each run in turn with a memo of its own.
 // example: in_turn("no-such-directory", ir.little_library()).status == 2
 fn in_turn(scene: String, library: ir.Library) -> command.Said {
     match command.package_found(scene) {
@@ -87,7 +80,6 @@ fn each_in_turn(paths: List<String>, library: ir.Library) -> command.Tried {
     found
 }
 
-/// Where the report on a pool differs from the report in turn, and `""` where it is the same.
 // example: why_apart(pooled: command.Said { output: "", errors: "a", status: 1 }, turned: command.Said { output: "", errors: "b", status: 1 }) == "on a pool \"a\", status 1; in turn \"b\", status 1"
 fn why_apart(pooled: command.Said, turned: command.Said) -> String {
     if pooled.output == turned.output && pooled.errors == turned.errors && pooled.status == turned.status {
@@ -96,10 +88,8 @@ fn why_apart(pooled: command.Said, turned: command.Said) -> String {
     "on a pool " + held.quoted(pooled.output + pooled.errors) + ", status " + shown(pooled.status) + "; in turn " + held.quoted(turned.output + turned.errors) + ", status " + shown(turned.status)
 }
 
-/// The text of `module`, whose one function gives the number of the module.
-///
-/// A module after the first that reaches `OnTheFirst` adds the number of the first module, which
-/// is 0, so its run reaches the first module and each outcome of that module.
+// A module after the first that reaches `OnTheFirst` adds the number of the first module, 0.
+// So its run reaches the first module and each outcome of that module.
 // example: module_text(Module { number: 0, outcome: Holds, reach: Alone }) == "// The number of this module.\n// example: number() == 0\nfn number() -> Int {\n    0\n}\n"
 fn module_text(module: Module) -> String {
     let number = module.number
@@ -117,19 +107,16 @@ fn module_text(module: Module) -> String {
     }
 }
 
-/// A function `number` whose body is `body`, and whose one example expects `expected`.
 // example: stated(expected: 1, body: "1") == "// The number of this module.\n// example: number() == 1\nfn number() -> Int {\n    1\n}\n"
 fn stated(expected: Int, body: String) -> String {
     "// The number of this module.\n// example: number() == " + shown(expected) + "\nfn number() -> Int {\n    " + body + "\n}\n"
 }
 
-/// Every outcome a drawn module has, in the order a drawn number picks them.
 // example: list.length(every_outcome()) == 4
 fn every_outcome() -> List<Outcome> {
     [Holds, Fails, Refused, Quiet]
 }
 
-/// One drawn module: its number in the package, its outcome, and what it reaches.
 type Module = {
     number: Int
     outcome: Outcome
@@ -138,13 +125,10 @@ type Module = {
 
 derive Eq for Reach
 
-/// Whether each module after the first imports the first, or stands alone.
 type Reach =
     | Alone
     | OnTheFirst
 
-/// What a drawn module does under `bux test`: its example holds, it does not hold, the compiler
-/// refuses the module, or the module states nothing to run.
 type Outcome =
     | Holds
     | Fails

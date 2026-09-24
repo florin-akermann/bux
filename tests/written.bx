@@ -12,105 +12,87 @@ import list
 import reader
 import strings
 
-/// One source compiled twice gives the same class files, as the same bytes, in the same order.
 // example: held.is_held(compiling_one_source_twice_gives_byte_identical_class_files(0, ir.little_library()))
 fn compiling_one_source_twice_gives_byte_identical_class_files(cases: Int, library: ir.Library) -> held.Held {
     checked(property: CompiledTwice, cases: cases, library: library)
 }
 
-/// Every class file of a compiled source begins with the magic, then the JDK 28 preview version.
 // example: held.is_held(every_class_a_module_compiles_to_begins_with_the_magic_and_the_current_version(0, ir.little_library()))
 fn every_class_a_module_compiles_to_begins_with_the_magic_and_the_current_version(cases: Int, library: ir.Library) -> held.Held {
     checked(property: CompiledVersion, cases: cases, library: library)
 }
 
-/// The class and the base a compiled class file names are both places its own pool holds.
 // example: held.is_held(every_constant_a_compiled_class_names_is_one_its_own_pool_holds(0, ir.little_library()))
 fn every_constant_a_compiled_class_names_is_one_its_own_pool_holds(cases: Int, library: ir.Library) -> held.Held {
     checked(property: CompiledPool, cases: cases, library: library)
 }
 
-/// A class asks a JVM to load first only a class the same build writes, and never itself.
 // example: held.is_held(every_descriptor_a_class_asks_to_load_first_names_another_class_the_build_writes(0, ir.little_library()))
 fn every_descriptor_a_class_asks_to_load_first_names_another_class_the_build_writes(cases: Int, library: ir.Library) -> held.Held {
     checked(property: Loadable, cases: cases, library: library)
 }
 
-/// One drawn module written twice is written as the same bytes both times.
 // example: held.is_held(writing_a_class_twice_gives_the_same_bytes(0, ir.little_library()))
 fn writing_a_class_twice_gives_the_same_bytes(cases: Int, library: ir.Library) -> held.Held {
     checked(property: WrittenTwice, cases: cases, library: library)
 }
 
-/// Every class file of a drawn module begins with the magic, then the JDK 28 preview version.
 // example: held.is_held(every_class_written_begins_with_the_magic_and_the_current_version(0, ir.little_library()))
 fn every_class_written_begins_with_the_magic_and_the_current_version(cases: Int, library: ir.Library) -> held.Held {
     checked(property: WrittenVersion, cases: cases, library: library)
 }
 
-/// A method the class of a module writes for one of its functions takes and gives back no object.
 // example: held.is_held(no_method_written_for_a_function_a_module_declares_names_object(0, ir.little_library()))
 fn no_method_written_for_a_function_a_module_declares_names_object(cases: Int, library: ir.Library) -> held.Held {
     checked(property: NoObject, cases: cases, library: library)
 }
 
-/// A generic used at `Int` is written as a method from a `long` to a `long`, and boxes nothing.
 // example: held.is_held(a_generic_used_at_a_whole_number_is_written_taking_and_giving_back_a_long(0, ir.little_library()))
 fn a_generic_used_at_a_whole_number_is_written_taking_and_giving_back_a_long(cases: Int, library: ir.Library) -> held.Held {
     checked(property: Specialised, cases: cases, library: library)
 }
 
-/// The class file of a drawn module writes each method it declares, by name, in the same order.
 // example: held.is_held(every_method_a_module_declares_is_written_as_a_method_of_it(0, ir.little_library()))
 fn every_method_a_module_declares_is_written_as_a_method_of_it(cases: Int, library: ir.Library) -> held.Held {
     checked(property: Declared, cases: cases, library: library)
 }
 
-/// The class and the base of a drawn module are places its pool holds, and each method has a name.
 // example: held.is_held(every_constant_a_class_names_is_one_the_pool_holds(0, ir.little_library()))
 fn every_constant_a_class_names_is_one_the_pool_holds(cases: Int, library: ir.Library) -> held.Held {
     checked(property: WrittenPool, cases: cases, library: library)
 }
 
-/// Every class file of a drawn program reads back whole, from the magic to the last byte.
 // example: held.is_held(every_class_a_drawn_program_compiles_to_reads_back_whole(0, ir.little_library()))
 fn every_class_a_drawn_program_compiles_to_reads_back_whole(cases: Int, library: ir.Library) -> held.Held {
     checked(property: ReadsWhole, cases: cases, library: library)
 }
 
-/// A body with a branch over a drawn run of code is refused as too large past 32767 bytes only.
 // example: held.is_held(a_branch_past_what_two_bytes_reach_is_refused_as_too_large(0, ir.little_library()))
 fn a_branch_past_what_two_bytes_reach_is_refused_as_too_large(cases: Int, library: ir.Library) -> held.Held {
     checked(property: FarBranch, cases: cases, library: library)
 }
 
-/// A drawn text is refused as too long where it takes more than 65535 bytes, and only there.
 // example: held.is_held(a_text_past_what_the_pool_holds_is_refused_as_too_long(0, ir.little_library()))
 fn a_text_past_what_the_pool_holds_is_refused_as_too_long(cases: Int, library: ir.Library) -> held.Held {
     checked(property: LongText, cases: cases, library: library)
 }
 
-/// Two modules that write one class name write one file where the classes are the same, and are
-/// refused where they are not.
 // example: held.is_held(two_modules_that_write_one_class_name_write_it_once_or_are_refused(0, ir.little_library()))
 fn two_modules_that_write_one_class_name_write_it_once_or_are_refused(cases: Int, library: ir.Library) -> held.Held {
     checked(property: NamedTwice, cases: cases, library: library)
 }
 
-/// Two classes whose names differ only in case are refused, because a disk that ignores case holds
-/// them as one file, and two whose names differ elsewhere are both written.
+// A disk that ignores case holds two such classes as one file.
 // example: held.is_held(two_classes_whose_names_differ_only_in_case_are_refused(0, ir.little_library()))
 fn two_classes_whose_names_differ_only_in_case_are_refused(cases: Int, library: ir.Library) -> held.Held {
     checked(property: NamedInCase, cases: cases, library: library)
 }
 
-/// A method that calls and constructs with drawn `long` values declares the stack they take.
 // example: held.is_held(the_deepest_stack_a_method_declares_counts_two_words_for_each_long(0, ir.little_library()))
 fn the_deepest_stack_a_method_declares_counts_two_words_for_each_long(cases: Int, library: ir.Library) -> held.Held {
     checked(property: LongStack, cases: cases, library: library)
 }
 
-/// `property` checked over `cases` drawn modules, each drawn from a seed of its own.
 // example: checked(property: CompiledTwice, cases: 0, library: ir.little_library()).cases == 0
 fn checked(property: Property, cases: Int, library: ir.Library) -> held.Held {
     var found = held.nothing_failed(cases)
@@ -124,7 +106,6 @@ fn checked(property: Property, cases: Int, library: ir.Library) -> held.Held {
     found
 }
 
-/// The module `property` draws with `draw`, and what went wrong with it, which is empty if nothing.
 // example: drawing(property: WrittenTwice, draw: drawn.seeded(1), library: ir.little_library()).why == ""
 fn drawing(property: Property, draw: drawn.Draw, library: ir.Library) -> Drawing {
     match property {
@@ -147,7 +128,6 @@ fn drawing(property: Property, draw: drawn.Draw, library: ir.Library) -> Drawing
     }
 }
 
-/// The name a failure of `property` is reported with.
 // example: name_of(Declared) == "every_method_a_module_declares_is_written_as_a_method_of_it"
 fn name_of(property: Property) -> String {
     match property {
@@ -170,49 +150,42 @@ fn name_of(property: Property) -> String {
     }
 }
 
-/// One drawn source compiled twice, which must be written as the same bytes both times.
 // example: compiled_twice(drawn.seeded(1), ir.little_library()).source != ""
 fn compiled_twice(draw: drawn.Draw, library: ir.Library) -> Drawing {
     let source = drawn.picked(draw, sources(), "")
     Drawing { source: source, why: compiled.differing(compiled.written_alone(source, library), compiled.written_alone(source, library)) }
 }
 
-/// One drawn source, each of whose class files must begin with the magic and the version.
 // example: compiled_version(drawn.seeded(1), ir.little_library()).source != ""
 fn compiled_version(draw: drawn.Draw, library: ir.Library) -> Drawing {
     let source = drawn.picked(draw, sources(), "")
     Drawing { source: source, why: version_why(compiled.written_alone(source, library)) }
 }
 
-/// One drawn source, each of whose class files must name a class and a base its pool holds.
 // example: compiled_pool(drawn.seeded(1), ir.little_library()).source != ""
 fn compiled_pool(draw: drawn.Draw, library: ir.Library) -> Drawing {
     let source = drawn.picked(draw, sources(), "")
     Drawing { source: source, why: pool_why(compiled.written_alone(source, library)) }
 }
 
-/// One drawn source, whose classes must ask to load first only other classes of the build.
 // example: loadable(drawn.seeded(1), ir.little_library()).source != ""
 fn loadable(draw: drawn.Draw, library: ir.Library) -> Drawing {
     let source = drawn.picked(draw, sources(), "")
     Drawing { source: source, why: loadable_why(compiled.written_alone(source, library)) }
 }
 
-/// One drawn module written twice, which must be written as the same bytes both times.
 // example: written_twice(drawn.seeded(1)).why == ""
 fn written_twice(draw: drawn.Draw) -> Drawing {
     let module = a_module(draw)
     Drawing { source: shown_module(module), why: compiled.differing(compiled.classes_of([module]), compiled.classes_of([module])) }
 }
 
-/// One drawn module, whose class file must begin with the magic and the version.
 // example: written_version(drawn.seeded(1)).why == ""
 fn written_version(draw: drawn.Draw) -> Drawing {
     let module = a_module(draw)
     Drawing { source: shown_module(module), why: version_why(compiled.classes_of([module])) }
 }
 
-/// One drawn source, no method of whose own class may take or give back an object.
 // example: no_object(drawn.seeded(1), ir.little_library()).source != ""
 fn no_object(draw: drawn.Draw, library: ir.Library) -> Drawing {
     let source = drawn.picked(draw, sources(), "")
@@ -225,7 +198,6 @@ fn no_object(draw: drawn.Draw, library: ir.Library) -> Drawing {
     Drawing { source: source, why: why }
 }
 
-/// A drawn generic used at `Int`, which must be written from a `long` to a `long`, with no box.
 // example: specialised(drawn.seeded(1), ir.little_library()).source != ""
 fn specialised(draw: drawn.Draw, library: ir.Library) -> Drawing {
     let through = drawn.picked(draw, ["identity", "through"], "")
@@ -243,7 +215,6 @@ fn specialised(draw: drawn.Draw, library: ir.Library) -> Drawing {
     Drawing { source: source, why: why }
 }
 
-/// Why `descriptor` is not that of a method from a `long` to a `long`, which is empty where it is.
 // example: descriptor_why("(J)J") == ""
 fn descriptor_why(descriptor: String) -> String {
     if descriptor == "(J)J" {
@@ -252,7 +223,6 @@ fn descriptor_why(descriptor: String) -> String {
     "the use at `Int` is written " + descriptor
 }
 
-/// One drawn module, whose class file must write the methods it declares, by name, in order.
 // example: declared(drawn.seeded(1)).why == ""
 fn declared(draw: drawn.Draw) -> Drawing {
     let module = a_module(draw)
@@ -267,7 +237,6 @@ fn declared(draw: drawn.Draw) -> Drawing {
     Drawing { source: shown_module(module), why: why }
 }
 
-/// One drawn module, whose class file must name places its pool holds and name every method.
 // example: written_pool(drawn.seeded(1)).why == ""
 fn written_pool(draw: drawn.Draw) -> Drawing {
     let module = a_module(draw)
@@ -281,7 +250,6 @@ fn written_pool(draw: drawn.Draw) -> Drawing {
     Drawing { source: shown_module(module), why: why }
 }
 
-/// A drawn program, each of whose class files must read back whole and begin as a class file does.
 // example: reads_whole(drawn.seeded(1), ir.little_library()).source != ""
 fn reads_whole(draw: drawn.Draw, library: ir.Library) -> Drawing {
     let source = drawn_program(draw)
@@ -295,7 +263,6 @@ fn reads_whole(draw: drawn.Draw, library: ir.Library) -> Drawing {
     Drawing { source: source, why: why }
 }
 
-/// A program whose `main` runs up to four drawn statements over a total.
 // example: drawn_program(drawn.seeded(1)) != ""
 fn drawn_program(draw: drawn.Draw) -> String {
     let many = drawn.number(draw, 5)
@@ -306,15 +273,12 @@ fn drawn_program(draw: drawn.Draw) -> String {
     "import list\nimport strings\n\nfn main(arguments: List<String>) -> Int {\n    let count = list.length(arguments)\n    var total = strings.length(shown(count))\n" + body + "    total\n}\n\n/// Whether `total` is even.\n// example: is_even(2)\nfn is_even(total: Int) -> Bool {\n    or(total % 2, 1) == 0\n}\n\ntype Box = {\n    held: Int\n}\n"
 }
 
-/// The statements a drawn program writes before it gives back its total.
 // example: list.length(statements()) == 9
 fn statements() -> List<String> {
     ["total += count", "total = total * 3 - count", "total = or(total / count, 7)", "if is_even(total) {\n        total += 1\n    }", "for index in [1, 2, 3] {\n        total += index\n    }", "total = match total {\n        0 => 1\n        other => other\n    }", "total = Box { held: total }.held", "total = total + strings.length(\"é€\" + shown(count))", "total = or(list.at([total, 2147483648, -40000], count), 128)"]
 }
 
-/// A branch over a drawn number of six-byte increments, which reaches 32767 bytes at 5460 of them.
-///
-/// The branch is at offset 1, and it lands 3 bytes after itself and 6 bytes for each increment.
+// The branch is at offset 1, and it lands 3 bytes after itself and 6 bytes for each increment.
 // example: far_branch(drawn.seeded(1)).why == ""
 fn far_branch(draw: drawn.Draw) -> Drawing {
     let many = 5455 + drawn.number(draw, 12)
@@ -326,7 +290,6 @@ fn far_branch(draw: drawn.Draw) -> Drawing {
     Drawing { source: "a branch over " + shown(many) + " increments", why: refusal_why(answer: jvm.program_written([one_body(instructions, small_locals(302))]), code: "L0700", side: side_of(amount: 3 + 6 * many, limit: 32767)) }
 }
 
-/// `many` locals of a small whole number, which take the slots from zero up to `many`.
 // example: list.length(small_locals(3)) == 3
 fn small_locals(many: Int) -> List<ir.Local> {
     var locals = []
@@ -336,13 +299,11 @@ fn small_locals(many: Int) -> List<ir.Local> {
     locals
 }
 
-/// The local of a small whole number that the slot `at` holds, where each slot before it holds one.
 // example: small_local(3).name == "small3"
 fn small_local(at: Int) -> ir.Local {
     ir.Local { name: "small" + shown(at), of: ir.Small }
 }
 
-/// A drawn text of three-byte characters, which takes 65535 bytes at 21845 of them.
 // example: long_text(drawn.seeded(1)).why == ""
 fn long_text(draw: drawn.Draw) -> Drawing {
     let many = 21840 + drawn.number(draw, 12)
@@ -351,7 +312,6 @@ fn long_text(draw: drawn.Draw) -> Drawing {
     Drawing { source: "a text of " + shown(many) + " characters of three bytes", why: refusal_why(answer: jvm.program_written([one_body(instructions, [])]), code: "L0701", side: side_of(amount: 3 * many, limit: 65535)) }
 }
 
-/// `text` joined to itself `times` times, so `2` to the power `times` copies of it.
 // example: doubled("ab", 2) == "abababab"
 fn doubled(text: String, times: Int) -> String {
     var joined = text
@@ -363,7 +323,6 @@ fn doubled(text: String, times: Int) -> String {
     joined
 }
 
-/// Two modules that each write the class `demo/Box`, with a field each drawn from two names.
 // example: named_twice(drawn.seeded(1)).why == ""
 fn named_twice(draw: drawn.Draw) -> Drawing {
     let first = drawn.picked(draw, ["held", "kept"], "")
@@ -381,10 +340,6 @@ fn named_twice(draw: drawn.Draw) -> Drawing {
     Drawing { source: "two modules write `demo/Box` holding `" + first + "` and `" + second + "`", why: why }
 }
 
-/// Two modules that write `demo/Box` and a drawn second class, which holds the same field.
-///
-/// The second name is drawn from names that differ from `demo/Box` only in case, which are
-/// refused as `L0702`, and names that differ elsewhere, which are written as two classes.
 // example: named_in_case(drawn.seeded(1)).why == ""
 fn named_in_case(draw: drawn.Draw) -> Drawing {
     let second = drawn.picked(draw, ["demo/box", "Demo/Box", "DEMO/BOX", "demo/Bag", "demo/Box1", "other/Box"], "")
@@ -404,7 +359,6 @@ fn named_in_case(draw: drawn.Draw) -> Drawing {
     Drawing { source: "two modules write `demo/Box` and `" + second + "`, each holding `held`", why: why }
 }
 
-/// Whether `answer` is refused for two names that differ only in case.
 // example: !is_refused_in_case(Ok([]))
 fn is_refused_in_case(answer: Result<List<jvm.ClassFile>, jvm.Unwritten>) -> Bool {
     match answer {
@@ -413,30 +367,24 @@ fn is_refused_in_case(answer: Result<List<jvm.ClassFile>, jvm.Unwritten>) -> Boo
     }
 }
 
-/// Whether `name` is one of the drawn names that differ from `demo/Box` only in case.
 // example: is_box_in_other_case("demo/box")
 // example: !is_box_in_other_case("demo/Bag")
 fn is_box_in_other_case(name: String) -> Bool {
     list.has_value(["demo/box", "Demo/Box", "DEMO/BOX"], name)
 }
 
-/// The record `demo/Box`, which holds one whole number under the name `field`.
 // example: jvm.class_of(boxed("held").of) == "demo/Box"
 fn boxed(field: String) -> ir.Class {
     named_box(name: "demo/Box", field: field)
 }
 
-/// The record `name`, which holds one whole number under the name `field`.
 // example: jvm.class_of(named_box(name: "demo/box", field: "held").of) == "demo/box"
 fn named_box(name: String, field: String) -> ir.Class {
     ir.Class { of: program_type(name), extends: ir.Anything, extending: ir.Never, implements: [], fields: [ir.Field { name: field, of: ir.Whole }], methods: [] }
 }
 
-/// A method that passes a drawn number of `long` values to a call or a constructor, then adds.
-///
-/// A call takes `taken` values and leaves one, to which `added` more are added one at a time, so
-/// the stack holds two values at most after the call. A constructor takes `taken` values above
-/// the two copies of what it builds.
+// A call takes `taken` values and leaves one, and each of `added` goes on it alone, so two at most.
+// A constructor takes `taken` values above the two copies of what it builds.
 // example: long_stack(drawn.seeded(1)).why == ""
 fn long_stack(draw: drawn.Draw) -> Drawing {
     let taken = 1 + drawn.number(draw, 4)
@@ -480,7 +428,6 @@ fn long_stack(draw: drawn.Draw) -> Drawing {
     Drawing { source: shown(taken) + " values taken, " + shown(added) + " added, built: " + shown(is_built), why: why }
 }
 
-/// The type whose class is `name`, such as `demo/Box`, which the module before the `/` declares.
 // example: jvm.class_of(program_type("Demo/Box")) == "Demo/Box"
 fn program_type(name: String) -> ir.Kind {
     var at = 0
@@ -490,7 +437,6 @@ fn program_type(name: String) -> ir.Kind {
     ir.TypeOf { module: ir.OfTheProgram(or(strings.cut(name, 0, at), "")), name: or(strings.cut(name, at + 1, strings.length(name)), "") }
 }
 
-/// How many `long` values `instructions` put on the stack as constants.
 // example: longs_pushed([ir.New(program_type("demo/Box")), ir.LongOf(7)]) == 1
 fn longs_pushed(instructions: List<ir.Instruction>) -> Int {
     var count = 0
@@ -503,7 +449,6 @@ fn longs_pushed(instructions: List<ir.Instruction>) -> Int {
     count
 }
 
-/// The larger of `one` and `other`.
 // example: greater(one: 2, other: 3) == 3
 fn greater(one: Int, other: Int) -> Int {
     if one > other {
@@ -512,7 +457,6 @@ fn greater(one: Int, other: Int) -> Int {
     other
 }
 
-/// The module `demo` of one method, `answer0`, that runs `instructions` over `locals`.
 // example: list.length(one_body([ir.LongOf(1), ir.Return(Some(ir.Whole))], []).classes) == 1
 fn one_body(instructions: List<ir.Instruction>, locals: List<ir.Local>) -> ir.Lowered {
     let body = ir.Body { instructions: instructions, locals: locals, guards: [] }
@@ -520,7 +464,6 @@ fn one_body(instructions: List<ir.Instruction>, locals: List<ir.Local>) -> ir.Lo
     jvm.one_class(demo_class([method]))
 }
 
-/// Why `answer` is not refused with `code` past the limit, or not written within it, or nothing.
 // example: refusal_why(answer: Ok([]), code: "L0700", side: Within) == ""
 // example: refusal_why(answer: Ok([]), code: "L0700", side: Past) == "it is written, and it is past the limit"
 fn refusal_why(answer: Result<List<jvm.ClassFile>, jvm.Unwritten>, code: String, side: Side) -> String {
@@ -541,7 +484,6 @@ fn refusal_why(answer: Result<List<jvm.ClassFile>, jvm.Unwritten>, code: String,
     }
 }
 
-/// Which side of `limit` the drawn `amount` is on.
 // example: side_of(amount: 32768, limit: 32767) == Past
 fn side_of(amount: Int, limit: Int) -> Side {
     if amount > limit {
@@ -550,7 +492,6 @@ fn side_of(amount: Int, limit: Int) -> Side {
     Within
 }
 
-/// Why a class file of `files` does not begin with the magic and the version, or nothing.
 // example: version_why([]) == "the compiler refused it"
 fn version_why(files: List<jvm.ClassFile>) -> String {
     var why = compiled_why(files)
@@ -563,7 +504,6 @@ fn version_why(files: List<jvm.ClassFile>) -> String {
     why
 }
 
-/// Why a class file of `files` names a class or a base past the end of its pool, or nothing.
 // example: pool_why([]) == "the compiler refused it"
 fn pool_why(files: List<jvm.ClassFile>) -> String {
     var why = compiled_why(files)
@@ -577,7 +517,6 @@ fn pool_why(files: List<jvm.ClassFile>) -> String {
     why
 }
 
-/// Why a class of `files` asks to load first a class the build does not write, or itself.
 // example: loadable_why([]) == "the compiler refused it"
 fn loadable_why(files: List<jvm.ClassFile>) -> String {
     var written = []
@@ -595,13 +534,11 @@ fn loadable_why(files: List<jvm.ClassFile>) -> String {
     why
 }
 
-/// The descriptor of the class written at `path`.
 // example: descriptor_of("demo/Box.class") == "Ldemo/Box;"
 fn descriptor_of(path: String) -> String {
     "L" + compiled.replaced(path, ".class", "") + ";"
 }
 
-/// `the compiler refused it` where `files` are none, and nothing where there are some.
 // example: compiled_why([]) == "the compiler refused it"
 fn compiled_why(files: List<jvm.ClassFile>) -> String {
     if list.length(files) == 0 {
@@ -610,7 +547,6 @@ fn compiled_why(files: List<jvm.ClassFile>) -> String {
     ""
 }
 
-/// The bytes of the class file of the module `demo` among `files`, which are none where it is not.
 // example: module_bytes([jvm.ClassFile { path: "demo.class", bytes: [1] }]) == [1]
 fn module_bytes(files: List<jvm.ClassFile>) -> List<Int> {
     for file in files {
@@ -621,7 +557,6 @@ fn module_bytes(files: List<jvm.ClassFile>) -> List<Int> {
     []
 }
 
-/// A module of one to five methods, each of which gives back a whole number from a drawn body.
 // example: list.length(method_names(a_module(drawn.seeded(1)))) >= 1
 fn a_module(draw: drawn.Draw) -> ir.Lowered {
     let many = drawn.number(draw, 5)
@@ -634,13 +569,11 @@ fn a_module(draw: drawn.Draw) -> ir.Lowered {
     jvm.one_class(demo_class(methods))
 }
 
-/// The class of the module `demo`, which declares `methods`.
 // example: jvm.class_of(demo_class([]).of) == "demo"
 fn demo_class(methods: List<ir.Method>) -> ir.Class {
     ir.Class { of: ir.ModuleOf(ir.OfTheProgram("demo")), extends: ir.Anything, extending: ir.Never, implements: [], fields: [], methods: methods }
 }
 
-/// The body of the kind `which`, each of which leaves one whole number on the stack.
 // example: list.length(body_of_kind(2)) == 3
 fn body_of_kind(which: Int) -> List<ir.Instruction> {
     match which {
@@ -651,13 +584,11 @@ fn body_of_kind(which: Int) -> List<ir.Instruction> {
     }
 }
 
-/// A drawn module as a failure reports it: the names of the methods it declares.
 // example: shown_module(ir.no_lowered()) == "a module that declares "
 fn shown_module(module: ir.Lowered) -> String {
     "a module that declares " + strings.join(method_names(module), ", ")
 }
 
-/// The names of the methods the one class of `module` declares, in order.
 // example: method_names(ir.no_lowered()) == []
 fn method_names(module: ir.Lowered) -> List<String> {
     var names = []
@@ -669,26 +600,22 @@ fn method_names(module: ir.Lowered) -> List<String> {
     names
 }
 
-/// The eight modules the properties that compile a source draw from.
 // example: list.length(sources()) == 8
 fn sources() -> List<String> {
     ["fn answer() -> Int {\n    7\n}\n", "fn held(user: User) -> Int {\n    user.id\n}\n\ntype User = {\n    id: Int\n}\n", "fn told(payment: Payment) -> String {\n    match payment {\n        Pending => \"waiting\"\n        Failed(reason) => reason\n    }\n}\n\ntype Payment =\n    | Pending\n    | Failed(String)\n", "fn walked(counts: List<Int>) -> Int {\n    var total = 0\n    for count in counts {\n        total += count\n    }\n    total\n}\n", "fn used() -> Result<Int, String> {\n    let value = held()?\n    Ok(value + 1)\n}\n\nfn held() -> Result<Int, String> {\n    Ok(1)\n}\n", "fn number(user: User) -> Int {\n    user.home.number\n}\n\ntype User = {\n    id: Int\n    home: Address\n}\n\ntype Address = {\n    number: Int\n}\n", "fn kept(count: Int) -> Int {\n    identity(count)\n}\n\nfn is_kept(flag: Bool) -> Bool {\n    identity(flag)\n}\n\nfn identity<T>(value: T) -> T {\n    value\n}\n", "fn kept(count: Int) -> Int {\n    through(count)\n}\n\nfn through<T>(value: T) -> T {\n    identity(value)\n}\n\nfn identity<T>(value: T) -> T {\n    value\n}\n"]
 }
 
-/// One drawn module, and what went wrong with it, which is empty where the property held.
 type Drawing = {
     source: String
     why: String
 }
 
-/// Which side of a limit of the writer a drawn module is on.
 derive Eq for Side
 
 type Side =
     | Within
     | Past
 
-/// Which property a drawn module is checked against.
 type Property =
     | CompiledTwice
     | CompiledVersion

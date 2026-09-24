@@ -11,7 +11,6 @@ import map
 import resolver
 import types
 
-/// The spans of the holes `source` holds, one after another.
 // example: holes_of("fn f() -> Int {\n    todo(todo(\"x\"))\n}\n") == "20..35 25..34 "
 private fn holes_of(source: String) -> String {
     var written = ""
@@ -21,13 +20,11 @@ private fn holes_of(source: String) -> String {
     written
 }
 
-/// `source`, resolved against the small prelude of the examples.
 // example: declared_resolved("").module == "main"
 private fn declared_resolved(source: String) -> resolver.Resolved {
     types.checked_of(source).resolved
 }
 
-/// Every hole of `resolved`, in the order they are written.
 // example: list.length(of_module(declared_resolved("fn f() -> Int {\n    1\n}\n"))) == 0
 fn of_module(resolved: resolver.Resolved) -> List<Hole> {
     var found = []
@@ -37,7 +34,6 @@ fn of_module(resolved: resolver.Resolved) -> List<Hole> {
     found
 }
 
-/// `found`, then the holes of each statement of a block.
 // example: holes_of("fn f() -> Int {\n    let held = todo(\"x\")\n    held\n}\n") == "31..40 "
 fn block_holes(resolved: resolver.Resolved, found: List<Hole>, walked: ast.Block) -> List<Hole> {
     var gathered = found
@@ -47,7 +43,6 @@ fn block_holes(resolved: resolver.Resolved, found: List<Hole>, walked: ast.Block
     gathered
 }
 
-/// `found`, then the holes of the expressions of one statement.
 // example: holes_of("fn f() -> Int {\n    return todo(\"x\")\n}\n") == "27..36 "
 fn statement_holes(resolved: resolver.Resolved, found: List<Hole>, statement: ast.Statement) -> List<Hole> {
     match statement.kind {
@@ -61,7 +56,6 @@ fn statement_holes(resolved: resolver.Resolved, found: List<Hole>, statement: as
     }
 }
 
-/// `found`, then the holes of the value a `return` gives back, when it gives one.
 // example: list.length(given_holes(declared_resolved(""), [], None)) == 0
 fn given_holes(resolved: resolver.Resolved, found: List<Hole>, given: Option<ast.Expr>) -> List<Hole> {
     match given {
@@ -70,13 +64,11 @@ fn given_holes(resolved: resolver.Resolved, found: List<Hole>, given: Option<ast
     }
 }
 
-/// `found`, then the holes of what a `for` loops over or while, then those of its body.
 // example: holes_of("fn f() -> Int {\n    for todo(\"x\") {\n        _ = todo(\"y\")\n    }\n    1\n}\n") == "24..33 48..57 "
 fn loop_holes(resolved: resolver.Resolved, found: List<Hole>, looped: ast.ForLoop) -> List<Hole> {
     block_holes(resolved, header_holes(resolved, found, looped.header), looped.body)
 }
 
-/// `found`, then the holes of the condition of a `for`, or of what it loops over.
 // example: list.length(header_holes(declared_resolved(""), [], ast.Forever)) == 0
 fn header_holes(resolved: resolver.Resolved, found: List<Hole>, header: ast.ForHeader) -> List<Hole> {
     match header {
@@ -86,7 +78,6 @@ fn header_holes(resolved: resolver.Resolved, found: List<Hole>, header: ast.ForH
     }
 }
 
-/// `found`, then the holes inside one expression, in the order they are written.
 // example: holes_of("fn f() -> Int {\n    todo(\"x\") + todo(\"y\")\n}\n") == "20..29 32..41 "
 fn expression_holes(resolved: resolver.Resolved, found: List<Hole>, walked: ast.Expr) -> List<Hole> {
     match walked.kind {
@@ -104,16 +95,12 @@ fn expression_holes(resolved: resolver.Resolved, found: List<Hole>, walked: ast.
     }
 }
 
-/// `found`, then the holes of each argument of a call.
-///
-/// The arguments are walked whether or not the call is a hole, because `todo(name_of(todo("why")))`
-/// holds two.
+// Each argument is walked also where the call is a hole: `todo(name_of(todo("why")))` holds two.
 // example: holes_of("fn f(held: Int) -> Int {\n    f(held: todo(\"x\"))\n}\n") == "37..46 "
 fn call_holes(resolved: resolver.Resolved, found: List<Hole>, arguments: ast.Arguments) -> List<Hole> {
     each_holes(resolved, found, infer.values_of(arguments))
 }
 
-/// `found` with the call at `span` where its callee is the hole, and the holes of the callee otherwise.
 // example: holes_of("fn f() -> Int {\n    or(todo(\"x\"), 1)\n}\n") == "23..32 "
 fn callee_holes(resolved: resolver.Resolved, found: List<Hole>, callee: ast.Expr, span: lexer.Span) -> List<Hole> {
     if is_the_hole(resolved, callee) {
@@ -122,7 +109,6 @@ fn callee_holes(resolved: resolver.Resolved, found: List<Hole>, callee: ast.Expr
     expression_holes(resolved, found, callee)
 }
 
-/// Whether `callee` names the hole the prelude supplies, rather than one a module declared.
 // example: holes_of("fn f() -> Int {\n    todo(\"x\")\n}\n") == "20..29 "
 fn is_the_hole(resolved: resolver.Resolved, callee: ast.Expr) -> Bool {
     match callee.kind {
@@ -131,7 +117,6 @@ fn is_the_hole(resolved: resolver.Resolved, callee: ast.Expr) -> Bool {
     }
 }
 
-/// Whether a name resolved to a definition of the prelude.
 // example: !is_from_prelude(None)
 fn is_from_prelude(found: Option<resolver.Resolution>) -> Bool {
     match found {
@@ -140,7 +125,6 @@ fn is_from_prelude(found: Option<resolver.Resolution>) -> Bool {
     }
 }
 
-/// Whether a definition came from the prelude.
 // example: is_prelude_origin(resolver.InPrelude)
 fn is_prelude_origin(origin: resolver.Origin) -> Bool {
     match origin {
@@ -149,7 +133,6 @@ fn is_prelude_origin(origin: resolver.Origin) -> Bool {
     }
 }
 
-/// `found`, then the holes of each of `values`, in the order they are written.
 // example: holes_of("fn f() -> List<Int> {\n    [todo(\"x\"), todo(\"y\")]\n}\n") == "27..36 38..47 "
 fn each_holes(resolved: resolver.Resolved, found: List<Hole>, values: List<ast.Expr>) -> List<Hole> {
     var gathered = found
@@ -159,7 +142,6 @@ fn each_holes(resolved: resolver.Resolved, found: List<Hole>, values: List<ast.E
     gathered
 }
 
-/// `found`, then the holes of the value of each field a record literal writes.
 // example: holes_of("fn f() -> Box {\n    Box { held: todo(\"x\") }\n}\n\ntype Box = {\n    held: Int\n}\n") == "32..41 "
 fn fields_holes(resolved: resolver.Resolved, found: List<Hole>, fields: List<ast.FieldValue>) -> List<Hole> {
     var gathered = found
@@ -169,7 +151,6 @@ fn fields_holes(resolved: resolver.Resolved, found: List<Hole>, fields: List<ast
     gathered
 }
 
-/// `found`, then the holes of each condition and the block it guards, then of the `else` block.
 // example: holes_of("fn f() -> Int {\n    if todo(\"x\") {\n        todo(\"y\")\n    } else {\n        todo(\"z\")\n    }\n}\n") == "23..32 43..52 74..83 "
 fn if_holes(resolved: resolver.Resolved, found: List<Hole>, chain: ast.IfExpr) -> List<Hole> {
     var gathered = found
@@ -182,7 +163,6 @@ fn if_holes(resolved: resolver.Resolved, found: List<Hole>, chain: ast.IfExpr) -
     }
 }
 
-/// `found`, then the holes of the scrutinee, then those of the body of each arm.
 // example: holes_of("fn f() -> Int {\n    match todo(\"x\") {\n        _ => todo(\"y\")\n    }\n}\n") == "26..35 51..60 "
 fn match_holes(resolved: resolver.Resolved, found: List<Hole>, matched: ast.MatchExpr) -> List<Hole> {
     var gathered = expression_holes(resolved, found, matched.scrutinee)
@@ -192,10 +172,7 @@ fn match_holes(resolved: resolver.Resolved, found: List<Hole>, matched: ast.Matc
     gathered
 }
 
-/// A `todo(…)` written where a value belongs.
-///
-/// A hole carries only where it is written, because the reason is written there too: the
-/// rendered line under the message is what names it.
+// A hole keeps only its place, because the reason is written there, and the rendered line shows it.
 type Hole = {
     span: lexer.Span
 }

@@ -28,13 +28,13 @@ fn repeat(word: String, times: Int) -> String {
     said
 }
 
-/// The parameter types differ, so this call is written either way and is written in order here.
+// The parameter types are different, so a call can name them or not. This call puts them in order.
 // example: label("done", 1) == "done 1"
 fn label(text: String, count: Int) -> String {
     text + " " + shown(count)
 }
 
-/// A type parameter counts as a type, so `pair` repeats one and every call of it names them.
+// A type parameter is a type, so `pair` repeats a type and each call of `pair` names the arguments.
 // example: list.length(pair(first: 1, second: 2)) == 2
 fn pair<T>(first: T, second: T) -> List<T> {
     [first, second]

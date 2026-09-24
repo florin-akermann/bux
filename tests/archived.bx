@@ -18,7 +18,6 @@ import modules
 import started
 import walk
 
-/// Every check of this module, or one skip where `JAVA_HOME` names no JDK.
 // example: strings_joined(["a", "b"]) == "a\nb\n"
 fn every_archive_held(library: ir.Library, limit: Int) -> held.Held {
     if !exemplified.is_a_jdk_named() {
@@ -34,7 +33,6 @@ fn every_archive_held(library: ir.Library, limit: Int) -> held.Held {
     held.added(found, dependency_archive_reached(library, limit))
 }
 
-/// `run` reaches a class in an archive the manifest states.
 // example: strings_joined([program_text()]) != ""
 fn stated_reached(library: ir.Library, limit: Int) -> held.Held {
     let scene = enacted.scene_of([enacted.Written { at: "src/main.bx", text: program_text() }])
@@ -46,8 +44,6 @@ fn stated_reached(library: ir.Library, limit: Int) -> held.Held {
     enacted.facts_held("run reaches a class in an archive the manifest states", facts)
 }
 
-/// `run` refuses a class that no archive the manifest states holds, though an archive beside it
-/// holds the class, and runs nothing.
 // example: strings_joined([manifest_text([])]) != ""
 fn unstated_unreached(library: ir.Library, limit: Int) -> held.Held {
     let scene = enacted.scene_of([enacted.Written { at: "src/main.bx", text: program_text() }])
@@ -59,7 +55,6 @@ fn unstated_unreached(library: ir.Library, limit: Int) -> held.Held {
     enacted.facts_held("run refuses a class in no archive the manifest states", facts)
 }
 
-/// `build` refuses an archive that is not there.
 // example: strings_joined([zero_line("lib/gone.jar")]) != ""
 fn missing_refused(library: ir.Library) -> held.Held {
     let scene = enacted.scene_of([enacted.Written { at: "src/main.bx", text: program_text() }, enacted.Written { at: "bux.package", text: manifest_text([zero_line("lib/gone.jar")]) }])
@@ -69,7 +64,6 @@ fn missing_refused(library: ir.Library) -> held.Held {
     enacted.facts_held("build refuses an archive that is not there", facts)
 }
 
-/// `run` refuses an archive whose hash is not the one its line states, and runs nothing.
 // example: strings_joined([zero_line("lib/shouting.jar")]) != ""
 fn other_hash_refused(library: ir.Library, limit: Int) -> held.Held {
     let scene = enacted.scene_of([enacted.Written { at: "src/main.bx", text: program_text() }, enacted.Written { at: "bux.package", text: manifest_text([zero_line("lib/shouting.jar")]) }])
@@ -80,7 +74,6 @@ fn other_hash_refused(library: ir.Library, limit: Int) -> held.Held {
     enacted.facts_held("run refuses an archive whose hash is not the one its line states", facts)
 }
 
-/// `build` refuses an archive whose manifest names more archives in its `Class-Path`.
 // example: strings_joined(["Class-Path: other.jar"]) == "Class-Path: other.jar\n"
 fn class_path_refused(library: ir.Library, limit: Int) -> held.Held {
     let scene = enacted.scene_of([enacted.Written { at: "src/main.bx", text: program_text() }, enacted.Written { at: "manifest.txt", text: strings_joined(["Class-Path: other.jar"]) }])
@@ -92,7 +85,6 @@ fn class_path_refused(library: ir.Library, limit: Int) -> held.Held {
     enacted.facts_held("build refuses an archive whose manifest names more archives", facts)
 }
 
-/// `build` refuses a file that has the hash its line states and is no Java archive.
 // example: strings_joined([]) == ""
 fn plain_file_refused(library: ir.Library) -> held.Held {
     let scene = enacted.scene_of([enacted.Written { at: "src/main.bx", text: program_text() }, enacted.Written { at: "lib/shouting.jar", text: "plain" }])
@@ -103,7 +95,6 @@ fn plain_file_refused(library: ir.Library) -> held.Held {
     enacted.facts_held("build refuses a file that is no Java archive", facts)
 }
 
-/// `test` runs examples that reach a class in an archive the manifest states.
 // example: strings_joined([examples_text()]) != ""
 fn examples_reach_it(library: ir.Library, limit: Int) -> held.Held {
     let scene = enacted.scene_of([enacted.Written { at: "src/loud.bx", text: examples_text() }])
@@ -114,7 +105,6 @@ fn examples_reach_it(library: ir.Library, limit: Int) -> held.Held {
     enacted.facts_held("test runs examples that reach a class in a stated archive", enacted.said_facts("test", said))
 }
 
-/// `run` reaches an archive that a package it depends on states, because that package needs it.
 // example: strings_joined([depending_text()]) != ""
 fn dependency_archive_reached(library: ir.Library, limit: Int) -> held.Held {
     let scene = enacted.scene_of([enacted.Written { at: "app/src/main.bx", text: depending_text() }, enacted.Written { at: "app/bux.package", text: "package app\nversion 0.1.0\ndepends ../lender\n" }, enacted.Written { at: "lender/src/loud.bx", text: examples_text() }])
@@ -127,16 +117,11 @@ fn dependency_archive_reached(library: ir.Library, limit: Int) -> held.Held {
     enacted.facts_held("run reaches an archive a package it depends on states", facts)
 }
 
-/// The facts that `said` is a refusal opening with `opening`, and that no class was written.
 // example: list.length(refused_facts(said: command.nothing_said(), scene: "no-such-directory", opening: "a")) == 3
 fn refused_facts(said: command.Said, scene: String, opening: String) -> List<enacted.Fact> {
     [enacted.status_fact(said, 1), enacted.opening_fact("errors", said.errors, opening), enacted.absence(scene, "target/main.class")]
 }
 
-/// The archive `lib/shouting.jar` under `scene`, holding the class `shouting`, and packed with the
-/// manifest file `manifest` where it names one.
-///
-/// The class is built in a directory of its own beside the archive, which is then taken away.
 // example: list.length(pack_line(jar: "a.jar", target: "t", manifest: "")) == 7
 fn packed(scene: String, library: ir.Library, limit: Int, manifest: String) -> String {
     let source = modules.joined(scene, "source")
@@ -150,7 +135,6 @@ fn packed(scene: String, library: ir.Library, limit: Int, manifest: String) -> S
     jar
 }
 
-/// The line that has the `jar` tool pack the class `shouting` of `target` into `jar`.
 // example: list.length(pack_line(jar: "a.jar", target: "t", manifest: "m.txt")) == 9
 fn pack_line(jar: String, target: String, manifest: String) -> List<String> {
     let tool = modules.joined(modules.joined(or(environment.read("JAVA_HOME"), ""), "bin"), "jar")
@@ -161,25 +145,21 @@ fn pack_line(jar: String, target: String, manifest: String) -> List<String> {
     command.all_of(opening, ["--manifest", manifest, "-C", target, "shouting.class"])
 }
 
-/// The `jar` line of `lib/shouting.jar`, stating the hash of the file at `jar`.
 // example: archive_line("no-such-directory/x.jar") == "jar lib/shouting.jar sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 fn archive_line(jar: String) -> String {
     "jar lib/shouting.jar sha256:" + digest.sha256(ok_or(files.read_bytes(jar), []))
 }
 
-/// A `jar` line of `path` whose hash is 64 zeros, which is the hash of no archive made here.
 // example: zero_line("x.jar") == "jar x.jar sha256:0000000000000000000000000000000000000000000000000000000000000000"
 fn zero_line(path: String) -> String {
     "jar " + path + " sha256:" + modules.repeated_zero(64)
 }
 
-/// A manifest of the package `scene`, with each of `lines` after its version.
 // example: manifest_text(["jar x"]) == "package scene\nversion 0.1.0\njar x\n"
 fn manifest_text(lines: List<String>) -> String {
     "package scene\nversion 0.1.0\n" + strings_joined(lines)
 }
 
-/// Each of `lines`, each ended by a line break.
 // example: strings_joined([]) == ""
 fn strings_joined(lines: List<String>) -> String {
     var written = ""
@@ -189,7 +169,6 @@ fn strings_joined(lines: List<String>) -> String {
     written
 }
 
-/// What the command line says to `words`, where a program it would start is started in `scene`.
 // example: ran(["--version"], "no-such-directory", ir.little_library(), 1).status == 0
 fn ran(words: List<String>, scene: String, library: ir.Library, limit: Int) -> command.Said {
     match command.answered_within(words, library) {
@@ -198,25 +177,21 @@ fn ran(words: List<String>, scene: String, library: ir.Library, limit: Int) -> c
     }
 }
 
-/// The module packed into each archive: the class `shouting`, with one static method.
 // example: list.length(walk.lines_of(shouting_text())) == 4
 fn shouting_text() -> String {
     "// example: shout(\"a\") == \"a!\"\nfn shout(text: String) -> String {\n    text + \"!\"\n}\n"
 }
 
-/// A program that reaches `shouting.shout` in an archive.
 // example: list.length(walk.lines_of(program_text())) == 8
 fn program_text() -> String {
     "import io\n\nfn main(arguments: List<String>) -> Int {\n    io.println(shouted(\"hello\"))\n    0\n}\n\nextern static shouted(text: String) -> String = \"shouting.shout\"\n"
 }
 
-/// A module whose example reaches `shouting.shout` in an archive.
 // example: list.length(walk.lines_of(examples_text())) == 6
 fn examples_text() -> String {
     "// example: loud(\"a\") == \"a!\"\nfn loud(text: String) -> String {\n    shouted(text)\n}\n\nextern static shouted(text: String) -> String = \"shouting.shout\"\n"
 }
 
-/// A program of a package that reaches `shouting.shout` through a module of a dependency.
 // example: list.length(walk.lines_of(depending_text())) == 7
 fn depending_text() -> String {
     "import io\nimport loud\n\nfn main(arguments: List<String>) -> Int {\n    io.println(loud.loud(\"hello\"))\n    0\n}\n"

@@ -15,7 +15,6 @@ import list
 import strings
 import types
 
-/// A drawn module is checked to one answer, however many times it is checked.
 // example: held.is_held(inference_is_deterministic(2, ir.little_library()))
 fn inference_is_deterministic(cases: Int, library: ir.Library) -> held.Held {
     var found = held.nothing_failed(cases)
@@ -25,7 +24,6 @@ fn inference_is_deterministic(cases: Int, library: ir.Library) -> held.Held {
     found
 }
 
-/// A drawn module, checked twice.
 // example: deterministic_tried(drawn.seeded(1), ir.little_library()).why == ""
 fn deterministic_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
     let source = drawn_module(draw)
@@ -37,7 +35,6 @@ fn deterministic_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried 
     checking.Tried { input: source, why: "" }
 }
 
-/// The API page of a module that types, or the code, the place, and the message of its refusal.
 // example: answer_text(checking.checked("fn one() -> Int {\n    1\n}\n", ir.little_library())) == "fn one() -> Int\n"
 fn answer_text(answer: Result<infer.Inference, command.Diagnostic>) -> String {
     match answer {
@@ -46,8 +43,6 @@ fn answer_text(answer: Result<infer.Inference, command.Diagnostic>) -> String {
     }
 }
 
-/// A call written with its first argument in front of the name is refused, and its `help:` is
-/// the plain call, which types.
 // example: held.is_held(a_call_in_front_is_refused_for_the_plain_call(2, ir.little_library()))
 fn a_call_in_front_is_refused_for_the_plain_call(cases: Int, library: ir.Library) -> held.Held {
     var found = held.nothing_failed(cases)
@@ -57,7 +52,6 @@ fn a_call_in_front_is_refused_for_the_plain_call(cases: Int, library: ir.Library
     found
 }
 
-/// A drawn call, written in front of the name and plainly: the first refused, the second not.
 // example: call_tried(drawn.seeded(1), ir.little_library()).why == ""
 fn call_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
     let first = drawn.picked(draw, ["count", "1", "twice(count)"], "count")
@@ -72,7 +66,6 @@ fn call_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
     checking.Tried { input: in_front, why: checking.code_of(checking.checked(calling(plain), library)) }
 }
 
-/// The `help:` line of a refusal, and nothing where there is no refusal or no help.
 // example: help_given(checking.checked("fn one() -> Int {\n    1\n}\n", ir.little_library())) == ""
 fn help_given(answer: Result<infer.Inference, command.Diagnostic>) -> String {
     match answer {
@@ -81,13 +74,11 @@ fn help_given(answer: Result<infer.Inference, command.Diagnostic>) -> String {
     }
 }
 
-/// A module that binds what `call` gives back, with the functions it calls declared below.
 // example: strings.length(calling("held(1, said)")) > 0
 fn calling(call: String) -> String {
     "fn go(count: Int, said: String) -> String {\n    let answer = " + call + "\n    _ = count\n    _ = said\n    answer\n}\n\nfn held(count: Int, said: String) -> String {\n    _ = count\n    said\n}\n\nfn twice(count: Int) -> Int {\n    count + count\n}\n"
 }
 
-/// A module of distinct pieces, each of which infers on its own, infers.
 // example: held.is_held(a_module_of_pieces_infers(2, ir.little_library()))
 fn a_module_of_pieces_infers(cases: Int, library: ir.Library) -> held.Held {
     var found = held.nothing_failed(cases)
@@ -98,8 +89,6 @@ fn a_module_of_pieces_infers(cases: Int, library: ir.Library) -> held.Held {
     found
 }
 
-/// A piece that is refused however sound the module around it is gives a refusal that points
-/// at a stretch of at least one byte inside the source.
 // example: held.is_held(a_refusal_points_inside_the_source(2, ir.little_library()))
 fn a_refusal_points_inside_the_source(cases: Int, library: ir.Library) -> held.Held {
     var found = held.nothing_failed(cases)
@@ -109,7 +98,6 @@ fn a_refusal_points_inside_the_source(cases: Int, library: ir.Library) -> held.H
     found
 }
 
-/// A drawn module of pieces, with a piece that is refused below them.
 // example: refusal_tried(drawn.seeded(1), ir.little_library()).why == ""
 fn refusal_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
     let refused = drawn.picked(draw, refusals(), "")
@@ -120,7 +108,6 @@ fn refusal_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
     }
 }
 
-/// Every expression of a drawn module of pieces has the type inference gave it.
 // example: held.is_held(every_expression_has_a_type(2, ir.little_library()))
 fn every_expression_has_a_type(cases: Int, library: ir.Library) -> held.Held {
     var found = held.nothing_failed(cases)
@@ -131,7 +118,6 @@ fn every_expression_has_a_type(cases: Int, library: ir.Library) -> held.Held {
     found
 }
 
-/// The first expression of `source` inference gave no type, and `""` where there is none.
 // example: first_untyped("fn one() -> Int {\n    1\n}\n", ir.little_library()) == ""
 fn first_untyped(source: String, library: ir.Library) -> String {
     match checking.checked(source, library) {
@@ -140,7 +126,6 @@ fn first_untyped(source: String, library: ir.Library) -> String {
     }
 }
 
-/// The first expression `inference` gave no type, written as `source` writes it, and `""`.
 // example: untyped_in(or_nothing(checking.checked("fn one() -> Int {\n    1\n}\n", ir.little_library())), "fn one() -> Int {\n    1\n}\n") == ""
 fn untyped_in(inference: infer.Inference, source: String) -> String {
     for written in expressions(inference.resolved.program) {
@@ -151,7 +136,6 @@ fn untyped_in(inference: infer.Inference, source: String) -> String {
     ""
 }
 
-/// No expression of a drawn module of pieces is left with a type that nothing settled.
 // example: held.is_held(no_expression_is_left_unsettled(2, ir.little_library()))
 fn no_expression_is_left_unsettled(cases: Int, library: ir.Library) -> held.Held {
     var found = held.nothing_failed(cases)
@@ -162,7 +146,6 @@ fn no_expression_is_left_unsettled(cases: Int, library: ir.Library) -> held.Held
     found
 }
 
-/// The first expression of `source` whose type holds a `_`, and `""` where there is none.
 // example: first_unsettled("fn one() -> Int {\n    1\n}\n", ir.little_library()) == ""
 fn first_unsettled(source: String, library: ir.Library) -> String {
     match checking.checked(source, library) {
@@ -171,7 +154,6 @@ fn first_unsettled(source: String, library: ir.Library) -> String {
     }
 }
 
-/// The first expression `inference` left unsettled, written as `source` writes it, and `""`.
 // example: unsettled_in(or_nothing(checking.checked("fn one() -> Int {\n    1\n}\n", ir.little_library())), "fn one() -> Int {\n    1\n}\n") == ""
 fn unsettled_in(inference: infer.Inference, source: String) -> String {
     for written in expressions(inference.resolved.program) {
@@ -183,19 +165,16 @@ fn unsettled_in(inference: infer.Inference, source: String) -> String {
     ""
 }
 
-/// The inference `answer` holds, and the inference of nothing where it holds none.
 // example: list.length(or_nothing(checking.checked("fn (", ir.little_library())).resolved.program.items) == 0
 fn or_nothing(answer: Result<infer.Inference, command.Diagnostic>) -> infer.Inference {
     ok_or(answer, infer.nothing_inferred())
 }
 
-/// What `source` writes where `written` is.
 // example: text_at("ab", ast.Expr { kind: ast.Unit, span: checking.occurrence("ab", "b", 1) }) == "b"
 fn text_at(source: String, written: ast.Expr) -> String {
     or(strings.cut(source, written.span.start, written.span.start + written.span.length), "")
 }
 
-/// A generic function is inferred to its most general type, so no two uses are too much for it.
 // example: held.is_held(a_generic_is_general_enough_for_any_two_uses(2, ir.little_library()))
 fn a_generic_is_general_enough_for_any_two_uses(cases: Int, library: ir.Library) -> held.Held {
     var found = held.nothing_failed(cases)
@@ -205,7 +184,6 @@ fn a_generic_is_general_enough_for_any_two_uses(cases: Int, library: ir.Library)
     found
 }
 
-/// Two drawn uses of one generic function, each of which gives back the type it was given.
 // example: generic_tried(drawn.seeded(1), ir.little_library()).why == ""
 fn generic_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
     let first = drawn.picked(draw, values(), Valued { written: "1", of: "Int" })
@@ -219,13 +197,11 @@ fn generic_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
     checking.Tried { input: source, why: "" }
 }
 
-/// A value of each type a generic function is used at, with the type it has.
 // example: list.length(values()) == 3
 fn values() -> List<Valued> {
     [Valued { written: "1", of: "Int" }, Valued { written: "\"two\"", of: "String" }, Valued { written: "true", of: "Bool" }]
 }
 
-/// A ring of one to five records, each holding the next, is refused naming every one of them.
 // example: held.is_held(a_ring_of_records_is_refused_whatever_its_length(2, ir.little_library()))
 fn a_ring_of_records_is_refused_whatever_its_length(cases: Int, library: ir.Library) -> held.Held {
     var found = held.nothing_failed(cases)
@@ -235,7 +211,6 @@ fn a_ring_of_records_is_refused_whatever_its_length(cases: Int, library: ir.Libr
     found
 }
 
-/// A drawn ring of records, whose refusal names the first of them and every step round.
 // example: ring_tried(drawn.seeded(1), ir.little_library()).why == ""
 fn ring_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
     let many = drawn.number(draw, 5) + 1
@@ -249,7 +224,6 @@ fn ring_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
     checking.Tried { input: source, why: "" }
 }
 
-/// A chain of one to five records that never comes back round is accepted.
 // example: held.is_held(a_chain_of_records_is_accepted(2, ir.little_library()))
 fn a_chain_of_records_is_accepted(cases: Int, library: ir.Library) -> held.Held {
     var found = held.nothing_failed(cases)
@@ -260,8 +234,6 @@ fn a_chain_of_records_is_accepted(cases: Int, library: ir.Library) -> held.Held 
     found
 }
 
-/// `Option<()>`, written or inferred in a drawn shape, is refused with `L0432` where it is reached,
-/// and the same shape with `Option<Bool>` in its place is accepted.
 // example: held.is_held(an_option_of_unit_is_refused_where_it_is_reached(2, ir.little_library()))
 fn an_option_of_unit_is_refused_where_it_is_reached(cases: Int, library: ir.Library) -> held.Held {
     var found = held.nothing_failed(cases)
@@ -271,7 +243,6 @@ fn an_option_of_unit_is_refused_where_it_is_reached(cases: Int, library: ir.Libr
     found
 }
 
-/// A drawn shape below a drawn module of pieces, once with `()` and once with `Bool` in it.
 // example: carrying_tried(drawn.seeded(1), ir.little_library()).why == ""
 fn carrying_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
     let shape = drawn.picked(draw, carryings(), Carrying { refused: "", accepted: "", at: "" })
@@ -290,7 +261,6 @@ fn carrying_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
     checking.Tried { input: source, why: "" }
 }
 
-/// The span of the refusal `answer` holds, and an empty span before the source where it holds none.
 // example: refused_span(Ok(1)).start == -1
 fn refused_span<T>(answer: Result<T, command.Diagnostic>) -> lexer.Span {
     match answer {
@@ -299,10 +269,6 @@ fn refused_span<T>(answer: Result<T, command.Diagnostic>) -> lexer.Span {
     }
 }
 
-/// The shapes an `Option<()>` is written or inferred in, each with where the refusal points.
-///
-/// Three write it in a signature or a field, and three reach it: at `Some(())`, at a `None` that
-/// meets it, and at a call of a generic over a `List<()>`.
 // example: list.length(carryings()) == 6
 fn carryings() -> List<Carrying> {
     let given = "\n\nfn is_given(given: ()) -> Bool {\n    _ = given\n    true\n}"
@@ -312,7 +278,6 @@ fn carryings() -> List<Carrying> {
     [Carrying { refused: "fn is_held(maybe: Option<()>) -> Bool {\n    match maybe {\n        Some(_) => true\n        None => false\n    }\n}", accepted: "fn is_held(maybe: Option<Bool>) -> Bool {\n    match maybe {\n        Some(_) => true\n        None => false\n    }\n}", at: "Option<()>" }, Carrying { refused: "type Held = {\n    maybe: Option<()>\n}", accepted: "type Held = {\n    maybe: Option<Bool>\n}", at: "Option<()>" }, Carrying { refused: "fn held() -> List<Option<()>> {\n    []\n}", accepted: "fn held() -> List<Option<Bool>> {\n    []\n}", at: "Option<()>" }, Carrying { refused: "fn is_there() -> Bool {\n    match Some(()) {\n        Some(_) => true\n        None => false\n    }\n}", accepted: "fn is_there() -> Bool {\n    match Some(true) {\n        Some(_) => true\n        None => false\n    }\n}", at: "Some(())" }, Carrying { refused: "fn is_there() -> Bool {\n    match None" + matched + given, accepted: "fn is_there() -> Bool {\n    match None" + matched + given_flag, at: "None" }, Carrying { refused: "fn is_first_given(all: List<()>) -> Bool {\n    match first(all)" + matched + first + given, accepted: "fn is_first_given(all: List<Bool>) -> Bool {\n    match first(all)" + matched + first + given_flag, at: "first(all)" }]
 }
 
-/// The code and the message of the refusal `answer` holds, and `""` where it holds none.
 // example: refusal_text(Ok(1)) == ""
 fn refusal_text<T>(answer: Result<T, command.Diagnostic>) -> String {
     match answer {
@@ -321,7 +286,6 @@ fn refusal_text<T>(answer: Result<T, command.Diagnostic>) -> String {
     }
 }
 
-/// A module declaring `many` records, each holding the next, and the last holding `last`.
 // example: along(many: 1, last: "Int") == "fn counted(held: Room) -> Int {\n    held.count\n}\n\ntype Room = {\n    count: Int\n    next: Int\n}\n"
 fn along(many: Int, last: String) -> String {
     var source = "fn counted(held: Room) -> Int {\n    held.count\n}\n"
@@ -337,13 +301,11 @@ fn along(many: Int, last: String) -> String {
     source
 }
 
-/// The names a ring or a chain of records is declared under, in the order it runs.
 // example: list.length(ringed()) == 5
 fn ringed() -> List<String> {
     ["Room", "Wing", "Floor", "Plan", "Site"]
 }
 
-/// How many times `text` writes `piece`, counting pieces that do not overlap.
 // example: times_written(text: "a, b, c", piece: ", ") == 2
 fn times_written(text: String, piece: String) -> Int {
     var count = 0
@@ -353,7 +315,6 @@ fn times_written(text: String, piece: String) -> Int {
     count
 }
 
-/// Whether `text` ends with `ending`.
 // example: is_ending_in(text: "ab", ending: "b")
 // example: !is_ending_in(text: "ab", ending: "a")
 fn is_ending_in(text: String, ending: String) -> Bool {
@@ -361,9 +322,6 @@ fn is_ending_in(text: String, ending: String) -> Bool {
     from >= 0 && or(strings.cut(text, from, strings.length(text)), "") == ending
 }
 
-/// A module of one record and two functions, the first of which calls the second.
-///
-/// Its parameters, its result, and its body are drawn, so it is refused as often as not.
 // example: strings.length(drawn_module(drawn.seeded(1))) > 0
 fn drawn_module(draw: drawn.Draw) -> String {
     let one = drawn_parameter(draw: draw, named: "one")
@@ -373,13 +331,11 @@ fn drawn_module(draw: drawn.Draw) -> String {
     "fn check(" + one + ", " + other + ") -> " + result + " {\n" + body + "}\n\nfn pick<T>(first: T, second: T) -> T {\n    first\n}\n\ntype Box = {\n    held: Int\n}\n"
 }
 
-/// A parameter called `named`, of a drawn type, which the signature writes as every one does.
 // example: drawn_parameter(draw: drawn.seeded(1), named: "one") != ""
 fn drawn_parameter(draw: drawn.Draw, named: String) -> String {
     named + ": " + drawn.picked(drawn.next(draw), drawn_types(), "Int")
 }
 
-/// A body of up to two bindings and a drawn expression, or a `match` over a drawn one.
 // example: strings.length(drawn_body(drawn.seeded(1))) > 0
 fn drawn_body(draw: drawn.Draw) -> String {
     var body = ""
@@ -394,32 +350,27 @@ fn drawn_body(draw: drawn.Draw) -> String {
     body + "    match " + drawn_expression(checking.after(at, 1)) + " {\n        1 => " + drawn_expression(checking.after(at, 2)) + "\n        _ => " + drawn_expression(checking.after(at, 3)) + "\n    }\n"
 }
 
-/// One expression over the parameters `one` and `other`.
 // example: strings.length(drawn_expression(drawn.seeded(1))) > 0
 fn drawn_expression(draw: drawn.Draw) -> String {
     drawn.picked(draw, ["one", "other", "1", "\"text\"", "one + other", "one == other", "one < 2", "one / 0", "one / other", "Some(one)", "[one, other]", "one?", "Box { held: one }", "one.held", "pick(one, other)", "!one"], "one")
 }
 
-/// The types a drawn signature writes.
 // example: list.length(drawn_types()) == 6
 fn drawn_types() -> List<String> {
     ["Int", "Bool", "String", "Option<Int>", "List<Int>", "Box"]
 }
 
-/// The pieces a drawn module is built from, each of which infers on its own and declares its own
-/// names, so any set of them is a module that infers.
+// Each piece infers alone and declares its own names, so any set of pieces is a module that infers.
 // example: list.length(pieces()) == 6
 fn pieces() -> List<String> {
     ["type UserId = UserId(Int)", "fn is_open(user: User) -> Bool {\n    user.active\n}\n\ntype User = {\n    id: Int\n    active: Bool\n}\n", "fn identity<T>(value: T) -> T {\n    value\n}", "fn total(counts: List<Int>) -> Int {\n    var sum = 0\n    for count in counts {\n        sum += count\n    }\n    sum\n}", "fn shout(word: String) -> String {\n    word + \"!\"\n}", "fn describe(payment: Payment) -> String {\n    match payment {\n        Pending => \"waiting\"\n        Failed(reason) => reason\n    }\n}\n\ntype Payment =\n    | Pending\n    | Failed(String)\n"]
 }
 
-/// The pieces that are refused however sound the module around them is.
 // example: list.length(refusals()) == 4
 fn refusals() -> List<String> {
     ["fn refused() -> Int {\n    \"seven\"\n}", "fn refused<T>(value: T) -> T {\n    1\n}", "fn is_refused(flag: Bool) -> Bool {\n    flag + flag\n}", "fn refused(value: Int) -> Int {\n    value.missing\n}"]
 }
 
-/// Every expression the functions of `program` write, each before the expressions inside it.
 // example: list.length(expressions(or_nothing(checking.checked("fn one() -> Int {\n    1 + 2\n}\n", ir.little_library())).resolved.program)) == 3
 fn expressions(program: ast.Program) -> List<ast.Expr> {
     var found = []
@@ -429,7 +380,6 @@ fn expressions(program: ast.Program) -> List<ast.Expr> {
     found
 }
 
-/// Every expression the body of `item` writes, where it is a function.
 // example: list.length(in_function(ast.Import(ast.ImportDeclaration { module: ast.Name { text: "io", span: checking.occurrence("io", "io", 1) }, span: checking.occurrence("io", "io", 1) }))) == 0
 fn in_function(item: ast.Item) -> List<ast.Expr> {
     match item {
@@ -438,7 +388,6 @@ fn in_function(item: ast.Item) -> List<ast.Expr> {
     }
 }
 
-/// Every expression `block` writes.
 // example: list.length(in_block(ast.Block { statements: [], span: checking.occurrence("", "", 1) })) == 0
 fn in_block(block: ast.Block) -> List<ast.Expr> {
     var found = []
@@ -448,7 +397,6 @@ fn in_block(block: ast.Block) -> List<ast.Expr> {
     found
 }
 
-/// Every expression one statement writes.
 // example: list.length(in_statement(ast.Statement { kind: ast.Break, span: checking.occurrence("", "", 1) })) == 0
 fn in_statement(statement: ast.Statement) -> List<ast.Expr> {
     match statement.kind {
@@ -462,7 +410,6 @@ fn in_statement(statement: ast.Statement) -> List<ast.Expr> {
     }
 }
 
-/// Every expression a loop's header writes.
 // example: list.length(in_header(ast.Forever)) == 0
 fn in_header(header: ast.ForHeader) -> List<ast.Expr> {
     match header {
@@ -472,7 +419,6 @@ fn in_header(header: ast.ForHeader) -> List<ast.Expr> {
     }
 }
 
-/// Every expression `value` holds, where it holds one.
 // example: list.length(from_option(None)) == 0
 fn from_option(value: Option<ast.Expr>) -> List<ast.Expr> {
     match value {
@@ -481,13 +427,11 @@ fn from_option(value: Option<ast.Expr>) -> List<ast.Expr> {
     }
 }
 
-/// `written`, then every expression inside it.
 // example: list.length(from_expr(ast.Expr { kind: ast.Unit, span: checking.occurrence("", "", 1) })) == 1
 fn from_expr(written: ast.Expr) -> List<ast.Expr> {
     both(first: [written], second: inside(written))
 }
 
-/// Every expression inside `written`, not counting `written` itself.
 // example: list.length(inside(ast.Expr { kind: ast.Unit, span: checking.occurrence("", "", 1) })) == 0
 fn inside(written: ast.Expr) -> List<ast.Expr> {
     match written.kind {
@@ -505,7 +449,6 @@ fn inside(written: ast.Expr) -> List<ast.Expr> {
     }
 }
 
-/// Every expression an `if` chain writes: each condition and block, then the last block.
 // example: list.length(in_if(ast.IfExpr { branches: [], otherwise: None })) == 0
 fn in_if(chain: ast.IfExpr) -> List<ast.Expr> {
     var found = []
@@ -518,7 +461,6 @@ fn in_if(chain: ast.IfExpr) -> List<ast.Expr> {
     }
 }
 
-/// Each of `written_ones`, then every expression inside it, in order.
 // example: list.length(from_all([])) == 0
 fn from_all(written_ones: List<ast.Expr>) -> List<ast.Expr> {
     var found = []
@@ -528,7 +470,6 @@ fn from_all(written_ones: List<ast.Expr>) -> List<ast.Expr> {
     found
 }
 
-/// The values a call passes, in the order it writes them.
 // example: list.length(passed(ast.Positional([]))) == 0
 fn passed(arguments: ast.Arguments) -> List<ast.Expr> {
     match arguments {
@@ -537,7 +478,6 @@ fn passed(arguments: ast.Arguments) -> List<ast.Expr> {
     }
 }
 
-/// The value of each named argument.
 // example: list.length(named_values([])) == 0
 fn named_values(named: List<ast.NamedArgument>) -> List<ast.Expr> {
     var found = []
@@ -547,7 +487,6 @@ fn named_values(named: List<ast.NamedArgument>) -> List<ast.Expr> {
     found
 }
 
-/// The value of each field a record literal writes.
 // example: list.length(field_values([])) == 0
 fn field_values(fields: List<ast.FieldValue>) -> List<ast.Expr> {
     var found = []
@@ -557,7 +496,6 @@ fn field_values(fields: List<ast.FieldValue>) -> List<ast.Expr> {
     found
 }
 
-/// The body of each arm of a `match`.
 // example: list.length(arm_bodies([])) == 0
 fn arm_bodies(arms: List<ast.MatchArm>) -> List<ast.Expr> {
     var found = []
@@ -567,7 +505,6 @@ fn arm_bodies(arms: List<ast.MatchArm>) -> List<ast.Expr> {
     found
 }
 
-/// The expressions of `first`, then those of `second`.
 // example: list.length(both(first: [], second: [])) == 0
 fn both(first: List<ast.Expr>, second: List<ast.Expr>) -> List<ast.Expr> {
     var found = first
@@ -577,14 +514,12 @@ fn both(first: List<ast.Expr>, second: List<ast.Expr>) -> List<ast.Expr> {
     found
 }
 
-/// A value a generic function is used at, as it is written, and the type it has.
 type Valued = {
     written: String
     of: String
 }
 
-/// One shape an `Option<()>` is written or inferred in, the same shape with `Bool` in place of
-/// `()`, and the text the refusal points at, which is its first occurrence in the module.
+// `at` is the first text in the module that the refusal points at.
 type Carrying = {
     refused: String
     accepted: String

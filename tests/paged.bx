@@ -14,7 +14,6 @@ import strings
 import typed
 import types
 
-/// `property` tried on `cases` cases, each drawn from a seed of its own.
 // example: held.is_held(held_over(property: PrintedAlike, cases: 2, prelude: types.little_prelude()))
 fn held_over(property: Property, cases: Int, prelude: types.Prelude) -> held.Held {
     var found = held.nothing_failed(cases)
@@ -30,7 +29,6 @@ fn held_over(property: Property, cases: Int, prelude: types.Prelude) -> held.Hel
     found
 }
 
-/// One case of `property`, drawn from `draw`, typed against `prelude`.
 // example: tried_by(property: TypesAreTheirPage, draw: drawn.seeded(1), prelude: types.little_prelude()).why == ""
 fn tried_by(property: Property, draw: drawn.Draw, prelude: types.Prelude) -> Tried {
     match property {
@@ -40,7 +38,6 @@ fn tried_by(property: Property, draw: drawn.Draw, prelude: types.Prelude) -> Tri
     }
 }
 
-/// The name a failure of `property` is reported with.
 // example: name_of(PrintedAlike) == "printing_a_page_is_deterministic"
 fn name_of(property: Property) -> String {
     match property {
@@ -50,7 +47,6 @@ fn name_of(property: Property) -> String {
     }
 }
 
-/// A module of type declarations alone, in canonical form and holding no comment, is its page.
 // example: a_module_of_types_alone_holding_no_comment_is_its_own_page(drawn.seeded(1), types.little_prelude()).why == ""
 fn a_module_of_types_alone_holding_no_comment_is_its_own_page(draw: drawn.Draw, prelude: types.Prelude) -> Tried {
     let source = module_of(declared_types(draw))
@@ -62,7 +58,6 @@ fn a_module_of_types_alone_holding_no_comment_is_its_own_page(draw: drawn.Draw, 
     Tried { case: source, why: why }
 }
 
-/// Every name a module declares at the top level, a variant among them, is on its page.
 // example: every_name_a_module_declares_is_on_its_page(drawn.seeded(1), types.little_prelude()).why == ""
 fn every_name_a_module_declares_is_on_its_page(draw: drawn.Draw, prelude: types.Prelude) -> Tried {
     let source = module_of(anything(draw))
@@ -76,7 +71,6 @@ fn every_name_a_module_declares_is_on_its_page(draw: drawn.Draw, prelude: types.
     Tried { case: source, why: why }
 }
 
-/// A page printed twice is the same page.
 // example: printing_a_page_is_deterministic(drawn.seeded(1), types.little_prelude()).why == ""
 fn printing_a_page_is_deterministic(draw: drawn.Draw, prelude: types.Prelude) -> Tried {
     let source = module_of(anything(draw))
@@ -89,7 +83,6 @@ fn printing_a_page_is_deterministic(draw: drawn.Draw, prelude: types.Prelude) ->
     Tried { case: source, why: why }
 }
 
-/// Up to four function declarations, then up to four type declarations, each numbered apart.
 // example: list.length(anything(drawn.seeded(1))) < 9
 fn anything(draw: drawn.Draw) -> List<String> {
     var written = []
@@ -106,7 +99,6 @@ fn anything(draw: drawn.Draw) -> List<String> {
     written
 }
 
-/// Up to four type declarations, each numbered by where it is drawn so that no two share a name.
 // example: list.length(declared_types(drawn.seeded(1))) < 5
 fn declared_types(draw: drawn.Draw) -> List<String> {
     var written = []
@@ -118,7 +110,6 @@ fn declared_types(draw: drawn.Draw) -> List<String> {
     written
 }
 
-/// The type declaration numbered `which`, as canonical form writes it, with `number` in its names.
 // example: type_numbered(which: 2, number: 0) == "type Held0 = Held0(String)"
 fn type_numbered(which: Int, number: Int) -> String {
     let n = shown(number)
@@ -130,7 +121,6 @@ fn type_numbered(which: Int, number: Int) -> String {
     }
 }
 
-/// The function numbered `which`, which needs no other declaration, with `number` in its name.
 // example: function_numbered(which: 0, number: 1) == "fn answer1() -> Int {\n    7\n}"
 fn function_numbered(which: Int, number: Int) -> String {
     let n = shown(number)
@@ -142,7 +132,6 @@ fn function_numbered(which: Int, number: Int) -> String {
     }
 }
 
-/// The source of a module of `written`, one blank line between two, which is empty where none is.
 // example: module_of(["type A = A", "type B = B"]) == "type A = A\n\ntype B = B\n"
 // example: module_of([]) == ""
 fn module_of(written: List<String>) -> String {
@@ -152,9 +141,7 @@ fn module_of(written: List<String>) -> String {
     strings.join(written, "\n\n") + "\n"
 }
 
-/// Every name `program` declares at the top level, which is what a page holds.
-///
-/// An import names another module, and neither an instance nor a derive declares a name.
+// An import names another module, and an instance and a derive declare no name.
 // example: declarations(ok_or(parser.parse("type A =\n    | B\n    | C\n"), ast.Program { items: [] })) == ["A", "B", "C"]
 fn declarations(program: ast.Program) -> List<String> {
     var declared = []
@@ -166,7 +153,6 @@ fn declarations(program: ast.Program) -> List<String> {
     declared
 }
 
-/// The names one item declares.
 // example: names_of(ast.Import(ast.ImportDeclaration { module: ast.Name { text: "io", span: lexer.Span { start: 7, length: 2 } }, span: lexer.Span { start: 0, length: 9 } })) == []
 fn names_of(item: ast.Item) -> List<String> {
     match item {
@@ -179,7 +165,6 @@ fn names_of(item: ast.Item) -> List<String> {
     }
 }
 
-/// The name of a type, then the name of each variant it declares, which a record has none of.
 // example: names_of(or(list.at(ok_or(parser.parse("type A = {\n    b: Int\n}\n"), ast.Program { items: [] }).items, 0), ast.Import(ast.ImportDeclaration { module: ast.Name { text: "", span: lexer.Span { start: 0, length: 0 } }, span: lexer.Span { start: 0, length: 0 } }))) == ["A"]
 fn with_variants(declaration: ast.TypeDeclaration) -> List<String> {
     match declaration.definition {
@@ -188,7 +173,6 @@ fn with_variants(declaration: ast.TypeDeclaration) -> List<String> {
     }
 }
 
-/// `names`, then the name of each of `declared`.
 // example: variant_names(["A"], []) == ["A"]
 fn variant_names(names: List<String>, declared: List<ast.Variant>) -> List<String> {
     var all = names
@@ -198,7 +182,6 @@ fn variant_names(names: List<String>, declared: List<ast.Variant>) -> List<Strin
     all
 }
 
-/// The name of a trait, then the name of each method it declares.
 // example: list.length(names_of(or(list.at(ok_or(parser.parse("trait Sized<T> {\n    fn size(of: T) -> Int\n}\n"), ast.Program { items: [] }).items, 0), ast.Import(ast.ImportDeclaration { module: ast.Name { text: "", span: lexer.Span { start: 0, length: 0 } }, span: lexer.Span { start: 0, length: 0 } })))) == 2
 fn with_methods(declaration: ast.TraitDeclaration) -> List<String> {
     var names = [declaration.name.text]
@@ -208,7 +191,6 @@ fn with_methods(declaration: ast.TraitDeclaration) -> List<String> {
     names
 }
 
-/// The page of `source`, and a line that says so where `source` does not type.
 // example: page_of("fn f() -> Int {\n    1\n}\n", types.little_prelude()) == "fn f() -> Int\n"
 fn page_of(source: String, prelude: types.Prelude) -> String {
     match typed.inferred(source, prelude) {
@@ -217,7 +199,6 @@ fn page_of(source: String, prelude: types.Prelude) -> String {
     }
 }
 
-/// Whether `piece` is somewhere in `text`.
 // example: has_text(text: "abc", piece: "bc")
 // example: !has_text(text: "abc", piece: "ca")
 fn has_text(text: String, piece: String) -> Bool {
@@ -231,13 +212,11 @@ fn has_text(text: String, piece: String) -> Bool {
     false
 }
 
-/// One case of a property: the drawn input as text, and why it failed, which is `""` where it held.
 type Tried = {
     case: String
     why: String
 }
 
-/// Each property of the page.
 type Property =
     | TypesAreTheirPage
     | EveryNameOnThePage

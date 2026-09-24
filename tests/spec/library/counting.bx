@@ -21,7 +21,6 @@ fn length(values: List<Kept>) -> Int {
     list.length(values)
 }
 
-/// No kept value at all, which is the empty list at a type this module declares.
 // example: list.length(kept()) == 0
 fn kept() -> List<Kept> {
     []

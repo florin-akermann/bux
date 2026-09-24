@@ -14,7 +14,6 @@ import parsing
 import strings
 import walk
 
-/// A drawn `extern` declaration is in canonical form: formatting writes it as it is written.
 // example: held.is_held(every_extern_declaration_round_trips(3))
 fn every_extern_declaration_round_trips(cases: Int) -> held.Held {
     var found = held.nothing_failed(cases)
@@ -30,8 +29,6 @@ fn every_extern_declaration_round_trips(cases: Int) -> held.Held {
     found
 }
 
-/// One `extern` declaration, drawn from `seed`, under a name and giving back a type the boundary
-/// carries, after the declaration of the type it reaches.
 // example: strings.length(declaration(1)) > 0
 fn declaration(seed: Int) -> String {
     let kind = drawn.number(stepped(seed: seed, steps: 0), 4)
@@ -45,7 +42,6 @@ fn declaration(seed: Int) -> String {
     "extern type " + class + "File = \"java.io.File\"\n\nextern " + member + " -> " + result + reached + "\n"
 }
 
-/// The parameters of a declaration of `kind`, the last one written `taken`, where it takes any.
 // example: extern_parameters(0, "held") == "()"
 // example: extern_parameters(3, "int held") == "(path: String, int held: Int)"
 fn extern_parameters(kind: Int, taken: String) -> String {
@@ -55,7 +51,6 @@ fn extern_parameters(kind: Int, taken: String) -> String {
     or(list.at(["(", "(path: File, ", "(file: File, ", "(path: String, "], kind), "(") + taken + ": Int)"
 }
 
-/// Formatting a drawn program twice gives one text, and formatting that text gives it again.
 // example: held.is_held(formatting_is_deterministic_and_idempotent(3))
 fn formatting_is_deterministic_and_idempotent(cases: Int) -> held.Held {
     var found = held.nothing_failed(cases)
@@ -72,9 +67,7 @@ fn formatting_is_deterministic_and_idempotent(cases: Int) -> held.Held {
     found
 }
 
-/// Why formatting `source` twice, or formatting its canonical text, does not give one text.
-///
-/// A source the parser refuses has no canonical text, so nothing is said of it.
+// A source that the parser refuses has no canonical text, so the check says nothing of it.
 // example: idempotence_fault("fn main( )  {}") == ""
 // example: idempotence_fault("fn (") == ""
 fn idempotence_fault(source: String) -> String {
@@ -92,7 +85,6 @@ fn idempotence_fault(source: String) -> String {
     ""
 }
 
-/// The canonical text of a drawn program parses to the items the program parses to.
 // example: held.is_held(formatting_keeps_the_tree(3))
 fn formatting_keeps_the_tree(cases: Int) -> held.Held {
     var found = held.nothing_failed(cases)
@@ -109,9 +101,7 @@ fn formatting_keeps_the_tree(cases: Int) -> held.Held {
     found
 }
 
-/// Why the canonical text of `source` parses to other items, and `""` where it parses to the same.
-///
-/// The items are compared in canonical order, because formatting puts each import and test there.
+// The items are compared in canonical order, because formatting puts each import and test there.
 // example: tree_fault("fn main( )  {  -(7.abs())\n}") == ""
 // example: tree_fault("fn (") == ""
 // example: tree_fault("import list\nimport io\n") == ""
@@ -128,7 +118,6 @@ fn tree_fault(source: String) -> String {
     ""
 }
 
-/// Each item of a printed tree in canonical order: the imports sorted, the declarations, the tests.
 // example: items_of("test a\n  x\nfunction f\nimport list\nimport io\n") == ["import io\n", "import list\n", "function f\n", "test a\n  x\n"]
 fn items_of(printed: String) -> List<String> {
     var items = []
@@ -146,7 +135,6 @@ fn items_of(printed: String) -> List<String> {
     in_canonical_order(items)
 }
 
-/// Printed items in canonical order: the imports sorted, then the declarations, then the tests.
 // example: in_canonical_order(["test a\n", "import list\n", "import io\n"]) == ["import io\n", "import list\n", "test a\n"]
 fn in_canonical_order(items: List<String>) -> List<String> {
     var imports = []
@@ -164,13 +152,11 @@ fn in_canonical_order(items: List<String>) -> List<String> {
     parts_joined([sorted(imports), declarations, tests])
 }
 
-/// Whether `text` opens with `opening`.
 // example: is_opened_by(text: "import io", opening: "import ")
 fn is_opened_by(text: String, opening: String) -> Bool {
     or(strings.cut(text, 0, strings.length(opening)), "") == opening
 }
 
-/// The texts of each part of `parts`, one part after the other.
 // example: parts_joined([["a"], [], ["b"]]) == ["a", "b"]
 fn parts_joined(parts: List<List<String>>) -> List<String> {
     var joined = []
@@ -182,7 +168,6 @@ fn parts_joined(parts: List<List<String>>) -> List<String> {
     joined
 }
 
-/// The tree `source` parses to, as `ast.printed` writes it, with each span taken out.
 // example: tree("import io\n") == "import io\n"
 // example: tree(" import io") == "import io\n"
 fn tree(source: String) -> String {
@@ -193,7 +178,6 @@ fn tree(source: String) -> String {
     written
 }
 
-/// `line` without the span it ends with, where it ends with one.
 // example: without_span("  integer 7 4..5") == "  integer 7"
 // example: without_span("  result") == "  result"
 fn without_span(line: String) -> String {
@@ -208,7 +192,6 @@ fn without_span(line: String) -> String {
     or(strings.cut(line, 0, index), line)
 }
 
-/// Whether `text` is a span as `shown` writes one: digits, two dots, and digits.
 // example: is_span_text("12..140")
 // example: !is_span_text("result")
 // example: !is_span_text("..")
@@ -230,8 +213,6 @@ fn is_span_text(text: String) -> Bool {
     dots == 2 && digits >= 2
 }
 
-/// Every comment of a drawn program is in its canonical text once, in the same order where no item
-/// moves.
 // example: held.is_held(every_comment_survives_in_source_order(3))
 fn every_comment_survives_in_source_order(cases: Int) -> held.Held {
     var found = held.nothing_failed(cases)
@@ -248,8 +229,6 @@ fn every_comment_survives_in_source_order(cases: Int) -> held.Held {
     found
 }
 
-/// Why the canonical text of `source` holds other comments, or holds them in another order where
-/// no item moves, and `""` where it holds the same.
 // example: comment_fault("fn main( )  {  // why\n1 // one   \n}") == ""
 // example: comment_fault("fn (") == ""
 fn comment_fault(source: String) -> String {
@@ -265,7 +244,6 @@ fn comment_fault(source: String) -> String {
     ""
 }
 
-/// `texts` in sorted order.
 // example: sorted(["b", "a", "b"]) == ["a", "b", "b"]
 fn sorted(texts: List<String>) -> List<String> {
     var ordered = []
@@ -287,14 +265,12 @@ fn sorted(texts: List<String>) -> List<String> {
     ordered
 }
 
-/// Whether each import and each test of `source` is in place, so formatting moves no item.
 // example: is_in_place("import io\n\nfn f() {\n}\n")
 // example: !is_in_place("import list\nimport io\n")
 fn is_in_place(source: String) -> Bool {
     !format.is_misplaced(format.out_of_order(ok_or(parser.parse(source), ast.Program { items: [] })))
 }
 
-/// The text of each comment of `source`, in order, without the blanks it ends with.
 // example: comments("a // one  \n// two\n") == ["// one", "// two"]
 fn comments(source: String) -> List<String> {
     var texts = []
@@ -306,7 +282,6 @@ fn comments(source: String) -> List<String> {
     texts
 }
 
-/// `text` without the spaces and tabs it ends with.
 // example: without_trailing_blanks("// a \t ") == "// a"
 fn without_trailing_blanks(text: String) -> String {
     var end = strings.length(text)
@@ -316,15 +291,12 @@ fn without_trailing_blanks(text: String) -> String {
     or(strings.cut(text, 0, end), text)
 }
 
-/// Whether `unit` is a space or a tab.
 // example: is_blank(32)
 // example: !is_blank(47)
 fn is_blank(unit: Int) -> Bool {
     unit == 32 || unit == 9
 }
 
-/// A drawn program written as a person might is refused as not canonical, and the canonical text
-/// the refusal carries is in canonical form.
 // example: held.is_held(the_canonical_text_of_a_refusal_is_canonical(3))
 fn the_canonical_text_of_a_refusal_is_canonical(cases: Int) -> held.Held {
     var found = held.nothing_failed(cases)
@@ -340,7 +312,6 @@ fn the_canonical_text_of_a_refusal_is_canonical(cases: Int) -> held.Held {
     found
 }
 
-/// Why `written` is not refused as not canonical, or the text of the refusal is not canonical.
 // example: refusal_fault("fn main() {\n\n}\n") == ""
 // example: refusal_fault("fn main() {\n}\n") == "it is not refused as not canonical: \"\""
 fn refusal_fault(written: String) -> String {
@@ -350,10 +321,8 @@ fn refusal_fault(written: String) -> String {
     }
 }
 
-/// Why `text` departs from canonical form in its layout, and `""` where it does not.
-///
-/// A refusal of the layout comes before a refusal of the order, so the text it carries keeps each
-/// item where the author wrote it, and the check says next where an item belongs.
+// A refusal of the layout comes before a refusal of the order.
+// So the text keeps each item where the author wrote it, and the next check says where it goes.
 // example: canonical_fault("fn main() {\n}\n") == ""
 // example: canonical_fault("fn main() {\n\n}\n") != ""
 fn canonical_fault(text: String) -> String {
@@ -364,10 +333,8 @@ fn canonical_fault(text: String) -> String {
     ""
 }
 
-/// A drawn program with the break after each line spaced as a person might, one always wrongly.
-///
-/// Blank lines and indentation are what a person gets wrong, so they are what is drawn wrong, at
-/// any line break: a run of blank lines deep in a file is the case the first line would not show.
+// A person gets blank lines and indentation wrong, so the draw spaces them wrongly at any break.
+// A run of blank lines deep in a file is a case that the first line does not show.
 // example: strings.length(spaced_as_a_person_might(1)) > 0
 fn spaced_as_a_person_might(seed: Int) -> String {
     let lines = walk.lines_of(drawn_program(seed))
@@ -384,7 +351,6 @@ fn spaced_as_a_person_might(seed: Int) -> String {
     written + "\n"
 }
 
-/// The spacing before line `index`, which is spelled wrongly where it is the line `wrong`.
 // example: spacing_at(index: 1, wrong: 2, drawn_spacing: "\n", seed: 1) == "\n"
 // example: spacing_at(index: 2, wrong: 2, drawn_spacing: "\n", seed: 1) != "\n"
 fn spacing_at(index: Int, wrong: Int, drawn_spacing: String, seed: Int) -> String {
@@ -394,7 +360,6 @@ fn spacing_at(index: Int, wrong: Int, drawn_spacing: String, seed: Int) -> Strin
     drawn.picked(stepped(seed: seed, steps: 9), ["\n\n", "\n\n\n", "\n   \n", "  \n", "\n\t"], "\n\n")
 }
 
-/// Canonical form accepts the spelling it advises for a drawn name.
 // example: held.is_held(every_spelling_canonical_form_advises_is_one_it_accepts(3))
 fn every_spelling_canonical_form_advises_is_one_it_accepts(cases: Int) -> held.Held {
     var found = held.nothing_failed(cases)
@@ -410,10 +375,7 @@ fn every_spelling_canonical_form_advises_is_one_it_accepts(cases: Int) -> held.H
     found
 }
 
-/// The spelling canonical form advises for `name`, and `""` where it advises none.
-///
-/// A name already canonical is its own spelling. A name that is an initial has none, because the
-/// word it should have named is the author's to choose and no rewrite can guess it.
+// A name that is an initial has no spelling, because the author must choose the word it names.
 // example: spelling("counted") == "counted"
 // example: spelling("Counted") == "counted"
 // example: spelling("c") == ""
@@ -425,15 +387,12 @@ fn spelling(name: String) -> String {
     }
 }
 
-/// A module declaring one function called `name`, which is the only thing about it that varies.
 // example: declaring("f") == "fn f(count: Int) -> Int {\n    count\n}\n"
 fn declaring(name: String) -> String {
     "fn " + name + "(count: Int) -> Int {\n    count\n}\n"
 }
 
-/// A name a person might write, in any mixture of case, underscore, and digit, drawn from `seed`.
-///
-/// An underscore never stands alone, because `_` is a keyword rather than a name.
+// An underscore never stands alone, because `_` is a keyword and not a name.
 // example: strings.length(drawn_name(1)) > 0
 fn drawn_name(seed: Int) -> String {
     let opener = drawn.picked(stepped(seed: seed, steps: 0), ["a", "A", "u", "U", "_a", "_U"], "a")
@@ -441,8 +400,6 @@ fn drawn_name(seed: Int) -> String {
     opener + drawn.text_of(stepped(seed: seed, steps: 2), ["a", "b", "U", "I", "_", "2"], count)
 }
 
-/// A test written anywhere among canonical declarations is out of place, as `L0201`, exactly
-/// where a declaration is written below it, and a test written last is in place.
 // example: held.is_held(a_declaration_below_a_test_is_out_of_place(3))
 fn a_declaration_below_a_test_is_out_of_place(cases: Int) -> held.Held {
     var found = held.nothing_failed(cases)
@@ -462,7 +419,6 @@ fn a_declaration_below_a_test_is_out_of_place(cases: Int) -> held.Held {
     found
 }
 
-/// Up to 6 canonical declarations and a test, drawn from `seed`, and whether the test is last.
 // example: strings.length(declarations_with_a_test(1).source) > 0
 fn declarations_with_a_test(seed: Int) -> Placed {
     var chosen = []
@@ -485,13 +441,11 @@ fn declarations_with_a_test(seed: Int) -> Placed {
     Placed { source: strings.join(written, "\n\n") + "\n", is_last: at == list.length(chosen) }
 }
 
-/// The test a drawn program is written with, already in canonical form.
 // example: parsing.is_parsed(test_item())
 fn test_item() -> String {
     "test \"adds\" {\n    let total = 1 + 1\n    total == 2\n}"
 }
 
-/// A program of up to 6 canonical items and one function of a drawn expression, drawn from `seed`.
 // example: parsing.is_parsed(drawn_program(1))
 fn drawn_program(seed: Int) -> String {
     var chosen = []
@@ -502,11 +456,8 @@ fn drawn_program(seed: Int) -> String {
     strings.join(chosen, "\n\n") + "\n"
 }
 
-/// An expression built by wrapping an atom in up to 12 layers, spelled as a person might rather
-/// than canonically, so that the printer has parentheses and blanks to decide about.
-///
-/// A `-` in front of a number is the pair that matters most: the grammar reads `-7` as one
-/// number, so a printer that drops the parentheses of `-(7.abs())` writes another program.
+// A `-` before a number is the most important pair: the grammar reads `-7` as one number.
+// So a printer that removes the parentheses of `-(7.abs())` writes a different program.
 // example: strings.length(expression(1)) > 0
 fn expression(seed: Int) -> String {
     var written = drawn.picked(stepped(seed: seed, steps: 20), ["a", "7", "0", "f(1, b)", "[]"], "a")
@@ -517,7 +468,6 @@ fn expression(seed: Int) -> String {
     written
 }
 
-/// `wrapper` with `inner` written in place of its one `_`.
 // example: wrapped(wrapper: "[b, _]", inner: "7") == "[b, 7]"
 fn wrapped(wrapper: String, inner: String) -> String {
     var index = 0
@@ -527,19 +477,16 @@ fn wrapped(wrapper: String, inner: String) -> String {
     or(strings.cut(wrapper, 0, index), "") + inner + or(strings.cut(wrapper, index + 1, strings.length(wrapper)), "")
 }
 
-/// The ways a drawn expression wraps the one inside it, `_` standing for that one.
 // example: list.length(wrappers()) == 12
 fn wrappers() -> List<String> {
     ["-_", "- _", "!_", "(_)", "_.abs()", "_?", "_ + b", "b * _", "(_) == b", "g( _ )", "[ _ ]", "[b, _]"]
 }
 
-/// The item shapes a drawn program is built from, each already in canonical form.
 // example: list.length(canonical_items()) == 14
 fn canonical_items() -> List<String> {
     ["import io", "type UserId = UserId(Int)", "type User = {\n    id: UserId\n}", "type Payment =\n    | Pending\n    | Failed(String)", "fn added(count: Int) -> Int {\n    // why this is here\n    count + 1 * (2 - 3)\n}", "fn dropped(count: Int) -> Int {\n    _ = added(count)\n    count\n}", "fn named(count: Int) -> Int {\n    joined(first: count, second: count)\n}", "fn matched(payment: Payment) -> Int {\n    match payment {\n        Pending => 1\n        Failed(reason) => 2\n    }\n}", "fn answered(payment: Payment) -> Int {\n    match payment {\n        Pending | Failed(_) => 1\n        _ => 2\n    }\n}", "trait Area<T> {\n    fn covered(shape: T) -> Int\n}", "instance Area<User> {\n    fn covered(shape: User) -> Int {\n        1\n    }\n}", "instance<T: Area<T>> Area<List<T>> {\n    fn covered(shape: List<T>) -> Int {\n        1\n    }\n}", "derive Eq for User", "derive Eq, Ord for Payment"]
 }
 
-/// A file of 1 to 6 items written out of canonical form, and what a person writes between them.
 // example: strings.length(person_written(1)) > 0
 fn person_written(seed: Int) -> String {
     var written = ""
@@ -551,13 +498,11 @@ fn person_written(seed: Int) -> String {
     written
 }
 
-/// What a person-written file is made of: items out of canonical form, most of which parse.
 // example: list.length(person_items()) == 13
 fn person_items() -> List<String> {
     ["import  io", "test   \"adds\"{ let total=1+1\n total==2 }", "// a comment alone   ", "type   Id = Id(Int)", "type Shape = | Dot // a dot\n| Line { length: Int\nwidth:Int }", "type Empty = {}", "extern static read(int at: Int,path:Path)->String = \"a.B.c\"", "derive Eq ,Hash for Id", "trait Named<T> {\n// the name\nfn name(value: T)->String\n}", "fn main( ) -> Int {\n  var total = 0 // start\n   total += -(7.abs())\n\n  total // done\n}", "fn pick(x: Int) -> String {\n match x {\n 1 | 2 => \"few\" // small\n _ => if x > 9 { \"many\" } else if (User {}).on { \"on\" } else { \"some\" }\n }\n}", "fn go<T:Eq<T>>(users: List<T>) {\nfor user in users { _ = f(a: (1 + 2) * 3, b: !(a && b)) }\nfor { break }\n}", "fn broken( {"]
 }
 
-/// The draw `steps` steps after the one `seed` starts.
 // example: stepped(seed: 1, steps: 1).state == drawn.next(drawn.seeded(1)).state
 fn stepped(seed: Int, steps: Int) -> drawn.Draw {
     var draw = drawn.seeded(seed)
@@ -569,7 +514,6 @@ fn stepped(seed: Int, steps: Int) -> drawn.Draw {
     draw
 }
 
-/// `first` where it says something, and `second` otherwise.
 // example: first_of(first: "", second: "b") == "b"
 // example: first_of(first: "a", second: "b") == "a"
 fn first_of(first: String, second: String) -> String {
@@ -579,7 +523,6 @@ fn first_of(first: String, second: String) -> String {
     second
 }
 
-/// Why `source` does not parse, and `""` where it does.
 // example: unparsed("import io\n") == ""
 fn unparsed(source: String) -> String {
     if parsing.is_parsed(source) {
@@ -588,7 +531,6 @@ fn unparsed(source: String) -> String {
     "the program " + held.quoted(source) + " does not parse: " + held.quoted(parser.printed(source))
 }
 
-/// A drawn program, and whether the test it holds is its last item.
 type Placed = {
     source: String
     is_last: Bool

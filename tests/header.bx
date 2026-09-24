@@ -8,7 +8,6 @@ import list
 import strings
 import walk
 
-/// What the example `source` says about itself.
 // example: expectation_of("import io\n") == Compiles
 // example: expectation_of("// expect-error: L9999\n") == Misstated("there is no diagnostic L9999")
 // example: expectation_of("// > one\nimport io\n") == Misstated("only an example that is run states what it writes")
@@ -21,7 +20,6 @@ fn expectation_of(source: String) -> Expectation {
     }
 }
 
-/// What an example that is not run says: it compiles, or it is refused with the code it names.
 // example: not_run(["// expect-error: L9999"], "// expect-error: L9999") == Misstated("there is no diagnostic L9999")
 // example: not_run(["// a note"], "// a note") == Compiles
 fn not_run(lines: List<String>, first: String) -> Expectation {
@@ -40,7 +38,6 @@ fn not_run(lines: List<String>, first: String) -> Expectation {
     }
 }
 
-/// The words `first` says the program is run with, where `first` is the run header at all.
 // example: or(run_with("// expect-run one two"), []) == ["one", "two"]
 // example: or(run_with("// expect-running"), ["none"]) == ["none"]
 fn run_with(first: String) -> Option<List<String>> {
@@ -54,7 +51,6 @@ fn run_with(first: String) -> Option<List<String>> {
     Some(words_of(rest))
 }
 
-/// The words of `text`, each a run of what is not a space.
 // example: words_of(" one  two ") == ["one", "two"]
 fn words_of(text: String) -> List<String> {
     var words = []
@@ -73,7 +69,6 @@ fn words_of(text: String) -> List<String> {
     with_word(words, word)
 }
 
-/// `words` with `word` after them, where it holds anything.
 // example: with_word(["a"], "") == ["a"]
 fn with_word(words: List<String>, word: String) -> List<String> {
     if word == "" {
@@ -82,10 +77,8 @@ fn with_word(words: List<String>, word: String) -> List<String> {
     list.push(words, word)
 }
 
-/// What the lines under the run header say the run amounts to.
-///
-/// They come directly under the header, so the first line that states nothing ends them. A line
-/// below that still opens with a marker is one the author meant to state, and it is a failure.
+// The lines come directly under the header, so the first line that states nothing ends them.
+// A marked line below that is a line the author meant to state, so it is a failure.
 // example: ran(lines: ["// expect-run", "// > one", "// status 3"], arguments: []) == Runs(Ran { arguments: [], output: "one\n", errors: "", status: 3 })
 // example: ran(lines: ["// expect-run", "// a note", "// > two"], arguments: []) == Misstated("a line stating a run comes directly under the header, and this one does not")
 fn ran(lines: List<String>, arguments: List<String>) -> Expectation {
@@ -106,7 +99,6 @@ fn ran(lines: List<String>, arguments: List<String>) -> Expectation {
     Runs(stated)
 }
 
-/// Whether a line stated anything about the run.
 // example: is_stating(Some(Status(0)))
 // example: !is_stating(None)
 fn is_stating(found: Option<Stated>) -> Bool {
@@ -116,7 +108,6 @@ fn is_stating(found: Option<Stated>) -> Bool {
     }
 }
 
-/// `stated` with what `one` states added to it.
 // example: added(Ran { arguments: [], output: "a\n", errors: "", status: 0 }, Output("b")).output == "a\nb\n"
 fn added(stated: Ran, one: Stated) -> Ran {
     match one {
@@ -126,7 +117,6 @@ fn added(stated: Ran, one: Stated) -> Ran {
     }
 }
 
-/// What `line` states about the run, where it states anything at all.
 // example: or(states("// > held"), Status(99)) == Output("held")
 // example: or(states("// >"), Status(99)) == Output("")
 // example: or(states("// ! gone"), Status(99)) == Errors("gone")
@@ -140,7 +130,6 @@ fn states(line: String) -> Option<Stated> {
     }
 }
 
-/// What `line` states about standard error or the status, where it states either.
 // example: or(errors_or_status("// ! gone"), Status(99)) == Errors("gone")
 fn errors_or_status(line: String) -> Option<Stated> {
     match after_the_marker(line: line, marker: "// !") {
@@ -149,7 +138,6 @@ fn errors_or_status(line: String) -> Option<Stated> {
     }
 }
 
-/// The status `line` states, where it states one as a whole number.
 // example: or(status_of("// status 3"), Status(99)) == Status(3)
 // example: !is_stating(status_of("// status soon"))
 fn status_of(line: String) -> Option<Stated> {
@@ -162,10 +150,8 @@ fn status_of(line: String) -> Option<Stated> {
     }
 }
 
-/// Whether `line` opens the way a line stating a run does, however it goes on.
-///
-/// A marker ends at the end of the line or at a space, so a comment whose first word merely opens
-/// with one, such as `// statuses are read elsewhere`, states nothing about a run.
+// A marker ends at the end of the line or at a space.
+// So a comment such as `// statuses are read elsewhere` states nothing about a run.
 // example: is_marked("// status soon")
 // example: !is_marked("// statuses are read elsewhere")
 fn is_marked(line: String) -> Bool {
@@ -177,7 +163,6 @@ fn is_marked(line: String) -> Bool {
     false
 }
 
-/// Whether a marker was found, with a line after it.
 // example: is_after(Some(""))
 // example: !is_after(None)
 fn is_after(found: Option<String>) -> Bool {
@@ -187,7 +172,6 @@ fn is_after(found: Option<String>) -> Bool {
     }
 }
 
-/// The line written after `marker`, where `line` opens with it and a space or nothing follows.
 // example: or(after_the_marker(line: "// > a", marker: "// >"), "none") == "a"
 // example: !is_after(after_the_marker(line: "// >a", marker: "// >"))
 fn after_the_marker(line: String, marker: String) -> Option<String> {
@@ -210,14 +194,12 @@ derive Eq for Ran
 
 derive Eq for Stated
 
-/// What an example says about itself.
 type Expectation =
     | Compiles
     | Refused(String)
     | Runs(Ran)
     | Misstated(String)
 
-/// What an example headed `// expect-run` says its run amounts to.
 type Ran = {
     arguments: List<String>
     output: String
@@ -225,7 +207,6 @@ type Ran = {
     status: Int
 }
 
-/// One line under the run header, as what it says about the run.
 type Stated =
     | Output(String)
     | Errors(String)

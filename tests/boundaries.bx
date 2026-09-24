@@ -21,8 +21,6 @@ import surface
 import types
 import walk
 
-/// The two properties of the names a library module declares, each case written under a
-/// directory of its own, which is removed whole afterwards.
 // example: list.length(library_reached(0, ir.little_library())) == 2
 fn library_reached(cases: Int, library: ir.Library) -> List<held.Held> {
     match command.somewhere_of_its_own() {
@@ -31,7 +29,6 @@ fn library_reached(cases: Int, library: ir.Library) -> List<held.Held> {
     }
 }
 
-/// The two properties of the names a library module declares, run in `directory`.
 // example: list.length(reached_in(cases: 0, library: ir.little_library(), directory: "no-such-directory")) == 2
 fn reached_in(cases: Int, library: ir.Library, directory: String) -> List<held.Held> {
     let found = [a_declared_name_has_one_type_wherever_it_is_written(cases: cases, library: library, directory: directory), an_undeclared_name_is_refused_naming_the_module(cases: cases, library: library, directory: directory)]
@@ -39,7 +36,6 @@ fn reached_in(cases: Int, library: ir.Library, directory: String) -> List<held.H
     found
 }
 
-/// A name a library module declares has the type the spec gives it, wherever the call is written.
 // example: held.is_held(a_declared_name_has_one_type_wherever_it_is_written(cases: 0, library: ir.little_library(), directory: "no-such-directory"))
 fn a_declared_name_has_one_type_wherever_it_is_written(cases: Int, library: ir.Library, directory: String) -> held.Held {
     var found = held.nothing_failed(cases)
@@ -49,7 +45,6 @@ fn a_declared_name_has_one_type_wherever_it_is_written(cases: Int, library: ir.L
     found
 }
 
-/// A drawn call of a declared name, written in a drawn place.
 // example: declared_tried(drawn.seeded(1), Reaching { library: ir.little_library(), directory: "no-such-directory" }).why != ""
 fn declared_tried(draw: drawn.Draw, reaching: Reaching) -> checking.Tried {
     let row = drawn.picked(draw, reached(), Reached { module: "io", name: "print", arguments: "\"text\"", result: "()" })
@@ -63,7 +58,6 @@ fn declared_tried(draw: drawn.Draw, reaching: Reaching) -> checking.Tried {
     checking.Tried { input: source, why: "" }
 }
 
-/// A name a library module does not declare is refused naming the module and the name.
 // example: held.is_held(an_undeclared_name_is_refused_naming_the_module(cases: 0, library: ir.little_library(), directory: "no-such-directory"))
 fn an_undeclared_name_is_refused_naming_the_module(cases: Int, library: ir.Library, directory: String) -> held.Held {
     var found = held.nothing_failed(cases)
@@ -73,9 +67,7 @@ fn an_undeclared_name_is_refused_naming_the_module(cases: Int, library: ir.Libra
     found
 }
 
-/// A call of a drawn name that the drawn module does not declare.
-///
-/// A drawn name that one of the rows declares holds, because it says nothing of the rule.
+// A drawn name that a row declares holds, because it tells nothing about the rule.
 // example: undeclared_tried(drawn.seeded(1), Reaching { library: ir.little_library(), directory: "no-such-directory" }).why != ""
 fn undeclared_tried(draw: drawn.Draw, reaching: Reaching) -> checking.Tried {
     let module = drawn.picked(draw, reached(), Reached { module: "io", name: "print", arguments: "", result: "" }).module
@@ -91,7 +83,6 @@ fn undeclared_tried(draw: drawn.Draw, reaching: Reaching) -> checking.Tried {
     checking.Tried { input: source, why: "" }
 }
 
-/// A type that does not cross is refused whichever position of a Java member it is written in.
 // example: a_type_that_does_not_cross_is_refused_in_every_position(2, ir.little_library()).cases == 2
 fn a_type_that_does_not_cross_is_refused_in_every_position(cases: Int, library: ir.Library) -> held.Held {
     var found = held.nothing_failed(cases)
@@ -101,7 +92,6 @@ fn a_type_that_does_not_cross_is_refused_in_every_position(cases: Int, library: 
     found
 }
 
-/// A drawn type that does not cross, written in a drawn position.
 // example: crossing_tried(drawn.seeded(1), ir.little_library()).input != ""
 fn crossing_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
     let written = drawn.picked(draw, ["User", "Paid", "Option<Int>", "List<Option<Int>>"], "User")
@@ -115,7 +105,6 @@ fn crossing_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
     checking.Tried { input: source, why: "" }
 }
 
-/// A list crosses where a Java member takes one, and nowhere else.
 // example: a_list_crosses_only_where_a_member_takes_one(2, ir.little_library()).cases == 2
 fn a_list_crosses_only_where_a_member_takes_one(cases: Int, library: ir.Library) -> held.Held {
     var found = held.nothing_failed(cases)
@@ -125,7 +114,6 @@ fn a_list_crosses_only_where_a_member_takes_one(cases: Int, library: ir.Library)
     found
 }
 
-/// A list of a drawn element type, written in a drawn position.
 // example: list_tried(drawn.seeded(1), ir.little_library()).input != ""
 fn list_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
     let element = drawn.picked(draw, ["Bool", "Int", "String", "File"], "Int")
@@ -138,8 +126,7 @@ fn list_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
     checking.Tried { input: source, why: "" }
 }
 
-/// Every class that a module of the tree names in an `extern` is on the list of `java.base`,
-/// because the tree states no archive.
+// The tree states no archive, so each class that it names must be on the list of `java.base`.
 // example: every_class_the_tree_names_is_on_the_list(2).cases == 2
 fn every_class_the_tree_names_is_on_the_list(cases: Int) -> held.Held {
     let modules_of_the_tree = tree_modules()
@@ -150,7 +137,6 @@ fn every_class_the_tree_names_is_on_the_list(cases: Int) -> held.Held {
     found
 }
 
-/// The module at `path`, whose every class an `extern` names is on the list.
 // example: tree_tried("no-such-directory/a.bx").why != ""
 fn tree_tried(path: String) -> checking.Tried {
     match files.read(path) {
@@ -159,7 +145,6 @@ fn tree_tried(path: String) -> checking.Tried {
     }
 }
 
-/// The module at `path`, which holds `source`, whose every class an `extern` names is on the list.
 // example: source_tried(path: "a.bx", source: "fn (").why == "the module does not parse"
 fn source_tried(path: String, source: String) -> checking.Tried {
     match checking.parsed(source) {
@@ -168,7 +153,6 @@ fn source_tried(path: String, source: String) -> checking.Tried {
     }
 }
 
-/// Nothing where every class `program` names in an `extern` is on the list, and the first else.
 // example: classes_listed("a.bx", ast.Program { items: [] }).why == ""
 fn classes_listed(path: String, program: ast.Program) -> checking.Tried {
     for item in program.items {
@@ -180,7 +164,6 @@ fn classes_listed(path: String, program: ast.Program) -> checking.Tried {
     checking.Tried { input: path, why: "" }
 }
 
-/// Every module of the tree that a test builds: the compiler, the library, and the tests.
 // example: list.length(tree_modules()) > 0
 fn tree_modules() -> List<String> {
     var found = []
@@ -192,7 +175,6 @@ fn tree_modules() -> List<String> {
     found
 }
 
-/// A drawn class that is on no list is `L0434`, and it is accepted where an archive holds it.
 // example: a_class_on_no_list_is_refused_and_accepted_from_an_archive(2, ir.little_library()).cases == 2
 fn a_class_on_no_list_is_refused_and_accepted_from_an_archive(cases: Int, library: ir.Library) -> held.Held {
     var found = held.nothing_failed(cases)
@@ -202,9 +184,6 @@ fn a_class_on_no_list_is_refused_and_accepted_from_an_archive(cases: Int, librar
     found
 }
 
-/// A drawn class on no list, named by an `extern type`, checked with no archive and with one.
-///
-/// A class of a package the JDK holds is refused with an archive too, and any other is accepted.
 // example: unlisted_tried(drawn.seeded(1), ir.little_library()).input != ""
 fn unlisted_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
     let class = unlisted_class(draw)
@@ -225,7 +204,6 @@ fn unlisted_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
     checking.Tried { input: source, why: "" }
 }
 
-/// A drawn class on no list: a drawn name in a package on no list, or a class the list leaves out.
 // example: !boundary.is_listed(unlisted_class(drawn.seeded(1)))
 fn unlisted_class(draw: drawn.Draw) -> String {
     let nested = drawn.picked(checking.after(draw, 4), ["", "$Inner"], "")
@@ -237,7 +215,6 @@ fn unlisted_class(draw: drawn.Draw) -> String {
     package + "." + name + nested
 }
 
-/// `source`, checked as `checking.checked` checks it, with `archived` as the classes of its archives.
 // example: checking.code_of(checked_with(source: "extern type Drawn = \"a.B\"\n", archived: set.insert(set.empty(), "a.B"), library: ir.little_library())) == ""
 fn checked_with(source: String, archived: set.Set<String>, library: ir.Library) -> Result<infer.Inference, command.Diagnostic> {
     let program = checking.parsed(source)?
@@ -245,7 +222,6 @@ fn checked_with(source: String, archived: set.Set<String>, library: ir.Library) 
     command.inferred_of(types.check(resolved, surface.nothing_imported(), types.with_archived(library.prelude, archived)))
 }
 
-/// Whether one of the rows declares `name`.
 // example: is_declared("print")
 // example: !is_declared("printed")
 fn is_declared(name: String) -> Bool {
@@ -257,38 +233,32 @@ fn is_declared(name: String) -> Bool {
     false
 }
 
-/// `place` with `call` written where it writes `CALL`.
 // example: place_of(place: "    _ = CALL\n", call: "f()") == "    _ = f()\n"
 fn place_of(place: String, call: String) -> String {
     let at = checking.occurrence(place, "CALL", 1)
     or(strings.cut(place, 0, at.start), "") + call + or(strings.cut(place, at.start + at.length, strings.length(place)), "")
 }
 
-/// Every name a library module declares, with the arguments a call writes and what it gives.
 // example: list.length(reached()) == 9
 fn reached() -> List<Reached> {
     [Reached { module: "io", name: "print", arguments: "\"text\"", result: "()" }, Reached { module: "io", name: "println", arguments: "\"text\"", result: "()" }, Reached { module: "files", name: "read", arguments: "\"text\"", result: "Result<String, String>" }, Reached { module: "files", name: "write", arguments: "\"text\", \"text\"", result: "Result<String, String>" }, Reached { module: "files", name: "listed", arguments: "\"text\"", result: "Result<List<String>, String>" }, Reached { module: "files", name: "made", arguments: "\"text\"", result: "Result<String, String>" }, Reached { module: "files", name: "removed", arguments: "\"text\"", result: "Result<Bool, String>" }, Reached { module: "environment", name: "read", arguments: "\"text\"", result: "Option<String>" }, Reached { module: "programs", name: "run", arguments: "\"text\", []", result: "Result<programs.Finished, String>" }]
 }
 
-/// Every place a call is written, which is every place an expression of its type may go.
 // example: list.length(places()) == 3
 fn places() -> List<String> {
     ["    let held = CALL\n    _ = held\n", "    _ = CALL\n", "    if true {\n        _ = CALL\n    }\n"]
 }
 
-/// Every place a Java member's signature writes a type, and whether the member takes it there.
 // example: list.length(positions()) == 5
 fn positions() -> List<Position> {
     [Position { written: "static held(one: CALL) -> String = \"java.lang.String.valueOf\"", is_taken: IsTaken }, Position { written: "static held(one: String, two: CALL) -> String = \"java.lang.String.valueOf\"", is_taken: IsTaken }, Position { written: "static held(one: String) -> CALL = \"java.lang.String.valueOf\"", is_taken: IsGiven }, Position { written: "method held(file: File, one: CALL) -> String = \"toString\"", is_taken: IsTaken }, Position { written: "field held() -> CALL = \"java.lang.System.out\"", is_taken: IsGiven }]
 }
 
-/// Where a module that imports a library module is checked, and against what prelude.
 type Reaching = {
     library: ir.Library
     directory: String
 }
 
-/// One name a library module declares: the module, the name, what a call passes, and its type.
 type Reached = {
     module: String
     name: String
@@ -296,7 +266,6 @@ type Reached = {
     result: String
 }
 
-/// One place a Java member writes a type, with `CALL` standing for the type.
 type Position = {
     written: String
     is_taken: Taken
@@ -304,7 +273,6 @@ type Position = {
 
 derive Eq for Taken
 
-/// Whether a member takes what is written at a place, or gives it back.
 type Taken =
     | IsTaken
     | IsGiven

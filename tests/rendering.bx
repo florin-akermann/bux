@@ -11,7 +11,6 @@ import list
 import strings
 import walk
 
-/// `property` tried on `cases` cases, each drawn from a seed of its own.
 // example: held.is_held(held_over(NamesAPlace, 2))
 fn held_over(property: Property, cases: Int) -> held.Held {
     var found = held.nothing_failed(cases)
@@ -27,7 +26,6 @@ fn held_over(property: Property, cases: Int) -> held.Held {
     found
 }
 
-/// One case of `property`, drawn from `draw`.
 // example: tried_by(OpensAndEnds, drawn.seeded(1)).why == ""
 fn tried_by(property: Property, draw: drawn.Draw) -> Tried {
     match property {
@@ -38,7 +36,6 @@ fn tried_by(property: Property, draw: drawn.Draw) -> Tried {
     }
 }
 
-/// The name a failure of `property` is reported with.
 // example: name_of(OpensAndEnds) == "a_rendering_opens_with_the_code_and_ends_with_a_newline"
 fn name_of(property: Property) -> String {
     match property {
@@ -49,7 +46,6 @@ fn name_of(property: Property) -> String {
     }
 }
 
-/// The second line of a rendering names a line the source has, and a column on it or just past it.
 // example: a_rendering_names_a_line_and_a_column_inside_the_source(drawn.seeded(4)).why == ""
 fn a_rendering_names_a_line_and_a_column_inside_the_source(draw: drawn.Draw) -> Tried {
     let pointed = pointed_of(draw)
@@ -66,7 +62,6 @@ fn a_rendering_names_a_line_and_a_column_inside_the_source(draw: drawn.Draw) -> 
     Tried { case: shown_pointed(pointed), why: why }
 }
 
-/// A rendering opens with the code in brackets and ends with a line break.
 // example: a_rendering_opens_with_the_code_and_ends_with_a_newline(drawn.seeded(4)).why == ""
 fn a_rendering_opens_with_the_code_and_ends_with_a_newline(draw: drawn.Draw) -> Tried {
     let pointed = pointed_of(draw)
@@ -79,7 +74,6 @@ fn a_rendering_opens_with_the_code_and_ends_with_a_newline(draw: drawn.Draw) -> 
     Tried { case: shown_pointed(pointed), why: why }
 }
 
-/// A drawn source, a drawn code, and a drawn span anywhere in the source or up to 2 bytes past it.
 // example: pointed_of(drawn.seeded(1)).source != ""
 fn pointed_of(draw: drawn.Draw) -> Pointed {
     let source = source_of(draw)
@@ -88,9 +82,6 @@ fn pointed_of(draw: drawn.Draw) -> Pointed {
     Pointed { source: source, code: code_of(stepped(draw, 22)), span: span }
 }
 
-/// A source of zero or more lines, each ended by a line break, blank and non-ASCII ones among them.
-///
-/// A source of no lines is one line break.
 // example: walk.is_ending_in(source_of(drawn.seeded(1)), "\n")
 fn source_of(draw: drawn.Draw) -> String {
     let lines = ["fn f() {\n", "    a < b\n", "\n", "    // é\n", "}\n", "\ttab\n"]
@@ -101,14 +92,12 @@ fn source_of(draw: drawn.Draw) -> String {
     source
 }
 
-/// `pointed` rendered against the file `demo.bx`, with a message of plain text.
 // example: walk.is_ending_in(rendered_of(pointed_of(drawn.seeded(1))), "\n")
 fn rendered_of(pointed: Pointed) -> String {
     let diagnostic = command.Diagnostic { code: pointed.code, message: "something is wrong", span: pointed.span, help: None, fix: None }
     command.rendered(diagnostic, command.Page { source: pointed.source, path: "demo.bx" })
 }
 
-/// Where the last `:` of `text` is, and -1 where it has none.
 // example: last_colon("a:1:2") == 3
 fn last_colon(text: String) -> Int {
     var at = strings.length(text) - 1
@@ -118,13 +107,11 @@ fn last_colon(text: String) -> Int {
     at
 }
 
-/// How many characters `text` holds, where a pair of code units is one.
 // example: characters_in("aé") == 2
 fn characters_in(text: String) -> Int {
     command.characters_of(text, command.Stretched { from: 0, to: strings.length(text) })
 }
 
-/// Whether there is no line where one was asked for.
 // example: is_none(None)
 fn is_none(found: Option<String>) -> Bool {
     match found {
@@ -133,19 +120,16 @@ fn is_none(found: Option<String>) -> Bool {
     }
 }
 
-/// Whether `text` opens with `opening`.
 // example: is_opening(text: "ab", opening: "a")
 fn is_opening(text: String, opening: String) -> Bool {
     or(strings.cut(text, 0, strings.length(opening)), "") == opening
 }
 
-/// A drawn case of a rendering, as its code, its span, and its source.
 // example: shown_pointed(Pointed { source: "\n", code: "L0100", span: lexer.Span { start: 0, length: 1 } }) == "L0100 0..1 of \n"
 fn shown_pointed(pointed: Pointed) -> String {
     pointed.code + " " + shown(pointed.span) + " of " + pointed.source
 }
 
-/// The data form of a diagnostic whose message and help hold drawn text is one line, closed.
 // example: a_data_form_is_one_line_whatever_text_the_diagnostic_holds(drawn.seeded(4)).why == ""
 fn a_data_form_is_one_line_whatever_text_the_diagnostic_holds(draw: drawn.Draw) -> Tried {
     let message = message_of(draw)
@@ -158,10 +142,8 @@ fn a_data_form_is_one_line_whatever_text_the_diagnostic_holds(draw: drawn.Draw) 
     Tried { case: message, why: why }
 }
 
-/// The message of a data form, read back with every escape turned back, is the message given.
-///
-/// The reader is the one a tool would have, so the property is a round trip and not a second
-/// copy of the escaping it is about.
+// The reader is the one that a tool has, so the property is a round trip.
+// It is not a second copy of the escapes that it examines.
 // example: text_a_data_form_writes_reads_back_as_the_text_it_was_given(drawn.seeded(4)).why == ""
 fn text_a_data_form_writes_reads_back_as_the_text_it_was_given(draw: drawn.Draw) -> Tried {
     let message = message_of(draw)
@@ -175,10 +157,8 @@ fn text_a_data_form_writes_reads_back_as_the_text_it_was_given(draw: drawn.Draw)
     Tried { case: message, why: why }
 }
 
-/// Drawn text with awkward pieces woven through it, which is what a message quoting a source holds.
-///
-/// Each awkward piece comes after a drawn character, so an escape between two plain characters
-/// and one at the very start are both drawn. One awkward piece is always drawn.
+// Each awkward piece follows a drawn character, so an escape is first or between two plain ones.
+// The draw always gives one awkward piece.
 // example: strings.length(message_of(drawn.seeded(1))) > 0
 fn message_of(draw: drawn.Draw) -> String {
     let awkward = ["\"", "\\", "\n", "\r", "\t", or(strings.one_char(1), ""), "é", "a < b"]
@@ -191,7 +171,6 @@ fn message_of(draw: drawn.Draw) -> String {
     woven + drawn.picked(at, awkward, "") + character_of(drawn.next(at))
 }
 
-/// One drawn character: printable ASCII, a control, one of two bytes in UTF-8, or one of a pair.
 // example: strings.length(character_of(drawn.seeded(1))) > 0
 fn character_of(draw: drawn.Draw) -> String {
     let ranges = [[32, 95], [0, 32], [128, 1920], [128512, 80]]
@@ -200,7 +179,6 @@ fn character_of(draw: drawn.Draw) -> String {
     or(strings.one_char(unit), "?")
 }
 
-/// The text of the field `named` of a data form, with every escape turned back, where it closes.
 // example: or(read_back(written: "{\"a\":\"x\\ty\"}", named: "a"), "") == "x\ty"
 // example: is_none(read_back(written: "{\"a\":\"x", named: "a"))
 fn read_back(written: String, named: String) -> Option<String> {
@@ -219,7 +197,6 @@ fn read_back(written: String, named: String) -> Option<String> {
     None
 }
 
-/// What the code unit at `at` of a data form stands for, and how many units it takes up.
 // example: taken_at("\\u0001", 0).width == 6
 // example: taken_at("a", 0).text == "a"
 fn taken_at(written: String, at: Int) -> Taken {
@@ -237,7 +214,6 @@ fn taken_at(written: String, at: Int) -> Taken {
     }
 }
 
-/// The number `digits` writes in base sixteen.
 // example: hex_value("001f") == 31
 // example: hex_value("00A0") == 160
 fn hex_value(digits: String) -> Int {
@@ -251,7 +227,6 @@ fn hex_value(digits: String) -> Int {
     value
 }
 
-/// What one hexadecimal digit is worth.
 // example: digit_value(98) == 11
 fn digit_value(unit: Int) -> Int {
     if unit >= 97 {
@@ -263,7 +238,6 @@ fn digit_value(unit: Int) -> Int {
     unit - 48
 }
 
-/// Where `piece` first starts in `text`, and -1 where it is not in it.
 // example: text_index(text: "abcab", piece: "ca") == 2
 // example: text_index(text: "ab", piece: "x") == -1
 fn text_index(text: String, piece: String) -> Int {
@@ -277,13 +251,11 @@ fn text_index(text: String, piece: String) -> Int {
     -1
 }
 
-/// One of the codes a diagnostic has.
 // example: strings.length(code_of(drawn.seeded(1))) == 5
 fn code_of(draw: drawn.Draw) -> String {
     drawn.picked(draw, ["L0100", "L0101", "L0300", "L0302", "L0400", "L0500", "L0600", "L0601"], "L0100")
 }
 
-/// The draw `times` steps after `draw`.
 // example: stepped(drawn.seeded(1), 1).state == drawn.next(drawn.seeded(1)).state
 fn stepped(draw: drawn.Draw, times: Int) -> drawn.Draw {
     var at = draw
@@ -295,26 +267,22 @@ fn stepped(draw: drawn.Draw, times: Int) -> drawn.Draw {
     at
 }
 
-/// One case of a property: the drawn input as text, and why it failed, which is `""` where it held.
 type Tried = {
     case: String
     why: String
 }
 
-/// A drawn source, and a diagnostic that points into it with a code and a span.
 type Pointed = {
     source: String
     code: String
     span: lexer.Span
 }
 
-/// What one escape of a data form stands for, and how many code units it is written with.
 type Taken = {
     text: String
     width: Int
 }
 
-/// Each property of the rendering and the data form.
 type Property =
     | NamesAPlace
     | OpensAndEnds

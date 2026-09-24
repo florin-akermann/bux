@@ -6,7 +6,6 @@
 import list
 import strings
 
-/// The whole file at `path` as text, or what went wrong reading it.
 // example: ok_or(read(""), "nothing there") == "nothing there"
 fn read(path: String) -> Result<String, String> {
     match as_a_path(named(path)) {
@@ -15,7 +14,6 @@ fn read(path: String) -> Result<String, String> {
     }
 }
 
-/// The whole file at `path` as bytes, one value from 0 to 255 for each, or what went wrong.
 // example: ok_or(read_bytes(""), [1]) == [1]
 fn read_bytes(path: String) -> Result<List<Int>, String> {
     match as_a_path(named(path)) {
@@ -24,12 +22,6 @@ fn read_bytes(path: String) -> Result<List<Int>, String> {
     }
 }
 
-/// The bytes from `from` up to `to` of the file at `path`, one char for each byte, as
-/// `read_bytes` reads them.
-///
-/// A `to` past the end reads up to the end, and a `from` past it reads nothing. A negative `from`,
-/// a `to` below `from`, and a part longer than one buffer holds are each an `Err` that names why,
-/// and the file is not opened for any of them.
 // example: ok_or(read_between(path: "no-such-file.bin", from: 0, to: 1), "not there") == "not there"
 // example: ok_or(read_between(path: "unused.bin", from: 2, to: 1), "refused") == "refused"
 // example: ok_or(read_between(path: "unused.bin", from: 0, to: 2147483648), "refused") == "refused"
@@ -46,7 +38,6 @@ fn read_between(path: String, from: Int, to: Int) -> Result<String, String> {
     }
 }
 
-/// The bytes from `from` up to `to` of the file at `path`, which holds `end` bytes.
 // example: ok_or(part_before(path: "no-such-file.bin", from: 3, to: 9, end: 3), "none") == ""
 fn part_before(path: String, from: Int, to: Int, end: Int) -> Result<String, String> {
     var last = to
@@ -63,13 +54,11 @@ fn part_before(path: String, from: Int, to: Int, end: Int) -> Result<String, Str
     }
 }
 
-/// Why a part of `length` bytes of the file at `path` is not read.
 // example: too_long(path: "a.txt", length: 3) == "a part of 3 bytes of a.txt is more than one buffer holds"
 fn too_long(path: String, length: Int) -> String {
     "a part of " + shown(length) + " bytes of " + path + " is more than one buffer holds"
 }
 
-/// The bytes of the file at `path` that fill `buffer` from `from` on, or what stopped the read.
 // example: ok_or(part_before(path: "no-such-file.bin", from: 0, to: 9, end: 9), "none") == "none"
 fn read_into(path: String, buffer: strings.Bytes, from: Int) -> Result<String, String> {
     match opened_to_read(path) {
@@ -78,9 +67,6 @@ fn read_into(path: String, buffer: strings.Bytes, from: Int) -> Result<String, S
     }
 }
 
-/// The bytes `stream` fills `buffer` with from `from` on.
-///
-/// The stream goes back to the file system here, whether the read worked or did not.
 // example: ok_or(part_before(path: "no-such-file.bin", from: 0, to: 9, end: 9), "none") == "none"
 fn read_and_let_go(stream: Source, buffer: strings.Bytes, from: Int) -> Result<String, String> {
     let part = filled(channel: channel_of(stream), buffer: buffer, from: from)
@@ -88,11 +74,8 @@ fn read_and_let_go(stream: Source, buffer: strings.Bytes, from: Int) -> Result<S
     part
 }
 
-/// The text of the bytes `channel` gives from `from` on, until `buffer` is full or the file ends.
-///
-/// A read gives the count of bytes it read, which can be fewer than the room left, and `-1` at
-/// the end of the file. A count of `0` ends the reads too, so no loop waits on a file that holds
-/// no more.
+// A read can give fewer bytes than the room that is left, and `-1` at the end of the file.
+// A count of `0` also stops the reads, so that no loop waits on a file that holds no more.
 // example: ok_or(part_before(path: "no-such-file.bin", from: 0, to: 9, end: 9), "none") == "none"
 fn filled(channel: Channel, buffer: strings.Bytes, from: Int) -> Result<String, String> {
     var at = from
@@ -107,7 +90,6 @@ fn filled(channel: Channel, buffer: strings.Bytes, from: Int) -> Result<String, 
     Ok(text_of(buffer))
 }
 
-/// The text of `buffer` where `answer` is a count, and why the read failed where it is not.
 // example: ok_or(part_before(path: "no-such-file.bin", from: 0, to: 9, end: 9), "none") == "none"
 fn text_or_why(answer: Result<Int, String>, buffer: strings.Bytes) -> Result<String, String> {
     match answer {
@@ -116,13 +98,11 @@ fn text_or_why(answer: Result<Int, String>, buffer: strings.Bytes) -> Result<Str
     }
 }
 
-/// The bytes `buffer` holds from its start up to where the reads stopped, one char for each.
 // example: ok_or(part_before(path: "no-such-file.bin", from: 0, to: 9, end: 9), "none") == "none"
 fn text_of(buffer: strings.Bytes) -> String {
     strings.spelled(strings.decoded(strings.as_latin_1(), flipped(buffer)))
 }
 
-/// How many bytes the file at `path` holds, or what went wrong asking the file system.
 // example: ok_or(size("no-such-file.bin"), -1) == -1
 fn size(path: String) -> Result<Int, String> {
     match as_a_path(named(path)) {
@@ -131,7 +111,6 @@ fn size(path: String) -> Result<Int, String> {
     }
 }
 
-/// The value of each char of `answer`, which ISO-8859-1 reads as the one byte of that value.
 // example: ok_or(each_byte(Ok("AB")), []) == [65, 66]
 fn each_byte(answer: Result<String, String>) -> Result<List<Int>, String> {
     match answer {
@@ -140,7 +119,6 @@ fn each_byte(answer: Result<String, String>) -> Result<List<Int>, String> {
     }
 }
 
-/// The value of each char of `text`, in order.
 // example: values_of("é") == [233]
 fn values_of(text: String) -> List<Int> {
     var values = []
@@ -152,7 +130,6 @@ fn values_of(text: String) -> List<Int> {
     values
 }
 
-/// `text` written as the whole of the file at `path`, with `path` back where that worked.
 // example: ok_or(write(path: "", text: ""), "nothing written") == "nothing written"
 fn write(path: String, text: String) -> Result<String, String> {
     match opened(path, strings.as_utf_8()) {
@@ -161,7 +138,7 @@ fn write(path: String, text: String) -> Result<String, String> {
     }
 }
 
-/// `text` put on `sink` and `sink` closed, because a file left open is a file not written.
+// The sink must close here, because the file does not get the text before the close.
 // example: ok_or(write(path: "", text: ""), "nothing written") == "nothing written"
 fn sent(sink: Writer, text: String, to: String) -> Result<String, String> {
     put(sink, text)
@@ -172,9 +149,6 @@ fn sent(sink: Writer, text: String, to: String) -> Result<String, String> {
     Ok(to)
 }
 
-/// `bytes` written as the whole of the file at `path`, one byte for each value.
-///
-/// A value outside 0 to 255 is no byte, so the file is not opened and the `Err` names the value.
 // example: ok_or(write_bytes(path: "", bytes: [65]), "nothing written") == "nothing written"
 // example: ok_or(write_bytes(path: "unused.bin", bytes: [256]), "refused") == "refused"
 fn write_bytes(path: String, bytes: List<Int>) -> Result<String, String> {
@@ -189,7 +163,6 @@ fn write_bytes(path: String, bytes: List<Int>) -> Result<String, String> {
     }
 }
 
-/// Each of `bytes` put on `sink` as the one char of the same value, and `sink` closed.
 // example: ok_or(write_bytes(path: "", bytes: []), "nothing written") == "nothing written"
 fn bytes_sent(sink: Writer, bytes: List<Int>, to: String) -> Result<String, String> {
     for byte in bytes {
@@ -202,9 +175,6 @@ fn bytes_sent(sink: Writer, bytes: List<Int>, to: String) -> Result<String, Stri
     Ok(to)
 }
 
-/// `text` written as UTF-8 after what the file at `path` holds, with `path` back where that worked.
-///
-/// A file that is not there is made first, so the first part of a file is appended as the rest are.
 // example: ok_or(append(path: "", text: "a"), "nothing appended") == "nothing appended"
 fn append(path: String, text: String) -> Result<String, String> {
     match opened_to_append(path, true) {
@@ -213,9 +183,6 @@ fn append(path: String, text: String) -> Result<String, String> {
     }
 }
 
-/// `bytes` written at the end of the file `stream` holds open, and `stream` closed.
-///
-/// The stream goes back to the file system here, whether the write worked or did not.
 // example: ok_or(append(path: "", text: ""), "nothing appended") == "nothing appended"
 fn appended_and_let_go(stream: Sink, bytes: strings.Bytes, to: String) -> Result<String, String> {
     let answer = drained(channel: channel_to(stream), bytes: bytes, to: to)
@@ -223,10 +190,8 @@ fn appended_and_let_go(stream: Sink, bytes: strings.Bytes, to: String) -> Result
     answer
 }
 
-/// `to` where `channel` took every one of `bytes`, and what stopped it where it did not.
-///
-/// A write can take fewer bytes than are left, so the writes go on until none are left. A write
-/// that takes none ends them, so no loop waits on a file that takes no more.
+// A write can take fewer bytes than are left, so the writes continue until none are left.
+// A write that takes none stops them, so that no loop waits on a file that takes no more.
 // example: ok_or(append(path: "", text: ""), "nothing appended") == "nothing appended"
 fn drained(channel: Channel, bytes: strings.Bytes, to: String) -> Result<String, String> {
     for has_room(bytes) {
@@ -238,7 +203,6 @@ fn drained(channel: Channel, bytes: strings.Bytes, to: String) -> Result<String,
     Ok(to)
 }
 
-/// The name of everything the directory at `path` holds, in order.
 // example: list.length(ok_or(listed("no-such-directory"), [])) == 0
 fn listed(path: String) -> Result<List<String>, String> {
     match as_a_path(named(path)) {
@@ -247,7 +211,6 @@ fn listed(path: String) -> Result<List<String>, String> {
     }
 }
 
-/// The names the directory at `found` holds, or what went wrong reading them.
 // example: list.length(ok_or(listed("no-such-directory"), [])) == 0
 fn names_within(found: Path) -> Result<List<String>, String> {
     match entries(found) {
@@ -256,9 +219,7 @@ fn names_within(found: Path) -> Result<List<String>, String> {
     }
 }
 
-/// The names `stream` holds, read out of it whole so that no step of the walk below can throw.
-///
-/// The directory goes back to the file system here, whether the reading worked or did not.
+// All names come out of the stream first, so that no later step of the walk can throw.
 // example: list.length(ok_or(listed("no-such-directory"), [])) == 0
 fn every_name(stream: Entries) -> Result<List<String>, String> {
     let held = all_of(in_order(stream))
@@ -269,7 +230,6 @@ fn every_name(stream: Entries) -> Result<List<String>, String> {
     }
 }
 
-/// The name of every entry `names` holds, each pushed onto the list the walk fills.
 // example: list.length(ok_or(listed("no-such-directory"), [])) == 0
 fn each_bare_name(names: Held) -> List<String> {
     let walk = one_by_one(names)
@@ -280,9 +240,7 @@ fn each_bare_name(names: Held) -> List<String> {
     found
 }
 
-/// The directory made at `path`, with `path` back where it was made.
-///
-/// A JVM says whether it made one and says no more, so the reason a failure holds is this line.
+// The JVM tells only whether it made the directory, so this function writes the reason.
 // example: ok_or(made(""), "nothing made") == "nothing made"
 fn made(path: String) -> Result<String, String> {
     if make(named(path)) {
@@ -291,7 +249,6 @@ fn made(path: String) -> Result<String, String> {
     Err("no directory was made at " + path)
 }
 
-/// Whether anything was at `path` to remove, or what stopped the removal.
 // example: !ok_or(removed("no-such-directory"), true)
 fn removed(path: String) -> Result<Bool, String> {
     match as_a_path(named(path)) {
@@ -300,157 +257,107 @@ fn removed(path: String) -> Result<Bool, String> {
     }
 }
 
-/// The whole file at `path`, read as UTF-8.
 extern static read_whole(path: Path) -> Result<String, String> = "java.nio.file.Files.readString"
 
-/// The whole file at `path`, read in `encoding`.
 extern static read_whole_as(path: Path, encoding: strings.Encoding) -> Result<String, String> = "java.nio.file.Files.readString"
 
-/// How many bytes the file at `path` holds, which the file system answers without a read.
 extern static byte_count(path: Path) -> Result<Int, String> = "java.nio.file.Files.size"
 
-/// A stream of the bytes of the file at `path`, opened to be read and never written.
 extern new opened_to_read(path: String) -> Result<Source, String>
 
-/// The channel of `stream`, which reads at a position rather than where the last read stopped.
 extern method channel_of(stream: Source) -> Channel = "getChannel"
 
-/// Reads what fits in `buffer` from `position` on, and gives the count read, or `-1` at the end.
 extern method int read_at(channel: Channel, buffer: strings.Bytes, position: Int) -> Result<Int, String> = "read"
 
-/// A buffer with room for `capacity` bytes, and `None` where `capacity` does not fit in an `int`.
-///
-/// The `Err` is a JVM that has no memory left for so many bytes.
+// An `Err` is a JVM that has no memory left for so many bytes.
 extern static allotted(int capacity: Int) -> Result<Option<strings.Bytes>, String> = "java.nio.ByteBuffer.allocate"
 
-/// Whether `buffer` has room for another byte.
 extern method has_room(buffer: strings.Bytes) -> Bool = "hasRemaining"
 
-/// `buffer`, turned to be read from its start up to where the reads into it stopped.
 extern method flipped(buffer: strings.Bytes) -> strings.Bytes = "flip"
 
-/// Closes `stream` and its channel, which gives the file back to the file system.
-///
-/// A close gives nothing back, so no `Result` can carry what it throws. The part is read before
-/// it, so a close that fails loses no byte of it.
+// A close gives nothing back, so no `Result` can hold what it throws.
+// The read occurs before the close, so a close that fails loses no byte.
 extern method let_go(stream: Source) -> () = "close"
 
-/// A file at `path` opened to be written whole, which is a file emptied of whatever it held.
 extern new opened(path: String, written_as: strings.Encoding) -> Result<Writer, String>
 
-/// Writes `text` on `sink` and nothing else.
 extern method put(sink: Writer, text: String) -> () = "print"
 
-/// Closes `sink`, which is what puts the last of what was written on it into the file.
 extern method closed(sink: Writer) -> () = "close"
 
-/// Whether anything written on `sink` did not reach the file, which is all a sink reports.
+// A `PrintWriter` throws nothing, so this is the only report of a write that failed.
 extern method failed(sink: Writer) -> Bool = "checkError"
 
-/// Everything the directory at `path` holds, as the stream a JVM answers with.
 extern static entries(path: Path) -> Result<Entries, String> = "java.nio.file.Files.list"
 
-/// The same entries, each after the ones it sorts behind, so a listing reads the same twice.
+// The entries are sorted, so that two listings of one directory have the same order.
 extern method in_order(stream: Entries) -> Entries = "sorted"
 
-/// Every entry of `stream`, read out of it here, which is the one step of a listing that throws.
 extern method all_of(stream: Entries) -> Result<Held, String> = "toList"
 
-/// The entries `names` holds, to be taken one at a time, which throws nothing on the way.
 extern method one_by_one(names: Held) -> Walk = "iterator"
 
-/// Lets `stream` go, which gives the directory it was reading back to the file system.
 extern method released(stream: Entries) -> () = "close"
 
-/// Whether `walk` has an entry left to give.
 extern method has_another(walk: Walk) -> Bool = "hasNext"
 
-/// The next entry of `walk`, which is there whenever `has_another` says it is.
 extern method next_value(walk: Walk) -> Anything = "next"
 
-/// `value` as the text a JVM writes it as, which for an entry of a directory is its path.
 extern method as_text(value: Anything) -> String = "toString"
 
-/// The last part of the path of `file`, which is the name the directory holds it under.
 extern method bare_name(file: File) -> String = "getName"
 
-/// Whether a directory was made at `file`, which is `false` where anything is there already.
 extern method make(file: File) -> Bool = "mkdir"
 
-/// Whether the file system held anything at `path` to remove.
 extern static delete(path: Path) -> Result<Bool, String> = "java.nio.file.Files.deleteIfExists"
 
-/// The path `file` names, which is how a file is reached to be read.
 extern method as_a_path(file: File) -> Result<Path, String> = "toPath"
 
-/// The file the text `path` names.
 extern new named(path: String) -> File
 
-/// Whether anything is at `file`, a file or a directory.
 extern method is_there(file: File) -> Bool = "exists"
 
-/// Whether `file` is a file that is there, rather than a directory or nothing at all.
 extern method is_file(file: File) -> Bool = "isFile"
 
-/// Whether `file` is a directory that is there.
 extern method is_directory(file: File) -> Bool = "isDirectory"
 
-/// Whether this process may read `file`.
 extern method is_readable(file: File) -> Bool = "canRead"
 
-/// Whether the directory at `file`, and every one above it that was missing, was made.
 extern method has_made_all(file: File) -> Bool = "mkdirs"
 
-/// The path of the directory above `file`, and `None` where its path names none.
 extern method parent_path(file: File) -> Option<String> = "getParent"
 
-/// The one path the JVM gives `file` however it is spelled, which is what compares two routes.
 extern method canonical_path(file: File) -> Result<String, String> = "getCanonicalPath"
 
-/// What the JVM writes between two entries of a class path.
 extern field path_separator() -> String = "java.io.File.pathSeparator"
 
-/// A file the file system holds, named rather than opened.
 extern type File = "java.io.File"
 
-/// A file a program writes text on, one piece of text at a time.
 extern type Writer = "java.io.PrintWriter"
 
-/// Everything a directory holds, which a JVM answers a listing with.
 extern type interface Entries = "java.util.stream.Stream"
 
-/// The same entries once they are read out, which is what a walk over them reads.
 extern type interface Held = "java.util.List"
 
-/// Entries taken one at a time, which is how a program reads what a listing holds.
 extern type interface Walk = "java.util.Iterator"
 
-/// A value of the JVM's own, which is what an entry of a listing is before it is read as text.
 extern type Anything = "java.lang.Object"
 
-/// Where a file the file system holds is, which is what a read takes.
 extern type interface Path = "java.nio.file.Path"
 
-/// A file at `path` opened to be written, after what it holds where `at_the_end` is `true`.
 extern new opened_to_append(path: String, at_the_end: Bool) -> Result<Sink, String>
 
-/// The channel of `stream`, which writes where the stream was opened to write.
 extern method channel_to(stream: Sink) -> Channel = "getChannel"
 
-/// Writes what is left of `bytes` through `channel`, and gives the count of bytes it took.
 extern method int written_from(channel: Channel, bytes: strings.Bytes) -> Result<Int, String> = "write"
 
-/// Closes `stream` and its channel, which gives the file back to the file system.
-///
-/// A close gives nothing back, so no `Result` can carry what it throws. The stream holds no
-/// buffer, so every byte is written before it, and a close that fails loses none.
+// A close gives nothing back, so no `Result` can hold what it throws.
+// The stream has no buffer, so a close that fails loses no byte.
 extern method shut(stream: Sink) -> () = "close"
 
-/// A file opened to be written, one byte after another or through its channel.
 extern type Sink = "java.io.FileOutputStream"
 
-/// A file opened to be read, one byte after another or at a position through its channel.
 extern type Source = "java.io.FileInputStream"
 
-/// What reads a file at a position or writes one, which a stream opened on the file gives.
 extern type Channel = "java.nio.channels.FileChannel"

@@ -10,7 +10,6 @@ fn main(arguments: List<String>) -> Int {
     0
 }
 
-/// The text the file at `path` holds after it is written whole.
 // example: ok_or(kept(""), "nothing") == "nothing"
 fn kept(path: String) -> Result<String, String> {
     match files.write(path, "a line") {

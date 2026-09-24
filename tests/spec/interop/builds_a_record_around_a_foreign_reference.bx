@@ -6,7 +6,6 @@ fn main(arguments: List<String>) -> Int {
     0
 }
 
-/// One value of any type.
 type Box<T> = {
     value: T
 }

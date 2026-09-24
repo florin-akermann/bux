@@ -15,7 +15,6 @@ import modules
 import strings
 import walk
 
-/// Every check of this module, each done in a scene of its own.
 // example: list.length(facts_held("a", [Fact { what: "b", expected: "c", found: "c" }]).failures) == 0
 fn every_scene_held(library: ir.Library, limit: Int) -> held.Held {
     var found = every_build_held(library)
@@ -27,7 +26,6 @@ fn every_scene_held(library: ir.Library, limit: Int) -> held.Held {
     held.added(found, every_header_held())
 }
 
-/// The checks of `build`: what it writes under `target/`, and what it refuses to write.
 // example: strings.length(module_text()) > 0
 fn every_build_held(library: ir.Library) -> held.Held {
     var found = classes_written(library)
@@ -40,8 +38,6 @@ fn every_build_held(library: ir.Library) -> held.Held {
     held.added(found, holes_refused(library))
 }
 
-/// `build` leaves no resource in `target/` that its compiler does not read, as after a help topic
-/// is taken out.
 // example: absence(scene: "no-such-directory", at: "target/help/gone.md").expected == "not written"
 fn no_stale_resource(library: ir.Library) -> held.Held {
     let scene = scene_of([Written { at: "example.bx", text: module_text() }, Written { at: "target/help/gone.md", text: "gone\n" }])
@@ -51,7 +47,6 @@ fn no_stale_resource(library: ir.Library) -> held.Held {
     found
 }
 
-/// `build` leaves no class beside a source: every class of the program is under `target/`.
 // example: classes_outside(["a.bx", "target/a.class", "a.class"], "target/") == ["a.class"]
 fn nothing_beside(library: ir.Library) -> held.Held {
     let scene = scene_of(program_files())
@@ -62,7 +57,6 @@ fn nothing_beside(library: ir.Library) -> held.Held {
     found
 }
 
-/// The class files among `paths` that do not sit under `target`.
 // example: classes_outside(["target/a.class"], "target/") == []
 fn classes_outside(paths: List<String>, target: String) -> List<String> {
     var found = []
@@ -74,8 +68,6 @@ fn classes_outside(paths: List<String>, target: String) -> List<String> {
     found
 }
 
-/// `build` writes one class under `target/` for the module and for each type it declares, and
-/// beside the classes a copy of the library, the help topics, and the explanations.
 // example: presence(scene: "no-such-directory", at: "a.class") == "not written"
 fn classes_written(library: ir.Library) -> held.Held {
     let scene = scene_of([Written { at: "example.bx", text: module_text() }])
@@ -86,8 +78,6 @@ fn classes_written(library: ir.Library) -> held.Held {
     found
 }
 
-/// Every class `build` writes opens with the class file magic and the version of JDK 28, marked
-/// preview.
 // example: codes_of("AB", 2) == [65, 66]
 fn class_file_opened(library: ir.Library) -> held.Held {
     let scene = scene_of([Written { at: "example.bx", text: module_text() }])
@@ -98,7 +88,6 @@ fn class_file_opened(library: ir.Library) -> held.Held {
     found
 }
 
-/// `build` writes the same bytes each time it is run, because nothing of a build depends on when.
 // example: codes_of("", 2) == []
 fn bytes_written_again(library: ir.Library) -> held.Held {
     let scene = scene_of([Written { at: "example.bx", text: module_text() }])
@@ -112,7 +101,6 @@ fn bytes_written_again(library: ir.Library) -> held.Held {
     found
 }
 
-/// `build` writes nothing when the compiler refuses the program.
 // example: shown(is_within(text: "a error[L0400] b", part: "error[L0400]")) == "true"
 fn refused_build(library: ir.Library) -> held.Held {
     let scene = scene_of([Written { at: "example.bx", text: "fn told(payment: Int) -> String {\n    payment\n}\n" }])
@@ -123,7 +111,6 @@ fn refused_build(library: ir.Library) -> held.Held {
     found
 }
 
-/// `build` refuses a file whose name is not one a class may have, and names the file.
 // example: absence(scene: "no-such-directory", at: "a.class").found == "not written"
 fn dotted_build(library: ir.Library) -> held.Held {
     let scene = scene_of([Written { at: "my.app.bx", text: module_text() }])
@@ -134,8 +121,6 @@ fn dotted_build(library: ir.Library) -> held.Held {
     found
 }
 
-/// `build` refuses a module that holds a hole, names every hole in a block of its own, and writes
-/// nothing.
 // example: occurrences(text: "ab ab", part: "ab") == 2
 fn holes_refused(library: ir.Library) -> held.Held {
     let scene = scene_of([Written { at: "example.bx", text: unfinished_text() }])
@@ -148,7 +133,6 @@ fn holes_refused(library: ir.Library) -> held.Held {
     found
 }
 
-/// The checks of `check`: the refusal as a page to read, and the same refusal as data.
 // example: strings.length(not_canonical_text()) > 0
 fn every_check_held(library: ir.Library) -> held.Held {
     var found = canonical_accepted(library)
@@ -158,7 +142,6 @@ fn every_check_held(library: ir.Library) -> held.Held {
     held.added(found, example_program_checked(library))
 }
 
-/// `check` says nothing about a file the compiler accepts, as a page or as data.
 // example: status_fact(command.nothing_said(), 0).found == "0"
 fn canonical_accepted(library: ir.Library) -> held.Held {
     let scene = scene_of([Written { at: "example.bx", text: "fn answer() -> Int {\n    7\n}\n" }])
@@ -171,8 +154,6 @@ fn canonical_accepted(library: ir.Library) -> held.Held {
     found
 }
 
-/// `check --json` writes the refusal as one line of data on standard output, which names the file,
-/// the code, the message, the span, and the canonical text as the edit.
 // example: opening_fact(what: "a", text: "{x", part: "{").found == "{"
 fn refusal_as_data(library: ir.Library) -> held.Held {
     let scene = scene_of([Written { at: "example.bx", text: not_canonical_text() }])
@@ -185,7 +166,6 @@ fn refusal_as_data(library: ir.Library) -> held.Held {
     found
 }
 
-/// A refusal the compiler has no edit for carries none, as data.
 // example: every_part(text: "ab", parts: ["a", "b"]) == [Fact { what: "output holds a", expected: "true", found: "true" }, Fact { what: "output holds b", expected: "true", found: "true" }]
 fn refusal_without_edit(library: ir.Library) -> held.Held {
     let scene = scene_of([Written { at: "example.bx", text: "fn answer() -> Int {\n    missing()\n}\n" }])
@@ -197,7 +177,6 @@ fn refusal_without_edit(library: ir.Library) -> held.Held {
     found
 }
 
-/// Without the flag, the refusal is the page a reader sees on standard error.
 // example: closing_fact(what: "a", text: "x}\n", part: "}\n").found == "}\n"
 fn refusal_as_page(library: ir.Library) -> held.Held {
     let scene = scene_of([Written { at: "example.bx", text: not_canonical_text() }])
@@ -208,14 +187,12 @@ fn refusal_as_page(library: ir.Library) -> held.Held {
     found
 }
 
-/// `example/src/main.bx`, the one program a newcomer is pointed at, compiles and is in canonical form.
 // example: said_facts(what: "a", said: command.nothing_said()) == [Fact { what: "a: status", expected: "0", found: "0" }, Fact { what: "a: output", expected: "", found: "" }, Fact { what: "a: errors", expected: "", found: "" }]
 fn example_program_checked(library: ir.Library) -> held.Held {
     let said = said_to(["check", "example/src/main.bx"], library)
     facts_held("example/src/main.bx compiles and is in canonical form", said_facts(what: "check", said: said))
 }
 
-/// The checks of `fmt`, and of the canonical-form gate of `check`.
 // example: strings.length(spaced_text()) > 0
 fn every_format_held(library: ir.Library) -> held.Held {
     var found = formatting_rewrites(library)
@@ -225,7 +202,6 @@ fn every_format_held(library: ir.Library) -> held.Held {
     held.added(found, form_before_names(library))
 }
 
-/// `fmt` rewrites a file that is not in canonical form.
 // example: content_of(scene: "no-such-directory", at: "a.bx") == ""
 fn formatting_rewrites(library: ir.Library) -> held.Held {
     let scene = scene_of([Written { at: "example.bx", text: spaced_text() }])
@@ -236,7 +212,6 @@ fn formatting_rewrites(library: ir.Library) -> held.Held {
     found
 }
 
-/// `fmt` leaves a canonical file exactly as it is, and `check` accepts it.
 // example: status_fact(command.nothing_said(), 1).expected == "1"
 fn canonical_left(library: ir.Library) -> held.Held {
     let scene = scene_of([Written { at: "example.bx", text: canonical_text() }])
@@ -249,7 +224,6 @@ fn canonical_left(library: ir.Library) -> held.Held {
     found
 }
 
-/// `fmt` writes nothing when the file does not parse, and says why.
 // example: within_fact(what: "a", text: "xy", part: "y").found == "true"
 fn unparsed_left(library: ir.Library) -> held.Held {
     let scene = scene_of([Written { at: "example.bx", text: "fn (x) {\n}\n" }])
@@ -261,8 +235,6 @@ fn unparsed_left(library: ir.Library) -> held.Held {
     found
 }
 
-/// `check` names the first line that is not in canonical form, where it is in the file it was
-/// given, with the line canonical form writes, and it leaves the file as it is.
 // example: strings.length(spaced_text()) == 26
 fn first_departure_named(library: ir.Library) -> held.Held {
     let scene = scene_of([Written { at: "example.bx", text: spaced_text() }])
@@ -275,7 +247,6 @@ fn first_departure_named(library: ir.Library) -> held.Held {
     found
 }
 
-/// `check` holds a file to canonical form before it resolves a name.
 // example: opening_fact(what: "a", text: "xyz", part: "xy").expected == "xy"
 fn form_before_names(library: ir.Library) -> held.Held {
     let scene = scene_of([Written { at: "example.bx", text: "fn total() -> Int {\n  missing\n}\n" }])
@@ -286,7 +257,6 @@ fn form_before_names(library: ir.Library) -> held.Held {
     found
 }
 
-/// The checks of `check` and `build` handed a package, which is a directory with a manifest.
 // example: strings.length(declaring_text()) > 0
 fn every_package_held(library: ir.Library, limit: Int) -> held.Held {
     var found = package_checked(library)
@@ -297,7 +267,6 @@ fn every_package_held(library: ir.Library, limit: Int) -> held.Held {
     held.added(found, unlisted_package(library: library, limit: limit, locked: "unlisted/src"))
 }
 
-/// `check` takes a package and accepts every module it holds.
 // example: list.length(package_files(example: "", helper: "")) == 3
 fn package_checked(library: ir.Library) -> held.Held {
     let scene = scene_of(package_files(example: declaring_text(), helper: declaring_text()))
@@ -307,7 +276,6 @@ fn package_checked(library: ir.Library) -> held.Held {
     found
 }
 
-/// `check` refuses a package when one module of it is refused.
 // example: strings.length(unparsed_text()) > 0
 fn package_refused(library: ir.Library) -> held.Held {
     let scene = scene_of(package_files(example: declaring_text(), helper: unparsed_text()))
@@ -318,7 +286,6 @@ fn package_refused(library: ir.Library) -> held.Held {
     found
 }
 
-/// `build` takes a package and writes a class for every module it holds.
 // example: presences(scene: "no-such-directory", written: ["a.class"]) == [Fact { what: "a.class", expected: "written", found: "not written" }]
 fn package_built(library: ir.Library) -> held.Held {
     let scene = scene_of(package_files(example: declaring_text(), helper: declaring_text()))
@@ -329,7 +296,6 @@ fn package_built(library: ir.Library) -> held.Held {
     found
 }
 
-/// `build` writes nothing of a package whose first module is refused.
 // example: absence(scene: "no-such-directory", at: "a.class").expected == "not written"
 fn refused_package_built(library: ir.Library) -> held.Held {
     let scene = scene_of(package_files(example: unparsed_text(), helper: declaring_text()))
@@ -357,7 +323,6 @@ fn unlisted_package(library: ir.Library, limit: Int, locked: String) -> held.Hel
     found
 }
 
-/// The checks of a program written across several modules, as the command line compiles it.
 // example: strings.length(greeting_text()) > 0
 fn every_import_held(library: ir.Library) -> held.Held {
     var found = imported_refusal_named(library)
@@ -365,7 +330,6 @@ fn every_import_held(library: ir.Library) -> held.Held {
     held.added(found, surface_of_the_named(library))
 }
 
-/// A refusal of an imported module names that module's own file.
 // example: strings.length(program_text()) > 0
 fn imported_refusal_named(library: ir.Library) -> held.Held {
     let scene = scene_of([Written { at: "example.bx", text: program_text() }, Written { at: "greeting.bx", text: "fn greeting(name: String) -> Int {\n    name\n}\n" }])
@@ -376,8 +340,6 @@ fn imported_refusal_named(library: ir.Library) -> held.Held {
     found
 }
 
-/// `build` writes a class for every module the program reaches, and none for a module beside it
-/// that nothing imports.
 // example: list.length(program_files()) == 2
 fn reached_built(library: ir.Library) -> held.Held {
     let scene = scene_of(list.push(program_files(), Written { at: "unreached.bx", text: "fn held() -> Int {\n    1\n}\n" }))
@@ -388,8 +350,6 @@ fn reached_built(library: ir.Library) -> held.Held {
     found
 }
 
-/// `api` prints the surface of the module named and not of what it imports, and writes nothing
-/// beside the source.
 // example: within_fact(what: "a", text: "fn main", part: "fn main").expected == "true"
 fn surface_of_the_named(library: ir.Library) -> held.Held {
     let scene = scene_of(program_files())
@@ -401,7 +361,6 @@ fn surface_of_the_named(library: ir.Library) -> held.Held {
     found
 }
 
-/// The checks of `run` and `test` on a module they refuse before any JVM is started.
 // example: strings.length(the_one_shape()) > 0
 fn every_refused_run_held(library: ir.Library) -> held.Held {
     var found = run_builds_as_build_does(library)
@@ -417,8 +376,6 @@ fn every_refused_run_held(library: ir.Library) -> held.Held {
     held.added(found, nothing_to_test(library))
 }
 
-/// `run` leaves behind exactly what `build` leaves for the same file: a run builds, and builds
-/// nothing else.
 // example: relative_files("no-such-directory") == []
 fn run_builds_as_build_does(library: ir.Library) -> held.Held {
     let built = scene_of([Written { at: "example.bx", text: counting_program_text() }])
@@ -432,7 +389,6 @@ fn run_builds_as_build_does(library: ir.Library) -> held.Held {
     found
 }
 
-/// `run` refuses a module that declares no `main` of the one shape, and names the shape to write.
 // example: the_one_shape() == "fn main(arguments: List<String>) -> Int"
 fn no_program(source: String, library: ir.Library) -> held.Held {
     let scene = scene_of([Written { at: "example.bx", text: source }])
@@ -443,7 +399,6 @@ fn no_program(source: String, library: ir.Library) -> held.Held {
     found
 }
 
-/// `run` refuses a program the compiler will not have, and runs and writes nothing.
 // example: first_line_of("a\nb") == "a"
 fn refused_program_run(library: ir.Library) -> held.Held {
     let scene = scene_of([Written { at: "example.bx", text: refused_program_text() }])
@@ -454,11 +409,8 @@ fn refused_program_run(library: ir.Library) -> held.Held {
     found
 }
 
-/// `word` refuses a module in a directory whose path holds `:`, and builds nothing.
-///
-/// A class path reads the `:` as the end of one path, so the refusal comes before a build. The
-/// package states an archive, because an archive is what puts the directory on the class path of
-/// `test`. The archive is not there, and the refusal comes before an archive is looked for.
+// A class path reads `:` as the end of a path, so the refusal comes before a build.
+// An archive puts the directory on the class path of `test`, so the package states a missing one.
 // example: strings.length(split_manifest_text()) > 0
 fn split_refused(word: String, library: ir.Library) -> held.Held {
     let scene = scene_of([Written { at: "a:b/src/example.bx", text: counting_program_text() }, Written { at: "a:b/bux.package", text: split_manifest_text() }])
@@ -469,8 +421,7 @@ fn split_refused(word: String, library: ir.Library) -> held.Held {
     found
 }
 
-/// `test` takes a module in a directory whose path holds `:` where the package reaches no
-/// archive, because its classes go into a directory of its own, and nothing else is on the path.
+// Its classes go into a directory of their own, and nothing else is on the class path.
 // example: strings.length(counting_program_text()) > 0
 fn split_but_reaching_no_archive(library: ir.Library) -> held.Held {
     let scene = scene_of([Written { at: "a:b/example.bx", text: "type Colour =\n    | Red\n    | Blue\n" }])
@@ -480,13 +431,11 @@ fn split_but_reaching_no_archive(library: ir.Library) -> held.Held {
     found
 }
 
-/// A manifest that states one archive, which is not there.
 // example: is_within(text: split_manifest_text(), part: "jar ")
 fn split_manifest_text() -> String {
     "package split\nversion 0.1.0\njar lib/gone.jar sha256:0000000000000000000000000000000000000000000000000000000000000000\n"
 }
 
-/// `test` refuses the module `source` with `refusal` before it looks for a JDK.
 // example: strings.length(holds_text()) > 0
 fn test_refused(source: String, refusal: String, library: ir.Library) -> held.Held {
     let scene = scene_of([Written { at: "example.bx", text: source }])
@@ -497,7 +446,6 @@ fn test_refused(source: String, refusal: String, library: ir.Library) -> held.He
     found
 }
 
-/// `test` says nothing and ends with 0 for a module that states no example.
 // example: list.length(said_facts(what: "a", said: command.nothing_said())) == 3
 fn nothing_to_test(library: ir.Library) -> held.Held {
     let scene = scene_of([Written { at: "example.bx", text: "type Colour =\n    | Red\n    | Blue\n" }])
@@ -507,7 +455,6 @@ fn nothing_to_test(library: ir.Library) -> held.Held {
     found
 }
 
-/// What each header of an example says, held to what `tests/header.bx` reads it as.
 // example: list.length(stated_headers()) > 0
 fn every_header_held() -> held.Held {
     var found = held.nothing_failed(0)
@@ -517,14 +464,12 @@ fn every_header_held() -> held.Held {
     found
 }
 
-/// Each header, and what `tests/header.bx` reads it as.
 // example: or(list.at(stated_headers(), 0), Headed { source: "", read: header.Compiles }).read == header.Refused("L0105")
 fn stated_headers() -> List<Headed> {
     let only = "only an example that is run states what it writes"
     [Headed { source: "// expect-error: L0105\nfn f() {\n}\n", read: header.Refused("L0105") }, Headed { source: run_of("// >   held  \n"), read: run_writing("  held  \n") }, Headed { source: run_of("// > one\n// >\n// > two\n"), read: run_writing("one\n\ntwo\n") }, Headed { source: run_of("// > > held\n"), read: run_writing("> held\n") }, Headed { source: run_of("// > one\n// a comment\n"), read: run_writing("one\n") }, Headed { source: run_of("// statuses are read elsewhere\n"), read: run_writing("") }, Headed { source: run_of("// an ordinary comment\n"), read: run_writing("") }, Headed { source: run_of("// > said\n// ! went wrong\n"), read: header.Runs(header.Ran { arguments: [], output: "said\n", errors: "went wrong\n", status: 0 }) }, Headed { source: "// expect-error: L0105\n// > one\nfn f() {\n}\n", read: header.Misstated(only) }, Headed { source: "// status 1\nimport io\n", read: header.Misstated(only) }, Headed { source: "// statuses are read elsewhere\nimport io\n", read: header.Compiles }, Headed { source: run_of("// status soon\n"), read: header.Misstated("a line stating a run comes directly under the header, and this one does not") }]
 }
 
-/// One header held to what `tests/header.bx` reads it as.
 // example: header_held(Headed { source: "import io\n", read: header.Compiles }).failures == []
 fn header_held(stated: Headed) -> held.Held {
     let read = header.expectation_of(stated.source)
@@ -534,19 +479,16 @@ fn header_held(stated: Headed) -> held.Held {
     held.with_failure(held.nothing_failed(1), held.failure("the header of " + held.quoted(stated.source), described(stated.read), described(read)))
 }
 
-/// An example headed `// expect-run`, stating `stated` about a run that does nothing at all.
 // example: run_of("") == "// expect-run\nfn main(arguments: List<String>) -> Int {\n}\n"
 fn run_of(stated: String) -> String {
     "// expect-run\n" + stated + "fn main(arguments: List<String>) -> Int {\n}\n"
 }
 
-/// A run with no words, which writes `output` and ends with 0.
 // example: run_writing("a\n") == header.Runs(header.Ran { arguments: [], output: "a\n", errors: "", status: 0 })
 fn run_writing(output: String) -> header.Expectation {
     header.Runs(header.Ran { arguments: [], output: output, errors: "", status: 0 })
 }
 
-/// What an expectation says, as text a failure can print.
 // example: described(header.Refused("L0105")) == "refused with L0105"
 fn described(read: header.Expectation) -> String {
     match read {
@@ -557,97 +499,81 @@ fn described(read: header.Expectation) -> String {
     }
 }
 
-/// A module with a record, an algebraic data type, and a function over each.
 // example: strings.length(module_text()) > 100
 fn module_text() -> String {
     "// example: told(Pending) == \"waiting\"\nfn told(payment: Payment) -> String {\n    match payment {\n        Pending => \"waiting\"\n        Failed(reason) => reason\n    }\n}\n\ntype Payment =\n    | Pending\n    | Failed(String)\n\ntype User = {\n    id: Int\n}\n"
 }
 
-/// A module whose two functions are holes, which `check` accepts and `build` refuses.
 // example: occurrences(text: unfinished_text(), part: "todo(") == 2
 fn unfinished_text() -> String {
     "fn total(users: List<User>) -> Int {\n    todo(\"count them once the walk is written\")\n}\n\nfn named(user: User) -> String {\n    todo(\"read the name off the record\")\n}\n\ntype User = {\n    id: Int\n}\n"
 }
 
-/// A module in canonical form that imports a module and reads it.
 // example: first_line_of(canonical_text()) == "import io"
 fn canonical_text() -> String {
     "import io\n\nfn greet() -> () {\n    io.println(\"hi\")\n}\n"
 }
 
-/// A module whose second line is not what canonical form writes there.
 // example: strings.length(not_canonical_text()) == 30
 fn not_canonical_text() -> String {
     "fn answer() -> Int {\n     7\n}\n"
 }
 
-/// A module whose body is spaced the way canonical form does not space it.
 // example: first_line_of(spaced_text()) == "fn f() {"
 fn spaced_text() -> String {
     "fn f() {\n  let  a  =  1\n}\n"
 }
 
-/// A module that declares one function and states the example it is held to.
 // example: first_line_of(declaring_text()) == "// example: hello() == \"hi\""
 fn declaring_text() -> String {
     "// example: hello() == \"hi\"\nfn hello() -> String {\n    \"hi\"\n}\n"
 }
 
-/// A module that does not parse.
 // example: first_line_of(unparsed_text()) == "fn hello( -> String {"
 fn unparsed_text() -> String {
     "fn hello( -> String {\n}\n"
 }
 
-/// A package: its manifest, `example.bx`, and `helper.bx` beside it.
 // example: or(list.at(package_files(example: "a", helper: "b"), 0), Written { at: "", text: "" }).at == "bux.package"
 fn package_files(example: String, helper: String) -> List<Written> {
     [Written { at: "bux.package", text: "package app\nversion 0.2.0\n" }, Written { at: "src/example.bx", text: example }, Written { at: "src/helper.bx", text: helper }]
 }
 
-/// A program that imports `greeting`, and `greeting` beside it.
 // example: or(list.at(program_files(), 1), Written { at: "", text: "" }).at == "greeting.bx"
 fn program_files() -> List<Written> {
     [Written { at: "example.bx", text: program_text() }, Written { at: "greeting.bx", text: greeting_text() }]
 }
 
-/// A program reaching a function of the module `greeting`.
 // example: first_line_of(program_text()) == "import greeting"
 fn program_text() -> String {
     "import greeting\nimport io\n\nfn main(arguments: List<String>) -> Int {\n    io.println(greeting.greeting(\"world\"))\n    0\n}\n"
 }
 
-/// The module a program imports, offering one function.
 // example: first_line_of(greeting_text()) == "// example: greeting(name: \"world\") == \"hello, world\""
 fn greeting_text() -> String {
     "// example: greeting(name: \"world\") == \"hello, world\"\nfn greeting(name: String) -> String {\n    \"hello, \" + name\n}\n"
 }
 
-/// A program: a module declaring the `main` a run starts at, over a type and a loop.
 // example: first_line_of(counting_program_text()) == "fn main(arguments: List<String>) -> Int {"
 fn counting_program_text() -> String {
     "fn main(arguments: List<String>) -> Int {\n    0\n}\n\n// example: counted([User { id: 1, active: true }]) == 1\nfn counted(users: List<User>) -> Int {\n    var total = 0\n    for user in users {\n        if user.active {\n            total += 1\n        }\n    }\n    total\n}\n\ntype User = {\n    id: Int\n    active: Bool\n}\n"
 }
 
-/// A program the compiler will not have, which a run reports rather than starts.
 // example: first_line_of(refused_program_text()) == "fn main(arguments: List<String>) -> Int {"
 fn refused_program_text() -> String {
     "fn main(arguments: List<String>) -> Int {\n    missing()\n    0\n}\n"
 }
 
-/// A module whose one example holds.
 // example: first_line_of(holds_text()) == "// example: shared(total: 7) == 7"
 fn holds_text() -> String {
     "// example: shared(total: 7) == 7\nfn shared(total: Int) -> Int {\n    total\n}\n"
 }
 
-/// The one shape of `main` a program is run through.
 // example: strings.length(the_one_shape()) == 39
 fn the_one_shape() -> String {
     "fn main(arguments: List<String>) -> Int"
 }
 
-/// A directory of its own that holds each of `written`, or a place no file can be written into.
 // example: presence(scene: "no-such-directory", at: "a") == "not written"
 fn scene_of(written: List<Written>) -> String {
     let scene = ok_or(command.somewhere_of_its_own(), "/no-such-directory-for-a-scene")
@@ -659,7 +585,6 @@ fn scene_of(written: List<Written>) -> String {
     scene
 }
 
-/// What the command line says to `words`; a program it would start is not started.
 // example: said_to(["--version"], ir.little_library()).status == 0
 fn said_to(words: List<String>, library: ir.Library) -> command.Said {
     match command.answered_within(words, library) {
@@ -668,7 +593,6 @@ fn said_to(words: List<String>, library: ir.Library) -> command.Said {
     }
 }
 
-/// One failure for each of `facts` that does not hold, in a check that is one case.
 // example: list.length(facts_held("a", [Fact { what: "b", expected: "c", found: "d" }]).failures) == 1
 fn facts_held(at: String, facts: List<Fact>) -> held.Held {
     var found = held.nothing_failed(1)
@@ -680,7 +604,6 @@ fn facts_held(at: String, facts: List<Fact>) -> held.Held {
     found
 }
 
-/// One case whose expected answer is `expected`, with a failure for the first stream that differs.
 // example: said_held(at: "a", expected: command.nothing_said(), found: command.nothing_said()).failures == []
 // example: said_held(at: "a", expected: command.nothing_said(), found: command.unusable("b")).failures == ["a: status: expected \"0\", found \"2\""]
 fn said_held(at: String, expected: command.Said, found: command.Said) -> held.Held {
@@ -697,7 +620,6 @@ fn said_held(at: String, expected: command.Said, found: command.Said) -> held.He
     one
 }
 
-/// The failure line of two texts that differ, which names the first line where they do.
 // example: differing(at: "a", expected: "x\ny\n", found: "x\nz\n") == "a, line 2: expected \"y\", found \"z\""
 fn differing(at: String, expected: String, found: String) -> String {
     let wanted = walk.lines_of(expected)
@@ -712,38 +634,32 @@ fn differing(at: String, expected: String, found: String) -> String {
     held.failure(at + ", line " + shown(index + 1), or(list.at(wanted, index), ""), or(list.at(got, index), ""))
 }
 
-/// The facts that `said` wrote nothing and ended with 0.
 // example: list.length(said_facts(what: "a", said: command.nothing_said())) == 3
 fn said_facts(what: String, said: command.Said) -> List<Fact> {
     [Fact { what: what + ": status", expected: "0", found: shown(said.status) }, Fact { what: what + ": output", expected: "", found: said.output }, Fact { what: what + ": errors", expected: "", found: said.errors }]
 }
 
-/// The fact that `said` ended with `status`.
 // example: status_fact(command.unusable("a"), 2).found == "2"
 fn status_fact(said: command.Said, status: Int) -> Fact {
     Fact { what: "status", expected: shown(status), found: shown(said.status) }
 }
 
-/// The fact that `text` opens with `part`.
 // example: opening_fact(what: "a", text: "xyz", part: "xy").found == "xy"
 fn opening_fact(what: String, text: String, part: String) -> Fact {
     Fact { what: what + " open with", expected: part, found: or(strings.cut(text, 0, strings.length(part)), text) }
 }
 
-/// The fact that `text` closes with `part`.
 // example: closing_fact(what: "a", text: "xyz", part: "yz").found == "yz"
 fn closing_fact(what: String, text: String, part: String) -> Fact {
     let from = strings.length(text) - strings.length(part)
     Fact { what: what + " close with", expected: part, found: or(strings.cut(text, from, strings.length(text)), text) }
 }
 
-/// The fact that `text` holds `part`.
 // example: within_fact(what: "a", text: "xyz", part: "q").found == "false"
 fn within_fact(what: String, text: String, part: String) -> Fact {
     Fact { what: what + " holds " + held.quoted(part), expected: "true", found: shown(is_within(text: text, part: part)) }
 }
 
-/// The facts that the output `text` holds each of `parts`.
 // example: list.length(every_part(text: "", parts: ["a"])) == 1
 fn every_part(text: String, parts: List<String>) -> List<Fact> {
     var facts = []
@@ -753,7 +669,6 @@ fn every_part(text: String, parts: List<String>) -> List<Fact> {
     facts
 }
 
-/// The facts that each of `written` is a file under `scene`.
 // example: presences(scene: "no-such-directory", written: []) == []
 fn presences(scene: String, written: List<String>) -> List<Fact> {
     var facts = []
@@ -763,19 +678,16 @@ fn presences(scene: String, written: List<String>) -> List<Fact> {
     facts
 }
 
-/// The fact that a file is written at `at` under `scene`.
 // example: presence_fact(scene: "no-such-directory", at: "a").found == "not written"
 fn presence_fact(scene: String, at: String) -> Fact {
     Fact { what: at, expected: "written", found: presence(scene: scene, at: at) }
 }
 
-/// The fact that nothing is written at `at` under `scene`.
 // example: absence(scene: "no-such-directory", at: "a").found == "not written"
 fn absence(scene: String, at: String) -> Fact {
     Fact { what: at, expected: "not written", found: presence(scene: scene, at: at) }
 }
 
-/// Whether a file is written at `at` under `scene`, in words.
 // example: presence(scene: "no-such-directory", at: "a") == "not written"
 fn presence(scene: String, at: String) -> String {
     if files.is_there(files.named(modules.joined(scene, at))) {
@@ -784,13 +696,11 @@ fn presence(scene: String, at: String) -> String {
     "not written"
 }
 
-/// What the file at `at` under `scene` holds, or nothing where it cannot be read.
 // example: content_of(scene: "no-such-directory", at: "a") == ""
 fn content_of(scene: String, at: String) -> String {
     ok_or(files.read(modules.joined(scene, at)), "")
 }
 
-/// Every file under `directory`, by its path from there, in the order the paths sort.
 // example: relative_files("no-such-directory") == []
 fn relative_files(directory: String) -> List<String> {
     var found = []
@@ -800,13 +710,11 @@ fn relative_files(directory: String) -> List<String> {
     found
 }
 
-/// The first line of `text`, without its line break.
 // example: first_line_of("") == ""
 fn first_line_of(text: String) -> String {
     or(list.at(walk.lines_of(text), 0), "")
 }
 
-/// The first `count` code units of `text`, each as a number.
 // example: codes_of("AB", 1) == [65]
 fn codes_of(text: String, count: Int) -> List<Int> {
     var codes = []
@@ -818,13 +726,11 @@ fn codes_of(text: String, count: Int) -> List<Int> {
     codes
 }
 
-/// `text` with every place it holds the path `stage` and a slash after it taken out.
 // example: unstaged(text: "/s/a and /s/b", stage: "/s") == "a and b"
 fn unstaged(text: String, stage: String) -> String {
     without(text: text, part: stage + "/")
 }
 
-/// `text` with every place it holds `part` taken out.
 // example: without(text: "abcab", part: "ab") == "c"
 // example: without(text: "abc", part: "") == "abc"
 fn without(text: String, part: String) -> String {
@@ -847,14 +753,12 @@ fn without(text: String, part: String) -> String {
     kept + or(strings.cut(text, start, strings.length(text)), "")
 }
 
-/// Whether `text` holds `part`.
 // example: is_within(text: "abc", part: "bc")
 // example: !is_within(text: "abc", part: "cd")
 fn is_within(text: String, part: String) -> Bool {
     occurrences(text: text, part: part) > 0
 }
 
-/// How many times `text` holds `part`, counted without overlaps.
 // example: occurrences(text: "aaa", part: "aa") == 1
 fn occurrences(text: String, part: String) -> Int {
     let size = strings.length(part)
@@ -874,7 +778,6 @@ fn occurrences(text: String, part: String) -> Int {
     count
 }
 
-/// Each byte of the file at `path`, read as one code unit, which is how a class file is read.
 // example: !is_readable(read_as_bytes("no-such-directory/a.class"))
 fn read_as_bytes(path: String) -> Result<String, String> {
     match files.as_a_path(files.named(path)) {
@@ -883,7 +786,6 @@ fn read_as_bytes(path: String) -> Result<String, String> {
     }
 }
 
-/// Whether `read` holds a text.
 // example: is_readable(Ok(""))
 fn is_readable(read: Result<String, String>) -> Bool {
     match read {
@@ -894,20 +796,17 @@ fn is_readable(read: Result<String, String>) -> Bool {
 
 derive Eq for Fact
 
-/// One fact a check holds: what it is about, what it should be, and what it was.
 type Fact = {
     what: String
     expected: String
     found: String
 }
 
-/// A file a scene holds: where it is under the scene, and what it holds.
 type Written = {
     at: String
     text: String
 }
 
-/// A header, and what `tests/header.bx` reads it as.
 type Headed = {
     source: String
     read: header.Expectation

@@ -11,7 +11,6 @@ import ir
 import list
 import strings
 
-/// A drawn function that leaves one type out of its signature is `L0436` at that place.
 // example: a_type_left_out_of_a_signature_is_refused_where_it_is_left_out(2, ir.little_library()).cases == 2
 fn a_type_left_out_of_a_signature_is_refused_where_it_is_left_out(cases: Int, library: ir.Library) -> held.Held {
     var found = held.nothing_failed(cases)
@@ -21,7 +20,6 @@ fn a_type_left_out_of_a_signature_is_refused_where_it_is_left_out(cases: Int, li
     found
 }
 
-/// A drawn function with one type left out, and the refusal read for the place it is left out.
 // example: left_out_tried(drawn.seeded(1), ir.little_library()).why == ""
 fn left_out_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
     let taken = drawn.numbers(draw, drawn.number(drawn.next(draw), 3) + 1, list.length(kinds()))
@@ -37,10 +35,7 @@ fn left_out_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
     checking.Tried { input: source, why: "" }
 }
 
-/// `fn measured(…) -> … { … }`: a function whose body settles the type of each parameter and of
-/// its result, with the type at `omitted` left out of the signature.
-///
-/// `omitted` counts the parameters from zero, and the count of them is the result.
+// `omitted` counts the parameters from zero, and the count of the parameters is the result.
 // example: measured(taken: [0], result: 1, omitted: 1) == "fn measured(first: Int) {\n    _ = int_kept(first)\n    text_kept(\"a\")\n}\n"
 fn measured(taken: List<Int>, result: Int, omitted: Int) -> String {
     var body = ""
@@ -53,7 +48,6 @@ fn measured(taken: List<Int>, result: Int, omitted: Int) -> String {
     measured_head(taken: taken, result: result, omitted: omitted) + " {\n" + body + "    " + given.kept + "(" + given.literal + ")\n}\n"
 }
 
-/// The signature of `measured`, with the type at `omitted` left out, and whole where it is `-1`.
 // example: measured_head(taken: [0, 2], result: 0, omitted: -1) == "fn measured(first: Int, second: List<Int>) -> Int"
 // example: measured_head(taken: [0, 2], result: 0, omitted: 0) == "fn measured(first, second: List<Int>) -> Int"
 fn measured_head(taken: List<Int>, result: Int, omitted: Int) -> String {
@@ -74,7 +68,6 @@ fn measured_head(taken: List<Int>, result: Int, omitted: Int) -> String {
     head
 }
 
-/// The stretch the refusal names: the parameter at `omitted`, or the name where that is the result.
 // example: place_of(source: "fn measured(first) -> Int {", omitted: 0, count: 1) == "12..17"
 // example: place_of(source: "fn measured(first: Int) {", omitted: 1, count: 1) == "3..11"
 fn place_of(source: String, omitted: Int, count: Int) -> String {
@@ -87,7 +80,6 @@ fn place_of(source: String, omitted: Int, count: Int) -> String {
     shown(at.start) + ".." + shown(at.start + at.length)
 }
 
-/// The stretch a refusal names, and nothing where there is no refusal.
 // example: span_text(checking.checked("fn one() -> Int {\n    1\n}\n", ir.little_library())) == ""
 fn span_text<T>(answer: Result<T, command.Diagnostic>) -> String {
     match answer {
@@ -96,31 +88,26 @@ fn span_text<T>(answer: Result<T, command.Diagnostic>) -> String {
     }
 }
 
-/// The name of the parameter at `index`.
 // example: parameter_name(2) == "third"
 fn parameter_name(index: Int) -> String {
     or(list.at(["first", "second", "third"], index), "measured")
 }
 
-/// The kind at `index`, and the first kind where there is none.
 // example: kind_at(1).written == "String"
 fn kind_at(index: Int) -> Kind {
     or(list.at(kinds(), index), Kind { written: "Int", kept: "int_kept", literal: "1" })
 }
 
-/// The types a drawn signature writes, each with the function that settles it and a value of it.
 // example: list.length(kinds()) == 3
 fn kinds() -> List<Kind> {
     [Kind { written: "Int", kept: "int_kept", literal: "1" }, Kind { written: "String", kept: "text_kept", literal: "\"a\"" }, Kind { written: "List<Int>", kept: "list_kept", literal: "[1]" }]
 }
 
-/// The functions that settle a type, one for each kind, written below the drawn one.
 // example: strings.length(helpers()) > 0
 fn helpers() -> String {
     "\nfn int_kept(value: Int) -> Int {\n    value\n}\n\nfn text_kept(value: String) -> String {\n    value\n}\n\nfn list_kept(value: List<Int>) -> List<Int> {\n    value\n}\n"
 }
 
-/// A type a drawn signature writes: its text, the function that settles it, and a value of it.
 type Kind = {
     written: String
     kept: String

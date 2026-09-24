@@ -12,7 +12,6 @@ import strings
 import typed
 import types
 
-/// `property` tried on `cases` cases, each drawn from a seed of its own.
 // example: held.is_held(held_over(property: NoneUnfinished, cases: 2, prelude: types.little_prelude()))
 fn held_over(property: Property, cases: Int, prelude: types.Prelude) -> held.Held {
     var found = held.nothing_failed(cases)
@@ -28,7 +27,6 @@ fn held_over(property: Property, cases: Int, prelude: types.Prelude) -> held.Hel
     found
 }
 
-/// One case of `property`, drawn from `draw`, typed against `prelude`.
 // example: tried_by(property: NoneUnfinished, draw: drawn.seeded(1), prelude: types.little_prelude()).why == ""
 fn tried_by(property: Property, draw: drawn.Draw, prelude: types.Prelude) -> Tried {
     match property {
@@ -39,7 +37,6 @@ fn tried_by(property: Property, draw: drawn.Draw, prelude: types.Prelude) -> Tri
     }
 }
 
-/// The name a failure of `property` is reported with.
 // example: name_of(AnyType) == "a_hole_is_a_hole_whatever_type_it_is_written_in"
 fn name_of(property: Property) -> String {
     match property {
@@ -50,7 +47,6 @@ fn name_of(property: Property) -> String {
     }
 }
 
-/// A hole written as the body of a function is found, and its span covers the whole call.
 // example: a_hole_is_a_hole_whatever_type_it_is_written_in(drawn.seeded(1), types.little_prelude()).case != ""
 fn a_hole_is_a_hole_whatever_type_it_is_written_in(draw: drawn.Draw, prelude: types.Prelude) -> Tried {
     let source = placed(place: 0, result: result_of(draw))
@@ -62,7 +58,6 @@ fn a_hole_is_a_hole_whatever_type_it_is_written_in(draw: drawn.Draw, prelude: ty
     Tried { case: source, why: why }
 }
 
-/// Every hole a module holds is found, wherever in a function it is written.
 // example: every_hole_a_module_holds_is_found_wherever_it_is_written(drawn.seeded(1), types.little_prelude()).case != ""
 fn every_hole_a_module_holds_is_found_wherever_it_is_written(draw: drawn.Draw, prelude: types.Prelude) -> Tried {
     let place = drawn.number(drawn.next(draw), 4)
@@ -75,16 +70,12 @@ fn every_hole_a_module_holds_is_found_wherever_it_is_written(draw: drawn.Draw, p
     Tried { case: source, why: why }
 }
 
-/// One of the types a hole is written in, which between them cover every shape a type has.
 // example: result_of(drawn.seeded(1)) != ""
 fn result_of(draw: drawn.Draw) -> String {
     drawn.picked(draw, ["Int", "String", "Bool", "Option<Int>", "List<Int>"], "Int")
 }
 
-/// A function that writes a hole at the place numbered `place`, and gives back a `result`.
-///
-/// The function asks a question in its name, because a function that gives back a `Bool` has a
-/// name that asks one, and `result` is sometimes `Bool`.
+// A function that gives back `Bool` needs a name that asks a question, and `result` can be `Bool`.
 // example: placed(place: 0, result: "Int") == "fn is_reached() -> Int {\n    todo(\"why\")\n}\n"
 fn placed(place: Int, result: String) -> String {
     let hole = "todo(\"why\")"
@@ -96,7 +87,6 @@ fn placed(place: Int, result: String) -> String {
     }
 }
 
-/// A module holding no hole, which a property finds none in.
 // example: a_module_with_nothing_unfinished_holds_no_hole_to_refuse(drawn.seeded(1), types.little_prelude()).why == ""
 fn a_module_with_nothing_unfinished_holds_no_hole_to_refuse(draw: drawn.Draw, prelude: types.Prelude) -> Tried {
     let finished = ["fn answer() -> Int {\n    7\n}\n", "fn told(word: String) -> String {\n    word + \"!\"\n}\n", "fn walked(counts: List<Int>) -> Int {\n    var total = 0\n    for count in counts {\n        total += count\n    }\n    total\n}\n", "fn held(maybe: Option<Int>) -> Int {\n    or(maybe, 0)\n}\n"]
@@ -109,10 +99,7 @@ fn a_module_with_nothing_unfinished_holds_no_hole_to_refuse(draw: drawn.Draw, pr
     Tried { case: source, why: why }
 }
 
-/// Every hole of a drawn body of statements is found once, in the order it is written.
-///
-/// A hole may hold a hole, so the holes are counted as the calls of `todo` the body writes. Each
-/// span covers one call, and none starts before the one found before it.
+// A hole can hold a hole, so the count of holes is the count of calls of `todo` in the body.
 // example: every_hole_of_a_drawn_body_is_found_in_the_order_it_is_written(drawn.seeded(1), types.little_prelude()).case != ""
 fn every_hole_of_a_drawn_body_is_found_in_the_order_it_is_written(draw: drawn.Draw, prelude: types.Prelude) -> Tried {
     let source = drawn_holes(draw)
@@ -125,9 +112,7 @@ fn every_hole_of_a_drawn_body_is_found_in_the_order_it_is_written(draw: drawn.Dr
     Tried { case: source, why: why }
 }
 
-/// A module whose first function writes up to three drawn statements and a drawn last expression.
-///
-/// The truth is a field of a record, because a `Bool` parameter is refused before the holes.
+// The truth is a field of a record, because the compiler refuses a `Bool` parameter before a hole.
 // example: calls_of_todo(drawn_holes(drawn.seeded(1))) > 0
 fn drawn_holes(draw: drawn.Draw) -> String {
     let statements = ["_ = todo(\"a\")", "_ = count + todo(\"b\")", "_ = [todo(\"c\"), count]", "_ = todo(todo(\"d\"))", "for todo(\"e\") {\n        break\n    }", "_ = pick(first: count, second: todo(\"f\"))"]
@@ -144,7 +129,6 @@ fn drawn_holes(draw: drawn.Draw) -> String {
     "fn check(given: Given, count: Int) -> Int {\n" + body + "}\n\nfn pick(first: Int, second: Int) -> Int {\n    first + second\n}\n\ntype Box = {\n    held: Int\n}\n\ntype Given = {\n    flag: Bool\n}\n"
 }
 
-/// How many calls of `todo` `source` writes.
 // example: calls_of_todo("todo(todo(\"x\"))") == 2
 fn calls_of_todo(source: String) -> Int {
     var count = 0
@@ -158,7 +142,6 @@ fn calls_of_todo(source: String) -> Int {
     count
 }
 
-/// Whether each text opens as a call of `todo` and closes it.
 // example: is_each_a_call(["todo(\"a\")"])
 // example: !is_each_a_call(["todo(\"a\""])
 fn is_each_a_call(written: List<String>) -> Bool {
@@ -171,7 +154,6 @@ fn is_each_a_call(written: List<String>) -> Bool {
     true
 }
 
-/// Whether no number of `values` is smaller than the one before it.
 // example: is_ascending([1, 1, 2])
 // example: !is_ascending([2, 1])
 fn is_ascending(values: List<Int>) -> Bool {
@@ -185,9 +167,7 @@ fn is_ascending(values: List<Int>) -> Bool {
     true
 }
 
-/// What each hole of `source` is written as, which is the text its span covers, in order.
-///
-/// A module that does not type holds one text that says so, which no hole is written as.
+// A module that does not type gives one text that says so, and no hole is written as that text.
 // example: written_of("fn f() -> Int {\n    1\n}\n", types.little_prelude()) == []
 fn written_of(source: String, prelude: types.Prelude) -> List<String> {
     match typed.inferred(source, prelude) {
@@ -196,7 +176,6 @@ fn written_of(source: String, prelude: types.Prelude) -> List<String> {
     }
 }
 
-/// Where each hole of `source` starts, and nothing where `source` does not type.
 // example: starts_of("fn f() -> Int {\n    1\n}\n", types.little_prelude()) == []
 fn starts_of(source: String, prelude: types.Prelude) -> List<Int> {
     match typed.inferred(source, prelude) {
@@ -205,7 +184,6 @@ fn starts_of(source: String, prelude: types.Prelude) -> List<Int> {
     }
 }
 
-/// Where each of `found` starts.
 // example: spans_started([]) == []
 fn spans_started(found: List<holes.Hole>) -> List<Int> {
     var starts = []
@@ -215,7 +193,6 @@ fn spans_started(found: List<holes.Hole>) -> List<Int> {
     starts
 }
 
-/// The text of `source` each of `found` covers.
 // example: texts_of(source: "", found: []) == []
 fn texts_of(source: String, found: List<holes.Hole>) -> List<String> {
     var texts = []
@@ -225,13 +202,11 @@ fn texts_of(source: String, found: List<holes.Hole>) -> List<String> {
     texts
 }
 
-/// One case of a property: the drawn input as text, and why it failed, which is `""` where it held.
 type Tried = {
     case: String
     why: String
 }
 
-/// Each property of the holes.
 type Property =
     | AnyType
     | AnyPlace

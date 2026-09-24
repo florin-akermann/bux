@@ -13,7 +13,6 @@ fn main(arguments: List<String>) -> Int {
     0
 }
 
-/// How many values the pick holds.
 // example: size(Nothing) == 0
 fn size<T>(held: Held<T>) -> Int {
     match held {
@@ -22,7 +21,6 @@ fn size<T>(held: Held<T>) -> Int {
     }
 }
 
-/// `onto` where `from` holds nothing, and what `from` holds otherwise.
 // example: size(picked(from: Nothing, onto: Nothing)) == 0
 fn picked<T>(from: Held<T>, onto: Held<T>) -> Held<T> {
     match from {

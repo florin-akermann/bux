@@ -79,6 +79,7 @@ An example of the second half: `17 / 0` is `None`, because a panic is simpler an
 - Prefer domain types over `String`, `u32`, and `bool`, and one sum type over a pair of flags.
 - Push fallibility to construction and decoding boundaries so interior functions can be total.
 - Construction proves an invariant; a wrapper name or a comment asserts one, which is not proof.
+- A comment above a declaration says why, or it is not there; its examples say what it does.
 - Add type ceremony only where it removes a partial operation, a repeated guard, or an ambiguity.
 - A name describes role and intent, not type; no `Utils`, `Misc`, `Helper`, `get_`, or `set_`.
 

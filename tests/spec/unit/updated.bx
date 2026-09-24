@@ -10,7 +10,6 @@ fn main(arguments: List<String>) -> Int {
     0
 }
 
-/// The same note under another number, with the nothing it holds kept as it was.
 // example: renumbered(Note { held: (), id: 1 }).id == 2
 fn renumbered(note: Note) -> Note {
     note { id: 2 }

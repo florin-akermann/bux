@@ -33,7 +33,6 @@ fn shown_sent(answer: Sent) -> String {
     }
 }
 
-/// A process whose one message recurses without end.
 process Deep {
     fn start() -> Int {
         0
@@ -46,7 +45,6 @@ process Deep {
     }
 }
 
-/// The depth at which `level` comes back to zero, which it never does from above zero.
 // example: depth(0) == 0
 fn depth(level: Int) -> Int {
     if level == 0 {
@@ -55,5 +53,4 @@ fn depth(level: Int) -> Int {
     depth(level + 1)
 }
 
-/// What a deep process is sent.
 type Descended = Descend

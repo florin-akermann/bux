@@ -6,13 +6,7 @@
 import files
 import list
 
-/// Runs `command`, waits for it to end, and gives back what it wrote and the code it ended with.
-///
-/// `command` names the program, and `arguments` holds what it is given, in the order it reads
-/// them. An `Err` is a command that never started at all.
-///
-/// The program reads the standard input this one reads, so a program that asks for input reads
-/// it from whoever started this one rather than from a pipe nobody ever writes on.
+// The program reads the standard input of this program, so that it never waits on an empty pipe.
 // example: ok_or(run("", []), Finished { code: 9, output: "", errors: "" }).code == 9
 fn run(command: String, arguments: List<String>) -> Result<Finished, String> {
     let started_from = whole_command(command, arguments)
@@ -23,7 +17,6 @@ fn run(command: String, arguments: List<String>) -> Result<Finished, String> {
     Ok(Finished { code: code, output: output, errors: errors })
 }
 
-/// The program and every argument after it, which is the one list a JVM starts a program from.
 // example: or(list.at(whole_command("java", ["-version"]), 0), "") == "java"
 // example: or(list.at(whole_command("java", ["-version"]), 1), "") == "-version"
 fn whole_command(command: String, arguments: List<String>) -> List<String> {
@@ -34,10 +27,8 @@ fn whole_command(command: String, arguments: List<String>) -> List<String> {
     parts
 }
 
-/// The whole of what was written on `stream`, which is nothing where nothing was written.
-///
-/// The scanner is given a delimiter no text holds, so the whole stream is one token, and reading
-/// that token waits for whoever writes on the stream to close it.
+// The delimiter matches no text, so the whole stream is one token.
+// The read of that token waits until the writer closes the stream.
 // example: whole(nothing_at_all()) == ""
 fn whole(stream: InputStream) -> String {
     let scanner = delimited(over(stream), "\\A")
@@ -46,105 +37,73 @@ fn whole(stream: InputStream) -> String {
     text
 }
 
-/// A builder of the program the first value of `command` names, given every value after it.
 extern new of_command(command: List<String>) -> ProcessBuilder
 
-/// The builder, with the program reading what `input` names rather than a pipe of its own.
 extern method reading_from(builder: ProcessBuilder, input: Redirect) -> ProcessBuilder = "redirectInput"
 
-/// Reading what the program that started this one reads, which is one thing a program may read.
 extern field inherited() -> Redirect = "java.lang.ProcessBuilder$Redirect.INHERIT"
 
-/// Starts the program the builder names, or says why the program never started.
 extern method started(builder: ProcessBuilder) -> Result<Running, String> = "start"
 
-/// The standard output of the program, which it holds open until it ends.
 extern method output_of(ran: Running) -> InputStream = "getInputStream"
 
-/// The standard error of the program, which it holds open until it ends.
 extern method errors_of(ran: Running) -> InputStream = "getErrorStream"
 
-/// Waits for the program to end and gives the code it ended with, widened from the JVM's `int`.
 extern method int waited_for(ran: Running) -> Result<Int, String> = "waitFor"
 
-/// The builder, with the program reading and writing the streams of this process.
 extern method inheriting(builder: ProcessBuilder) -> ProcessBuilder = "inheritIO"
 
-/// The same builder, starting the program in `directory`.
 extern method within(builder: ProcessBuilder, directory: files.File) -> ProcessBuilder = "directory"
 
-/// The same builder, with the program reading `file` as its standard input.
 extern method input_from(builder: ProcessBuilder, file: files.File) -> ProcessBuilder = "redirectInput"
 
-/// The same builder, with the program writing its standard output into `file`.
 extern method output_to(builder: ProcessBuilder, file: files.File) -> ProcessBuilder = "redirectOutput"
 
-/// The same builder, with the program writing its standard error into `file`.
 extern method errors_to(builder: ProcessBuilder, file: files.File) -> ProcessBuilder = "redirectError"
 
-/// The environment that the builder starts a program with, which a change to it changes.
 extern method variables_of(builder: ProcessBuilder) -> Variables = "environment"
 
-/// Removes the variable `name`, and gives back its value where it held one.
 extern method removed(variables: Variables, name: files.Anything) -> Option<files.Anything> = "remove"
 
-/// The text as a constant, which is how a `String` becomes a value that `removed` takes.
+// `Map.remove` takes an `Object`, and a `String` becomes one only through this constant.
 extern method held_as_constant(text: String) -> Constant = "describeConstable"
 
-/// The text that the constant holds, as the `java.lang.Object` that `Map.remove` takes.
 extern method as_object(constant: Constant) -> files.Anything = "orElseThrow"
 
-/// Whether the program ended within `limit` of `unit`, having waited no longer than that.
 extern method is_ended_within(ran: Running, limit: Int, unit: TimeUnit) -> Result<Bool, String> = "waitFor"
 
-/// The program stopped at once, as the platform stops a program that is not asked.
 extern method stopped(ran: Running) -> Running = "destroyForcibly"
 
-/// The unit a limit is counted in, which is a second.
 extern field seconds() -> TimeUnit = "java.util.concurrent.TimeUnit.SECONDS"
 
-/// A scanner over `stream`, which is what reads the text a program wrote on one.
 extern new over(stream: InputStream) -> Scanner
 
-/// The scanner, reading `pattern` as what stands between one token and the next.
 extern method delimited(scanner: Scanner, pattern: String) -> Scanner = "useDelimiter"
 
-/// The next token, or why there was none, which an empty stream is one case of.
 extern method token(scanner: Scanner) -> Result<String, String> = "next"
 
-/// Closes the scanner and the stream it reads, which is what gives the JVM the handle back.
 extern method closed(scanner: Scanner) -> () = "close"
 
-/// A stream nobody ever wrote on, which is what the whole of nothing is read off.
 extern static nothing_at_all() -> InputStream = "java.io.InputStream.nullInputStream"
 
-/// What a program that ran left behind.
 type Finished = {
     code: Int
     output: String
     errors: String
 }
 
-/// The program a run starts, built from the command that names it.
 extern type ProcessBuilder = "java.lang.ProcessBuilder"
 
-/// A program that is running, or has run, which is what a start gives back.
 extern type Running = "java.lang.Process"
 
-/// Text a program wrote, which is read in the order the program wrote it.
 extern type InputStream = "java.io.InputStream"
 
-/// A reading of a stream, one token at a time.
 extern type Scanner = "java.util.Scanner"
 
-/// Where a program a run starts reads its standard input from.
 extern type Redirect = "java.lang.ProcessBuilder$Redirect"
 
-/// The environment of a program not started yet, from the name of a variable to its value.
 extern type interface Variables = "java.util.Map"
 
-/// A constant that a `String` describes itself as, which holds that `String`.
 extern type Constant = "java.util.Optional"
 
-/// A unit of time, which a limit is counted in.
 extern type TimeUnit = "java.util.concurrent.TimeUnit"

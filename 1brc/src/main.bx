@@ -17,8 +17,6 @@ fn main(arguments: List<String>) -> Int {
     }
 }
 
-/// The status of a run over the file at `path`, once the answer or the reason there is none is
-/// written.
 // example: answered("no-such-file.txt") == 2
 fn answered(path: String) -> Int {
     match every_part_tallied(path) {
@@ -27,21 +25,18 @@ fn answered(path: String) -> Int {
     }
 }
 
-/// The status of a run that writes `why` on standard error, which is 2.
 // example: refused("error: no file") == 2
 fn refused(why: String) -> Int {
     io.eprintln(why)
     2
 }
 
-/// The status of a run that writes the answer of `tally` on standard output, which is 0.
 // example: written(no_tally()) == 0
 fn written(tally: Tally) -> Int {
     io.println(answer_of(tally))
     0
 }
 
-/// The tally of the whole file at `path`, from one worker for each processor, merged by name.
 // example: list.length(ok_or(every_part_tallied("no-such-file.txt"), no_tally()).names) == 0
 fn every_part_tallied(path: String) -> Result<Tally, String> {
     let size = files.size(path)?
@@ -60,7 +55,6 @@ fn every_part_tallied(path: String) -> Result<Tally, String> {
     Ok(merged)
 }
 
-/// Where part `index` of `count` parts of a file of `size` bytes starts, as a byte offset.
 // example: boundary(size: 10, index: 1, count: 4) == 2
 // example: boundary(size: 10, index: 4, count: 4) == 10
 fn boundary(size: Int, index: Int, count: Int) -> Int {
@@ -70,14 +64,12 @@ fn boundary(size: Int, index: Int, count: Int) -> Int {
     }
 }
 
-/// What `worker` tallied, once it is told to finish and has ended.
 // example: list.length(ok_or(finished(spawn Worker(Part { path: "no-such-file.txt", from: 0, to: 0 })), no_tally()).names) == 0
 fn finished(worker: Process<Asked, Result<Tally, String>>) -> Result<Tally, String> {
     _ = send(worker, Finish, NoLimit)
     ended(worker)
 }
 
-/// A worker tallies its part of the file when it starts, and holds the tally until it finishes.
 process Worker {
     fn start(part: Part) -> Result<Tally, String> {
         part_tallied(part)
@@ -90,10 +82,7 @@ process Worker {
     }
 }
 
-/// The tally of every line that starts inside `part`, or why the file could not be read.
-///
-/// A line belongs to the part its first byte is in, so a part starts at the first line that
-/// starts at or after its start, and ends where the first line after its end starts.
+// A line belongs to the part that holds its first byte, so that no line is in two parts.
 // example: list.length(ok_or(part_tallied(Part { path: "no-such-file.txt", from: 0, to: 0 }), no_tally()).names) == 0
 fn part_tallied(part: Part) -> Result<Tally, String> {
     let first = line_start(path: part.path, at: part.from)?
@@ -101,8 +90,6 @@ fn part_tallied(part: Part) -> Result<Tally, String> {
     tallied_between(path: part.path, from: first, to: last)
 }
 
-/// Where the first line that starts at or after `at` starts, and the end of the file where no
-/// line does.
 // example: ok_or(line_start(path: "no-such-file.txt", at: 0), -1) == 0
 // example: ok_or(line_start(path: "no-such-file.txt", at: 5), -1) == -1
 fn line_start(path: String, at: Int) -> Result<Int, String> {
@@ -125,7 +112,6 @@ fn line_start(path: String, at: Int) -> Result<Int, String> {
     Ok(from)
 }
 
-/// Where the first line end of `slice` is, and the length of `slice` where it holds none.
 // example: line_end_in("ab\ncd\n") == 2
 // example: line_end_in("ab") == 2
 fn line_end_in(slice: String) -> Int {
@@ -139,10 +125,7 @@ fn line_end_in(slice: String) -> Int {
     index
 }
 
-/// The tally of the lines from `from` up to `to`, read one slice at a time.
-///
-/// Each slice is cut after its last line end, so no line is split between two slices, except the
-/// last slice, which is read whole because a file need not end with a line end.
+// The last slice is read whole, because a file need not end with a line end.
 // example: list.length(ok_or(tallied_between(path: "no-such-file.txt", from: 0, to: 0), no_tally()).names) == 0
 fn tallied_between(path: String, from: Int, to: Int) -> Result<Tally, String> {
     var tally = no_tally()
@@ -168,13 +151,12 @@ fn tallied_between(path: String, from: Int, to: Int) -> Result<Tally, String> {
     Ok(tally)
 }
 
-/// How many bytes one read of the file takes, which is far more than the longest line holds.
+// One read must hold much more than the longest line.
 // example: slice_length() > 107
 fn slice_length() -> Int {
     1048576
 }
 
-/// How much of `slice` is whole lines: up to and with its last line end.
 // example: whole_lines_in("a;1\nb;") == 4
 // example: whole_lines_in("a;") == 0
 fn whole_lines_in(slice: String) -> Int {
@@ -185,7 +167,6 @@ fn whole_lines_in(slice: String) -> Int {
     through
 }
 
-/// `tally` with each line of `slice` up to `through`, where a line with no `;` is no reading.
 // example: lines_tallied(tally: no_tally(), slice: "a;1.0\nb;2.0\n", through: 12).names == ["a", "b"]
 // example: lines_tallied(tally: no_tally(), slice: "a;1.0\nb;2.0", through: 11).names == ["a", "b"]
 // example: lines_tallied(tally: no_tally(), slice: "\nnone\n", through: 6).names == []
@@ -211,13 +192,11 @@ fn lines_tallied(tally: Tally, slice: String, through: Int) -> Tally {
     tallied
 }
 
-/// The byte that ends a line.
 // example: line_end() == 10
 fn line_end() -> Int {
     10
 }
 
-/// The reading written in `slice` from `from` up to `to`, in tenths, such as `-12` for `-1.2`.
 // example: tenths_in(slice: "a;-1.2\n", from: 2, to: 6) == -12
 // example: tenths_in(slice: "a;45.0", from: 2, to: 6) == 450
 fn tenths_in(slice: String, from: Int, to: Int) -> Int {
@@ -237,7 +216,6 @@ fn tenths_in(slice: String, from: Int, to: Int) -> Int {
     sign * tenths
 }
 
-/// `tally` with one more `reading` of the station called `name`.
 // example: with_reading(tally: with_reading(tally: no_tally(), name: "a", reading: 5), name: "a", reading: -5).names == ["a"]
 fn with_reading(tally: Tally, name: String, reading: Int) -> Tally {
     match map.get(tally.summaries, name) {
@@ -246,22 +224,18 @@ fn with_reading(tally: Tally, name: String, reading: Int) -> Tally {
     }
 }
 
-/// The summary of one reading.
 // example: first_reading(7).count == 1
 fn first_reading(reading: Int) -> Summary {
     Summary { lowest: reading, highest: reading, total: reading, count: 1 }
 }
 
-/// The tally that holds no station.
 // example: no_tally().names == []
 fn no_tally() -> Tally {
     Tally { names: [], summaries: map.empty() }
 }
 
-/// `merged` with each station of `tally`, under the name its UTF-8 bytes spell.
-///
-/// A worker holds a name as the bytes it read, one char for each byte, and the names are decoded
-/// here, once for each station of each worker rather than once for each line.
+// A worker holds a name as its bytes, and the decode occurs here, once for each station of each
+// worker and not once for each line.
 // example: merged_into(merged: no_tally(), tally: with_reading(tally: no_tally(), name: "Ã©", reading: 1)).names == ["é"]
 fn merged_into(merged: Tally, tally: Tally) -> Tally {
     var together = merged
@@ -274,7 +248,6 @@ fn merged_into(merged: Tally, tally: Tally) -> Tally {
     together
 }
 
-/// `tally` with the readings of `summary` added to the station called `name`.
 // example: with_summary(tally: no_tally(), name: "a", summary: first_reading(1)).names == ["a"]
 fn with_summary(tally: Tally, name: String, summary: Summary) -> Tally {
     match map.get(tally.summaries, name) {
@@ -283,7 +256,6 @@ fn with_summary(tally: Tally, name: String, summary: Summary) -> Tally {
     }
 }
 
-/// The summary of the readings of `one` and of `other` together.
 // example: joined(held: first_reading(1), added: first_reading(-3)) == Summary { lowest: -3, highest: 1, total: -2, count: 2 }
 fn joined(held: Summary, added: Summary) -> Summary {
     var least = held.lowest
@@ -297,8 +269,6 @@ fn joined(held: Summary, added: Summary) -> Summary {
     Summary { lowest: least, highest: most, total: held.total + added.total, count: held.count + added.count }
 }
 
-/// The one line of output: each station in the order of its name, with its lowest, mean, and
-/// highest reading.
 // example: answer_of(with_reading(tally: with_reading(tally: no_tally(), name: "b", reading: 5), name: "a", reading: -15)) == "{a=-1.5/-1.5/-1.5, b=0.5/0.5/0.5}"
 fn answer_of(tally: Tally) -> String {
     var stations = []
@@ -311,17 +281,13 @@ fn answer_of(tally: Tally) -> String {
     "{" + strings.join(stations, ", ") + "}"
 }
 
-/// The lowest, mean, and highest reading of `summary`, each with one decimal.
 // example: summary_text(joined(held: first_reading(-1), added: first_reading(-2))) == "-0.2/-0.1/-0.1"
 fn summary_text(summary: Summary) -> String {
     decimal(summary.lowest) + "/" + decimal(mean_of(summary)) + "/" + decimal(summary.highest)
 }
 
-/// The mean of the readings of `summary` in tenths, where a half rounds toward positive infinity,
-/// as `Math.round` rounds it.
-///
-/// The mean rounded so is the floor of `total / count + 1/2`, which is the floor of
-/// `(2 * total + count) / (2 * count)`, so no fraction is held.
+// A half rounds toward positive infinity, as `Math.round` rounds it. The mean is the floor of
+// `(2 * total + count) / (2 * count)`, so no fraction is necessary.
 // example: mean_of(joined(held: first_reading(-1), added: first_reading(-2))) == -1
 // example: mean_of(joined(held: first_reading(1), added: first_reading(2))) == 2
 // example: mean_of(joined(held: first_reading(1), added: first_reading(1))) == 1
@@ -332,7 +298,6 @@ fn mean_of(summary: Summary) -> Int {
     }
 }
 
-/// `tenths` written with one decimal, such as `-1.2` for `-12`.
 // example: decimal(-12) == "-1.2"
 // example: decimal(-5) == "-0.5"
 // example: decimal(0) == "0.0"
@@ -352,8 +317,6 @@ fn decimal(tenths: Int) -> String {
     sign + shown(whole) + "." + shown(size - whole * 10)
 }
 
-/// `dividend` divided by `divisor`, rounded toward negative infinity, and `None` where `divisor`
-/// is zero.
 // example: or(floored(dividend: -3, divisor: 2), 0) == -2
 // example: or(floored(dividend: 3, divisor: 2), 0) == 1
 // example: or(floored(dividend: 3, divisor: 0), 7) == 7
@@ -365,17 +328,14 @@ fn floored(dividend: Int, divisor: Int) -> Option<Int> {
     Some(quotient)
 }
 
-/// The part of the file at `path` from `from` up to `to`, as byte offsets, which one worker reads.
 type Part = {
     path: String
     from: Int
     to: Int
 }
 
-/// What a worker is sent: it holds its tally until it is told to finish.
 type Asked = Finish
 
-/// The stations of a part of the file, and each name in the order it was first read.
 type Tally = {
     names: List<String>
     summaries: map.Map<String, Summary>
@@ -383,9 +343,7 @@ type Tally = {
 
 derive Eq for Summary
 
-/// The lowest and highest reading of a station, the total of its readings, and how many there are.
-///
-/// Each reading is in tenths, so the total of a billion of them fits in an `Int`.
+// Each reading is in tenths, so the total of a billion readings fits in an `Int`.
 type Summary = {
     lowest: Int
     highest: Int

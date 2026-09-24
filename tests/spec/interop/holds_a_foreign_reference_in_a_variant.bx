@@ -4,7 +4,6 @@ fn main(arguments: List<String>) -> Int {
     0
 }
 
-/// A file that a program found, or found not to be there.
 type Found =
     | There(Option<File>)
     | Missing

@@ -20,7 +20,6 @@ fn main(arguments: List<String>) -> Int {
     0
 }
 
-/// The whole numbers from one up to `last`, each pushed onto the list the loop keeps.
 // example: list.length(counting(3)) == 3
 fn counting(last: Int) -> List<Int> {
     var counted = []
@@ -32,7 +31,6 @@ fn counting(last: Int) -> List<Int> {
     counted
 }
 
-/// What the list holds at `index`, as a word, and `nothing` where it holds none there.
 // example: read_at([1], 0) == "1"
 // example: read_at([1], 1) == "nothing"
 fn read_at(values: List<Int>, index: Int) -> String {

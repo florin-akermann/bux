@@ -10,7 +10,6 @@ import map
 import set
 import strings
 
-/// `property` tried on `cases` cases, each drawn from a seed of its own.
 // example: held.is_held(held_over(MapReadsBack, 2))
 fn held_over(property: Property, cases: Int) -> held.Held {
     var found = held.nothing_failed(cases)
@@ -26,7 +25,6 @@ fn held_over(property: Property, cases: Int) -> held.Held {
     found
 }
 
-/// One case of `property`, drawn from `draw`.
 // example: tried_by(ListReadsBack, drawn.seeded(1)).why == ""
 fn tried_by(property: Property, draw: drawn.Draw) -> Tried {
     match property {
@@ -40,7 +38,6 @@ fn tried_by(property: Property, draw: drawn.Draw) -> Tried {
     }
 }
 
-/// The name a failure of `property` is reported with.
 // example: name_of(MapReadsBack) == "a_map_gives_back_the_value_last_put_in_at_each_key"
 fn name_of(property: Property) -> String {
     match property {
@@ -54,9 +51,7 @@ fn name_of(property: Property) -> String {
     }
 }
 
-/// `docs/specs/collections.md` properties 1 and 2: a key reads back as what last went in at it.
-///
-/// The keys are drawn from a handful, so most cases put two values in at one key.
+// The keys come from a small set, so most cases put two values at one key.
 // example: a_map_gives_back_the_value_last_put_in_at_each_key(drawn.seeded(3)).why == ""
 fn a_map_gives_back_the_value_last_put_in_at_each_key(draw: drawn.Draw) -> Tried {
     let put_in = puts_of(draw)
@@ -74,7 +69,6 @@ fn a_map_gives_back_the_value_last_put_in_at_each_key(draw: drawn.Draw) -> Tried
     Tried { case: puts_shown(put_in), why: why }
 }
 
-/// Up to six keys from 0 to 4, each with a value from -99 to 99 to put in at it.
 // example: list.length(puts_of(drawn.seeded(1))) < 7
 fn puts_of(draw: drawn.Draw) -> List<Put> {
     var puts = []
@@ -86,7 +80,6 @@ fn puts_of(draw: drawn.Draw) -> List<Put> {
     puts
 }
 
-/// The value put in last at `key`, and `missing()` where none was.
 // example: last_put_at([Put { key: 1, value: 5 }, Put { key: 1, value: 6 }], 1) == 6
 // example: last_put_at([], 1) == missing()
 fn last_put_at(put_in: List<Put>, key: Int) -> Int {
@@ -99,7 +92,6 @@ fn last_put_at(put_in: List<Put>, key: Int) -> Int {
     last
 }
 
-/// Each put as `key=value`, one after another.
 // example: puts_shown([Put { key: 1, value: -5 }]) == "1=-5"
 fn puts_shown(put_in: List<Put>) -> String {
     var written = []
@@ -109,10 +101,7 @@ fn puts_shown(put_in: List<Put>) -> String {
     strings.join(written, " ")
 }
 
-/// `docs/specs/collections.md` property 3: a set holds what went into it and nothing else.
-///
-/// The set is asked about every value put in, which catches a lost one, and about other values
-/// beside them, which catches a set that holds everything.
+// Values put in find a lost value, and other values find a set that holds everything.
 // example: a_set_holds_every_value_put_into_it_and_no_other(drawn.seeded(3)).why == ""
 fn a_set_holds_every_value_put_into_it_and_no_other(draw: drawn.Draw) -> Tried {
     let put_in = smalls_of(draw, 7)
@@ -129,7 +118,6 @@ fn a_set_holds_every_value_put_into_it_and_no_other(draw: drawn.Draw) -> Tried {
     Tried { case: shown(put_in), why: why }
 }
 
-/// The values of `first`, then those of `second`.
 // example: joined(first: [1], second: [2]) == [1, 2]
 fn joined(first: List<Int>, second: List<Int>) -> List<Int> {
     var values = first
@@ -139,10 +127,8 @@ fn joined(first: List<Int>, second: List<Int>) -> List<Int> {
     values
 }
 
-/// `docs/specs/collections.md` property 4: hundreds of keys, some hashing alike, all read back.
-///
-/// Each drawn number `one` puts the keys `[one, 31]` and `[one + 1, 0]` in, which hash alike, at
-/// the index each has among the keys. A key written with `30` never goes in.
+// The keys `[one, 31]` and `[one + 1, 0]` have the same hash, so the map must keep both apart.
+// No key has `30` in it, so a read of such a key must find nothing.
 // example: hundreds_of_keys_read_back_out_of_a_map_and_a_set(drawn.seeded(3)).why == ""
 fn hundreds_of_keys_read_back_out_of_a_map_and_a_set(draw: drawn.Draw) -> Tried {
     let drawn_numbers = drawn.numbers(draw, 150, 1000)
@@ -158,7 +144,6 @@ fn hundreds_of_keys_read_back_out_of_a_map_and_a_set(draw: drawn.Draw) -> Tried 
     Tried { case: shown(drawn_numbers), why: wide_misread(Wide { keys: keys, held_map: held_map, seen: seen }) }
 }
 
-/// Two keys that hash alike for each of `drawn_numbers`, in the order they were drawn.
 // example: wide_keys([4]) == [[4, 31], [5, 0]]
 fn wide_keys(drawn_numbers: List<Int>) -> List<List<Int>> {
     var keys = []
@@ -168,7 +153,6 @@ fn wide_keys(drawn_numbers: List<Int>) -> List<List<Int>> {
     keys
 }
 
-/// Why the map or the set of `wide` reads a key back wrong, and `""` where each reads right.
 // example: wide_misread(Wide { keys: [], held_map: map.empty(), seen: set.empty() }) == ""
 fn wide_misread(wide: Wide) -> String {
     for key in wide.keys {
@@ -184,7 +168,6 @@ fn wide_misread(wide: Wide) -> String {
     ""
 }
 
-/// The last index `keys` holds `key` at, and `missing()` where it holds none.
 // example: last_index_of([[1], [2], [1]], [1]) == 2
 fn last_index_of(keys: List<List<Int>>, key: List<Int>) -> Int {
     var index = list.length(keys) - 1
@@ -197,9 +180,6 @@ fn last_index_of(keys: List<List<Int>>, key: List<Int>) -> Int {
     index
 }
 
-/// `docs/specs/library.md` properties 5 and 6: what was pushed on reads back where it went.
-///
-/// The list is read at every index it holds, and at two past each end of them.
 // example: a_list_grown_by_push_reads_back_at_every_index_it_holds(drawn.seeded(3)).why == ""
 fn a_list_grown_by_push_reads_back_at_every_index_it_holds(draw: drawn.Draw) -> Tried {
     let grown = smalls_of(draw, 7)
@@ -216,7 +196,6 @@ fn a_list_grown_by_push_reads_back_at_every_index_it_holds(draw: drawn.Draw) -> 
     Tried { case: shown(grown), why: why }
 }
 
-/// The value `smalls_of` draws at `index` of `count`, drawn again, and `missing()` past an end.
 // example: drawn_at(draw: drawn.seeded(1), index: -1, count: 3) == missing()
 fn drawn_at(draw: drawn.Draw, index: Int, count: Int) -> Int {
     if index < 0 || index >= count {
@@ -231,9 +210,7 @@ fn drawn_at(draw: drawn.Draw, index: Int, count: Int) -> Int {
     small(at)
 }
 
-/// `docs/specs/library.md` property 6: a list is a value, so a push reaches into none.
-///
-/// Both pushes are made before any list is read, so the second cannot write over the first.
+// Both pushes come before any read, so a second push that writes over the first shows in the read.
 // example: a_push_leaves_the_list_it_was_handed_holding_what_it_held(drawn.seeded(3)).why == ""
 fn a_push_leaves_the_list_it_was_handed_holding_what_it_held(draw: drawn.Draw) -> Tried {
     let handed = smalls_of(draw, 7)
@@ -249,10 +226,8 @@ fn a_push_leaves_the_list_it_was_handed_holding_what_it_held(draw: drawn.Draw) -
     Tried { case: shown(handed), why: why }
 }
 
-/// `docs/specs/library.md` property 7: a list holds the number of pushes that built it.
-///
-/// Every list on the way is kept, and all of them share one buffer, so a later push must change
-/// the length of no earlier list. One more push onto a drawn earlier list copies it.
+// All the kept lists share one buffer, so a later push must not change an earlier length.
+// One more push onto a drawn earlier list must copy it.
 // example: the_length_of_a_list_is_the_number_of_pushes_that_built_it(drawn.seeded(3)).why == ""
 fn the_length_of_a_list_is_the_number_of_pushes_that_built_it(draw: drawn.Draw) -> Tried {
     let count = drawn.number(draw, 9)
@@ -269,7 +244,6 @@ fn the_length_of_a_list_is_the_number_of_pushes_that_built_it(draw: drawn.Draw) 
     Tried { case: shown(count) + " pushes, then one onto list " + shown(branched), why: miscounted(built: built, branch: branch, branched: branched) }
 }
 
-/// Why a length of `built` or of `branch` is wrong, and `""` where each is the number of pushes.
 // example: miscounted(built: [[], [1]], branch: [0], branched: 0) == ""
 // example: miscounted(built: [[1]], branch: [0], branched: 0) == "list 0 holds 1 values"
 fn miscounted(built: List<List<Int>>, branch: List<Int>, branched: Int) -> String {
@@ -286,14 +260,12 @@ fn miscounted(built: List<List<Int>>, branch: List<Int>, branched: Int) -> Strin
     ""
 }
 
-/// `docs/specs/library.md` property 9: a sort gives back each value it was handed, in order.
 // example: a_sorted_list_holds_what_it_was_handed_in_order(drawn.seeded(3)).why == ""
 fn a_sorted_list_holds_what_it_was_handed_in_order(draw: drawn.Draw) -> Tried {
     let handed = smalls_of(draw, 40)
     Tried { case: shown(handed), why: unsorted(handed: handed, ordered: list.sorted(handed)) }
 }
 
-/// Why `ordered` is not the values of `handed` in order, and `""` where it is.
 // example: unsorted(handed: [2, 1, 2], ordered: [1, 2, 2]) == ""
 // example: unsorted(handed: [2, 1], ordered: [2, 1]) == "2 is ahead of 1"
 // example: unsorted(handed: [2, 1], ordered: [1, 1]) == "2 is held 1 times, and 0 times once sorted"
@@ -315,7 +287,6 @@ fn unsorted(handed: List<Int>, ordered: List<Int>) -> String {
     ""
 }
 
-/// How many times `values` holds `value`.
 // example: times_held(values: [1, 2, 1], value: 1) == 2
 fn times_held(values: List<Int>, value: Int) -> Int {
     var count = 0
@@ -327,7 +298,6 @@ fn times_held(values: List<Int>, value: Int) -> Int {
     count
 }
 
-/// Fewer than `bound` whole numbers from -99 to 99.
 // example: list.length(smalls_of(drawn.seeded(1), 3)) < 3
 fn smalls_of(draw: drawn.Draw, bound: Int) -> List<Int> {
     var values = []
@@ -339,38 +309,33 @@ fn smalls_of(draw: drawn.Draw, bound: Int) -> List<Int> {
     values
 }
 
-/// A whole number from -99 to 99.
 // example: small(drawn.seeded(1)) >= -99
 fn small(draw: drawn.Draw) -> Int {
     drawn.number(draw, 199) - 99
 }
 
-/// What a read of a key or an index that holds nothing gives, which no drawn value is.
+// No drawn value is equal to this value.
 // example: missing() == -1000
 fn missing() -> Int {
     -1000
 }
 
-/// One case of a property: the drawn input as text, and why it failed, which is `""` where it held.
 type Tried = {
     case: String
     why: String
 }
 
-/// One key to put a value in at, and the value.
 type Put = {
     key: Int
     value: Int
 }
 
-/// The keys of a wide case, and the map and the set they went into.
 type Wide = {
     keys: List<List<Int>>
     held_map: map.Map<List<Int>, Int>
     seen: set.Set<List<Int>>
 }
 
-/// Each property of the collections.
 type Property =
     | MapReadsBack
     | SetHoldsWhatWentIn

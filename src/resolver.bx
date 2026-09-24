@@ -12,10 +12,6 @@ import parser
 import set
 import strings
 
-/// What the resolver says of `source`, in the form the harness compares.
-///
-/// A resolved module is `resolved`, then a line for each resolved name, in the order of its span.
-/// A refusal is `refused`, then the code, the span, and the message, then the help.
 // example: printed("fn (", prelude_of(ast.Program { items: [] })) == "unparsed\n"
 // example: printed("fn f() -> Int {\n    1\n}\n", prelude_of(ast.Program { items: [] })) == "resolved\n3..4 value function declared 3..4\n10..13 type type prelude\n"
 fn printed(source: String, prelude: Prelude) -> String {
@@ -25,7 +21,6 @@ fn printed(source: String, prelude: Prelude) -> String {
     }
 }
 
-/// What the resolver says of the prelude's own `source`, which is resolved as the prelude.
 // example: prelude_printed("fn f() -> Int {\n    1\n}\n") == "resolved\n3..4 value function declared 3..4\n10..13 type type prelude\n"
 private fn prelude_printed(source: String) -> String {
     match parser.parse(source) {
@@ -34,7 +29,6 @@ private fn prelude_printed(source: String) -> String {
     }
 }
 
-/// The resolved names, printed, or the refusal.
 // example: answer_printed(Err(ResolveError { kind: NoValue("x"), span: lexer.Span { start: 1, length: 1 } })) == "refused\nL0300 1..2 there is nothing named `x`\nhelp: a name is declared in this file, imported, or supplied by the prelude\n"
 fn answer_printed(answer: Result<Resolved, ResolveError>) -> String {
     match answer {
@@ -43,11 +37,6 @@ fn answer_printed(answer: Result<Resolved, ResolveError>) -> String {
     }
 }
 
-/// Resolves every name of `program`, or gives the first one that is refused.
-///
-/// Every name the module declares is in scope before any body is walked. Then the first
-/// declaration written above something that uses it is refused. `examples_read` holds each
-/// module name that an example of the module writes before a dot, which reads that import.
 // example: answer_printed(resolve(ast.Program { items: [] }, "main", prelude_of(ast.Program { items: [] }), set.empty())) == "resolved\n"
 // example: answer_printed(resolve(ok_or(parser.parse("import io\n"), ast.Program { items: [] }), "main", prelude_of(ast.Program { items: [] }), set.insert(set.empty(), "io"))) == "resolved\n7..9 value module declared 7..9\n"
 fn resolve(program: ast.Program, module: String, prelude: Prelude, examples_read: set.Set<String>) -> Result<Resolved, ResolveError> {
@@ -57,10 +46,7 @@ fn resolve(program: ast.Program, module: String, prelude: Prelude, examples_read
     Ok(Resolved { module: module, program: program, found: walked.found })
 }
 
-/// The prelude, and in the module `list` the three functions the compiler holds for it.
-///
-/// Another module reaches them as `list.push`, and `list` cannot import itself, so it writes them
-/// bare, as the prelude writes `push` and `at`.
+// The module `list` cannot import itself, so it writes these three functions bare.
 // example: answer_printed(resolve(ok_or(parser.parse("fn f() -> Int {\n    length([1])\n}\n"), ast.Program { items: [] }), "list", prelude_of(ast.Program { items: [] }), set.empty())) == "resolved\n3..4 value function declared 3..4\n10..13 type type prelude\n20..26 value function prelude\n"
 fn scope_of(prelude: Prelude, module: String) -> Prelude {
     if module != "list" {
@@ -69,10 +55,7 @@ fn scope_of(prelude: Prelude, module: String) -> Prelude {
     prelude { values: held_as(names: prelude.values, texts: ["length", "push", "at"], kind: Function) }
 }
 
-/// The prelude, resolved, with what the JVM holds in scope and nothing else.
-///
-/// The prelude declares what every other module's scope starts from, so it cannot be resolved
-/// against that scope: every name it declares would already be in it.
+// The prelude declares what each other scope starts from, so it cannot resolve against that scope.
 // example: prelude_printed("fn f() -> Int {\n    push\n}\n") == "refused\nL0304 20..24 `push` is a function, so it is written as a call\nhelp: version 0.1 reaches a function by calling it; write the call\n"
 fn prelude_resolved(program: ast.Program) -> Result<Resolved, ResolveError> {
     let walked = module_walked(library_resolver(), program)?
@@ -80,12 +63,6 @@ fn prelude_resolved(program: ast.Program) -> Result<Resolved, ResolveError> {
     Ok(Resolved { module: "prelude", program: program, found: walked.found })
 }
 
-/// `program` with its declarations in the order a file reads top down, which is how `bux fmt`
-/// repairs `L0303`.
-///
-/// A declaration moves below each declaration that uses it, and otherwise keeps its place, so two
-/// declarations that use each other keep the order the author wrote. An import and a test keep
-/// their places. A program the walk refuses has no such order, and the refusal is the answer.
 // example: ast.printed(ok_or(top_down(ok_or(parser.parse("fn one() -> Int {\n    1\n}\n\nfn two() -> Int {\n    one()\n}\n"), ast.Program { items: [] }), prelude_of(ast.Program { items: [] })), ast.Program { items: [] })) == "function two 27..56\n  result\n    named-type Int 39..42\n  block 43..56\n    call 49..54\n      name one 49..52\nfunction one 0..25\n  result\n    named-type Int 12..15\n  block 16..25\n    integer 1 22..23\n"
 fn top_down(program: ast.Program, prelude: Prelude) -> Result<ast.Program, ResolveError> {
     let walked = module_walked(resolver_of(prelude), program)?
@@ -93,10 +70,7 @@ fn top_down(program: ast.Program, prelude: Prelude) -> Result<ast.Program, Resol
     Ok(ast.Program { items: in_slots(program.items, read_top_down(uses_of(placed, walked.found), list.length(placed))) })
 }
 
-/// Nothing where every name the module introduces is read, and the refusal of the first that is not.
-///
-/// An import, a binding, and a parameter of a signature the function chooses are each held to
-/// it, which `docs/specs/unused.md` states. An assignment names its `var` without reading it.
+// An assignment names its `var` and does not read it.
 // example: printed("import io\n", prelude_of(ast.Program { items: [] })) == "refused\nL0320 7..9 the import `io` is read by nothing\nhelp: read it, or remove it\n"
 // example: printed("fn f(a: Int) -> Int {\n    1\n}\n", prelude_of(ast.Program { items: [] })) == "refused\nL0321 5..6 the parameter `a` is read by nothing\nhelp: read it, or remove it\n"
 fn every_name_read(program: ast.Program, reading: Reading) -> Result<(), ResolveError> {
@@ -108,9 +82,7 @@ fn every_name_read(program: ast.Program, reading: Reading) -> Result<(), Resolve
     first
 }
 
-/// The refusal written first of `kept` and `next`, which is nothing where neither refuses.
-///
-/// The walk meets a binding after the value it is bound to, so the order of the source decides.
+// The walk meets a binding after its value, so the order of the source decides.
 // example: refused_printed(written_first(kept: Err(at(ast.Name { text: "b", span: lexer.Span { start: 5, length: 1 } }, UnreadBinding("b"))), next: Err(at(ast.Name { text: "a", span: lexer.Span { start: 2, length: 1 } }, UnreadImport("a"))))) == "refused\nL0320 2..3 the import `a` is read by nothing\nhelp: read it, or remove it\n"
 fn written_first(kept: Result<(), ResolveError>, next: Result<(), ResolveError>) -> Result<(), ResolveError> {
     match kept {
@@ -126,11 +98,8 @@ fn written_first(kept: Result<(), ResolveError>, next: Result<(), ResolveError>)
     }
 }
 
-/// Where each parameter a function writes into a signature of its own choosing is introduced.
-///
-/// `main` takes the arguments its shape fixes, an instance method the parameters its trait
-/// fixes, and a process's `start` and `receive` the ones the process shape fixes, so none of
-/// those is held. A trait's signature and an `extern` have no body to read a parameter in.
+// The shape fixes the parameters of `main`, an instance method, `start`, and `receive`.
+// A trait signature and an `extern` have no body that can read a parameter.
 // example: set.has_value(held_parameters(ok_or(parser.parse("fn main(arguments: List<String>) -> Int {\n    0\n}\n"), ast.Program { items: [] })), 8) == false
 fn held_parameters(program: ast.Program) -> set.Set<Int> {
     var held = set.empty()
@@ -140,7 +109,6 @@ fn held_parameters(program: ast.Program) -> set.Set<Int> {
     held
 }
 
-/// `held` with the parameters `declared` chooses, where it is a function or a process.
 // example: set.has_value(with_held(set.empty(), or(list.at(ok_or(parser.parse("fn f(a: Int) -> Int {\n    a\n}\n"), ast.Program { items: [] }).items, 0), ast.Import(ast.ImportDeclaration { module: ast.Name { text: "io", span: lexer.Span { start: 0, length: 2 } }, span: lexer.Span { start: 0, length: 2 } }))), 5)
 fn with_held(held: set.Set<Int>, declared: ast.Item) -> set.Set<Int> {
     match declared {
@@ -150,7 +118,6 @@ fn with_held(held: set.Set<Int>, declared: ast.Item) -> set.Set<Int> {
     }
 }
 
-/// `held` with the parameters of each function of a process but `start` and `receive`.
 // example: set.has_value(with_process_held(set.empty(), ast.ProcessDeclaration { name: ast.Name { text: "Counter", span: lexer.Span { start: 8, length: 7 } }, functions: [], span: lexer.Span { start: 0, length: 17 }, visibility: ast.Public }), 0) == false
 fn with_process_held(held: set.Set<Int>, declaration: ast.ProcessDeclaration) -> set.Set<Int> {
     var walked = held
@@ -160,7 +127,6 @@ fn with_process_held(held: set.Set<Int>, declaration: ast.ProcessDeclaration) ->
     walked
 }
 
-/// `held` with the parameters of `declaration`, unless its name is one whose shape is fixed.
 // example: set.has_value(with_chosen(set.empty(), ast.FunctionDeclaration { name: ast.Name { text: "main", span: lexer.Span { start: 3, length: 4 } }, type_parameters: [], parameters: [], result: None, body: ast.Block { statements: [], span: lexer.Span { start: 8, length: 2 } }, span: lexer.Span { start: 0, length: 10 }, visibility: ast.Public }, ["main"]), 3) == false
 fn with_chosen(held: set.Set<Int>, declaration: ast.FunctionDeclaration, fixed: List<String>) -> set.Set<Int> {
     if list.has_value(fixed, declaration.name.text) {
@@ -173,7 +139,6 @@ fn with_chosen(held: set.Set<Int>, declaration: ast.FunctionDeclaration, fixed: 
     walked
 }
 
-/// Nothing where the name `resolution` introduces is read or not held, and its refusal otherwise.
 // example: refused_printed(introduced_and_read(Resolution { namespace: ValueNamespace, name: ast.Name { text: "count", span: lexer.Span { start: 4, length: 5 } }, definition: Definition { kind: Local, origin: Declared(lexer.Span { start: 4, length: 5 }) } }, Reads { read: set.empty(), held: set.empty(), examples_read: set.empty() })) == "refused\nL0321 4..9 the binding `count` is read by nothing\nhelp: read it, or write `_ =` for its value\n"
 fn introduced_and_read(resolution: Resolution, reads: Reads) -> Result<(), ResolveError> {
     if set.has_value(reads.read, resolution.name.span.start) {
@@ -185,8 +150,6 @@ fn introduced_and_read(resolution: Resolution, reads: Reads) -> Result<(), Resol
     }
 }
 
-/// The refusal of an unread name of `kind`, which a parameter the shape fixes and a declaration
-/// have none of.
 // example: printed("fn f() -> Int {\n    var count = 0\n    count = 1\n    1\n}\n", prelude_of(ast.Program { items: [] })) == "refused\nL0321 24..29 the binding `count` is read by nothing\nhelp: read it, or write `_ =` for its value\n"
 fn unread_kind(kind: DefinitionKind, name: ast.Name, reads: Reads) -> Option<ResolveErrorKind> {
     match kind {
@@ -198,9 +161,7 @@ fn unread_kind(kind: DefinitionKind, name: ast.Name, reads: Reads) -> Option<Res
     }
 }
 
-/// The refusal of an unread import, where no example of the module writes its name before a dot.
-///
-/// An example is compiled in the module's scope, with the module's imports, so it reads them.
+// An example compiles in the scope of the module, with its imports, so it reads them.
 // example: code_of(or(unread_import(ast.Name { text: "io", span: lexer.Span { start: 7, length: 2 } }, set.empty()), NotACall(""))) == "L0320"
 // example: code_of(or(unread_import(ast.Name { text: "io", span: lexer.Span { start: 7, length: 2 } }, set.insert(set.empty(), "io")), NotACall(""))) == code_of(NotACall(""))
 fn unread_import(name: ast.Name, examples_read: set.Set<String>) -> Option<ResolveErrorKind> {
@@ -210,7 +171,6 @@ fn unread_import(name: ast.Name, examples_read: set.Set<String>) -> Option<Resol
     Some(UnreadImport(name.text))
 }
 
-/// The refusal of an unread parameter, where the function chose it and `held` holds it.
 // example: printed("fn main(arguments: List<String>) -> Int {\n    0\n}\n", prelude_of(ast.Program { items: [] })) == "resolved\n3..7 value function declared 3..7\n8..17 value parameter declared 8..17\n19..23 type type prelude\n24..30 type type prelude\n36..39 type type prelude\n"
 fn unread_parameter(name: ast.Name, held: set.Set<Int>) -> Option<ResolveErrorKind> {
     if set.has_value(held, name.span.start) {
@@ -219,11 +179,7 @@ fn unread_parameter(name: ast.Name, held: set.Set<Int>) -> Option<ResolveErrorKi
     None
 }
 
-/// The names in scope in every module, read out of the prelude's tree.
-///
-/// A `private` declaration of the prelude is reached only in the prelude, so it is not among them.
-/// Its scope also holds what the compiler holds, which no source declares: five types, `todo`,
-/// `send`, and `ended`.
+// A `private` declaration of the prelude is reached only in the prelude, so it is not here.
 // example: printed("fn f() -> Thing {\n    Made\n}\n\ntype Thing =\n    | Made\n", prelude_of(ok_or(parser.parse("type Other =\n    | Made\n"), ast.Program { items: [] }))) == "refused\nL0302 49..53 `Made` is already in scope here\nhelp: rename the inner one; Bux never hides a name\n"
 fn prelude_of(program: ast.Program) -> Prelude {
     var prelude = Prelude { types: held_as(names: map.empty(), texts: held_types(), kind: Type), values: held_as(names: map.empty(), texts: held_values(), kind: Function), instances: set.empty(), traits: map.empty() }
@@ -235,29 +191,23 @@ fn prelude_of(program: ast.Program) -> Prelude {
     prelude
 }
 
-/// The resolver the prelude itself is resolved with, whose scope holds what the JVM holds.
-///
-/// `push` and `at` are the compiler's rather than a source's, and the prelude writes them bare.
+// `push` and `at` belong to the compiler and not to a source, so the prelude writes them bare.
 // example: prelude_printed("fn f() -> Int {\n    todo(\"x\")\n}\n") == "resolved\n3..4 value function declared 3..4\n10..13 type type prelude\n20..24 value function prelude\n"
 fn library_resolver() -> Resolver {
     let values = held_as(names: map.empty(), texts: list.push(list.push(held_values(), "push"), "at"), kind: Function)
     resolver_of(Prelude { types: held_as(names: map.empty(), texts: held_types(), kind: Type), values: values, instances: set.empty(), traits: map.empty() })
 }
 
-/// The types the compiler holds, which no Bux declaration could write: four the JVM holds, and
-/// the handle of a process.
 // example: list.length(held_types()) == 5
 fn held_types() -> List<String> {
     ["Bool", "Int", "List", "Process", "String"]
 }
 
-/// The functions the compiler holds in every module: `todo`, and `send` and `ended` of a process.
 // example: list.length(held_values()) == 3
 fn held_values() -> List<String> {
     ["todo", "send", "ended"]
 }
 
-/// The prelude once `declared` is read into it: a type, a trait, an instance, or a function.
 // example: printed("fn f() -> Int {\n    g()\n}\n", prelude_of(ok_or(parser.parse("fn g() -> Int {\n    1\n}\n"), ast.Program { items: [] }))) == "resolved\n3..4 value function declared 3..4\n10..13 type type prelude\n20..21 value function prelude\n"
 fn with_supplied(prelude: Prelude, declared: ast.Item) -> Prelude {
     match declared {
@@ -269,7 +219,6 @@ fn with_supplied(prelude: Prelude, declared: ast.Item) -> Prelude {
     }
 }
 
-/// A type the prelude declares, and the variants it declares with it.
 // example: printed("fn f() -> Int {\n    Made\n}\n", prelude_of(ok_or(parser.parse("type Thing =\n    | Made\n"), ast.Program { items: [] }))) == "resolved\n3..4 value function declared 3..4\n10..13 type type prelude\n20..24 value constructor prelude\n"
 fn with_supplied_type(prelude: Prelude, declaration: ast.TypeDeclaration) -> Prelude {
     let types = held_as(names: prelude.types, texts: [declaration.name.text], kind: Type)
@@ -277,7 +226,6 @@ fn with_supplied_type(prelude: Prelude, declaration: ast.TypeDeclaration) -> Pre
     Prelude { types: types, values: values, instances: prelude.instances, traits: prelude.traits }
 }
 
-/// A trait the prelude declares, the methods it declares, and what an instance of it writes.
 // example: printed("fn f() -> Int {\n    size(1)\n}\n", prelude_of(ok_or(parser.parse("trait Sized<T> {\n    fn size(value: T) -> Int\n}\n"), ast.Program { items: [] }))) == "resolved\n3..4 value function declared 3..4\n10..13 type type prelude\n20..24 value trait-method prelude\n"
 fn with_supplied_trait(prelude: Prelude, declaration: ast.TraitDeclaration) -> Prelude {
     let methods = method_names(declaration)
@@ -286,7 +234,6 @@ fn with_supplied_trait(prelude: Prelude, declaration: ast.TraitDeclaration) -> P
     Prelude { types: types, values: values, instances: prelude.instances, traits: map.insert(prelude.traits, declaration.name.text, methods) }
 }
 
-/// The names of the variants a type declares, which a record and a Java class declare none of.
 // example: list.length(variant_names(ast.RecordType([]))) == 0
 fn variant_names(definition: ast.TypeDefinition) -> List<String> {
     match definition {
@@ -295,7 +242,6 @@ fn variant_names(definition: ast.TypeDefinition) -> List<String> {
     }
 }
 
-/// The name of each variant, in the order they are written.
 // example: list.length(names_of_variants([])) == 0
 fn names_of_variants(variants: List<ast.Variant>) -> List<String> {
     var names = []
@@ -305,7 +251,6 @@ fn names_of_variants(variants: List<ast.Variant>) -> List<String> {
     names
 }
 
-/// `names` with each of `texts` in it, as a definition of `kind` the prelude supplies.
 // example: or(look_up(Scope { namespace: TypeNamespace, names: held_as(names: map.empty(), texts: ["Int"], kind: Type), introduced: [], depth: 0 }, "Int"), Definition { kind: Local, origin: InPrelude }).kind == Type
 fn held_as(names: map.Map<String, Held>, texts: List<String>, kind: DefinitionKind) -> map.Map<String, Held> {
     var held = names
@@ -315,7 +260,6 @@ fn held_as(names: map.Map<String, Held>, texts: List<String>, kind: DefinitionKi
     held
 }
 
-/// A resolver whose scope is `prelude` and nothing else.
 // example: resolver_of(prelude_of(ast.Program { items: [] })).values.depth == 0
 fn resolver_of(prelude: Prelude) -> Resolver {
     let types = Scope { namespace: TypeNamespace, names: prelude.types, introduced: [], depth: 0 }
@@ -323,7 +267,6 @@ fn resolver_of(prelude: Prelude) -> Resolver {
     Resolver { types: types, values: values, found: map.empty(), read: set.empty(), introductions: [], instances: prelude.instances, traits: prelude.traits }
 }
 
-/// Every name a module declares, put in scope before any body is walked, then every body.
 // example: printed("fn f() -> Int {\n    g()\n}\n\nfn g() -> Int {\n    1\n}\n", prelude_of(ast.Program { items: [] })) == "resolved\n3..4 value function declared 3..4\n10..13 type type prelude\n20..21 value function declared 30..31\n30..31 value function declared 30..31\n37..40 type type prelude\n"
 fn module_walked(resolver: Resolver, program: ast.Program) -> Result<Resolver, ResolveError> {
     var walked = resolver { types: entered(resolver.types), values: entered(resolver.values) }
@@ -337,9 +280,7 @@ fn module_walked(resolver: Resolver, program: ast.Program) -> Result<Resolver, R
     Ok(walked)
 }
 
-/// Nothing where no two tests of `program` share a name, and the second of the first pair that does.
-///
-/// A test is reported by its name, so two tests of one name would be one line of a report.
+// A report names a test by its name, so two tests of one name would be one line of a report.
 // example: printed("test \"a\" {\n    true\n}\n\ntest \"a\" {\n    true\n}\n", prelude_of(ast.Program { items: [] })) == "refused\nL0319 28..31 two tests of this module are named \"a\"\nhelp: a report names a test by its name; rename one of the two\n"
 fn tests_named_once(program: ast.Program) -> Result<(), ResolveError> {
     var seen = set.empty()
@@ -352,7 +293,6 @@ fn tests_named_once(program: ast.Program) -> Result<(), ResolveError> {
     Ok(())
 }
 
-/// The names `declared` puts in scope, which an instance and a derive put none of.
 // example: printed("import io\n\nimport io\n", prelude_of(ast.Program { items: [] })) == "refused\nL0301 18..20 `io` is declared twice in this module\nhelp: one name has one definition; rename one of the two\n"
 fn declare(resolver: Resolver, declared: ast.Item) -> Result<Resolver, ResolveError> {
     match declared {
@@ -366,10 +306,7 @@ fn declare(resolver: Resolver, declared: ast.Item) -> Result<Resolver, ResolveEr
     }
 }
 
-/// A type names a type, and names the value each of its variants is built with.
-///
-/// A record is built with the name of its type. A Java class is built with an `extern new` and
-/// with nothing else, so its name is a type and never a constructor.
+// A Java class is built with an `extern new` only, so its name is a type and never a constructor.
 // example: printed("type Id =\n    | Id\n    | Id\n", prelude_of(ast.Program { items: [] })) == "refused\nL0301 25..27 `Id` is declared twice in this module\nhelp: one name has one definition; rename one of the two\n"
 fn declare_type(resolver: Resolver, declaration: ast.TypeDeclaration) -> Result<Resolver, ResolveError> {
     let typed = introduce_type(resolver, declaration.name, Type)?
@@ -380,7 +317,6 @@ fn declare_type(resolver: Resolver, declaration: ast.TypeDeclaration) -> Result<
     }
 }
 
-/// Each variant, as the value it is built with.
 // example: printed("type Id =\n    | Id\n", prelude_of(ast.Program { items: [] })) == "resolved\n5..7 type type declared 5..7\n16..18 value constructor declared 16..18\n"
 fn introduce_variants(resolver: Resolver, variants: List<ast.Variant>) -> Result<Resolver, ResolveError> {
     var walked = resolver
@@ -390,9 +326,6 @@ fn introduce_variants(resolver: Resolver, variants: List<ast.Variant>) -> Result
     Ok(walked)
 }
 
-/// A trait names itself among the types, and each of its methods among the values.
-///
-/// An instance declares nothing: its methods answer for the names its trait declares.
 // example: printed("trait Sized<T> {\n    fn size(value: T) -> Int\n    fn size(value: T) -> Int\n}\n", prelude_of(ast.Program { items: [] })) == "refused\nL0301 53..57 `size` is declared twice in this module\nhelp: one name has one definition; rename one of the two\n"
 fn declare_trait(resolver: Resolver, declaration: ast.TraitDeclaration) -> Result<Resolver, ResolveError> {
     var walked = introduce_type(resolver, declaration.name, Trait)?
@@ -402,7 +335,6 @@ fn declare_trait(resolver: Resolver, declaration: ast.TraitDeclaration) -> Resul
     Ok(walked { traits: map.insert(walked.traits, declaration.name.text, method_names(declaration)) })
 }
 
-/// The name of each method a trait declares, in the order it declares them.
 // example: list.length(method_names(ast.TraitDeclaration { name: ast.Name { text: "T", span: lexer.Span { start: 0, length: 1 } }, parameter: ast.Name { text: "A", span: lexer.Span { start: 0, length: 1 } }, methods: [], span: lexer.Span { start: 0, length: 1 }, visibility: ast.Public })) == 0
 fn method_names(declaration: ast.TraitDeclaration) -> List<String> {
     var names = []
@@ -412,7 +344,6 @@ fn method_names(declaration: ast.TraitDeclaration) -> List<String> {
     names
 }
 
-/// Every name inside `declared`, walked in the scope the whole module declares.
 // example: answer_printed(resolve(ok_or(parser.parse("import io\n"), ast.Program { items: [] }), "main", prelude_of(ast.Program { items: [] }), set.insert(set.empty(), "io"))) == "resolved\n7..9 value module declared 7..9\n"
 fn define(resolver: Resolver, declared: ast.Item) -> Result<Resolver, ResolveError> {
     match declared {
@@ -428,9 +359,7 @@ fn define(resolver: Resolver, declared: ast.Item) -> Result<Resolver, ResolveErr
     }
 }
 
-/// Each function a process declares, walked as a function is.
-///
-/// The functions of a process put no name in scope, because only the process calls them.
+// The functions of a process put no name in scope, because only the process calls them.
 // example: printed("process Counter {\n    fn start() -> Int {\n        missing\n    }\n}\n", prelude_of(ast.Program { items: [] })) == "refused\nL0300 50..57 there is nothing named `missing`\nhelp: a name is declared in this file, imported, or supplied by the prelude\n"
 fn process_declaration(resolver: Resolver, declaration: ast.ProcessDeclaration) -> Result<Resolver, ResolveError> {
     var walked = resolver
@@ -440,7 +369,6 @@ fn process_declaration(resolver: Resolver, declaration: ast.ProcessDeclaration) 
     Ok(walked)
 }
 
-/// A type's parameters, then every type its definition names.
 // example: printed("type Box<T> = {\n    held: T\n}\n", prelude_of(ast.Program { items: [] })) == "resolved\n5..8 type type declared 5..8\n5..8 value constructor declared 5..8\n9..10 type type-parameter declared 9..10\n26..27 type type-parameter declared 9..10\n"
 fn type_declaration(resolver: Resolver, declaration: ast.TypeDeclaration) -> Result<Resolver, ResolveError> {
     var walked = resolver { types: entered(resolver.types) }
@@ -451,7 +379,6 @@ fn type_declaration(resolver: Resolver, declaration: ast.TypeDeclaration) -> Res
     Ok(returned_to(inner: defined, outer: resolver))
 }
 
-/// The types a type's definition names, which a Java class names none of.
 // example: printed("type Pair =\n    | Pair(Int, Missing)\n", prelude_of(ast.Program { items: [] })) == "refused\nL0300 28..35 there is no type named `Missing`\nhelp: a name is declared in this file, imported, or supplied by the prelude\n"
 fn defined_as(resolver: Resolver, written: ast.TypeDefinition) -> Result<Resolver, ResolveError> {
     match written {
@@ -461,7 +388,6 @@ fn defined_as(resolver: Resolver, written: ast.TypeDefinition) -> Result<Resolve
     }
 }
 
-/// What each variant carries.
 // example: printed("type Held =\n    | Held { count: Missing }\n", prelude_of(ast.Program { items: [] })) == "refused\nL0300 32..39 there is no type named `Missing`\nhelp: a name is declared in this file, imported, or supplied by the prelude\n"
 fn each_variant(resolver: Resolver, variants: List<ast.Variant>) -> Result<Resolver, ResolveError> {
     var walked = resolver
@@ -471,7 +397,6 @@ fn each_variant(resolver: Resolver, variants: List<ast.Variant>) -> Result<Resol
     Ok(walked)
 }
 
-/// The types a variant carries, positionally or as named fields.
 // example: printed("type Held =\n    | Held(Int)\n", prelude_of(ast.Program { items: [] })) == "resolved\n5..9 type type declared 5..9\n18..22 value constructor declared 18..22\n23..26 type type prelude\n"
 fn payload(resolver: Resolver, carried: ast.VariantPayload) -> Result<Resolver, ResolveError> {
     match carried {
@@ -481,7 +406,6 @@ fn payload(resolver: Resolver, carried: ast.VariantPayload) -> Result<Resolver, 
     }
 }
 
-/// The type of each field.
 // example: printed("type Held = {\n    count: Missing\n}\n", prelude_of(ast.Program { items: [] })) == "refused\nL0300 25..32 there is no type named `Missing`\nhelp: a name is declared in this file, imported, or supplied by the prelude\n"
 fn record_fields(resolver: Resolver, fields: List<ast.RecordField>) -> Result<Resolver, ResolveError> {
     var walked = resolver
@@ -491,7 +415,6 @@ fn record_fields(resolver: Resolver, fields: List<ast.RecordField>) -> Result<Re
     Ok(walked)
 }
 
-/// A trait's signatures, each read against the one type parameter the trait is written over.
 // example: printed("trait Sized<T> {\n    fn size(value: T) -> Int\n}\n", prelude_of(ast.Program { items: [] })) == "resolved\n6..11 type trait declared 6..11\n12..13 type type-parameter declared 12..13\n24..28 value trait-method declared 24..28\n29..34 value parameter declared 29..34\n36..37 type type-parameter declared 12..13\n42..45 type type prelude\n"
 fn trait_declaration(resolver: Resolver, declaration: ast.TraitDeclaration) -> Result<Resolver, ResolveError> {
     var walked = introduce_type(resolver { types: entered(resolver.types) }, declaration.parameter, TypeParameter)?
@@ -501,7 +424,6 @@ fn trait_declaration(resolver: Resolver, declaration: ast.TraitDeclaration) -> R
     Ok(returned_to(inner: walked, outer: resolver))
 }
 
-/// One signature: the types it names, and its parameters while it names them.
 // example: printed("trait Sized<T> {\n    fn size(value: T, value: T) -> Int\n}\n", prelude_of(ast.Program { items: [] })) == "refused\nL0301 39..44 `value` is declared twice in this module\nhelp: one name has one definition; rename one of the two\n"
 fn signature(resolver: Resolver, method: ast.Signature) -> Result<Resolver, ResolveError> {
     let typed = parameters(resolver { values: entered(resolver.values) }, method.parameters)?
@@ -509,10 +431,7 @@ fn signature(resolver: Resolver, method: ast.Signature) -> Result<Resolver, Reso
     Ok(returned_to(inner: finished, outer: resolver))
 }
 
-/// An `extern`: the types of its signature, and its parameters while it names them.
-///
-/// There is no body below it, so nothing reads those parameters. They are introduced all the
-/// same, because two parameters of one name is the mistake it always was.
+// No body reads these parameters, but two parameters of one name are still a mistake.
 // example: printed("extern static now(at: Int, at: Int) -> Int = \"a.B.c\"\n", prelude_of(ast.Program { items: [] })) == "refused\nL0301 27..29 `at` is declared twice in this module\nhelp: one name has one definition; rename one of the two\n"
 fn declared_extern(resolver: Resolver, declaration: ast.ExternDeclaration) -> Result<Resolver, ResolveError> {
     var walked = resolver { values: entered(resolver.values) }
@@ -523,10 +442,6 @@ fn declared_extern(resolver: Resolver, declaration: ast.ExternDeclaration) -> Re
     Ok(returned_to(inner: finished, outer: resolver))
 }
 
-/// An instance: the trait it is for, the type it is for, and a body for each declared method.
-///
-/// Each method is written over the instance's type parameters, so a method introduces them
-/// exactly as a generic function does.
 // example: printed("instance Eq<Missing> {\n    fn is_equal(one: Missing, other: Missing) -> Bool {\n        true\n    }\n}\n", prelude_of(ok_or(parser.parse("trait Eq<T> {\n    fn is_equal(one: T, other: T) -> Bool\n}\n"), ast.Program { items: [] }))) == "refused\nL0300 12..19 there is no type named `Missing`\nhelp: a name is declared in this file, imported, or supplied by the prelude\n"
 fn instance_declaration(resolver: Resolver, declaration: ast.InstanceDeclaration) -> Result<Resolver, ResolveError> {
     let traited = trait_named(resolver, declaration.trait_name)?
@@ -543,9 +458,7 @@ fn instance_declaration(resolver: Resolver, declaration: ast.InstanceDeclaration
     Ok(walked)
 }
 
-/// A derive: the type the compiler writes the instances for, and each trait it names.
-///
-/// A derive writes an instance, so it claims what an instance claims and is refused where one is.
+// A derive writes an instance, so it claims what an instance claims.
 // example: printed("derive Show for Int\n", prelude_of(ast.Program { items: [] })) == "refused\nL0312 16..19 `Int` is not a type this module declares\nhelp: a derive reads the declaration it names, so it names one this module writes\n"
 fn derive_declaration(resolver: Resolver, declaration: ast.DeriveDeclaration) -> Result<Resolver, ResolveError> {
     var walked = named_type(resolver, declaration.for_type)?
@@ -558,7 +471,6 @@ fn derive_declaration(resolver: Resolver, declaration: ast.DeriveDeclaration) ->
     Ok(walked)
 }
 
-/// Refuses a derive for a type this module does not declare, whose declaration is not here.
 // example: printed("derive Show for Int\n", prelude_of(ast.Program { items: [] })) == "refused\nL0312 16..19 `Int` is not a type this module declares\nhelp: a derive reads the declaration it names, so it names one this module writes\n"
 fn declared_here(resolver: Resolver, for_type: ast.Name) -> Result<(), ResolveError> {
     match look_up(resolver.types, for_type.text) {
@@ -567,7 +479,6 @@ fn declared_here(resolver: Resolver, for_type: ast.Name) -> Result<(), ResolveEr
     }
 }
 
-/// Nothing where `origin` is a declaration of this module, and the refusal of `for_type` otherwise.
 // example: refused_printed(declared_origin(InPrelude, ast.Name { text: "Int", span: lexer.Span { start: 0, length: 3 } })) == "refused\nL0312 0..3 `Int` is not a type this module declares\nhelp: a derive reads the declaration it names, so it names one this module writes\n"
 fn declared_origin(origin: Origin, for_type: ast.Name) -> Result<(), ResolveError> {
     match origin {
@@ -576,7 +487,6 @@ fn declared_origin(origin: Origin, for_type: ast.Name) -> Result<(), ResolveErro
     }
 }
 
-/// Refuses a trait that is not one a type derives: `Eq`, `Ord`, `Hash`, and `Show` are.
 // example: refused_printed(derivable(ast.Name { text: "Add", span: lexer.Span { start: 0, length: 3 } })) == "refused\nL0312 0..3 `Add` is not a trait a type derives\nhelp: `Eq`, `Ord`, `Hash`, and `Show` are the traits a type derives; write others by hand\n"
 fn derivable(derived: ast.Name) -> Result<(), ResolveError> {
     if list.has_value(["Eq", "Ord", "Hash", "Show"], derived.text) {
@@ -585,7 +495,6 @@ fn derivable(derived: ast.Name) -> Result<(), ResolveError> {
     Err(at(derived, NotDerivable(derived.text)))
 }
 
-/// Records that the trait `of` now has an instance for `for_type`, and refuses a second one.
 // example: printed("instance Eq<Int> {\n    fn is_equal(one: Int, other: Int) -> Bool {\n        true\n    }\n}\n", prelude_of(ok_or(parser.parse("trait Eq<T> {\n    fn is_equal(one: T, other: T) -> Bool\n}\n\ninstance Eq<Int> {\n    fn is_equal(one: Int, other: Int) -> Bool {\n        true\n    }\n}\n"), ast.Program { items: [] }))) == "refused\nL0308 12..15 `Eq` already has an instance for `Int`\nhelp: one trait and one type have one instance; join the two\n"
 fn claimed(resolver: Resolver, of: ast.Name, for_type: ast.Name) -> Result<Resolver, ResolveError> {
     let key = claim(of: of.text, for_type: for_type.text)
@@ -595,7 +504,6 @@ fn claimed(resolver: Resolver, of: ast.Name, for_type: ast.Name) -> Result<Resol
     Ok(resolver { instances: set.insert(resolver.instances, key) })
 }
 
-/// Refuses the first method an instance writes that its trait does not declare, or writes twice.
 // example: refused_printed(writes_declared_names_once(ast.InstanceDeclaration { trait_name: ast.Name { text: "Eq", span: lexer.Span { start: 0, length: 2 } }, type_parameters: [], for_type: ast.Name { text: "Int", span: lexer.Span { start: 3, length: 3 } }, arguments: [], methods: [], span: lexer.Span { start: 0, length: 6 } }, ["is_equal"])) == "not refused\n"
 fn writes_declared_names_once(declaration: ast.InstanceDeclaration, declared: List<String>) -> Result<(), ResolveError> {
     var written = []
@@ -612,7 +520,6 @@ fn writes_declared_names_once(declaration: ast.InstanceDeclaration, declared: Li
     Ok(())
 }
 
-/// Refuses the first method the trait declares that the instance does not write.
 // example: refused_printed(writes_every_one(ast.InstanceDeclaration { trait_name: ast.Name { text: "Eq", span: lexer.Span { start: 0, length: 2 } }, type_parameters: [], for_type: ast.Name { text: "Int", span: lexer.Span { start: 3, length: 3 } }, arguments: [], methods: [], span: lexer.Span { start: 0, length: 6 } }, ["is_equal"])) == "refused\nL0309 0..2 `Eq` declares `is_equal`, which this instance does not write\nhelp: an instance writes a body for every method it declares\n"
 fn writes_every_one(declaration: ast.InstanceDeclaration, declared: List<String>) -> Result<(), ResolveError> {
     var written = []
@@ -627,9 +534,7 @@ fn writes_every_one(declaration: ast.InstanceDeclaration, declared: List<String>
     Ok(())
 }
 
-/// Refuses the first argument of an instance's type that is no type parameter it declares.
-///
-/// A type written with arguments gets the one instance that answers at every argument.
+// A type with arguments gets one instance, which answers at each argument.
 // example: refused_printed(written_over_its_parameters(ast.InstanceDeclaration { trait_name: ast.Name { text: "Eq", span: lexer.Span { start: 0, length: 2 } }, type_parameters: [], for_type: ast.Name { text: "Box", span: lexer.Span { start: 3, length: 3 } }, arguments: [ast.Name { text: "Int", span: lexer.Span { start: 7, length: 3 } }], methods: [], span: lexer.Span { start: 0, length: 11 } })) == "refused\nL0318 7..10 `Int` is not a type parameter this instance declares\nhelp: an instance answers for every argument of its type: write `instance<T> Eq<Box<T>>`\n"
 fn written_over_its_parameters(declaration: ast.InstanceDeclaration) -> Result<(), ResolveError> {
     var declares = []
@@ -644,7 +549,6 @@ fn written_over_its_parameters(declaration: ast.InstanceDeclaration) -> Result<(
     Ok(())
 }
 
-/// A function: its type parameters, their constraints, its parameters, its result, and its body.
 // example: printed("fn f<T>(held: T) -> T {\n    held\n}\n", prelude_of(ast.Program { items: [] })) == "resolved\n3..4 value function declared 3..4\n5..6 type type-parameter declared 5..6\n8..12 value parameter declared 8..12\n14..15 type type-parameter declared 5..6\n20..21 type type-parameter declared 5..6\n28..32 value parameter declared 8..12\n"
 fn function(resolver: Resolver, declaration: ast.FunctionDeclaration) -> Result<Resolver, ResolveError> {
     var walked = resolver { types: entered(resolver.types), values: entered(resolver.values) }
@@ -660,7 +564,6 @@ fn function(resolver: Resolver, declaration: ast.FunctionDeclaration) -> Result<
     Ok(returned_to(inner: walked, outer: resolver))
 }
 
-/// Each trait a type parameter is constrained by, read once every type parameter is in scope.
 // example: printed("fn f<T: Missing<T>>(held: T) -> T {\n    held\n}\n", prelude_of(ast.Program { items: [] })) == "refused\nL0300 8..15 there is no type named `Missing`\nhelp: a name is declared in this file, imported, or supplied by the prelude\n"
 fn constrained(resolver: Resolver, parameter: ast.TypeParameter) -> Result<Resolver, ResolveError> {
     var walked = resolver
@@ -671,7 +574,6 @@ fn constrained(resolver: Resolver, parameter: ast.TypeParameter) -> Result<Resol
     Ok(walked)
 }
 
-/// Each parameter: the type it is written with, then the name it binds.
 // example: printed("fn f(a: Int, a: Int) -> Int {\n    1\n}\n", prelude_of(ast.Program { items: [] })) == "refused\nL0301 13..14 `a` is declared twice in this module\nhelp: one name has one definition; rename one of the two\n"
 fn parameters(resolver: Resolver, written: List<ast.Parameter>) -> Result<Resolver, ResolveError> {
     var walked = resolver
@@ -681,14 +583,12 @@ fn parameters(resolver: Resolver, written: List<ast.Parameter>) -> Result<Resolv
     Ok(walked)
 }
 
-/// One parameter: the type it is written with, where it is written with one, then its name.
 // example: printed("fn f(a: Missing) -> Int {\n    1\n}\n", prelude_of(ast.Program { items: [] })) == "refused\nL0300 8..15 there is no type named `Missing`\nhelp: a name is declared in this file, imported, or supplied by the prelude\n"
 fn taken_parameter(resolver: Resolver, taken: ast.Parameter) -> Result<Resolver, ResolveError> {
     let typed = optional_type(resolver, taken.type_ref)?
     introduce_value(typed, taken.name, Parameter)
 }
 
-/// A type where one is written, and nothing where none is.
 // example: printed("fn f() {\n}\n", prelude_of(ast.Program { items: [] })) == "resolved\n3..4 value function declared 3..4\n"
 fn optional_type(resolver: Resolver, written: Option<ast.TypeRef>) -> Result<Resolver, ResolveError> {
     match written {
@@ -697,7 +597,6 @@ fn optional_type(resolver: Resolver, written: Option<ast.TypeRef>) -> Result<Res
     }
 }
 
-/// A `{ … }` body, whose bindings leave scope where it ends.
 // example: printed("fn f() -> Int {\n    let held = 1\n    held\n}\n", prelude_of(ast.Program { items: [] })) == "resolved\n3..4 value function declared 3..4\n10..13 type type prelude\n24..28 value local declared 24..28\n37..41 value local declared 24..28\n"
 fn block(resolver: Resolver, body: ast.Block) -> Result<Resolver, ResolveError> {
     var walked = resolver { values: entered(resolver.values) }
@@ -707,7 +606,6 @@ fn block(resolver: Resolver, body: ast.Block) -> Result<Resolver, ResolveError> 
     Ok(returned_to(inner: walked, outer: resolver))
 }
 
-/// One statement, whose binding is in scope from the statement after it.
 // example: printed("fn f() -> Int {\n    let total = total\n    1\n}\n", prelude_of(ast.Program { items: [] })) == "refused\nL0300 32..37 there is nothing named `total`\nhelp: a name is declared in this file, imported, or supplied by the prelude\n"
 fn statement(resolver: Resolver, written: ast.Statement) -> Result<Resolver, ResolveError> {
     match written.kind {
@@ -721,7 +619,6 @@ fn statement(resolver: Resolver, written: ast.Statement) -> Result<Resolver, Res
     }
 }
 
-/// `let name = value` or `var name = value`: the value first, then the name it binds.
 // example: printed("fn f() -> Int {\n    var total = 0\n    total\n}\n", prelude_of(ast.Program { items: [] })) == "resolved\n3..4 value function declared 3..4\n10..13 type type prelude\n24..29 value variable declared 24..29\n38..43 value variable declared 24..29\n"
 fn bind(resolver: Resolver, mutability: ast.Mutability, bound: ast.Name, value: ast.Expr) -> Result<Resolver, ResolveError> {
     let valued = expression(resolver: resolver, walked: value)?
@@ -731,7 +628,6 @@ fn bind(resolver: Resolver, mutability: ast.Mutability, bound: ast.Name, value: 
     }
 }
 
-/// `target = value`: the name an assignment changes, which is a `var` and nothing else, then the value.
 // example: printed("fn f() -> Int {\n    let total = 0\n    total = 1\n    total\n}\n", prelude_of(ast.Program { items: [] })) == "refused\nL0305 38..43 `total` is not a `var`, so it is never assigned to\nhelp: mutation is explicit: bind it with `var`, or bind a new name\n"
 fn assignment(resolver: Resolver, target: ast.Name, value: ast.Expr) -> Result<Resolver, ResolveError> {
     let named_one = named(resolver: resolver, name: target, position: Anywhere)?
@@ -742,7 +638,6 @@ fn assignment(resolver: Resolver, target: ast.Name, value: ast.Expr) -> Result<R
     expression(resolver: named_one { read: resolver.read }, walked: value)
 }
 
-/// A value where one is written, and nothing where none is.
 // example: printed("fn f() {\n    return\n}\n", prelude_of(ast.Program { items: [] })) == "resolved\n3..4 value function declared 3..4\n"
 fn optional_expression(resolver: Resolver, written: Option<ast.Expr>) -> Result<Resolver, ResolveError> {
     match written {
@@ -751,7 +646,6 @@ fn optional_expression(resolver: Resolver, written: Option<ast.Expr>) -> Result<
     }
 }
 
-/// A loop: its condition or what it loops over, then its body, with its binding in scope there.
 // example: printed("fn f(counts: List<Int>) {\n    for count in counts {\n        count\n    }\n    count\n}\n", prelude_of(ast.Program { items: [] })) == "refused\nL0300 76..81 there is nothing named `count`\nhelp: a name is declared in this file, imported, or supplied by the prelude\n"
 fn for_loop(resolver: Resolver, looped: ast.ForLoop) -> Result<Resolver, ResolveError> {
     let entered_one = resolver { values: entered(resolver.values) }
@@ -760,7 +654,6 @@ fn for_loop(resolver: Resolver, looped: ast.ForLoop) -> Result<Resolver, Resolve
     Ok(returned_to(inner: walked, outer: resolver))
 }
 
-/// What a loop reads before its body: nothing, a condition, or a list and the name of each value.
 // example: printed("fn f() {\n    for missing {\n    }\n}\n", prelude_of(ast.Program { items: [] })) == "refused\nL0300 17..24 there is nothing named `missing`\nhelp: a name is declared in this file, imported, or supplied by the prelude\n"
 fn loop_header(resolver: Resolver, header: ast.ForHeader) -> Result<Resolver, ResolveError> {
     match header {
@@ -770,9 +663,7 @@ fn loop_header(resolver: Resolver, header: ast.ForHeader) -> Result<Resolver, Re
     }
 }
 
-/// `for name in values`: the list first, then the name each value of it is bound to.
-///
-/// `for _ in values` binds nothing, so two loops nested one in the other may each write `_`.
+// `for _ in values` binds nothing, so two nested loops can each write `_`.
 // example: printed("fn f(counts: List<Int>) {\n    for counts in counts {\n    }\n}\n", prelude_of(ast.Program { items: [] })) == "refused\nL0302 34..40 `counts` is already in scope here\nhelp: rename the inner one; Bux never hides a name\n"
 fn looped_over(resolver: Resolver, bound: ast.Name, iterable: ast.Expr) -> Result<Resolver, ResolveError> {
     let walked = expression(resolver: resolver, walked: iterable)?
@@ -782,7 +673,6 @@ fn looped_over(resolver: Resolver, bound: ast.Name, iterable: ast.Expr) -> Resul
     introduce_value(walked, bound, Local)
 }
 
-/// Every name an expression writes, each pointed at what it means.
 // example: printed("fn f() -> Int {\n    [missing]\n}\n", prelude_of(ast.Program { items: [] })) == "refused\nL0300 21..28 there is nothing named `missing`\nhelp: a name is declared in this file, imported, or supplied by the prelude\n"
 fn expression(resolver: Resolver, walked: ast.Expr) -> Result<Resolver, ResolveError> {
     match walked.kind {
@@ -801,7 +691,6 @@ fn expression(resolver: Resolver, walked: ast.Expr) -> Result<Resolver, ResolveE
     }
 }
 
-/// `spawn Counter(0)`: the process this module declares, then each argument `start` takes.
 // example: printed("fn f() -> Int {\n    spawn f()\n}\n", prelude_of(ast.Program { items: [] })) == "refused\nL0800 26..27 `spawn` starts a process, and `f` is not one\nhelp: declare a `process`, or import the module that declares one, and name it after `spawn`\n"
 fn spawned(resolver: Resolver, started: ast.Expr) -> Result<Resolver, ResolveError> {
     match started.kind {
@@ -811,8 +700,6 @@ fn spawned(resolver: Resolver, started: ast.Expr) -> Result<Resolver, ResolveErr
     }
 }
 
-/// Why `spawn` refuses what it is written before where that is not a call: a bare name lacks
-/// the call, and anything else is not a process.
 // example: printed("process Counter {\n    fn start() -> Int {\n        0\n    }\n}\n\nfn f() -> Int {\n    spawn Counter\n}\n", prelude_of(ast.Program { items: [] })) == "refused\nL0800 87..94 `spawn` starts a process with a call, and `Counter` is written without one\nhelp: write the values that `start` takes in parentheses after the name, as in `spawn Counter()`\n"
 fn uncalled(started: ast.Expr) -> ResolveErrorKind {
     match started.kind {
@@ -821,8 +708,6 @@ fn uncalled(started: ast.Expr) -> ResolveErrorKind {
     }
 }
 
-/// Why `spawn` refuses a name after a dot with no call: through a module it lacks the call, and
-/// through anything else it is not a process.
 // example: printed("import demo\n\nfn f() -> Int {\n    spawn demo.Counter\n}\n", prelude_of(ast.Program { items: [] })) == "refused\nL0800 39..51 `spawn` starts a process with a call, and `demo.Counter` is written without one\nhelp: write the values that `start` takes in parentheses after the name, as in `spawn demo.Counter()`\n"
 // example: printed("fn f(held: Int) -> Int {\n    spawn held.count\n}\n", prelude_of(ast.Program { items: [] })) == "refused\nL0800 35..45 `spawn` starts a process, and `held.count` is not one\nhelp: declare a `process`, or import the module that declares one, and name it after `spawn`\n"
 fn uncalled_through(resolver: Resolver, started: ast.Expr, receiver: ast.Expr) -> Result<Resolver, ResolveError> {
@@ -833,8 +718,6 @@ fn uncalled_through(resolver: Resolver, started: ast.Expr, receiver: ast.Expr) -
     Err(ResolveError { kind: NotAProcess(written_text(started)), span: started.span })
 }
 
-/// The call after `spawn`, whose callee is the bare name of a process, or a name reached through
-/// a module.
 // example: printed("fn f(held: Int) -> Int {\n    spawn held.f()\n}\n", prelude_of(ast.Program { items: [] })) == "refused\nL0800 35..41 `spawn` starts a process, and `held.f` is not one\nhelp: declare a `process`, or import the module that declares one, and name it after `spawn`\n"
 fn process_started(resolver: Resolver, callee: ast.Expr, arguments: ast.Arguments) -> Result<Resolver, ResolveError> {
     match callee.kind {
@@ -844,10 +727,7 @@ fn process_started(resolver: Resolver, callee: ast.Expr, arguments: ast.Argument
     }
 }
 
-/// `spawn other.Counter(0)`: the module the process is reached through, then each argument.
-///
-/// Which names a module offers as processes is known to inference, which holds the name after the
-/// dot to one.
+// Inference knows which names a module offers as processes, so it holds the name after the dot.
 // example: printed("import io\n\nfn f() -> Int {\n    spawn io.Counter()\n}\n", prelude_of(ast.Program { items: [] })) == "resolved\n7..9 value module declared 7..9\n14..15 value function declared 14..15\n21..24 type type prelude\n37..39 value module declared 7..9\n"
 fn process_reached(resolver: Resolver, callee: ast.Expr, receiver: ast.Expr, arguments: ast.Arguments) -> Result<Resolver, ResolveError> {
     let walked = in_position(resolver: resolver, walked: receiver, position: Receiver)?
@@ -857,7 +737,6 @@ fn process_reached(resolver: Resolver, callee: ast.Expr, receiver: ast.Expr, arg
     passed(walked, arguments)
 }
 
-/// Whether `written` is the bare name of a module.
 // example: !is_module_name(resolver_of(prelude_of(ast.Program { items: [] })), ast.Expr { kind: ast.Unit, span: lexer.Span { start: 0, length: 2 } })
 fn is_module_name(resolver: Resolver, written: ast.Expr) -> Bool {
     match written.kind {
@@ -866,7 +745,6 @@ fn is_module_name(resolver: Resolver, written: ast.Expr) -> Bool {
     }
 }
 
-/// The process `name` means, then each argument `start` takes.
 // example: printed("process Counter {\n    fn start() -> Int {\n        0\n    }\n}\n\nfn f() -> Int {\n    spawn Counter(missing)\n}\n", prelude_of(ast.Program { items: [] })) == "refused\nL0300 95..102 there is nothing named `missing`\nhelp: a name is declared in this file, imported, or supplied by the prelude\n"
 fn process_named(resolver: Resolver, name: ast.Name, arguments: ast.Arguments) -> Result<Resolver, ResolveError> {
     let found = meaning(resolver.values, name)?
@@ -876,8 +754,6 @@ fn process_named(resolver: Resolver, name: ast.Name, arguments: ast.Arguments) -
     passed(value_read(resolver, name, found), arguments)
 }
 
-/// How a refusal names what `spawn` was written before: a name as it is, and any other form as
-/// `this`.
 // example: written_text(ast.Expr { kind: ast.Unit, span: lexer.Span { start: 0, length: 2 } }) == "this"
 fn written_text(written: ast.Expr) -> String {
     match written.kind {
@@ -888,20 +764,17 @@ fn written_text(written: ast.Expr) -> String {
     }
 }
 
-/// The two sides of an infix expression, left first.
 // example: printed("fn f() -> Int {\n    1 + missing\n}\n", prelude_of(ast.Program { items: [] })) == "refused\nL0300 24..31 there is nothing named `missing`\nhelp: a name is declared in this file, imported, or supplied by the prelude\n"
 fn both(resolver: Resolver, left: ast.Expr, right: ast.Expr) -> Result<Resolver, ResolveError> {
     let walked = expression(resolver: resolver, walked: left)?
     expression(resolver: walked, walked: right)
 }
 
-/// A call: what is called, which is where a function name is written, then each argument.
 // example: printed("fn f() -> Int {\n    f(f)\n}\n", prelude_of(ast.Program { items: [] })) == "refused\nL0304 22..23 `f` is a function, so it is written as a call\nhelp: version 0.1 reaches a function by calling it; write the call\n"
 fn call(resolver: Resolver, callee: ast.Expr, arguments: ast.Arguments) -> Result<Resolver, ResolveError> {
     passed(in_position(resolver: resolver, walked: callee, position: Callee)?, arguments)
 }
 
-/// The value of each argument a call passes, in the order it is written.
 // example: printed("fn f(a: Int) -> Int {\n    f(missing)\n}\n", prelude_of(ast.Program { items: [] })) == "refused\nL0300 28..35 there is nothing named `missing`\nhelp: a name is declared in this file, imported, or supplied by the prelude\n"
 fn passed(resolver: Resolver, arguments: ast.Arguments) -> Result<Resolver, ResolveError> {
     match arguments {
@@ -910,7 +783,6 @@ fn passed(resolver: Resolver, arguments: ast.Arguments) -> Result<Resolver, Reso
     }
 }
 
-/// The value of each argument written with the parameter it is passed for.
 // example: printed("fn f(a: Int) -> Int {\n    f(a: missing)\n}\n", prelude_of(ast.Program { items: [] })) == "refused\nL0300 31..38 there is nothing named `missing`\nhelp: a name is declared in this file, imported, or supplied by the prelude\n"
 fn named_arguments(resolver: Resolver, values: List<ast.NamedArgument>) -> Result<Resolver, ResolveError> {
     var walked = resolver
@@ -920,7 +792,6 @@ fn named_arguments(resolver: Resolver, values: List<ast.NamedArgument>) -> Resul
     Ok(walked)
 }
 
-/// Each expression, in the order it is written.
 // example: printed("fn f() -> Int {\n    [1, missing]\n}\n", prelude_of(ast.Program { items: [] })) == "refused\nL0300 24..31 there is nothing named `missing`\nhelp: a name is declared in this file, imported, or supplied by the prelude\n"
 fn each_expression(resolver: Resolver, values: List<ast.Expr>) -> Result<Resolver, ResolveError> {
     var walked = resolver
@@ -930,9 +801,7 @@ fn each_expression(resolver: Resolver, values: List<ast.Expr>) -> Result<Resolve
     Ok(walked)
 }
 
-/// `User { name: value }`: the name the value is built with, then the value of each field.
-///
-/// A field names a field of the type being built, which inference looks up, so it is left alone.
+// Inference looks up a field of the type that is built, so the resolver does not touch it.
 // example: printed("fn f() -> Int {\n    Missing { a: 1 }\n}\n", prelude_of(ast.Program { items: [] })) == "refused\nL0300 20..27 there is nothing named `Missing`\nhelp: a name is declared in this file, imported, or supplied by the prelude\n"
 fn record_literal(resolver: Resolver, base: ast.Path, fields: List<ast.FieldValue>) -> Result<Resolver, ResolveError> {
     var walked = built_as(resolver, base)?
@@ -942,7 +811,6 @@ fn record_literal(resolver: Resolver, base: ast.Path, fields: List<ast.FieldValu
     Ok(walked)
 }
 
-/// An `if` chain: each condition and the block it guards, then the `else` block.
 // example: printed("fn f() -> Int {\n    if missing {\n        1\n    } else {\n        2\n    }\n}\n", prelude_of(ast.Program { items: [] })) == "refused\nL0300 23..30 there is nothing named `missing`\nhelp: a name is declared in this file, imported, or supplied by the prelude\n"
 fn if_expression(resolver: Resolver, chain: ast.IfExpr) -> Result<Resolver, ResolveError> {
     var walked = resolver
@@ -956,7 +824,6 @@ fn if_expression(resolver: Resolver, chain: ast.IfExpr) -> Result<Resolver, Reso
     }
 }
 
-/// A `match`: what it matches, then each arm, whose bindings are in scope in its body alone.
 // example: printed("fn f(held: Int) -> Int {\n    match held {\n        one => one\n        other => one\n    }\n}\n", prelude_of(ast.Program { items: [] })) == "refused\nL0300 78..81 there is nothing named `one`\nhelp: a name is declared in this file, imported, or supplied by the prelude\n"
 fn match_expression(resolver: Resolver, matched: ast.MatchExpr) -> Result<Resolver, ResolveError> {
     var walked = expression(resolver: resolver, walked: matched.scrutinee)?
@@ -969,10 +836,7 @@ fn match_expression(resolver: Resolver, matched: ast.MatchExpr) -> Result<Resolv
     Ok(walked)
 }
 
-/// An expression where more than a value may be written, when it is a bare name or a dotted call.
-///
-/// The name after a dot is a field, or a function of the module before it, and neither is a
-/// name of this module, so inference looks it up.
+// The name after a dot is a field or a function of another module, so inference looks it up.
 // example: printed("import io\n\nfn f() -> Int {\n    io.count()\n}\n", prelude_of(ast.Program { items: [] })) == "resolved\n7..9 value module declared 7..9\n14..15 value function declared 14..15\n21..24 type type prelude\n31..33 value module declared 7..9\n"
 fn in_position(resolver: Resolver, walked: ast.Expr, position: Position) -> Result<Resolver, ResolveError> {
     match walked.kind {
@@ -982,9 +846,6 @@ fn in_position(resolver: Resolver, walked: ast.Expr, position: Position) -> Resu
     }
 }
 
-/// A name written as a value, refused where what it names is no value and `position` wants one.
-///
-/// A function is written only as the name of a call, and a module only before a `.`.
 // example: printed("import io\n\nfn f() -> Int {\n    let held = io\n    1\n}\n", prelude_of(ast.Program { items: [] })) == "refused\nL0304 42..44 `io` is a module, so a name inside it is what is written\nhelp: a module is what a name is reached through, as `io.println` is\n"
 fn named(resolver: Resolver, name: ast.Name, position: Position) -> Result<Resolver, ResolveError> {
     let found = meaning(resolver.values, name)?
@@ -995,9 +856,7 @@ fn named(resolver: Resolver, name: ast.Name, position: Position) -> Result<Resol
     in_place(used, name, found.kind)
 }
 
-/// The resolver where `name` is the prelude's `todo`, whose hole reads every name in scope.
-///
-/// A hole stands for code not yet written, and that code may read any name in scope.
+// A hole stands for code not yet written, and that code can read any name in scope.
 // example: printed("fn f(count: Int) -> Int {\n    todo(\"later\")\n}\n", prelude_of(ast.Program { items: [] })) == "resolved\n3..4 value function declared 3..4\n5..10 value parameter declared 5..10\n12..15 type type prelude\n20..23 type type prelude\n30..34 value function prelude\n"
 fn holes_read(resolver: Resolver, name: ast.Name, found: Definition) -> Resolver {
     match found.origin {
@@ -1006,7 +865,6 @@ fn holes_read(resolver: Resolver, name: ast.Name, found: Definition) -> Resolver
     }
 }
 
-/// The resolver where `name`, a name of the prelude, is `todo`, with every name in scope read.
 // example: prelude_hole_read(resolver_of(prelude_of(ast.Program { items: [] })), ast.Name { text: "or", span: lexer.Span { start: 0, length: 2 } }).values.depth == 0
 fn prelude_hole_read(resolver: Resolver, name: ast.Name) -> Resolver {
     if name.text != "todo" {
@@ -1019,7 +877,6 @@ fn prelude_hole_read(resolver: Resolver, name: ast.Name) -> Resolver {
     resolver { read: read }
 }
 
-/// Whether a name of `kind` belongs at `position` beyond an ordinary value.
 // example: can_take(Callee, Function)
 // example: !can_take(Anywhere, Function)
 fn can_take(position: Position, kind: DefinitionKind) -> Bool {
@@ -1030,7 +887,6 @@ fn can_take(position: Position, kind: DefinitionKind) -> Bool {
     }
 }
 
-/// The resolver as it is, where a name of `kind` is a value, and the refusal where it is not.
 // example: refused_printed(in_place(resolver_of(prelude_of(ast.Program { items: [] })), ast.Name { text: "f", span: lexer.Span { start: 0, length: 1 } }, Function)) == "refused\nL0304 0..1 `f` is a function, so it is written as a call\nhelp: version 0.1 reaches a function by calling it; write the call\n"
 fn in_place(resolver: Resolver, name: ast.Name, kind: DefinitionKind) -> Result<Resolver, ResolveError> {
     match kind {
@@ -1042,7 +898,6 @@ fn in_place(resolver: Resolver, name: ast.Name, kind: DefinitionKind) -> Result<
     }
 }
 
-/// A pattern: what a value has to be, and the names the arm's body goes on to read.
 // example: printed("fn f(held: Int) -> Int {\n    match held {\n        1 | 2 => 1\n        _ => 2\n    }\n}\n", prelude_of(ast.Program { items: [] })) == "resolved\n3..4 value function declared 3..4\n5..9 value parameter declared 5..9\n11..14 type type prelude\n19..22 type type prelude\n35..39 value parameter declared 5..9\n"
 fn pattern(resolver: Resolver, written_one: ast.Pattern) -> Result<Resolver, ResolveError> {
     match written_one.kind {
@@ -1054,7 +909,6 @@ fn pattern(resolver: Resolver, written_one: ast.Pattern) -> Result<Resolver, Res
     }
 }
 
-/// `Failed(reason)`: the constructor it names, then each pattern inside it.
 // example: printed("fn f(held: Int) -> Int {\n    match held {\n        Missing(one) => 1\n    }\n}\n", prelude_of(ast.Program { items: [] })) == "refused\nL0300 50..57 there is nothing named `Missing`\nhelp: a name is declared in this file, imported, or supplied by the prelude\n"
 fn tuple_pattern(resolver: Resolver, path: ast.Path, elements: List<ast.Pattern>) -> Result<Resolver, ResolveError> {
     var walked = built_as(resolver, path)?
@@ -1064,7 +918,6 @@ fn tuple_pattern(resolver: Resolver, path: ast.Path, elements: List<ast.Pattern>
     Ok(walked)
 }
 
-/// `User { id, name }`: the constructor it names, then each field it binds by its own name.
 // example: printed("fn f(held: Int) -> Int {\n    match held {\n        Missing { one } => 1\n    }\n}\n", prelude_of(ast.Program { items: [] })) == "refused\nL0300 50..57 there is nothing named `Missing`\nhelp: a name is declared in this file, imported, or supplied by the prelude\n"
 fn record_pattern(resolver: Resolver, path: ast.Path, fields: List<ast.Name>) -> Result<Resolver, ResolveError> {
     var walked = built_as(resolver, path)?
@@ -1074,7 +927,6 @@ fn record_pattern(resolver: Resolver, path: ast.Path, fields: List<ast.Name>) ->
     Ok(walked)
 }
 
-/// `Pending | Running`, whose alternatives match without binding anything.
 // example: printed("fn f(held: Int) -> Int {\n    match held {\n        1 | other => 1\n    }\n}\n", prelude_of(ast.Program { items: [] })) == "refused\nL0314 54..59 `other` binds inside an or-pattern, which binds nothing\nhelp: write one arm for each alternative where one of them binds\n"
 fn any_of(resolver: Resolver, alternatives: List<ast.Pattern>) -> Result<Resolver, ResolveError> {
     var walked = resolver
@@ -1085,7 +937,6 @@ fn any_of(resolver: Resolver, alternatives: List<ast.Pattern>) -> Result<Resolve
     Ok(walked)
 }
 
-/// Nothing where `alternative` binds no name, and the refusal of the first name it binds.
 // example: printed("fn f(held: Int) -> Int {\n    match held {\n        1 | 2 => 1\n        _ => 2\n    }\n}\n", prelude_of(ast.Program { items: [] })) == "resolved\n3..4 value function declared 3..4\n5..9 value parameter declared 5..9\n11..14 type type prelude\n19..22 type type prelude\n35..39 value parameter declared 5..9\n"
 fn binds_nothing(resolver: Resolver, alternative: ast.Pattern) -> Result<(), ResolveError> {
     match binds(resolver, alternative) {
@@ -1094,7 +945,6 @@ fn binds_nothing(resolver: Resolver, alternative: ast.Pattern) -> Result<(), Res
     }
 }
 
-/// The first name `written_one` would bind, which is nothing where it binds nothing.
 // example: printed("fn f(held: Int) -> Int {\n    match held {\n        1 | Some(other) => 1\n    }\n}\n", prelude_of(ok_or(parser.parse("type Option<T> =\n    | Some(T)\n    | None\n"), ast.Program { items: [] }))) == "refused\nL0314 59..64 `other` binds inside an or-pattern, which binds nothing\nhelp: write one arm for each alternative where one of them binds\n"
 fn binds(resolver: Resolver, written_one: ast.Pattern) -> Option<ast.Name> {
     match written_one.kind {
@@ -1106,7 +956,6 @@ fn binds(resolver: Resolver, written_one: ast.Pattern) -> Option<ast.Name> {
     }
 }
 
-/// The first name any of `patterns` would bind.
 // example: printed("fn f(held: Int) -> Int {\n    match held {\n        1 | Some(other) => 1\n    }\n}\n", prelude_of(ok_or(parser.parse("type Option<T> =\n    | Some(T)\n    | None\n"), ast.Program { items: [] }))) == "refused\nL0314 59..64 `other` binds inside an or-pattern, which binds nothing\nhelp: write one arm for each alternative where one of them binds\n"
 fn first_binding(resolver: Resolver, patterns: List<ast.Pattern>) -> Option<ast.Name> {
     for one in patterns {
@@ -1118,7 +967,6 @@ fn first_binding(resolver: Resolver, patterns: List<ast.Pattern>) -> Option<ast.
     None
 }
 
-/// Whether `found` holds a name.
 // example: !is_some(None)
 fn is_some(found: Option<ast.Name>) -> Bool {
     match found {
@@ -1127,7 +975,6 @@ fn is_some(found: Option<ast.Name>) -> Bool {
     }
 }
 
-/// The name a bare name pattern binds, which is nothing where it names a constructor.
 // example: printed("fn f(held: Int) -> Int {\n    match held {\n        1 | None => 1\n    }\n}\n", prelude_of(ok_or(parser.parse("type Option<T> =\n    | Some(T)\n    | None\n"), ast.Program { items: [] }))) == "resolved\n3..4 value function declared 3..4\n5..9 value parameter declared 5..9\n11..14 type type prelude\n19..22 type type prelude\n35..39 value parameter declared 5..9\n54..58 value constructor prelude\n"
 fn binding_name(resolver: Resolver, path: ast.Path) -> Option<ast.Name> {
     if is_dotted(path) || is_kind(look_up(resolver.values, path.name.text), Constructor) {
@@ -1136,10 +983,6 @@ fn binding_name(resolver: Resolver, path: ast.Path) -> Option<ast.Name> {
     Some(path.name)
 }
 
-/// A bare name matches what a constructor of that name carries, and otherwise binds the value.
-///
-/// A name reached through a module matches and never binds, because a binding is a name of this
-/// module and a dotted name is a name of another.
 // example: printed("fn f(held: Int) -> Int {\n    match held {\n        other => other\n    }\n}\n", prelude_of(ast.Program { items: [] })) == "resolved\n3..4 value function declared 3..4\n5..9 value parameter declared 5..9\n11..14 type type prelude\n19..22 type type prelude\n35..39 value parameter declared 5..9\n50..55 value local declared 50..55\n59..64 value local declared 50..55\n"
 fn bare_pattern(resolver: Resolver, path: ast.Path) -> Result<Resolver, ResolveError> {
     if is_dotted(path) {
@@ -1151,7 +994,6 @@ fn bare_pattern(resolver: Resolver, path: ast.Path) -> Result<Resolver, ResolveE
     introduce_value(resolver, path.name, Local)
 }
 
-/// Whether `path` is reached through a module, as `demo.User` is.
 // example: !is_dotted(ast.Path { module: None, name: ast.Name { text: "User", span: lexer.Span { start: 0, length: 4 } } })
 fn is_dotted(path: ast.Path) -> Bool {
     match path.module {
@@ -1160,7 +1002,6 @@ fn is_dotted(path: ast.Path) -> Bool {
     }
 }
 
-/// The name a value is built with, which is this module's constructor or another module's.
 // example: printed("fn f() -> Int {\n    demo.User { a: 1 }\n}\n", prelude_of(ast.Program { items: [] })) == "refused\nL0300 20..24 there is nothing named `demo`\nhelp: a name is declared in this file, imported, or supplied by the prelude\n"
 fn built_as(resolver: Resolver, path: ast.Path) -> Result<Resolver, ResolveError> {
     match path.module {
@@ -1169,7 +1010,6 @@ fn built_as(resolver: Resolver, path: ast.Path) -> Result<Resolver, ResolveError
     }
 }
 
-/// A written type: the name it is written with, then each of its arguments.
 // example: printed("fn f() -> List<Missing> {\n    []\n}\n", prelude_of(ast.Program { items: [] })) == "refused\nL0300 15..22 there is no type named `Missing`\nhelp: a name is declared in this file, imported, or supplied by the prelude\n"
 fn type_ref(resolver: Resolver, written_one: ast.TypeRef) -> Result<Resolver, ResolveError> {
     match written_one.kind {
@@ -1178,14 +1018,12 @@ fn type_ref(resolver: Resolver, written_one: ast.TypeRef) -> Result<Resolver, Re
     }
 }
 
-/// `List<User>` or `demo.User`: the name, then each argument.
 // example: printed("fn f() -> List<Int> {\n    []\n}\n", prelude_of(ast.Program { items: [] })) == "resolved\n3..4 value function declared 3..4\n10..14 type type prelude\n15..18 type type prelude\n"
 fn named_type_ref(resolver: Resolver, path: ast.Path, arguments: List<ast.TypeRef>) -> Result<Resolver, ResolveError> {
     let walked = type_path(resolver, path)?
     type_refs(walked, arguments)
 }
 
-/// The name a type is written with, which is a type of this module or one reached through another.
 // example: printed("fn f() -> demo.User {\n    todo(\"x\")\n}\n", prelude_of(ast.Program { items: [] })) == "refused\nL0300 10..14 there is nothing named `demo`\nhelp: a name is declared in this file, imported, or supplied by the prelude\n"
 fn type_path(resolver: Resolver, path: ast.Path) -> Result<Resolver, ResolveError> {
     match path.module {
@@ -1194,7 +1032,6 @@ fn type_path(resolver: Resolver, path: ast.Path) -> Result<Resolver, ResolveErro
     }
 }
 
-/// Each written type, in order.
 // example: printed("type Pair =\n    | Pair(Int, Bool)\n", prelude_of(ast.Program { items: [] })) == "resolved\n5..9 type type declared 5..9\n18..22 value constructor declared 18..22\n23..26 type type prelude\n28..32 type type prelude\n"
 fn type_refs(resolver: Resolver, types: List<ast.TypeRef>) -> Result<Resolver, ResolveError> {
     var walked = resolver
@@ -1204,9 +1041,6 @@ fn type_refs(resolver: Resolver, types: List<ast.TypeRef>) -> Result<Resolver, R
     Ok(walked)
 }
 
-/// The module a dotted name is reached through, which is a name in scope and has to be a module.
-///
-/// Nothing after the dot is resolved here: what that module declares is what answers it.
 // example: printed("fn f(held: Int) -> held.User {\n    todo(\"x\")\n}\n", prelude_of(ast.Program { items: [] })) == "refused\nL0313 19..23 `held` is a module in neither scope, and a type is reached through one\nhelp: a type of another module is reached through the import: write `demo.User`\n"
 fn through_module(resolver: Resolver, module: ast.Name) -> Result<Resolver, ResolveError> {
     let used = use_value(resolver, module)?
@@ -1216,7 +1050,6 @@ fn through_module(resolver: Resolver, module: ast.Name) -> Result<Resolver, Reso
     Err(at(module, NotAModule(module.text)))
 }
 
-/// A type as a type is written, refusing a trait, which names what a type can do and is none.
 // example: printed("fn f(held: Eq) -> Int {\n    1\n}\n", prelude_of(ok_or(parser.parse("trait Eq<T> {\n    fn is_equal(one: T, other: T) -> Bool\n}\n"), ast.Program { items: [] }))) == "refused\nL0311 11..13 `Eq` is a trait, not a type\nhelp: name the type, and constrain it with `<T: Eq<T>>` where it is\n"
 fn named_type(resolver: Resolver, name: ast.Name) -> Result<Resolver, ResolveError> {
     let used = use_type(resolver, name)?
@@ -1226,7 +1059,6 @@ fn named_type(resolver: Resolver, name: ast.Name) -> Result<Resolver, ResolveErr
     Ok(used)
 }
 
-/// The trait `name` names, refusing anything that is no trait.
 // example: printed("fn f<T: Int<T>>(held: T) -> Int {\n    1\n}\n", prelude_of(ast.Program { items: [] })) == "refused\nL0310 8..11 `Int` is not a trait\nhelp: a trait is declared with `trait`, and `Eq` is the one supplied\n"
 fn trait_named(resolver: Resolver, name: ast.Name) -> Result<Resolver, ResolveError> {
     let used = use_type(resolver, name)?
@@ -1236,7 +1068,6 @@ fn trait_named(resolver: Resolver, name: ast.Name) -> Result<Resolver, ResolveEr
     Ok(used)
 }
 
-/// Whether `found` is a definition of `kind`.
 // example: is_kind(Some(Definition { kind: Module, origin: InPrelude }), Module)
 // example: !is_kind(None, Module)
 fn is_kind(found: Option<Definition>, kind: DefinitionKind) -> Bool {
@@ -1246,14 +1077,12 @@ fn is_kind(found: Option<Definition>, kind: DefinitionKind) -> Bool {
     }
 }
 
-/// What `name` means in the value scope, recorded against the place it is written.
 // example: printed("fn f() -> Int {\n    missing\n}\n", prelude_of(ast.Program { items: [] })) == "refused\nL0300 20..27 there is nothing named `missing`\nhelp: a name is declared in this file, imported, or supplied by the prelude\n"
 fn use_value(resolver: Resolver, name: ast.Name) -> Result<Resolver, ResolveError> {
     let found = meaning(resolver.values, name)?
     Ok(value_read(resolver, name, found))
 }
 
-/// The resolver with `name` pointed at `found`, which reads the name where this module introduced it.
 // example: set.has_value(value_read(resolver_of(prelude_of(ast.Program { items: [] })), ast.Name { text: "a", span: lexer.Span { start: 9, length: 1 } }, Definition { kind: Local, origin: Declared(lexer.Span { start: 2, length: 1 }) }).read, 2)
 fn value_read(resolver: Resolver, name: ast.Name, found: Definition) -> Resolver {
     let pointed = with_found(resolver, recorded(found: resolver.found, namespace: ValueNamespace, name: name, definition: found))
@@ -1263,14 +1092,12 @@ fn value_read(resolver: Resolver, name: ast.Name, found: Definition) -> Resolver
     }
 }
 
-/// What `name` means in the type scope, recorded against the place it is written.
 // example: printed("fn f() -> Missing {\n    1\n}\n", prelude_of(ast.Program { items: [] })) == "refused\nL0300 10..17 there is no type named `Missing`\nhelp: a name is declared in this file, imported, or supplied by the prelude\n"
 fn use_type(resolver: Resolver, name: ast.Name) -> Result<Resolver, ResolveError> {
     let found = meaning(resolver.types, name)?
     Ok(with_found(resolver, recorded(found: resolver.found, namespace: TypeNamespace, name: name, definition: found)))
 }
 
-/// The definition `name` means in `scope`, or the refusal of a name that means nothing there.
 // example: refused_printed(meaning(resolver_of(prelude_of(ast.Program { items: [] })).types, ast.Name { text: "X", span: lexer.Span { start: 0, length: 1 } })) == "refused\nL0300 0..1 there is no type named `X`\nhelp: a name is declared in this file, imported, or supplied by the prelude\n"
 fn meaning(scope: Scope, name: ast.Name) -> Result<Definition, ResolveError> {
     match look_up(scope, name.text) {
@@ -1279,7 +1106,6 @@ fn meaning(scope: Scope, name: ast.Name) -> Result<Definition, ResolveError> {
     }
 }
 
-/// The failure a name missing from `namespace` amounts to.
 // example: message(missing(ValueNamespace, "x")) == "there is nothing named `x`"
 fn missing(namespace: Namespace, text: String) -> ResolveErrorKind {
     match namespace {
@@ -1288,7 +1114,6 @@ fn missing(namespace: Namespace, text: String) -> ResolveErrorKind {
     }
 }
 
-/// The definition `text` means in `scope`, where it means one.
 // example: is_kind(look_up(resolver_of(prelude_of(ast.Program { items: [] })).types, "Int"), Type)
 fn look_up(scope: Scope, text: String) -> Option<Definition> {
     match map.get(scope.names, text) {
@@ -1297,7 +1122,6 @@ fn look_up(scope: Scope, text: String) -> Option<Definition> {
     }
 }
 
-/// Declares `name` in the value scope, and points it at the definition it has just made.
 // example: printed("fn Some() -> Int {\n    1\n}\n", prelude_of(ok_or(parser.parse("type Option<T> =\n    | Some(T)\n    | None\n"), ast.Program { items: [] }))) == "refused\nL0302 3..7 `Some` is already in scope here\nhelp: rename the inner one; Bux never hides a name\n"
 fn introduce_value(resolver: Resolver, name: ast.Name, kind: DefinitionKind) -> Result<Resolver, ResolveError> {
     let values = introduced(resolver.values, name, kind)?
@@ -1307,7 +1131,6 @@ fn introduce_value(resolver: Resolver, name: ast.Name, kind: DefinitionKind) -> 
     Ok(resolver { values: values, found: found, introductions: list.push(resolver.introductions, introduction) })
 }
 
-/// Declares `name` in the type scope, and points it at the definition it has just made.
 // example: printed("type Int = {\n}\n", prelude_of(ast.Program { items: [] })) == "refused\nL0302 5..8 `Int` is already in scope here\nhelp: rename the inner one; Bux never hides a name\n"
 fn introduce_type(resolver: Resolver, name: ast.Name, kind: DefinitionKind) -> Result<Resolver, ResolveError> {
     let types = introduced(resolver.types, name, kind)?
@@ -1315,9 +1138,7 @@ fn introduce_type(resolver: Resolver, name: ast.Name, kind: DefinitionKind) -> R
     Ok(resolver { types: types, found: found })
 }
 
-/// `scope` with `name` in its innermost layer, refusing a name already in scope.
-///
-/// A name in the same layer is declared twice, and a name further out would be hidden.
+// A name in the same layer is declared twice, and a name further out would be hidden.
 // example: printed("fn f(total: Int) -> Int {\n    let total = 1\n    total\n}\n", prelude_of(ast.Program { items: [] })) == "refused\nL0302 34..39 `total` is already in scope here\nhelp: rename the inner one; Bux never hides a name\n"
 fn introduced(scope: Scope, name: ast.Name, kind: DefinitionKind) -> Result<Scope, ResolveError> {
     match map.get(scope.names, name.text) {
@@ -1326,7 +1147,6 @@ fn introduced(scope: Scope, name: ast.Name, kind: DefinitionKind) -> Result<Scop
     }
 }
 
-/// What a second declaration of `text` amounts to: twice in one layer, or hiding an outer one.
 // example: message(clash(scope: Scope { namespace: ValueNamespace, names: map.empty(), introduced: [], depth: 1 }, held: Held { definition: Definition { kind: Local, origin: InPrelude }, depth: 0 }, text: "x")) == "`x` is already in scope here"
 fn clash(scope: Scope, held: Held, text: String) -> ResolveErrorKind {
     if held.depth == scope.depth {
@@ -1335,13 +1155,11 @@ fn clash(scope: Scope, held: Held, text: String) -> ResolveErrorKind {
     Shadowed(text)
 }
 
-/// `found` with `name` pointed at `definition`, under the namespace it is written in.
 // example: list.length(names_of_variants([])) == 0
 fn recorded(found: map.Map<Int, Resolution>, namespace: Namespace, name: ast.Name, definition: Definition) -> map.Map<Int, Resolution> {
     map.insert(found, key_of(namespace, name.span.start), Resolution { namespace: namespace, name: name, definition: definition })
 }
 
-/// Where a name written at `start` is kept, which puts a type before a value at one place.
 // example: key_of(ValueNamespace, 3) == 7
 fn key_of(namespace: Namespace, start: Int) -> Int {
     match namespace {
@@ -1350,28 +1168,22 @@ fn key_of(namespace: Namespace, start: Int) -> Int {
     }
 }
 
-/// The resolver with `found` as what has been resolved so far.
 // example: with_found(resolver_of(prelude_of(ast.Program { items: [] })), map.empty()).types.depth == 0
 fn with_found(resolver: Resolver, found: map.Map<Int, Resolution>) -> Resolver {
     resolver { found: found }
 }
 
-/// The scopes of `outer`, and everything `inner` found, which is how a name leaves with its layer.
 // example: returned_to(inner: resolver_of(prelude_of(ast.Program { items: [] })), outer: resolver_of(prelude_of(ast.Program { items: [] }))).values.depth == 0
 fn returned_to(inner: Resolver, outer: Resolver) -> Resolver {
     inner { types: outer.types, values: outer.values }
 }
 
-/// `scope` with a new innermost layer, which the names introduced next go into.
 // example: entered(Scope { namespace: TypeNamespace, names: map.empty(), introduced: [], depth: 0 }).depth == 1
 fn entered(scope: Scope) -> Scope {
     scope { depth: scope.depth + 1 }
 }
 
-/// Refuses the first declaration written above something that uses it.
-///
-/// Two declarations that use each other are written either way, because no order undoes a cycle,
-/// so a use is out of order only where what it uses cannot reach back to it.
+// No order undoes a cycle, so a use is out of order only where its target cannot reach back.
 // example: printed("type Id = {\n}\n\nfn f(id: Id) -> Int {\n    1\n}\n", prelude_of(ast.Program { items: [] })) == "refused\nL0303 5..7 `Id` is written above `f`, which uses it\nhelp: a file reads top down: `bux fmt` moves it below what uses it\n"
 fn in_order(program: ast.Program, found: map.Map<Int, Resolution>) -> Result<(), ResolveError> {
     match first_out_of_order(uses_of(placements(program), found)) {
@@ -1380,13 +1192,11 @@ fn in_order(program: ast.Program, found: map.Map<Int, Resolution>) -> Result<(),
     }
 }
 
-/// The refusal `kind`, pointing at `name`.
 // example: refusal_printed(at(ast.Name { text: "x", span: lexer.Span { start: 0, length: 1 } }, NotCalled("x"))) == "refused\nL0304 0..1 `x` is a function, so it is written as a call\nhelp: version 0.1 reaches a function by calling it; write the call\n"
 fn at(name: ast.Name, kind: ResolveErrorKind) -> ResolveError {
     ResolveError { kind: kind, span: name.span }
 }
 
-/// The use that is out of order and first, by the declaration it means, then the one it is in.
 // example: printed("fn f() -> Int {\n    g()\n}\n\nfn g() -> Int {\n    f()\n}\n", prelude_of(ast.Program { items: [] })) == "resolved\n3..4 value function declared 3..4\n10..13 type type prelude\n20..21 value function declared 30..31\n30..31 value function declared 30..31\n37..40 type type prelude\n47..48 value function declared 3..4\n"
 fn first_out_of_order(uses: Uses) -> Option<Edge> {
     var first = None
@@ -1398,7 +1208,6 @@ fn first_out_of_order(uses: Uses) -> Option<Edge> {
     first
 }
 
-/// Whichever of the two comes first, by the declaration it means, then by the one it is in.
 // example: earlier(None, Edge { meant: 1, writes: 2, name: ast.Name { text: "a", span: lexer.Span { start: 0, length: 1 } }, declared: "a", used_by: "b" }).writes == 2
 fn earlier(first: Option<Edge>, edge: Edge) -> Edge {
     match first {
@@ -1407,7 +1216,6 @@ fn earlier(first: Option<Edge>, edge: Edge) -> Edge {
     }
 }
 
-/// `one` where it comes before `other`, and `other` otherwise.
 // example: earliest(one: Edge { meant: 1, writes: 3, name: ast.Name { text: "a", span: lexer.Span { start: 0, length: 1 } }, declared: "a", used_by: "b" }, other: Edge { meant: 1, writes: 2, name: ast.Name { text: "a", span: lexer.Span { start: 0, length: 1 } }, declared: "a", used_by: "c" }).used_by == "c"
 fn earliest(one: Edge, other: Edge) -> Edge {
     if one.meant < other.meant || one.meant == other.meant && one.writes < other.writes {
@@ -1416,10 +1224,7 @@ fn earliest(one: Edge, other: Edge) -> Edge {
     other
 }
 
-/// The position of each of `count` declarations, in the order a file reads top down.
-///
-/// Of the declarations free to go next, the one written first goes next, so a file already in that
-/// order keeps it, and a declaration moves only as far as a use makes it.
+// The first declaration that is free goes next, so a file already in order keeps its order.
 // example: read_top_down(Uses { edges: [], from: map.insert(map.empty(), 0, [1]) }, 2) == [0, 1]
 // example: read_top_down(Uses { edges: [Edge { meant: 0, writes: 1, name: ast.Name { text: "a", span: lexer.Span { start: 0, length: 1 } }, declared: "a", used_by: "b" }], from: map.insert(map.empty(), 1, [0]) }, 2) == [1, 0]
 fn read_top_down(uses: Uses, count: Int) -> List<Int> {
@@ -1434,12 +1239,8 @@ fn read_top_down(uses: Uses, count: Int) -> List<Int> {
     order
 }
 
-/// For each of `count` declarations, the declarations written above it once the file reads top
-/// down.
-///
-/// A declaration waits for each one that uses it where it cannot reach back to that one. Of two
-/// declarations that use each other, the later one waits for the earlier, which keeps the order the
-/// author wrote. Neither wait makes a ring, so some declaration is always free to go next.
+// Of two declarations that use each other, the later one waits, so the order of the author stays.
+// No wait makes a ring, so a declaration is always free to go next.
 // example: or(map.get(waits_of(Uses { edges: [], from: map.insert(map.insert(map.empty(), 0, [1]), 1, [0]) }, 2), 1), []) == [0]
 fn waits_of(uses: Uses, count: Int) -> map.Map<Int, List<Int>> {
     var reached = []
@@ -1462,7 +1263,6 @@ fn waits_of(uses: Uses, count: Int) -> map.Map<Int, List<Int>> {
     waits
 }
 
-/// The nearest declaration above `later` that it uses both ways, where there is one.
 // example: cycle_kept(reached: [set.insert(set.empty(), 1), set.insert(set.empty(), 0)], later: 1) == [0]
 // example: cycle_kept(reached: [set.insert(set.empty(), 1), set.empty()], later: 1) == []
 fn cycle_kept(reached: List<set.Set<Int>>, later: Int) -> List<Int> {
@@ -1476,17 +1276,13 @@ fn cycle_kept(reached: List<set.Set<Int>>, later: Int) -> List<Int> {
     []
 }
 
-/// Whether the declaration `from` uses `to`, as `reached` holds what each one uses.
 // example: is_reached(reached: [set.insert(set.empty(), 1)], from: 0, to: 1)
 // example: !is_reached(reached: [], from: 0, to: 1)
 fn is_reached(reached: List<set.Set<Int>>, from: Int, to: Int) -> Bool {
     set.has_value(or(list.at(reached, from), set.empty()), to)
 }
 
-/// The first declaration not yet placed whose waits are all placed.
-///
-/// The waits hold no ring, so there is always one. The first declaration not placed stands in
-/// otherwise, so the order still holds each declaration once.
+// The waits hold no ring, so one is always free; the fallback keeps each declaration once.
 // example: first_free(waits: map.insert(map.empty(), 0, [1]), count: 2, placed: set.empty()) == 1
 // example: first_free(waits: map.insert(map.empty(), 0, [1]), count: 2, placed: set.insert(set.empty(), 1)) == 0
 fn first_free(waits: map.Map<Int, List<Int>>, count: Int, placed: set.Set<Int>) -> Int {
@@ -1504,7 +1300,6 @@ fn first_free(waits: map.Map<Int, List<Int>>, count: Int, placed: set.Set<Int>) 
     or(list.at(unplaced, 0), 0)
 }
 
-/// Whether every declaration in `waits` is placed.
 // example: is_free([], set.empty())
 // example: !is_free([0], set.empty())
 fn is_free(waits: List<Int>, placed: set.Set<Int>) -> Bool {
@@ -1516,7 +1311,6 @@ fn is_free(waits: List<Int>, placed: set.Set<Int>) -> Bool {
     true
 }
 
-/// `items` with each declaration in the slot `order` gives it, and each import and test in its own.
 // example: list.length(in_slots([], [])) == 0
 fn in_slots(items: List<ast.Item>, order: List<Int>) -> List<ast.Item> {
     var declarations = []
@@ -1538,7 +1332,6 @@ fn in_slots(items: List<ast.Item>, order: List<Int>) -> List<ast.Item> {
     arranged
 }
 
-/// Whether `declared` is placed by what uses it, which every item but an import and a test is.
 // example: !is_placed(ast.Import(ast.ImportDeclaration { module: ast.Name { text: "io", span: lexer.Span { start: 7, length: 2 } }, span: lexer.Span { start: 0, length: 9 } }))
 fn is_placed(declared: ast.Item) -> Bool {
     match declared {
@@ -1547,14 +1340,12 @@ fn is_placed(declared: ast.Item) -> Bool {
     }
 }
 
-/// Whether the declaration `from` uses `to`, however many declarations it takes to get there.
 // example: can_reach(uses: map.insert(map.insert(map.empty(), 0, [1]), 1, [2]), from: 0, to: 2)
 // example: !can_reach(uses: map.insert(map.empty(), 0, [1]), from: 1, to: 0)
 fn can_reach(uses: map.Map<Int, List<Int>>, from: Int, to: Int) -> Bool {
     set.has_value(reached_from(uses: uses, from: from), to)
 }
 
-/// Every declaration that `from` uses, however many declarations it takes to get there.
 // example: set.has_value(reached_from(uses: map.insert(map.insert(map.empty(), 0, [1]), 1, [2]), from: 0), 2)
 // example: !set.has_value(reached_from(uses: map.insert(map.empty(), 0, [1]), from: 0), 0)
 fn reached_from(uses: map.Map<Int, List<Int>>, from: Int) -> set.Set<Int> {
@@ -1573,7 +1364,6 @@ fn reached_from(uses: map.Map<Int, List<Int>>, from: Int) -> set.Set<Int> {
     reached
 }
 
-/// Which declaration uses which, each pair once, with what each declaration uses.
 // example: list.length(uses_of(placements(ast.Program { items: [] }), map.empty()).edges) == 0
 fn uses_of(placed: List<Placed>, found: map.Map<Int, Resolution>) -> Uses {
     var gathered = Uses { edges: [], from: map.empty() }
@@ -1587,7 +1377,6 @@ fn uses_of(placed: List<Placed>, found: map.Map<Int, Resolution>) -> Uses {
     gathered
 }
 
-/// `gathered` with `edge` in it, unless it is a declaration using itself or is in it already.
 // example: list.length(with_use(Uses { edges: [], from: map.empty() }, Edge { meant: 1, writes: 1, name: ast.Name { text: "a", span: lexer.Span { start: 0, length: 1 } }, declared: "a", used_by: "a" }).edges) == 0
 fn with_use(gathered: Uses, edge: Edge) -> Uses {
     let already = or(map.get(gathered.from, edge.writes), [])
@@ -1597,7 +1386,6 @@ fn with_use(gathered: Uses, edge: Edge) -> Uses {
     Uses { edges: list.push(gathered.edges, edge), from: map.insert(gathered.from, edge.writes, list.push(already, edge.meant)) }
 }
 
-/// The declaration each name written inside `extent` means, where it means one of this module.
 // example: list.length(meant_inside([], map.empty(), lexer.Span { start: 0, length: 4 })) == 0
 fn meant_inside(placed: List<Placed>, found: map.Map<Int, Resolution>, extent: lexer.Span) -> List<Indexed> {
     var meant = []
@@ -1610,7 +1398,6 @@ fn meant_inside(placed: List<Placed>, found: map.Map<Int, Resolution>, extent: l
     meant
 }
 
-/// `meant` with `one` after it, where there is one.
 // example: list.length(with_meant([], None)) == 0
 fn with_meant(meant: List<Indexed>, one: Option<Indexed>) -> List<Indexed> {
     match one {
@@ -1619,7 +1406,6 @@ fn with_meant(meant: List<Indexed>, one: Option<Indexed>) -> List<Indexed> {
     }
 }
 
-/// The declaration of this module a resolved name means, which a prelude name means none of.
 // example: is_none(meant_by([], None))
 fn meant_by(placed: List<Placed>, resolution: Option<Resolution>) -> Option<Indexed> {
     match resolution {
@@ -1628,7 +1414,6 @@ fn meant_by(placed: List<Placed>, resolution: Option<Resolution>) -> Option<Inde
     }
 }
 
-/// Whether nothing is there.
 // example: is_none(None)
 private fn is_none(found: Option<Indexed>) -> Bool {
     match found {
@@ -1637,7 +1422,6 @@ private fn is_none(found: Option<Indexed>) -> Bool {
     }
 }
 
-/// The declaration holding the name that `origin` points at, where it is declared in this module.
 // example: is_none(declared_in([], InPrelude))
 fn declared_in(placed: List<Placed>, origin: Origin) -> Option<Indexed> {
     match origin {
@@ -1646,7 +1430,6 @@ fn declared_in(placed: List<Placed>, origin: Origin) -> Option<Indexed> {
     }
 }
 
-/// The declaration whose source holds the byte at `offset`, with its position among them.
 // example: is_none(holding([], 0))
 fn holding(placed: List<Placed>, offset: Int) -> Option<Indexed> {
     var index = 0
@@ -1659,9 +1442,7 @@ fn holding(placed: List<Placed>, offset: Int) -> Option<Indexed> {
     None
 }
 
-/// Every declaration of the module in source order, which is every item but an import.
-///
-/// An import is placed by canonical form rather than by what uses it.
+// Canonical form places an import, and not the declarations that use it.
 // example: list.length(placements(ok_or(parser.parse("import io\n\nfn f() {\n}\n"), ast.Program { items: [] }))) == 1
 fn placements(program: ast.Program) -> List<Placed> {
     var placed = []
@@ -1671,9 +1452,7 @@ fn placements(program: ast.Program) -> List<Placed> {
     placed
 }
 
-/// `placed` with `declared` after it, spoken of as a refusal names it.
-///
-/// An instance and a derive declare no name, so each is spoken of as it is written.
+// An instance and a derive declare no name, so a refusal speaks of each as it is written.
 // example: list.length(with_placed([], ast.Import(ast.ImportDeclaration { module: ast.Name { text: "io", span: lexer.Span { start: 7, length: 2 } }, span: lexer.Span { start: 0, length: 9 } }))) == 0
 fn with_placed(placed: List<Placed>, declared: ast.Item) -> List<Placed> {
     match declared {
@@ -1689,13 +1468,11 @@ fn with_placed(placed: List<Placed>, declared: ast.Item) -> List<Placed> {
     }
 }
 
-/// The one text an instance of `of` for `for_type` is known by, which no two instances share.
 // example: claim(of: "Eq", for_type: "Int") == "Eq<Int>"
 fn claim(of: String, for_type: String) -> String {
     of + "<" + for_type + ">"
 }
 
-/// A derive as the module wrote it, which is how a refusal speaks of it.
 // example: derive_written(ast.DeriveDeclaration { traits: [ast.Name { text: "Eq", span: lexer.Span { start: 7, length: 2 } }, ast.Name { text: "Show", span: lexer.Span { start: 11, length: 4 } }], for_type: ast.Name { text: "User", span: lexer.Span { start: 20, length: 4 } }, span: lexer.Span { start: 0, length: 24 } }) == "derive Eq, Show for User"
 fn derive_written(declaration: ast.DeriveDeclaration) -> String {
     var traits = []
@@ -1705,9 +1482,7 @@ fn derive_written(declaration: ast.DeriveDeclaration) -> String {
     "derive " + strings.join(traits, ", ") + " for " + declaration.for_type.text
 }
 
-/// Each resolved name on a line of its own, in the order of its span, a type before a value.
-///
-/// Every name is inside an item, so the walk stops where the last item ends.
+// Every name is inside an item, so the walk stops where the last item ends.
 // example: resolved_printed(Resolved { module: "main", program: ast.Program { items: [] }, found: map.empty() }) == "resolved\n"
 fn resolved_printed(resolved: Resolved) -> String {
     let end = end_of_items(resolved.program)
@@ -1720,7 +1495,6 @@ fn resolved_printed(resolved: Resolved) -> String {
     written
 }
 
-/// Where the last item of `program` ends, which is where the last name of it ends at the latest.
 // example: end_of_items(ok_or(parser.parse("import io\n"), ast.Program { items: [] })) == 9
 fn end_of_items(program: ast.Program) -> Int {
     var end = 0
@@ -1731,7 +1505,6 @@ fn end_of_items(program: ast.Program) -> Int {
     end
 }
 
-/// The line of the name kept at `key`, and nothing where no name is kept there.
 // example: line_at(map.empty(), 0) == ""
 fn line_at(found: map.Map<Int, Resolution>, key: Int) -> String {
     match map.get(found, key) {
@@ -1740,14 +1513,12 @@ fn line_at(found: map.Map<Int, Resolution>, key: Int) -> String {
     }
 }
 
-/// `<span> <namespace> <kind> <origin>`, one resolved name.
 // example: resolution_line(Resolution { namespace: TypeNamespace, name: ast.Name { text: "Int", span: lexer.Span { start: 3, length: 3 } }, definition: Definition { kind: Type, origin: InPrelude } }) == "3..6 type type prelude\n"
 fn resolution_line(resolution: Resolution) -> String {
     let definition = resolution.definition
     shown(resolution.name.span) + " " + namespace_word(resolution.namespace) + " " + kind_word(definition.kind) + " " + origin_words(definition.origin) + "\n"
 }
 
-/// The word a namespace is printed as.
 // example: namespace_word(ValueNamespace) == "value"
 fn namespace_word(namespace: Namespace) -> String {
     match namespace {
@@ -1756,7 +1527,6 @@ fn namespace_word(namespace: Namespace) -> String {
     }
 }
 
-/// The word a kind of definition is printed as.
 // example: kind_word(TypeParameter) == "type-parameter"
 fn kind_word(kind: DefinitionKind) -> String {
     match kind {
@@ -1774,7 +1544,6 @@ fn kind_word(kind: DefinitionKind) -> String {
     }
 }
 
-/// `prelude`, or `declared` and the span of the name that declares it.
 // example: origin_words(Declared(lexer.Span { start: 1, length: 2 })) == "declared 1..3"
 fn origin_words(origin: Origin) -> String {
     match origin {
@@ -1783,7 +1552,6 @@ fn origin_words(origin: Origin) -> String {
     }
 }
 
-/// The refusal `answer` holds, printed, and `not refused` where it holds none.
 // example: refused_printed(Ok(1)) == "not refused\n"
 private fn refused_printed<T>(answer: Result<T, ResolveError>) -> String {
     match answer {
@@ -1792,13 +1560,11 @@ private fn refused_printed<T>(answer: Result<T, ResolveError>) -> String {
     }
 }
 
-/// `refused`, then the code, the span, and the message, then the help.
 // example: refusal_printed(ResolveError { kind: NotATrait("Int"), span: lexer.Span { start: 1, length: 3 } }) == "refused\nL0310 1..4 `Int` is not a trait\nhelp: a trait is declared with `trait`, and `Eq` is the one supplied\n"
 fn refusal_printed(refused: ResolveError) -> String {
     "refused\n" + code_of(refused.kind) + " " + shown(refused.span) + " " + message(refused.kind) + "\nhelp: " + help_of(refused.kind) + "\n"
 }
 
-/// The code a refusal of this kind is refused with, which `docs/specs/modules.md` lists.
 // example: code_of(WrittenAbove { declared: "a", used_by: "b" }) == "L0303"
 fn code_of(kind: ResolveErrorKind) -> String {
     match kind {
@@ -1831,7 +1597,6 @@ fn code_of(kind: ResolveErrorKind) -> String {
     }
 }
 
-/// The `error:` line, without its prefix.
 // example: message(InstanceTwice { of: "Eq", for_type: "Int" }) == "`Eq` already has an instance for `Int`"
 fn message(kind: ResolveErrorKind) -> String {
     match kind {
@@ -1864,7 +1629,6 @@ fn message(kind: ResolveErrorKind) -> String {
     }
 }
 
-/// The `help:` line, which every refusal of resolution has.
 // example: help_of(Shadowed("x")) == "rename the inner one; Bux never hides a name"
 fn help_of(kind: ResolveErrorKind) -> String {
     match kind {
@@ -1897,16 +1661,12 @@ fn help_of(kind: ResolveErrorKind) -> String {
     }
 }
 
-/// A module whose every name that has a definition points at it.
-///
-/// The tree comes through unchanged, and each answer is kept under the place its name is written.
 type Resolved = {
     module: String
     program: ast.Program
     found: map.Map<Int, Resolution>
 }
 
-/// The names in scope in every module without an import, which `prelude_of` reads.
 type Prelude = {
     types: map.Map<String, Held>
     values: map.Map<String, Held>
@@ -1914,14 +1674,11 @@ type Prelude = {
     traits: map.Map<String, List<String>>
 }
 
-/// The walked module, and each module name that an example of it writes before a dot.
 type Reading = {
     walked: Resolver
     examples_read: set.Set<String>
 }
 
-/// The two scopes, every name resolved so far, where each name that is read is introduced, each
-/// value name this module introduces, every instance claimed, and each trait's methods.
 type Resolver = {
     types: Scope
     values: Scope
@@ -1932,10 +1689,7 @@ type Resolver = {
     traits: map.Map<String, List<String>>
 }
 
-/// One namespace: every name in scope, where each one this module introduced is introduced, and
-/// how many layers deep the innermost one is.
-///
-/// No name hides another, so each name is in one layer, and the scope holds which one.
+// No name hides another, so each name is in one layer, and the scope holds which one.
 type Scope = {
     namespace: Namespace
     names: map.Map<String, Held>
@@ -1943,20 +1697,17 @@ type Scope = {
     depth: Int
 }
 
-/// A definition in scope, and the layer it was introduced in.
 type Held = {
     definition: Definition
     depth: Int
 }
 
-/// One name, where it is written, and the definition it means.
 type Resolution = {
     namespace: Namespace
     name: ast.Name
     definition: Definition
 }
 
-/// The definition one occurrence of a name means.
 type Definition = {
     kind: DefinitionKind
     origin: Origin
@@ -1964,7 +1715,6 @@ type Definition = {
 
 derive Eq for DefinitionKind
 
-/// What kind of thing a name was declared as.
 type DefinitionKind =
     | Module
     | Type
@@ -1978,31 +1728,26 @@ type DefinitionKind =
     | Variable
     | ProcessName
 
-/// Where a definition came from: the prelude, or the name that declares it in this module.
 type Origin =
     | InPrelude
     | Declared(lexer.Span)
 
-/// Which of the two scopes a name is written in, which never mix.
 type Namespace =
     | TypeNamespace
     | ValueNamespace
 
 derive Eq for Position
 
-/// Where a name is written, which is what decides whether it must name a value.
 type Position =
     | Anywhere
     | Callee
     | Receiver
 
-/// Why resolution refused, and the name it points at.
 type ResolveError = {
     kind: ResolveErrorKind
     span: lexer.Span
 }
 
-/// What went wrong, in the words the reader sees.
 type ResolveErrorKind =
     | NoValue(String)
     | NoType(String)
@@ -2046,21 +1791,17 @@ type ResolveErrorKind =
     | NotACall(String)
     | NotSpawned(String)
 
-/// Where each name some place reads is introduced, each parameter held to being read, and each
-/// module name that an example writes before a dot.
 type Reads = {
     read: set.Set<Int>
     held: set.Set<Int>
     examples_read: set.Set<String>
 }
 
-/// Which declaration uses which, each pair once, and what each declaration uses.
 type Uses = {
     edges: List<Edge>
     from: map.Map<Int, List<Int>>
 }
 
-/// One declaration using another, by position, with the words a refusal of it names.
 type Edge = {
     meant: Int
     writes: Int
@@ -2069,13 +1810,11 @@ type Edge = {
     used_by: String
 }
 
-/// A declaration and its position among the declarations of the module.
 type Indexed = {
     index: Int
     placed: Placed
 }
 
-/// A declaration: the name a refusal points at, the words it is spoken of in, and its source.
 type Placed = {
     name: ast.Name
     written: String

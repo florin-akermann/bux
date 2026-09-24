@@ -7,19 +7,16 @@
 // costs what a map costs and the walk of the trie is written once rather than twice.
 import map
 
-/// The set that holds nothing, which every set is built out of.
 // example: !has_value(empty(), 1)
 fn empty<T>() -> Set<T> {
     Set(map.empty())
 }
 
-/// The set this one becomes with `value` in it, which is this one where it is in it already.
 // example: has_value(insert(empty(), 1), 1)
 fn insert<T: Eq<T> + Hash<T>>(into: Set<T>, value: T) -> Set<T> {
     Set(map.insert(held_by(into), value, true))
 }
 
-/// Whether the set holds a value equal to this one.
 // example: !has_value(insert(empty(), 1), 2)
 fn has_value<T: Eq<T> + Hash<T>>(within: Set<T>, value: T) -> Bool {
     match map.get(held_by(within), value) {
@@ -28,7 +25,6 @@ fn has_value<T: Eq<T> + Hash<T>>(within: Set<T>, value: T) -> Bool {
     }
 }
 
-/// The map the set is written over, which holds one value at a key for each member.
 // example: or(map.get(held_by(insert(empty(), 1)), 1), false)
 fn held_by<T>(within: Set<T>) -> map.Map<T, Bool> {
     match within {

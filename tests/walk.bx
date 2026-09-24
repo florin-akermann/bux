@@ -9,7 +9,6 @@ import modules
 import programs
 import strings
 
-/// Every file under `directory` whose name ends in `ending`, at any depth, in the order names sort.
 // example: list.length(every_file(directory: "no-such-directory", ending: ".bx")) == 0
 fn every_file(directory: String, ending: String) -> List<String> {
     var found = []
@@ -26,7 +25,6 @@ fn every_file(directory: String, ending: String) -> List<String> {
     found
 }
 
-/// Every file directly in `directory` whose name ends in `ending`, in the order names sort.
 // example: list.length(files_in(directory: "no-such-directory", ending: ".bx")) == 0
 fn files_in(directory: String, ending: String) -> List<String> {
     var found = []
@@ -45,7 +43,6 @@ fn start_limit() -> Int {
     60
 }
 
-/// `path` with the extension after its last dot put in place of `extension`.
 // example: sibling(path: "a/b.bx", extension: "tokens") == "a/b.tokens"
 fn sibling(path: String, extension: String) -> String {
     let dot = modules.last_unit(path, 46)
@@ -55,7 +52,6 @@ fn sibling(path: String, extension: String) -> String {
     or(strings.cut(path, 0, dot + 1), "") + extension
 }
 
-/// Whether `text` ends with `ending`.
 // example: is_ending_in(text: "a.bx", ending: ".bx")
 // example: !is_ending_in(text: "a.bxx", ending: ".bx")
 fn is_ending_in(text: String, ending: String) -> Bool {
@@ -63,7 +59,6 @@ fn is_ending_in(text: String, ending: String) -> Bool {
     from >= 0 && or(strings.cut(text, from, strings.length(text)), "") == ending
 }
 
-/// Every line of `text`, each without its line break, the empty ones kept.
 // example: list.length(lines_of("a\n\nb\n")) == 3
 fn lines_of(text: String) -> List<String> {
     var lines = []
@@ -82,21 +77,15 @@ fn lines_of(text: String) -> List<String> {
     lines
 }
 
-/// Starts `line` in `directory` with no input, and gives back what it wrote and its status.
-///
-/// What the program writes goes into two files of the directory, so a program writing much on one
-/// stream never waits on a reader of the other. A program still running `limit` seconds after it
-/// started is stopped, so one program that never ends cannot stop its test.
+// The output goes into two files, so a program that writes much on one stream never waits.
+// The limit stops a program that never ends, so that program cannot stop its test.
 // example: ok_or(completed(line: ["no-such-program-at-all"], directory: "no-such-directory", limit: 1), Ended { output: "", errors: "", status: 7 }).status == 7
 fn completed(line: List<String>, directory: String, limit: Int) -> Result<Ended, Unended> {
     completed_from(line: line, directory: directory, written: directory, limit: limit)
 }
 
-/// Starts `line` in `directory` with no input, its two streams written into the directory
-/// `written`, and gives back what it wrote and its status.
-///
-/// Programs that start in one directory at the same time each write into a directory of their own.
-/// Each starts with the environment that `command.cleared` leaves, as a run of `bux test` starts.
+// Programs that start in one directory at the same time each write into a directory of their own.
+// Each starts with the environment that `command.cleared` leaves, as a run of `bux test` starts.
 // example: ok_or(completed_from(line: ["no-such-program-at-all"], directory: ".", written: "no-such-directory", limit: 1), Ended { output: "", errors: "", status: 7 }).status == 7
 fn completed_from(line: List<String>, directory: String, written: String, limit: Int) -> Result<Ended, Unended> {
     let output = modules.joined(written, ".output")
@@ -110,10 +99,7 @@ fn completed_from(line: List<String>, directory: String, written: String, limit:
     }
 }
 
-/// What `running` wrote into the files `streams` names, where it ends within `limit` seconds.
-///
-/// A program that does not end by then is stopped, and the caller waits until it is gone. What
-/// it wrote on its standard output until then is kept, so a caller can see how far it came.
+// The standard output until the stop stays, so a caller can see how far the program came.
 // example: unended_said(PastLimit(2, ""), "the program") == "the program did not end within 2 s, and was stopped"
 fn ended_or_stopped(running: programs.Running, limit: Int, streams: Streams) -> Result<Ended, Unended> {
     if ok_or(programs.is_ended_within(running, limit, programs.seconds()), false) {
@@ -124,7 +110,6 @@ fn ended_or_stopped(running: programs.Running, limit: Int, streams: Streams) -> 
     Err(PastLimit(limit, ok_or(files.read(streams.output), "")))
 }
 
-/// What a check says of a program, named `program`, that gave no status back.
 // example: unended_said(NotStarted, "the launcher") == "the launcher could not be started"
 fn unended_said(unended: Unended, program: String) -> String {
     match unended {
@@ -133,29 +118,22 @@ fn unended_said(unended: Unended, program: String) -> String {
     }
 }
 
-/// What a program that ended with `status` wrote into the files `output` and `errors` name.
-///
-/// The status is taken first, because a program has written all it writes only once it has ended.
+// The status comes first, because a program has written all its output only when it has ended.
 // example: read_after(status: 3, output: "no-such-directory/a", errors: "no-such-directory/b").status == 3
 fn read_after(status: Int, output: String, errors: String) -> Ended {
     Ended { output: ok_or(files.read(output), ""), errors: ok_or(files.read(errors), ""), status: status }
 }
 
-/// What a started program wrote on each stream, and the status it ended with.
 type Ended = {
     output: String
     errors: String
     status: Int
 }
 
-/// Why a started program gave no status back: it never started, or it ran past its limit.
-///
-/// A program stopped at its limit keeps what it wrote on its standard output until then.
 type Unended =
     | NotStarted
     | PastLimit(Int, String)
 
-/// The files a started program writes its standard output and its standard error into.
 type Streams = {
     output: String
     errors: String

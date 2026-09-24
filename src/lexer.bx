@@ -7,7 +7,6 @@
 import list
 import strings
 
-/// The tokens of `source`, one line each: the kind, then the span as a start and an end.
 // example: listed("let x = 1") == "Keyword(let) 0..3\nIdentifier 4..5\nPunct(=) 6..7\nInteger 8..9\n"
 // example: listed("fn\n") == "Keyword(fn) 0..2\nNewline 2..3\n"
 fn listed(source: String) -> String {
@@ -18,9 +17,6 @@ fn listed(source: String) -> String {
     written
 }
 
-/// The tokens `source` lexes to, in source order.
-///
-/// Blanks separate tokens and give none, and every other byte lies inside one token's span.
 // example: list.length(lex("fn main")) == 2
 // example: list.length(lex(" \t\r")) == 0
 fn lex(source: String) -> List<Token> {
@@ -40,9 +36,7 @@ fn lex(source: String) -> List<Token> {
     tokens
 }
 
-/// The kind and the length in code units of the token at the start of `rest`.
-///
-/// `rest` holds at least one more code unit, and it is not a blank.
+// `rest` holds one more code unit at least, and that code unit is not a blank.
 // example: shown(scan_token(Rest { source: "a<==", start: 1 }).kind) == "Punct(<=)"
 // example: scan_token(Rest { source: "// note\n", start: 0 }).units == 7
 fn scan_token(rest: Rest) -> Scanned {
@@ -65,7 +59,6 @@ fn scan_token(rest: Rest) -> Scanned {
     scan_punctuation(rest)
 }
 
-/// An identifier, or the keyword it spells.
 // example: shown(scan_word(Rest { source: "fnord", start: 0 }).kind) == "Identifier"
 // example: shown(scan_word(Rest { source: "fn(", start: 0 }).kind) == "Keyword(fn)"
 fn scan_word(rest: Rest) -> Scanned {
@@ -74,7 +67,6 @@ fn scan_word(rest: Rest) -> Scanned {
     Scanned { kind: word_kind(word), units: length }
 }
 
-/// The keyword `word` spells, or an identifier where it spells none.
 // example: shown(word_kind("match")) == "Keyword(match)"
 // example: shown(word_kind("_x")) == "Identifier"
 fn word_kind(word: String) -> TokenKind {
@@ -86,10 +78,7 @@ fn word_kind(word: String) -> TokenKind {
     Identifier
 }
 
-/// A string from its opening quote to the first unescaped `"` on the same line.
-///
-/// It is an unterminated string where the line or the input ends first, and it stops before the
-/// line ending, so the newline is still a token of its own.
+// The string stops before the line break, so that the newline stays a token of its own.
 // example: shown(scan_string(Rest { source: "\"a\\\"b\" c", start: 0 }).kind) == "String"
 // example: scan_string(Rest { source: "\"ab\nc", start: 0 }).units == 3
 fn scan_string(rest: Rest) -> Scanned {
@@ -107,7 +96,6 @@ fn scan_string(rest: Rest) -> Scanned {
     Scanned { kind: UnterminatedString, units: ahead }
 }
 
-/// The longest punctuation `rest` starts with, or one unknown character where it starts none.
 // example: scan_punctuation(Rest { source: "->", start: 0 }).units == 2
 // example: shown(scan_punctuation(Rest { source: "@", start: 0 }).kind) == "Unknown"
 fn scan_punctuation(rest: Rest) -> Scanned {
@@ -120,10 +108,7 @@ fn scan_punctuation(rest: Rest) -> Scanned {
     Scanned { kind: Unknown, units: character_length(rest) }
 }
 
-/// How many code units the character at the start of `rest` takes, which is two for a pair.
-///
-/// A JVM holds a character outside the basic plane, such as an emoji, as two code units: a high
-/// surrogate, then a low one. Every other character is one code unit.
+// A JVM holds a character outside the basic plane, such as an emoji, as two code units.
 // example: character_length(Rest { source: "é", start: 0 }) == 1
 // example: character_length(Rest { source: "😀", start: 0 }) == 2
 fn character_length(rest: Rest) -> Int {
@@ -133,7 +118,6 @@ fn character_length(rest: Rest) -> Int {
     1
 }
 
-/// How many bytes the UTF-8 form of the first `units` code units of `rest` takes.
 // example: byte_length(Rest { source: "aé", start: 0 }, 2) == 3
 // example: byte_length(Rest { source: "😀", start: 0 }, 2) == 4
 fn byte_length(rest: Rest, units: Int) -> Int {
@@ -146,10 +130,7 @@ fn byte_length(rest: Rest, units: Int) -> Int {
     length
 }
 
-/// How many bytes one code unit takes in UTF-8, where each half of a surrogate pair takes two.
-///
-/// A code unit below 128 is one byte, one below 2048 is two, and any other is three. A pair of
-/// surrogates is one character of four bytes, so each half counts as two.
+// A pair of surrogates is one character of four bytes, so each half counts as two.
 // example: unit_width(97) == 1
 // example: unit_width(233) == 2
 // example: unit_width(8364) == 3
@@ -167,28 +148,24 @@ fn unit_width(unit: Int) -> Int {
     3
 }
 
-/// Whether `unit` is the first half of a pair of code units, which is 55296 up to 56319.
 // example: is_high_surrogate(55357)
 // example: !is_high_surrogate(56832)
 fn is_high_surrogate(unit: Int) -> Bool {
     unit >= 55296 && unit <= 56319
 }
 
-/// Whether `unit` is the second half of a pair of code units, which is 56320 up to 57343.
 // example: is_low_surrogate(56832)
 // example: !is_low_surrogate(55357)
 fn is_low_surrogate(unit: Int) -> Bool {
     unit >= 56320 && unit <= 57343
 }
 
-/// The code unit `ahead` units into `rest`, and -1 past the end, which is no code unit at all.
 // example: unit_at(Rest { source: "ab", start: 1 }, 0) == 98
 // example: unit_at(Rest { source: "ab", start: 1 }, 1) == -1
 fn unit_at(rest: Rest, ahead: Int) -> Int {
     or(strings.at(rest.source, rest.start + ahead), -1)
 }
 
-/// Whether `rest` starts with `text`.
 // example: has_prefix(Rest { source: "a->", start: 1 }, "->")
 // example: !has_prefix(Rest { source: "a-", start: 1 }, "->")
 fn has_prefix(rest: Rest, text: String) -> Bool {
@@ -199,7 +176,6 @@ fn has_prefix(rest: Rest, text: String) -> Bool {
     }
 }
 
-/// How many code units at the start of `rest` are part of `run`.
 // example: run_length(Rest { source: "123abc", start: 0 }, Digits) == 3
 // example: run_length(Rest { source: "ab // c\nd", start: 3 }, RestOfLine) == 4
 fn run_length(rest: Rest, run: Run) -> Int {
@@ -210,9 +186,7 @@ fn run_length(rest: Rest, run: Run) -> Int {
     length
 }
 
-/// The code unit `ahead` units into `rest`, as a text of its own, and `""` past the end.
-///
-/// The empty text is part of no run, so a loop over a run stops at the end of the input.
+// The empty text is part of no run, so a loop over a run stops at the end of the input.
 // example: letter_at(Rest { source: "ab", start: 1 }, 0) == "b"
 // example: letter_at(Rest { source: "ab", start: 1 }, 1) == ""
 fn letter_at(rest: Rest, ahead: Int) -> String {
@@ -220,7 +194,6 @@ fn letter_at(rest: Rest, ahead: Int) -> String {
     or(strings.cut(rest.source, from, from + 1), "")
 }
 
-/// Whether `letter`, one code unit as a text of its own, is part of `run`.
 // example: is_part_of("\t", Blanks)
 // example: !is_part_of("", RestOfLine)
 fn is_part_of(letter: String, run: Run) -> Bool {
@@ -232,9 +205,7 @@ fn is_part_of(letter: String, run: Run) -> Bool {
     }
 }
 
-/// Whether `letter` is an ASCII letter, an ASCII digit, or `_`, which is what a word is made of.
-///
-/// A word never starts with a digit, because a digit starts a number first.
+// A word never starts with a digit, because a digit starts a number first.
 // example: is_word_letter("_")
 // example: !is_word_letter("é")
 fn is_word_letter(letter: String) -> Bool {
@@ -247,13 +218,12 @@ fn is_word_letter(letter: String) -> Bool {
     letter == "_" || letter >= "0" && letter <= "9"
 }
 
-/// Every keyword, so that a word can be looked up among them.
 // example: list.length(keywords()) == 24
 fn keywords() -> List<Keyword> {
     [Fn, Type, Trait, Instance, Derive, Process, Private, Test, Spawn, Let, Var, If, Else, For, In, Match, Break, ContinueLoop, Return, Import, Extern, True, False, Underscore]
 }
 
-/// Every punctuation, longest first, so that `==` wins over `=` and `->` over `-`.
+// Longest first, so that `==` wins over `=` and `->` over `-`.
 // example: list.length(every_punctuation()) == 29
 fn every_punctuation() -> List<Punct> {
     [EqEq, BangEq, LtEq, GtEq, PlusEq, AndAnd, OrOr, Arrow, FatArrow, Eq, Lt, Gt, Plus, Minus, Star, Slash, Percent, Bang, Question, Dot, Comma, Colon, Pipe, LParen, RParen, LBrace, RBrace, LBracket, RBracket]
@@ -287,7 +257,6 @@ instance Show<TokenKind> {
     }
 }
 
-/// The text that spells `keyword`, which is how a later phase names one in a message.
 // example: keyword_text(Underscore) == "_"
 fn keyword_text(keyword: Keyword) -> String {
     match keyword {
@@ -318,7 +287,6 @@ fn keyword_text(keyword: Keyword) -> String {
     }
 }
 
-/// The text that spells `punctuation`, which is how a later phase names one in a message.
 // example: punctuation_text(FatArrow) == "=>"
 fn punctuation_text(punctuation: Punct) -> String {
     match punctuation {
@@ -354,29 +322,25 @@ fn punctuation_text(punctuation: Punct) -> String {
     }
 }
 
-/// One token of the source: what it is, where its text lies, and the text itself.
-///
-/// A span counts UTF-8 bytes and a string is read in UTF-16 code units, so a span alone cannot
-/// cut the text out of the source again; the parser reads a name and a literal from `text`.
+// A span counts UTF-8 bytes, and a string is read in UTF-16 code units.
+// So a span cannot cut the text out of the source again, and the parser reads `text`.
 type Token = {
     kind: TokenKind
     span: Span
     text: String
 }
 
-/// Where a token's text lies, as a byte offset into the UTF-8 source and a length in bytes.
+// A span counts the bytes of the UTF-8 source, not the UTF-16 code units of a string.
 type Span = {
     start: Int
     length: Int
 }
 
-/// The source, and the code unit where the part not yet lexed starts.
 type Rest = {
     source: String
     start: Int
 }
 
-/// A token not yet placed: its kind, and how many code units of the source it takes.
 type Scanned = {
     kind: TokenKind
     units: Int
@@ -388,7 +352,6 @@ derive Eq for Keyword
 
 derive Eq for Punct
 
-/// The token classes, with the two that keep lexing total last.
 type TokenKind =
     | Identifier
     | Keyword(Keyword)
@@ -400,7 +363,6 @@ type TokenKind =
     | UnterminatedString
     | Unknown
 
-/// The words the grammar reserves, and `_`, which is written on the left of `=` and nowhere else.
 type Keyword =
     | Fn
     | Type
@@ -427,7 +389,6 @@ type Keyword =
     | False
     | Underscore
 
-/// Operators and punctuation.
 type Punct =
     | EqEq
     | BangEq
@@ -459,7 +420,6 @@ type Punct =
     | LBracket
     | RBracket
 
-/// A kind of code unit a token runs over for as long as the source goes on giving one.
 type Run =
     | Blanks
     | Digits
