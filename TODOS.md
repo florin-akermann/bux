@@ -6,17 +6,6 @@
 
 ## Open
 
-## 🔴 Item 084: An `extern` names only a class that the build can account for
-**Depends on:** Item 083 — an accepted class is in a stated archive or on the allow list.
-Today an `extern` can name `java.lang.Class.forName` and load a class whose name comes at run time.
-The same form reaches `javax.naming.InitialContext.doLookup`, which is the Log4Shell call.
-An accepted class is in a stated archive, or in a `java.base` package on a fixed allow list.
-The allow list leaves out reflection, class loaders, method handles, and deserialization.
-[084][a] - `docs/design.md` section 17 states the rule in the target-neutral words of Item 086.
-[084][b] - `docs/specs/interop.md` states the JVM form, the allow list, and the new code.
-[084][c] - The Bux phases read the entry names of each stated archive and refuse other classes.
-[084][d] - A spec example shows an `extern` on `java.lang.Class.forName` that is refused.
-
 ## 🔴 Item 100: `spawn` starts a process that another module declares
 Item 091 found it: `L0800` refuses a `spawn` of a process outside the module that declares it.
 A library process, such as a ticker or a bus, is then out of reach, and section 15 wants both.
