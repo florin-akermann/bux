@@ -92,20 +92,3 @@ A kept why is rewritten as `//` lines, and `bin/bux check` accepts each file.
 [137][d] - Every `///` line above a declaration in `tests/spec/` goes, except where a golden stays.
 [137][e] - `bin/bootstrap` and `bin/bux test tests` pass, and `mycs check` reports no finding.
 
-## 🔴 Item 138: `map.with_child` copies a node without a fresh row of empty children
-**Depends on:** Item 131 — its profile priced `map.insert` at 82% of the billion-row run.
-Section 7 profiled `1brc/src/main.bx`, and `map.insert` is 82% of its samples in two runs.
-Of it, `map.with_child` is 69%: each level of the walk copies a node of 32 children.
-Its `for` loop runs over `no_children()`, a fresh row of 32 empty maps, only to count to 32.
-That row is 26% of the run, and `Map.Empty` is 25% of the allocation pressure.
-The requirement is the processor time of the run, 874 s to 915 s, which the node copy prices.
-The alternatives weighed:
-- `with_child` loops over the `children` it copies, which removes the row and adds nothing.
-- The compressed node of a bitmap, which `docs/specs/collections.md` weighed and refused.
-  It narrows a node to the children it holds, but it adds a bit operation and a population count.
-- A `list` function that puts one element in place of another; a `for` loop writes it.
-- One walk for `get` and `insert` together, which adds a second spelling of an update.
-The first is the smallest and asks for no new concept; the profile after it says if more is needed.
-[138][a] - `map.with_child` copies a node with no call to `no_children`.
-[138][b] - Section 7 records the processor time of the run before and after, at a load below 12.
-[138][c] - The examples of `library/map.bx` and `tests/spec/library/` hold.
