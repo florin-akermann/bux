@@ -38,6 +38,7 @@ import map
 import modules
 import naming
 import operating
+import packaged
 import paged
 import parsing
 import pinned
@@ -72,9 +73,9 @@ fn main(arguments: List<String>) -> Int {
 ///
 /// The parts are counted from the last state of the pool in the order of the jobs, so no line
 /// depends on which worker ends first.
-// example: processors() > 0
+// example: command.processors() > 0
 fn every_part_held(setting: Setting) -> Counted {
-    let workers = processors()
+    let workers = command.processors()
     let jobs = every_job(chunks: workers, root: ok_or(modules.canonical_path(modules.file_at(".")), "."))
     counted_of(jobs, pooled(jobs, setting, workers).answers)
 }
@@ -324,12 +325,6 @@ fn job_held(job: Job, setting: Setting) -> List<held.Held> {
     }
 }
 
-/// The processors the JVM may use, which is how many workers the pool has.
-// example: processors() > 0
-fn processors() -> Int {
-    processors_of(machine())
-}
-
 /// What each part held, counted from the `answers` of the pool in the order of `jobs`.
 // example: counted_of([], map.empty()).all.cases == 0
 fn counted_of(jobs: List<Job>, answers: map.Map<Int, Answer>) -> Counted {
@@ -434,6 +429,7 @@ fn every_property_held(library: ir.Library) -> List<held.Held> {
     found = command.all_of(found, covered.every_property(cases, library))
     found = command.all_of(found, unfinished.every_property(cases, library))
     found = command.all_of(found, paged.every_property(cases, library))
+    found = command.all_of(found, packaged.every_property(cases, library))
     found = command.all_of(found, naming.every_property(cases, library))
     found = command.all_of(found, loading.every_property(cases, library))
     found = command.all_of(found, pinned.every_property(cases, library))
@@ -480,15 +476,6 @@ fn every_of(parts: List<held.Held>) -> held.Held {
     }
     found
 }
-
-/// The JVM this program runs on, which says how many processors it may use.
-extern static machine() -> Machine = "java.lang.Runtime.getRuntime"
-
-/// How many processors the JVM may use, which is never fewer than one.
-extern method int processors_of(running: Machine) -> Int = "availableProcessors"
-
-/// The JVM this program runs on.
-extern type Machine = "java.lang.Runtime"
 
 /// What each part of the runner held, and all of it together.
 type Counted = {

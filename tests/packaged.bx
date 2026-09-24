@@ -1,0 +1,160 @@
+// The drawn property of `bux test` over a package, which `docs/specs/testing.md` states.
+//
+// Each case draws a package of modules, each with a drawn outcome, and a drawn number of workers.
+// The pool of `command.every_module_tested` must report exactly what the modules report when each
+// is run in turn with a memo of its own, which is how `bux test` ran a package before the pool.
+import checking
+import command
+import drawn
+import enacted
+import exemplified
+import held
+import ir
+import list
+import modules
+
+/// The one property of a package run on a pool, checked over `cases` drawn packages.
+// example: list.length(every_property(0, ir.little_library())) == 1
+fn every_property(cases: Int, library: ir.Library) -> List<held.Held> {
+    [a_package_on_a_pool_reports_what_its_modules_report_in_turn(cases, library)]
+}
+
+/// A drawn package reports on a pool of drawn size what its modules report when run in turn.
+///
+/// A property of no cases starts no JVM, and the property is skipped where no JDK is named.
+// example: held.is_held(a_package_on_a_pool_reports_what_its_modules_report_in_turn(0, ir.little_library()))
+fn a_package_on_a_pool_reports_what_its_modules_report_in_turn(cases: Int, library: ir.Library) -> held.Held {
+    if cases == 0 {
+        return held.nothing_failed(0)
+    }
+    if !exemplified.is_a_jdk_named() {
+        return held.with_skip(held.nothing_failed(0), "tests/packaged.bx: a JVM runs each module, and JAVA_HOME names no JDK")
+    }
+    var found = held.nothing_failed(cases)
+    for seed in checking.seeds(cases) {
+        found = checking.noted(found, "a_package_on_a_pool_reports_what_its_modules_report_in_turn", seed, package_tried(drawn.seeded(seed), library))
+    }
+    found
+}
+
+/// One drawn package, run on a pool and in turn, and why the two reports differ, where they do.
+// example: package_tried(drawn.seeded(1), ir.little_library()).why == ""
+fn package_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
+    let outcomes = drawn.numbers(draw, drawn.number(checking.after(draw, 6), 5) + 1, list.length(every_outcome()))
+    let workers = drawn.number(checking.after(draw, 7), 3) + 1
+    let reach = drawn.picked(checking.after(draw, 8), [Alone, OnTheFirst], Alone)
+    var written = [enacted.Written { at: "bux.package", text: "package drawn\nversion 0.1.0\n" }]
+    var number = 0
+    for outcome in outcomes {
+        let module = Module { number: number, outcome: or(list.at(every_outcome(), outcome), Holds), reach: reach }
+        written = list.push(written, enacted.Written { at: "m" + shown(number) + ".bx", text: module_text(module) })
+        number += 1
+    }
+    let scene = enacted.scene_of(written)
+    let pooled = on_a_pool(scene, library, workers)
+    let turned = in_turn(scene, library)
+    command.removed_whole(scene)
+    checking.Tried { input: "outcomes " + shown(outcomes) + ", " + shown(workers) + " workers, " + reach_name(reach), why: why_apart(pooled: pooled, turned: turned) }
+}
+
+/// The name a failure gives `reach`.
+// example: reach_name(OnTheFirst) == "each on the first"
+fn reach_name(reach: Reach) -> String {
+    match reach {
+        Alone => "each alone"
+        OnTheFirst => "each on the first"
+    }
+}
+
+/// What `bux test` reports of the package in `scene`, run on a pool of `workers` workers.
+// example: on_a_pool("no-such-directory", ir.little_library(), 1).status == 2
+fn on_a_pool(scene: String, library: ir.Library, workers: Int) -> command.Said {
+    match command.package_found(scene) {
+        Ok(package) => command.reported(command.every_module_tested(package, library, workers))
+        Err(said) => said
+    }
+}
+
+/// What the modules of the package in `scene` report, each run in turn with a memo of its own.
+// example: in_turn("no-such-directory", ir.little_library()).status == 2
+fn in_turn(scene: String, library: ir.Library) -> command.Said {
+    match command.package_found(scene) {
+        Ok(package) => command.reported(each_in_turn(package, library))
+        Err(said) => said
+    }
+}
+
+/// What each module of `package` found, one after another, as the entries of `package` list them.
+// example: each_in_turn(command.Package { directory: "no-such-directory", names: ["a.bx"] }, ir.little_library()).said.status == 2
+fn each_in_turn(package: command.Package, library: ir.Library) -> command.Tried {
+    var found = command.only_said(command.nothing_said())
+    for path in command.module_paths(package) {
+        let ran = command.module_tested(path, command.Typing { library: library, memo: command.no_memo() })
+        found = command.tried_both(found, ran.tried)
+    }
+    found
+}
+
+/// Where the report on a pool differs from the report in turn, and `""` where it is the same.
+// example: why_apart(pooled: command.Said { output: "", errors: "a", status: 1 }, turned: command.Said { output: "", errors: "b", status: 1 }) == "on a pool \"a\", status 1; in turn \"b\", status 1"
+fn why_apart(pooled: command.Said, turned: command.Said) -> String {
+    if pooled.output == turned.output && pooled.errors == turned.errors && pooled.status == turned.status {
+        return ""
+    }
+    "on a pool " + held.quoted(pooled.output + pooled.errors) + ", status " + shown(pooled.status) + "; in turn " + held.quoted(turned.output + turned.errors) + ", status " + shown(turned.status)
+}
+
+/// The text of `module`, whose one function gives the number of the module.
+///
+/// A module after the first that reaches `OnTheFirst` adds the number of the first module, which
+/// is 0, so its run reaches the first module and each outcome of that module.
+// example: module_text(Module { number: 0, outcome: Holds, reach: Alone }) == "// The number of this module.\n// example: number() == 0\nfn number() -> Int {\n    0\n}\n"
+fn module_text(module: Module) -> String {
+    let number = module.number
+    var imported = ""
+    var body = shown(number)
+    if module.reach == OnTheFirst && number > 0 {
+        imported = "import m0\n\n"
+        body = "m0.number() + " + shown(number)
+    }
+    match module.outcome {
+        Holds => imported + stated(expected: number, body: body)
+        Fails => imported + stated(expected: number + 1, body: body)
+        Refused => imported + stated(expected: number, body: "\"" + shown(number) + "\"")
+        Quiet => imported + "// A number, which no example states.\ntype Counted = {\n    value: Int\n}\n"
+    }
+}
+
+/// A function `number` whose body is `body`, and whose one example expects `expected`.
+// example: stated(expected: 1, body: "1") == "// The number of this module.\n// example: number() == 1\nfn number() -> Int {\n    1\n}\n"
+fn stated(expected: Int, body: String) -> String {
+    "// The number of this module.\n// example: number() == " + shown(expected) + "\nfn number() -> Int {\n    " + body + "\n}\n"
+}
+
+/// Every outcome a drawn module has, in the order a drawn number picks them.
+// example: list.length(every_outcome()) == 4
+fn every_outcome() -> List<Outcome> {
+    [Holds, Fails, Refused, Quiet]
+}
+
+/// One drawn module: its number in the package, its outcome, and what it reaches.
+type Module = {
+    number: Int
+    outcome: Outcome
+    reach: Reach
+}
+
+derive Eq for Reach
+
+/// Whether each module after the first imports the first, or stands alone.
+type Reach =
+    | Alone
+    | OnTheFirst
+
+/// What a drawn module does under `bux test`: its example holds, it does not hold, the compiler
+/// refuses the module, or the module states nothing to run.
+type Outcome =
+    | Holds
+    | Fails
+    | Refused
+    | Quiet

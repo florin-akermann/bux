@@ -5,9 +5,9 @@ Packages
 A package is a directory of modules with a manifest called `bux.package` beside them. Handed a
 directory rather than a file, `bux check` and `bux build` run over every module the package
 holds, in the order their names sort, and stop at the first refusal. `bux test` runs the examples
-and the tests of every module in the same order, and it does not stop at the first module that
-fails; with no path, it runs the package in the current directory. A directory holding no
-manifest is no package, and a command handed one says so and stops with exit code 2.
+and the tests of every module, reports them in the same order, and does not stop at the first
+module that fails; with no path, it runs the package in the current directory. A directory
+holding no manifest is no package, and a command handed one says so and stops with exit code 2.
 
     package shapes
     version 0.2.0
