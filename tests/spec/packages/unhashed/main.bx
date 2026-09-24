@@ -1,0 +1,6 @@
+// expect-error: L0315
+// A `jar` line states `sha256:` and 64 lowercase hexadecimal digits, and the one beside this file
+// states eight.
+fn held() -> Int {
+    1
+}

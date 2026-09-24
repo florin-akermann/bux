@@ -15,6 +15,7 @@ A preview class file carries minor version 65535, and a JVM loads one only when 
 `bux run` starts the JVM with `--enable-preview`, so a run needs nothing the reader must know.
 Modern JVM features are used freely: invokedynamic, records, sealed classes, value classes.
 A release of the JDK moves the target with it; there is no compatibility matrix and never will be.
+The `jar` line of a manifest, which `docs/specs/packages.md` states, is for the JVM target alone.
 
 The compiler should emit JVM bytecode directly or through a suitable intermediate representation.
 

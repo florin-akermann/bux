@@ -218,7 +218,7 @@ strings:     at  cut  join  length
 map:         empty  insert  get
 set:         empty  insert  has_value
 io:          print  println  eprintln
-files:       read  write  write_bytes  listed  made  removed
+files:       read  read_bytes  write  write_bytes  listed  made  removed
 process:     run
 environment: read
 ```
@@ -229,6 +229,7 @@ Three of them import `list`: `map` grows the children of a node with `list.push`
 with `list.at`, `files` builds the list `files.listed` gives back the same way, and `programs`
 grows the list a JVM starts a program from.
 `set` imports `map`, because a set is the trie a map is, at a key for each value it holds.
+`files` also imports `strings`, because `files.read_bytes` reads the value of each char.
 Loading hands an imported library module over below the one that imports it, as it does for a
 module read out of a file, so nothing about the order a module is read in changes.
 

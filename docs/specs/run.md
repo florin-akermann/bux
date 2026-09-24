@@ -14,12 +14,13 @@ A module that declares `main` at that shape is a program; every other module is 
 `bux run` does what `bux build` does and then hands the result to a JVM.
 The class files are written as `bux build` writes them, so a run leaves what a build leaves.
 
-The JVM is started on the module class, with the one `target/` of the build as its class path.
-The next section states that directory.
+The JVM is started on the module class.
+Its class path is the one `target/` of the build, then each archive that the manifest states.
+The next section states that directory, and the section after it states the archives.
 The entry point is part of what is written and not something the runner supplies.
 The runner adds `--enable-preview`, because every class written is a value class.
 JDK 28 holds value classes in preview, and `docs/specs/codegen.md` says how the bytes look.
-The runner also limits what the program can reach, and the next section states how.
+The runner also limits what the program can reach, and a section below states how.
 
 The program's own output is the runner's output: what it writes to standard output and to
 standard error, the runner passes through unchanged, and the status it ends with is the status
@@ -46,14 +47,28 @@ Neither holds a class beside a source, so no class there can hide a class of `ta
 It writes the classes of its run into a directory made for that run alone, and then deletes it.
 `docs/specs/doc-examples.md` states why.
 
+## The archives on the class path
+
+A `jar` line of the manifest names a Java archive, which `docs/specs/packages.md` states.
+The class path of `bux run` and of `bux test` is the one `target/`, then the archives.
+The archives are in the order of their lines, and nothing else is on the class path.
+The archives of each dependency come after, in the order of the `depends` lines.
+Each dependency puts its own archives first and then those of its dependencies.
+A package that two routes reach puts its archives on the class path once, at the first place.
+
+`target/` is first, so a class that the build writes is never hidden by a class of an archive.
+A module with no manifest, and a package with no `jar` line, has `target/` alone.
+The command line below writes the class path as `<dir>[:<archive>...]`.
+
 ## What the program can reach
 
-A program reaches its library and the `java.base` module of the JDK, and nothing more.
+A program reaches its library, its stated archives, and the `java.base` module of the JDK.
+It reaches nothing more.
 An `extern` declaration can name any class, so the JVM itself must refuse the classes outside.
 The runner starts every compiled program with this command line, in this order:
 
 ```text
-java --enable-preview --limit-modules java.base -Djdk.serialFilter=!* -cp <dir> <module> <word...>
+java --enable-preview --limit-modules java.base -Djdk.serialFilter=!* -cp <dir>[:<archive>...] <module> <word...>
 ```
 
 `--limit-modules java.base` gives the JVM the `java.base` module and no other module.
@@ -230,3 +245,4 @@ These hold, and each is checked:
 5. Stage 2 of the bootstrap is stage 1 byte for byte, and both stages pass `tests/spec`.
 6. A checkout with no class file bootstraps with `JAVA_HOME` alone, and `bin/bux` then starts.
 7. A program loads no class outside `java.base`, and its JVM reads none of the three variables.
+8. A program reaches a class of each archive its manifest states, and of no other archive.

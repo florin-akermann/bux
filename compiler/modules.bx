@@ -275,8 +275,10 @@ fn code_of(kind: LoadErrorKind) -> String {
         Ring(ring) => "L0307"
         LineIsNot(keyword) => "L0315"
         NotOneWord(keyword) => "L0315"
+        NotAnArchiveLine => "L0315"
         NoSuchPackage(named) => "L0316"
         DependsTwice(named) => "L0315"
+        ArchivedTwice(named) => "L0315"
         InTwoFiles { module, first, second } => "L0317"
     }
 }
@@ -289,8 +291,10 @@ fn message(kind: LoadErrorKind) -> String {
         Ring(ring) => ring_text(ring)
         LineIsNot(keyword) => "`" + keyword_text(keyword) + "` is what a manifest states here"
         NotOneWord(keyword) => "`" + keyword_text(keyword) + "` states one word, and this line does not"
+        NotAnArchiveLine => "`jar` states a path and a hash, and this line does not"
         NoSuchPackage(named) => "there is no package in `" + named + "`"
         DependsTwice(named) => "`" + named + "` is depended on twice"
+        ArchivedTwice(named) => "`" + named + "` is stated twice"
         InTwoFiles { module, first, second } => "`" + module + "` is both `" + first + "` and `" + second + "`"
     }
 }
@@ -301,10 +305,12 @@ fn help_of(kind: LoadErrorKind) -> String {
     match kind {
         NoSuchModule(name) => "a module is a file beside this one, or one of a package it depends on"
         Ring(ring) => "a module is compiled after what it imports, and a ring has no such order"
-        LineIsNot(keyword) => "a manifest is `package`, then `version`, then a `depends` for each dependency"
+        LineIsNot(keyword) => "a manifest is `package`, then `version`, then a `depends` for each dependency, then a `jar` for each archive"
         NotOneWord(keyword) => "a manifest line is a keyword, one space, and one word"
+        NotAnArchiveLine => "a `jar` line is `jar`, a path, and `sha256:` with 64 lowercase hexadecimal digits"
         NoSuchPackage(named) => "a package is a directory holding `bux.package`"
         DependsTwice(named) => "a manifest states one `depends` for each package it reaches"
+        ArchivedTwice(named) => "a manifest states one `jar` for each archive it reaches"
         InTwoFiles { module, first, second } => "one name has one definition; rename one of the two modules"
     }
 }
@@ -337,12 +343,52 @@ fn reachable_from(directory: String) -> Result<List<Route>, NotLoaded> {
     }
 }
 
+/// Every archive the package in `directory` states, then every archive of each package it
+/// depends on, in the order of its `depends` lines, and so on down, each package read once.
+///
+/// A directory holding no manifest states no archive.
+// example: list.length(ok_or(archives_reached("no-such-directory"), [])) == 0
+fn archives_reached(directory: String) -> Result<List<Reached>, NotLoaded> {
+    let gathered = archives_below(Gathering { found: [], read: [] }, directory)?
+    Ok(gathered.found)
+}
+
+/// `gathering` with the archives of the package in `directory` and of what it depends on.
+// example: list.length(ok_or(archives_below(Gathering { found: [], read: [] }, "no-such-directory"), Gathering { found: [], read: ["x"] }).read) == 1
+fn archives_below(gathering: Gathering, directory: String) -> Result<Gathering, NotLoaded> {
+    let key = route_to(directory).found
+    if list.has_value(gathering.read, key) {
+        return Ok(gathering)
+    }
+    let marked = gathering { read: list.push(gathering.read, key) }
+    match manifest_in(directory)? {
+        Some(manifest) => archives_stated(marked, manifest, directory)
+        None => Ok(marked)
+    }
+}
+
+/// `gathering` with each archive `manifest` states, then those of each package it depends on.
+// example: list.length(ok_or(archives_stated(Gathering { found: [], read: [] }, Manifest { path: "bux.package", source: "package a\nversion 1\njar x.jar sha256:" + repeated_zero(64) + "\n" }, "a"), Gathering { found: [], read: [] }).found) == 1
+fn archives_stated(gathering: Gathering, manifest: Manifest, directory: String) -> Result<Gathering, NotLoaded> {
+    let stated = stated_by(manifest)?
+    var found = gathering.found
+    for archive in stated.archives {
+        found = list.push(found, Reached { file: joined(directory: directory, name: archive.path), archive: archive, manifest: manifest })
+    }
+    var gathered = gathering { found: found }
+    for named in stated.depends {
+        let route = depended_on(manifest, directory, named)?
+        gathered = archives_below(gathered, route.shown)?
+    }
+    Ok(gathered)
+}
+
 /// The packages `manifest` states, read against `directory`, each of them there and named once.
 // example: refused_printed(depends_of(Manifest { path: "bux.package", source: "package a\nversion 1\ndepends no-such-directory\n" }, ".")) == "refused bux.package\nL0316 20..45 there is no package in `no-such-directory`\nhelp: a package is a directory holding `bux.package`\n"
 fn depends_of(manifest: Manifest, directory: String) -> Result<List<Route>, NotLoaded> {
     let stated = stated_by(manifest)?
     var depends = []
-    for named in stated {
+    for named in stated.depends {
         let one = depended_on(manifest, directory, named)?
         if is_held(depends, one) {
             return Err(manifest_refusing(manifest, LoadError { kind: DependsTwice(named.word), span: named.span }))
@@ -367,7 +413,7 @@ fn depended_on(manifest: Manifest, directory: String, named: At) -> Result<Route
 }
 
 /// The route to the package at `at`, where its manifest `found` is written as a manifest is.
-// example: refused_printed(proved(Manifest { path: "a/bux.package", source: "" }, "a")) == "refused a/bux.package\nL0315 0..0 `package` is what a manifest states here\nhelp: a manifest is `package`, then `version`, then a `depends` for each dependency\n"
+// example: refused_printed(proved(Manifest { path: "a/bux.package", source: "" }, "a")) == "refused a/bux.package\nL0315 0..0 `package` is what a manifest states here\nhelp: a manifest is `package`, then `version`, then a `depends` for each dependency, then a `jar` for each archive\n"
 fn proved(found: Manifest, at: String) -> Result<Route, NotLoaded> {
     _ = stated_by(found)?
     Ok(route_to(at))
@@ -404,11 +450,11 @@ fn has_no_manifest(held: Option<Manifest>) -> Bool {
     }
 }
 
-/// Where each dependency `manifest` states sits, or the first line of it that is no manifest line.
+/// What `manifest` states: each dependency and each archive, or the first line that is no line of it.
 ///
 /// The name and the version are read here and kept nowhere, which `docs/specs/packages.md` says.
-// example: list.length(ok_or(stated_by(Manifest { path: "bux.package", source: "package a\nversion 1\ndepends ../b\n" }), [])) == 1
-fn stated_by(manifest: Manifest) -> Result<List<At>, NotLoaded> {
+// example: list.length(ok_or(stated_by(Manifest { path: "bux.package", source: "package a\nversion 1\ndepends ../b\n" }), no_lines()).depends) == 1
+fn stated_by(manifest: Manifest) -> Result<Stated, NotLoaded> {
     match read_out_of(manifest.source) {
         Ok(stated) => Ok(stated)
         Err(error) => Err(manifest_refusing(manifest, error))
@@ -422,25 +468,136 @@ fn manifest_refusing(manifest: Manifest, error: LoadError) -> NotLoaded {
 }
 
 /// The same, against the text alone, which is where every refusal of a manifest is decided.
-// example: error_printed(refused_with(read_out_of("package a\nversion 1\ndepend ../b\n"))) == "L0315 20..31 `depends` is what a manifest states here\nhelp: a manifest is `package`, then `version`, then a `depends` for each dependency\n"
-fn read_out_of(source: String) -> Result<List<At>, LoadError> {
+///
+/// A `depends` line comes before every `jar` line, so a line after a `jar` line is one more.
+// example: error_printed(refused_with(read_out_of("package a\nversion 1\ndepend ../b\n"))) == "L0315 20..31 `depends` is what a manifest states here\nhelp: a manifest is `package`, then `version`, then a `depends` for each dependency, then a `jar` for each archive\n"
+// example: list.length(ok_or(read_out_of("package a\nversion 1\njar x.jar sha256:" + repeated_zero(64) + "\n"), no_lines()).archives) == 1
+fn read_out_of(source: String) -> Result<Stated, LoadError> {
     let lines = lines_of(source)
     _ = line_stating(lines: lines, index: 0, keyword: Package, source: source)?
     _ = line_stating(lines: lines, index: 1, keyword: Version, source: source)?
-    var stated = []
+    var stated = no_lines()
     var index = 0
     for line in lines {
         if index > 1 {
-            stated = list.push(stated, word_of(line, Depends)?)
+            stated = line_added(stated, line)?
         }
         index += 1
     }
     Ok(stated)
 }
 
+/// `stated` with what `line` states: a dependency before the first archive, and an archive after.
+// example: list.length(ok_or(line_added(no_lines(), Line { text: "depends ../b", span: lexer.Span { start: 0, length: 12 } }), no_lines()).depends) == 1
+fn line_added(stated: Stated, line: Line) -> Result<Stated, LoadError> {
+    if is_an_archive_line(line) {
+        let archive = archive_of(line)?
+        if is_archived(stated.archives, archive.path) {
+            return Err(LoadError { kind: ArchivedTwice(archive.path), span: line.span })
+        }
+        return Ok(stated { archives: list.push(stated.archives, archive) })
+    }
+    if list.length(stated.archives) > 0 {
+        return Err(LoadError { kind: LineIsNot(Jar), span: line.span })
+    }
+    Ok(stated { depends: list.push(stated.depends, word_of(line, Depends)?) })
+}
+
+/// Whether `archives` holds one at `path`, as the line writes it.
+// example: !is_archived([], "x.jar")
+fn is_archived(archives: List<Archive>, path: String) -> Bool {
+    for archive in archives {
+        if archive.path == path {
+            return true
+        }
+    }
+    false
+}
+
+/// A manifest that states no dependency and no archive.
+// example: list.length(no_lines().depends) == 0
+fn no_lines() -> Stated {
+    Stated { depends: [], archives: [] }
+}
+
+/// Whether `line` opens with the keyword `jar`, whatever follows it.
+// example: is_an_archive_line(Line { text: "jar", span: lexer.Span { start: 0, length: 3 } })
+// example: !is_an_archive_line(Line { text: "jars x", span: lexer.Span { start: 0, length: 6 } })
+fn is_an_archive_line(line: Line) -> Bool {
+    line.text == "jar" || lexer.has_prefix(lexer.Rest { source: line.text, start: 0 }, "jar ")
+}
+
+/// The archive a `jar` line states: a path, one space, and `sha256:` with 64 hexadecimal digits.
+///
+/// A path holds no blank, and no `:`, because a class path puts a `:` between two archives. It
+/// holds no `*`, because a JVM reads a class path entry that ends in `*` as every archive there.
+// example: ok_or(archive_of(Line { text: "jar lib/x.jar sha256:" + repeated_zero(64), span: lexer.Span { start: 0, length: 85 } }), Archive { path: "", digest: Digest(""), span: lexer.Span { start: 0, length: 0 } }).path == "lib/x.jar"
+// example: error_printed(refused_with_archive(archive_of(Line { text: "jar x.jar sha256:0", span: lexer.Span { start: 0, length: 18 } }))) == "L0315 0..18 `jar` states a path and a hash, and this line does not\nhelp: a `jar` line is `jar`, a path, and `sha256:` with 64 lowercase hexadecimal digits\n"
+fn archive_of(line: Line) -> Result<Archive, LoadError> {
+    let words = or(strings.cut(line.text, 4, strings.length(line.text)), "")
+    let space = first_unit(text: words, unit: 32)
+    let path = or(strings.cut(words, 0, space), "")
+    let hash = or(strings.cut(words, space + 1, strings.length(words)), "")
+    if space < 1 || has_blank(path) || first_unit(text: path, unit: 58) >= 0 || first_unit(text: path, unit: 42) >= 0 || !is_a_hash(hash) {
+        return Err(LoadError { kind: NotAnArchiveLine, span: line.span })
+    }
+    Ok(Archive { path: path, digest: Digest(or(strings.cut(hash, 7, 71), "")), span: line.span })
+}
+
+/// Whether `word` is `sha256:` and 64 lowercase hexadecimal digits, which is a hash a line states.
+// example: is_a_hash("sha256:" + repeated_zero(64))
+// example: !is_a_hash("sha256:" + repeated_zero(63) + "A")
+fn is_a_hash(word: String) -> Bool {
+    if strings.length(word) != 71 || !lexer.has_prefix(lexer.Rest { source: word, start: 0 }, "sha256:") {
+        return false
+    }
+    var index = 7
+    for index < 71 {
+        let unit = or(strings.at(word, index), 0)
+        if !(unit >= 48 && unit <= 57) && !(unit >= 97 && unit <= 102) {
+            return false
+        }
+        index += 1
+    }
+    true
+}
+
+/// `count` zeros, which is a hash of the right length for an example.
+// example: repeated_zero(3) == "000"
+fn repeated_zero(count: Int) -> String {
+    var written = ""
+    for strings.length(written) < count {
+        written += "0"
+    }
+    written
+}
+
+/// Where `text` first holds `unit`, and `-1` where it holds none.
+// example: first_unit(text: "a b c", unit: 32) == 1
+// example: first_unit(text: "abc", unit: 32) == -1
+fn first_unit(text: String, unit: Int) -> Int {
+    var index = 0
+    for index < strings.length(text) {
+        if or(strings.at(text, index), 0) == unit {
+            return index
+        }
+        index += 1
+    }
+    -1
+}
+
+/// The error an archive line was refused with, and an error pointing nowhere where it was not.
+// example: refused_with_archive(Ok(Archive { path: "", digest: Digest(""), span: lexer.Span { start: 0, length: 0 } })).span.length == 0
+fn refused_with_archive(read: Result<Archive, LoadError>) -> LoadError {
+    match read {
+        Ok(_) => LoadError { kind: NoSuchModule(""), span: lexer.Span { start: 0, length: 0 } }
+        Err(error) => error
+    }
+}
+
 /// The error a manifest was refused with, and an error pointing nowhere where it was not.
-// example: refused_with(Ok([])).span.length == 0
-fn refused_with(read: Result<List<At>, LoadError>) -> LoadError {
+// example: refused_with(Ok(no_lines())).span.length == 0
+fn refused_with(read: Result<Stated, LoadError>) -> LoadError {
     match read {
         Ok(_) => LoadError { kind: NoSuchModule(""), span: lexer.Span { start: 0, length: 0 } }
         Err(error) => error
@@ -450,7 +607,7 @@ fn refused_with(read: Result<List<At>, LoadError>) -> LoadError {
 /// The word line `index` states after `keyword`, the manifest having to have such a line.
 ///
 /// A manifest too short to hold the line is refused as a whole, because there is no line to show.
-// example: error_printed(refused_with(read_out_of("package é\n"))) == "L0315 0..11 `version` is what a manifest states here\nhelp: a manifest is `package`, then `version`, then a `depends` for each dependency\n"
+// example: error_printed(refused_with(read_out_of("package é\n"))) == "L0315 0..11 `version` is what a manifest states here\nhelp: a manifest is `package`, then `version`, then a `depends` for each dependency, then a `jar` for each archive\n"
 fn line_stating(lines: List<Line>, index: Int, keyword: Keyword, source: String) -> Result<At, LoadError> {
     match list.at(lines, index) {
         Some(line) => word_of(line, keyword)
@@ -546,6 +703,7 @@ fn keyword_text(keyword: Keyword) -> String {
         Package => "package"
         Version => "version"
         Depends => "depends"
+        Jar => "jar"
     }
 }
 
@@ -789,6 +947,38 @@ type Route = {
     found: String
 }
 
+/// The archives found so far, and the canonical path of each package already read for them.
+type Gathering = {
+    found: List<Reached>
+    read: List<String>
+}
+
+/// One archive a build reaches: the file, read against its package, and the line and manifest
+/// that state it, which a refusal of it points into.
+type Reached = {
+    file: String
+    archive: Archive
+    manifest: Manifest
+}
+
+/// What the lines of a manifest after `version` state: its dependencies, then its archives.
+type Stated = {
+    depends: List<At>
+    archives: List<Archive>
+}
+
+/// One Java archive a `jar` line states: its path as written, its hash, and the line.
+type Archive = {
+    path: String
+    digest: Digest
+    span: lexer.Span
+}
+
+derive Eq for Digest
+
+/// The 64 lowercase hexadecimal digits of a SHA-256, which only a line that parsed holds.
+type Digest = Digest(String)
+
 /// One manifest as it was read: the file it is, and the text a refusal points into.
 type Manifest = {
     path: String
@@ -819,8 +1009,10 @@ type LoadErrorKind =
     | Ring(List<String>)
     | LineIsNot(Keyword)
     | NotOneWord(Keyword)
+    | NotAnArchiveLine
     | NoSuchPackage(String)
     | DependsTwice(String)
+    | ArchivedTwice(String)
     | InTwoFiles {
         module: String
         first: String
@@ -832,6 +1024,7 @@ type Keyword =
     | Package
     | Version
     | Depends
+    | Jar
 
 extern type Scanner = "java.util.Scanner"
 

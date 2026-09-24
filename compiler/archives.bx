@@ -1,0 +1,212 @@
+// The Java archives a package states, each held to its line before a run can reach it.
+//
+// `docs/specs/packages.md` states the `jar` line and each refusal, and `docs/specs/run.md` states
+// the class path the archives go on. The manifest is read by `modules`, which also reads it for
+// the dependencies. An archive is read with `files`, hashed with `digest`, and opened with the
+// `extern` declarations below, which `docs/specs/interop.md` states.
+import digest
+import files
+import lexer
+import list
+import modules
+
+/// The file of each archive the package in `directory` reaches, in the order a class path takes.
+///
+/// Each archive is there, has the hash its line states, is a Java archive, and names no other
+/// archive in its manifest; the first archive that is not is refused, against its line.
+// example: list.length(ok_or(reached("no-such-directory"), ["x"])) == 0
+fn reached(directory: String) -> Result<List<String>, Unreached> {
+    match modules.archives_reached(directory) {
+        Ok(stated) => each_held(stated)
+        Err(not) => Err(Unread(not))
+    }
+}
+
+/// The file of each of `stated`, where each is held to its line.
+// example: list.length(ok_or(each_held([]), ["x"])) == 0
+fn each_held(stated: List<modules.Reached>) -> Result<List<String>, Unreached> {
+    var found = []
+    for one in stated {
+        found = list.push(found, held(one)?)
+    }
+    Ok(found)
+}
+
+/// The file of `one`, where it is there and has the hash its line states, and why not otherwise.
+// example: code_of(refused_kind(held(one_at("no-such-directory/x.jar")))) == "L0606"
+fn held(one: modules.Reached) -> Result<String, Unreached> {
+    if !modules.is_file(modules.file_at(one.file)) {
+        return Err(refused(one, Missing(one.archive.path)))
+    }
+    let bytes = read_of(one)?
+    let hash = digest.sha256(bytes)
+    if modules.Digest(hash) != one.archive.digest {
+        return Err(refused(one, HashDiffers { path: one.archive.path, found: hash }))
+    }
+    opened_held(one)
+}
+
+/// The bytes of the file of `one`, or the file that could not be read.
+// example: is_unread(read_of(one_at("no-such-directory/x.jar")))
+fn read_of(one: modules.Reached) -> Result<List<Int>, Unreached> {
+    match files.read_bytes(one.file) {
+        Ok(bytes) => Ok(bytes)
+        Err(why) => Err(Unread(modules.Unreadable { path: one.file, why: why }))
+    }
+}
+
+/// The file of `one`, where it opens as a Java archive whose manifest names no other archive.
+// example: code_of(refused_kind(opened_held(one_at("no-such-directory/x.jar")))) == "L0609"
+fn opened_held(one: modules.Reached) -> Result<String, Unreached> {
+    match opened(one.file) {
+        Ok(archive) => class_path_held(one, archive)
+        Err(_) => Err(refused(one, NotAnArchive(one.archive.path)))
+    }
+}
+
+/// The file of `one`, where `archive`, which is that file opened, names no other archive.
+///
+/// The manifest's `Class-Path` names more archives, and a JVM would reach each of them.
+// example: code_of(refused_kind(opened_held(one_at("no-such-directory/x.jar")))) == "L0609"
+fn class_path_held(one: modules.Reached, archive: JarFile) -> Result<String, Unreached> {
+    let named = more_named(archive)
+    closed(archive)
+    match named {
+        Ok(false) => Ok(one.file)
+        Ok(true) => Err(refused(one, NamesMore(one.archive.path)))
+        Err(_) => Err(refused(one, NotAnArchive(one.archive.path)))
+    }
+}
+
+/// Whether the manifest of `archive` has a `Class-Path`, or why the manifest could not be read.
+///
+/// An archive with no manifest names no other archive.
+// example: code_of(refused_kind(opened_held(one_at("no-such-directory/x.jar")))) == "L0609"
+fn more_named(archive: JarFile) -> Result<Bool, String> {
+    match manifest_of(archive) {
+        Ok(Some(manifest)) => Ok(has_class_path(main_attributes(manifest)))
+        Ok(None) => Ok(false)
+        Err(why) => Err(why)
+    }
+}
+
+/// Whether `attributes` has a `Class-Path`, whatever it holds.
+// example: code_of(refused_kind(opened_held(one_at("no-such-directory/x.jar")))) == "L0609"
+fn has_class_path(attributes: Attributes) -> Bool {
+    match value_of(attributes, "Class-Path") {
+        Some(_) => true
+        None => false
+    }
+}
+
+/// `kind` as a refusal of the line that states `one`.
+// example: code_of(refused_kind(Err(refused(one_at("x.jar"), Missing("x.jar"))))) == "L0606"
+fn refused(one: modules.Reached, kind: ArchiveErrorKind) -> Unreached {
+    Refused { manifest: one.manifest, error: ArchiveError { kind: kind, span: one.archive.span } }
+}
+
+/// The code a refusal of this kind is refused with, which `docs/specs/diagnostics.md` lists.
+// example: code_of(NamesMore("x.jar")) == "L0608"
+fn code_of(kind: ArchiveErrorKind) -> String {
+    match kind {
+        Missing(_) => "L0606"
+        HashDiffers { path, found } => "L0607"
+        NamesMore(_) => "L0608"
+        NotAnArchive(_) => "L0609"
+    }
+}
+
+/// The `error:` line, without its prefix.
+// example: message(Missing("lib/x.jar")) == "`lib/x.jar` is not there"
+fn message(kind: ArchiveErrorKind) -> String {
+    match kind {
+        Missing(path) => "`" + path + "` is not there"
+        HashDiffers { path, found } => "`" + path + "` has the hash `sha256:" + found + "`, and this line states another"
+        NamesMore(path) => "`" + path + "` names more archives in its `Class-Path`"
+        NotAnArchive(path) => "`" + path + "` is no Java archive"
+    }
+}
+
+/// The `help:` line, which every refusal of an archive has.
+// example: help_of(Missing("x.jar")) == "a `jar` line names a file on disk already, and nothing is fetched"
+fn help_of(kind: ArchiveErrorKind) -> String {
+    match kind {
+        Missing(_) => "a `jar` line names a file on disk already, and nothing is fetched"
+        HashDiffers { path, found } => "a hash pins the bytes of an archive; state the hash of the archive the package uses"
+        NamesMore(_) => "a run reaches only the archives a manifest states; use an archive with no `Class-Path`"
+        NotAnArchive(_) => "a `jar` line names a zip file of classes, as the `jar` tool of the JDK writes one"
+    }
+}
+
+/// The kind of refusal `answer` holds, and a missing archive where it holds none.
+// example: code_of(refused_kind(Ok("x.jar"))) == "L0606"
+fn refused_kind<T>(answer: Result<T, Unreached>) -> ArchiveErrorKind {
+    match answer {
+        Err(Refused { manifest, error }) => error.kind
+        _ => Missing("")
+    }
+}
+
+/// Whether `answer` holds a file that could not be read.
+// example: !is_unread(Ok(1))
+fn is_unread<T>(answer: Result<T, Unreached>) -> Bool {
+    match answer {
+        Err(Unread(_)) => true
+        _ => false
+    }
+}
+
+/// An archive at `file`, stated with a hash of zeros by the line at the start of a manifest.
+// example: one_at("x.jar").file == "x.jar"
+fn one_at(file: String) -> modules.Reached {
+    let archive = modules.Archive { path: file, digest: modules.Digest(modules.repeated_zero(64)), span: lexer.Span { start: 0, length: 0 } }
+    modules.Reached { file: file, archive: archive, manifest: modules.Manifest { path: "bux.package", source: "" } }
+}
+
+/// The Java archive at `name`, opened to be read.
+extern new opened(name: String) -> Result<JarFile, String>
+
+/// The manifest of `archive`, and `None` where it has none.
+extern method manifest_of(archive: JarFile) -> Result<Option<JarManifest>, String> = "getManifest"
+
+/// The attributes of the main section of `manifest`, which is where `Class-Path` is written.
+extern method main_attributes(manifest: JarManifest) -> Attributes = "getMainAttributes"
+
+/// The value of the attribute `name`, and `None` where there is no such attribute.
+extern method value_of(attributes: Attributes, name: String) -> Option<String> = "getValue"
+
+/// Closes `archive`, which gives its file back to the file system.
+extern method closed(archive: JarFile) -> () = "close"
+
+/// Why a build reaches no archive: a file that could not be read, or a line that is refused.
+type Unreached =
+    | Unread(modules.NotLoaded)
+    | Refused {
+        manifest: modules.Manifest
+        error: ArchiveError
+    }
+
+/// Why an archive was refused, and the `jar` line that states it.
+type ArchiveError = {
+    kind: ArchiveErrorKind
+    span: lexer.Span
+}
+
+/// What is wrong with an archive, in the words the reader sees.
+type ArchiveErrorKind =
+    | Missing(String)
+    | HashDiffers {
+        path: String
+        found: String
+    }
+    | NamesMore(String)
+    | NotAnArchive(String)
+
+/// A Java archive, opened.
+extern type JarFile = "java.util.jar.JarFile"
+
+/// The manifest of a Java archive, which is its `META-INF/MANIFEST.MF`.
+extern type JarManifest = "java.util.jar.Manifest"
+
+/// The attributes of one section of a manifest.
+extern type Attributes = "java.util.jar.Attributes"

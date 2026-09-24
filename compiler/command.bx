@@ -4,6 +4,7 @@
 // `docs/specs/diagnostics.md` states how a refusal reads. A command answers with text rather than
 // with a print, so the runner runs many commands in one JVM and holds each to its golden answer.
 // `main.bx` prints the answer; it is a module of its own because no module imports `main`.
+import archives
 import ast
 import environment
 import exhaustiveness
@@ -291,13 +292,13 @@ fn started(asked: Started, library: ir.Library) -> Answer {
 }
 
 /// The program `done` holds, started with the words `asked` gives it, where it is one.
-// example: said_by(built_started(Built { module: "a", target: "", starts: false }, Started { file: "a.bx", arguments: [] })).errors == "error: a.bx: a module is run through `fn main(arguments: List<String>) -> Int`, which this one does not declare\n"
+// example: said_by(built_started(Built { module: "a", target: "", archives: [], starts: false }, Started { file: "a.bx", arguments: [] })).errors == "error: a.bx: a module is run through `fn main(arguments: List<String>) -> Int`, which this one does not declare\n"
 fn built_started(done: Built, asked: Started) -> Answer {
     if !done.starts {
         return Spoken(unusable(asked.file + ": a module is run through `fn main(arguments: List<String>) -> Int`, which this one does not declare"))
     }
     match java_found() {
-        Ok(java) => Starts(program_line(java: java, classes: done.target, module: done.module, arguments: asked.arguments))
+        Ok(java) => Starts(program_line(java: java, classes: all_of(values: [done.target], more: done.archives), module: done.module, arguments: asked.arguments))
         Err(said) => Spoken(said)
     }
 }
@@ -305,26 +306,18 @@ fn built_started(done: Built, asked: Started) -> Answer {
 /// Compiles `path` and every module it reaches, writing every class into the one `target_of(path)`.
 ///
 /// A module is a class of its own, so a program of several modules is several classes, and a JVM
-/// is started on the one the command named. `docs/specs/modules.md` states the order.
+/// is started on the one the command named. `docs/specs/modules.md` states the order. Each Java
+/// archive the package states is held to its line before anything is written.
 // example: is_refused(built("no-such-directory/a.bx", ir.little_library()))
 fn built(path: String, library: ir.Library) -> Result<Built, Said> {
     let program = page_said(checked(path, library))?
     let module = named_module(program.root.module.path)?
     let lowered = page_said(lowered_of(program, library))?
     let classes = page_said(written_of(lowered, program))?
+    let reached = page_said(archives_of(path))?
     let target = target_of(path)
     _ = classes_written(classes, target)?
-    Ok(Built { module: module, target: target, starts: is_a_program(lowered) })
-}
-
-/// The one directory a build of `path` writes every class into: `target/` beside the module.
-///
-/// A module of a package sits in the package's directory, so this is the package's `target/`.
-/// No class lands beside a source, and deleting this directory is a clean build.
-// example: target_of("compiler/main.bx") == "compiler/target"
-// example: target_of("main.bx") == "target"
-fn target_of(path: String) -> String {
-    modules.joined(modules.directory_of(path), "target")
+    Ok(Built { module: module, target: target, archives: reached, starts: is_a_program(lowered) })
 }
 
 /// Whether a build was refused, which is what the examples of a build that fails read.
@@ -450,11 +443,41 @@ fn is_none_run(found: Result<Option<Run>, List<Diagnostic>>) -> Bool {
 fn examples_held(run: Run, root: Typed, library: ir.Library) -> Result<Said, Said> {
     let module = named_module(root.module.path)?
     let classes = refusing(run_classes(run, root, library), run, root)?
+    let reached = refusing(archives_of(root.module.path), run, root)?
     let java = java_found()?
     let beside = somewhere_of_its_own()?
-    let said = ran_in(Beside { java: java, module: module, beside: beside }, classes, run, root)
+    let said = ran_in(Beside { java: java, module: module, beside: beside, archives: reached }, classes, run, root)
     removed_whole(beside)
     Ok(said)
+}
+
+/// The file of each Java archive the package of `path` reaches, or the refusal of the first that
+/// is not held to its line, shown against the manifest that states it.
+///
+/// `docs/specs/packages.md` states the `jar` line, and `docs/specs/run.md` the class path.
+// example: list.length(ok_or(page_said(archives_of("no-such-directory/a.bx")), ["x"])) == 0
+fn archives_of(path: String) -> Result<List<String>, NotCompiled> {
+    match archives.reached(modules.directory_of(path)) {
+        Ok(found) => Ok(found)
+        Err(archives.Unread(not)) => Err(not_loaded(not))
+        Err(archives.Refused { manifest, error }) => Err(Refused(Refusal { diagnostics: [archive_diagnostic(error)], page: Page { source: manifest.source, path: manifest.path } }))
+    }
+}
+
+/// A refusal of an archive as the diagnostic the reader is shown.
+// example: archive_diagnostic(archives.ArchiveError { kind: archives.Missing("x.jar"), span: lexer.Span { start: 0, length: 1 } }).code == "L0606"
+fn archive_diagnostic(error: archives.ArchiveError) -> Diagnostic {
+    Diagnostic { code: archives.code_of(error.kind), message: archives.message(error.kind), span: error.span, help: help_written(archives.help_of(error.kind)), fix: None }
+}
+
+/// The one directory a build of `path` writes every class into: `target/` beside the module.
+///
+/// A module of a package sits in the package's directory, so this is the package's `target/`.
+/// No class lands beside a source, and deleting this directory is a clean build.
+// example: target_of("compiler/main.bx") == "compiler/target"
+// example: target_of("main.bx") == "target"
+fn target_of(path: String) -> String {
+    modules.joined(modules.directory_of(path), "target")
 }
 
 /// The `java` of the JDK `JAVA_HOME` names, which is the only JVM a run ever reaches for.
@@ -554,10 +577,10 @@ fn put_back(refused: Refusal, run: Run, root: Typed) -> Said {
 }
 
 /// The classes written into `beside.beside`, the run started there, and what it found.
-// example: ran_in(Beside { java: "no-such-java", module: "a", beside: "no-such-directory/a" }, [], Run { source: "", stretches: [], examples: [], module: lexer.Span { start: 0, length: 0 } }, Typed { module: modules.Module { name: "main", path: "main.bx", source: "", program: ast.Program { items: [] } }, inferred: types.checked_of("") }).status == 2
+// example: ran_in(Beside { java: "no-such-java", module: "a", beside: "no-such-directory/a", archives: [] }, [], Run { source: "", stretches: [], examples: [], module: lexer.Span { start: 0, length: 0 } }, Typed { module: modules.Module { name: "main", path: "main.bx", source: "", program: ast.Program { items: [] } }, inferred: types.checked_of("") }).status == 2
 fn ran_in(beside: Beside, classes: List<jvm.ClassFile>, run: Run, root: Typed) -> Said {
     match classes_written(classes, beside.beside) {
-        Ok(_) => run_ended(program_finished(program_line(java: beside.java, classes: beside.beside, module: beside.module, arguments: [])), beside.java, run, root)
+        Ok(_) => run_ended(program_finished(program_line(java: beside.java, classes: all_of(values: [beside.beside], more: beside.archives), module: beside.module, arguments: [])), beside.java, run, root)
         Err(said) => said
     }
 }
@@ -575,14 +598,16 @@ fn program_finished(line: List<String>) -> Result<programs.Finished, String> {
     Ok(programs.Finished { code: code, output: output, errors: errors })
 }
 
-/// The line that starts a JVM on the class `module` in `classes`, which `arguments` then follow.
+/// The line that starts a JVM on the class `module`, which `arguments` then follow.
 ///
 /// `docs/specs/run.md` states each flag: the preview that a value class needs, no module outside
-/// `java.base`, and no class that a stream of serialized bytes names.
-// example: list.length(program_line(java: "java", classes: "a", module: "b", arguments: ["c"])) == 9
-// example: or(list.at(program_line(java: "java", classes: "a", module: "b", arguments: []), 4), "") == "-Djdk.serialFilter=!*"
-fn program_line(java: String, classes: String, module: String, arguments: List<String>) -> List<String> {
-    all_of(values: [java, "--enable-preview", "--limit-modules", "java.base", "-Djdk.serialFilter=!*", "-cp", classes, module], more: arguments)
+/// `java.base`, and no class that a stream of serialized bytes names. The class path is `classes`
+/// and nothing else, in the order given: the one `target/` of the build, then each archive.
+// example: list.length(program_line(java: "java", classes: ["a"], module: "b", arguments: ["c"])) == 9
+// example: or(list.at(program_line(java: "java", classes: ["a"], module: "b", arguments: []), 4), "") == "-Djdk.serialFilter=!*"
+// example: or(list.at(program_line(java: "java", classes: ["target", "x.jar"], module: "b", arguments: []), 6), "") == "target:x.jar"
+fn program_line(java: String, classes: List<String>, module: String, arguments: List<String>) -> List<String> {
+    all_of(values: [java, "--enable-preview", "--limit-modules", "java.base", "-Djdk.serialFilter=!*", "-cp", strings.join(classes, ":"), module], more: arguments)
 }
 
 /// The builder, with each variable removed that a JVM reads options from.
@@ -2994,6 +3019,7 @@ type Started = {
 type Built = {
     module: String
     target: String
+    archives: List<String>
     starts: Bool
 }
 
@@ -3066,6 +3092,7 @@ type Beside = {
     java: String
     module: String
     beside: String
+    archives: List<String>
 }
 
 derive Eq for RootForm

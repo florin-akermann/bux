@@ -31,7 +31,9 @@ status 0
 > `bux run` does what `bux build` does and then hands the result to a JVM. The class files are
 > written under `target/` exactly as a build writes them, so a run leaves the same files behind and
 > nothing more. That includes the class of every module the program imports, because the program
-> reaches them while it runs. That one `target/` directory is the whole class path of the program.
+> reaches them while it runs. The class path of the program is that one `target/` directory, then
+> each Java archive that a `jar` line of the manifest states, in line order, then the archives of
+> each dependency. Nothing else is on it, and `bux help packages` states the `jar` line.
 >
 > A program starts at `main`, which takes the words it was run with and gives back the status the
 > run ends with:
@@ -53,7 +55,8 @@ status 0
 > module. The JVM gets `--enable-preview` because every class Bux writes is a value class, which
 > JDK 28 holds in preview.
 >
-> A program reaches its library and the `java.base` module of the JDK, and nothing more of the JDK.
+> A program reaches its library, its stated archives, and the `java.base` module of the JDK, and
+> nothing more of the JDK.
 > The JVM gets `--limit-modules java.base`, so no class of `java.naming`, `java.rmi`, or
 > `java.scripting` loads. It also gets `-Djdk.serialFilter=!*`, so it makes no object from
 > serialized bytes. `JAVA_TOOL_OPTIONS`, `JDK_JAVA_OPTIONS`, and `_JAVA_OPTIONS` are removed from
@@ -432,10 +435,12 @@ status 0
 >     package shapes
 >     version 0.2.0
 >     depends ../geometry
+>     jar lib/geometry.jar sha256:4f2c000000000000000000000000000000000000000000000000000000009a1e
 >
-> Every line is a keyword, one space, and one word. `package` is written first and `version`
-> second, and a `depends` line for each dependency comes after both. A path is read against the
-> directory the manifest sits in, so `../geometry` is that directory's sibling.
+> Every line is a keyword, one space, and one word, except a `jar` line. `package` is written
+> first and `version` second, a `depends` line for each dependency comes after both, and a `jar`
+> line for each Java archive comes last. A path is read against the directory the manifest sits
+> in, so `../geometry` is that directory's sibling.
 >
 > An import that names no module beside the file that wrote it names a module of a package the
 > manifest depends on. Nothing is fetched: the directory is already there, or the compiler says
@@ -447,6 +452,14 @@ status 0
 > one name has one definition, and an order would make which definition a name means depend on the
 > order the files were reached in. A directory depended on twice is refused for the same reason
 > there is one way to write a manifest.
+>
+> A `jar` line names a Java archive by its path and by the SHA-256 of its bytes: `sha256:` and 64
+> lowercase hexadecimal digits, as `shasum -a 256` shows them. The path holds no blank, `:`, or `*`.
+> Nothing is fetched: the archive is a file on disk already. `bux build`, `bux run`, and `bux test`
+> refuse an archive that is not there, that has another hash, that is no Java archive, or whose
+> manifest has a `Class-Path`, because a JVM reaches each archive a `Class-Path` names. A run puts
+> the stated archives on the class path after `target/`, and a package with no `jar` line reaches
+> no archive. A program reaches a class of an archive with an `extern`.
 >
 > The name and the version are stated and nothing reads either yet. A manifest that leaves one out
 > is refused all the same, because a package says what it is before anything asks.
@@ -655,6 +668,10 @@ status 0
 > A module is named after its file, so the file's name has to be one a class may have: a name
 > holding `.`, `;`, `[` or `/` is refused rather than written out as a class no JVM would load.
 >
+> A build reads the `jar` lines of the manifest too, which `bux help packages` states. Each archive
+> is there, has the hash that its line states, is a Java archive, and has no `Class-Path`, or the
+> build is refused against its line before a class is written. The archive is not copied.
+>
 > A hole is refused here. `todo("a reason")` is what an unfinished body is written as, and a hole
 > has nothing to run, so there is nothing for a build to write. Every hole in the module is named
 > rather than the first, because a build is how a reader learns what is left; nothing is written
@@ -674,10 +691,12 @@ status 0
 >     package shapes
 >     version 0.2.0
 >     depends ../geometry
+>     jar lib/geometry.jar sha256:4f2c000000000000000000000000000000000000000000000000000000009a1e
 >
-> Every line is a keyword, one space, and one word. `package` is written first and `version`
-> second, and a `depends` line for each dependency comes after both. A path is read against the
-> directory the manifest sits in, so `../geometry` is that directory's sibling.
+> Every line is a keyword, one space, and one word, except a `jar` line. `package` is written
+> first and `version` second, a `depends` line for each dependency comes after both, and a `jar`
+> line for each Java archive comes last. A path is read against the directory the manifest sits
+> in, so `../geometry` is that directory's sibling.
 >
 > An import that names no module beside the file that wrote it names a module of a package the
 > manifest depends on. Nothing is fetched: the directory is already there, or the compiler says
@@ -689,6 +708,14 @@ status 0
 > one name has one definition, and an order would make which definition a name means depend on the
 > order the files were reached in. A directory depended on twice is refused for the same reason
 > there is one way to write a manifest.
+>
+> A `jar` line names a Java archive by its path and by the SHA-256 of its bytes: `sha256:` and 64
+> lowercase hexadecimal digits, as `shasum -a 256` shows them. The path holds no blank, `:`, or `*`.
+> Nothing is fetched: the archive is a file on disk already. `bux build`, `bux run`, and `bux test`
+> refuse an archive that is not there, that has another hash, that is no Java archive, or whose
+> manifest has a `Class-Path`, because a JVM reaches each archive a `Class-Path` names. A run puts
+> the stated archives on the class path after `target/`, and a package with no `jar` line reaches
+> no archive. A program reaches a class of an archive with an `extern`.
 >
 > The name and the version are stated and nothing reads either yet. A manifest that leaves one out
 > is refused all the same, because a package says what it is before anything asks.
@@ -1837,10 +1864,12 @@ status 0
 >     package shapes
 >     version 0.2.0
 >     depends ../geometry
+>     jar lib/geometry.jar sha256:4f2c000000000000000000000000000000000000000000000000000000009a1e
 >
-> Every line is a keyword, one space, and one word. `package` is written first and `version`
-> second, and a `depends` line for each dependency comes after both. A path is read against the
-> directory the manifest sits in, so `../geometry` is that directory's sibling.
+> Every line is a keyword, one space, and one word, except a `jar` line. `package` is written
+> first and `version` second, a `depends` line for each dependency comes after both, and a `jar`
+> line for each Java archive comes last. A path is read against the directory the manifest sits
+> in, so `../geometry` is that directory's sibling.
 >
 > An import that names no module beside the file that wrote it names a module of a package the
 > manifest depends on. Nothing is fetched: the directory is already there, or the compiler says
@@ -1852,6 +1881,14 @@ status 0
 > one name has one definition, and an order would make which definition a name means depend on the
 > order the files were reached in. A directory depended on twice is refused for the same reason
 > there is one way to write a manifest.
+>
+> A `jar` line names a Java archive by its path and by the SHA-256 of its bytes: `sha256:` and 64
+> lowercase hexadecimal digits, as `shasum -a 256` shows them. The path holds no blank, `:`, or `*`.
+> Nothing is fetched: the archive is a file on disk already. `bux build`, `bux run`, and `bux test`
+> refuse an archive that is not there, that has another hash, that is no Java archive, or whose
+> manifest has a `Class-Path`, because a JVM reaches each archive a `Class-Path` names. A run puts
+> the stated archives on the class path after `target/`, and a package with no `jar` line reaches
+> no archive. A program reaches a class of an archive with an `extern`.
 >
 > The name and the version are stated and nothing reads either yet. A manifest that leaves one out
 > is refused all the same, because a package says what it is before anything asks.
