@@ -116,12 +116,12 @@ An import that reaches a private name is refused with a code and a help that nam
 
 ## 🔴 Item 125: `send` says `Delivered` for a message that the process reads
 `tests/spec/concurrency/mailbox_full.bx` sends `Stop` to an `Idle` process and expects `delivered`.
-One runner pass of Item 112 printed `the process has ended` for that line, and five printed `delivered`.
+One runner pass of Item 112 printed `the process has ended` for that line; five printed `delivered`.
 `send` offers the message to the mailbox, and then it tests whether the process has ended.
 `offer_within` and `ended_test` in `compiler/ir.bx` write the two steps.
-`Idle` takes `Stop` and ends between the two steps, so a message the process read is reported as never read.
-`docs/specs/concurrency.md` says that a message the mailbox takes after the end gives `ProcessEnded`.
+`Idle` takes `Stop` and ends between the two steps, so a message it read is reported as never read.
+`docs/specs/concurrency.md` says a message the mailbox takes after the end gives `ProcessEnded`.
 The answer must follow what happens to the message, not the time of the test.
-[125][a] - `docs/specs/concurrency.md` states that `send` gives `ProcessEnded` only for a message that no `receive` reads.
+[125][a] - `docs/specs/concurrency.md` states that `ProcessEnded` means no `receive` reads it.
 [125][b] - A process that ends leaves its mailbox in a state `send` can tell from a taken message.
 [125][c] - `tests/spec/concurrency/mailbox_full.bx` holds on every pass of the runner.
