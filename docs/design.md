@@ -348,7 +348,7 @@ Error propagation should be concise:
 
 ```text
 fn load_user(id: UserId) -> Result<User, Error> {
-    user := find_user(id)?
+    let user = find_user(id)?
     validate(user)?
     Ok(user)
 }
@@ -434,8 +434,8 @@ should infer approximately:
 Likewise:
 
 ```text
-x := 42
-name := "Florin"
+let x = 42
+let name = "Florin"
 ```
 
 should infer:
@@ -603,7 +603,7 @@ type User = {
 Record construction:
 
 ```text
-user := User {
+let user = User {
     id: id,
     name: "Alice",
     email: email
@@ -613,7 +613,7 @@ user := User {
 Record updates should be concise:
 
 ```text
-updated := user {
+let updated = user {
     name: "Bob"
 }
 ```
@@ -628,7 +628,7 @@ fn contact(user: User) {
     }
 }
 
-result := map(users, contact)
+let result = map(users, contact)
 ```
 
 This should be considered only after the core type system is stable.
@@ -636,8 +636,8 @@ This should be considered only after the core type system is stable.
 A map and a set are values too, and both are library types rather than language ones.
 
 ```text
-ages := map.insert(map.empty(), "ada", 36)
-found := map.get(ages, "ada")
+let ages = map.insert(map.empty(), "ada", 36)
+let found = map.get(ages, "ada")
 ```
 
 `Map<K, V>` holds one value for each key it is given, and `Set<T>` holds a value once however
@@ -661,7 +661,7 @@ Mutation should be explicit.
 Prefer:
 
 ```text
-user := user {
+let user = user {
     name: "Bob"
 }
 ```
@@ -678,13 +678,18 @@ counter += 1
 
 The distinction should be obvious in source code.
 
+**A binding says with its keyword whether its name can change**.
+`let total = 0` binds a name that never changes, and `var total = 0` binds a name that can.
+The two differ only in the keyword, and each joins the name to its value with `=`.
+A bare `=` then changes only a `var`, so each operator has one job.
+
 **An assignment names a name**.
 `counter = 1` and `counter += 1` are the whole of it; `user.name = "Bob"` is not written.
 A record is updated by building the value it becomes, which the paragraph above shows.
 There is then one way to change what a name holds, and none to reach inside a value.
 
 **The name an assignment names is a `var` binding**.
-`total := 0` promises the reader that `total` never changes, so `total = 2` below it is refused.
+`let total = 0` promises the reader that `total` never changes, so `total = 2` below it is refused.
 A parameter, a `for … in` binding, and a name a pattern binds never change either.
 Mutation is explicit, which means it is visible at the binding rather than only at the change.
 
@@ -716,7 +721,7 @@ fn user_name(user: User) -> String {
     user.name
 }
 
-active_names := map(filter(users, is_active), user_name)
+let active_names = map(filter(users, is_active), user_name)
 ```
 
 **There are no anonymous functions**.
@@ -1066,7 +1071,7 @@ fn added(total: Int, amount: Int) -> Next<Int> {
     Continue(total + amount)
 }
 
-counting := spawn Counter(0)
+let counting = spawn Counter(0)
 
 _ = send(counting, Add(3), NoLimit)
 ```

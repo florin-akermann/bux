@@ -20,8 +20,8 @@ fn main(arguments: List<String>) -> Int {
     if Boxed(Boxed(1)) == Boxed(Boxed(1)) {
         io.println("a box of a box is one value too")
     }
-    numbers := [Boxed(1), Boxed(2)]
-    words := [Boxed("a"), Boxed("b")]
+    let numbers = [Boxed(1), Boxed(2)]
+    let words = [Boxed("a"), Boxed("b")]
     if list.has_value(numbers, Boxed(2)) == list.has_value(words, Boxed("a")) {
         io.println("a library generic reaches the instance at each type it is used at")
     }

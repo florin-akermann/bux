@@ -14,7 +14,7 @@ fn classify(total: Int, limit: Int) -> String {
     for {
         break
     }
-    ok := seen == limit
+    let ok = seen == limit
     if ok {
         return "done"
     }

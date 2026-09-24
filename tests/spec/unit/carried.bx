@@ -22,7 +22,7 @@ fn is_saved() -> Bool {
 /// A `()` carried through a `?` and put back in an `Ok`.
 // example: is_saved()
 fn saved() -> Result<(), String> {
-    inside := kept()?
+    let inside = kept()?
     Ok(inside)
 }
 

@@ -1,16 +1,16 @@
 // expect-error: L0300
 // Canonical form keeps each bracket that the shape needs, so formatting changes no meaning.
 fn kept() {
-    first := (-a).b
-    second := -(a + b)
-    third := !(a && b)
-    fourth := (a + b).f(c)
-    fifth := -(7?)
-    sixth := -(7).abs()
-    seventh := !!a
-    eighth := f((a + b), c)
-    ninth := -(-(7))
-    tenth := ((a))
+    let first = (-a).b
+    let second = -(a + b)
+    let third = !(a && b)
+    let fourth = (a + b).f(c)
+    let fifth = -(7?)
+    let sixth = -(7).abs()
+    let seventh = !!a
+    let eighth = f((a + b), c)
+    let ninth = -(-(7))
+    let tenth = ((a))
     for (user { active: true }).active {
     }
     match (user { active: true }).active {

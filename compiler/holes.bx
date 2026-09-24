@@ -39,7 +39,7 @@ fn of_module(resolved: resolver.Resolved) -> List<Hole> {
 }
 
 /// `found`, then the holes of each statement of a block.
-// example: holes_of("fn f() -> Int {\n    held := todo(\"x\")\n    held\n}\n") == "28..37 "
+// example: holes_of("fn f() -> Int {\n    let held = todo(\"x\")\n    held\n}\n") == "31..40 "
 fn block_holes(resolved: resolver.Resolved, found: List<Hole>, walked: ast.Block) -> List<Hole> {
     var gathered = found
     for statement in walked.statements {

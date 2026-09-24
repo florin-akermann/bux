@@ -17,7 +17,7 @@ fn main(arguments: List<String>) -> Int {
     var index = 0
     for index + 1 < list.length(arguments) {
         io.println(opened_line(or(index / 2, 0)))
-        stopped := stopped_by(directory: or(list.at(arguments, index), ""), class: or(list.at(arguments, index + 1), ""))
+        let stopped = stopped_by(directory: or(list.at(arguments, index), ""), class: or(list.at(arguments, index + 1), ""))
         if stopped != "" {
             io.println(stopped_line(stopped))
         }
@@ -61,11 +61,11 @@ fn one_line(text: String) -> String {
 /// loads it.
 // example: is_stopped(main_called(directory: "no-such-directory", class: "a"))
 fn main_called(directory: String, class: String) -> Result<Int, String> {
-    loader := loader_over(directory)?
-    started := static_of(public_lookup(), class_in(class, true, loader)?, "main", method_type("(Lbux/List;)J", loader)?)?
-    listed := static_of(public_lookup(), class_in("bux.List", true, loader)?, "of", method_type("([Ljava/lang/Object;)Lbux/List;", loader)?)?
-    empty := or_stopped(collecting(listed, class_named("[Ljava.lang.Object;")?, 0), "no empty list")?
-    whole := or_stopped(collected(started, 0, empty), "no call of main")?
+    let loader = loader_over(directory)?
+    let started = static_of(public_lookup(), class_in(class, true, loader)?, "main", method_type("(Lbux/List;)J", loader)?)?
+    let listed = static_of(public_lookup(), class_in("bux.List", true, loader)?, "of", method_type("([Ljava/lang/Object;)Lbux/List;", loader)?)?
+    let empty = or_stopped(collecting(listed, class_named("[Ljava.lang.Object;")?, 0), "no empty list")?
+    let whole = or_stopped(collected(started, 0, empty), "no call of main")?
     invoked(whole)
 }
 
@@ -81,9 +81,9 @@ fn is_stopped<T>(ran: Result<T, String>) -> Bool {
 /// A class loader over `directory` alone, whose parent reaches only the platform's classes.
 // example: stopped_by(directory: "no-such-directory", class: "a") != ""
 fn loader_over(directory: String) -> Result<Loader, String> {
-    made := method_type("([Ljava/net/URL;Ljava/lang/ClassLoader;)V", platform_loader())?
-    building := constructor_of(public_lookup(), class_named("java.net.URLClassLoader")?, made)?
-    one := or_stopped(collecting_at(building, 0, class_named("[Ljava.net.URL;")?, 1), "no loader")?
+    let made = method_type("([Ljava/net/URL;Ljava/lang/ClassLoader;)V", platform_loader())?
+    let building = constructor_of(public_lookup(), class_named("java.net.URLClassLoader")?, made)?
+    let one = or_stopped(collecting_at(building, 0, class_named("[Ljava.net.URL;")?, 1), "no loader")?
     loader_made(one, url_of(address_of(file_of(directory)))?, platform_loader())
 }
 

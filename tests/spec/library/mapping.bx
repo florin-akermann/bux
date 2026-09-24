@@ -12,11 +12,11 @@ import map
 import set
 
 fn main(arguments: List<String>) -> Int {
-    ages := map.insert(map.insert(map.empty(), "ada", 36), "alan", 41)
+    let ages = map.insert(map.insert(map.empty(), "ada", 36), "alan", 41)
     io.println(shown(or(map.get(ages, "ada"), 0)))
     io.println(shown(or(map.get(ages, "grace"), 0)))
     io.println(shown(or(map.get(map.insert(ages, "ada", 41), "ada"), 0)))
-    seen := set.insert(set.insert(set.empty(), 2), 2)
+    let seen = set.insert(set.insert(set.empty(), 2), 2)
     io.println(shown(set.has_value(seen, 2)))
     io.println(shown(set.has_value(seen, 3)))
     0

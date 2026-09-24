@@ -36,7 +36,7 @@ fn program_lowered(path: String, library: Library) -> Result<List<Lowered>, Stri
 /// The checked modules, lowered, or `skipped` where a check refused or a module holds a hole.
 // example: list.length(ok_or(checked_lowered(Err("refused"), little_library()), [])) == 0
 fn checked_lowered(checked: Result<List<infer.Inference>, String>, library: Library) -> Result<List<Lowered>, String> {
-    typed := checked?
+    let typed = checked?
     for module in typed {
         if list.length(holes.of_module(module.resolved)) > 0 {
             return Err("skipped\n")
@@ -52,10 +52,10 @@ fn checked_lowered(checked: Result<List<infer.Inference>, String>, library: Libr
 /// lowered after each module that imports it, and the prelude is lowered after all of them.
 // example: list.length(passes_lowered([], little_library())) == 1
 fn passes_lowered(typed: List<infer.Inference>, library: Library) -> List<Lowered> {
-    classes := module_classes(typed)
+    let classes = module_classes(typed)
     var asked = no_asks()
     for {
-        pass := pass_over(typed, library, classes, asked)
+        let pass = pass_over(typed, library, classes, asked)
         if !is_asking_more(pass) {
             return reversed(pass.lowered)
         }
@@ -71,7 +71,7 @@ fn passes_lowered(typed: List<infer.Inference>, library: Library) -> List<Lowere
 fn pass_over(typed: List<infer.Inference>, library: Library, classes: map.Map<String, String>, asked: Asked) -> Pass {
     var pass = Pass { lowered: [], asked: asked, knew: [] }
     for module in reversed(typed) {
-        naming := naming_in(pass, classes, module.resolved.module)
+        let naming = naming_in(pass, classes, module.resolved.module)
         pass = pass_added(pass, naming.module, lowered_module(module, library, naming, pass.asked))
     }
     pass_added(pass, "prelude", lowered_prelude(library, classes, pass.asked))
@@ -102,10 +102,10 @@ fn naming_in(pass: Pass, classes: map.Map<String, String>, name: String) -> Nami
 // example: module_named(module_classes([types.checked_of("")]), "main") == "main"
 fn module_classes(typed: List<infer.Inference>) -> map.Map<String, String> {
     var classes = only_the_prelude()
-    last := list.length(typed) - 1
+    let last = list.length(typed) - 1
     var index = 0
     for module in typed {
-        name := module.resolved.module
+        let name = module.resolved.module
         if index < last && is_carried(name) {
             classes = library_class_added(classes, name)
         }
@@ -122,7 +122,7 @@ fn module_classes(typed: List<infer.Inference>) -> map.Map<String, String> {
 // example: module_named(root_class_added(only_the_prelude(), "prelude"), "prelude$") == "prelude"
 // example: module_named(root_class_added(only_the_prelude(), "main"), "main") == "main"
 fn root_class_added(classes: map.Map<String, String>, name: String) -> map.Map<String, String> {
-    spelled := root_spelled(classes, name)
+    let spelled = root_spelled(classes, name)
     if spelled == name {
         return classes
     }
@@ -222,9 +222,9 @@ fn no_lowered() -> Lowered {
 /// from what inference gave them.
 // example: set.has_value(library_read("type Box = Box\n").types, "Box")
 fn library_read(source: String) -> Library {
-    program := ok_or(parser.parse(source), ast.Program { items: [] })
-    prelude := types.prelude_read(source)
-    resolved := ok_or(resolver.prelude_resolved(program), resolver.Resolved { module: "prelude", program: program, found: map.empty() })
+    let program = ok_or(parser.parse(source), ast.Program { items: [] })
+    let prelude = types.prelude_read(source)
+    let resolved = ok_or(resolver.prelude_resolved(program), resolver.Resolved { module: "prelude", program: program, found: map.empty() })
     library_of(prelude, resolved)
 }
 
@@ -243,9 +243,9 @@ fn lowered_prelude(library: Library, classes: map.Map<String, String>, asked: As
 /// The module class, then one class for each type the module reaches, then the class of a list.
 // example: list.length(lowered(little_lowering("fn f() -> Int {\n    1\n}\n"), no_asks()).classes) == 8
 fn lowered(lowering: Lowering, asked: Asked) -> Lowered {
-    reached := lowering { shapes: asked_reached(lowering.shapes, asked, lowering.module) }
-    classed := module_class(reached, asked)
-    written := concatenated(first: concatenated(first: [classed.class], second: shape_classes(reached.shapes)), second: process_classes(classed.lowering))
+    let reached = lowering { shapes: asked_reached(lowering.shapes, asked, lowering.module) }
+    let classed = module_class(reached, asked)
+    let written = concatenated(first: concatenated(first: [classed.class], second: shape_classes(reached.shapes)), second: process_classes(classed.lowering))
     Lowered { classes: list.push(written, carrier()), asks: classed.lowering.asks }
 }
 
@@ -273,11 +273,11 @@ fn process_classes(lowering: Lowering) -> List<Class> {
 /// `spawn` calls and the method the virtual thread of the process runs.
 // example: process_class(little_lowering(""), ast.ProcessDeclaration { name: infer.no_name(), functions: [], span: infer.no_name().span }).implements == ["java/lang/Runnable"]
 fn process_class(lowering: Lowering, declaration: ast.ProcessDeclaration) -> Class {
-    started := signature_of_process(lowering, declaration, 0)
-    received := signature_of_process(lowering, declaration, 1)
-    shape := process_shape(process_class_name(module: lowering.shapes.class, named: declaration.name.text), started)
-    ran := Ran { module: lowering.shapes.class, named: declaration.name.text, started: started, received: received }
-    methods := [constructor_method(shape, object_class()), spawned_method(shape, started), run_method(lowering.shapes, shape, ran)]
+    let started = signature_of_process(lowering, declaration, 0)
+    let received = signature_of_process(lowering, declaration, 1)
+    let shape = process_shape(process_class_name(module: lowering.shapes.class, named: declaration.name.text), started)
+    let ran = Ran { module: lowering.shapes.class, named: declaration.name.text, started: started, received: received }
+    let methods = [constructor_method(shape, object_class()), spawned_method(shape, started), run_method(lowering.shapes, shape, ran)]
     Class { name: shape.class, extends: object_class(), extending: Never, implements: ["java/lang/Runnable"], fields: held_fields(shape), methods: methods }
 }
 
@@ -300,20 +300,20 @@ fn process_shape(class: String, started: Signature) -> Shape {
 /// `start` runs on the new thread, so `spawn` never waits for it.
 // example: spawned_method(process_shape("main/process$Counter", Signature { parameters: [], result: Some(Long) }), Signature { parameters: [], result: Some(Long) }).name == "spawned"
 fn spawned_method(shape: Shape, started: Signature) -> Method {
-    taken := descriptor_of(Signature { parameters: started.parameters, result: None }).parameters
-    mailbox := parameters_width(MethodDescriptor { parameters: taken, result: None })
-    finished := mailbox + 1
+    let taken = descriptor_of(Signature { parameters: started.parameters, result: None }).parameters
+    let mailbox = parameters_width(MethodDescriptor { parameters: taken, result: None })
+    let finished = mailbox + 1
     var loading = []
     var slot = 0
     for one in taken {
         loading = list.push(loading, Load { slot: slot, of: one })
         slot += width(one)
     }
-    opened := [New(mailbox_class()), Copy, IntegerOf(mailbox_bound()), Construct(MethodRef { class: mailbox_class(), name: "<init>", descriptor: MethodDescriptor { parameters: [Integer], result: None } }), Store { slot: mailbox, of: mailbox_descriptor() }, New(finished_class()), Copy, Construct(MethodRef { class: finished_class(), name: "<init>", descriptor: MethodDescriptor { parameters: [], result: None } }), Store { slot: finished, of: finished_descriptor() }]
-    held := [Load { slot: mailbox, of: mailbox_descriptor() }, Load { slot: finished, of: finished_descriptor() }]
-    started_thread := concatenated(first: concatenated(first: concatenated(first: [New(shape.class), Copy], second: loading), second: held), second: [Construct(MethodRef { class: shape.class, name: "<init>", descriptor: constructor_descriptor(shape) }), InvokeStatic(virtual_thread_started()), Drop(Reference("java/lang/Thread"))])
-    handed_back := concatenated(first: concatenated(first: [New(handle_class_name()), Copy], second: held), second: [Construct(MethodRef { class: handle_class_name(), name: "<init>", descriptor: constructor_descriptor(handle_shape()) }), Return(Some(handle_descriptor()))])
-    body := Body { instructions: concatenated(first: concatenated(first: opened, second: started_thread), second: handed_back), locals: 2, guards: [] }
+    let opened = [New(mailbox_class()), Copy, IntegerOf(mailbox_bound()), Construct(MethodRef { class: mailbox_class(), name: "<init>", descriptor: MethodDescriptor { parameters: [Integer], result: None } }), Store { slot: mailbox, of: mailbox_descriptor() }, New(finished_class()), Copy, Construct(MethodRef { class: finished_class(), name: "<init>", descriptor: MethodDescriptor { parameters: [], result: None } }), Store { slot: finished, of: finished_descriptor() }]
+    let held = [Load { slot: mailbox, of: mailbox_descriptor() }, Load { slot: finished, of: finished_descriptor() }]
+    let started_thread = concatenated(first: concatenated(first: concatenated(first: [New(shape.class), Copy], second: loading), second: held), second: [Construct(MethodRef { class: shape.class, name: "<init>", descriptor: constructor_descriptor(shape) }), InvokeStatic(virtual_thread_started()), Drop(Reference("java/lang/Thread"))])
+    let handed_back = concatenated(first: concatenated(first: [New(handle_class_name()), Copy], second: held), second: [Construct(MethodRef { class: handle_class_name(), name: "<init>", descriptor: constructor_descriptor(handle_shape()) }), Return(Some(handle_descriptor()))])
+    let body = Body { instructions: concatenated(first: concatenated(first: opened, second: started_thread), second: handed_back), locals: 2, guards: [] }
     Method { name: "spawned", descriptor: MethodDescriptor { parameters: taken, result: Some(handle_descriptor()) }, reached: ThroughTheClass, body: body }
 }
 
@@ -329,7 +329,7 @@ fn virtual_thread_started() -> MethodRef {
 /// The state is held as an object between two messages, and each call is given it as it takes it.
 // example: run_method(no_shapes(), process_shape("main/process$Counter", Signature { parameters: [], result: Some(Long) }), Ran { module: "main", named: "Counter", started: Signature { parameters: [], result: Some(Long) }, received: Signature { parameters: [Some(Long), Some(Long)], result: Some(object()) } }).name == "run"
 fn run_method(shapes: Shapes, shape: Shape, ran: Ran) -> Method {
-    this := Reference(shape.class)
+    let this = Reference(shape.class)
     var starting = []
     for carried in shape.carries {
         starting = match carried.of {
@@ -341,17 +341,17 @@ fn run_method(shapes: Shapes, shape: Shape, ran: Ran) -> Method {
             None => starting
         }
     }
-    module := ran.module
-    named := ran.named
-    started := concatenated(first: list.push(starting, InvokeStatic(MethodRef { class: module, name: named + "$start", descriptor: descriptor_of(ran.started) })), second: as_object(ran.started.result))
-    taking := [Store { slot: 1, of: object() }, Label(0), Load { slot: 0, of: this }, GetField(FieldRef { class: shape.class, name: "mailbox", of: mailbox_descriptor() }), InvokeVirtual(MethodRef { class: mailbox_class(), name: "take", descriptor: MethodDescriptor { parameters: [], result: Some(object()) } }), Store { slot: 2, of: object() }]
-    receiving := concatenated(first: concatenated(first: object_as(1, or(list.at(ran.received.parameters, 0), None)), second: object_as(2, or(list.at(ran.received.parameters, 1), None))), second: [InvokeStatic(MethodRef { class: module, name: named + "$receive", descriptor: descriptor_of(ran.received) }), Store { slot: 3, of: next_descriptor() }])
-    again := built_shape(shapes, "Continue")
-    tested := carrying_tag(again, Slot { at: 3, of: next_descriptor() }, 1)
-    kept := concatenated(first: [Load { slot: 3, of: next_descriptor() }, Cast(again.class), GetField(FieldRef { class: again.class, name: first_carried_name(again), of: or(first_carried(again), object()) })], second: as_object(first_carried(again)))
-    ending := [Store { slot: 1, of: object() }, Jump(0), Label(1), Load { slot: 0, of: this }, GetField(FieldRef { class: shape.class, name: "finished", of: finished_descriptor() }), Load { slot: 1, of: object() }, InvokeVirtual(MethodRef { class: finished_class(), name: "complete", descriptor: MethodDescriptor { parameters: [object()], result: Some(Boolean) } }), Drop(Boolean), Return(None)]
-    instructions := concatenated(first: concatenated(first: concatenated(first: concatenated(first: [Label(2)], second: started), second: taking), second: concatenated(first: receiving, second: tested)), second: concatenated(first: concatenated(first: kept, second: ending), second: failed_end(shape)))
-    guard := Guard { from: 2, to: 4, handler: 4, catching: "java/lang/Throwable" }
+    let module = ran.module
+    let named = ran.named
+    let started = concatenated(first: list.push(starting, InvokeStatic(MethodRef { class: module, name: named + "$start", descriptor: descriptor_of(ran.started) })), second: as_object(ran.started.result))
+    let taking = [Store { slot: 1, of: object() }, Label(0), Load { slot: 0, of: this }, GetField(FieldRef { class: shape.class, name: "mailbox", of: mailbox_descriptor() }), InvokeVirtual(MethodRef { class: mailbox_class(), name: "take", descriptor: MethodDescriptor { parameters: [], result: Some(object()) } }), Store { slot: 2, of: object() }]
+    let receiving = concatenated(first: concatenated(first: object_as(1, or(list.at(ran.received.parameters, 0), None)), second: object_as(2, or(list.at(ran.received.parameters, 1), None))), second: [InvokeStatic(MethodRef { class: module, name: named + "$receive", descriptor: descriptor_of(ran.received) }), Store { slot: 3, of: next_descriptor() }])
+    let again = built_shape(shapes, "Continue")
+    let tested = carrying_tag(again, Slot { at: 3, of: next_descriptor() }, 1)
+    let kept = concatenated(first: [Load { slot: 3, of: next_descriptor() }, Cast(again.class), GetField(FieldRef { class: again.class, name: first_carried_name(again), of: or(first_carried(again), object()) })], second: as_object(first_carried(again)))
+    let ending = [Store { slot: 1, of: object() }, Jump(0), Label(1), Load { slot: 0, of: this }, GetField(FieldRef { class: shape.class, name: "finished", of: finished_descriptor() }), Load { slot: 1, of: object() }, InvokeVirtual(MethodRef { class: finished_class(), name: "complete", descriptor: MethodDescriptor { parameters: [object()], result: Some(Boolean) } }), Drop(Boolean), Return(None)]
+    let instructions = concatenated(first: concatenated(first: concatenated(first: concatenated(first: [Label(2)], second: started), second: taking), second: concatenated(first: receiving, second: tested)), second: concatenated(first: concatenated(first: kept, second: ending), second: failed_end(shape)))
+    let guard = Guard { from: 2, to: 4, handler: 4, catching: "java/lang/Throwable" }
     Method { name: "run", descriptor: MethodDescriptor { parameters: [], result: None }, reached: ThroughAnInstance, body: Body { instructions: instructions, locals: 3, guards: [guard] } }
 }
 
@@ -362,8 +362,8 @@ fn run_method(shapes: Shapes, shape: Shape, ran: Ran) -> Method {
 /// one waits for an end that never comes.
 // example: list.length(failed_end(process_shape("main/process$Counter", Signature { parameters: [], result: Some(Long) }))) == 9
 fn failed_end(shape: Shape) -> List<Instruction> {
-    thrown := Reference("java/lang/Throwable")
-    completed := InvokeVirtual(MethodRef { class: finished_class(), name: "completeExceptionally", descriptor: MethodDescriptor { parameters: [thrown], result: Some(Boolean) } })
+    let thrown = Reference("java/lang/Throwable")
+    let completed = InvokeVirtual(MethodRef { class: finished_class(), name: "completeExceptionally", descriptor: MethodDescriptor { parameters: [thrown], result: Some(Boolean) } })
     [Label(4), Store { slot: 1, of: thrown }, Load { slot: 0, of: Reference(shape.class) }, GetField(FieldRef { class: shape.class, name: "finished", of: finished_descriptor() }), Load { slot: 1, of: thrown }, completed, Drop(Boolean), Load { slot: 1, of: thrown }, Throw]
 }
 
@@ -388,7 +388,7 @@ fn object_as(slot: Int, wanted: Option<Descriptor>) -> List<Instruction> {
 /// The class of a handle: the mailbox and the end of one process, and the method `send` calls.
 // example: list.length(handle_class(no_shapes()).methods) == 2
 fn handle_class(shapes: Shapes) -> Class {
-    shape := handle_shape()
+    let shape = handle_shape()
     Class { name: shape.class, extends: object_class(), extending: Never, implements: [], fields: held_fields(shape), methods: [constructor_method(shape, object_class()), sent_method(shapes)] }
 }
 
@@ -399,17 +399,17 @@ fn handle_class(shapes: Shapes) -> Class {
 /// in between, so a process that ends while the sender waits is told as ended.
 // example: sent_method(no_shapes()).name == "sent"
 fn sent_method(shapes: Shapes) -> Method {
-    waiting := Slot { at: 2, of: named_descriptor(shapes, "Waiting") }
-    opened := concatenated(first: ended_test(shapes, 0), second: [Label(0)])
-    unlimited := concatenated(first: carrying_tag(built_shape(shapes, "NoLimit"), waiting, 2), second: [Label(1)])
-    offered := concatenated(first: offer_within([LongOf(100)], shapes, 5), second: [Label(5)])
-    again := concatenated(first: ended_test(shapes, 1), second: [Label(2), LongOf(0), Store { slot: 3, of: Long }])
-    timed := built_shape(shapes, "Milliseconds")
-    limit := concatenated(first: carrying_tag(timed, waiting, 3), second: [Load { slot: 2, of: waiting.of }, Cast(timed.class), GetField(FieldRef { class: timed.class, name: first_carried_name(timed), of: or(first_carried(timed), Long) }), Store { slot: 3, of: Long }, Label(3)])
-    bounded := concatenated(first: offer_within([Load { slot: 3, of: Long }], shapes, 4), second: concatenated(first: [Label(4)], second: ended_test(shapes, 6)))
-    full := concatenated(first: [Label(6)], second: sent_answer(shapes, "MailboxFull"))
-    instructions := concatenated(first: concatenated(first: concatenated(first: opened, second: unlimited), second: concatenated(first: offered, second: again)), second: concatenated(first: concatenated(first: limit, second: bounded), second: full))
-    taken := [handle_descriptor(), object(), waiting.of]
+    let waiting = Slot { at: 2, of: named_descriptor(shapes, "Waiting") }
+    let opened = concatenated(first: ended_test(shapes, 0), second: [Label(0)])
+    let unlimited = concatenated(first: carrying_tag(built_shape(shapes, "NoLimit"), waiting, 2), second: [Label(1)])
+    let offered = concatenated(first: offer_within([LongOf(100)], shapes, 5), second: [Label(5)])
+    let again = concatenated(first: ended_test(shapes, 1), second: [Label(2), LongOf(0), Store { slot: 3, of: Long }])
+    let timed = built_shape(shapes, "Milliseconds")
+    let limit = concatenated(first: carrying_tag(timed, waiting, 3), second: [Load { slot: 2, of: waiting.of }, Cast(timed.class), GetField(FieldRef { class: timed.class, name: first_carried_name(timed), of: or(first_carried(timed), Long) }), Store { slot: 3, of: Long }, Label(3)])
+    let bounded = concatenated(first: offer_within([Load { slot: 3, of: Long }], shapes, 4), second: concatenated(first: [Label(4)], second: ended_test(shapes, 6)))
+    let full = concatenated(first: [Label(6)], second: sent_answer(shapes, "MailboxFull"))
+    let instructions = concatenated(first: concatenated(first: concatenated(first: opened, second: unlimited), second: concatenated(first: offered, second: again)), second: concatenated(first: concatenated(first: limit, second: bounded), second: full))
+    let taken = [handle_descriptor(), object(), waiting.of]
     Method { name: "sent", descriptor: MethodDescriptor { parameters: taken, result: Some(named_descriptor(shapes, "Sent")) }, reached: ThroughTheClass, body: Body { instructions: instructions, locals: 2, guards: [] } }
 }
 
@@ -417,7 +417,7 @@ fn sent_method(shapes: Shapes) -> Method {
 /// it has not.
 // example: list.length(ended_test(no_shapes(), 0)) == 8
 fn ended_test(shapes: Shapes, open: Int) -> List<Instruction> {
-    tested := [Load { slot: 0, of: handle_descriptor() }, GetField(handle_finished()), InvokeVirtual(MethodRef { class: finished_class(), name: "isDone", descriptor: MethodDescriptor { parameters: [], result: Some(Boolean) } }), JumpIfFalse(open)]
+    let tested = [Load { slot: 0, of: handle_descriptor() }, GetField(handle_finished()), InvokeVirtual(MethodRef { class: finished_class(), name: "isDone", descriptor: MethodDescriptor { parameters: [], result: Some(Boolean) } }), JumpIfFalse(open)]
     concatenated(first: tested, second: sent_answer(shapes, "ProcessEnded"))
 }
 
@@ -425,16 +425,16 @@ fn ended_test(shapes: Shapes, open: Int) -> List<Instruction> {
 /// jump to `missed` where it does not.
 // example: list.length(offer_within([LongOf(0)], no_shapes(), 0)) == 11
 fn offer_within(within: List<Instruction>, shapes: Shapes, missed: Int) -> List<Instruction> {
-    unit := GetStatic(FieldRef { class: "java/util/concurrent/TimeUnit", name: "MILLISECONDS", of: Reference("java/util/concurrent/TimeUnit") })
-    offer := MethodRef { class: mailbox_class(), name: "offer", descriptor: MethodDescriptor { parameters: [object(), Long, Reference("java/util/concurrent/TimeUnit")], result: Some(Boolean) } }
-    loaded := concatenated(first: [Load { slot: 0, of: handle_descriptor() }, GetField(handle_mailbox()), Load { slot: 1, of: object() }], second: within)
+    let unit = GetStatic(FieldRef { class: "java/util/concurrent/TimeUnit", name: "MILLISECONDS", of: Reference("java/util/concurrent/TimeUnit") })
+    let offer = MethodRef { class: mailbox_class(), name: "offer", descriptor: MethodDescriptor { parameters: [object(), Long, Reference("java/util/concurrent/TimeUnit")], result: Some(Boolean) } }
+    let loaded = concatenated(first: [Load { slot: 0, of: handle_descriptor() }, GetField(handle_mailbox()), Load { slot: 1, of: object() }], second: within)
     concatenated(first: concatenated(first: loaded, second: [unit, InvokeVirtual(offer), JumpIfFalse(missed)]), second: sent_answer(shapes, "Delivered"))
 }
 
 /// The variant `named` of `Sent`, built and given back.
 // example: list.length(sent_answer(no_shapes(), "Delivered")) == 4
 fn sent_answer(shapes: Shapes, named: String) -> List<Instruction> {
-    shape := built_shape(shapes, named)
+    let shape = built_shape(shapes, named)
     [New(shape.class), Copy, Construct(MethodRef { class: shape.class, name: "<init>", descriptor: constructor_descriptor(shape) }), Return(Some(named_descriptor(shapes, "Sent")))]
 }
 
@@ -459,9 +459,9 @@ fn mailbox_bound() -> Int {
 /// The class of the module: every method nothing has to ask for, every one asked for, and `main`.
 // example: list.length(module_class(little_lowering("fn f() -> Int {\n    1\n}\n"), no_asks()).class.methods) == 1
 fn module_class(lowering: Lowering, asked: Asked) -> Classed {
-    owing := every_asked_owed(every_plain_owed(lowering), asked)
-    written := methods_owed(owing)
-    methods := concatenated(first: written.methods, second: entry_point(written.lowering))
+    let owing = every_asked_owed(every_plain_owed(lowering), asked)
+    let written = methods_owed(owing)
+    let methods = concatenated(first: written.methods, second: entry_point(written.lowering))
     Classed { lowering: written.lowering, class: Class { name: owing.shapes.class, extends: object_class(), extending: Never, implements: [], fields: [], methods: methods } }
 }
 
@@ -471,7 +471,7 @@ fn module_class(lowering: Lowering, asked: Asked) -> Classed {
 /// `extern`, in the order the module writes them.
 // example: list.length(every_plain_owed(little_lowering("fn f() -> Int {\n    1\n}\n")).owed) == 1
 fn every_plain_owed(lowering: Lowering) -> Lowering {
-    program := lowering.typed.resolved.program
+    let program = lowering.typed.resolved.program
     var owing = lowering
     for function in infer.functions_of(program) {
         if list.length(function.type_parameters) == 0 || function.name.text == "main" {
@@ -529,7 +529,7 @@ fn function_asked_owed(lowering: Lowering, one: Specialisation) -> Lowering {
 /// `lowering` owing `function` with its type parameters settled on `settled`, in order.
 // example: list.length(settled_function_owed(little_lowering(""), no_function(), []).owed) == 1
 fn settled_function_owed(lowering: Lowering, function: ast.FunctionDeclaration, settled: List<unify.Type>) -> Lowering {
-    at := asked_for(function, settled)
+    let at = asked_for(function, settled)
     owe(lowering, function.name.span, instantiation_names(at, named_at(lowering, function.name.span)), at)
 }
 
@@ -562,13 +562,13 @@ fn methods_owed(lowering: Lowering) -> MethodsWritten {
     var written = set.empty()
     var methods = []
     for writing.next_owed < list.length(writing.owed) {
-        owed := or(list.at(writing.owed, writing.next_owed), Owed { declared: infer.no_name().span, named: "", at: whole() })
+        let owed = or(list.at(writing.owed, writing.next_owed), Owed { declared: infer.no_name().span, named: "", at: whole() })
         writing = writing { next_owed: writing.next_owed + 1 }
-        signature := signature_of(writing, owed.declared, owed.at)
-        key := owed.named + " " + method_descriptor_text(descriptor_of(signature))
+        let signature = signature_of(writing, owed.declared, owed.at)
+        let key = owed.named + " " + method_descriptor_text(descriptor_of(signature))
         if !set.has_value(written, key) {
             written = set.insert(written, key)
-            made := method_written(writing, owed, signature)
+            let made = method_written(writing, owed, signature)
             writing = made.lowering
             methods = list.push(methods, made.method)
         }
@@ -579,7 +579,7 @@ fn methods_owed(lowering: Lowering) -> MethodsWritten {
 /// The method `owed` names, with its body written from its declaration.
 // example: method_written(little_lowering(""), Owed { declared: infer.no_name().span, named: "f", at: whole() }, Signature { parameters: [], result: None }).method.name == "f"
 fn method_written(lowering: Lowering, owed: Owed, signature: Signature) -> MethodMade {
-    made := body_written(lowering, owed, signature)
+    let made = body_written(lowering, owed, signature)
     MethodMade { lowering: made.lowering, method: Method { name: owed.named, descriptor: descriptor_of(signature), reached: ThroughTheClass, body: made.body } }
 }
 
@@ -605,7 +605,7 @@ fn declared_body(lowering: Lowering, written: Written, signature: Signature, at:
 /// The body of `function`, written from its source.
 // example: list.length(source_body(little_lowering(""), no_function(), Signature { parameters: [], result: None }, whole()).body.instructions) == 1
 fn source_body(lowering: Lowering, function: ast.FunctionDeclaration, signature: Signature, at: Instantiation) -> BodyMade {
-    built := body_built(builder_entering(lowering, function, signature, at), function.body)
+    let built = body_built(builder_entering(lowering, function, signature, at), function.body)
     BodyMade { lowering: built.lowering, body: Body { instructions: built.instructions, locals: built.next_slot - built.first_local, guards: [] } }
 }
 
@@ -641,13 +641,13 @@ fn function_named(lowering: Lowering, named: String) -> Option<ast.FunctionDecla
 /// The entry point that calls `function`, where it takes a list of text and gives back an `Int`.
 // example: list.length(entry_of(little_lowering(""), no_function())) == 0
 fn entry_of(lowering: Lowering, function: ast.FunctionDeclaration) -> List<Method> {
-    entered := unify.Function { parameters: [unify.list_of(unify.text_type())], result: unify.int() }
+    let entered = unify.Function { parameters: [unify.list_of(unify.text_type())], result: unify.int() }
     if used_as(lowering, function.name.span) != entered {
         return []
     }
-    started := descriptor_of(signature_of(lowering, function.name.span, whole()))
-    taken := arguments_descriptor()
-    instructions := [Load { slot: 0, of: taken }, InvokeStatic(list_built()), InvokeStatic(MethodRef { class: lowering.shapes.class, name: "main", descriptor: started }), LowEightBits, InvokeStatic(MethodRef { class: "java/lang/System", name: "exit", descriptor: MethodDescriptor { parameters: [Integer], result: None } }), Return(None)]
+    let started = descriptor_of(signature_of(lowering, function.name.span, whole()))
+    let taken = arguments_descriptor()
+    let instructions = [Load { slot: 0, of: taken }, InvokeStatic(list_built()), InvokeStatic(MethodRef { class: lowering.shapes.class, name: "main", descriptor: started }), LowEightBits, InvokeStatic(MethodRef { class: "java/lang/System", name: "exit", descriptor: MethodDescriptor { parameters: [Integer], result: None } }), Return(None)]
     [Method { name: "main", descriptor: MethodDescriptor { parameters: [taken], result: None }, reached: ThroughTheClass, body: Body { instructions: instructions, locals: 0, guards: [] } }]
 }
 
@@ -690,8 +690,8 @@ fn no_extern() -> ast.ExternDeclaration {
 /// A builder of the body of the first function `source` writes, typed against the small prelude.
 // example: little_builder("fn f() -> Int {\n    1\n}\n").next_slot == 0
 fn little_builder(source: String) -> Builder {
-    lowering := little_lowering(source)
-    function := or(list.at(infer.functions_of(lowering.typed.resolved.program), 0), no_function())
+    let lowering = little_lowering(source)
+    let function = or(list.at(infer.functions_of(lowering.typed.resolved.program), 0), no_function())
     builder_entering(lowering, function, signature_of(lowering, function.name.span, whole()), whole())
 }
 
@@ -708,7 +708,7 @@ fn builder_entering(lowering: Lowering, function: ast.FunctionDeclaration, signa
 /// The first expression the first function `source` writes gives back.
 // example: first_expr("fn f() -> Int {\n    1\n}\n").span.start == 20
 fn first_expr(source: String) -> ast.Expr {
-    function := or(list.at(infer.functions_of(declared.first_program(source)), 0), no_function())
+    let function = or(list.at(infer.functions_of(declared.first_program(source)), 0), no_function())
     var found = []
     for statement in function.body.statements {
         found = match statement.kind {
@@ -722,8 +722,8 @@ fn first_expr(source: String) -> ast.Expr {
 /// The builder after the body `block` is written, and what it gives back is returned.
 // example: list.length(body_built(little_builder("fn f() -> Int {\n    1\n}\n"), first_function_body("fn f() -> Int {\n    1\n}\n")).instructions) == 2
 fn body_built(builder: Builder, block: ast.Block) -> Builder {
-    left := block_built(builder, block)
-    adapted := adapt(builder: left.builder, from: left.held, to: builder.result)
+    let left = block_built(builder, block)
+    let adapted = adapt(builder: left.builder, from: left.held, to: builder.result)
     emit(adapted, Return(builder.result))
 }
 
@@ -822,7 +822,7 @@ fn split(lowering: Lowering, function: ast.FunctionDeclaration) -> set.Set<Int> 
 /// Where each binding of `function` is written that is split, in the order it is written.
 // example: list.length(split_list(little_lowering(""), no_function())) == 0
 fn split_list(lowering: Lowering, function: ast.FunctionDeclaration) -> List<Int> {
-    walk := block_walked(lowering, Escape { built: [], escaped: set.empty() }, function.body)
+    let walk = block_walked(lowering, Escape { built: [], escaped: set.empty() }, function.body)
     var kept = []
     for one in walk.built {
         if !set.has_value(walk.escaped, one) {
@@ -859,7 +859,7 @@ fn statement_walked(lowering: Lowering, walk: Escape, kind: ast.StatementKind) -
 /// `walk` after the binding of `name` to `value`, which is split where it holds a record literal.
 // example: list.length(bound_walked(little_lowering(""), Escape { built: [], escaped: set.empty() }, ast.Immutable, infer.no_name(), no_expr()).built) == 0
 fn bound_walked(lowering: Lowering, walk: Escape, mutability: ast.Mutability, name: ast.Name, value: ast.Expr) -> Escape {
-    walked := expr_walked(lowering, walk, value)
+    let walked = expr_walked(lowering, walk, value)
     if is_immutable(mutability) && is_record_literal(lowering, value) {
         return walked { built: list.push(walked.built, infer.span_key(name.span)) }
     }
@@ -869,7 +869,7 @@ fn bound_walked(lowering: Lowering, walk: Escape, mutability: ast.Mutability, na
 /// `walk` after the loop `repeated`: its header, then its body.
 // example: list.length(loop_walked(little_lowering(""), Escape { built: [], escaped: set.empty() }, ast.ForLoop { header: ast.Forever, body: first_function_body("") }).built) == 0
 fn loop_walked(lowering: Lowering, walk: Escape, repeated: ast.ForLoop) -> Escape {
-    headed := match repeated.header {
+    let headed = match repeated.header {
         ast.Forever => walk
         ast.While(condition) => expr_walked(lowering, walk, condition)
         ast.Over { binding, iterable } => expr_walked(lowering, walk, iterable)
@@ -1014,7 +1014,7 @@ fn let_go_of(lowering: Lowering, walk: Escape, name: ast.Name) -> Escape {
 /// The shapes of the prelude, whose class is `bux/library/prelude`.
 // example: prelude_shapes(little_library(), only_the_prelude()).class == "bux/library/prelude"
 fn prelude_shapes(library: Library, classes: map.Map<String, String>) -> Shapes {
-    naming := Naming { module: "prelude", class: module_named(classes, "prelude"), classes: classes }
+    let naming = Naming { module: "prelude", class: module_named(classes, "prelude"), classes: classes }
     prelude_declared(empty_shapes(naming, library), library)
 }
 
@@ -1090,9 +1090,9 @@ fn variant_classes(shapes: Shapes, base: String, constructors: List<String>) -> 
 /// The base class of a type's variants, which holds the tag each variant is told apart by.
 // example: list.length(base_class("main/Box").fields) == 1
 fn base_class(base: String) -> Class {
-    this := Reference(base)
-    instructions := [Load { slot: 0, of: this }, Load { slot: 1, of: Integer }, PutField(FieldRef { class: base, name: "tag", of: Integer }), Load { slot: 0, of: this }, Construct(MethodRef { class: object_class(), name: "<init>", descriptor: MethodDescriptor { parameters: [], result: None } }), Return(None)]
-    made := Method { name: "<init>", descriptor: MethodDescriptor { parameters: [Integer], result: None }, reached: ThroughAnInstance, body: Body { instructions: instructions, locals: 0, guards: [] } }
+    let this = Reference(base)
+    let instructions = [Load { slot: 0, of: this }, Load { slot: 1, of: Integer }, PutField(FieldRef { class: base, name: "tag", of: Integer }), Load { slot: 0, of: this }, Construct(MethodRef { class: object_class(), name: "<init>", descriptor: MethodDescriptor { parameters: [], result: None } }), Return(None)]
+    let made = Method { name: "<init>", descriptor: MethodDescriptor { parameters: [Integer], result: None }, reached: ThroughAnInstance, body: Body { instructions: instructions, locals: 0, guards: [] } }
     Class { name: base, extends: object_class(), extending: ByItsVariants, implements: [], fields: [Field { name: "tag", of: Integer }], methods: [made] }
 }
 
@@ -1105,7 +1105,7 @@ fn variant_class(shape: Shape, base: String) -> Class {
 /// The class of a list: its slots and length, and the methods that build, push onto, and cross it.
 // example: list.length(carrier().methods) == 4
 fn carrier() -> Class {
-    made := record_class(list_shape())
+    let made = record_class(list_shape())
     made { methods: concatenated(first: made.methods, second: [list_of_method(), list_push_method(), list_listed_method()]) }
 }
 
@@ -1118,7 +1118,7 @@ fn record_class(shape: Shape) -> Class {
 /// The constructor of `shape`: each value set on its field, then the constructor of `extends`.
 // example: list.length(constructor_method(no_shape(), object_class()).body.instructions) == 3
 fn constructor_method(shape: Shape, extends: String) -> Method {
-    this := Reference(shape.class)
+    let this = Reference(shape.class)
     var instructions = []
     var slot = 1
     for field in held_fields(shape) {
@@ -1155,18 +1155,18 @@ fn held_fields(shape: Shape) -> List<Field> {
 /// The method that builds a list out of an array, which holds every slot it fills.
 // example: list.length(list_of_method().body.instructions) == 7
 fn list_of_method() -> Method {
-    instructions := [New(list_class()), Copy, Load { slot: 0, of: buffer() }, Load { slot: 0, of: buffer() }, ArrayLength, list_constructed(), Return(Some(list_descriptor()))]
+    let instructions = [New(list_class()), Copy, Load { slot: 0, of: buffer() }, Load { slot: 0, of: buffer() }, ArrayLength, list_constructed(), Return(Some(list_descriptor()))]
     static_method(list_built(), instructions, 0)
 }
 
 /// The method that pushes a value onto a list, which claims the free slot where no push has.
 // example: list.length(list_push_method().body.instructions) == 45
 fn list_push_method() -> Method {
-    buffered := Load { slot: 2, of: buffer() }
-    counted := Load { slot: 3, of: Integer }
-    testing := [Load { slot: 0, of: list_descriptor() }, GetField(list_slots()), Store { slot: 2, of: buffer() }, Load { slot: 0, of: list_descriptor() }, GetField(list_length()), Store { slot: 3, of: Integer }, counted, buffered, ArrayLength, CompareIntegers(Less), JumpIfFalse(0), buffered, counted, LoadFromArray, JumpIfNull(1), Label(0)]
-    copying := [counted, Widen, LongOf(2), Arithmetic(Multiply), LongOf(1), Arithmetic(Add), Narrow, NewArray(object_class()), Store { slot: 4, of: buffer() }, buffered, IntegerOf(0), Load { slot: 4, of: buffer() }, IntegerOf(0), counted, InvokeStatic(array_copy()), Load { slot: 4, of: buffer() }, Store { slot: 2, of: buffer() }]
-    claiming := [Label(1), buffered, counted, Load { slot: 1, of: object() }, StoreInArray, Increment(3), New(list_class()), Copy, buffered, counted, list_constructed(), Return(Some(list_descriptor()))]
+    let buffered = Load { slot: 2, of: buffer() }
+    let counted = Load { slot: 3, of: Integer }
+    let testing = [Load { slot: 0, of: list_descriptor() }, GetField(list_slots()), Store { slot: 2, of: buffer() }, Load { slot: 0, of: list_descriptor() }, GetField(list_length()), Store { slot: 3, of: Integer }, counted, buffered, ArrayLength, CompareIntegers(Less), JumpIfFalse(0), buffered, counted, LoadFromArray, JumpIfNull(1), Label(0)]
+    let copying = [counted, Widen, LongOf(2), Arithmetic(Multiply), LongOf(1), Arithmetic(Add), Narrow, NewArray(object_class()), Store { slot: 4, of: buffer() }, buffered, IntegerOf(0), Load { slot: 4, of: buffer() }, IntegerOf(0), counted, InvokeStatic(array_copy()), Load { slot: 4, of: buffer() }, Store { slot: 2, of: buffer() }]
+    let claiming = [Label(1), buffered, counted, Load { slot: 1, of: object() }, StoreInArray, Increment(3), New(list_class()), Copy, buffered, counted, list_constructed(), Return(Some(list_descriptor()))]
     static_method(list_pushed(), concatenated(first: concatenated(first: testing, second: copying), second: claiming), 3)
 }
 
@@ -1179,12 +1179,12 @@ fn array_copy() -> MethodRef {
 /// The method that turns a list into a `java.util.List`, each list inside it turned too.
 // example: list.length(list_listed_method().body.instructions) == 35
 fn list_listed_method() -> Method {
-    counted := [Load { slot: 0, of: list_descriptor() }, GetField(list_length())]
-    element := Load { slot: 3, of: object() }
-    index := Load { slot: 2, of: Integer }
-    starting := concatenated(first: counted, second: [NewArray(object_class()), Store { slot: 1, of: buffer() }, IntegerOf(0), Store { slot: 2, of: Integer }, Label(0), index])
-    walking := concatenated(first: counted, second: [CompareIntegers(Less), JumpIfFalse(2), Load { slot: 0, of: list_descriptor() }, GetField(list_slots()), index, LoadFromArray, Store { slot: 3, of: object() }, element, InstanceOf(list_class()), JumpIfFalse(1), element, Cast(list_class()), InvokeStatic(list_crossed()), Store { slot: 3, of: object() }, Label(1)])
-    putting := [Load { slot: 1, of: buffer() }, index, element, StoreInArray, Increment(2), Jump(0), Label(2), Load { slot: 1, of: buffer() }, InvokeStaticOfInterface(MethodRef { class: "java/util/List", name: "of", descriptor: MethodDescriptor { parameters: [buffer()], result: Some(java_list()) } }), Return(Some(java_list()))]
+    let counted = [Load { slot: 0, of: list_descriptor() }, GetField(list_length())]
+    let element = Load { slot: 3, of: object() }
+    let index = Load { slot: 2, of: Integer }
+    let starting = concatenated(first: counted, second: [NewArray(object_class()), Store { slot: 1, of: buffer() }, IntegerOf(0), Store { slot: 2, of: Integer }, Label(0), index])
+    let walking = concatenated(first: counted, second: [CompareIntegers(Less), JumpIfFalse(2), Load { slot: 0, of: list_descriptor() }, GetField(list_slots()), index, LoadFromArray, Store { slot: 3, of: object() }, element, InstanceOf(list_class()), JumpIfFalse(1), element, Cast(list_class()), InvokeStatic(list_crossed()), Store { slot: 3, of: object() }, Label(1)])
+    let putting = [Load { slot: 1, of: buffer() }, index, element, StoreInArray, Increment(2), Jump(0), Label(2), Load { slot: 1, of: buffer() }, InvokeStaticOfInterface(MethodRef { class: "java/util/List", name: "of", descriptor: MethodDescriptor { parameters: [buffer()], result: Some(java_list()) } }), Return(Some(java_list()))]
     static_method(list_crossed(), concatenated(first: concatenated(first: starting, second: walking), second: putting), 3)
 }
 
@@ -1239,8 +1239,8 @@ fn is_unsettled(found: Option<unify.Type>) -> Bool {
 /// reads each value the type holds with the instance of that value's own type.
 // example: list.length(derived_body(little_lowering("type Box = Box\n"), "Show", declared.first_type("type Box = Box\n")).body.instructions) == 3
 fn derived_body(lowering: Lowering, of: String, declaration: ast.TypeDeclaration) -> BodyMade {
-    begun := Writing { lowering: lowering, instructions: [], next_label: 0 }
-    writing := if of == "Eq" {
+    let begun = Writing { lowering: lowering, instructions: [], next_label: 0 }
+    let writing = if of == "Eq" {
         is_equal_written(begun, declaration)
     } else if of == "Ord" {
         is_less_written(begun, declaration)
@@ -1273,8 +1273,8 @@ fn no_writing() -> Writing {
 /// The lowering of `source`, typed against the small prelude as the module `main`.
 // example: little_lowering("fn f() -> Int {\n    1\n}\n").shapes.module == "main"
 fn little_lowering(source: String) -> Lowering {
-    typed := types.checked_of(source)
-    library := little_library()
+    let typed = types.checked_of(source)
+    let library = little_library()
     lowering_of(typed, library, "main", shapes_of(typed, main_naming(), library))
 }
 
@@ -1284,7 +1284,7 @@ fn little_lowering(source: String) -> Lowering {
 /// as an object in each module that writes the classes of `Option`.
 // example: set.has_value(little_library().types, "Result")
 fn little_library() -> Library {
-    program := declared.little_prelude()
+    let program = declared.little_prelude()
     library_of(types.little_prelude(), ok_or(resolver.prelude_resolved(program), resolver.Resolved { module: "prelude", program: program, found: map.empty() }))
 }
 
@@ -1297,7 +1297,7 @@ fn library_of(prelude: types.Prelude, resolved: resolver.Resolved) -> Library {
 /// The prelude's own bodies, typed against what the prelude declares.
 // example: list.length(prelude_typed(types.little_prelude(), declared.resolved_of("")).functions) == 0
 fn prelude_typed(prelude: types.Prelude, resolved: resolver.Resolved) -> infer.Inference {
-    empty := infer.inference_of(resolved, surface.nothing_imported(), infer.no_declaring())
+    let empty = infer.inference_of(resolved, surface.nothing_imported(), infer.no_declaring())
     match declared.environment_of(prelude.declared, resolved, [], [], unify.empty_table()) {
         Ok(declaring) => ok_or(infer.module_inferred(resolved, surface.nothing_imported(), declaring), empty)
         Err(_) => empty
@@ -1333,8 +1333,8 @@ fn types_in(program: ast.Program) -> set.Set<String> {
 /// The lowering of the module `module`, which has written nothing yet.
 // example: little_lowering("").module == "main"
 fn lowering_of(typed: infer.Inference, library: Library, module: String, shapes: Shapes) -> Lowering {
-    program := typed.resolved.program
-    instances := instances_of(program, library)
+    let program = typed.resolved.program
+    let instances = instances_of(program, library)
     Lowering { typed: typed, library: library, module: module, shapes: shapes, declared: declarations_of(program, library), answers: answers_by_key(instances), instances: instances, owed: [], next_owed: 0, asks: no_asks() }
 }
 
@@ -1372,7 +1372,7 @@ fn item_declared(declarations: map.Map<Int, Declared>, program: ast.Program, lib
 fn process_declared(declarations: map.Map<Int, Declared>, process_of: ast.ProcessDeclaration) -> map.Map<Int, Declared> {
     var declaring = declarations
     for function in process_of.functions {
-        named := process_of.name.text + "$" + function.name.text
+        let named = process_of.name.text + "$" + function.name.text
         declaring = map.insert(declaring, infer.span_key(function.name.span), Declared { named: named, body: Source(function) })
     }
     declaring
@@ -1383,7 +1383,7 @@ fn process_declared(declarations: map.Map<Int, Declared>, process_of: ast.Proces
 fn instance_declared(declarations: map.Map<Int, Declared>, answerer: ast.InstanceDeclaration) -> map.Map<Int, Declared> {
     var declaring = declarations
     for method in answerer.methods {
-        named := answerer.trait_name.text + "$" + answerer.for_type.text + "$" + method.name.text
+        let named = answerer.trait_name.text + "$" + answerer.for_type.text + "$" + method.name.text
         declaring = map.insert(declaring, infer.span_key(method.name.span), Declared { named: named, body: Source(method) })
     }
     declaring
@@ -1393,10 +1393,10 @@ fn instance_declared(declarations: map.Map<Int, Declared>, answerer: ast.Instanc
 // example: named_at(little_lowering("derive Eq for Box\n\ntype Box = Box\n"), lexer.Span { start: 7, length: 2 }) == "Eq$Box$is_equal"
 fn derive_declared(declarations: map.Map<Int, Declared>, program: ast.Program, library: Library, deriving: ast.DeriveDeclaration) -> map.Map<Int, Declared> {
     var declaring = declarations
-    declaration := type_declared(program, deriving.for_type)
+    let declaration = type_declared(program, deriving.for_type)
     for named in deriving.traits {
-        method := method_of(library, named.text)
-        written := Declared { named: named.text + "$" + deriving.for_type.text + "$" + method, body: Derived { of: named.text, declaration: declaration } }
+        let method = method_of(library, named.text)
+        let written = Declared { named: named.text + "$" + deriving.for_type.text + "$" + method, body: Derived { of: named.text, declaration: declaration } }
         declaring = map.insert(declaring, infer.span_key(named.span), written)
     }
     declaring
@@ -1519,14 +1519,14 @@ fn empty_shapes(naming: Naming, library: Library) -> Shapes {
 /// `shapes` with the type the module declares as `declaration`, in the module's own package.
 // example: set.has_value(own_declared(no_shapes(), declared.resolved_of(""), declared.first_type("type Box = Box\n")).own, "Box")
 fn own_declared(shapes: Shapes, resolved: resolver.Resolved, declaration: ast.TypeDeclaration) -> Shapes {
-    owning := shapes { own: set.insert(shapes.own, declaration.name.text) }
+    let owning = shapes { own: set.insert(shapes.own, declaration.name.text) }
     declared_as(owning, resolved, declaration, declared_class(owning, declaration.name.text))
 }
 
 /// `shapes` with a type another module offers, laid out as that module lays it out.
 // example: built_shape(reached_declared(main_shapes(), surface.record_of_user()), "User").class == "main/User"
 fn reached_declared(shapes: Shapes, offered: surface.OfferedType) -> Shapes {
-    base := declared_class(shapes, offered.name)
+    let base = declared_class(shapes, offered.name)
     match offered.built_by {
         surface.Record(one) => offered_record(shapes: shapes, named: offered.name, one: one, base: base)
         surface.Variants(variants) => offered_variants(shapes, variants, base)
@@ -1537,7 +1537,7 @@ fn reached_declared(shapes: Shapes, offered: surface.OfferedType) -> Shapes {
 /// `shapes` with the offered record `named`, which `one` builds.
 // example: built_shape(offered_record(shapes: no_shapes(), named: "user.User", one: surface.OfferedConstructor { name: "user.User", labels: [], carries: [] }, base: "user/User"), "user.User").class == "user/User"
 fn offered_record(shapes: Shapes, named: String, one: surface.OfferedConstructor, base: String) -> Shapes {
-    shape := Shape { class: base, base: base, tag: None, carries: offered_carries(shapes, one) }
+    let shape = Shape { class: base, base: base, tag: None, carries: offered_carries(shapes, one) }
     shapes { records: map.insert(shapes.records, named, one.name), record_builders: set.insert(shapes.record_builders, one.name), built_by: map.insert(shapes.built_by, one.name, shape) }
 }
 
@@ -1547,7 +1547,7 @@ fn offered_variants(shapes: Shapes, variants: List<surface.OfferedConstructor>, 
     var reaching = shapes
     var position = 0
     for variant in variants {
-        shape := Shape { class: base + "$" + simple(variant.name), base: base, tag: Some(position), carries: offered_carries(reaching, variant) }
+        let shape = Shape { class: base + "$" + simple(variant.name), base: base, tag: Some(position), carries: offered_carries(reaching, variant) }
         reaching = reaching { built_by: map.insert(reaching.built_by, variant.name, shape) }
         position += 1
     }
@@ -1570,7 +1570,7 @@ fn offered_carries(shapes: Shapes, built: surface.OfferedConstructor) -> List<Ca
 // example: built_shape(prelude_declared(no_shapes(), little_library()), "Some").class == "bux/Option$Some"
 fn prelude_declared(shapes: Shapes, library: Library) -> Shapes {
     var declaring = shapes
-    resolved := library.typed.resolved
+    let resolved = library.typed.resolved
     for item in resolved.program.items {
         declaring = match item {
             ast.Type(declaration) => declared_as(declaring, resolved, declaration, "bux/" + declaration.name.text)
@@ -1584,7 +1584,7 @@ fn prelude_declared(shapes: Shapes, library: Library) -> Shapes {
 /// a base class and one class for each variant.
 // example: built_shape(declared_as(no_shapes(), declared.resolved_of(""), declared.first_type("type Box = Box\n"), "main/Box"), "Box").class == "main/Box$Box"
 fn declared_as(shapes: Shapes, resolved: resolver.Resolved, declaration: ast.TypeDeclaration, base: String) -> Shapes {
-    named := declaration.name.text
+    let named = declaration.name.text
     match declaration.definition {
         ast.RecordType(fields) => record_declared(shapes: shapes, named: named, base: base, carries: fields_carried(shapes, resolved, fields))
         ast.Variants(variants) => variants_declared(shapes, resolved, variants, base)
@@ -1604,7 +1604,7 @@ fn called_as(called: ast.Called) -> CalledAs {
 /// `shapes` with the record `named`, its own constructor, laid out as the class `base`.
 // example: is_record_constructor(record_declared(shapes: no_shapes(), named: "Box", base: "main/Box", carries: []), "Box")
 fn record_declared(shapes: Shapes, named: String, base: String, carries: List<Carried>) -> Shapes {
-    shape := Shape { class: base, base: base, tag: None, carries: carries }
+    let shape = Shape { class: base, base: base, tag: None, carries: carries }
     shapes { records: map.insert(shapes.records, named, named), record_builders: set.insert(shapes.record_builders, named), declarations: list.push(shapes.declarations, RecordDeclared(named)), built_by: map.insert(shapes.built_by, named, shape) }
 }
 
@@ -1615,8 +1615,8 @@ fn variants_declared(shapes: Shapes, resolved: resolver.Resolved, variants: List
     var constructors = []
     var position = 0
     for variant in variants {
-        named := variant.name.text
-        shape := Shape { class: base + "$" + named, base: base, tag: Some(position), carries: payload_carried(declaring, resolved, variant.payload) }
+        let named = variant.name.text
+        let shape = Shape { class: base + "$" + named, base: base, tag: Some(position), carries: payload_carried(declaring, resolved, variant.payload) }
         constructors = list.push(constructors, named)
         declaring = declaring { built_by: map.insert(declaring.built_by, named, shape) }
         position += 1
@@ -1709,7 +1709,7 @@ fn is_unit_written(written: ast.TypeRef) -> Bool {
 /// `Eq$T$is_equal`: the same variant, then everything both hold equal, and then the two answers.
 // example: list.length(is_equal_written(writing_over(box_module()), declared.first_type(box_module())).instructions) == 12
 fn is_equal_written(writing: Writing, declaration: ast.TypeDeclaration) -> Writing {
-    differs := labelled_writing(writing)
+    let differs = labelled_writing(writing)
     var writes = differs.writing
     for holds in record_holds(writes, declaration.name.text, record_fields_of(declaration)) {
         writes = equal_written(writes, holds, differs.label)
@@ -1723,8 +1723,8 @@ fn is_equal_written(writing: Writing, declaration: ast.TypeDeclaration) -> Writi
 /// Variants: the same variant first, and then whatever that variant carries.
 // example: list.length(same_variant(no_writing(), [], 0).instructions) == 7
 fn same_variant(writing: Writing, variants: List<ast.Variant>, differs: Int) -> Writing {
-    equally := labelled_writing(writing)
-    base := base_of(equally.writing, variants)
+    let equally = labelled_writing(writing)
+    let base = base_of(equally.writing, variants)
     var writes = tag_read(tag_read(equally.writing, base, 0), base, 1)
     writes = each_written_out(writes, [CompareIntegers(Equal), JumpIfFalse(differs)])
     for variant in variants {
@@ -1736,11 +1736,11 @@ fn same_variant(writing: Writing, variants: List<ast.Variant>, differs: Int) -> 
 /// One variant, whose values are compared where both values are that variant.
 // example: list.length(variant_equal(writing: no_writing(), variant: declared.no_variant(), differs: 0, equally: 1).instructions) == 0
 fn variant_equal(writing: Writing, variant: ast.Variant, differs: Int, equally: Int) -> Writing {
-    held := variant_holds(writing, variant)
+    let held = variant_holds(writing, variant)
     if list.length(held) == 0 {
         return writing
     }
-    next := labelled_writing(writing)
+    let next = labelled_writing(writing)
     var writes = unless_it_is(next.writing, built_shape(writing.lowering.shapes, variant.name.text), next.label)
     for holds in held {
         writes = equal_written(writes, holds, differs)
@@ -1751,14 +1751,14 @@ fn variant_equal(writing: Writing, variant: ast.Variant, differs: Int, equally: 
 /// One value both sides hold, which leaves for `differs` unless the two of it are equal.
 // example: list.length(equal_written(no_writing(), Holds { shape: no_shape(), carried: Carried { name: "x", of: Some(Long) }, of: Long, named: None, written: unit_written() }, 0).instructions) == 6
 fn equal_written(writing: Writing, holds: Holds, differs: Int) -> Writing {
-    compared_both := derived_through(value_read(value_read(writing, holds, 0), holds, 1), "Eq", holds)
+    let compared_both = derived_through(value_read(value_read(writing, holds, 0), holds, 1), "Eq", holds)
     written_out(compared_both, JumpIfFalse(differs))
 }
 
 /// The two answers of `is_equal` and the one way out, which every comparison jumped into.
 // example: list.length(equality_answered(no_writing(), 0).instructions) == 6
 fn equality_answered(writing: Writing, differs: Int) -> Writing {
-    end := labelled_writing(writing)
+    let end = labelled_writing(writing)
     each_written_out(end.writing, [BooleanOf(true), Jump(end.label), Label(differs), BooleanOf(false), Label(end.label), Return(Some(Boolean))])
 }
 
@@ -1781,7 +1781,7 @@ fn hashed_written(writing: Writing, declaration: ast.TypeDeclaration) -> Writing
 /// Variants: the tag to start from, and then whatever that one variant carries.
 // example: list.length(hashed_by_variant(no_writing(), []).instructions) == 4
 fn hashed_by_variant(writing: Writing, variants: List<ast.Variant>) -> Writing {
-    end := labelled_writing(writing)
+    let end = labelled_writing(writing)
     var writes = written_out(tag_read(end.writing, base_of(end.writing, variants), 0), Widen)
     for variant in variants {
         writes = carried_by(writes, variant, end.label)
@@ -1792,11 +1792,11 @@ fn hashed_by_variant(writing: Writing, variants: List<ast.Variant>) -> Writing {
 /// What one variant carries, taken in where the value turns out to be that variant.
 // example: list.length(carried_by(no_writing(), declared.no_variant(), 0).instructions) == 0
 fn carried_by(writing: Writing, variant: ast.Variant, end: Int) -> Writing {
-    held := variant_holds(writing, variant)
+    let held = variant_holds(writing, variant)
     if list.length(held) == 0 {
         return writing
     }
-    next := labelled_writing(writing)
+    let next = labelled_writing(writing)
     var writes = unless_it_is(next.writing, built_shape(writing.lowering.shapes, variant.name.text), next.label)
     for holds in held {
         writes = taken_in(writes, holds)
@@ -1807,16 +1807,16 @@ fn carried_by(writing: Writing, variant: ast.Variant, end: Int) -> Writing {
 /// One value taken into the number worked out below it: times 31, and its own hash added.
 // example: list.length(taken_in(no_writing(), Holds { shape: no_shape(), carried: Carried { name: "x", of: Some(Long) }, of: Long, named: None, written: unit_written() }).instructions) == 5
 fn taken_in(writing: Writing, holds: Holds) -> Writing {
-    spread := each_written_out(writing, [LongOf(31), Arithmetic(Multiply)])
+    let spread = each_written_out(writing, [LongOf(31), Arithmetic(Multiply)])
     written_out(derived_through(value_read(spread, holds, 0), "Hash", holds), Arithmetic(Add))
 }
 
 /// `Ord$T$is_less`: whatever the type holds decides, and then the two answers.
 // example: list.length(is_less_written(writing_over(box_module()), declared.first_type(box_module())).instructions) == 22
 fn is_less_written(writing: Writing, declaration: ast.TypeDeclaration) -> Writing {
-    less := labelled_writing(writing)
-    not_less := labelled_writing(less.writing)
-    settled := Decided { less: less.label, not_less: not_less.label }
+    let less = labelled_writing(writing)
+    let not_less = labelled_writing(less.writing)
+    let settled = Decided { less: less.label, not_less: not_less.label }
     var writes = not_less.writing
     for holds in record_holds(writes, declaration.name.text, record_fields_of(declaration)) {
         writes = deciding(writes, holds, settled)
@@ -1830,7 +1830,7 @@ fn is_less_written(writing: Writing, declaration: ast.TypeDeclaration) -> Writin
 /// Variants: which variant each value is first, and then what that variant carries.
 // example: list.length(ordered_by_variant(no_writing(), [], Decided { less: 0, not_less: 1 }).instructions) == 13
 fn ordered_by_variant(writing: Writing, variants: List<ast.Variant>, settled: Decided) -> Writing {
-    base := base_of(writing, variants)
+    let base = base_of(writing, variants)
     var writes = written_out(tag_read(tag_read(writing, base, 0), base, 1), CompareIntegers(Less))
     writes = leaving_where_it_holds(writes, settled.less)
     writes = written_out(tag_read(tag_read(writes, base, 0), base, 1), CompareIntegers(Equal))
@@ -1853,11 +1853,11 @@ fn base_of(writing: Writing, variants: List<ast.Variant>) -> String {
 /// One variant, whose values decide where both values are that variant.
 // example: list.length(variant_ordered(no_writing(), declared.no_variant(), Decided { less: 0, not_less: 1 }).instructions) == 0
 fn variant_ordered(writing: Writing, variant: ast.Variant, settled: Decided) -> Writing {
-    held := variant_holds(writing, variant)
+    let held = variant_holds(writing, variant)
     if list.length(held) == 0 {
         return writing
     }
-    next := labelled_writing(writing)
+    let next = labelled_writing(writing)
     var writes = unless_it_is(next.writing, built_shape(writing.lowering.shapes, variant.name.text), next.label)
     for holds in held {
         writes = deciding(writes, holds, settled)
@@ -1868,8 +1868,8 @@ fn variant_ordered(writing: Writing, variant: ast.Variant, settled: Decided) -> 
 /// One value both sides hold, which decides unless the two of it come in neither order.
 // example: list.length(deciding(no_writing(), Holds { shape: no_shape(), carried: Carried { name: "x", of: Some(Long) }, of: Long, named: None, written: unit_written() }, Decided { less: 0, not_less: 1 }).instructions) == 14
 fn deciding(writing: Writing, holds: Holds, settled: Decided) -> Writing {
-    before := derived_through(value_read(value_read(writing, holds, 0), holds, 1), "Ord", holds)
-    after := derived_through(value_read(value_read(leaving_where_it_holds(before, settled.less), holds, 1), holds, 0), "Ord", holds)
+    let before = derived_through(value_read(value_read(writing, holds, 0), holds, 1), "Ord", holds)
+    let after = derived_through(value_read(value_read(leaving_where_it_holds(before, settled.less), holds, 1), holds, 0), "Ord", holds)
     leaving_where_it_holds(after, settled.not_less)
 }
 
@@ -1882,7 +1882,7 @@ fn leaving_where_it_holds(writing: Writing, answer: Int) -> Writing {
 /// The two answers of `is_less` and the one way out, which every decision jumped into.
 // example: list.length(order_answered(no_writing(), Decided { less: 0, not_less: 1 }).instructions) == 8
 fn order_answered(writing: Writing, settled: Decided) -> Writing {
-    end := labelled_writing(writing)
+    let end = labelled_writing(writing)
     each_written_out(end.writing, [Jump(settled.not_less), Label(settled.less), BooleanOf(true), Jump(end.label), Label(settled.not_less), BooleanOf(false), Label(end.label), Return(Some(Boolean))])
 }
 
@@ -1910,7 +1910,7 @@ fn record_holds(writing: Writing, named: String, fields: List<ast.RecordField>) 
 /// What a statement before the last leaves is dropped.
 // example: held_text(block_built(little_builder("fn f() -> Int {\n    1\n}\n"), first_function_body("fn f() -> Int {\n    1\n}\n")).held) == "J"
 fn block_built(builder: Builder, block: ast.Block) -> Left {
-    last := list.length(block.statements) - 1
+    let last = list.length(block.statements) - 1
     var left = Left { builder: builder, held: None }
     var at = 0
     for statement in block.statements {
@@ -1950,7 +1950,7 @@ fn performed(builder: Builder, kind: ast.StatementKind) -> Builder {
 /// The builder after `value` is written and what it leaves is dropped.
 // example: list.length(discarded(little_builder(""), no_expr()).instructions) == 0
 fn discarded(builder: Builder, value: ast.Expr) -> Builder {
-    left := expr_built(builder, value)
+    let left = expr_built(builder, value)
     adapt(builder: left.builder, from: left.held, to: None)
 }
 
@@ -1960,7 +1960,7 @@ fn binding_built(builder: Builder, name: ast.Name, value: ast.Expr) -> Builder {
     if set.has_value(builder.splitting, infer.span_key(name.span)) {
         return split_bound(builder, name, value)
     }
-    left := expr_built(builder, value)
+    let left = expr_built(builder, value)
     stored_value(declare(left.builder, name), name, left.held)
 }
 
@@ -1990,7 +1990,7 @@ fn each_field_split(builder: Builder, name: ast.Name, fields: List<ast.FieldValu
 /// The builder after `value` is set on, or added to, the variable `name`.
 // example: list.length(assigned(little_builder(""), infer.no_name(), ast.SetTo, no_expr()).instructions) == 0
 fn assigned(builder: Builder, name: ast.Name, operator: ast.AssignOperator, value: ast.Expr) -> Builder {
-    left := match operator {
+    let left = match operator {
         ast.SetTo => expr_built(builder, value)
         ast.AddTo => added_or_written(builder, local(builder, name), value)
     }
@@ -2009,7 +2009,7 @@ fn added_or_written(builder: Builder, slot: Option<Slot>, value: ast.Expr) -> Le
 /// The builder after `value`, where there is one, is given back.
 // example: list.length(returned(little_builder(""), None).instructions) == 1
 fn returned(builder: Builder, value: Option<ast.Expr>) -> Builder {
-    written := match value {
+    let written = match value {
         Some(given) => left_as(expr_built(builder, given), builder.result)
         None => builder
     }
@@ -2019,19 +2019,19 @@ fn returned(builder: Builder, value: Option<ast.Expr>) -> Builder {
 /// The builder after the loop `repeated`: its test at the top, its body, and a jump back.
 // example: list.length(for_loop(little_builder(""), ast.ForLoop { header: ast.Forever, body: ast.Block { statements: [], span: infer.no_name().span } }).instructions) == 4
 fn for_loop(builder: Builder, repeated: ast.ForLoop) -> Builder {
-    entered := loop_entered(builder, repeated.header)
-    turn := entered.turn
-    top := entered.builder.next_label
-    again := top + 1
-    done := top + 2
-    entering := entered.builder
-    labelled := emit(entering { next_label: top + 3 }, Label(top))
-    tested := loop_tested(labelled, turn, done)
-    outer := tested.repeat
-    left := block_built(tested { repeat: Some(Repeat { again: again, done: done }) }, repeated.body)
-    adapted := adapt(builder: left.builder, from: left.held, to: None)
-    walked := emit(adapted { repeat: outer }, Label(again))
-    stepped := match turn {
+    let entered = loop_entered(builder, repeated.header)
+    let turn = entered.turn
+    let top = entered.builder.next_label
+    let again = top + 1
+    let done = top + 2
+    let entering = entered.builder
+    let labelled = emit(entering { next_label: top + 3 }, Label(top))
+    let tested = loop_tested(labelled, turn, done)
+    let outer = tested.repeat
+    let left = block_built(tested { repeat: Some(Repeat { again: again, done: done }) }, repeated.body)
+    let adapted = adapt(builder: left.builder, from: left.held, to: None)
+    let walked = emit(adapted { repeat: outer }, Label(again))
+    let stepped = match turn {
         Walk { walked_list, index, item } => emit(walked, Increment(index))
         _ => walked
     }
@@ -2052,13 +2052,13 @@ fn loop_entered(builder: Builder, header: ast.ForHeader) -> Entered {
 /// `binding` has a slot.
 // example: walk_entered(little_builder(""), infer.no_name(), no_expr()).builder.next_slot == 2
 fn walk_entered(builder: Builder, binding: ast.Name, iterable: ast.Expr) -> Entered {
-    of := list_descriptor()
-    left := expr_built(builder, iterable)
-    list_at := left.builder.next_slot
-    holding := emit(temporary(adapt(builder: left.builder, from: left.held, to: Some(of)), of), Store { slot: list_at, of: of })
-    index := holding.next_slot
-    counting := emit(emit(temporary(holding, Integer), IntegerOf(0)), Store { slot: index, of: Integer })
-    bound := declare(counting, binding)
+    let of = list_descriptor()
+    let left = expr_built(builder, iterable)
+    let list_at = left.builder.next_slot
+    let holding = emit(temporary(adapt(builder: left.builder, from: left.held, to: Some(of)), of), Store { slot: list_at, of: of })
+    let index = holding.next_slot
+    let counting = emit(emit(temporary(holding, Integer), IntegerOf(0)), Store { slot: index, of: Integer })
+    let bound = declare(counting, binding)
     Entered { builder: bound, turn: Walk { walked_list: list_at, index: index, item: local(bound, binding) } }
 }
 
@@ -2075,15 +2075,15 @@ fn loop_tested(builder: Builder, turn: Turn, done: Int) -> Builder {
 /// The builder after `condition` is written as a truth value on the stack.
 // example: list.length(condition_built(little_builder(""), no_expr()).instructions) == 0
 fn condition_built(builder: Builder, condition: ast.Expr) -> Builder {
-    left := expr_built(builder, condition)
+    let left = expr_built(builder, condition)
     adapt(builder: left.builder, from: left.held, to: Some(Boolean))
 }
 
 /// The builder after `written` is written as what its own type is carried as.
 // example: held_text(value_built(little_builder(""), no_expr()).held) == "V"
 fn value_built(builder: Builder, written: ast.Expr) -> Left {
-    left := expr_built(builder, written)
-    settled := carried_at(left.builder, written.span)
+    let left = expr_built(builder, written)
+    let settled = carried_at(left.builder, written.span)
     Left { builder: adapt(builder: left.builder, from: left.held, to: settled), held: settled }
 }
 
@@ -2093,7 +2093,7 @@ fn value_built(builder: Builder, written: ast.Expr) -> Left {
 /// generic holds an object where the source holds `()`.
 // example: list.length(handed(little_builder(""), no_expr(), None).instructions) == 0
 fn handed(builder: Builder, written: ast.Expr, wanted: Option<Descriptor>) -> Builder {
-    left := expr_built(builder, written)
+    let left = expr_built(builder, written)
     if is_nothing(left.held) && !is_nothing(wanted) && is_holding_nothing(left.builder, written.span) {
         return adapt(builder: nothing(left.builder), from: Some(object()), to: wanted)
     }
@@ -2126,15 +2126,15 @@ fn expr_built(builder: Builder, written: ast.Expr) -> Left {
 /// The builder after the process `started` calls is spawned, which gives back its handle.
 // example: held_text(spawn_built(little_builder(""), no_expr()).held) == "Lbux/Process;"
 fn spawn_built(builder: Builder, started: ast.Expr) -> Left {
-    requested := match started.kind {
+    let requested = match started.kind {
         ast.Call { callee, arguments } => callee_of(callee, infer.values_of(arguments))
         _ => callee_of(started, [])
     }
-    declaration := spawned_declaration(builder.lowering, value_definition(builder, requested.name).origin)
-    signature := signature_of_process(builder.lowering, declaration, 0)
-    handing := each_handed(builder, requested.passed, signature.parameters)
-    taken := descriptor_of(Signature { parameters: signature.parameters, result: None }).parameters
-    spawned := MethodRef { class: process_class_name(module: builder.lowering.shapes.class, named: declaration.name.text), name: "spawned", descriptor: MethodDescriptor { parameters: taken, result: Some(handle_descriptor()) } }
+    let declaration = spawned_declaration(builder.lowering, value_definition(builder, requested.name).origin)
+    let signature = signature_of_process(builder.lowering, declaration, 0)
+    let handing = each_handed(builder, requested.passed, signature.parameters)
+    let taken = descriptor_of(Signature { parameters: signature.parameters, result: None }).parameters
+    let spawned = MethodRef { class: process_class_name(module: builder.lowering.shapes.class, named: declaration.name.text), name: "spawned", descriptor: MethodDescriptor { parameters: taken, result: Some(handle_descriptor()) } }
     Left { builder: emit(handing, InvokeStatic(spawned)), held: Some(handle_descriptor()) }
 }
 
@@ -2207,43 +2207,43 @@ fn binary(builder: Builder, operator: ast.BinaryOperator, left: ast.Expr, right:
 /// The builder after a division: `None` where the divisor is zero, and `Some` of the answer.
 // example: held_text(divided(builder: little_builder(""), how: Divide, left: no_expr(), right: no_expr()).held) == "Lbux/Option;"
 fn divided(builder: Builder, how: Arithmetic, left: ast.Expr, right: ast.Expr) -> Left {
-    dividend := put_aside_as(builder, left, Long)
-    divisor := put_aside_as(dividend.builder, right, Long)
-    answered := divisor.builder.next_label
-    end := answered + 1
-    dividing := divisor.builder
-    testing := emits(dividing { next_label: end + 1 }, [Load { slot: divisor.slot.at, of: Long }, LongOf(0), CompareLongs(Equal), JumpIfFalse(answered)])
-    none := built_shape(testing.lowering.shapes, "None")
-    absent := constructed(emits(testing, [New(none.class), Copy]), none)
-    answering := emits(absent.builder, [Jump(end), Label(answered)])
+    let dividend = put_aside_as(builder, left, Long)
+    let divisor = put_aside_as(dividend.builder, right, Long)
+    let answered = divisor.builder.next_label
+    let end = answered + 1
+    let dividing = divisor.builder
+    let testing = emits(dividing { next_label: end + 1 }, [Load { slot: divisor.slot.at, of: Long }, LongOf(0), CompareLongs(Equal), JumpIfFalse(answered)])
+    let none = built_shape(testing.lowering.shapes, "None")
+    let absent = constructed(emits(testing, [New(none.class), Copy]), none)
+    let answering = emits(absent.builder, [Jump(end), Label(answered)])
     Left { builder: emit(divided_answer(builder: answering, how: how, dividend: dividend.slot.at, divisor: divisor.slot.at), Label(end)), held: absent.held }
 }
 
 /// The builder after `operand` is written as a value `of` holds and put aside in a new slot.
 // example: put_aside_as(little_builder(""), no_expr(), Long).slot.at == 0
 fn put_aside_as(builder: Builder, operand: ast.Expr, of: Descriptor) -> Aside {
-    left := value_built(builder, operand)
-    at := left.builder.next_slot
+    let left = value_built(builder, operand)
+    let at = left.builder.next_slot
     Aside { builder: emit(temporary(adapt(builder: left.builder, from: left.held, to: Some(of)), of), Store { slot: at, of: of }), slot: Slot { at: at, of: of } }
 }
 
 /// The builder after `left || right`, which reads `right` only where `left` is false.
 // example: list.length(either(builder: little_builder(""), left: no_expr(), right: no_expr()).builder.instructions) == 5
 fn either(builder: Builder, left: ast.Expr, right: ast.Expr) -> Left {
-    otherwise := builder.next_label
-    end := otherwise + 1
-    tested := emit(condition_built(builder { next_label: end + 1 }, left), JumpIfFalse(otherwise))
-    other := condition_built(emits(tested, [BooleanOf(true), Jump(end), Label(otherwise)]), right)
+    let otherwise = builder.next_label
+    let end = otherwise + 1
+    let tested = emit(condition_built(builder { next_label: end + 1 }, left), JumpIfFalse(otherwise))
+    let other = condition_built(emits(tested, [BooleanOf(true), Jump(end), Label(otherwise)]), right)
     Left { builder: emit(other, Label(end)), held: Some(Boolean) }
 }
 
 /// The builder after `left && right`, which reads `right` only where `left` is true.
 // example: list.length(both(builder: little_builder(""), left: no_expr(), right: no_expr()).builder.instructions) == 5
 fn both(builder: Builder, left: ast.Expr, right: ast.Expr) -> Left {
-    otherwise := builder.next_label
-    end := otherwise + 1
-    tested := emit(condition_built(builder { next_label: end + 1 }, left), JumpIfFalse(otherwise))
-    other := condition_built(tested, right)
+    let otherwise = builder.next_label
+    let end = otherwise + 1
+    let tested = emit(condition_built(builder { next_label: end + 1 }, left), JumpIfFalse(otherwise))
+    let other = condition_built(tested, right)
     Left { builder: emits(other, [Jump(end), Label(otherwise), BooleanOf(false), Label(end)]), held: Some(Boolean) }
 }
 
@@ -2268,7 +2268,7 @@ fn call_written(builder: Builder, callee: Callee, at: lexer.Span) -> Left {
 /// The builder after a call of the function `name`: a trait method, one of the module, or the prelude's.
 // example: held_text(invoked(little_builder(""), infer.no_name(), [], infer.no_name().span).held) == "V"
 fn invoked(builder: Builder, name: ast.Name, arguments: List<ast.Expr>, written: lexer.Span) -> Left {
-    definition := value_definition(builder, name)
+    let definition = value_definition(builder, name)
     if definition.kind == resolver.TraitMethod {
         return through_the_instance(builder, name, arguments)
     }
@@ -2281,8 +2281,8 @@ fn invoked(builder: Builder, name: ast.Name, arguments: List<ast.Expr>, written:
 /// The builder after a call of the trait method `name`, through the instance its use asks for.
 // example: held_text(through_the_instance(little_builder(""), infer.no_name(), []).held) == "V"
 fn through_the_instance(builder: Builder, name: ast.Name, arguments: List<ast.Expr>) -> Left {
-    at := or(infer.method_type_at(builder.lowering.typed, name.span), unify.Unit)
-    found := found_in(builder, answering_at(builder.lowering, name.text, substituted(builder.at, at)))
+    let at = or(infer.method_type_at(builder.lowering.typed, name.span), unify.Unit)
+    let found = found_in(builder, answering_at(builder.lowering, name.text, substituted(builder.at, at)))
     match found.answered_by {
         Some(answerer) => calling(found.builder, answerer, arguments)
         None => written_out_instance(found.builder, name, arguments)
@@ -2292,7 +2292,7 @@ fn through_the_instance(builder: Builder, name: ast.Name, arguments: List<ast.Ex
 /// The builder after a call of `instance` with `arguments`.
 // example: held_text(calling(little_builder(""), Instance { class: "main", reaching: Reaching { named: "f", signature: Signature { parameters: [], result: Some(Long) } } }, []).held) == "J"
 fn calling(builder: Builder, answerer: Instance, arguments: List<ast.Expr>) -> Left {
-    handing := each_handed(builder, arguments, answerer.reaching.signature.parameters)
+    let handing = each_handed(builder, arguments, answerer.reaching.signature.parameters)
     Left { builder: emit(handing, instance_called(answerer)), held: answerer.reaching.signature.result }
 }
 
@@ -2314,9 +2314,9 @@ fn each_handed(builder: Builder, arguments: List<ast.Expr>, parameters: List<Opt
 /// The builder after a call of a function this module declares, settled as `use` settles it.
 // example: held_text(statically(little_builder(""), Use { declared: infer.no_name().span, at: infer.no_name().span, within: whole() }, []).held) == "V"
 fn statically(builder: Builder, use: Use, arguments: List<ast.Expr>) -> Left {
-    reached := use_reached(builder.lowering, use)
-    handing := each_handed(builder { lowering: reached.lowering }, arguments, reached.reaching.signature.parameters)
-    invoking := InvokeStatic(MethodRef { class: handing.lowering.shapes.class, name: reached.reaching.named, descriptor: descriptor_of(reached.reaching.signature) })
+    let reached = use_reached(builder.lowering, use)
+    let handing = each_handed(builder { lowering: reached.lowering }, arguments, reached.reaching.signature.parameters)
+    let invoking = InvokeStatic(MethodRef { class: handing.lowering.shapes.class, name: reached.reaching.named, descriptor: descriptor_of(reached.reaching.signature) })
     Left { builder: emit(handing, invoking), held: reached.reaching.signature.result }
 }
 
@@ -2356,10 +2356,10 @@ fn field_read(builder: Builder, receiver: ast.Expr, name: ast.Name) -> Left {
 /// The builder after the record `receiver` is written and its field `name` read.
 // example: held_text(field_of_record(little_builder(""), no_expr(), infer.no_name()).held) == "V"
 fn field_of_record(builder: Builder, receiver: ast.Expr, name: ast.Name) -> Left {
-    shape := record_of(builder, receiver.span)
-    left := expr_built(builder, receiver)
-    base := Reference(shape.base)
-    reading := adapt(builder: left.builder, from: left.held, to: Some(base))
+    let shape = record_of(builder, receiver.span)
+    let left = expr_built(builder, receiver)
+    let base = Reference(shape.base)
+    let reading = adapt(builder: left.builder, from: left.held, to: Some(base))
     match carried_named(shape, name.text) {
         Some(of) => Left { builder: emit(reading, GetField(FieldRef { class: shape.class, name: name.text, of: of })), held: Some(of) }
         None => Left { builder: adapt(builder: reading, from: Some(base), to: None), held: None }
@@ -2369,27 +2369,27 @@ fn field_of_record(builder: Builder, receiver: ast.Expr, name: ast.Name) -> Left
 /// The builder after `inner?`: the failure is given back at once, and the value read otherwise.
 // example: held_text(propagated(little_builder(""), no_expr(), infer.no_name().span).held) == "V"
 fn propagated(builder: Builder, inner: ast.Expr, at: lexer.Span) -> Left {
-    named := named_type_at(builder, inner.span)
-    handed_back := if named == "Option" {
+    let named = named_type_at(builder, inner.span)
+    let handed_back = if named == "Option" {
         "None"
     } else {
         "Err"
     }
-    carrying := if named == "Option" {
+    let carrying = if named == "Option" {
         "Some"
     } else {
         "Ok"
     }
-    failed := built_shape(builder.lowering.shapes, handed_back)
-    worked := built_shape(builder.lowering.shapes, carrying)
-    of := Reference(failed.base)
-    left := expr_built(builder, inner)
-    slot := left.builder.next_slot
-    holding := emit(temporary(adapt(builder: left.builder, from: left.held, to: Some(of)), of), Store { slot: slot, of: of })
-    value := holding.next_label
-    tested := emits(label_taken(holding), [Load { slot: slot, of: of }, GetField(FieldRef { class: failed.base, name: "tag", of: Integer }), IntegerOf(or(failed.tag, 0)), CompareIntegers(Equal), JumpIfFalse(value)])
-    reading := emits(tested, [Load { slot: slot, of: of }, Return(tested.result), Label(value), Load { slot: slot, of: of }, Cast(worked.class), GetField(FieldRef { class: worked.class, name: first_carried_name(worked), of: object() })])
-    wanted := carried_at(reading, at)
+    let failed = built_shape(builder.lowering.shapes, handed_back)
+    let worked = built_shape(builder.lowering.shapes, carrying)
+    let of = Reference(failed.base)
+    let left = expr_built(builder, inner)
+    let slot = left.builder.next_slot
+    let holding = emit(temporary(adapt(builder: left.builder, from: left.held, to: Some(of)), of), Store { slot: slot, of: of })
+    let value = holding.next_label
+    let tested = emits(label_taken(holding), [Load { slot: slot, of: of }, GetField(FieldRef { class: failed.base, name: "tag", of: Integer }), IntegerOf(or(failed.tag, 0)), CompareIntegers(Equal), JumpIfFalse(value)])
+    let reading = emits(tested, [Load { slot: slot, of: of }, Return(tested.result), Label(value), Load { slot: slot, of: of }, Cast(worked.class), GetField(FieldRef { class: worked.class, name: first_carried_name(worked), of: object() })])
+    let wanted = carried_at(reading, at)
     Left { builder: adapt(builder: reading, from: Some(object()), to: wanted), held: wanted }
 }
 
@@ -2405,7 +2405,7 @@ fn record(builder: Builder, base: ast.Path, fields: List<ast.FieldValue>) -> Lef
 /// The builder after a new value of the constructor `base` is built out of `fields`.
 // example: held_text(built_with(little_builder(""), ast.Path { module: None, name: infer.no_name() }, []).held) == "L;"
 fn built_with(builder: Builder, base: ast.Path, fields: List<ast.FieldValue>) -> Left {
-    shape := built_shape(builder.lowering.shapes, path_text(base))
+    let shape = built_shape(builder.lowering.shapes, path_text(base))
     var building = emits(builder, [New(shape.class), Copy])
     for carried in shape.carries {
         building = given_fields(building, fields, carried)
@@ -2427,7 +2427,7 @@ fn given_fields(builder: Builder, fields: List<ast.FieldValue>, carried: Carried
 /// The builder after a copy of the record `base` holds is built, with each of `fields` new.
 // example: held_text(updated(little_builder(""), infer.no_name(), []).held) == "L;"
 fn updated(builder: Builder, base: ast.Name, fields: List<ast.FieldValue>) -> Left {
-    shape := record_updated(builder, base)
+    let shape = record_updated(builder, base)
     var building = emits(builder, [New(shape.class), Copy])
     for carried in shape.carries {
         building = if is_written_for(fields, carried) {
@@ -2442,13 +2442,13 @@ fn updated(builder: Builder, base: ast.Name, fields: List<ast.FieldValue>) -> Le
 /// The builder after an `if`: each branch tested in turn, and the one that holds written.
 // example: held_text(if_expr(little_builder(""), ast.IfExpr { branches: [], otherwise: None }, infer.no_name().span).held) == "V"
 fn if_expr(builder: Builder, chain: ast.IfExpr, at: lexer.Span) -> Left {
-    wanted := carried_at(builder, at)
-    end := builder.next_label
+    let wanted = carried_at(builder, at)
+    let end = builder.next_label
     var writing = label_taken(builder)
     for branch in chain.branches {
-        otherwise := writing.next_label
-        tested := emit(condition_built(label_taken(writing), branch.condition), JumpIfFalse(otherwise))
-        left := block_built(tested, branch.block)
+        let otherwise = writing.next_label
+        let tested = emit(condition_built(label_taken(writing), branch.condition), JumpIfFalse(otherwise))
+        let left = block_built(tested, branch.block)
         writing = emits(adapt(builder: left.builder, from: left.held, to: wanted), [Jump(end), Label(otherwise)])
     }
     writing = match chain.otherwise {
@@ -2462,8 +2462,8 @@ fn if_expr(builder: Builder, chain: ast.IfExpr, at: lexer.Span) -> Left {
 /// one answers the operator's trait at the type of `left`.
 // example: held_text(operated(builder: little_builder(""), operator: ast.Add, left: no_expr(), right: no_expr()).held) == "V"
 fn operated(builder: Builder, operator: ast.BinaryOperator, left: ast.Expr, right: ast.Expr) -> Left {
-    asked := asked_by(operator)
-    found := instance_written(builder, method_of(builder.lowering.library, asked.of), left.span)
+    let asked = asked_by(operator)
+    let found = instance_written(builder, method_of(builder.lowering.library, asked.of), left.span)
     match found.answered_by {
         Some(answerer) => through_the_operator(found.builder, asked, answerer, [left, right])
         None => written_out_operator(builder: found.builder, operator: operator, left: left, right: right)
@@ -2473,8 +2473,8 @@ fn operated(builder: Builder, operator: ast.BinaryOperator, left: ast.Expr, righ
 /// The builder after a trait method the prelude supplies is written out as instructions.
 // example: held_text(written_out_instance(little_builder(""), ast.Name { text: "from_literal", span: infer.no_name().span }, [no_expr()]).held) == "V"
 fn written_out_instance(builder: Builder, name: ast.Name, arguments: List<ast.Expr>) -> Left {
-    of := trait_of(builder.lowering.library, name.text)
-    first := or(list.at(arguments, 0), no_expr())
+    let of = trait_of(builder.lowering.library, name.text)
+    let first = or(list.at(arguments, 0), no_expr())
     if of == "IntegerLiteral" {
         return expr_built(builder, first)
     }
@@ -2490,8 +2490,8 @@ fn written_out_instance(builder: Builder, name: ast.Name, arguments: List<ast.Ex
 /// The builder after `value` is hashed, or shown, as `of` asks.
 // example: held_text(read_one(little_builder(""), "Show", no_expr()).held) == "Ljava/lang/String;"
 fn read_one(builder: Builder, of: String, value: ast.Expr) -> Left {
-    left := value_built(builder, value)
-    held := or(left.held, Long)
+    let left = value_built(builder, value)
+    let held = or(left.held, Long)
     if of == "Hash" {
         return Left { builder: emits(left.builder, hashed_as(held)), held: Some(Long) }
     }
@@ -2501,8 +2501,8 @@ fn read_one(builder: Builder, of: String, value: ast.Expr) -> Left {
 /// The builder after `value` is added to what `slot` holds, which `+=` writes.
 // example: held_text(added_to(little_builder(""), Slot { at: 0, of: Long }, no_expr()).held) == "J"
 fn added_to(builder: Builder, slot: Slot, value: ast.Expr) -> Left {
-    loading := emit(builder, Load { slot: slot.at, of: slot.of })
-    found := instance_written(loading, method_of(loading.lowering.library, "Add"), value.span)
+    let loading = emit(builder, Load { slot: slot.at, of: slot.of })
+    let found = instance_written(loading, method_of(loading.lowering.library, "Add"), value.span)
     match found.answered_by {
         Some(answerer) => added_through(found.builder, answerer, value)
         None => added_out(found.builder, slot, value)
@@ -2512,21 +2512,21 @@ fn added_to(builder: Builder, slot: Slot, value: ast.Expr) -> Left {
 /// The builder after `value` is added through the instance of `Add` that answers.
 // example: held_text(added_through(little_builder(""), Instance { class: "main", reaching: Reaching { named: "add", signature: Signature { parameters: [Some(Long), Some(Long)], result: Some(Long) } } }, no_expr()).held) == "J"
 fn added_through(builder: Builder, answerer: Instance, value: ast.Expr) -> Left {
-    wanted := or(list.at(answerer.reaching.signature.parameters, 1), None)
+    let wanted = or(list.at(answerer.reaching.signature.parameters, 1), None)
     Left { builder: emit(handed(builder, value, wanted), instance_called(answerer)), held: answerer.reaching.signature.result }
 }
 
 /// The builder after `value` is added as the JVM adds: joined for text, summed for numbers.
 // example: held_text(added_out(little_builder(""), Slot { at: 0, of: Long }, no_expr()).held) == "J"
 fn added_out(builder: Builder, slot: Slot, value: ast.Expr) -> Left {
-    left := expr_built(builder, value)
+    let left = expr_built(builder, value)
     Left { builder: emit(adapt(builder: left.builder, from: left.held, to: Some(slot.of)), written_out_add(slot.of)), held: Some(slot.of) }
 }
 
 /// The builder after `operand` is negated, through an instance where one answers `Neg`.
 // example: held_text(negated(little_builder(""), no_expr()).held) == "J"
 fn negated(builder: Builder, operand: ast.Expr) -> Left {
-    found := instance_written(builder, method_of(builder.lowering.library, "Neg"), operand.span)
+    let found = instance_written(builder, method_of(builder.lowering.library, "Neg"), operand.span)
     match found.answered_by {
         Some(answerer) => calling(found.builder, answerer, [operand])
         None => negated_out(found.builder, operand)
@@ -2536,7 +2536,7 @@ fn negated(builder: Builder, operand: ast.Expr) -> Left {
 /// The builder after `operand` is negated as a JVM `long`.
 // example: held_text(negated_out(little_builder(""), no_expr()).held) == "J"
 fn negated_out(builder: Builder, operand: ast.Expr) -> Left {
-    left := expr_built(builder, operand)
+    let left = expr_built(builder, operand)
     Left { builder: emit(adapt(builder: left.builder, from: left.held, to: Some(Long)), Arithmetic(Negate)), held: Some(Long) }
 }
 
@@ -2544,7 +2544,7 @@ fn negated_out(builder: Builder, operand: ast.Expr) -> Left {
 /// turned over where the operator asks for that.
 // example: held_text(through_the_operator(little_builder(""), asked_by(ast.Add), Instance { class: "main", reaching: Reaching { named: "add", signature: Signature { parameters: [], result: Some(Long) } } }, []).held) == "J"
 fn through_the_operator(builder: Builder, asked: OperatorAsk, answerer: Instance, operands: List<ast.Expr>) -> Left {
-    given := if asked.reversed {
+    let given = if asked.reversed {
         the_other_way_round(builder, answerer, operands)
     } else {
         calling(builder, answerer, operands)
@@ -2566,9 +2566,9 @@ fn the_other_way_round(builder: Builder, answerer: Instance, operands: List<ast.
     var kept = []
     var at = 0
     for operand in operands {
-        wanted := list.at(answerer.reaching.signature.parameters, at)
+        let wanted = list.at(answerer.reaching.signature.parameters, at)
         if at < list.length(answerer.reaching.signature.parameters) {
-            aside := operand_aside(writing, operand, or(wanted, None))
+            let aside = operand_aside(writing, operand, or(wanted, None))
             writing = aside.builder
             kept = concatenated(first: aside.slots, second: kept)
         }
@@ -2597,8 +2597,8 @@ fn handed_aside(builder: Builder, operand: ast.Expr, of: Descriptor) -> Aside {
     if !is_holding_nothing(builder, operand.span) {
         return put_aside_as(builder, operand, of)
     }
-    handing := handed(builder, operand, Some(of))
-    at := handing.next_slot
+    let handing = handed(builder, operand, Some(of))
+    let at = handing.next_slot
     Aside { builder: emit(temporary(handing, of), Store { slot: at, of: of }), slot: Slot { at: at, of: of } }
 }
 
@@ -2608,9 +2608,9 @@ fn written_out_operator(builder: Builder, operator: ast.BinaryOperator, left: as
     if is_division(operator) {
         return divided(builder: builder, how: counted_by(operator), left: left, right: right)
     }
-    one := value_built(builder, left)
-    other := value_built(one.builder, right)
-    both_held := adapt(builder: other.builder, from: other.held, to: one.held)
+    let one = value_built(builder, left)
+    let other = value_built(one.builder, right)
+    let both_held = adapt(builder: other.builder, from: other.held, to: one.held)
     match operator {
         ast.Add => added(both_held, one.held)
         ast.Subtract => Left { builder: emit(both_held, Arithmetic(Subtract)), held: Some(Long) }
@@ -2638,16 +2638,16 @@ fn supplied(builder: Builder, name: ast.Name, arguments: List<ast.Expr>, written
 /// gives the last state as the call's type holds it.
 // example: held_text(process_supplied(little_builder(""), "ended", [no_expr()], infer.no_name().span).held) == "V"
 fn process_supplied(builder: Builder, name: String, arguments: List<ast.Expr>, written: lexer.Span) -> Left {
-    handle := handed(builder, or(list.at(arguments, 0), no_expr()), Some(handle_descriptor()))
+    let handle = handed(builder, or(list.at(arguments, 0), no_expr()), Some(handle_descriptor()))
     if name == "ended" {
-        joined := MethodRef { class: finished_class(), name: "join", descriptor: MethodDescriptor { parameters: [], result: Some(object()) } }
-        wanted := carried_at(builder, written)
+        let joined = MethodRef { class: finished_class(), name: "join", descriptor: MethodDescriptor { parameters: [], result: Some(object()) } }
+        let wanted = carried_at(builder, written)
         return Left { builder: adapt(builder: emits(handle, [GetField(handle_finished()), InvokeVirtual(joined)]), from: Some(object()), to: wanted), held: wanted }
     }
-    waiting := named_descriptor(builder.lowering.shapes, "Waiting")
-    sent := named_descriptor(builder.lowering.shapes, "Sent")
-    handing := handed(handed(handle, or(list.at(arguments, 1), no_expr()), Some(object())), or(list.at(arguments, 2), no_expr()), Some(waiting))
-    offered := MethodRef { class: handle_class_name(), name: "sent", descriptor: MethodDescriptor { parameters: [handle_descriptor(), object(), waiting], result: Some(sent) } }
+    let waiting = named_descriptor(builder.lowering.shapes, "Waiting")
+    let sent = named_descriptor(builder.lowering.shapes, "Sent")
+    let handing = handed(handed(handle, or(list.at(arguments, 1), no_expr()), Some(object())), or(list.at(arguments, 2), no_expr()), Some(waiting))
+    let offered = MethodRef { class: handle_class_name(), name: "sent", descriptor: MethodDescriptor { parameters: [handle_descriptor(), object(), waiting], result: Some(sent) } }
     Left { builder: emit(handing, InvokeStatic(offered)), held: Some(sent) }
 }
 
@@ -2705,7 +2705,7 @@ fn finished_class() -> String {
 /// The builder after `or` or `ok_or`: the value the answer carries, or the fallback.
 // example: held_text(with_fallback(little_builder(""), "", [], infer.no_name().span).held) == "V"
 fn with_fallback(builder: Builder, name: String, arguments: List<ast.Expr>, written: lexer.Span) -> Left {
-    carrying := if name == "or" {
+    let carrying = if name == "or" {
         "Some"
     } else {
         "Ok"
@@ -2713,32 +2713,32 @@ fn with_fallback(builder: Builder, name: String, arguments: List<ast.Expr>, writ
     if name != "or" && name != "ok_or" {
         return Left { builder: builder, held: None }
     }
-    wanted := carried_at(builder, written)
-    held := set_aside(builder, or(list.at(arguments, 0), no_expr()))
-    fallback := set_aside_as(held.builder, or(list.at(arguments, 1), no_expr()), wanted)
-    otherwise := fallback.builder.next_label
-    end := otherwise + 1
-    shape := built_shape(builder.lowering.shapes, carrying)
-    falling := fallback.builder
-    tested := emits(falling { next_label: end + 1 }, carrying_tag(shape, held.slot, otherwise))
-    read := read_carried(tested, shape, held.slot, wanted)
-    reloaded := emits(read, concatenated(first: [Jump(end), Label(otherwise)], second: reloaded_from(fallback.slots)))
+    let wanted = carried_at(builder, written)
+    let held = set_aside(builder, or(list.at(arguments, 0), no_expr()))
+    let fallback = set_aside_as(held.builder, or(list.at(arguments, 1), no_expr()), wanted)
+    let otherwise = fallback.builder.next_label
+    let end = otherwise + 1
+    let shape = built_shape(builder.lowering.shapes, carrying)
+    let falling = fallback.builder
+    let tested = emits(falling { next_label: end + 1 }, carrying_tag(shape, held.slot, otherwise))
+    let read = read_carried(tested, shape, held.slot, wanted)
+    let reloaded = emits(read, concatenated(first: [Jump(end), Label(otherwise)], second: reloaded_from(fallback.slots)))
     Left { builder: emit(reloaded, Label(end)), held: wanted }
 }
 
 /// The builder after `answer` is put aside in a new slot.
 // example: set_aside(little_builder(""), no_expr()).slot.at == 0
 fn set_aside(builder: Builder, answer: ast.Expr) -> Aside {
-    of := or(carried_at(builder, answer.span), object())
-    left := expr_built(builder, answer)
-    at := left.builder.next_slot
+    let of = or(carried_at(builder, answer.span), object())
+    let left = expr_built(builder, answer)
+    let at = left.builder.next_slot
     Aside { builder: emit(temporary(adapt(builder: left.builder, from: left.held, to: Some(of)), of), Store { slot: at, of: of }), slot: Slot { at: at, of: of } }
 }
 
 /// The builder after `fallback` is put aside in a new slot, where it is not `()`.
 // example: list.length(set_aside_as(little_builder(""), no_expr(), None).slots) == 0
 fn set_aside_as(builder: Builder, fallback: ast.Expr, wanted: Option<Descriptor>) -> Asides {
-    handing := handed(builder, fallback, wanted)
+    let handing = handed(builder, fallback, wanted)
     match wanted {
         Some(of) => Asides { builder: emit(temporary(handing, of), Store { slot: handing.next_slot, of: of }), slots: [Slot { at: handing.next_slot, of: of }] }
         None => Asides { builder: handing, slots: [] }
@@ -2760,14 +2760,14 @@ fn held_by_the_compiler(builder: Builder, through: Through, arguments: List<ast.
 // example: is_unwritten(held_named(little_builder(""), "push", []))
 // example: !is_unwritten(held_named(little_builder(""), "length", [no_expr()]))
 fn held_named(builder: Builder, name: String, arguments: List<ast.Expr>) -> Option<Left> {
-    values := or(list.at(arguments, 0), no_expr())
+    let values = or(list.at(arguments, 0), no_expr())
     if name == "length" && list.length(arguments) == 1 {
         return Some(read_length(builder: builder, values: values))
     }
     if list.length(arguments) != 2 {
         return None
     }
-    second := or(list.at(arguments, 1), no_expr())
+    let second = or(list.at(arguments, 1), no_expr())
     if name == "push" {
         return Some(list_push_built(builder: builder, values: values, value: second))
     }
@@ -2780,33 +2780,33 @@ fn held_named(builder: Builder, name: String, arguments: List<ast.Expr>) -> Opti
 /// The builder after the length `values` holds is read, and widened to the `long` an `Int` is.
 // example: held_text(read_length(builder: little_builder(""), values: no_expr()).held) == "J"
 fn read_length(builder: Builder, values: ast.Expr) -> Left {
-    listed := handed(builder, values, Some(list_descriptor()))
+    let listed = handed(builder, values, Some(list_descriptor()))
     Left { builder: emits(listed, [GetField(list_length()), Widen]), held: Some(Long) }
 }
 
 /// The builder after `value` is pushed onto `values`.
 // example: held_text(list_push_built(builder: little_builder(""), values: no_expr(), value: no_expr()).held) == "Lbux/List;"
 fn list_push_built(builder: Builder, values: ast.Expr, value: ast.Expr) -> Left {
-    handing := handed(handed(builder, values, Some(list_descriptor())), value, Some(object()))
+    let handing = handed(handed(builder, values, Some(list_descriptor())), value, Some(object()))
     Left { builder: emit(handing, InvokeStatic(list_pushed())), held: Some(list_descriptor()) }
 }
 
 /// The builder after the value at `index` of `values` is read: `Some` of it, or `None` outside.
 // example: held_text(read_at(builder: little_builder(""), values: no_expr(), index: no_expr()).held) == "Lbux/Option;"
 fn read_at(builder: Builder, values: ast.Expr, index: ast.Expr) -> Left {
-    holding := list_descriptor()
-    listed := handed(builder, values, Some(holding))
-    list_at := listed.next_slot
-    indexed := handed(emit(temporary(listed, holding), Store { slot: list_at, of: holding }), index, Some(Long))
-    at := indexed.next_slot
-    stored_at := emit(temporary(indexed, Long), Store { slot: at, of: Long })
-    empty := stored_at.next_label
-    end := empty + 1
-    within := [Load { slot: at, of: Long }, LongOf(0), CompareLongs(GreaterOrEqual), JumpIfFalse(empty), Load { slot: at, of: Long }, Load { slot: list_at, of: holding }, GetField(list_length()), Widen, CompareLongs(Less), JumpIfFalse(empty)]
-    some := built_shape(builder.lowering.shapes, "Some")
-    reading := emits(stored_at { next_label: end + 1 }, concatenated(first: within, second: [New(some.class), Copy, Load { slot: list_at, of: holding }, GetField(list_slots()), Load { slot: at, of: Long }, Narrow, LoadFromArray]))
-    held := constructed(reading, some)
-    none := builds(emits(held.builder, [Jump(end), Label(empty)]), built_shape(builder.lowering.shapes, "None"), [])
+    let holding = list_descriptor()
+    let listed = handed(builder, values, Some(holding))
+    let list_at = listed.next_slot
+    let indexed = handed(emit(temporary(listed, holding), Store { slot: list_at, of: holding }), index, Some(Long))
+    let at = indexed.next_slot
+    let stored_at = emit(temporary(indexed, Long), Store { slot: at, of: Long })
+    let empty = stored_at.next_label
+    let end = empty + 1
+    let within = [Load { slot: at, of: Long }, LongOf(0), CompareLongs(GreaterOrEqual), JumpIfFalse(empty), Load { slot: at, of: Long }, Load { slot: list_at, of: holding }, GetField(list_length()), Widen, CompareLongs(Less), JumpIfFalse(empty)]
+    let some = built_shape(builder.lowering.shapes, "Some")
+    let reading = emits(stored_at { next_label: end + 1 }, concatenated(first: within, second: [New(some.class), Copy, Load { slot: list_at, of: holding }, GetField(list_slots()), Load { slot: at, of: Long }, Narrow, LoadFromArray]))
+    let held = constructed(reading, some)
+    let none = builds(emits(held.builder, [Jump(end), Label(empty)]), built_shape(builder.lowering.shapes, "None"), [])
     Left { builder: emit(none.builder, Label(end)), held: held.held }
 }
 
@@ -2831,9 +2831,9 @@ fn compiled_or_called(builder: Builder, through: Through, arguments: List<ast.Ex
 /// The builder after a call of a function another module declares.
 // example: held_text(in_another_module(little_builder(""), Through { module: infer.no_name(), name: infer.no_name(), used: infer.no_name().span }, []).held) == "V"
 fn in_another_module(builder: Builder, through: Through, arguments: List<ast.Expr>) -> Left {
-    reached := reached_method(builder, through)
-    handing := each_handed(reached.builder, arguments, reached.reaching.signature.parameters)
-    invoking := InvokeStatic(MethodRef { class: module_named(builder.lowering.shapes.classes, through.module.text), name: reached.reaching.named, descriptor: descriptor_of(reached.reaching.signature) })
+    let reached = reached_method(builder, through)
+    let handing = each_handed(reached.builder, arguments, reached.reaching.signature.parameters)
+    let invoking = InvokeStatic(MethodRef { class: module_named(builder.lowering.shapes.classes, through.module.text), name: reached.reaching.named, descriptor: descriptor_of(reached.reaching.signature) })
     Left { builder: emit(handing, invoking), held: reached.reaching.signature.result }
 }
 
@@ -2843,13 +2843,13 @@ fn in_another_module(builder: Builder, through: Through, arguments: List<ast.Exp
 /// is thrown, because the JVM does not take a method that can run off its end.
 // example: held_text(match_expr(little_builder(""), ast.MatchExpr { scrutinee: no_expr(), arms: [] }, infer.no_name().span).held) == "V"
 fn match_expr(builder: Builder, matched: ast.MatchExpr, at: lexer.Span) -> Left {
-    wanted := carried_at(builder, at)
-    held := matched_held(builder, matched.scrutinee)
-    end := held.builder.next_label
+    let wanted = carried_at(builder, at)
+    let held = matched_held(builder, matched.scrutinee)
+    let end = held.builder.next_label
     var writing = label_taken(held.builder)
     for arm in matched.arms {
-        next := writing.next_label
-        left := expr_built(tried(label_taken(writing), arm.pattern, held.slot, next), arm.body)
+        let next = writing.next_label
+        let left = expr_built(tried(label_taken(writing), arm.pattern, held.slot, next), arm.body)
         writing = emits(adapt(builder: left.builder, from: left.held, to: wanted), [Jump(end), Label(next)])
     }
     Left { builder: emit(unmatched(writing), Label(end)), held: wanted }
@@ -2858,9 +2858,9 @@ fn match_expr(builder: Builder, matched: ast.MatchExpr, at: lexer.Span) -> Left 
 /// The builder after `scrutinee` is held in a new slot, where it is not `()`.
 // example: is_unslotted(matched_held(little_builder(""), no_expr()).slot)
 fn matched_held(builder: Builder, scrutinee: ast.Expr) -> HeldSlot {
-    of := carried_at(builder, scrutinee.span)
-    left := expr_built(builder, scrutinee)
-    adapted := adapt(builder: left.builder, from: left.held, to: of)
+    let of = carried_at(builder, scrutinee.span)
+    let left = expr_built(builder, scrutinee)
+    let adapted = adapt(builder: left.builder, from: left.held, to: of)
     match of {
         Some(holding) => HeldSlot { builder: emit(temporary(adapted, holding), Store { slot: adapted.next_slot, of: holding }), slot: Some(Slot { at: adapted.next_slot, of: holding }) }
         None => HeldSlot { builder: adapted, slot: None }
@@ -2882,10 +2882,10 @@ fn use_reached(lowering: Lowering, use: Use) -> Reachable {
 /// The generic `function`, owed settled on what its use settles it on.
 // example: used_settled(little_lowering(""), Use { declared: infer.no_name().span, at: infer.no_name().span, within: whole() }, no_function()).reaching.named == ""
 fn used_settled(lowering: Lowering, use: Use, function: ast.FunctionDeclaration) -> Reachable {
-    at_use := substituted(use.within, used_as(lowering, use.at))
-    settled := instantiation_of(function: function, written_at: used_as(lowering, use.declared), used: at_use)
-    named := instantiation_names(settled, named_at(lowering, use.declared))
-    reaching := Reaching { named: named, signature: signature_of(lowering, use.declared, settled) }
+    let at_use = substituted(use.within, used_as(lowering, use.at))
+    let settled = instantiation_of(function: function, written_at: used_as(lowering, use.declared), used: at_use)
+    let named = instantiation_names(settled, named_at(lowering, use.declared))
+    let reaching = Reaching { named: named, signature: signature_of(lowering, use.declared, settled) }
     Reachable { lowering: owe(lowering, use.declared, named, settled), reaching: reaching }
 }
 
@@ -2925,8 +2925,8 @@ fn left_for(builder: Builder, label: Option<Int>) -> Builder {
 /// The builder after the value on the stack is held in a new slot, which `key` names.
 // example: !is_unslotted(map.get(field_held(little_builder(""), "a", Long).fields, "a"))
 fn field_held(builder: Builder, key: String, of: Descriptor) -> Builder {
-    at := builder.next_slot
-    holding := emit(temporary(builder, of), Store { slot: at, of: of })
+    let at = builder.next_slot
+    let holding = emit(temporary(builder, of), Store { slot: at, of: of })
     holding { fields: map.insert(holding.fields, key, Slot { at: at, of: of }) }
 }
 
@@ -2948,10 +2948,10 @@ fn walk_stepped(builder: Builder, turn: Turn, done: Int) -> Builder {
 /// The builder after the test of a walk over the list in `list`, and the item held in `item`.
 // example: list.length(walked_over(builder: little_builder(""), walked_list: Slot { at: 0, of: Long }, index: 1, item: None, done: 0).instructions) == 10
 fn walked_over(builder: Builder, walked_list: Slot, index: Int, item: Option<Slot>, done: Int) -> Builder {
-    counting := Load { slot: index, of: Integer }
-    walking := Load { slot: walked_list.at, of: walked_list.of }
-    testing := emits(builder, [counting, walking, GetField(list_length()), CompareIntegers(Less), JumpIfFalse(done)])
-    reading := emits(testing, [walking, GetField(list_slots()), counting, LoadFromArray])
+    let counting = Load { slot: index, of: Integer }
+    let walking = Load { slot: walked_list.at, of: walked_list.of }
+    let testing = emits(builder, [counting, walking, GetField(list_length()), CompareIntegers(Less), JumpIfFalse(done)])
+    let reading = emits(testing, [walking, GetField(list_slots()), counting, LoadFromArray])
     stored_in(reading, item, Some(object()))
 }
 
@@ -2982,15 +2982,15 @@ fn is_holding_nothing(builder: Builder, written: lexer.Span) -> Bool {
 /// The builder after `Some` of the quotient or the remainder of the two slots is built.
 // example: list.length(divided_answer(builder: little_builder(""), how: Divide, dividend: 0, divisor: 2).instructions) == 7
 fn divided_answer(builder: Builder, how: Arithmetic, dividend: Int, divisor: Int) -> Builder {
-    some := built_shape(builder.lowering.shapes, "Some")
-    computed := emits(builder, [New(some.class), Copy, Load { slot: dividend, of: Long }, Load { slot: divisor, of: Long }, Arithmetic(how)])
+    let some = built_shape(builder.lowering.shapes, "Some")
+    let computed = emits(builder, [New(some.class), Copy, Load { slot: dividend, of: Long }, Load { slot: divisor, of: Long }, Arithmetic(how)])
     constructed(adapt(builder: computed, from: Some(Long), to: first_carried(some)), some).builder
 }
 
 /// The builder after two values `held` holds are added: joined for text, summed for numbers.
 // example: list.length(added(little_builder(""), Some(Long)).builder.instructions) == 1
 fn added(builder: Builder, held: Option<Descriptor>) -> Left {
-    adding := match held {
+    let adding = match held {
         Some(Reference(_)) => Concat
         _ => Arithmetic(Add)
     }
@@ -3115,7 +3115,7 @@ fn kept_values(builder: Builder, base: ast.Name, shape: Shape, carried: Carried)
 /// The builder after `reading` is read from the record `base` holds.
 // example: list.length(field_kept(little_builder(""), infer.no_name(), no_shape(), FieldRef { class: "", name: "a", of: Long }).instructions) == 1
 fn field_kept(builder: Builder, base: ast.Name, shape: Shape, reading: FieldRef) -> Builder {
-    left := loaded_value(builder, base)
+    let left = loaded_value(builder, base)
     emit(adapt(builder: left.builder, from: left.held, to: Some(Reference(shape.class))), GetField(reading))
 }
 
@@ -3295,16 +3295,16 @@ fn generic_reached(builder: Builder, through: Through, generic: infer.GenericUse
     for one in generic.settled {
         settled = list.push(settled, substituted(builder.at, one))
     }
-    owing := each_instance_owed(builder.lowering, generic.constrained, settled)
-    named := asking_named(owing, GenericAsked { module: through.module.text, function: through.name.text, settled: settled, constrained: generic.constrained })
-    signature := written_as(named.lowering, substituted(builder.at, generic.written_as))
+    let owing = each_instance_owed(builder.lowering, generic.constrained, settled)
+    let named = asking_named(owing, GenericAsked { module: through.module.text, function: through.name.text, settled: settled, constrained: generic.constrained })
+    let signature = written_as(named.lowering, substituted(builder.at, generic.written_as))
     Reaches { builder: builder { lowering: named.lowering }, reaching: Reaching { named: named.named, signature: signature } }
 }
 
 /// The name a use of a generic of `module` reaches, which that module is asked for.
 // example: asking_named(little_lowering(""), GenericAsked { module: "lexer", function: "pick", settled: [unify.int()], constrained: [[]] }).named == "pick$Int"
 fn asking_named(lowering: Lowering, asked: GenericAsked) -> NamedAsked {
-    made := ask(lowering: lowering, module: asked.module, function: asked.function, settled: asked.settled)
+    let made = ask(lowering: lowering, module: asked.module, function: asked.function, settled: asked.settled)
     NamedAsked { lowering: made.lowering, named: generic_names(asked.function, made.written, asked.constrained) }
 }
 
@@ -3336,7 +3336,7 @@ fn traits_answered(lowering: Lowering, traits: List<String>, at: unify.Type) -> 
 /// The builder after the throw of an `AssertionError`.
 // example: list.length(unmatched(little_builder("")).instructions) == 4
 fn unmatched(builder: Builder) -> Builder {
-    thrown := "java/lang/AssertionError"
+    let thrown = "java/lang/AssertionError"
     emits(builder, [New(thrown), Copy, Construct(MethodRef { class: thrown, name: "<init>", descriptor: MethodDescriptor { parameters: [], result: None } }), Throw])
 }
 
@@ -3368,16 +3368,16 @@ fn tried_against(builder: Builder, pattern: ast.Pattern, against: Against) -> Bu
 /// The builder after each alternative is tried in turn, the first that fits going on.
 // example: little_builder("").next_label == 0
 fn tried_any_of(builder: Builder, alternatives: List<ast.Pattern>, against: Against) -> Builder {
-    matched := builder.next_label
+    let matched = builder.next_label
     var writing = label_taken(builder)
-    last := list.length(alternatives) - 1
+    let last = list.length(alternatives) - 1
     if last < 0 {
         return writing
     }
     var at = 0
     for alternative in alternatives {
         if at < last {
-            next := writing.next_label
+            let next = writing.next_label
             writing = emits(tried(label_taken(writing), alternative, Some(against.slot), next), [Jump(matched), Label(next)])
         } else {
             writing = tried(writing, alternative, Some(against.slot), against.next)
@@ -3390,7 +3390,7 @@ fn tried_any_of(builder: Builder, alternatives: List<ast.Pattern>, against: Agai
 /// The builder after the variant is tested for and each value it carries tried against its pattern.
 // example: list.length(tried_tuple(little_builder(""), ast.Path { module: None, name: infer.no_name() }, [], Against { slot: Slot { at: 0, of: Long }, next: 0 }).instructions) == 0
 fn tried_tuple(builder: Builder, path: ast.Path, elements: List<ast.Pattern>, against: Against) -> Builder {
-    found := tagged(builder, path, against)
+    let found = tagged(builder, path, against)
     var writing = found.builder
     var at = 0
     for element in elements {
@@ -3421,9 +3421,9 @@ fn label_taken(builder: Builder) -> Builder {
 /// The builder after the whole number `value` is compared with what `against` holds.
 // example: list.length(tried_number(little_builder(""), 1, infer.no_name().span, Against { slot: Slot { at: 0, of: Long }, next: 0 }).instructions) == 5
 fn tried_number(builder: Builder, value: Int, written: lexer.Span, against: Against) -> Builder {
-    of := carried_at(builder, written)
-    loading := adapt(builder: emit(builder, Load { slot: against.slot.at, of: against.slot.of }), from: Some(against.slot.of), to: of)
-    pushed := whole_number(loading, value, written)
+    let of = carried_at(builder, written)
+    let loading = adapt(builder: emit(builder, Load { slot: against.slot.at, of: against.slot.of }), from: Some(against.slot.of), to: of)
+    let pushed = whole_number(loading, value, written)
     same_as(pushed.builder, or(pushed.held, Long), written, against)
 }
 
@@ -3431,7 +3431,7 @@ fn tried_number(builder: Builder, value: Int, written: lexer.Span, against: Agai
 /// answers it at the type the literal is written at.
 // example: held_text(whole_number(little_builder(""), 1, infer.no_name().span).held) == "J"
 fn whole_number(builder: Builder, value: Int, written: lexer.Span) -> Left {
-    found := instance_written(emit(builder, LongOf(value)), "from_literal", written)
+    let found = instance_written(emit(builder, LongOf(value)), "from_literal", written)
     match found.answered_by {
         Some(answerer) => Left { builder: emit(found.builder, instance_called(answerer)), held: answerer.reaching.signature.result }
         None => Left { builder: found.builder, held: Some(Long) }
@@ -3444,7 +3444,7 @@ fn tried_name(builder: Builder, path: ast.Path, against: Against) -> Builder {
     if !is_unnamed(path.module) || value_definition(builder, path.name).kind == resolver.Constructor {
         return tagged(builder, path, against).builder
     }
-    declaring := declare(builder, path.name)
+    let declaring = declare(builder, path.name)
     stored_value(emit(declaring, Load { slot: against.slot.at, of: against.slot.of }), path.name, Some(against.slot.of))
 }
 
@@ -3460,10 +3460,10 @@ fn is_unnamed(found: Option<ast.Name>) -> Bool {
 /// The builder after the variant is tested for and each field it names bound.
 // example: list.length(tried_record(little_builder(""), ast.Path { module: None, name: infer.no_name() }, [], Against { slot: Slot { at: 0, of: Long }, next: 0 }).instructions) == 0
 fn tried_record(builder: Builder, path: ast.Path, fields: List<ast.Name>, against: Against) -> Builder {
-    found := tagged(builder, path, against)
+    let found = tagged(builder, path, against)
     var writing = found.builder
     for field in fields {
-        carried := Carried { name: field.text, of: carried_named(found.shape, field.text) }
+        let carried = Carried { name: field.text, of: carried_named(found.shape, field.text) }
         writing = stored_value(pattern_read(declare(writing, field), found.shape, carried, against), field, carried.of)
     }
     writing
@@ -3538,7 +3538,7 @@ fn carried_named(shape: Shape, name: String) -> Option<Descriptor> {
 /// names, and the shape of that variant; a record has no tag, and is not tested.
 // example: tagged(little_builder(""), ast.Path { module: None, name: infer.no_name() }, Against { slot: Slot { at: 0, of: Long }, next: 0 }).shape.class == ""
 fn tagged(builder: Builder, path: ast.Path, against: Against) -> Tagged {
-    shape := built_shape(builder.lowering.shapes, path_text(path))
+    let shape = built_shape(builder.lowering.shapes, path_text(path))
     match shape.tag {
         Some(_) => Tagged { builder: emits(builder, carrying_tag(shape, against.slot, against.next)), shape: shape }
         None => Tagged { builder: builder, shape: shape }
@@ -3563,7 +3563,7 @@ fn pattern_read(builder: Builder, shape: Shape, carried: Carried, against: Again
 /// The builder after the literal `pushed`, which a value `of` holds, is compared with `against`.
 // example: list.length(equal_to(little_builder(""), BooleanOf(true), Boolean, infer.no_name().span, Against { slot: Slot { at: 0, of: Boolean }, next: 0 }).instructions) == 4
 fn equal_to(builder: Builder, pushed: Instruction, of: Descriptor, written: lexer.Span, against: Against) -> Builder {
-    loading := adapt(builder: emit(builder, Load { slot: against.slot.at, of: against.slot.of }), from: Some(against.slot.of), to: Some(of))
+    let loading = adapt(builder: emit(builder, Load { slot: against.slot.at, of: against.slot.of }), from: Some(against.slot.of), to: Some(of))
     same_as(emit(loading, pushed), of, written, against)
 }
 
@@ -3593,8 +3593,8 @@ fn converted(held: Descriptor, wanted: Descriptor) -> List<Instruction> {
     if held == wanted {
         return []
     }
-    boxed := boxing_class(held)
-    unboxed := boxing_class(wanted)
+    let boxed = boxing_class(held)
+    let unboxed = boxing_class(wanted)
     if boxed != "" && unboxed == "" {
         return [holding_class(held)]
     }
@@ -3624,7 +3624,7 @@ fn narrowed(held: Descriptor, wanted: Descriptor) -> List<Instruction> {
 /// The cast to the box of `wanted`, and the call that reads the value out of it.
 // example: list.length(read_out_of(Long)) == 2
 fn read_out_of(wanted: Descriptor) -> List<Instruction> {
-    class := boxing_class(wanted)
+    let class = boxing_class(wanted)
     [Cast(class), InvokeVirtual(MethodRef { class: class, name: box_read(wanted), descriptor: MethodDescriptor { parameters: [], result: Some(wanted) } })]
 }
 
@@ -3642,8 +3642,8 @@ fn box_read(of: Descriptor) -> String {
 /// they differ, through `is_equal` where an instance answers it at the type of the pattern.
 // example: list.length(same_as(little_builder(""), Long, infer.no_name().span, Against { slot: Slot { at: 0, of: Long }, next: 0 }).instructions) == 2
 fn same_as(builder: Builder, held: Descriptor, written: lexer.Span, against: Against) -> Builder {
-    found := instance_written(builder, "is_equal", written)
-    comparing := match found.answered_by {
+    let found = instance_written(builder, "is_equal", written)
+    let comparing = match found.answered_by {
         Some(answerer) => emit(found.builder, instance_called(answerer))
         None => emits(found.builder, compared(Some(held), Equal))
     }
@@ -3730,7 +3730,7 @@ fn buffer() -> Descriptor {
 /// type at the use; a parameter the use does not settle stays itself.
 // example: list.length(instantiation_of(function: no_function(), written_at: unify.Unit, used: unify.Unit).settled) == 0
 fn instantiation_of(function: ast.FunctionDeclaration, written_at: unify.Type, used: unify.Type) -> Instantiation {
-    found := settle(written_at: written_at, used: used, into: [])
+    let found = settle(written_at: written_at, used: used, into: [])
     var settled = []
     for written in function.type_parameters {
         settled = list.push(settled, Settled { origin: written.name.span.start, at: or(bound_at(found, written.name.span.start), parameter_itself(written.name)), constrained: list.length(written.constraints) > 0 })
@@ -3857,9 +3857,9 @@ fn is_record(declaration: ast.TypeDeclaration) -> Bool {
 /// Variants: the one the value turns out to be, and the last one without a test.
 // example: list.length(shown_by_variant(no_writing(), [declared.no_variant()]).instructions) == 2
 fn shown_by_variant(writing: Writing, variants: List<ast.Variant>) -> Writing {
-    end := labelled_writing(writing)
+    let end = labelled_writing(writing)
     var writes = end.writing
-    last := list.length(variants) - 1
+    let last = list.length(variants) - 1
     var position = 0
     for variant in variants {
         writes = if position == last {
@@ -3875,8 +3875,8 @@ fn shown_by_variant(writing: Writing, variants: List<ast.Variant>) -> Writing {
 /// One variant shown where the value turns out to be it, and a jump past the rest.
 // example: list.length(variant_tested(no_writing(), declared.no_variant(), 0).instructions) == 8
 fn variant_tested(writing: Writing, variant: ast.Variant, end: Int) -> Writing {
-    next := labelled_writing(writing)
-    tested := unless_it_is(next.writing, built_shape(writing.lowering.shapes, variant.name.text), next.label)
+    let next = labelled_writing(writing)
+    let tested = unless_it_is(next.writing, built_shape(writing.lowering.shapes, variant.name.text), next.label)
     each_written_out(one_variant_shown(tested, variant), [Jump(end), Label(next.label)])
 }
 
@@ -3889,7 +3889,7 @@ fn labelled_writing(writing: Writing) -> LabelledWriting {
 /// `writing` with a jump to `elsewhere` unless what slot 0 holds is the variant `shape` builds.
 // example: list.length(unless_it_is(no_writing(), tagged_shape(), 3).instructions) == 5
 fn unless_it_is(writing: Writing, shape: Shape, elsewhere: Int) -> Writing {
-    tagged_one := tag_read(writing, shape.base, 0)
+    let tagged_one = tag_read(writing, shape.base, 0)
     each_written_out(tagged_one, [IntegerOf(or(shape.tag, 0)), CompareIntegers(Equal), JumpIfFalse(elsewhere)])
 }
 
@@ -3902,8 +3902,8 @@ fn tag_read(writing: Writing, base: String, slot: Int) -> Writing {
 /// One variant: its name alone, its name and what it carries, or its name and its fields.
 // example: list.length(one_variant_shown(no_writing(), declared.no_variant()).instructions) == 1
 fn one_variant_shown(writing: Writing, variant: ast.Variant) -> Writing {
-    named := variant.name.text
-    held := variant_holds(writing, variant)
+    let named = variant.name.text
+    let held = variant_holds(writing, variant)
     match variant.payload {
         ast.NoPayload => written_out(writing, TextOf(named))
         ast.TuplePayload(_) => inside_brackets(writing, named, held)
@@ -3914,7 +3914,7 @@ fn one_variant_shown(writing: Writing, variant: ast.Variant) -> Writing {
 /// Every value one variant carries, in the order it carries them.
 // example: list.length(variant_holds(no_writing(), declared.no_variant())) == 0
 fn variant_holds(writing: Writing, variant: ast.Variant) -> List<Holds> {
-    shape := built_shape(writing.lowering.shapes, variant.name.text)
+    let shape = built_shape(writing.lowering.shapes, variant.name.text)
     match variant.payload {
         ast.NoPayload => []
         ast.TuplePayload(written) => held_values(shape, positions_written(written))
@@ -3972,7 +3972,7 @@ fn inside_braces(writing: Writing, named: String, held: List<Holds>) -> Writing 
     var writes = written_out(writing, TextOf(named + " {"))
     var position = 0
     for holds in held {
-        opening := if position == 0 {
+        let opening = if position == 0 {
             " "
         } else {
             ", "
@@ -3980,7 +3980,7 @@ fn inside_braces(writing: Writing, named: String, held: List<Holds>) -> Writing 
         writes = showing(each_written_out(writes, [TextOf(opening + or(holds.named, "") + ": "), Concat]), holds)
         position += 1
     }
-    closing := if list.length(held) == 0 {
+    let closing = if list.length(held) == 0 {
         "}"
     } else {
         " }"
@@ -4012,9 +4012,9 @@ fn showing(writing: Writing, holds: Holds) -> Writing {
 /// `writing` with one value read off what `slot` holds, which a variant is cast to first.
 // example: list.length(value_read(no_writing(), Holds { shape: no_shape(), carried: Carried { name: "x", of: Some(Long) }, of: Long, named: None, written: unit_written() }, 0).instructions) == 2
 fn value_read(writing: Writing, holds: Holds, slot: Int) -> Writing {
-    shape := holds.shape
-    loaded := written_out(writing, Load { slot: slot, of: Reference(shape.base) })
-    cast := if shape.class != shape.base {
+    let shape = holds.shape
+    let loaded = written_out(writing, Load { slot: slot, of: Reference(shape.base) })
+    let cast = if shape.class != shape.base {
         written_out(loaded, Cast(shape.class))
     } else {
         loaded
@@ -4026,8 +4026,8 @@ fn value_read(writing: Writing, holds: Holds, slot: Int) -> Writing {
 /// on the stack; a type the JVM holds is what its instance amounts to, written out.
 // example: list.length(derived_through(no_writing(), "Eq", Holds { shape: no_shape(), carried: Carried { name: "x", of: Some(Long) }, of: Long, named: None, written: unit_written() }).instructions) == 1
 fn derived_through(writing: Writing, of: String, holds: Holds) -> Writing {
-    answered := answering_at(writing.lowering, method_of(writing.lowering.library, of), type_written_as(holds.written))
-    answering_writing := writing { lowering: answered.lowering }
+    let answered = answering_at(writing.lowering, method_of(writing.lowering.library, of), type_written_as(holds.written))
+    let answering_writing = writing { lowering: answered.lowering }
     match answered.answered_by {
         Some(answerer) => written_out(answering_writing, instance_called(answerer))
         None => each_written_out(answering_writing, derived_supplied(of, holds.of))
@@ -4049,7 +4049,7 @@ fn answering_at(lowering: Lowering, method: String, at: unify.Type) -> Answered 
 /// The instance of `method` at the named type `at`, whose name `written` holds twice.
 // example: is_unanswered(answering_named(little_lowering(""), "is_equal", unify.int(), Home { module: "Int", name: "Int" }, []))
 fn answering_named(lowering: Lowering, method: String, at: unify.Type, written: Home, arguments: List<unify.Type>) -> Answered {
-    name := written.name
+    let name = written.name
     if lowering.module == "prelude" && (name == "Bool" || name == "Int" || name == "String") {
         return Answered { lowering: lowering, answered_by: None }
     }
@@ -4074,15 +4074,15 @@ fn declaring_module(lowering: Lowering, name: String) -> Option<Home> {
 /// The instance another module writes for the type `asking.at`, which that module is asked for.
 // example: is_unanswered(answered_elsewhere(little_lowering(""), Asking { method: "is_equal", at: unify.Unit, home: Home { module: "lexer", name: "Span" }, arguments: [] })) == false
 fn answered_elsewhere(lowering: Lowering, asking: Asking) -> Answered {
-    of := trait_of(lowering.library, asking.method)
-    answerer := of + "$" + asking.home.name + "$" + asking.method
-    asked := if list.length(asking.arguments) == 0 {
+    let of = trait_of(lowering.library, asking.method)
+    let answerer = of + "$" + asking.home.name + "$" + asking.method
+    let asked = if list.length(asking.arguments) == 0 {
         AskedOf { lowering: lowering, written: [] }
     } else {
         ask(lowering: lowering, module: asking.home.module, function: answerer, settled: asking.arguments)
     }
-    signature := written_as(lowering, instance_signature(library: lowering.library, of: of, method: asking.method, at: asking.at))
-    reaching := Reaching { named: names_wholly(answerer, asked.written), signature: signature }
+    let signature = written_as(lowering, instance_signature(library: lowering.library, of: of, method: asking.method, at: asking.at))
+    let reaching = Reaching { named: names_wholly(answerer, asked.written), signature: signature }
     Answered { lowering: asked.lowering, answered_by: Some(Instance { class: module_named(asked.lowering.shapes.classes, asking.home.module), reaching: reaching }) }
 }
 
@@ -4095,9 +4095,9 @@ fn instance_signature(library: Library, of: String, method: String, at: unify.Ty
 /// `settled`, noted as asked of `module` for `function`, and as that module writes each type.
 // example: list.length(ask(lowering: little_lowering(""), module: "lexer", function: "pick", settled: [unify.int()]).lowering.asks.of) == 1
 fn ask(lowering: Lowering, module: String, function: String, settled: List<unify.Type>) -> AskedOf {
-    written := each_written_by(lowering.shapes, module, settled)
-    foreign := foreign_written_by(lowering.shapes, module, settled)
-    asks := noted(lowering.asks, Specialisation { module: module, function: function, settled: written, foreign: foreign })
+    let written = each_written_by(lowering.shapes, module, settled)
+    let foreign = foreign_written_by(lowering.shapes, module, settled)
+    let asks = noted(lowering.asks, Specialisation { module: module, function: function, settled: written, foreign: foreign })
     AskedOf { lowering: lowering { asks: asks }, written: written }
 }
 
@@ -4122,7 +4122,7 @@ fn written_here(lowering: Lowering, method: String, named: String, arguments: Li
 /// The instance `answers` writes, reached in this module's own class.
 // example: answered_here(little_lowering(""), Answers { method: "f", for_type: "Box", arguments: [], declared: infer.no_name().span }, []).lowering.module == "main"
 fn answered_here(lowering: Lowering, answers: Answers, arguments: List<unify.Type>) -> Answered {
-    reached := instance_method(lowering, answers, arguments)
+    let reached = instance_method(lowering, answers, arguments)
     Answered { lowering: reached.lowering, answered_by: Some(Instance { class: lowering.shapes.class, reaching: reached.reaching }) }
 }
 
@@ -4138,9 +4138,9 @@ fn instance_method(lowering: Lowering, answers: Answers, arguments: List<unify.T
 /// The generic instance method `function`, owed with its parameters settled on `arguments`.
 // example: instance_settled(little_lowering(""), Answers { method: "f", for_type: "Box", arguments: [], declared: infer.no_name().span }, [unify.int()], no_function()).reaching.named == "$Int"
 fn instance_settled(lowering: Lowering, answers: Answers, arguments: List<unify.Type>, function: ast.FunctionDeclaration) -> Reachable {
-    settled := asked_for(function, settled_by(function, answers, arguments))
-    named := names_wholly(named_at(lowering, answers.declared), arguments)
-    reaching := Reaching { named: named, signature: signature_of(lowering, answers.declared, settled) }
+    let settled = asked_for(function, settled_by(function, answers, arguments))
+    let named = names_wholly(named_at(lowering, answers.declared), arguments)
+    let reaching = Reaching { named: named, signature: signature_of(lowering, answers.declared, settled) }
     Reachable { lowering: owe(lowering, answers.declared, named, settled), reaching: reaching }
 }
 
@@ -4258,7 +4258,7 @@ fn settled_by(function: ast.FunctionDeclaration, answers: Answers, at: List<unif
 /// What the type parameter `declared` is settled on.
 // example: settling_of(infer.no_name(), Answers { method: "", for_type: "", arguments: [""], declared: infer.no_name().span }, [unify.int()]) == unify.int()
 fn settling_of(written_at: ast.Name, answers: Answers, at: List<unify.Type>) -> unify.Type {
-    itself := parameter_itself(written_at)
+    let itself = parameter_itself(written_at)
     match list.index_of(answers.arguments, written_at.text) {
         Some(position) => or(list.at(at, position), itself)
         None => itself
@@ -4533,7 +4533,7 @@ fn compared(held: Option<Descriptor>, how: Comparison) -> List<Instruction> {
 /// The instructions that compare two strings, as `how` asks.
 // example: list.length(by_value(NotEqual)) == 2
 fn by_value(how: Comparison) -> List<Instruction> {
-    equals := InvokeVirtual(MethodRef { class: string_class(), name: "equals", descriptor: MethodDescriptor { parameters: [object()], result: Some(Boolean) } })
+    let equals = InvokeVirtual(MethodRef { class: string_class(), name: "equals", descriptor: MethodDescriptor { parameters: [object()], result: Some(Boolean) } })
     match how {
         Equal => [equals]
         NotEqual => [equals, Not]
@@ -4571,11 +4571,11 @@ fn rendered(class: String, of: Descriptor) -> Instruction {
 /// What an `extern` declaration runs: the member it names, and the mapping it asks for.
 // example: list.length(extern_body(little_lowering(""), no_extern(), Signature { parameters: [], result: None }).guards) == 0
 fn extern_body(lowering: Lowering, declaration: ast.ExternDeclaration, signature: Signature) -> Body {
-    shapes := lowering.shapes
-    written_at := used_as(lowering, declaration.name.span)
-    answer := answer_of(shapes, written_at, declaration.gives)
-    arguments := arguments_of_extern(signature, declaration)
-    held := arguments_width(arguments)
+    let shapes = lowering.shapes
+    let written_at = used_as(lowering, declaration.name.span)
+    let answer = answer_of(shapes, written_at, declaration.gives)
+    let arguments = arguments_of_extern(signature, declaration)
+    let held = arguments_width(arguments)
     var instructions = list.push(fitting(arguments), Label(0))
     instructions = concatenated(first: instructions, second: member_reached(declaration.reaches, arguments, answer.member, called_by(shapes, received_by(written_at))))
     instructions = list.push(instructions, Label(1))
@@ -4747,10 +4747,10 @@ fn within_bound(slot: Int, bound: Int, how: Comparison) -> List<Instruction> {
 /// What the member gives back, and what the declaration wraps it in, read off the result.
 // example: answer_of(no_shapes(), unify.Unit, ast.GivesAsDeclared).guarded == false
 fn answer_of(shapes: Shapes, written_at: unify.Type, gives: ast.Gives) -> Answer {
-    result := result_or_unit(written_at)
-    guarded := is_wrapped_in("Result", result)
-    inside_result := peeled("Result", result)
-    widened := carried_type(shapes, peeled("Option", inside_result))
+    let result = result_or_unit(written_at)
+    let guarded = is_wrapped_in("Result", result)
+    let inside_result = peeled("Result", result)
+    let widened = carried_type(shapes, peeled("Option", inside_result))
     Answer { member: reached_for(widened, gives), widened: widened, optional: is_wrapped_in("Option", inside_result), guarded: guarded }
 }
 
@@ -4943,11 +4943,11 @@ fn given_back(answer: Answer, shapes: Shapes, held: Int) -> List<Instruction> {
 /// An optional answer given back: a `Some` of it, or a `None` where it is `null`.
 // example: list.length(optional_given_back(Answer { member: Some(Long), widened: Some(Long), optional: true, guarded: false }, no_shapes(), Long, 0)) == 6
 fn optional_given_back(answer: Answer, shapes: Shapes, of: Descriptor, held: Int) -> List<Instruction> {
-    stored := [Store { slot: held, of: of }]
+    let stored = [Store { slot: held, of: of }]
     if !is_reference(of) {
         return concatenated(first: stored, second: some_of(answer, shapes, of, held))
     }
-    tested := concatenated(first: stored, second: [Load { slot: held, of: of }, JumpIfNull(3)])
+    let tested = concatenated(first: stored, second: [Load { slot: held, of: of }, JumpIfNull(3)])
     concatenated(first: list.push(concatenated(first: tested, second: some_of(answer, shapes, of, held)), Label(3)), second: none_of(answer, shapes, held))
 }
 
@@ -4969,8 +4969,8 @@ fn handed_on(answer: Answer, shapes: Shapes, on_the_stack: Option<Descriptor>, h
     if !answer.guarded {
         return [Return(on_the_stack)]
     }
-    of := or(on_the_stack, object())
-    ok := built_shape(shapes, "Ok")
+    let of = or(on_the_stack, object())
+    let ok = built_shape(shapes, "Ok")
     list.push(concatenated(first: [Store { slot: held, of: of }], second: variant_built(ok, [Argument { slot: held, arrives: of, crossing: AsItIs }])), Return(Some(Reference(ok.base))))
 }
 
@@ -4983,8 +4983,8 @@ fn optional(shapes: Shapes) -> Descriptor {
 /// What a throw becomes: the `Err` holding what the throwable says of itself, given back.
 // example: list.length(caught(no_shapes(), 0)) == 7
 fn caught(shapes: Shapes, held: Int) -> List<Instruction> {
-    err := built_shape(shapes, "Err")
-    says := InvokeVirtual(MethodRef { class: "java/lang/Throwable", name: "toString", descriptor: MethodDescriptor { parameters: [], result: Some(text_descriptor()) } })
+    let err = built_shape(shapes, "Err")
+    let says = InvokeVirtual(MethodRef { class: "java/lang/Throwable", name: "toString", descriptor: MethodDescriptor { parameters: [], result: Some(text_descriptor()) } })
     list.push(concatenated(first: [says, Store { slot: held, of: text_descriptor() }], second: variant_built(err, [Argument { slot: held, arrives: text_descriptor(), crossing: AsItIs }])), Return(Some(Reference(err.base))))
 }
 
@@ -4997,7 +4997,7 @@ fn built_shape(shapes: Shapes, constructor: String) -> Shape {
 /// The shapes of the module `main`, which declares the type `Box`.
 // example: main_shapes().module == "main"
 fn main_shapes() -> Shapes {
-    shapes := no_shapes()
+    let shapes = no_shapes()
     shapes { module: "main", class: "main", own: set.insert(set.empty(), "Box") }
 }
 
@@ -5079,7 +5079,7 @@ fn as_a_reference(of: Descriptor) -> List<Instruction> {
 /// The call that puts a value `held` holds in its box.
 // example: method_named(holding_class(Long)) == "valueOf"
 fn holding_class(held: Descriptor) -> Instruction {
-    class := boxing_class(held)
+    let class = boxing_class(held)
     InvokeStatic(MethodRef { class: class, name: "valueOf", descriptor: MethodDescriptor { parameters: [held], result: Some(Reference(class)) } })
 }
 
@@ -5132,7 +5132,7 @@ fn is_reference(of: Descriptor) -> Bool {
 /// The member itself: every argument loaded from its slot, and the access.
 // example: list.length(member_reached(ast.Constructor, [], Some(object()), ThroughItsClass)) == 3
 fn member_reached(reaches: ast.Reaches, arguments: List<Argument>, gives: Option<Descriptor>, called: CalledAs) -> List<Instruction> {
-    taken := each_reaching(arguments)
+    let taken = each_reaching(arguments)
     match reaches {
         ast.StaticField(named) => [GetStatic(FieldRef { class: class_of_member(named.text), name: member_of(named.text), of: or(gives, object()) })]
         ast.StaticMethod(named) => list.push(arguments_loaded(arguments), InvokeStatic(MethodRef { class: class_of_member(named.text), name: member_of(named.text), descriptor: MethodDescriptor { parameters: taken, result: gives } }))

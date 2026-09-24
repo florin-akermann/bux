@@ -32,7 +32,7 @@ type User = {
 It names one or more traits, then `for`, then one type this module declares.
 
 ```text
-derive := "derive" Name { "," Name } "for" Name
+derive  = "derive" Name { "," Name } "for" Name
 ```
 
 The list is written with `, ` between two names and no trailing comma, and the whole item is one

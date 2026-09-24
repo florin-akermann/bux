@@ -10,7 +10,7 @@
 import io
 
 fn main(arguments: List<String>) -> Int {
-    holding := spawn Holder()
+    let holding = spawn Holder()
     io.println(told(send(holding, Hold(spawn Idle()), NoLimit)))
     var filled = 0
     for filled < 64 {
@@ -19,7 +19,7 @@ fn main(arguments: List<String>) -> Int {
     }
     io.println(told(send(holding, Release, NoWait)))
     io.println(told(send(holding, Release, Milliseconds(10))))
-    counting := spawn Idle()
+    let counting = spawn Idle()
     io.println(told(send(counting, Stop, NoWait)))
     _ = ended(counting)
     io.println(told(send(counting, Stop, NoLimit)))

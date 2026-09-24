@@ -23,8 +23,8 @@ fn a_record_kept_in_locals_computes_what_the_same_record_built_on_the_heap_compu
     var found = held.nothing_failed(cases)
     var case = 0
     for case < cases {
-        seed := drawn.seed_of(case)
-        one := drawing(drawn.seeded(seed), library)
+        let seed = drawn.seed_of(case)
+        let one = drawing(drawn.seeded(seed), library)
         found = compiled.noted(found, one.why, held.drawn_failure("a_record_kept_in_locals_computes_what_the_same_record_built_on_the_heap_computes", seed, one.source, one.why))
         case += 1
     }
@@ -34,19 +34,19 @@ fn a_record_kept_in_locals_computes_what_the_same_record_built_on_the_heap_compu
 /// A drawn record, read through the name it was built for and through a second name.
 // example: drawing(drawn.seeded(1), ir.little_library()).source != ""
 fn drawing(draw: drawn.Draw, library: ir.Library) -> Drawing {
-    many := drawn.number(draw, 3) + 1
-    given := drawn.numbers(drawn.next(draw), many, 5)
-    count := drawn.number(drawn.next(drawn.next(draw)), 2001) - 1000
-    kept := module(given: given, through: "point")
-    whole := module(given: given, through: "other")
-    kept_lowered := compiled.lowered_alone(kept, library)
-    whole_lowered := compiled.lowered_alone(whole, library)
+    let many = drawn.number(draw, 3) + 1
+    let given = drawn.numbers(drawn.next(draw), many, 5)
+    let count = drawn.number(drawn.next(drawn.next(draw)), 2001) - 1000
+    let kept = module(given: given, through: "point")
+    let whole = module(given: given, through: "other")
+    let kept_lowered = compiled.lowered_alone(kept, library)
+    let whole_lowered = compiled.lowered_alone(whole, library)
     var why = ""
     if has_new(kept_lowered) || !has_new(whole_lowered) {
         why = "the record is built where it is kept: " + shown(has_new(kept_lowered)) + ", and where it lets go: " + shown(has_new(whole_lowered))
     }
-    kept_answer := answer_text(computed(lowered: kept_lowered, count: count))
-    whole_answer := answer_text(computed(lowered: whole_lowered, count: count))
+    let kept_answer = answer_text(computed(lowered: kept_lowered, count: count))
+    let whole_answer = answer_text(computed(lowered: whole_lowered, count: count))
     if why == "" && kept_answer != whole_answer {
         why = "at " + shown(count) + " the kept record works out " + kept_answer + ", and the built one " + whole_answer
     }
@@ -57,14 +57,14 @@ fn drawing(draw: drawn.Draw, library: ir.Library) -> Drawing {
 ///
 /// `through` is the name the fields are read through: the name the record is built for keeps it
 /// in locals, and a second name bound to it lets it go.
-// example: module(given: [1], through: "point") == "fn held(count: Int) -> Int {\n    point := Point { across: 7 }\n    point.across\n}\n\ntype Point = {\n    across: Int\n}\n"
+// example: module(given: [1], through: "point") == "fn held(count: Int) -> Int {\n    let point = Point { across: 7 }\n    point.across\n}\n\ntype Point = {\n    across: Int\n}\n"
 fn module(given: List<Int>, through: String) -> String {
     var literal = []
     var reads = []
     var declared = ""
     var at = 0
     for value in given {
-        field := or(list.at(["across", "down", "along"], at), "")
+        let field = or(list.at(["across", "down", "along"], at), "")
         literal = list.push(literal, field + ": " + or(list.at(["count", "7", "count * 2", "count + -1", "3 - count"], value), ""))
         reads = list.push(reads, through + "." + field)
         declared += "    " + field + ": Int\n"
@@ -72,9 +72,9 @@ fn module(given: List<Int>, through: String) -> String {
     }
     var second = ""
     if through != "point" {
-        second = "    " + through + " := point\n"
+        second = "    let " + through + " = point\n"
     }
-    "fn held(count: Int) -> Int {\n    point := Point { " + strings.join(literal, ", ") + " }\n" + second + "    " + strings.join(reads, " + ") + "\n}\n\ntype Point = {\n" + declared + "}\n"
+    "fn held(count: Int) -> Int {\n    let point = Point { " + strings.join(literal, ", ") + " }\n" + second + "    " + strings.join(reads, " + ") + "\n}\n\ntype Point = {\n" + declared + "}\n"
 }
 
 /// Whether the body of `held` builds an instance of anything at all.
@@ -111,7 +111,7 @@ fn answer_text(answer: Result<Int, String>) -> String {
 /// What the function `held` of `lowered` gives back when it is handed `count`, run on the machine.
 // example: answer_text(computed(lowered: [], count: 1)) == "nothing, because the body gives nothing back"
 fn computed(lowered: List<ir.Lowered>, count: Int) -> Result<Int, String> {
-    classes := compiled.demo_classes(lowered)
+    let classes = compiled.demo_classes(lowered)
     var machine = Machine { stack: [], locals: map.insert(map.empty(), 0, Number(count)), broken: "" }
     for instruction in compiled.instructions_of(lowered, "held") {
         if is_return(instruction) {
@@ -172,16 +172,16 @@ fn loaded(machine: Machine, slot: Int) -> Machine {
 /// `machine` with the value on top of its stack taken off and kept in `slot`.
 // example: stored(Machine { stack: [Number(1)], locals: map.empty(), broken: "" }, 3).stack == []
 fn stored(machine: Machine, slot: Int) -> Machine {
-    kept := popped(machine)
+    let kept = popped(machine)
     kept { locals: map.insert(kept.locals, slot, top(machine)) }
 }
 
 /// `machine` with the two numbers on top of its stack joined the way `how` joins them.
 // example: worked_out(Machine { stack: [Number(5), Number(3)], locals: map.empty(), broken: "" }, ir.Subtract).stack == [Number(2)]
 fn worked_out(machine: Machine, how: ir.Arithmetic) -> Machine {
-    right := number_of(top(machine))
-    left := number_of(top(popped(machine)))
-    rest := popped(popped(machine))
+    let right = number_of(top(machine))
+    let left = number_of(top(popped(machine)))
+    let rest = popped(popped(machine))
     match how {
         ir.Add => pushed(rest, Number(left + right))
         ir.Subtract => pushed(rest, Number(left - right))
@@ -196,12 +196,12 @@ fn worked_out(machine: Machine, how: ir.Arithmetic) -> Machine {
 /// below them the record.
 // example: constructed(Machine { stack: [Fresh, Fresh, Number(4)], locals: map.empty(), broken: "" }, 1).stack == [Instance([4])]
 fn constructed(machine: Machine, carried: Int) -> Machine {
-    at := list.length(machine.stack) - carried
+    let at = list.length(machine.stack) - carried
     var fields = []
     for value in compiled.part(machine.stack, at, list.length(machine.stack)) {
         fields = list.push(fields, number_of(value))
     }
-    below := machine { stack: compiled.part(machine.stack, 0, at - 2) }
+    let below = machine { stack: compiled.part(machine.stack, 0, at - 2) }
     pushed(below, Instance(fields))
 }
 

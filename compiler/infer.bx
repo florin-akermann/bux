@@ -84,7 +84,7 @@ fn is_propagating(found: Option<Propagated>) -> Bool {
 /// It is `""` where the module types, and `unresolved` where resolution refuses it.
 // example: typed_code("fn count() -> Int {\n    1\n}\n") == ""
 fn typed_code(source: String) -> String {
-    program := declared.first_program(source)
+    let program = declared.first_program(source)
     match resolver.resolve(program, "main", resolver.prelude_of(declared.little_prelude())) {
         Ok(resolved) => declared_and_typed(resolved)
         Err(_) => "unresolved"
@@ -112,7 +112,7 @@ fn module_inferred(resolved: resolver.Resolved, imported: surface.Imported, decl
         walking = trait_settled(walking, item)?
     }
     walking = externs_typed(walking)
-    written := functions_of(resolved.program)
+    let written = functions_of(resolved.program)
     var index = list.length(written) - 1
     for index >= 0 {
         walking = function_at(walking, written, index)?
@@ -146,9 +146,9 @@ fn derive_typed(inference: Inference, item: ast.Item) -> Inference {
 // example: each_derived(nothing_inferred(), ast.DeriveDeclaration { traits: [], for_type: no_name(), span: no_name().span }).table.made == 0
 fn each_derived(inference: Inference, declaration: ast.DeriveDeclaration) -> Inference {
     var walking = inference
-    at := unify.Named { name: declaration.for_type.text, arguments: [] }
+    let at = unify.Named { name: declaration.for_type.text, arguments: [] }
     for of in declaration.traits {
-        method := or(declared.method_at(inference.environment, of.text, derived_method(of.text), at), unify.Unit)
+        let method = or(declared.method_at(inference.environment, of.text, derived_method(of.text), at), unify.Unit)
         walking = typed_at(walking, of.span, method)
     }
     walking
@@ -187,8 +187,8 @@ fn extern_typed(inference: Inference, item: ast.Item) -> Inference {
 /// One run of inference over `resolved`, holding nothing yet but what it is walked against.
 // example: list.length(inference_of(declared.resolved_of(""), surface.nothing_imported(), no_declaring()).functions) == 0
 fn inference_of(resolved: resolver.Resolved, imported: surface.Imported, declaring: declared.Declaring) -> Inference {
-    environment := declaring.environment
-    table := declaring.table
+    let environment = declaring.environment
+    let table = declaring.table
     var keys = []
     for function in functions_of(resolved.program) {
         keys = list.push(keys, declared.at_key(function.name.span.start))
@@ -218,7 +218,7 @@ fn trait_settled(inference: Inference, item: ast.Item) -> Result<Inference, refu
 // example: typed_code("trait Sized<T> {\n    fn is_sized(value: T, whole: Bool) -> Int\n}\n") == "L0412 43..54"
 fn methods_settled(inference: Inference, methods: List<ast.Signature>) -> Result<Inference, refusal.TypeError> {
     for method in methods {
-        signature := scheme_at(inference, declared.at_key(method.name.span.start)).body
+        let signature = scheme_at(inference, declared.at_key(method.name.span.start)).body
         _ = flags_refused(unify.parameters_of(signature), unify.result_of(signature), method.parameters, method.name)?
         _ = named_for(method.name, unify.result_of(signature))?
     }
@@ -229,21 +229,21 @@ fn methods_settled(inference: Inference, methods: List<ast.Signature>) -> Result
 /// its type generalised over whatever nothing else holds.
 // example: typed_code("fn count(held) -> Int {\n    held\n}\n") == ""
 fn function_walked(inference: Inference, function: ast.FunctionDeclaration) -> Result<Inference, refusal.TypeError> {
-    key := declared.at_key(function.name.span.start)
-    scheme := scheme_at(inference, key)
-    started := typed_at(inference { promised: scheme.required, named: map.insert(inference.named, function.name.span.start, scheme.body) }, function.name.span, scheme.body)
+    let key = declared.at_key(function.name.span.start)
+    let scheme = scheme_at(inference, key)
+    let started = typed_at(inference { promised: scheme.required, named: map.insert(inference.named, function.name.span.start, scheme.body) }, function.name.span, scheme.body)
     var walking = writes_the_method(started, key, scheme.body, function.name.span)?
-    taken := unify.parameters_of(scheme.body)
+    let taken = unify.parameters_of(scheme.body)
     var index = 0
     for parameter in function.parameters {
         walking = introduced_at(walking, parameter.name, list.at(taken, index))
         index += 1
     }
-    given_back := unify.result_of(scheme.body)
-    body := block_walked(walking { result: given_back }, function.body, GivesItsValue)?
-    looked := look_up_fields(body.inference)?
-    met := expect(inference: looked, expected: given_back, found: body.found, at: function.body.span)?
-    settled := function_settled(met, function, taken)?
+    let given_back = unify.result_of(scheme.body)
+    let body = block_walked(walking { result: given_back }, function.body, GivesItsValue)?
+    let looked = look_up_fields(body.inference)?
+    let met = expect(inference: looked, expected: given_back, found: body.found, at: function.body.span)?
+    let settled = function_settled(met, function, taken)?
     Ok(generalise(settled { introduced: [] }, key))
 }
 
@@ -259,12 +259,12 @@ fn introduced_at(inference: Inference, named: ast.Name, declared_one: Option<uni
 /// What one function waits on, settled in the order the Rust phase settled it.
 // example: typed_code("fn count() -> Int {\n    1 + 1\n}\n") == ""
 fn function_settled(inference: Inference, function: ast.FunctionDeclaration, taken: List<unify.Type>) -> Result<Inference, refusal.TypeError> {
-    propagated_all := settle_propagations(inference)?
-    literals_settled := settle_literals(propagated_all)?
-    operators_settled := settle_operators(literals_settled)?
-    requirements_settled := settle_requirements(operators_settled)?
-    discards_settled := settle_discards(requirements_settled)?
-    parameters_settled := settle_parameters(discards_settled, function, taken)?
+    let propagated_all = settle_propagations(inference)?
+    let literals_settled = settle_literals(propagated_all)?
+    let operators_settled = settle_operators(literals_settled)?
+    let requirements_settled = settle_requirements(operators_settled)?
+    let discards_settled = settle_discards(requirements_settled)?
+    let parameters_settled = settle_parameters(discards_settled, function, taken)?
     _ = named_for(function.name, unify.solved(parameters_settled.table, parameters_settled.result))?
     Ok(parameters_settled)
 }
@@ -283,10 +283,10 @@ fn writes_the_method(inference: Inference, key: String, found: unify.Type, at: l
 fn block_walked(inference: Inference, block: ast.Block, gives: BlockGives) -> Result<Typed, refusal.TypeError> {
     var walking = inference
     var left_behind = unify.Unit
-    last := list.length(block.statements) - 1
+    let last = list.length(block.statements) - 1
     var index = 0
     for statement in block.statements {
-        walked := statement_walked(walking, statement)?
+        let walked = statement_walked(walking, statement)?
         walking = walked.inference
         left_behind = walked.found
         if index < last || is_given_to_nothing(gives) {
@@ -315,15 +315,15 @@ fn statement_walked(inference: Inference, statement: ast.Statement) -> Result<Ty
 /// `_ = value`, which walks the value and keeps nothing of it.
 // example: typed_code("fn count() -> Int {\n    _ = 1\n    1\n}\n") == ""
 fn thrown_away(inference: Inference, thrown: ast.Expr) -> Result<Inference, refusal.TypeError> {
-    walked := walked_expr(inference, thrown)?
+    let walked = walked_expr(inference, thrown)?
     Ok(walked.inference)
 }
 
-/// `name := value`, polymorphic where it is immutable, and `var name = value`, which is not.
+/// `let name = value`, polymorphic where it is immutable, and `var name = value`, which is not.
 // example: typed_code("fn count() -> Int {\n    var held = 1\n    held = \"one\"\n    held\n}\n") == "L0400 48..53"
 fn binding_walked(inference: Inference, mutability: ast.Mutability, named: ast.Name, bound_to: ast.Expr) -> Result<Typed, refusal.TypeError> {
-    bound := walked_expr(inference, bound_to)?
-    scheme := match mutability {
+    let bound = walked_expr(inference, bound_to)?
+    let scheme = match mutability {
         ast.Immutable => generalised(bound.inference, bound.found)
         ast.Mutable => unify.monomorphic(bound.found)
     }
@@ -333,10 +333,10 @@ fn binding_walked(inference: Inference, mutability: ast.Mutability, named: ast.N
 /// `name = value` and `name += value`, which keep the type the name already has.
 // example: typed_code("fn count() -> Int {\n    var held = 1\n    held += 2\n    held\n}\n") == ""
 fn assign_walked(inference: Inference, target: ast.Name, operator: ast.AssignOperator, assigned_from: ast.Expr) -> Result<Typed, refusal.TypeError> {
-    assigned := value_of_name(inference, target)
-    found := walked_expr(assigned.inference, assigned_from)?
-    met := expect(inference: found.inference, expected: assigned.found, found: found.found, at: assigned_from.span)?
-    added := match operator {
+    let assigned = value_of_name(inference, target)
+    let found = walked_expr(assigned.inference, assigned_from)?
+    let met = expect(inference: found.inference, expected: assigned.found, found: found.found, at: assigned_from.span)?
+    let added = match operator {
         ast.SetTo => met
         ast.AddTo => operating(met, Operated { of: "Add", written_as: "+=", at: assigned.found, written: target.span })
     }
@@ -346,7 +346,7 @@ fn assign_walked(inference: Inference, target: ast.Name, operator: ast.AssignOpe
 /// A `return` leaves the block, so what follows it may be any type at all.
 // example: typed_code("fn count() -> Int {\n    return \"one\"\n}\n") == "L0400 31..36"
 fn returned(inference: Inference, given: Option<ast.Expr>, at: lexer.Span) -> Result<Typed, refusal.TypeError> {
-    met := match given {
+    let met = match given {
         Some(written) => returned_value(inference, written)
         None => expect(inference: inference, expected: inference.result, found: unify.Unit, at: at)
     }
@@ -356,35 +356,35 @@ fn returned(inference: Inference, given: Option<ast.Expr>, at: lexer.Span) -> Re
 /// What a `return` gives back, held to the result of its function.
 // example: typed_code("fn count() -> Int {\n    return 1\n}\n") == ""
 fn returned_value(inference: Inference, written: ast.Expr) -> Result<Inference, refusal.TypeError> {
-    found := walked_expr(inference, written)?
+    let found = walked_expr(inference, written)?
     expect(inference: found.inference, expected: found.inference.result, found: found.found, at: written.span)
 }
 
 /// A loop has no value, so what its body leaves behind is discarded.
 // example: typed_code("fn count() -> Int {\n    for 1 {\n        break\n    }\n    1\n}\n") == "L0400 28..29"
 fn loop_walked(inference: Inference, walked: ast.ForLoop) -> Result<Inference, refusal.TypeError> {
-    headed := match walked.header {
+    let headed = match walked.header {
         ast.Forever => Ok(inference)
         ast.While(condition) => condition_walked(inference, condition)
         ast.Over { binding, iterable } => over_walked(inference, binding, iterable)
     }
-    body := block_walked(headed?, walked.body, GivesNothing)?
+    let body = block_walked(headed?, walked.body, GivesNothing)?
     Ok(body.inference)
 }
 
 /// `for item in items`, where `items` is a list and `item` is one of what it holds.
 // example: typed_code("fn count() -> Int {\n    for item in 1 {\n        _ = item\n    }\n    1\n}\n") == "L0400 36..37"
 fn over_walked(inference: Inference, binding: ast.Name, iterable: ast.Expr) -> Result<Inference, refusal.TypeError> {
-    over := walked_expr(inference, iterable)?
-    item := fresh(over.inference)
-    met := expect(inference: item.inference, expected: unify.list_of(item.found), found: over.found, at: iterable.span)?
+    let over = walked_expr(inference, iterable)?
+    let item = fresh(over.inference)
+    let met = expect(inference: item.inference, expected: unify.list_of(item.found), found: over.found, at: iterable.span)?
     Ok(introduce(met, binding, unify.monomorphic(item.found)))
 }
 
 /// The type of one expression, which is kept at where it is written for lowering to read.
 // example: typed_code("fn count() -> Int {\n    ()\n}\n") == "L0400 18..28"
 fn walked_expr(inference: Inference, written: ast.Expr) -> Result<Typed, refusal.TypeError> {
-    walked := expr_written(inference, written)?
+    let walked = expr_written(inference, written)?
     Ok(Typed { inference: typed_at(walked.inference, written.span, walked.found), found: walked.found })
 }
 
@@ -413,10 +413,10 @@ fn expr_written(inference: Inference, written: ast.Expr) -> Result<Typed, refusa
 /// A written list, which is a `List` of the one type every element it writes shares.
 // example: typed_code("fn count() -> Int {\n    _ = [1, \"one\"]\n    1\n}\n") == "L0400 32..37"
 fn list_walked(inference: Inference, elements: List<ast.Expr>) -> Result<Typed, refusal.TypeError> {
-    item := fresh(inference)
+    let item = fresh(inference)
     var walking = item.inference
     for element in elements {
-        found := walked_expr(walking, element)?
+        let found = walked_expr(walking, element)?
         walking = expect(inference: found.inference, expected: item.found, found: found.found, at: element.span)?
     }
     Ok(Typed { inference: walking, found: unify.list_of(item.found) })
@@ -425,7 +425,7 @@ fn list_walked(inference: Inference, elements: List<ast.Expr>) -> Result<Typed, 
 /// `!` asks nothing of a type, and prefix `-` asks `Neg` of the one it is written over.
 // example: typed_code("fn count() -> Int {\n    _ = !1\n    1\n}\n") == "L0400 29..30"
 fn unary_walked(inference: Inference, operator: ast.UnaryOperator, operand: ast.Expr, at: lexer.Span) -> Result<Typed, refusal.TypeError> {
-    found := walked_expr(inference, operand)?
+    let found = walked_expr(inference, operand)?
     match operator {
         ast.Not => truth_after(expect(inference: found.inference, expected: unify.truth(), found: found.found, at: operand.span))
         ast.Negate => Ok(Typed { inference: operating(found.inference, Operated { of: "Neg", written_as: "-", at: found.found, written: at }), found: found.found })
@@ -437,8 +437,8 @@ fn unary_walked(inference: Inference, operator: ast.UnaryOperator, operand: ast.
 /// `&&` and `||` are `Bool`'s alone, because each decides whether to run the other side.
 // example: typed_code("fn count() -> Int {\n    1 + \"one\"\n}\n") == "L0400 28..33"
 fn binary_walked(inference: Inference, operator: ast.BinaryOperator, operands: Operands) -> Result<Typed, refusal.TypeError> {
-    found := walked_expr(inference, operands.left)?
-    other := walked_expr(found.inference, operands.right)?
+    let found = walked_expr(inference, operands.left)?
+    let other = walked_expr(found.inference, operands.right)?
     match asked_by(operator) {
         Some(asked) => operator_asked(other.inference, asked, Sides { left: found.found, right: other.found, operator: operator }, operands)
         None => both_true(other.inference, Sides { left: found.found, right: other.found, operator: operator }, operands)
@@ -449,25 +449,25 @@ fn binary_walked(inference: Inference, operator: ast.BinaryOperator, operands: O
 // example: typed_code("fn count(held: Int) -> Int {\n    count(1, 2)\n}\n") == "L0401 33..38"
 fn call_walked(inference: Inference, callee: ast.Expr, arguments: ast.Arguments, at: lexer.Span) -> Result<Typed, refusal.TypeError> {
     _ = called_plainly(inference, callee, arguments, at)?
-    signature := callee_type(inference, callee)?
-    passed := values_of(arguments)
+    let signature = callee_type(inference, callee)?
+    let passed = values_of(arguments)
     var walking = signature.inference
     var given = []
     for argument in passed {
-        one := walked_expr(walking, argument)?
+        let one = walked_expr(walking, argument)?
         walking = one.inference
         given = list.push(given, one.found)
     }
-    shape := unify.shallow(walking.table, signature.found)
+    let shape = unify.shallow(walking.table, signature.found)
     if !unify.is_function(shape) {
         return applied(walking, signature.found, given, at)
     }
-    taken := unify.parameters_of(shape)
+    let taken = unify.parameters_of(shape)
     if list.length(taken) != list.length(given) {
         return miscounted_call(walking, callee, Applied { called: signature.found, given: given, takes: list.length(taken) }, at)
     }
-    met := each_expected(inference: walking, taken: taken, given: given, passed: passed)?
-    named := named_as_declared(met, callee, arguments, at)?
+    let met = each_expected(inference: walking, taken: taken, given: given, passed: passed)?
+    let named = named_as_declared(met, callee, arguments, at)?
     Ok(Typed { inference: named, found: unify.result_of(shape) })
 }
 
@@ -483,29 +483,29 @@ fn callee_type(inference: Inference, callee: ast.Expr) -> Result<Typed, refusal.
 /// `walked`, with the type it found kept at `span`, where the step was not refused.
 // example: found_after(kept_at(Ok(Typed { inference: nothing_inferred(), found: unify.int() }), no_name().span)) == unify.int()
 fn kept_at(walked: Result<Typed, refusal.TypeError>, span: lexer.Span) -> Result<Typed, refusal.TypeError> {
-    one := walked?
+    let one = walked?
     Ok(Typed { inference: typed_at(one.inference, span, one.found), found: one.found })
 }
 
 /// A field is looked up as soon as the type it is reached through is known, and waits where not.
 // example: typed_code("fn count(held) -> Int {\n    held.size\n}\n") == "L0402 33..37"
 fn field_walked(inference: Inference, receiver: ast.Expr, named: ast.Name, how: ReachedAs) -> Result<Typed, refusal.TypeError> {
-    through := walked_expr(inference, receiver)?
-    found := fresh(through.inference)
-    lookup := Lookup { through: through.found, field: named, found: found.found, how: how }
+    let through = walked_expr(inference, receiver)?
+    let found = fresh(through.inference)
+    let lookup = Lookup { through: through.found, field: named, found: found.found, how: how }
     if unify.is_var(unify.shallow(found.inference.table, through.found)) {
         return Ok(Typed { inference: looking(found.inference, lookup), found: found.found })
     }
-    looked := look_up(found.inference, lookup)?
+    let looked = look_up(found.inference, lookup)?
     Ok(Typed { inference: looked, found: found.found })
 }
 
 /// `?` hands the case with nothing to go on back, and leaves what the other case carries.
 // example: typed_code("fn count(held: Option<Int>) -> Option<Int> {\n    held?\n}\n") == "L0400 43..56"
 fn propagated(inference: Inference, inner: ast.Expr, at: lexer.Span) -> Result<Typed, refusal.TypeError> {
-    found := walked_expr(inference, inner)?
-    held := fresh(found.inference)
-    waiting := Propagation { found: found.found, held: held.found, inner: inner.span, at: at }
+    let found = walked_expr(inference, inner)?
+    let held = fresh(found.inference)
+    let waiting = Propagation { found: found.found, held: held.found, inner: inner.span, at: at }
     match propagates(held.inference, found.found) {
         Some(kind) => held_after(propagate(held.inference, waiting, kind), held.found)
         None => Ok(Typed { inference: propagating(held.inference, waiting), found: held.found })
@@ -519,11 +519,11 @@ fn if_walked(inference: Inference, chain: ast.IfExpr) -> Result<Typed, refusal.T
     var blocks = []
     for branch in chain.branches {
         walking = condition_walked(walking, branch.condition)?
-        block := block_walked(walking, branch.block, GivesItsValue)?
+        let block = block_walked(walking, branch.block, GivesItsValue)?
         walking = block.inference
         blocks = list.push(blocks, Branched { found: block.found, span: branch.block.span })
     }
-    otherwise := otherwise_walked(walking, chain.otherwise)?
+    let otherwise = otherwise_walked(walking, chain.otherwise)?
     walking = otherwise.inference
     for one in blocks {
         walking = expect(inference: walking, expected: otherwise.found, found: one.found, at: one.span)?
@@ -543,12 +543,12 @@ fn otherwise_walked(inference: Inference, otherwise: Option<ast.Block>) -> Resul
 /// A `match`, whose arms all give one type, each pattern held to the type matched.
 // example: typed_code("fn count(held: Int) -> Int {\n    match held {\n        1 => 1\n        _ => \"one\"\n    }\n}\n") == "L0400 74..79"
 fn match_walked(inference: Inference, matched: ast.MatchExpr) -> Result<Typed, refusal.TypeError> {
-    scrutinee := walked_expr(inference, matched.scrutinee)?
-    made := fresh(scrutinee.inference)
+    let scrutinee = walked_expr(inference, matched.scrutinee)?
+    let made = fresh(scrutinee.inference)
     var walking = made.inference
     for arm in matched.arms {
         walking = pattern_walked(walking, arm.pattern, scrutinee.found)?
-        found := walked_expr(walking, arm.body)?
+        let found = walked_expr(walking, arm.body)?
         walking = expect(inference: found.inference, expected: made.found, found: found.found, at: arm.body.span)?
     }
     Ok(Typed { inference: walking, found: made.found })
@@ -557,7 +557,7 @@ fn match_walked(inference: Inference, matched: ast.MatchExpr) -> Result<Typed, r
 /// A condition, which is a `Bool`.
 // example: typed_code("fn count() -> Int {\n    if 1 {\n        1\n    } else {\n        2\n    }\n}\n") == "L0400 27..28"
 fn condition_walked(inference: Inference, condition: ast.Expr) -> Result<Inference, refusal.TypeError> {
-    found := walked_expr(inference, condition)?
+    let found = walked_expr(inference, condition)?
     expect(inference: found.inference, expected: unify.truth(), found: found.found, at: condition.span)
 }
 
@@ -568,10 +568,10 @@ fn record_walked(inference: Inference, base: ast.Path, fields: List<ast.FieldVal
     if is_built(inference, base) {
         return build(inference, base, fields, at)
     }
-    updated := value_of_name(inference, base.name)
+    let updated = value_of_name(inference, base.name)
     var walking = updated.inference
     for field in fields {
-        found := walked_expr(walking, field.value)?
+        let found = walked_expr(walking, field.value)?
         walking = looking(found.inference, Lookup { through: updated.found, field: field.name, found: found.found, how: AsAValue })
     }
     Ok(Typed { inference: walking, found: updated.found })
@@ -580,20 +580,20 @@ fn record_walked(inference: Inference, base: ast.Path, fields: List<ast.FieldVal
 /// A record built by its constructor, with a value for each field it labels.
 // example: typed_code("fn made() -> Box {\n    Box {}\n}\n\ntype Box = {\n    count: Int\n}\n") == "L0404 23..29"
 fn build(inference: Inference, base: ast.Path, fields: List<ast.FieldValue>, at: lexer.Span) -> Result<Typed, refusal.TypeError> {
-    built := built_by(inference, base)?
-    labels := or(map.get(built.inference.environment.labels, built.key), [])
+    let built = built_by(inference, base)?
+    let labels = or(map.get(built.inference.environment.labels, built.key), [])
     if !unify.is_function(built.found) {
         return Ok(Typed { inference: built.inference, found: build_without_fields(built.found, fields)? })
     }
-    taken := unify.parameters_of(built.found)
-    made := unify.result_of(built.found)
+    let taken = unify.parameters_of(built.found)
+    let made = unify.result_of(built.found)
     if list.length(labels) != list.length(taken) {
         return Err(built_without_labels(base, fields, list.length(taken), made))
     }
     var walking = built.inference
     for field in fields {
-        found := walked_expr(walking, field.value)?
-        index := labelled(labels, field.name, made)?
+        let found = walked_expr(walking, field.value)?
+        let index = labelled(labels, field.name, made)?
         walking = expect(inference: found.inference, expected: or(list.at(taken, index), unify.Unit), found: found.found, at: field.value.span)?
     }
     _ = every_field_given(base, fields, labels, at)?
@@ -621,32 +621,32 @@ fn discarded(inference: Inference, statement: ast.Statement, left_behind: unify.
 /// A step that leaves `()`, which is what a loop and a discard leave.
 // example: found_after(nothing_left(Ok(nothing_inferred()))) == unify.Unit
 fn nothing_left(walked: Result<Inference, refusal.TypeError>) -> Result<Typed, refusal.TypeError> {
-    left := walked?
+    let left = walked?
     Ok(Typed { inference: left, found: unify.Unit })
 }
 
 /// `&&` or `||`, whose two sides are both `Bool`.
 // example: typed_code("fn is_both() -> Bool {\n    true && 1\n}\n") == "L0400 35..36"
 fn both_true(inference: Inference, sides: Sides, operands: Operands) -> Result<Typed, refusal.TypeError> {
-    left_met := expect(inference: inference, expected: unify.truth(), found: sides.left, at: operands.left.span)?
+    let left_met = expect(inference: inference, expected: unify.truth(), found: sides.left, at: operands.left.span)?
     truth_after(expect(inference: left_met, expected: unify.truth(), found: sides.right, at: operands.right.span))
 }
 
 /// A step that leaves a `Bool`.
 // example: found_after(truth_after(Ok(nothing_inferred()))) == unify.truth()
 fn truth_after(walked: Result<Inference, refusal.TypeError>) -> Result<Typed, refusal.TypeError> {
-    left := walked?
+    let left = walked?
     Ok(Typed { inference: left, found: unify.truth() })
 }
 
 /// An operator that is a trait's method, which waits for its type to ask that trait of it.
 // example: typed_code("fn count() -> Option<Int> {\n    1 / 0\n}\n") == "L0407 36..37"
 fn operator_asked(inference: Inference, asked: Asking, sides: Sides, operands: Operands) -> Result<Typed, refusal.TypeError> {
-    met := expect(inference: inference, expected: sides.left, found: sides.right, at: operands.right.span)?
+    let met = expect(inference: inference, expected: sides.left, found: sides.right, at: operands.right.span)?
     if asked.of == "Div" || asked.of == "Rem" {
         _ = divides_by_zero(operands.right)?
     }
-    waiting := operating(met, Operated { of: asked.of, written_as: asked.written_as, at: sides.left, written: operands.at })
+    let waiting = operating(met, Operated { of: asked.of, written_as: asked.written_as, at: sides.left, written: operands.at })
     Ok(Typed { inference: waiting, found: gives_back(sides.operator, sides.left) })
 }
 
@@ -753,8 +753,8 @@ fn called_plainly(inference: Inference, callee: ast.Expr, arguments: ast.Argumen
 /// The call a dot after a value stands for, with the value passed first, as canonical form writes it.
 // example: plain_call(nothing_inferred(), Moved { receiver: format.expression_of("maybe"), called: ast.Name { text: "or", span: lexer.Span { start: 0, length: 2 } }, arguments: ast.Positional([format.expression_of("0")]) }) == "or(maybe, 0)"
 fn plain_call(inference: Inference, moved: Moved) -> String {
-    callee := ast.Expr { kind: ast.NameExpr(moved.called), span: moved.called.span }
-    written := ast.Expr { kind: ast.Call { callee: callee, arguments: passed_first(inference, moved) }, span: moved.receiver.span }
+    let callee = ast.Expr { kind: ast.NameExpr(moved.called), span: moved.called.span }
+    let written = ast.Expr { kind: ast.Call { callee: callee, arguments: passed_first(inference, moved) }, span: moved.receiver.span }
     format.nested(format.printer_of(""), written, 0, format.Allowed).text
 }
 
@@ -854,8 +854,8 @@ fn named_values(written: List<ast.NamedArgument>) -> List<ast.Expr> {
 /// A call of something whose type is not yet a function, which unification has to settle.
 // example: typed_code("fn count(held) -> Int {\n    held(1)\n}\n") == ""
 fn applied(inference: Inference, calling: unify.Type, given: List<unify.Type>, at: lexer.Span) -> Result<Typed, refusal.TypeError> {
-    made := fresh(inference)
-    met := expect(inference: made.inference, expected: calling, found: unify.Function { parameters: given, result: made.found }, at: at)?
+    let made = fresh(inference)
+    let met = expect(inference: made.inference, expected: calling, found: unify.Function { parameters: given, result: made.found }, at: at)?
     Ok(Typed { inference: met, found: made.found })
 }
 
@@ -1046,7 +1046,7 @@ fn named_in_order(argument: ast.NamedArgument, parameter: ast.Parameter) -> Resu
     if argument.name.text == parameter.name.text {
         return Ok(())
     }
-    start := argument.name.span.start
+    let start = argument.name.span.start
     Err(refusal.TypeError { kind: refusal.Misnamed { written: argument.name.text, parameter: parameter.name.text }, span: lexer.Span { start: start, length: argument.value.span.start + argument.value.span.length - start } })
 }
 
@@ -1062,7 +1062,7 @@ fn settle_positional(inference: Inference) -> Result<Inference, refusal.TypeErro
 /// The types the declaration gives its parameters, as inference settled them.
 // example: list.length(takes_of(nothing_inferred(), no_name())) == 0
 fn takes_of(inference: Inference, function: ast.Name) -> List<unify.Type> {
-    signature := scheme_at(inference, declared.at_key(function.span.start)).body
+    let signature = scheme_at(inference, declared.at_key(function.span.start)).body
     if !unify.is_function(signature) {
         return []
     }
@@ -1099,7 +1099,7 @@ fn look_up_fields(inference: Inference) -> Result<Inference, refusal.TypeError> 
 /// One field, read off the record or the module it is reached through.
 // example: typed_code("fn count(held: Int) -> Int {\n    held.size\n}\n") == "L0402 38..42"
 fn look_up(inference: Inference, lookup: Lookup) -> Result<Inference, refusal.TypeError> {
-    through := unify.solved(inference.table, lookup.through)
+    let through = unify.solved(inference.table, lookup.through)
     match through {
         unify.Named { name, arguments } => record_looked_up(inference, name, through, lookup)
         unify.Module(module) => inside(inference, module, lookup)
@@ -1119,14 +1119,14 @@ fn record_looked_up(inference: Inference, named: String, through: unify.Type, lo
 /// A field of the record whose constructor is filed under `key`.
 // example: typed_code("fn count(held: Box) -> Int {\n    held.count\n}\n\ntype Box = {\n    count: String\n}\n") == "L0400 27..45"
 fn field_of_record(inference: Inference, key: String, through: unify.Type, lookup: Lookup) -> Result<Inference, refusal.TypeError> {
-    labels := or(map.get(inference.environment.labels, key), [])
-    made := unify.at_one_use(inference.table, scheme_at(inference, key))
+    let labels = or(map.get(inference.environment.labels, key), [])
+    let made = unify.at_one_use(inference.table, scheme_at(inference, key))
     if !unify.is_function(made.found) {
         return Err(unreachable_field(through, lookup.field))
     }
-    built := unify.result_of(made.found)
-    met := expect(inference: inference { table: made.table }, expected: through, found: built, at: lookup.field.span)?
-    index := labelled(labels, lookup.field, unify.solved(met.table, built))?
+    let built = unify.result_of(made.found)
+    let met = expect(inference: inference { table: made.table }, expected: through, found: built, at: lookup.field.span)?
+    let index = labelled(labels, lookup.field, unify.solved(met.table, built))?
     expect(inference: met, expected: lookup.found, found: or(list.at(unify.parameters_of(made.found), index), unify.Unit), at: lookup.field.span)
 }
 
@@ -1190,14 +1190,14 @@ fn offered_inside(inference: Inference, reached: surface.Reached, module: String
 /// module's behalf.
 // example: offered_use(nothing_inferred(), surface.Plain(unify.monomorphic(unify.int())), Reaching { module: "demo", field: no_name() }).found == unify.int()
 fn offered_use(inference: Inference, offered: surface.Offered, reaching: Reaching) -> Typed {
-    scheme := surface.scheme_offered(offered)
-    made := unify.at_one_use(inference.table, scheme)
+    let scheme = surface.scheme_offered(offered)
+    let made = unify.at_one_use(inference.table, scheme)
     if !surface.is_generic(offered) {
         return Typed { inference: asking(inference { table: made.table }, made.required, reaching.field.span, ByConstraint), found: made.found }
     }
-    how := ByAnotherModule { module: reaching.module, name: reaching.field.text }
-    asked := asking(inference { table: made.table }, made.required, reaching.field.span, how)
-    reached := map.insert(asked.generics_reached, span_key(reaching.field.span), generic_use(scheme, made.given))
+    let how = ByAnotherModule { module: reaching.module, name: reaching.field.text }
+    let asked = asking(inference { table: made.table }, made.required, reaching.field.span, how)
+    let reached = map.insert(asked.generics_reached, span_key(reaching.field.span), generic_use(scheme, made.given))
     Typed { inference: asked { generics_reached: reached }, found: made.found }
 }
 
@@ -1269,7 +1269,7 @@ fn built_inside(inference: Inference, module: String, field: ast.Name) -> Option
 /// A step that leaves `found`.
 // example: found_after(held_after(Ok(nothing_inferred()), unify.int())) == unify.int()
 fn held_after(walked: Result<Inference, refusal.TypeError>, found: unify.Type) -> Result<Typed, refusal.TypeError> {
-    left := walked?
+    let left = walked?
     Ok(Typed { inference: left, found: found })
 }
 
@@ -1347,12 +1347,12 @@ fn any_of(inference: Inference, alternatives: List<ast.Pattern>, expected: unify
 /// A variant with what it carries in order, each held to its own pattern.
 // example: typed_code("fn count(held: Option<Int>) -> Int {\n    match held {\n        Some(one, two) => 1\n        _ => 2\n    }\n}\n") == "L0401 62..66"
 fn tuple_pattern(inference: Inference, written: TupleWritten, expected: unify.Type) -> Result<Inference, refusal.TypeError> {
-    named := written.path.name
-    built := built_by(inference, written.path)?
+    let named = written.path.name
+    let built = built_by(inference, written.path)?
     if !unify.is_function(built.found) {
         return Err(miscounted(named: named, takes: 0, given: list.length(written.elements)))
     }
-    taken := unify.parameters_of(built.found)
+    let taken = unify.parameters_of(built.found)
     if list.length(taken) != list.length(written.elements) {
         return Err(miscounted(named: named, takes: list.length(taken), given: list.length(written.elements)))
     }
@@ -1368,21 +1368,21 @@ fn tuple_pattern(inference: Inference, written: TupleWritten, expected: unify.Ty
 /// A whole number, which takes the type it is matched against.
 // example: typed_code("fn count(held: Int) -> Int {\n    match held {\n        1 => 1\n        _ => 2\n    }\n}\n") == ""
 fn number_pattern(inference: Inference, number: Int, expected: unify.Type, at: lexer.Span) -> Result<Inference, refusal.TypeError> {
-    written := literal(inference, number, at)
+    let written = literal(inference, number, at)
     literal_pattern(written.inference, Matched { written: written.found, expected: expected }, at)
 }
 
 /// A whole number, whose type is a variable until the code around it says which type it is.
 // example: list.length(literal(nothing_inferred(), 5, lexer.Span { start: 0, length: 1 }).inference.literals) == 1
 fn literal(inference: Inference, number: Int, written: lexer.Span) -> Typed {
-    made := unify.whole_number(inference.table)
+    let made = unify.whole_number(inference.table)
     Typed { inference: inference { table: made.table, literals: list.push(inference.literals, Literal { number: number, at: made.made, span: written }) }, found: made.made }
 }
 
 /// A literal, which matches the one value it is and asks `Eq` whether it is that value.
 // example: typed_code("fn count(held: Box) -> Int {\n    match held {\n        1 => 1\n        _ => 2\n    }\n}\n\ntype Box = Box\n") == "L0400 54..55"
 fn literal_pattern(inference: Inference, matched: Matched, at: lexer.Span) -> Result<Inference, refusal.TypeError> {
-    met := expect(inference: inference, expected: matched.expected, found: matched.written, at: at)?
+    let met = expect(inference: inference, expected: matched.expected, found: matched.written, at: at)?
     Ok(typed_at(asking(met, [unify.Required { trait_name: "Eq", at: matched.expected }], at, ByConstraint), at, matched.expected))
 }
 
@@ -1392,7 +1392,7 @@ fn bare_pattern(inference: Inference, path: ast.Path, expected: unify.Type) -> R
     if !is_built(inference, path) {
         return Ok(introduce(inference, path.name, unify.monomorphic(expected)))
     }
-    built := built_by(inference, path)?
+    let built = built_by(inference, path)?
     expect(inference: built.inference, expected: expected, found: built.found, at: path.name.span)
 }
 
@@ -1408,17 +1408,17 @@ fn is_built(inference: Inference, base: ast.Path) -> Bool {
 /// A variant with labelled values, each field it writes bound to what it carries there.
 // example: typed_code("fn count(held: Box) -> Int {\n    match held {\n        Box { size } => 1\n    }\n}\n\ntype Box = {\n    count: Int\n}\n") == "L0402 60..64"
 fn record_pattern(inference: Inference, written: RecordWritten, expected: unify.Type) -> Result<Inference, refusal.TypeError> {
-    named := written.path.name
-    built := built_by(inference, written.path)?
-    labels := or(map.get(built.inference.environment.labels, built.key), [])
+    let named = written.path.name
+    let built = built_by(inference, written.path)?
+    let labels = or(map.get(built.inference.environment.labels, built.key), [])
     if !unify.is_function(built.found) {
         return Err(miscounted(named: named, takes: 0, given: list.length(written.fields)))
     }
-    taken := unify.parameters_of(built.found)
-    made := unify.result_of(built.found)
+    let taken = unify.parameters_of(built.found)
+    let made = unify.result_of(built.found)
     var walking = expect(inference: built.inference, expected: expected, found: made, at: named.span)?
     for field in written.fields {
-        index := labelled(labels, field, made)?
+        let index = labelled(labels, field, made)?
         walking = introduce(walking, field, unify.monomorphic(or(list.at(taken, index), unify.Unit)))
     }
     Ok(walking)
@@ -1451,14 +1451,14 @@ fn built_by(inference: Inference, path: ast.Path) -> Result<BuiltUse, refusal.Ty
 /// A constructor written by its name alone.
 // example: bare_constructor(nothing_inferred(), no_name()).key == ""
 fn bare_constructor(inference: Inference, named: ast.Name) -> BuiltUse {
-    found := value_of_name(inference, named)
+    let found = value_of_name(inference, named)
     BuiltUse { inference: found.inference, key: key_of_name(inference, named), found: found.found }
 }
 
 /// A constructor reached through the module that declares it.
 // example: refusal.code_given(reached_constructor(nothing_inferred(), no_name(), ast.Path { module: None, name: no_name() })) == "L0414 0..0"
 fn reached_constructor(inference: Inference, module: ast.Name, path: ast.Path) -> Result<BuiltUse, refusal.TypeError> {
-    key := ast.path_text(path)
+    let key = ast.path_text(path)
     match map.get(inference.environment.values, key) {
         Some(scheme) => Ok(built_use(instantiated(inference, scheme), key))
         None => Err(refusal.TypeError { kind: refusal.NotInModule { module: module.text, name: path.name.text }, span: path.name.span })
@@ -1468,7 +1468,7 @@ fn reached_constructor(inference: Inference, module: ast.Name, path: ast.Path) -
 /// `scheme` at one use, with what the use asks left out, which is how a constructor is used.
 // example: instantiated(nothing_inferred(), unify.monomorphic(unify.int())).found == unify.int()
 fn instantiated(inference: Inference, scheme: unify.Scheme) -> Typed {
-    made := unify.at_one_use(inference.table, scheme)
+    let made = unify.at_one_use(inference.table, scheme)
     Typed { inference: inference { table: made.table }, found: made.found }
 }
 
@@ -1523,26 +1523,26 @@ fn kind_named(named: String) -> Option<Propagated> {
 /// One `?`, held to the kind it propagates on both sides: what it is given, and what it leaves.
 // example: typed_code("fn count(held: Result<Int, String>) -> Option<Int> {\n    held?\n}\n") == "L0400 57..61"
 fn propagate(inference: Inference, waiting: Propagation, kind: Propagated) -> Result<Inference, refusal.TypeError> {
-    sides := match kind {
+    let sides = match kind {
         Absence => absence_sides(inference, waiting.held)
         Failure => failure_sides(inference, waiting.held)
     }
-    met := expect(inference: sides.inference, expected: sides.written_on, found: waiting.found, at: waiting.inner)?
+    let met = expect(inference: sides.inference, expected: sides.written_on, found: waiting.found, at: waiting.inner)?
     expect(inference: met, expected: met.result, found: sides.given_back, at: waiting.at)
 }
 
 /// An `Option` on both sides of a `?`, which share nothing.
 // example: absence_sides(nothing_inferred(), unify.int()).written_on == unify.option_of(unify.int())
 fn absence_sides(inference: Inference, held: unify.Type) -> PropagatedSides {
-    made := fresh(inference)
+    let made = fresh(inference)
     PropagatedSides { inference: made.inference, written_on: unify.option_of(held), given_back: unify.option_of(made.found) }
 }
 
 /// A `Result` on both sides of a `?`, which share their error type.
 // example: unify.text_of(failure_sides(nothing_inferred(), unify.int()).written_on) == "Result<Int, _>"
 fn failure_sides(inference: Inference, held: unify.Type) -> PropagatedSides {
-    failed := fresh(inference)
-    other := fresh(failed.inference)
+    let failed = fresh(inference)
+    let other = fresh(failed.inference)
     PropagatedSides { inference: other.inference, written_on: unify.result_type(held, failed.found), given_back: unify.result_type(other.found, failed.found) }
 }
 
@@ -1563,7 +1563,7 @@ fn settle_literal(inference: Inference, written: Literal) -> Result<Inference, r
     if unify.is_var(unify.shallow(walking.table, written.at)) {
         walking = expect(inference: walking, expected: unify.int(), found: written.at, at: written.span)?
     }
-    at := unify.solved(walking.table, written.at)
+    let at = unify.solved(walking.table, written.at)
     match map.get(walking.environment.holds, named_of(at)) {
         Some(bounds) => fits(walking, written, at, bounds)
         None => Ok(walking)
@@ -1631,8 +1631,8 @@ fn is_by_method(how: Asked) -> Bool {
 /// One trait asked at one use, answered by an instance or refused.
 // example: typed_code("fn is_same(one: Int, other: Int) -> Bool {\n    one == other\n}\n") == ""
 fn requirement_answered(inference: Inference, requirement: Requirement) -> Result<(), refusal.TypeError> {
-    at := unify.solved(inference.table, requirement.required.at)
-    of := requirement.required.trait_name
+    let at = unify.solved(inference.table, requirement.required.at)
+    let of = requirement.required.trait_name
     _ = left_behind_by(inference, requirement.how, of, requirement.written)?
     if declared.is_answered(inference.environment, of, at, inference.promised) {
         return Ok(())
@@ -1661,8 +1661,8 @@ fn trait_reached(inference: Inference, kind: refusal.TypeErrorKind, of: String, 
 /// The refusal a trait nothing answers amounts to, worded by how it came to be asked.
 // example: refusal.code_given(Err(unanswered(Requirement { required: unify.Required { trait_name: "Eq", at: unify.Unit }, written: lexer.Span { start: 1, length: 2 }, how: ByMethod }, unify.Unit))) == "L0418 1..3"
 fn unanswered(requirement: Requirement, at: unify.Type) -> refusal.TypeError {
-    of := requirement.required.trait_name
-    kind := match requirement.how {
+    let of = requirement.required.trait_name
+    let kind = match requirement.how {
         ByOperator(written_as) => refusal.NoOperator { written_as: written_as, of: of, at: at }
         _ => refusal.NoInstance { of: of, at: at }
     }
@@ -1684,11 +1684,11 @@ fn settle_discards(inference: Inference) -> Result<Inference, refusal.TypeError>
 /// One statement whose value nothing takes.
 // example: typed_code("fn count() -> Int {\n    \"one\"\n    1\n}\n") == "L0408 24..29"
 fn settle_discard(inference: Inference, discard: Discard) -> Result<Inference, refusal.TypeError> {
-    settled := unify.shallow(inference.table, discard.found)
+    let settled = unify.shallow(inference.table, discard.found)
     if unify.is_var(settled) {
         return expect(inference: inference, expected: unify.Unit, found: discard.found, at: discard.at)
     }
-    solved := unify.solved(inference.table, settled)
+    let solved = unify.solved(inference.table, settled)
     if solved == unify.Unit {
         return Ok(inference)
     }
@@ -1809,14 +1809,14 @@ fn clashed(clash: unify.Clash, met: Met, at: lexer.Span) -> refusal.TypeError {
 /// A variable no other place has.
 // example: fresh(nothing_inferred()).found == unify.Var(0)
 fn fresh(inference: Inference) -> Typed {
-    made := unify.fresh(inference.table)
+    let made = unify.fresh(inference.table)
     Typed { inference: inference { table: made.table }, found: made.made }
 }
 
 /// Binds `named` to `scheme` for the rest of the function it is written in.
 // example: list.length(introduce(nothing_inferred(), no_name(), unify.monomorphic(unify.int())).introduced) == 1
 fn introduce(inference: Inference, named: ast.Name, scheme: unify.Scheme) -> Inference {
-    key := declared.at_key(named.span.start)
+    let key = declared.at_key(named.span.start)
     typed_at(inference { environment: declared.bound(inference.environment, key, scheme), introduced: list.push(inference.introduced, key) }, named.span, scheme.body)
 }
 
@@ -1825,9 +1825,9 @@ fn introduce(inference: Inference, named: ast.Name, scheme: unify.Scheme) -> Inf
 /// A trait's method asks its trait of what this use settles, and a constrained name asks the same.
 // example: typed_code("fn is_same(one: Int, other: Int) -> Bool {\n    is_equal(one, other)\n}\n") == ""
 fn value_of_name(inference: Inference, named: ast.Name) -> Typed {
-    key := key_of_name(inference, named)
-    made := unify.at_one_use(inference.table, scheme_at(inference, key))
-    how := match map.get(inference.environment.methods, key) {
+    let key = key_of_name(inference, named)
+    let made = unify.at_one_use(inference.table, scheme_at(inference, key))
+    let how = match map.get(inference.environment.methods, key) {
         Some(_) => ByMethod
         None => ByConstraint
     }
@@ -1862,7 +1862,7 @@ fn generalise(inference: Inference, key: String) -> Inference {
 /// `shell`, solved and quantified over what is free in it besides what it was written over.
 // example: generalised_shell(nothing_inferred(), unify.monomorphic(unify.Var(0)), "none").quantified == [unify.Generalised(0)]
 fn generalised_shell(inference: Inference, shell: unify.Scheme, key: String) -> unify.Scheme {
-    body := unify.solved(inference.table, shell.body)
+    let body = unify.solved(inference.table, shell.body)
     var quantified = shell.quantified
     for variable in free_in(inference, body, key) {
         quantified = list.push(quantified, unify.Generalised(variable))
@@ -1873,7 +1873,7 @@ fn generalised_shell(inference: Inference, shell: unify.Scheme, key: String) -> 
 /// A binding is as polymorphic as the value it was given, which is let-polymorphism.
 // example: generalised(nothing_inferred(), unify.int()).quantified == []
 fn generalised(inference: Inference, bound: unify.Type) -> unify.Scheme {
-    body := unify.solved(inference.table, bound)
+    let body = unify.solved(inference.table, bound)
     var quantified = []
     for variable in free_in(inference, body, "") {
         quantified = list.push(quantified, unify.Generalised(variable))
@@ -1886,11 +1886,11 @@ fn generalised(inference: Inference, bound: unify.Type) -> unify.Scheme {
 /// The function filed under `leaving` is being generalised, so it holds nothing of its own.
 // example: free_in(nothing_inferred(), unify.Var(3), "") == [3]
 fn free_in(inference: Inference, body: unify.Type, leaving: String) -> List<Int> {
-    free := unify.unsettled(inference.table, body, [])
+    let free = unify.unsettled(inference.table, body, [])
     if list.length(free) == 0 {
         return free
     }
-    held := held_elsewhere(inference, leaving)
+    let held = held_elsewhere(inference, leaving)
     var kept = []
     for variable in free {
         if !list.has_value(held, variable) {
@@ -1903,7 +1903,7 @@ fn free_in(inference: Inference, body: unify.Type, leaving: String) -> List<Int>
 /// Every variable something in scope or something still waiting holds.
 // example: held_elsewhere(nothing_inferred(), "") == []
 fn held_elsewhere(inference: Inference, leaving: String) -> List<Int> {
-    table := inference.table
+    let table = inference.table
     var held = []
     for key in inference.functions {
         if key != leaving {

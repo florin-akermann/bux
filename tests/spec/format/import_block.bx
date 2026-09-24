@@ -5,7 +5,7 @@ import list
 import strings
 
 fn main(arguments: List<String>) -> Int {
-    words := list.push(arguments, "hi")
+    let words = list.push(arguments, "hi")
     io.print(strings.join(words, " "))
     0
 }

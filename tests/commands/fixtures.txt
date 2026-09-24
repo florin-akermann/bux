@@ -402,10 +402,10 @@ status 1
 $ check tests/spec/format/brackets_kept.bx
 status 1
 ! error[L0300]: there is nothing named `a`
-!   --> tests/spec/format/brackets_kept.bx:4:16
+!   --> tests/spec/format/brackets_kept.bx:4:19
 !
-!   4 |     first := (-a).b
-!     |                ^
+!   4 |     let first = (-a).b
+!     |                   ^
 !
 ! help: a name is declared in this file, imported, or supplied by the prelude
 
@@ -808,10 +808,10 @@ status 0
 $ check tests/spec/lexer/carriage_return.bx
 status 1
 ! error[L0101]: this string has no closing quote
-!   --> tests/spec/lexer/carriage_return.bx:4:13
+!   --> tests/spec/lexer/carriage_return.bx:4:16
 !
-!   4 |     name := "Alice
-!     |             ^^^^^^
+!   4 |     let name = "Alice
+!     |                ^^^^^^
 !
 ! help: add a closing `"` before the end of the line
 
@@ -829,36 +829,36 @@ status 0
 $ check tests/spec/lexer/unknown_character.bx
 status 1
 ! error[L0102]: this character is not part of the language
-!   --> tests/spec/lexer/unknown_character.bx:3:12
+!   --> tests/spec/lexer/unknown_character.bx:3:15
 !
-!   3 |     x := 1 @ 2
-!     |            ^
+!   3 |     let x = 1 @ 2
+!     |               ^
 
 $ check tests/spec/lexer/unknown_characters.bx
 status 1
 ! error[L0102]: this character is not part of the language
-!   --> tests/spec/lexer/unknown_characters.bx:6:12
+!   --> tests/spec/lexer/unknown_characters.bx:6:15
 !
-!   6 |     x := 1 @@ 2 # 3
-!     |            ^
+!   6 |     let x = 1 @@ 2 # 3
+!     |               ^
 
 $ check tests/spec/lexer/unterminated_at_the_end.bx
 status 1
 ! error[L0101]: this string has no closing quote
-!   --> tests/spec/lexer/unterminated_at_the_end.bx:4:13
+!   --> tests/spec/lexer/unterminated_at_the_end.bx:4:16
 !
-!   4 |     name := "Alice
-!     |             ^^^^^^
+!   4 |     let name = "Alice
+!     |                ^^^^^^
 !
 ! help: add a closing `"` before the end of the line
 
 $ check tests/spec/lexer/unterminated_string.bx
 status 1
 ! error[L0101]: this string has no closing quote
-!   --> tests/spec/lexer/unterminated_string.bx:3:13
+!   --> tests/spec/lexer/unterminated_string.bx:3:16
 !
-!   3 |     name := "Alice
-!     |             ^^^^^^
+!   3 |     let name = "Alice
+!     |                ^^^^^^
 !
 ! help: add a closing `"` before the end of the line
 
@@ -1166,10 +1166,10 @@ status 1
 $ check tests/spec/name_resolution/binding_sees_itself.bx
 status 1
 ! error[L0300]: there is nothing named `count`
-!   --> tests/spec/name_resolution/binding_sees_itself.bx:4:14
+!   --> tests/spec/name_resolution/binding_sees_itself.bx:4:17
 !
-!   4 |     count := count + 1
-!     |              ^^^^^
+!   4 |     let count = count + 1
+!     |                 ^^^^^
 !
 ! help: a name is declared in this file, imported, or supplied by the prelude
 
@@ -1309,10 +1309,10 @@ status 1
 $ check tests/spec/name_resolution/function_not_called.bx
 status 1
 ! error[L0304]: `helper` is a function, so it is written as a call
-!   --> tests/spec/name_resolution/function_not_called.bx:4:13
+!   --> tests/spec/name_resolution/function_not_called.bx:4:16
 !
-!   4 |     held := helper
-!     |             ^^^^^^
+!   4 |     let held = helper
+!     |                ^^^^^^
 !
 ! help: version 0.1 reaches a function by calling it; write the call
 
@@ -1409,10 +1409,10 @@ status 1
 $ check tests/spec/name_resolution/module_as_value.bx
 status 1
 ! error[L0304]: `io` is a module, so a name inside it is what is written
-!   --> tests/spec/name_resolution/module_as_value.bx:6:13
+!   --> tests/spec/name_resolution/module_as_value.bx:6:16
 !
-!   6 |     held := io
-!     |             ^^
+!   6 |     let held = io
+!     |                ^^
 !
 ! help: a module is what a name is reached through, as `io.println` is
 
@@ -1522,10 +1522,10 @@ status 0
 $ check tests/spec/name_resolution/shadowed_name.bx
 status 1
 ! error[L0302]: `seen` is already in scope here
-!   --> tests/spec/name_resolution/shadowed_name.bx:4:5
+!   --> tests/spec/name_resolution/shadowed_name.bx:4:9
 !
-!   4 |     seen := 1
-!     |     ^^^^
+!   4 |     let seen = 1
+!     |         ^^^^
 !
 ! help: rename the inner one; Bux never hides a name
 
@@ -1824,6 +1824,16 @@ status 1
 !
 ! help: build the value it becomes: `user { name: "Bob" }`
 
+$ check tests/spec/parser/bound_with_colon_equals.bx
+status 1
+! error[L0109]: `:=` does not bind a name
+!   --> tests/spec/parser/bound_with_colon_equals.bx:4:5
+!
+!   4 |     total := 0
+!     |     ^^^^^^^^
+!
+! help: write `let total =`
+
 $ check tests/spec/parser/chained_comparison.bx
 status 1
 ! error[L0105]: comparisons do not chain
@@ -1864,6 +1874,14 @@ status 1
 !   3 | derive Eq User
 !     |           ^^^^
 
+$ check tests/spec/parser/discard_as_a_let.bx
+status 1
+! error[L0100]: expected a name, found `_`
+!   --> tests/spec/parser/discard_as_a_let.bx:4:9
+!
+!   4 |     let _ = count
+!     |         ^
+
 $ check tests/spec/parser/discard_as_a_value.bx
 status 1
 ! error[L0100]: expected an expression, found `_`
@@ -1879,14 +1897,6 @@ status 1
 !
 !   4 |     var _ = count
 !     |         ^
-
-$ check tests/spec/parser/discard_with_a_walrus.bx
-status 1
-! error[L0100]: expected `=`, found `:=`
-!   --> tests/spec/parser/discard_with_a_walrus.bx:4:7
-!
-!   4 |     _ := count
-!     |       ^^
 
 $ check tests/spec/parser/empty_record_pattern.bx
 status 1
@@ -2009,11 +2019,11 @@ status 0
 
 $ check tests/spec/parser/statement_outside_a_function.bx
 status 1
-! error[L0100]: expected an import, a type, a trait, an instance, a derive, a function, an extern, or a process, found `total`
+! error[L0100]: expected an import, a type, a trait, an instance, a derive, a function, an extern, or a process, found `let`
 !   --> tests/spec/parser/statement_outside_a_function.bx:4:1
 !
-!   4 | total := 1
-!     | ^^^^^
+!   4 | let total = 1
+!     | ^^^
 
 $ check tests/spec/parser/trait_over_two_types.bx
 status 1
@@ -2066,38 +2076,30 @@ status 1
 $ check tests/spec/parser/unknown_character.bx
 status 1
 ! error[L0102]: this character is not part of the language
-!   --> tests/spec/parser/unknown_character.bx:3:10
+!   --> tests/spec/parser/unknown_character.bx:3:13
 !
-!   3 |     a := @
-!     |          ^
+!   3 |     let a = @
+!     |             ^
 
 $ check tests/spec/parser/unknown_escape.bx
 status 1
 ! error[L0104]: `\q` is not an escape
-!   --> tests/spec/parser/unknown_escape.bx:3:12
+!   --> tests/spec/parser/unknown_escape.bx:3:15
 !
-!   3 |     a := "a\qb"
-!     |            ^^
+!   3 |     let a = "a\qb"
+!     |               ^^
 !
 ! help: the escapes are `\"`, `\\`, `\n`, `\t`, and `\r`
 
 $ check tests/spec/parser/unterminated_string.bx
 status 1
 ! error[L0101]: this string has no closing quote
-!   --> tests/spec/parser/unterminated_string.bx:3:10
+!   --> tests/spec/parser/unterminated_string.bx:3:13
 !
-!   3 |     a := "no closing quote
-!     |          ^^^^^^^^^^^^^^^^^
+!   3 |     let a = "no closing quote
+!     |             ^^^^^^^^^^^^^^^^^
 !
 ! help: add a closing `"` before the end of the line
-
-$ check tests/spec/parser/var_with_a_walrus.bx
-status 1
-! error[L0100]: expected `=`, found `:=`
-!   --> tests/spec/parser/var_with_a_walrus.bx:4:15
-!
-!   4 |     var total := 0
-!     |               ^^
 
 $ check tests/spec/parser/variant_with_empty_parentheses.bx
 status 1
@@ -2530,7 +2532,7 @@ status 0
 
 $ check --json tests/spec/calls/in_front.bx
 status 1
-> {"file":"tests/spec/calls/in_front.bx","code":"L0433","message":"a dot after a value reads a field, so this call of `described` is written plainly","span":{"start":300,"len":25},"help":"write `described(count, \"apples\")`"}
+> {"file":"tests/spec/calls/in_front.bx","code":"L0433","message":"a dot after a value reads a field, so this call of `described` is written plainly","span":{"start":303,"len":25},"help":"write `described(count, \"apples\")`"}
 
 $ check --json tests/spec/concurrency/arm_does_work.bx
 status 1
@@ -2659,7 +2661,7 @@ status 1
 
 $ check --json tests/spec/format/brackets_kept.bx
 status 1
-> {"file":"tests/spec/format/brackets_kept.bx","code":"L0300","message":"there is nothing named `a`","span":{"start":143,"len":1},"help":"a name is declared in this file, imported, or supplied by the prelude"}
+> {"file":"tests/spec/format/brackets_kept.bx","code":"L0300","message":"there is nothing named `a`","span":{"start":146,"len":1},"help":"a name is declared in this file, imported, or supplied by the prelude"}
 
 $ check --json tests/spec/format/canonical_names.bx
 status 0
@@ -2879,7 +2881,7 @@ status 0
 
 $ check --json tests/spec/lexer/carriage_return.bx
 status 1
-> {"file":"tests/spec/lexer/carriage_return.bx","code":"L0101","message":"this string has no closing quote","span":{"start":141,"len":6},"help":"add a closing `\"` before the end of the line"}
+> {"file":"tests/spec/lexer/carriage_return.bx","code":"L0101","message":"this string has no closing quote","span":{"start":144,"len":6},"help":"add a closing `\"` before the end of the line"}
 
 $ check --json tests/spec/lexer/comment_at_the_end.bx
 status 1
@@ -2890,19 +2892,19 @@ status 0
 
 $ check --json tests/spec/lexer/unknown_character.bx
 status 1
-> {"file":"tests/spec/lexer/unknown_character.bx","code":"L0102","message":"this character is not part of the language","span":{"start":43,"len":1}}
+> {"file":"tests/spec/lexer/unknown_character.bx","code":"L0102","message":"this character is not part of the language","span":{"start":46,"len":1}}
 
 $ check --json tests/spec/lexer/unknown_characters.bx
 status 1
-> {"file":"tests/spec/lexer/unknown_characters.bx","code":"L0102","message":"this character is not part of the language","span":{"start":314,"len":1}}
+> {"file":"tests/spec/lexer/unknown_characters.bx","code":"L0102","message":"this character is not part of the language","span":{"start":317,"len":1}}
 
 $ check --json tests/spec/lexer/unterminated_at_the_end.bx
 status 1
-> {"file":"tests/spec/lexer/unterminated_at_the_end.bx","code":"L0101","message":"this string has no closing quote","span":{"start":117,"len":6},"help":"add a closing `\"` before the end of the line"}
+> {"file":"tests/spec/lexer/unterminated_at_the_end.bx","code":"L0101","message":"this string has no closing quote","span":{"start":120,"len":6},"help":"add a closing `\"` before the end of the line"}
 
 $ check --json tests/spec/lexer/unterminated_string.bx
 status 1
-> {"file":"tests/spec/lexer/unterminated_string.bx","code":"L0101","message":"this string has no closing quote","span":{"start":44,"len":6},"help":"add a closing `\"` before the end of the line"}
+> {"file":"tests/spec/lexer/unterminated_string.bx","code":"L0101","message":"this string has no closing quote","span":{"start":47,"len":6},"help":"add a closing `\"` before the end of the line"}
 
 $ check --json tests/spec/lexer/words.bx
 status 0
@@ -3083,7 +3085,7 @@ status 0
 
 $ check --json tests/spec/name_resolution/added_to_a_binding.bx
 status 1
-> {"file":"tests/spec/name_resolution/added_to_a_binding.bx","code":"L0305","message":"`total` is not a `var`, so it is never assigned to","span":{"start":149,"len":5},"help":"mutation is explicit: bind it with `var`, or bind a new name"}
+> {"file":"tests/spec/name_resolution/added_to_a_binding.bx","code":"L0305","message":"`total` is not a `var`, so it is never assigned to","span":{"start":153,"len":5},"help":"mutation is explicit: bind it with `var`, or bind a new name"}
 
 $ check --json tests/spec/name_resolution/arm_binding_gone.bx
 status 1
@@ -3091,7 +3093,7 @@ status 1
 
 $ check --json tests/spec/name_resolution/binding_sees_itself.bx
 status 1
-> {"file":"tests/spec/name_resolution/binding_sees_itself.bx","code":"L0300","message":"there is nothing named `count`","span":{"start":149,"len":5},"help":"a name is declared in this file, imported, or supplied by the prelude"}
+> {"file":"tests/spec/name_resolution/binding_sees_itself.bx","code":"L0300","message":"there is nothing named `count`","span":{"start":152,"len":5},"help":"a name is declared in this file, imported, or supplied by the prelude"}
 
 $ check --json tests/spec/name_resolution/constraint_of_a_type.bx
 status 1
@@ -3150,7 +3152,7 @@ status 1
 
 $ check --json tests/spec/name_resolution/function_not_called.bx
 status 1
-> {"file":"tests/spec/name_resolution/function_not_called.bx","code":"L0304","message":"`helper` is a function, so it is written as a call","span":{"start":144,"len":6},"help":"version 0.1 reaches a function by calling it; write the call"}
+> {"file":"tests/spec/name_resolution/function_not_called.bx","code":"L0304","message":"`helper` is a function, so it is written as a call","span":{"start":147,"len":6},"help":"version 0.1 reaches a function by calling it; write the call"}
 
 $ check --json tests/spec/name_resolution/function_returned.bx
 status 1
@@ -3190,7 +3192,7 @@ status 1
 
 $ check --json tests/spec/name_resolution/module_as_value.bx
 status 1
-> {"file":"tests/spec/name_resolution/module_as_value.bx","code":"L0304","message":"`io` is a module, so a name inside it is what is written","span":{"start":152,"len":2},"help":"a module is what a name is reached through, as `io.println` is"}
+> {"file":"tests/spec/name_resolution/module_as_value.bx","code":"L0304","message":"`io` is a module, so a name inside it is what is written","span":{"start":155,"len":2},"help":"a module is what a name is reached through, as `io.println` is"}
 
 $ check --json tests/spec/name_resolution/name_bound_in_an_alternative.bx
 status 1
@@ -3198,7 +3200,7 @@ status 1
 
 $ check --json tests/spec/name_resolution/not_a_variable.bx
 status 1
-> {"file":"tests/spec/name_resolution/not_a_variable.bx","code":"L0305","message":"`total` is not a `var`, so it is never assigned to","span":{"start":141,"len":5},"help":"mutation is explicit: bind it with `var`, or bind a new name"}
+> {"file":"tests/spec/name_resolution/not_a_variable.bx","code":"L0305","message":"`total` is not a `var`, so it is never assigned to","span":{"start":145,"len":5},"help":"mutation is explicit: bind it with `var`, or bind a new name"}
 
 $ check --json tests/spec/name_resolution/parameter_assigned_to.bx
 status 1
@@ -3237,7 +3239,7 @@ status 0
 
 $ check --json tests/spec/name_resolution/shadowed_name.bx
 status 1
-> {"file":"tests/spec/name_resolution/shadowed_name.bx","code":"L0302","message":"`seen` is already in scope here","span":{"start":130,"len":4},"help":"rename the inner one; Bux never hides a name"}
+> {"file":"tests/spec/name_resolution/shadowed_name.bx","code":"L0302","message":"`seen` is already in scope here","span":{"start":134,"len":4},"help":"rename the inner one; Bux never hides a name"}
 
 $ check --json tests/spec/name_resolution/trait_as_a_type.bx
 status 1
@@ -3392,6 +3394,10 @@ $ check --json tests/spec/parser/assigned_to_a_value.bx
 status 1
 > {"file":"tests/spec/parser/assigned_to_a_value.bx","code":"L0107","message":"only a name is assigned to","span":{"start":141,"len":9},"help":"build the value it becomes: `user { name: \"Bob\" }`"}
 
+$ check --json tests/spec/parser/bound_with_colon_equals.bx
+status 1
+> {"file":"tests/spec/parser/bound_with_colon_equals.bx","code":"L0109","message":"`:=` does not bind a name","span":{"start":140,"len":8},"help":"write `let total =`"}
+
 $ check --json tests/spec/parser/chained_comparison.bx
 status 1
 > {"file":"tests/spec/parser/chained_comparison.bx","code":"L0105","message":"comparisons do not chain","span":{"start":78,"len":1},"help":"compare twice and join the two with `&&`"}
@@ -3414,6 +3420,10 @@ $ check --json tests/spec/parser/derive_without_for.bx
 status 1
 > {"file":"tests/spec/parser/derive_without_for.bx","code":"L0100","message":"expected `for`, found `User`","span":{"start":119,"len":4}}
 
+$ check --json tests/spec/parser/discard_as_a_let.bx
+status 1
+> {"file":"tests/spec/parser/discard_as_a_let.bx","code":"L0100","message":"expected a name, found `_`","span":{"start":153,"len":1}}
+
 $ check --json tests/spec/parser/discard_as_a_value.bx
 status 1
 > {"file":"tests/spec/parser/discard_as_a_value.bx","code":"L0100","message":"expected an expression, found `_`","span":{"start":143,"len":1}}
@@ -3421,10 +3431,6 @@ status 1
 $ check --json tests/spec/parser/discard_as_a_var.bx
 status 1
 > {"file":"tests/spec/parser/discard_as_a_var.bx","code":"L0100","message":"expected a name, found `_`","span":{"start":140,"len":1}}
-
-$ check --json tests/spec/parser/discard_with_a_walrus.bx
-status 1
-> {"file":"tests/spec/parser/discard_with_a_walrus.bx","code":"L0100","message":"expected `=`, found `:=`","span":{"start":153,"len":2}}
 
 $ check --json tests/spec/parser/empty_record_pattern.bx
 status 1
@@ -3491,7 +3497,7 @@ status 0
 
 $ check --json tests/spec/parser/statement_outside_a_function.bx
 status 1
-> {"file":"tests/spec/parser/statement_outside_a_function.bx","code":"L0100","message":"expected an import, a type, a trait, an instance, a derive, a function, an extern, or a process, found `total`","span":{"start":180,"len":5}}
+> {"file":"tests/spec/parser/statement_outside_a_function.bx","code":"L0100","message":"expected an import, a type, a trait, an instance, a derive, a function, an extern, or a process, found `let`","span":{"start":180,"len":3}}
 
 $ check --json tests/spec/parser/trait_over_two_types.bx
 status 1
@@ -3519,19 +3525,15 @@ status 1
 
 $ check --json tests/spec/parser/unknown_character.bx
 status 1
-> {"file":"tests/spec/parser/unknown_character.bx","code":"L0102","message":"this character is not part of the language","span":{"start":41,"len":1}}
+> {"file":"tests/spec/parser/unknown_character.bx","code":"L0102","message":"this character is not part of the language","span":{"start":44,"len":1}}
 
 $ check --json tests/spec/parser/unknown_escape.bx
 status 1
-> {"file":"tests/spec/parser/unknown_escape.bx","code":"L0104","message":"`\\q` is not an escape","span":{"start":43,"len":2},"help":"the escapes are `\\\"`, `\\\\`, `\\n`, `\\t`, and `\\r`"}
+> {"file":"tests/spec/parser/unknown_escape.bx","code":"L0104","message":"`\\q` is not an escape","span":{"start":46,"len":2},"help":"the escapes are `\\\"`, `\\\\`, `\\n`, `\\t`, and `\\r`"}
 
 $ check --json tests/spec/parser/unterminated_string.bx
 status 1
-> {"file":"tests/spec/parser/unterminated_string.bx","code":"L0101","message":"this string has no closing quote","span":{"start":41,"len":17},"help":"add a closing `\"` before the end of the line"}
-
-$ check --json tests/spec/parser/var_with_a_walrus.bx
-status 1
-> {"file":"tests/spec/parser/var_with_a_walrus.bx","code":"L0100","message":"expected `=`, found `:=`","span":{"start":145,"len":2}}
+> {"file":"tests/spec/parser/unterminated_string.bx","code":"L0101","message":"this string has no closing quote","span":{"start":44,"len":17},"help":"add a closing `\"` before the end of the line"}
 
 $ check --json tests/spec/parser/variant_with_empty_parentheses.bx
 status 1
@@ -3612,7 +3614,7 @@ status 0
 
 $ check --json tests/spec/traits/derived_holds_no_instance.bx
 status 1
-> {"file":"tests/spec/traits/derived_holds_no_instance.bx","code":"L0422","message":"`Basket` derives `Eq`, and the `List<Crate>` it holds as `crates` has none","span":{"start":323,"len":11},"help":"a derived instance reads what it holds by that type's own; give the held one"}
+> {"file":"tests/spec/traits/derived_holds_no_instance.bx","code":"L0422","message":"`Basket` derives `Eq`, and the `List<Crate>` it holds as `crates` has none","span":{"start":326,"len":11},"help":"a derived instance reads what it holds by that type's own; give the held one"}
 
 $ check --json tests/spec/traits/derived_ord.bx
 status 0
@@ -4325,10 +4327,10 @@ status 1
 $ api tests/spec/format/brackets_kept.bx
 status 1
 ! error[L0300]: there is nothing named `a`
-!   --> tests/spec/format/brackets_kept.bx:4:16
+!   --> tests/spec/format/brackets_kept.bx:4:19
 !
-!   4 |     first := (-a).b
-!     |                ^
+!   4 |     let first = (-a).b
+!     |                   ^
 !
 ! help: a name is declared in this file, imported, or supplied by the prelude
 
@@ -5003,10 +5005,10 @@ status 0
 $ api tests/spec/lexer/carriage_return.bx
 status 1
 ! error[L0101]: this string has no closing quote
-!   --> tests/spec/lexer/carriage_return.bx:4:13
+!   --> tests/spec/lexer/carriage_return.bx:4:16
 !
-!   4 |     name := "Alice
-!     |             ^^^^^^
+!   4 |     let name = "Alice
+!     |                ^^^^^^
 !
 ! help: add a closing `"` before the end of the line
 
@@ -5044,36 +5046,36 @@ status 0
 $ api tests/spec/lexer/unknown_character.bx
 status 1
 ! error[L0102]: this character is not part of the language
-!   --> tests/spec/lexer/unknown_character.bx:3:12
+!   --> tests/spec/lexer/unknown_character.bx:3:15
 !
-!   3 |     x := 1 @ 2
-!     |            ^
+!   3 |     let x = 1 @ 2
+!     |               ^
 
 $ api tests/spec/lexer/unknown_characters.bx
 status 1
 ! error[L0102]: this character is not part of the language
-!   --> tests/spec/lexer/unknown_characters.bx:6:12
+!   --> tests/spec/lexer/unknown_characters.bx:6:15
 !
-!   6 |     x := 1 @@ 2 # 3
-!     |            ^
+!   6 |     let x = 1 @@ 2 # 3
+!     |               ^
 
 $ api tests/spec/lexer/unterminated_at_the_end.bx
 status 1
 ! error[L0101]: this string has no closing quote
-!   --> tests/spec/lexer/unterminated_at_the_end.bx:4:13
+!   --> tests/spec/lexer/unterminated_at_the_end.bx:4:16
 !
-!   4 |     name := "Alice
-!     |             ^^^^^^
+!   4 |     let name = "Alice
+!     |                ^^^^^^
 !
 ! help: add a closing `"` before the end of the line
 
 $ api tests/spec/lexer/unterminated_string.bx
 status 1
 ! error[L0101]: this string has no closing quote
-!   --> tests/spec/lexer/unterminated_string.bx:3:13
+!   --> tests/spec/lexer/unterminated_string.bx:3:16
 !
-!   3 |     name := "Alice
-!     |             ^^^^^^
+!   3 |     let name = "Alice
+!     |                ^^^^^^
 !
 ! help: add a closing `"` before the end of the line
 
@@ -5572,10 +5574,10 @@ status 1
 $ api tests/spec/name_resolution/binding_sees_itself.bx
 status 1
 ! error[L0300]: there is nothing named `count`
-!   --> tests/spec/name_resolution/binding_sees_itself.bx:4:14
+!   --> tests/spec/name_resolution/binding_sees_itself.bx:4:17
 !
-!   4 |     count := count + 1
-!     |              ^^^^^
+!   4 |     let count = count + 1
+!     |                 ^^^^^
 !
 ! help: a name is declared in this file, imported, or supplied by the prelude
 
@@ -5735,10 +5737,10 @@ status 1
 $ api tests/spec/name_resolution/function_not_called.bx
 status 1
 ! error[L0304]: `helper` is a function, so it is written as a call
-!   --> tests/spec/name_resolution/function_not_called.bx:4:13
+!   --> tests/spec/name_resolution/function_not_called.bx:4:16
 !
-!   4 |     held := helper
-!     |             ^^^^^^
+!   4 |     let held = helper
+!     |                ^^^^^^
 !
 ! help: version 0.1 reaches a function by calling it; write the call
 
@@ -5835,10 +5837,10 @@ status 1
 $ api tests/spec/name_resolution/module_as_value.bx
 status 1
 ! error[L0304]: `io` is a module, so a name inside it is what is written
-!   --> tests/spec/name_resolution/module_as_value.bx:6:13
+!   --> tests/spec/name_resolution/module_as_value.bx:6:16
 !
-!   6 |     held := io
-!     |             ^^
+!   6 |     let held = io
+!     |                ^^
 !
 ! help: a module is what a name is reached through, as `io.println` is
 
@@ -5966,10 +5968,10 @@ status 0
 $ api tests/spec/name_resolution/shadowed_name.bx
 status 1
 ! error[L0302]: `seen` is already in scope here
-!   --> tests/spec/name_resolution/shadowed_name.bx:4:5
+!   --> tests/spec/name_resolution/shadowed_name.bx:4:9
 !
-!   4 |     seen := 1
-!     |     ^^^^
+!   4 |     let seen = 1
+!     |         ^^^^
 !
 ! help: rename the inner one; Bux never hides a name
 
@@ -6319,6 +6321,16 @@ status 1
 !
 ! help: build the value it becomes: `user { name: "Bob" }`
 
+$ api tests/spec/parser/bound_with_colon_equals.bx
+status 1
+! error[L0109]: `:=` does not bind a name
+!   --> tests/spec/parser/bound_with_colon_equals.bx:4:5
+!
+!   4 |     total := 0
+!     |     ^^^^^^^^
+!
+! help: write `let total =`
+
 $ api tests/spec/parser/chained_comparison.bx
 status 1
 ! error[L0105]: comparisons do not chain
@@ -6396,6 +6408,14 @@ status 1
 !   3 | derive Eq User
 !     |           ^^^^
 
+$ api tests/spec/parser/discard_as_a_let.bx
+status 1
+! error[L0100]: expected a name, found `_`
+!   --> tests/spec/parser/discard_as_a_let.bx:4:9
+!
+!   4 |     let _ = count
+!     |         ^
+
 $ api tests/spec/parser/discard_as_a_value.bx
 status 1
 ! error[L0100]: expected an expression, found `_`
@@ -6411,14 +6431,6 @@ status 1
 !
 !   4 |     var _ = count
 !     |         ^
-
-$ api tests/spec/parser/discard_with_a_walrus.bx
-status 1
-! error[L0100]: expected `=`, found `:=`
-!   --> tests/spec/parser/discard_with_a_walrus.bx:4:7
-!
-!   4 |     _ := count
-!     |       ^^
 
 $ api tests/spec/parser/empty_record_pattern.bx
 status 1
@@ -6622,11 +6634,11 @@ status 0
 
 $ api tests/spec/parser/statement_outside_a_function.bx
 status 1
-! error[L0100]: expected an import, a type, a trait, an instance, a derive, a function, an extern, or a process, found `total`
+! error[L0100]: expected an import, a type, a trait, an instance, a derive, a function, an extern, or a process, found `let`
 !   --> tests/spec/parser/statement_outside_a_function.bx:4:1
 !
-!   4 | total := 1
-!     | ^^^^^
+!   4 | let total = 1
+!     | ^^^
 
 $ api tests/spec/parser/trait_over_two_types.bx
 status 1
@@ -6679,38 +6691,30 @@ status 1
 $ api tests/spec/parser/unknown_character.bx
 status 1
 ! error[L0102]: this character is not part of the language
-!   --> tests/spec/parser/unknown_character.bx:3:10
+!   --> tests/spec/parser/unknown_character.bx:3:13
 !
-!   3 |     a := @
-!     |          ^
+!   3 |     let a = @
+!     |             ^
 
 $ api tests/spec/parser/unknown_escape.bx
 status 1
 ! error[L0104]: `\q` is not an escape
-!   --> tests/spec/parser/unknown_escape.bx:3:12
+!   --> tests/spec/parser/unknown_escape.bx:3:15
 !
-!   3 |     a := "a\qb"
-!     |            ^^
+!   3 |     let a = "a\qb"
+!     |               ^^
 !
 ! help: the escapes are `\"`, `\\`, `\n`, `\t`, and `\r`
 
 $ api tests/spec/parser/unterminated_string.bx
 status 1
 ! error[L0101]: this string has no closing quote
-!   --> tests/spec/parser/unterminated_string.bx:3:10
+!   --> tests/spec/parser/unterminated_string.bx:3:13
 !
-!   3 |     a := "no closing quote
-!     |          ^^^^^^^^^^^^^^^^^
+!   3 |     let a = "no closing quote
+!     |             ^^^^^^^^^^^^^^^^^
 !
 ! help: add a closing `"` before the end of the line
-
-$ api tests/spec/parser/var_with_a_walrus.bx
-status 1
-! error[L0100]: expected `=`, found `:=`
-!   --> tests/spec/parser/var_with_a_walrus.bx:4:15
-!
-!   4 |     var total := 0
-!     |               ^^
 
 $ api tests/spec/parser/variant_with_empty_parentheses.bx
 status 1
@@ -8377,10 +8381,10 @@ status 1
 $ test tests/spec/format/brackets_kept.bx
 status 1
 ! error[L0300]: there is nothing named `a`
-!   --> tests/spec/format/brackets_kept.bx:4:16
+!   --> tests/spec/format/brackets_kept.bx:4:19
 !
-!   4 |     first := (-a).b
-!     |                ^
+!   4 |     let first = (-a).b
+!     |                   ^
 !
 ! help: a name is declared in this file, imported, or supplied by the prelude
 
@@ -8913,10 +8917,10 @@ status 0
 $ test tests/spec/lexer/carriage_return.bx
 status 1
 ! error[L0101]: this string has no closing quote
-!   --> tests/spec/lexer/carriage_return.bx:4:13
+!   --> tests/spec/lexer/carriage_return.bx:4:16
 !
-!   4 |     name := "Alice
-!     |             ^^^^^^
+!   4 |     let name = "Alice
+!     |                ^^^^^^
 !
 ! help: add a closing `"` before the end of the line
 
@@ -8973,36 +8977,36 @@ status 1
 $ test tests/spec/lexer/unknown_character.bx
 status 1
 ! error[L0102]: this character is not part of the language
-!   --> tests/spec/lexer/unknown_character.bx:3:12
+!   --> tests/spec/lexer/unknown_character.bx:3:15
 !
-!   3 |     x := 1 @ 2
-!     |            ^
+!   3 |     let x = 1 @ 2
+!     |               ^
 
 $ test tests/spec/lexer/unknown_characters.bx
 status 1
 ! error[L0102]: this character is not part of the language
-!   --> tests/spec/lexer/unknown_characters.bx:6:12
+!   --> tests/spec/lexer/unknown_characters.bx:6:15
 !
-!   6 |     x := 1 @@ 2 # 3
-!     |            ^
+!   6 |     let x = 1 @@ 2 # 3
+!     |               ^
 
 $ test tests/spec/lexer/unterminated_at_the_end.bx
 status 1
 ! error[L0101]: this string has no closing quote
-!   --> tests/spec/lexer/unterminated_at_the_end.bx:4:13
+!   --> tests/spec/lexer/unterminated_at_the_end.bx:4:16
 !
-!   4 |     name := "Alice
-!     |             ^^^^^^
+!   4 |     let name = "Alice
+!     |                ^^^^^^
 !
 ! help: add a closing `"` before the end of the line
 
 $ test tests/spec/lexer/unterminated_string.bx
 status 1
 ! error[L0101]: this string has no closing quote
-!   --> tests/spec/lexer/unterminated_string.bx:3:13
+!   --> tests/spec/lexer/unterminated_string.bx:3:16
 !
-!   3 |     name := "Alice
-!     |             ^^^^^^
+!   3 |     let name = "Alice
+!     |                ^^^^^^
 !
 ! help: add a closing `"` before the end of the line
 
@@ -9310,10 +9314,10 @@ status 1
 $ test tests/spec/name_resolution/binding_sees_itself.bx
 status 1
 ! error[L0300]: there is nothing named `count`
-!   --> tests/spec/name_resolution/binding_sees_itself.bx:4:14
+!   --> tests/spec/name_resolution/binding_sees_itself.bx:4:17
 !
-!   4 |     count := count + 1
-!     |              ^^^^^
+!   4 |     let count = count + 1
+!     |                 ^^^^^
 !
 ! help: a name is declared in this file, imported, or supplied by the prelude
 
@@ -9453,10 +9457,10 @@ status 1
 $ test tests/spec/name_resolution/function_not_called.bx
 status 1
 ! error[L0304]: `helper` is a function, so it is written as a call
-!   --> tests/spec/name_resolution/function_not_called.bx:4:13
+!   --> tests/spec/name_resolution/function_not_called.bx:4:16
 !
-!   4 |     held := helper
-!     |             ^^^^^^
+!   4 |     let held = helper
+!     |                ^^^^^^
 !
 ! help: version 0.1 reaches a function by calling it; write the call
 
@@ -9553,10 +9557,10 @@ status 1
 $ test tests/spec/name_resolution/module_as_value.bx
 status 1
 ! error[L0304]: `io` is a module, so a name inside it is what is written
-!   --> tests/spec/name_resolution/module_as_value.bx:6:13
+!   --> tests/spec/name_resolution/module_as_value.bx:6:16
 !
-!   6 |     held := io
-!     |             ^^
+!   6 |     let held = io
+!     |                ^^
 !
 ! help: a module is what a name is reached through, as `io.println` is
 
@@ -9697,10 +9701,10 @@ status 1
 $ test tests/spec/name_resolution/shadowed_name.bx
 status 1
 ! error[L0302]: `seen` is already in scope here
-!   --> tests/spec/name_resolution/shadowed_name.bx:4:5
+!   --> tests/spec/name_resolution/shadowed_name.bx:4:9
 !
-!   4 |     seen := 1
-!     |     ^^^^
+!   4 |     let seen = 1
+!     |         ^^^^
 !
 ! help: rename the inner one; Bux never hides a name
 
@@ -10041,6 +10045,16 @@ status 1
 !
 ! help: build the value it becomes: `user { name: "Bob" }`
 
+$ test tests/spec/parser/bound_with_colon_equals.bx
+status 1
+! error[L0109]: `:=` does not bind a name
+!   --> tests/spec/parser/bound_with_colon_equals.bx:4:5
+!
+!   4 |     total := 0
+!     |     ^^^^^^^^
+!
+! help: write `let total =`
+
 $ test tests/spec/parser/chained_comparison.bx
 status 1
 ! error[L0105]: comparisons do not chain
@@ -10088,6 +10102,14 @@ status 1
 !   3 | derive Eq User
 !     |           ^^^^
 
+$ test tests/spec/parser/discard_as_a_let.bx
+status 1
+! error[L0100]: expected a name, found `_`
+!   --> tests/spec/parser/discard_as_a_let.bx:4:9
+!
+!   4 |     let _ = count
+!     |         ^
+
 $ test tests/spec/parser/discard_as_a_value.bx
 status 1
 ! error[L0100]: expected an expression, found `_`
@@ -10103,14 +10125,6 @@ status 1
 !
 !   4 |     var _ = count
 !     |         ^
-
-$ test tests/spec/parser/discard_with_a_walrus.bx
-status 1
-! error[L0100]: expected `=`, found `:=`
-!   --> tests/spec/parser/discard_with_a_walrus.bx:4:7
-!
-!   4 |     _ := count
-!     |       ^^
 
 $ test tests/spec/parser/empty_record_pattern.bx
 status 1
@@ -10264,11 +10278,11 @@ status 0
 
 $ test tests/spec/parser/statement_outside_a_function.bx
 status 1
-! error[L0100]: expected an import, a type, a trait, an instance, a derive, a function, an extern, or a process, found `total`
+! error[L0100]: expected an import, a type, a trait, an instance, a derive, a function, an extern, or a process, found `let`
 !   --> tests/spec/parser/statement_outside_a_function.bx:4:1
 !
-!   4 | total := 1
-!     | ^^^^^
+!   4 | let total = 1
+!     | ^^^
 
 $ test tests/spec/parser/trait_over_two_types.bx
 status 1
@@ -10321,38 +10335,30 @@ status 1
 $ test tests/spec/parser/unknown_character.bx
 status 1
 ! error[L0102]: this character is not part of the language
-!   --> tests/spec/parser/unknown_character.bx:3:10
+!   --> tests/spec/parser/unknown_character.bx:3:13
 !
-!   3 |     a := @
-!     |          ^
+!   3 |     let a = @
+!     |             ^
 
 $ test tests/spec/parser/unknown_escape.bx
 status 1
 ! error[L0104]: `\q` is not an escape
-!   --> tests/spec/parser/unknown_escape.bx:3:12
+!   --> tests/spec/parser/unknown_escape.bx:3:15
 !
-!   3 |     a := "a\qb"
-!     |            ^^
+!   3 |     let a = "a\qb"
+!     |               ^^
 !
 ! help: the escapes are `\"`, `\\`, `\n`, `\t`, and `\r`
 
 $ test tests/spec/parser/unterminated_string.bx
 status 1
 ! error[L0101]: this string has no closing quote
-!   --> tests/spec/parser/unterminated_string.bx:3:10
+!   --> tests/spec/parser/unterminated_string.bx:3:13
 !
-!   3 |     a := "no closing quote
-!     |          ^^^^^^^^^^^^^^^^^
+!   3 |     let a = "no closing quote
+!     |             ^^^^^^^^^^^^^^^^^
 !
 ! help: add a closing `"` before the end of the line
-
-$ test tests/spec/parser/var_with_a_walrus.bx
-status 1
-! error[L0100]: expected `=`, found `:=`
-!   --> tests/spec/parser/var_with_a_walrus.bx:4:15
-!
-!   4 |     var total := 0
-!     |               ^^
 
 $ test tests/spec/parser/variant_with_empty_parentheses.bx
 status 1
@@ -12448,10 +12454,10 @@ status 0
 $ fmt tests/spec/lexer/carriage_return.bx
 status 1
 ! error[L0101]: this string has no closing quote
-!   --> tests/spec/lexer/carriage_return.bx:4:13
+!   --> tests/spec/lexer/carriage_return.bx:4:16
 !
-!   4 |     name := "Alice
-!     |             ^^^^^^
+!   4 |     let name = "Alice
+!     |                ^^^^^^
 !
 ! help: add a closing `"` before the end of the line
 
@@ -12469,36 +12475,36 @@ status 0
 $ fmt tests/spec/lexer/unknown_character.bx
 status 1
 ! error[L0102]: this character is not part of the language
-!   --> tests/spec/lexer/unknown_character.bx:3:12
+!   --> tests/spec/lexer/unknown_character.bx:3:15
 !
-!   3 |     x := 1 @ 2
-!     |            ^
+!   3 |     let x = 1 @ 2
+!     |               ^
 
 $ fmt tests/spec/lexer/unknown_characters.bx
 status 1
 ! error[L0102]: this character is not part of the language
-!   --> tests/spec/lexer/unknown_characters.bx:6:12
+!   --> tests/spec/lexer/unknown_characters.bx:6:15
 !
-!   6 |     x := 1 @@ 2 # 3
-!     |            ^
+!   6 |     let x = 1 @@ 2 # 3
+!     |               ^
 
 $ fmt tests/spec/lexer/unterminated_at_the_end.bx
 status 1
 ! error[L0101]: this string has no closing quote
-!   --> tests/spec/lexer/unterminated_at_the_end.bx:4:13
+!   --> tests/spec/lexer/unterminated_at_the_end.bx:4:16
 !
-!   4 |     name := "Alice
-!     |             ^^^^^^
+!   4 |     let name = "Alice
+!     |                ^^^^^^
 !
 ! help: add a closing `"` before the end of the line
 
 $ fmt tests/spec/lexer/unterminated_string.bx
 status 1
 ! error[L0101]: this string has no closing quote
-!   --> tests/spec/lexer/unterminated_string.bx:3:13
+!   --> tests/spec/lexer/unterminated_string.bx:3:16
 !
-!   3 |     name := "Alice
-!     |             ^^^^^^
+!   3 |     let name = "Alice
+!     |                ^^^^^^
 !
 ! help: add a closing `"` before the end of the line
 
@@ -12934,6 +12940,16 @@ status 1
 !
 ! help: build the value it becomes: `user { name: "Bob" }`
 
+$ fmt tests/spec/parser/bound_with_colon_equals.bx
+status 1
+! error[L0109]: `:=` does not bind a name
+!   --> tests/spec/parser/bound_with_colon_equals.bx:4:5
+!
+!   4 |     total := 0
+!     |     ^^^^^^^^
+!
+! help: write `let total =`
+
 $ fmt tests/spec/parser/chained_comparison.bx
 status 1
 ! error[L0105]: comparisons do not chain
@@ -12974,6 +12990,14 @@ status 1
 !   3 | derive Eq User
 !     |           ^^^^
 
+$ fmt tests/spec/parser/discard_as_a_let.bx
+status 1
+! error[L0100]: expected a name, found `_`
+!   --> tests/spec/parser/discard_as_a_let.bx:4:9
+!
+!   4 |     let _ = count
+!     |         ^
+
 $ fmt tests/spec/parser/discard_as_a_value.bx
 status 1
 ! error[L0100]: expected an expression, found `_`
@@ -12989,14 +13013,6 @@ status 1
 !
 !   4 |     var _ = count
 !     |         ^
-
-$ fmt tests/spec/parser/discard_with_a_walrus.bx
-status 1
-! error[L0100]: expected `=`, found `:=`
-!   --> tests/spec/parser/discard_with_a_walrus.bx:4:7
-!
-!   4 |     _ := count
-!     |       ^^
 
 $ fmt tests/spec/parser/empty_record_pattern.bx
 status 1
@@ -13112,11 +13128,11 @@ status 0
 
 $ fmt tests/spec/parser/statement_outside_a_function.bx
 status 1
-! error[L0100]: expected an import, a type, a trait, an instance, a derive, a function, an extern, or a process, found `total`
+! error[L0100]: expected an import, a type, a trait, an instance, a derive, a function, an extern, or a process, found `let`
 !   --> tests/spec/parser/statement_outside_a_function.bx:4:1
 !
-!   4 | total := 1
-!     | ^^^^^
+!   4 | let total = 1
+!     | ^^^
 
 $ fmt tests/spec/parser/trait_over_two_types.bx
 status 1
@@ -13169,38 +13185,30 @@ status 1
 $ fmt tests/spec/parser/unknown_character.bx
 status 1
 ! error[L0102]: this character is not part of the language
-!   --> tests/spec/parser/unknown_character.bx:3:10
+!   --> tests/spec/parser/unknown_character.bx:3:13
 !
-!   3 |     a := @
-!     |          ^
+!   3 |     let a = @
+!     |             ^
 
 $ fmt tests/spec/parser/unknown_escape.bx
 status 1
 ! error[L0104]: `\q` is not an escape
-!   --> tests/spec/parser/unknown_escape.bx:3:12
+!   --> tests/spec/parser/unknown_escape.bx:3:15
 !
-!   3 |     a := "a\qb"
-!     |            ^^
+!   3 |     let a = "a\qb"
+!     |               ^^
 !
 ! help: the escapes are `\"`, `\\`, `\n`, `\t`, and `\r`
 
 $ fmt tests/spec/parser/unterminated_string.bx
 status 1
 ! error[L0101]: this string has no closing quote
-!   --> tests/spec/parser/unterminated_string.bx:3:10
+!   --> tests/spec/parser/unterminated_string.bx:3:13
 !
-!   3 |     a := "no closing quote
-!     |          ^^^^^^^^^^^^^^^^^
+!   3 |     let a = "no closing quote
+!     |             ^^^^^^^^^^^^^^^^^
 !
 ! help: add a closing `"` before the end of the line
-
-$ fmt tests/spec/parser/var_with_a_walrus.bx
-status 1
-! error[L0100]: expected `=`, found `:=`
-!   --> tests/spec/parser/var_with_a_walrus.bx:4:15
-!
-!   4 |     var total := 0
-!     |               ^^
 
 $ fmt tests/spec/parser/variant_with_empty_parentheses.bx
 status 1
@@ -13975,10 +13983,10 @@ status 1
 $ build tests/spec/format/brackets_kept.bx
 status 1
 ! error[L0300]: there is nothing named `a`
-!   --> tests/spec/format/brackets_kept.bx:4:16
+!   --> tests/spec/format/brackets_kept.bx:4:19
 !
-!   4 |     first := (-a).b
-!     |                ^
+!   4 |     let first = (-a).b
+!     |                   ^
 !
 ! help: a name is declared in this file, imported, or supplied by the prelude
 
@@ -14504,10 +14512,10 @@ status 0
 $ build tests/spec/lexer/carriage_return.bx
 status 1
 ! error[L0101]: this string has no closing quote
-!   --> tests/spec/lexer/carriage_return.bx:4:13
+!   --> tests/spec/lexer/carriage_return.bx:4:16
 !
-!   4 |     name := "Alice
-!     |             ^^^^^^
+!   4 |     let name = "Alice
+!     |                ^^^^^^
 !
 ! help: add a closing `"` before the end of the line
 
@@ -14564,36 +14572,36 @@ status 1
 $ build tests/spec/lexer/unknown_character.bx
 status 1
 ! error[L0102]: this character is not part of the language
-!   --> tests/spec/lexer/unknown_character.bx:3:12
+!   --> tests/spec/lexer/unknown_character.bx:3:15
 !
-!   3 |     x := 1 @ 2
-!     |            ^
+!   3 |     let x = 1 @ 2
+!     |               ^
 
 $ build tests/spec/lexer/unknown_characters.bx
 status 1
 ! error[L0102]: this character is not part of the language
-!   --> tests/spec/lexer/unknown_characters.bx:6:12
+!   --> tests/spec/lexer/unknown_characters.bx:6:15
 !
-!   6 |     x := 1 @@ 2 # 3
-!     |            ^
+!   6 |     let x = 1 @@ 2 # 3
+!     |               ^
 
 $ build tests/spec/lexer/unterminated_at_the_end.bx
 status 1
 ! error[L0101]: this string has no closing quote
-!   --> tests/spec/lexer/unterminated_at_the_end.bx:4:13
+!   --> tests/spec/lexer/unterminated_at_the_end.bx:4:16
 !
-!   4 |     name := "Alice
-!     |             ^^^^^^
+!   4 |     let name = "Alice
+!     |                ^^^^^^
 !
 ! help: add a closing `"` before the end of the line
 
 $ build tests/spec/lexer/unterminated_string.bx
 status 1
 ! error[L0101]: this string has no closing quote
-!   --> tests/spec/lexer/unterminated_string.bx:3:13
+!   --> tests/spec/lexer/unterminated_string.bx:3:16
 !
-!   3 |     name := "Alice
-!     |             ^^^^^^
+!   3 |     let name = "Alice
+!     |                ^^^^^^
 !
 ! help: add a closing `"` before the end of the line
 
@@ -14901,10 +14909,10 @@ status 1
 $ build tests/spec/name_resolution/binding_sees_itself.bx
 status 1
 ! error[L0300]: there is nothing named `count`
-!   --> tests/spec/name_resolution/binding_sees_itself.bx:4:14
+!   --> tests/spec/name_resolution/binding_sees_itself.bx:4:17
 !
-!   4 |     count := count + 1
-!     |              ^^^^^
+!   4 |     let count = count + 1
+!     |                 ^^^^^
 !
 ! help: a name is declared in this file, imported, or supplied by the prelude
 
@@ -15044,10 +15052,10 @@ status 1
 $ build tests/spec/name_resolution/function_not_called.bx
 status 1
 ! error[L0304]: `helper` is a function, so it is written as a call
-!   --> tests/spec/name_resolution/function_not_called.bx:4:13
+!   --> tests/spec/name_resolution/function_not_called.bx:4:16
 !
-!   4 |     held := helper
-!     |             ^^^^^^
+!   4 |     let held = helper
+!     |                ^^^^^^
 !
 ! help: version 0.1 reaches a function by calling it; write the call
 
@@ -15144,10 +15152,10 @@ status 1
 $ build tests/spec/name_resolution/module_as_value.bx
 status 1
 ! error[L0304]: `io` is a module, so a name inside it is what is written
-!   --> tests/spec/name_resolution/module_as_value.bx:6:13
+!   --> tests/spec/name_resolution/module_as_value.bx:6:16
 !
-!   6 |     held := io
-!     |             ^^
+!   6 |     let held = io
+!     |                ^^
 !
 ! help: a module is what a name is reached through, as `io.println` is
 
@@ -15288,10 +15296,10 @@ status 1
 $ build tests/spec/name_resolution/shadowed_name.bx
 status 1
 ! error[L0302]: `seen` is already in scope here
-!   --> tests/spec/name_resolution/shadowed_name.bx:4:5
+!   --> tests/spec/name_resolution/shadowed_name.bx:4:9
 !
-!   4 |     seen := 1
-!     |     ^^^^
+!   4 |     let seen = 1
+!     |         ^^^^
 !
 ! help: rename the inner one; Bux never hides a name
 
@@ -15632,6 +15640,16 @@ status 1
 !
 ! help: build the value it becomes: `user { name: "Bob" }`
 
+$ build tests/spec/parser/bound_with_colon_equals.bx
+status 1
+! error[L0109]: `:=` does not bind a name
+!   --> tests/spec/parser/bound_with_colon_equals.bx:4:5
+!
+!   4 |     total := 0
+!     |     ^^^^^^^^
+!
+! help: write `let total =`
+
 $ build tests/spec/parser/chained_comparison.bx
 status 1
 ! error[L0105]: comparisons do not chain
@@ -15679,6 +15697,14 @@ status 1
 !   3 | derive Eq User
 !     |           ^^^^
 
+$ build tests/spec/parser/discard_as_a_let.bx
+status 1
+! error[L0100]: expected a name, found `_`
+!   --> tests/spec/parser/discard_as_a_let.bx:4:9
+!
+!   4 |     let _ = count
+!     |         ^
+
 $ build tests/spec/parser/discard_as_a_value.bx
 status 1
 ! error[L0100]: expected an expression, found `_`
@@ -15694,14 +15720,6 @@ status 1
 !
 !   4 |     var _ = count
 !     |         ^
-
-$ build tests/spec/parser/discard_with_a_walrus.bx
-status 1
-! error[L0100]: expected `=`, found `:=`
-!   --> tests/spec/parser/discard_with_a_walrus.bx:4:7
-!
-!   4 |     _ := count
-!     |       ^^
 
 $ build tests/spec/parser/empty_record_pattern.bx
 status 1
@@ -15855,11 +15873,11 @@ status 0
 
 $ build tests/spec/parser/statement_outside_a_function.bx
 status 1
-! error[L0100]: expected an import, a type, a trait, an instance, a derive, a function, an extern, or a process, found `total`
+! error[L0100]: expected an import, a type, a trait, an instance, a derive, a function, an extern, or a process, found `let`
 !   --> tests/spec/parser/statement_outside_a_function.bx:4:1
 !
-!   4 | total := 1
-!     | ^^^^^
+!   4 | let total = 1
+!     | ^^^
 
 $ build tests/spec/parser/trait_over_two_types.bx
 status 1
@@ -15912,38 +15930,30 @@ status 1
 $ build tests/spec/parser/unknown_character.bx
 status 1
 ! error[L0102]: this character is not part of the language
-!   --> tests/spec/parser/unknown_character.bx:3:10
+!   --> tests/spec/parser/unknown_character.bx:3:13
 !
-!   3 |     a := @
-!     |          ^
+!   3 |     let a = @
+!     |             ^
 
 $ build tests/spec/parser/unknown_escape.bx
 status 1
 ! error[L0104]: `\q` is not an escape
-!   --> tests/spec/parser/unknown_escape.bx:3:12
+!   --> tests/spec/parser/unknown_escape.bx:3:15
 !
-!   3 |     a := "a\qb"
-!     |            ^^
+!   3 |     let a = "a\qb"
+!     |               ^^
 !
 ! help: the escapes are `\"`, `\\`, `\n`, `\t`, and `\r`
 
 $ build tests/spec/parser/unterminated_string.bx
 status 1
 ! error[L0101]: this string has no closing quote
-!   --> tests/spec/parser/unterminated_string.bx:3:10
+!   --> tests/spec/parser/unterminated_string.bx:3:13
 !
-!   3 |     a := "no closing quote
-!     |          ^^^^^^^^^^^^^^^^^
+!   3 |     let a = "no closing quote
+!     |             ^^^^^^^^^^^^^^^^^
 !
 ! help: add a closing `"` before the end of the line
-
-$ build tests/spec/parser/var_with_a_walrus.bx
-status 1
-! error[L0100]: expected `=`, found `:=`
-!   --> tests/spec/parser/var_with_a_walrus.bx:4:15
-!
-!   4 |     var total := 0
-!     |               ^^
 
 $ build tests/spec/parser/variant_with_empty_parentheses.bx
 status 1

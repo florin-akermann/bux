@@ -3,12 +3,12 @@
 // `demo.User`, `demo.Pending`, and `demo.Held<Int>` whole, and a later phase finds `demo` missing.
 // A minus before digits is part of the number, and a postfix operator applies to that number.
 fn built(payment: demo.Payment) -> Holder {
-    first := demo.User { id: 1 }
-    second := demo.Pending
-    third := -5.abs()
-    fourth := -5?
-    fifth := --5
-    sixth := users.first().name?
+    let first = demo.User { id: 1 }
+    let second = demo.Pending
+    let third = -5.abs()
+    let fourth = -5?
+    let fifth = --5
+    let sixth = users.first().name?
     match payment {
         demo.Pending => Holder(first)
         demo.Failed(reason) => reason

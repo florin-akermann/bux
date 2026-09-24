@@ -50,8 +50,8 @@ fn checked(property: Property, cases: Int, library: ir.Library) -> held.Held {
     var found = held.nothing_failed(cases)
     var case = 0
     for case < cases {
-        seed := drawn.seed_of(case)
-        one := drawing(property: property, draw: drawn.seeded(seed), library: library)
+        let seed = drawn.seed_of(case)
+        let one = drawing(property: property, draw: drawn.seeded(seed), library: library)
         found = compiled.noted(found, one.why, held.drawn_failure(name_of(property), seed, one.source, one.why))
         case += 1
     }
@@ -85,8 +85,8 @@ fn name_of(property: Property) -> String {
 /// Every division of a drawn module tested against zero before it divides.
 // example: tested(drawn.seeded(1), ir.little_library()).source != ""
 fn tested(draw: drawn.Draw, library: ir.Library) -> Drawing {
-    source := dividing(draw)
-    lowered := compiled.lowered_alone(source, library)
+    let source = dividing(draw)
+    let lowered = compiled.lowered_alone(source, library)
     var why = refused(lowered)
     for body in compiled.demo_bodies(lowered) {
         why = untested(body, why)
@@ -102,7 +102,7 @@ fn untested(body: List<ir.Instruction>, why: String) -> String {
     var said = why
     for instruction in body {
         if is_dividing(instruction) {
-            divisor := slot_loaded(or(list.at(body, at - 1), ir.Copy))
+            let divisor = slot_loaded(or(list.at(body, at - 1), ir.Copy))
             if divisor < 0 || !is_tested_before(body: body, at: at, divisor: divisor) {
                 said = "it divides by slot " + shown(divisor) + " untested"
             }
@@ -128,7 +128,7 @@ fn is_dividing(instruction: ir.Instruction) -> Bool {
 fn is_tested_before(body: List<ir.Instruction>, at: Int, divisor: Int) -> Bool {
     var from = 0
     for from + 2 < at {
-        loaded := is_long_loaded(or(list.at(body, from), ir.Copy), divisor)
+        let loaded = is_long_loaded(or(list.at(body, from), ir.Copy), divisor)
         if loaded && is_long_zero(or(list.at(body, from + 1), ir.Copy)) && is_long_equality(or(list.at(body, from + 2), ir.Copy)) {
             return true
         }
@@ -170,8 +170,8 @@ fn is_long_equality(instruction: ir.Instruction) -> Bool {
 /// A module that divides building both a `Some` and a `None`.
 // example: both_answers(drawn.seeded(1), ir.little_library()).source != ""
 fn both_answers(draw: drawn.Draw, library: ir.Library) -> Drawing {
-    source := dividing(draw)
-    lowered := compiled.lowered_alone(source, library)
+    let source = dividing(draw)
+    let lowered = compiled.lowered_alone(source, library)
     var built = []
     for body in compiled.demo_bodies(lowered) {
         built = compiled.both(built, compiled.reached_in(body))
@@ -188,25 +188,25 @@ fn both_answers(draw: drawn.Draw, library: ir.Library) -> Drawing {
 /// A module that divides, drawn from the operators, the operands, and where the division is.
 // example: dividing(drawn.seeded(1)) != ""
 fn dividing(draw: drawn.Draw) -> String {
-    operator := drawn.picked(draw, ["/", "%"], "")
-    dividend := drawn.picked(drawn.next(draw), operands(), "")
-    divisor := drawn.picked(drawn.next(drawn.next(draw)), operands(), "")
-    context := drawn.picked(drawn.next(drawn.next(drawn.next(draw))), contexts(), "")
+    let operator = drawn.picked(draw, ["/", "%"], "")
+    let dividend = drawn.picked(drawn.next(draw), operands(), "")
+    let divisor = drawn.picked(drawn.next(drawn.next(draw)), operands(), "")
+    let context = drawn.picked(drawn.next(drawn.next(drawn.next(draw))), contexts(), "")
     compiled.replaced(context, "{}", dividend + " " + operator + " " + divisor)
 }
 
 /// The ways a division is written, each holding it where `{}` is.
 // example: list.length(contexts()) == 4
 fn contexts() -> List<String> {
-    ["fn go(a: Int, b: Int) -> Option<Int> {\n    {}\n}\n", "fn go(a: Int, b: Int) -> Int {\n    or({}, 0)\n}\n", "fn go(a: Int, b: Int) -> Option<Int> {\n    held := {}\n    held\n}\n", "fn is_same(a: Int, b: Int) -> Bool {\n    or({}, 0) == a\n}\n"]
+    ["fn go(a: Int, b: Int) -> Option<Int> {\n    {}\n}\n", "fn go(a: Int, b: Int) -> Int {\n    or({}, 0)\n}\n", "fn go(a: Int, b: Int) -> Option<Int> {\n    let held = {}\n    held\n}\n", "fn is_same(a: Int, b: Int) -> Bool {\n    or({}, 0) == a\n}\n"]
 }
 
 /// An `or` over a division, with a drawn fallback, written out in place.
 // example: written_out(drawn.seeded(1), ir.little_library()).source != ""
 fn written_out(draw: drawn.Draw, library: ir.Library) -> Drawing {
-    fallback := drawn.picked(draw, operands(), "")
-    source := "fn go(a: Int, b: Int) -> Int {\n    or(a / b, " + fallback + ")\n}\n"
-    body := compiled.instructions_of(compiled.lowered_alone(source, library), "go")
+    let fallback = drawn.picked(draw, operands(), "")
+    let source = "fn go(a: Int, b: Int) -> Int {\n    or(a / b, " + fallback + ")\n}\n"
+    let body = compiled.instructions_of(compiled.lowered_alone(source, library), "go")
     Drawing { source: source, why: called_or_why(body) }
 }
 
@@ -239,11 +239,11 @@ fn field_read(instruction: ir.Instruction) -> String {
 /// An `or` whose fallback is drawn arithmetic, worked out before the variant is asked for.
 // example: fallback_first(drawn.seeded(1), ir.little_library()).source != ""
 fn fallback_first(draw: drawn.Draw, library: ir.Library) -> Drawing {
-    operator := drawn.picked(draw, ["+", "-", "*"], "")
-    source := "fn go(a: Int, b: Int) -> Int {\n    or(a / b, a " + operator + " b)\n}\n"
-    body := compiled.instructions_of(compiled.lowered_alone(source, library), "go")
-    worked_out := position_of_arithmetic(body, operator)
-    asked := position_of_equality(body)
+    let operator = drawn.picked(draw, ["+", "-", "*"], "")
+    let source = "fn go(a: Int, b: Int) -> Int {\n    or(a / b, a " + operator + " b)\n}\n"
+    let body = compiled.instructions_of(compiled.lowered_alone(source, library), "go")
+    let worked_out = position_of_arithmetic(body, operator)
+    let asked = position_of_equality(body)
     var why = ""
     if worked_out < 0 || asked < 0 || worked_out > asked {
         why = "the fallback is worked out at " + shown(worked_out) + ", and the variant asked for at " + shown(asked)
@@ -294,11 +294,11 @@ fn arithmetic_written(instruction: ir.Instruction) -> String {
 /// Every `?` on an `Option` in a drawn module, each loading what it tested and giving it back.
 // example: handed_back(drawn.seeded(1), ir.little_library()).source != ""
 fn handed_back(draw: drawn.Draw, library: ir.Library) -> Drawing {
-    dividend := drawn.picked(draw, operands(), "")
-    divisor := drawn.picked(drawn.next(draw), operands(), "")
-    context := drawn.picked(drawn.next(drawn.next(draw)), propagating(), "")
-    source := compiled.replaced(context, "{}", dividend + " / " + divisor)
-    lowered := compiled.lowered_alone(source, library)
+    let dividend = drawn.picked(draw, operands(), "")
+    let divisor = drawn.picked(drawn.next(draw), operands(), "")
+    let context = drawn.picked(drawn.next(drawn.next(draw)), propagating(), "")
+    let source = compiled.replaced(context, "{}", dividend + " / " + divisor)
+    let lowered = compiled.lowered_alone(source, library)
     var why = refused(lowered)
     var propagated = 0
     for body in compiled.demo_bodies(lowered) {
@@ -331,7 +331,7 @@ fn refused(lowered: List<ir.Lowered>) -> String {
 /// The ways a `?` on an `Option` is written, each holding a division where `{}` is.
 // example: list.length(propagating()) == 5
 fn propagating() -> List<String> {
-    ["fn go(a: Int, b: Int) -> Option<Int> {\n    Some(({})?)\n}\n", "fn go(a: Int, b: Int) -> Option<Int> {\n    held := ({})?\n    Some(held)\n}\n", "fn go(a: Int, b: Int) -> Option<Int> {\n    Some((({})? / 2)? + 2 * 5)\n}\n", "fn is_same(a: Int, b: Int) -> Option<Bool> {\n    Some(({})? == a)\n}\n", "fn go(a: Int, b: Int) -> Option<Int> {\n    if a == b {\n        return Some(({})?)\n    }\n    Some(0)\n}\n"]
+    ["fn go(a: Int, b: Int) -> Option<Int> {\n    Some(({})?)\n}\n", "fn go(a: Int, b: Int) -> Option<Int> {\n    let held = ({})?\n    Some(held)\n}\n", "fn go(a: Int, b: Int) -> Option<Int> {\n    Some((({})? / 2)? + 2 * 5)\n}\n", "fn is_same(a: Int, b: Int) -> Option<Bool> {\n    Some(({})? == a)\n}\n", "fn go(a: Int, b: Int) -> Option<Int> {\n    if a == b {\n        return Some(({})?)\n    }\n    Some(0)\n}\n"]
 }
 
 /// Where each test of `body` for the `None` a `?` hands back begins.
@@ -342,7 +342,7 @@ fn none_tests(body: List<ir.Instruction>) -> List<Int> {
     var found = []
     var at = 0
     for at + 3 < list.length(body) {
-        tag := is_option_tag(or(list.at(body, at), ir.Copy)) && is_none_tag(or(list.at(body, at + 1), ir.Copy))
+        let tag = is_option_tag(or(list.at(body, at), ir.Copy)) && is_none_tag(or(list.at(body, at + 1), ir.Copy))
         if tag && is_integer_equality(or(list.at(body, at + 2), ir.Copy)) && is_jump_if_false(or(list.at(body, at + 3), ir.Copy)) {
             found = list.push(found, at)
         }
@@ -396,11 +396,11 @@ fn is_jump_if_false(instruction: ir.Instruction) -> Bool {
 /// loads the same slot and gives it back as an `Option`.
 // example: propagation_why(body: [], at: 0, why: "") == "a `?` reads the tag of what it did not load"
 fn propagation_why(body: List<ir.Instruction>, at: Int, why: String) -> String {
-    slot := slot_loaded(or(list.at(body, at - 1), ir.Copy))
+    let slot = slot_loaded(or(list.at(body, at - 1), ir.Copy))
     if slot < 0 {
         return "a `?` reads the tag of what it did not load"
     }
-    loaded := is_option_loaded(or(list.at(body, at + 4), ir.Copy), slot)
+    let loaded = is_option_loaded(or(list.at(body, at + 4), ir.Copy), slot)
     if !loaded || !is_option_returned(or(list.at(body, at + 5), ir.Copy)) {
         return "a `?` builds a `None` rather than give back the one in slot " + shown(slot)
     }

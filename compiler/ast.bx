@@ -40,11 +40,11 @@ fn item_lines(declared: Item) -> String {
 /// An `extern`: the member it reaches, the Java name, each parameter, and the result.
 // example: extern_lines(ExternDeclaration { name: Name { text: "now", span: lexer.Span { start: 0, length: 3 } }, reaches: Constructor, gives: GivesAsDeclared, parameters: [], result: TypeRef { kind: UnitType, span: lexer.Span { start: 5, length: 2 } }, span: lexer.Span { start: 0, length: 7 } }) == "extern new now 0..7\n  result\n    unit-type 5..7\n"
 fn extern_lines(declaration: ExternDeclaration) -> String {
-    width := written_before(gives_word(declaration.gives))
+    let width = written_before(gives_word(declaration.gives))
     var written = node(0, "extern " + reaches_word(declaration.reaches) + " " + width + declaration.name.text, declaration.span)
     written += reached_lines(declaration.reaches)
     for taken in declaration.parameters {
-        narrowed := written_before(takes_word(taken.takes))
+        let narrowed = written_before(takes_word(taken.takes))
         written += parameter_lines(taken.declared, narrowed, 1)
     }
     written + group(1, "result") + type_ref_lines(declaration.result, 2)
@@ -243,7 +243,7 @@ fn function_lines(declaration: FunctionDeclaration, depth: Int) -> String {
 /// A parameter at `depth`, with `narrowed` before its name and its type one level in.
 // example: parameter_lines(Parameter { name: Name { text: "at", span: lexer.Span { start: 0, length: 2 } }, type_ref: None, span: lexer.Span { start: 0, length: 2 } }, "", 1) == "  parameter at 0..2\n"
 fn parameter_lines(parameter: Parameter, narrowed: String, depth: Int) -> String {
-    written := node(depth, "parameter " + narrowed + parameter.name.text, parameter.span)
+    let written = node(depth, "parameter " + narrowed + parameter.name.text, parameter.span)
     match parameter.type_ref {
         Some(type_ref) => written + type_ref_lines(type_ref, depth + 1)
         None => written
@@ -294,7 +294,7 @@ fn block_lines(block: Block, depth: Int) -> String {
 /// An expression written as a statement is no node of its own, so it is written at `depth`.
 // example: statement_lines(Statement { kind: Break, span: lexer.Span { start: 4, length: 5 } }, 2) == "    break 4..9\n"
 fn statement_lines(statement: Statement, depth: Int) -> String {
-    span := statement.span
+    let span = statement.span
     match statement.kind {
         Binding { mutability, name, value } => node(depth, "binding " + mutability_word(mutability) + " " + name.text, span) + expression_lines(value, depth + 1)
         Assign { target, operator, value } => node(depth, "assign " + assign_word(operator), span) + node(depth + 1, "name " + target.text, target.span) + expression_lines(value, depth + 1)
@@ -337,7 +337,7 @@ fn optional_lines(value: Option<Expr>, depth: Int) -> String {
 /// A `for` loop, which is named by what it loops over, and its body one level in.
 // example: for_lines(ForLoop { header: Forever, body: Block { statements: [], span: lexer.Span { start: 4, length: 3 } } }, lexer.Span { start: 0, length: 7 }, 0) == "for 0..7\n  block 4..7\n"
 fn for_lines(written: ForLoop, span: lexer.Span, depth: Int) -> String {
-    header := match written.header {
+    let header = match written.header {
         Forever => node(depth, "for", span)
         While(condition) => node(depth, "for-while", span) + expression_lines(condition, depth + 1)
         Over { binding, iterable } => node(depth, "for-in " + binding.text, span) + expression_lines(iterable, depth + 1)
@@ -349,7 +349,7 @@ fn for_lines(written: ForLoop, span: lexer.Span, depth: Int) -> String {
 // example: expression_lines(Expr { kind: Integer(-7), span: lexer.Span { start: 0, length: 2 } }, 0) == "integer -7 0..2\n"
 // example: expression_lines(Expr { kind: Text("a\"b"), span: lexer.Span { start: 0, length: 6 } }, 0) == "string \"a\\\"b\" 0..6\n"
 fn expression_lines(expr: Expr, depth: Int) -> String {
-    span := expr.span
+    let span = expr.span
     match expr.kind {
         NameExpr(name) => node(depth, "name " + name.text, span)
         Integer(value) => node(depth, "integer " + shown(value), span)
@@ -404,7 +404,7 @@ fn argument_lines(arguments: Arguments, depth: Int) -> String {
 fn named_argument_lines(arguments: List<NamedArgument>, depth: Int) -> String {
     var written = ""
     for argument in arguments {
-        span := lexer.Span { start: argument.name.span.start, length: end_of(argument.value.span) - argument.name.span.start }
+        let span = lexer.Span { start: argument.name.span.start, length: end_of(argument.value.span) - argument.name.span.start }
         written += node(depth, "argument " + argument.name.text, span)
         written += expression_lines(expr: argument.value, depth: depth + 1)
     }
@@ -441,7 +441,7 @@ fn match_lines(matched: MatchExpr, span: lexer.Span, depth: Int) -> String {
 /// A pattern, and what it is made of one level in.
 // example: pattern_lines(Pattern { kind: Wildcard, span: lexer.Span { start: 0, length: 1 } }, 0) == "pattern-wildcard 0..1\n"
 fn pattern_lines(pattern: Pattern, depth: Int) -> String {
-    span := pattern.span
+    let span = pattern.span
     match pattern.kind {
         NamePattern(path) => node(depth, "pattern " + path_text(path), span)
         TuplePattern { path, elements } => node(depth, "pattern-tuple " + path_text(path), span) + pattern_list_lines(elements, depth + 1)
@@ -558,11 +558,11 @@ fn escaped(unit: Int, letter: String) -> String {
 // example: hexadecimal(127) == "7f"
 // example: hexadecimal(0) == "0"
 fn hexadecimal(value: Int) -> String {
-    digits := "0123456789abcdef"
+    let digits = "0123456789abcdef"
     var rest = value
     var written = ""
     for {
-        digit := or(rest % 16, 0)
+        let digit = or(rest % 16, 0)
         written = or(strings.cut(digits, digit, digit + 1), "") + written
         rest = or(rest / 16, 0)
         if rest == 0 {

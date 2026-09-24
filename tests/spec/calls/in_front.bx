@@ -4,7 +4,7 @@
 import io
 
 fn main(arguments: List<String>) -> Int {
-    count := 3
+    let count = 3
     io.println(count.described("apples"))
     0
 }

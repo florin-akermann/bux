@@ -13,7 +13,7 @@ import strings
 fn every_file(directory: String, ending: String) -> List<String> {
     var found = []
     for name in ok_or(files.listed(directory), []) {
-        path := modules.joined(directory, name)
+        let path = modules.joined(directory, name)
         if command.is_folder(command.place_at(path)) {
             for below in every_file(directory: path, ending: ending) {
                 found = list.push(found, below)
@@ -30,7 +30,7 @@ fn every_file(directory: String, ending: String) -> List<String> {
 fn files_in(directory: String, ending: String) -> List<String> {
     var found = []
     for name in ok_or(files.listed(directory), []) {
-        path := modules.joined(directory, name)
+        let path = modules.joined(directory, name)
         if is_ending_in(text: name, ending: ending) && !command.is_folder(command.place_at(path)) {
             found = list.push(found, path)
         }
@@ -41,7 +41,7 @@ fn files_in(directory: String, ending: String) -> List<String> {
 /// `path` with the extension after its last dot put in place of `extension`.
 // example: sibling(path: "a/b.bx", extension: "tokens") == "a/b.tokens"
 fn sibling(path: String, extension: String) -> String {
-    dot := command.last_dot(path)
+    let dot = command.last_dot(path)
     if dot < 0 {
         return path + "." + extension
     }
@@ -52,7 +52,7 @@ fn sibling(path: String, extension: String) -> String {
 // example: is_ending_in(text: "a.bx", ending: ".bx")
 // example: !is_ending_in(text: "a.bxx", ending: ".bx")
 fn is_ending_in(text: String, ending: String) -> Bool {
-    from := strings.length(text) - strings.length(ending)
+    let from = strings.length(text) - strings.length(ending)
     from >= 0 && or(strings.cut(text, from, strings.length(text)), "") == ending
 }
 
@@ -82,9 +82,9 @@ fn lines_of(text: String) -> List<String> {
 /// started is stopped, so one program that never ends cannot stop the runner.
 // example: ok_or(completed(line: ["no-such-program-at-all"], directory: "no-such-directory", limit: 1), Ended { output: "", errors: "", status: 7 }).status == 7
 fn completed(line: List<String>, directory: String, limit: Int) -> Result<Ended, Unended> {
-    output := modules.joined(directory, ".output")
-    errors := modules.joined(directory, ".errors")
-    starting := errors_to(output_to(input_from(within(starter(line), place(directory)), place("/dev/null")), place(output)), place(errors))
+    let output = modules.joined(directory, ".output")
+    let errors = modules.joined(directory, ".errors")
+    let starting = errors_to(output_to(input_from(within(starter(line), place(directory)), place("/dev/null")), place(output)), place(errors))
     match started(starting) {
         Ok(running) => ended_or_stopped(running, limit, Streams { output: output, errors: errors })
         Err(_) => Err(NotStarted)

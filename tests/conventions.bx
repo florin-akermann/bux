@@ -28,9 +28,9 @@ fn a_statement_that_leaves_a_value_is_refused_above_the_last(cases: Int, library
 /// A drawn statement above a `()`.
 // example: above_tried(drawn.seeded(1), ir.little_library()).why == ""
 fn above_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
-    above := drawn.picked(draw, statements(), Left { written: "()", leaves: "()" })
-    source := body(result: "()", written: "    " + above.written + "\n    ()")
-    is_refused := !checking.is_accepted(source, library)
+    let above = drawn.picked(draw, statements(), Left { written: "()", leaves: "()" })
+    let source = body(result: "()", written: "    " + above.written + "\n    ()")
+    let is_refused = !checking.is_accepted(source, library)
     if is_refused != (above.leaves != "()") {
         return checking.Tried { input: source, why: "refused is " + shown(is_refused) + " where it leaves " + above.leaves }
     }
@@ -42,8 +42,8 @@ fn above_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
 fn the_last_statement_is_the_value_given_back(cases: Int, library: ir.Library) -> held.Held {
     var found = held.nothing_failed(cases)
     for seed in checking.seeds(cases) {
-        last := drawn.picked(drawn.seeded(seed), statements(), Left { written: "()", leaves: "()" })
-        source := body(result: last.leaves, written: "    " + last.written)
+        let last = drawn.picked(drawn.seeded(seed), statements(), Left { written: "()", leaves: "()" })
+        let source = body(result: last.leaves, written: "    " + last.written)
         found = checking.noted(found, "the_last_statement_is_the_value_given_back", seed, accepted_tried(source, library))
     }
     found
@@ -54,8 +54,8 @@ fn the_last_statement_is_the_value_given_back(cases: Int, library: ir.Library) -
 fn an_underscore_makes_any_statement_compile(cases: Int, library: ir.Library) -> held.Held {
     var found = held.nothing_failed(cases)
     for seed in checking.seeds(cases) {
-        thrown := drawn.picked(drawn.seeded(seed), statements(), Left { written: "()", leaves: "()" })
-        source := body(result: "()", written: "    _ = " + thrown.written + "\n    ()")
+        let thrown = drawn.picked(drawn.seeded(seed), statements(), Left { written: "()", leaves: "()" })
+        let source = body(result: "()", written: "    _ = " + thrown.written + "\n    ()")
         found = checking.noted(found, "an_underscore_makes_any_statement_compile", seed, accepted_tried(source, library))
     }
     found
@@ -74,9 +74,9 @@ fn a_repeated_type_is_called_by_name_only(cases: Int, library: ir.Library) -> he
 /// A drawn type, taken twice, and called both ways.
 // example: repeated_tried(drawn.seeded(1), ir.little_library()).why == ""
 fn repeated_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
-    value := drawn.picked(draw, passable(), Left { written: "1", leaves: "Int" })
-    pair := Pair { first: value, second: value }
-    named := accepted_tried(taking(pair, named_call(pair)), library)
+    let value = drawn.picked(draw, passable(), Left { written: "1", leaves: "Int" })
+    let pair = Pair { first: value, second: value }
+    let named = accepted_tried(taking(pair, named_call(pair)), library)
     if named.why != "" {
         return named
     }
@@ -96,11 +96,11 @@ fn differing_types_are_called_either_way(cases: Int, library: ir.Library) -> hel
 /// Two drawn types, and where they differ, a call of each spelling.
 // example: differing_tried(drawn.seeded(1), ir.little_library()).why == ""
 fn differing_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
-    pair := pair_drawn(draw)
+    let pair = pair_drawn(draw)
     if pair.first.leaves == pair.second.leaves {
         return checking.Tried { input: pair.first.leaves, why: "" }
     }
-    named := accepted_tried(taking(pair, named_call(pair)), library)
+    let named = accepted_tried(taking(pair, named_call(pair)), library)
     if named.why != "" {
         return named
     }
@@ -120,8 +120,8 @@ fn a_call_that_compiles_compiles_named(cases: Int, library: ir.Library) -> held.
 /// Two drawn types, called in order, and where that compiles, called with names.
 // example: named_tried(drawn.seeded(1), ir.little_library()).why == ""
 fn named_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
-    pair := pair_drawn(draw)
-    in_order := taking(pair, in_order_call(pair))
+    let pair = pair_drawn(draw)
+    let in_order = taking(pair, in_order_call(pair))
     if !checking.is_accepted(in_order, library) {
         return checking.Tried { input: in_order, why: "" }
     }
@@ -131,8 +131,8 @@ fn named_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
 /// Two values, each drawn from the values a parameter may take.
 // example: pair_drawn(drawn.seeded(1)).first.leaves != ""
 fn pair_drawn(draw: drawn.Draw) -> Pair {
-    first := drawn.picked(draw, passable(), Left { written: "1", leaves: "Int" })
-    second := drawn.picked(drawn.next(draw), passable(), Left { written: "1", leaves: "Int" })
+    let first = drawn.picked(draw, passable(), Left { written: "1", leaves: "Int" })
+    let second = drawn.picked(drawn.next(draw), passable(), Left { written: "1", leaves: "Int" })
     Pair { first: first, second: second }
 }
 
@@ -167,13 +167,13 @@ fn a_bool_parameter_compiles_only_in_an_all_bool_signature(cases: Int, library: 
 /// A drawn signature of `Bool` and `Int`, refused as a flag or accepted.
 // example: flag_tried(drawn.seeded(1), ir.little_library()).why == ""
 fn flag_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
-    takes := drawn_takes(draw)
-    gives := drawn.picked(checking.after(draw, 9), ["Bool", "Int"], "Int")
-    source := "fn is_open(" + parameters_of(takes) + ") -> " + gives + " {\n    todo(\"the body is not the point\")\n}\n"
+    let takes = drawn_takes(draw)
+    let gives = drawn.picked(checking.after(draw, 9), ["Bool", "Int"], "Int")
+    let source = "fn is_open(" + parameters_of(takes) + ") -> " + gives + " {\n    todo(\"the body is not the point\")\n}\n"
     if !is_a_flag(takes: takes, gives: gives) {
         return accepted_tried(source, library)
     }
-    help := checking.help_of(checking.checked(source, library))
+    let help = checking.help_of(checking.checked(source, library))
     if help != "declare a two-variant type and take that instead, so the call says which of the two" {
         return checking.Tried { input: source, why: "the help is " + held.quoted(help) }
     }
@@ -222,15 +222,15 @@ fn a_bool_function_compiles_where_its_name_asks(cases: Int, library: ir.Library)
 /// A drawn name, opened with a question or not, over a drawn result.
 // example: question_tried(drawn.seeded(1), ir.little_library()).input != ""
 fn question_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
-    opener := drawn.picked(draw, ["is_", "has_", "can_", "should_", "was_", ""], "")
-    word := drawn.picked(drawn.next(draw), ["active", "paid", "island"], "active")
-    gives := drawn.picked(checking.after(draw, 2), ["Bool", "Int"], "Int")
+    let opener = drawn.picked(draw, ["is_", "has_", "can_", "should_", "was_", ""], "")
+    let word = drawn.picked(drawn.next(draw), ["active", "paid", "island"], "active")
+    let gives = drawn.picked(checking.after(draw, 2), ["Bool", "Int"], "Int")
     var value = "count"
     if gives == "Bool" {
         value = "count > 1"
     }
-    source := "fn " + opener + word + "(count: Int) -> " + gives + " {\n    " + value + "\n}\n"
-    is_asking := list.has_value(["is_", "has_", "can_", "should_"], opener)
+    let source = "fn " + opener + word + "(count: Int) -> " + gives + " {\n    " + value + "\n}\n"
+    let is_asking = list.has_value(["is_", "has_", "can_", "should_"], opener)
     if checking.is_accepted(source, library) != (is_asking || gives != "Bool") {
         return checking.Tried { input: source, why: "accepted is " + shown(checking.is_accepted(source, library)) }
     }

@@ -28,13 +28,13 @@ No token is decoded here: the value of an integer or string literal is the parse
 | `Unknown`            | one character the language has no use for                              |
 
 The keywords are the words the grammar reserves:
-`fn`, `type`, `trait`, `instance`, `derive`, `var`, `if`, `else`, `for`, `in`, `match`,
+`fn`, `type`, `trait`, `instance`, `derive`, `let`, `var`, `if`, `else`, `for`, `in`, `match`,
 `break`, `continue`, `return`, `import`, `extern`, `process`, `spawn`, `true`, `false`.
 `_` is reserved alongside them: it is the discard, never an identifier, and `_x` is a name as ever.
 A later grammar item that reserves a word adds it here first.
 
 The punctuation, longest match first:
-`:=`, `==`, `!=`, `<=`, `>=`, `+=`, `&&`, `||`, `->`, `=>`,
+`==`, `!=`, `<=`, `>=`, `+=`, `&&`, `||`, `->`, `=>`,
 `=`, `<`, `>`, `+`, `-`, `*`, `/`, `%`, `!`, `?`, `.`, `,`, `:`, `|`, `(`, `)`, `{`, `}`, `[`, `]`.
 `+=` is the one compound assignment `docs/design.md` shows; others arrive with a design change.
 
@@ -69,7 +69,7 @@ Which escapes are valid is decided when the parser decodes the literal, not here
 A string that reaches the end of its line or of the input first is one `UnterminatedString` token.
 Its span stops before the line ending, so the newline is still its own token.
 
-Punctuation prefers the longest match: `:=` is one token, `=` `=` is `==`, `- >` is two tokens.
+Punctuation prefers the longest match: `==` is one token, and `- >` is two tokens.
 A character that starts no token, such as `@`, `#`, `$`, or a lone `&`, is one `Unknown` token.
 
 The lexer accepts any string, including empty input, which lexes to no tokens.
@@ -78,7 +78,7 @@ The lexer accepts any string, including empty input, which lexes to no tokens.
 
 `tests/spec/lexer/<name>.bx` files are lexed and compared with the sibling `<name>.tokens` file.
 Each line of the `.tokens` file is `<kind> <start>..<end> <text>`, one per token, in source order.
-A keyword and a punctuation are named by the text that spells them, as in `Punct(:=)`.
+A keyword and a punctuation are named by the text that spells them, as in `Punct(->)`.
 The text is quoted, and a quote, a backslash, a line break, a tab, and a return are escaped.
 `tests/siblings.bx` walks that directory and names the failing file.
 An example is a whole program held to `docs/specs/executable-examples.md`, not a fragment.
@@ -100,7 +100,7 @@ The parser reads a name, a number, and a string from that text.
 A token kind, a keyword, and a punctuation derive `Eq`, so the parser compares kinds with `==`.
 
 `lexer.listed(source)` writes one line for each token: the kind, a space, and `<start>..<end>`.
-A keyword and a punctuation show the text that spells them, as `Keyword(fn)` and `Punct(:=)` do.
+A keyword and a punctuation show the text that spells them, as `Keyword(fn)` and `Punct(->)` do.
 Every other kind shows its name, as `Identifier` and `UnterminatedString` do.
 
 `tests/lexing.bx` holds the lexer to the properties below, on drawn text.

@@ -1,0 +1,6 @@
+// expect-error: L0109
+// `:=` is not part of Bux: `let` binds a name that never changes, and `var` one that can.
+fn counted() -> Int {
+    total := 0
+    total
+}

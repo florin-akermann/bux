@@ -114,8 +114,8 @@ fn checked(property: Property, cases: Int, library: ir.Library) -> held.Held {
     var found = held.nothing_failed(cases)
     var case = 0
     for case < cases {
-        seed := drawn.seed_of(case)
-        one := drawing(property: property, draw: drawn.seeded(seed), library: library)
+        let seed = drawn.seed_of(case)
+        let one = drawing(property: property, draw: drawn.seeded(seed), library: library)
         found = compiled.noted(found, one.why, held.drawn_failure(name_of(property), seed, one.source, one.why))
         case += 1
     }
@@ -169,49 +169,49 @@ fn name_of(property: Property) -> String {
 /// One drawn source compiled twice, which must be written as the same bytes both times.
 // example: compiled_twice(drawn.seeded(1), ir.little_library()).source != ""
 fn compiled_twice(draw: drawn.Draw, library: ir.Library) -> Drawing {
-    source := drawn.picked(draw, sources(), "")
+    let source = drawn.picked(draw, sources(), "")
     Drawing { source: source, why: compiled.differing(compiled.written_alone(source, library), compiled.written_alone(source, library)) }
 }
 
 /// One drawn source, each of whose class files must begin with the magic and the version.
 // example: compiled_version(drawn.seeded(1), ir.little_library()).source != ""
 fn compiled_version(draw: drawn.Draw, library: ir.Library) -> Drawing {
-    source := drawn.picked(draw, sources(), "")
+    let source = drawn.picked(draw, sources(), "")
     Drawing { source: source, why: version_why(compiled.written_alone(source, library)) }
 }
 
 /// One drawn source, each of whose class files must name a class and a base its pool holds.
 // example: compiled_pool(drawn.seeded(1), ir.little_library()).source != ""
 fn compiled_pool(draw: drawn.Draw, library: ir.Library) -> Drawing {
-    source := drawn.picked(draw, sources(), "")
+    let source = drawn.picked(draw, sources(), "")
     Drawing { source: source, why: pool_why(compiled.written_alone(source, library)) }
 }
 
 /// One drawn source, whose classes must ask to load first only other classes of the build.
 // example: loadable(drawn.seeded(1), ir.little_library()).source != ""
 fn loadable(draw: drawn.Draw, library: ir.Library) -> Drawing {
-    source := drawn.picked(draw, sources(), "")
+    let source = drawn.picked(draw, sources(), "")
     Drawing { source: source, why: loadable_why(compiled.written_alone(source, library)) }
 }
 
 /// One drawn module written twice, which must be written as the same bytes both times.
 // example: written_twice(drawn.seeded(1)).why == ""
 fn written_twice(draw: drawn.Draw) -> Drawing {
-    module := a_module(draw)
+    let module = a_module(draw)
     Drawing { source: shown_module(module), why: compiled.differing(compiled.classes_of([module]), compiled.classes_of([module])) }
 }
 
 /// One drawn module, whose class file must begin with the magic and the version.
 // example: written_version(drawn.seeded(1)).why == ""
 fn written_version(draw: drawn.Draw) -> Drawing {
-    module := a_module(draw)
+    let module = a_module(draw)
     Drawing { source: shown_module(module), why: version_why(compiled.classes_of([module])) }
 }
 
 /// One drawn source, no method of whose own class may take or give back an object.
 // example: no_object(drawn.seeded(1), ir.little_library()).source != ""
 fn no_object(draw: drawn.Draw, library: ir.Library) -> Drawing {
-    source := drawn.picked(draw, sources(), "")
+    let source = drawn.picked(draw, sources(), "")
     var why = compiled_why(compiled.written_alone(source, library))
     for method in reader.read(module_bytes(compiled.written_alone(source, library))).methods {
         if compiled.is_holding(method.descriptor, "java/lang/Object") {
@@ -224,9 +224,9 @@ fn no_object(draw: drawn.Draw, library: ir.Library) -> Drawing {
 /// A drawn generic used at `Int`, which must be written from a `long` to a `long`, with no box.
 // example: specialised(drawn.seeded(1), ir.little_library()).source != ""
 fn specialised(draw: drawn.Draw, library: ir.Library) -> Drawing {
-    through := drawn.picked(draw, ["identity", "through"], "")
-    source := "fn kept(count: Int) -> Int {\n    " + through + "(count)\n}\n\nfn through<T>(value: T) -> T {\n    identity(value)\n}\n\nfn identity<T>(value: T) -> T {\n    value\n}\n"
-    contents := reader.read(module_bytes(compiled.written_alone(source, library)))
+    let through = drawn.picked(draw, ["identity", "through"], "")
+    let source = "fn kept(count: Int) -> Int {\n    " + through + "(count)\n}\n\nfn through<T>(value: T) -> T {\n    identity(value)\n}\n\nfn identity<T>(value: T) -> T {\n    value\n}\n"
+    let contents = reader.read(module_bytes(compiled.written_alone(source, library)))
     var why = through + " is not written at `Int`"
     for method in contents.methods {
         if method.name == through + "$Int" {
@@ -251,7 +251,7 @@ fn descriptor_why(descriptor: String) -> String {
 /// One drawn module, whose class file must write the methods it declares, by name, in order.
 // example: declared(drawn.seeded(1)).why == ""
 fn declared(draw: drawn.Draw) -> Drawing {
-    module := a_module(draw)
+    let module = a_module(draw)
     var names = []
     for method in reader.read(module_bytes(compiled.classes_of([module]))).methods {
         names = list.push(names, method.name)
@@ -266,8 +266,8 @@ fn declared(draw: drawn.Draw) -> Drawing {
 /// One drawn module, whose class file must name places its pool holds and name every method.
 // example: written_pool(drawn.seeded(1)).why == ""
 fn written_pool(draw: drawn.Draw) -> Drawing {
-    module := a_module(draw)
-    files := compiled.classes_of([module])
+    let module = a_module(draw)
+    let files = compiled.classes_of([module])
     var why = pool_why(files)
     for method in reader.read(module_bytes(files)).methods {
         if method.name == "" {
@@ -280,8 +280,8 @@ fn written_pool(draw: drawn.Draw) -> Drawing {
 /// A drawn program, each of whose class files must read back whole and begin as a class file does.
 // example: reads_whole(drawn.seeded(1), ir.little_library()).source != ""
 fn reads_whole(draw: drawn.Draw, library: ir.Library) -> Drawing {
-    source := drawn_program(draw)
-    files := compiled.written_alone(source, library)
+    let source = drawn_program(draw)
+    let files = compiled.written_alone(source, library)
     var why = version_why(files)
     for file in files {
         if !reader.is_whole(reader.read(file.bytes), file.bytes) {
@@ -294,12 +294,12 @@ fn reads_whole(draw: drawn.Draw, library: ir.Library) -> Drawing {
 /// A program whose `main` runs up to four drawn statements over a total.
 // example: drawn_program(drawn.seeded(1)) != ""
 fn drawn_program(draw: drawn.Draw) -> String {
-    many := drawn.number(draw, 5)
+    let many = drawn.number(draw, 5)
     var body = ""
     for which in drawn.numbers(drawn.next(draw), many, 9) {
         body += "    " + or(list.at(statements(), which), "") + "\n"
     }
-    "import list\nimport strings\n\nfn main(arguments: List<String>) -> Int {\n    count := list.length(arguments)\n    var total = 0\n" + body + "    total\n}\n\n/// Whether `total` is even.\n// example: is_even(2)\nfn is_even(total: Int) -> Bool {\n    or(total % 2, 1) == 0\n}\n\ntype Box = {\n    held: Int\n}\n"
+    "import list\nimport strings\n\nfn main(arguments: List<String>) -> Int {\n    let count = list.length(arguments)\n    var total = 0\n" + body + "    total\n}\n\n/// Whether `total` is even.\n// example: is_even(2)\nfn is_even(total: Int) -> Bool {\n    or(total % 2, 1) == 0\n}\n\ntype Box = {\n    held: Int\n}\n"
 }
 
 /// The statements a drawn program writes before it gives back its total.
@@ -313,7 +313,7 @@ fn statements() -> List<String> {
 /// The branch is at offset 1, and it lands 3 bytes after itself and 6 bytes for each increment.
 // example: far_branch(drawn.seeded(1)).why == ""
 fn far_branch(draw: drawn.Draw) -> Drawing {
-    many := 5455 + drawn.number(draw, 12)
+    let many = 5455 + drawn.number(draw, 12)
     var instructions = [ir.BooleanOf(true), ir.JumpIfFalse(0)]
     for list.length(instructions) < many + 2 {
         instructions = list.push(instructions, ir.Increment(300))
@@ -325,9 +325,9 @@ fn far_branch(draw: drawn.Draw) -> Drawing {
 /// A drawn text of three-byte characters, which takes 65535 bytes at 21845 of them.
 // example: long_text(drawn.seeded(1)).why == ""
 fn long_text(draw: drawn.Draw) -> Drawing {
-    many := 21840 + drawn.number(draw, 12)
-    text := or(strings.cut(doubled("€", 15), 0, many), "")
-    instructions := [ir.TextOf(text), ir.Drop(ir.Reference("java/lang/String")), ir.LongOf(1), ir.Return(Some(ir.Long))]
+    let many = 21840 + drawn.number(draw, 12)
+    let text = or(strings.cut(doubled("€", 15), 0, many), "")
+    let instructions = [ir.TextOf(text), ir.Drop(ir.Reference("java/lang/String")), ir.LongOf(1), ir.Return(Some(ir.Long))]
     Drawing { source: "a text of " + shown(many) + " characters of three bytes", why: refusal_why(answer: jvm.program_written([one_body(instructions, 0)]), code: "L0701", side: side_of(amount: 3 * many, limit: 65535)) }
 }
 
@@ -346,10 +346,10 @@ fn doubled(text: String, times: Int) -> String {
 /// Two modules that each write the class `demo/Box`, with a field each drawn from two names.
 // example: named_twice(drawn.seeded(1)).why == ""
 fn named_twice(draw: drawn.Draw) -> Drawing {
-    first := drawn.picked(draw, ["held", "kept"], "")
-    second := drawn.picked(drawn.next(draw), ["held", "kept"], "")
-    written := jvm.program_written([jvm.one_class(boxed(first)), jvm.one_class(boxed(second))])
-    side := if first == second {
+    let first = drawn.picked(draw, ["held", "kept"], "")
+    let second = drawn.picked(drawn.next(draw), ["held", "kept"], "")
+    let written = jvm.program_written([jvm.one_class(boxed(first)), jvm.one_class(boxed(second))])
+    let side = if first == second {
         Within
     } else {
         Past
@@ -374,9 +374,9 @@ fn boxed(field: String) -> ir.Class {
 /// the two copies of what it builds.
 // example: long_stack(drawn.seeded(1)).why == ""
 fn long_stack(draw: drawn.Draw) -> Drawing {
-    taken := 1 + drawn.number(draw, 4)
-    added := drawn.number(drawn.next(draw), 4)
-    is_built := drawn.number(drawn.next(drawn.next(draw)), 2) == 0
+    let taken = 1 + drawn.number(draw, 4)
+    let added = drawn.number(drawn.next(draw), 4)
+    let is_built = drawn.number(drawn.next(drawn.next(draw)), 2) == 0
     var longs = []
     for list.length(longs) < taken {
         longs = list.push(longs, ir.Long)
@@ -439,8 +439,8 @@ fn greater(one: Int, other: Int) -> Int {
 /// The module `demo` of one method, `answer0`, that runs `instructions` over `locals` locals.
 // example: list.length(one_body([ir.LongOf(1), ir.Return(Some(ir.Long))], 0).classes) == 1
 fn one_body(instructions: List<ir.Instruction>, locals: Int) -> ir.Lowered {
-    body := ir.Body { instructions: instructions, locals: locals, guards: [] }
-    method := ir.Method { name: "answer0", descriptor: ir.MethodDescriptor { parameters: [], result: Some(ir.Long) }, reached: ir.ThroughTheClass, body: body }
+    let body = ir.Body { instructions: instructions, locals: locals, guards: [] }
+    let method = ir.Method { name: "answer0", descriptor: ir.MethodDescriptor { parameters: [], result: Some(ir.Long) }, reached: ir.ThroughTheClass, body: body }
     jvm.one_class(ir.Class { name: "demo", extends: "java/lang/Object", extending: ir.Never, implements: [], fields: [], methods: [method] })
 }
 
@@ -448,7 +448,7 @@ fn one_body(instructions: List<ir.Instruction>, locals: Int) -> ir.Lowered {
 // example: refusal_why(answer: Ok([]), code: "L0700", side: Within) == ""
 // example: refusal_why(answer: Ok([]), code: "L0700", side: Past) == "it is written, and it is past the limit"
 fn refusal_why(answer: Result<List<jvm.ClassFile>, jvm.Unwritten>, code: String, side: Side) -> String {
-    refused := jvm.refused_code(answer)
+    let refused = jvm.refused_code(answer)
     match side {
         Within => if refused == "" {
             ""
@@ -479,7 +479,7 @@ fn side_of(amount: Int, limit: Int) -> Side {
 fn version_why(files: List<jvm.ClassFile>) -> String {
     var why = compiled_why(files)
     for file in files {
-        contents := reader.read(file.bytes)
+        let contents = reader.read(file.bytes)
         if contents.magic != 3405691582 || contents.major != 72 || contents.minor != 65535 {
             why = file.path + " begins " + shown(contents.magic) + ", version " + shown(contents.major) + "." + shown(contents.minor)
         }
@@ -492,8 +492,8 @@ fn version_why(files: List<jvm.ClassFile>) -> String {
 fn pool_why(files: List<jvm.ClassFile>) -> String {
     var why = compiled_why(files)
     for file in files {
-        contents := reader.read(file.bytes)
-        size := list.length(contents.pool)
+        let contents = reader.read(file.bytes)
+        let size = list.length(contents.pool)
         if contents.this > size || contents.extends > size {
             why = file.path + " names " + shown(contents.this) + " and " + shown(contents.extends) + " of a pool of " + shown(size)
         }
@@ -548,11 +548,11 @@ fn module_bytes(files: List<jvm.ClassFile>) -> List<Int> {
 /// A module of one to five methods, each of which gives back a whole number from a drawn body.
 // example: list.length(method_names(a_module(drawn.seeded(1)))) >= 1
 fn a_module(draw: drawn.Draw) -> ir.Lowered {
-    many := drawn.number(draw, 5)
-    chosen := list.push(drawn.numbers(drawn.next(draw), many, 4), 0)
+    let many = drawn.number(draw, 5)
+    let chosen = list.push(drawn.numbers(drawn.next(draw), many, 4), 0)
     var methods = []
     for which in chosen {
-        body := ir.Body { instructions: list.push(body_of_kind(which), ir.Return(Some(ir.Long))), locals: 0, guards: [] }
+        let body = ir.Body { instructions: list.push(body_of_kind(which), ir.Return(Some(ir.Long))), locals: 0, guards: [] }
         methods = list.push(methods, ir.Method { name: "answer" + shown(list.length(methods)), descriptor: ir.MethodDescriptor { parameters: [], result: Some(ir.Long) }, reached: ir.ThroughTheClass, body: body })
     }
     ir.Lowered { classes: [ir.Class { name: "demo", extends: "java/lang/Object", extending: ir.Never, implements: [], fields: [], methods: methods }], asks: ir.no_asks() }
@@ -590,7 +590,7 @@ fn method_names(module: ir.Lowered) -> List<String> {
 /// The eight modules the properties that compile a source draw from.
 // example: list.length(sources()) == 8
 fn sources() -> List<String> {
-    ["fn answer() -> Int {\n    7\n}\n", "fn held(user: User) -> Int {\n    user.id\n}\n\ntype User = {\n    id: Int\n}\n", "fn told(payment: Payment) -> String {\n    match payment {\n        Pending => \"waiting\"\n        Failed(reason) => reason\n    }\n}\n\ntype Payment =\n    | Pending\n    | Failed(String)\n", "fn walked(counts: List<Int>) -> Int {\n    var total = 0\n    for count in counts {\n        total += count\n    }\n    total\n}\n", "fn used() -> Result<Int, String> {\n    value := held()?\n    Ok(value + 1)\n}\n\nfn held() -> Result<Int, String> {\n    Ok(1)\n}\n", "fn number(user: User) -> Int {\n    user.home.number\n}\n\ntype User = {\n    id: Int\n    home: Address\n}\n\ntype Address = {\n    number: Int\n}\n", "fn kept(count: Int) -> Int {\n    identity(count)\n}\n\nfn is_kept(flag: Bool) -> Bool {\n    identity(flag)\n}\n\nfn identity<T>(value: T) -> T {\n    value\n}\n", "fn kept(count: Int) -> Int {\n    through(count)\n}\n\nfn through<T>(value: T) -> T {\n    identity(value)\n}\n\nfn identity<T>(value: T) -> T {\n    value\n}\n"]
+    ["fn answer() -> Int {\n    7\n}\n", "fn held(user: User) -> Int {\n    user.id\n}\n\ntype User = {\n    id: Int\n}\n", "fn told(payment: Payment) -> String {\n    match payment {\n        Pending => \"waiting\"\n        Failed(reason) => reason\n    }\n}\n\ntype Payment =\n    | Pending\n    | Failed(String)\n", "fn walked(counts: List<Int>) -> Int {\n    var total = 0\n    for count in counts {\n        total += count\n    }\n    total\n}\n", "fn used() -> Result<Int, String> {\n    let value = held()?\n    Ok(value + 1)\n}\n\nfn held() -> Result<Int, String> {\n    Ok(1)\n}\n", "fn number(user: User) -> Int {\n    user.home.number\n}\n\ntype User = {\n    id: Int\n    home: Address\n}\n\ntype Address = {\n    number: Int\n}\n", "fn kept(count: Int) -> Int {\n    identity(count)\n}\n\nfn is_kept(flag: Bool) -> Bool {\n    identity(flag)\n}\n\nfn identity<T>(value: T) -> T {\n    value\n}\n", "fn kept(count: Int) -> Int {\n    through(count)\n}\n\nfn through<T>(value: T) -> T {\n    identity(value)\n}\n\nfn identity<T>(value: T) -> T {\n    value\n}\n"]
 }
 
 /// One drawn module, and what went wrong with it, which is empty where the property held.

@@ -1,1 +1,1 @@
-180..185 expected an import, a type, a trait, an instance, a derive, a function, an extern, or a process, found `total`
+180..183 expected an import, a type, a trait, an instance, a derive, a function, an extern, or a process, found `let`

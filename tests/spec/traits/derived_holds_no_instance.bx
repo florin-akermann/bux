@@ -1,7 +1,7 @@
 // expect-error: L0422
 // A type derives `Eq` and holds a `List<Crate>`, whose element type has none, so it is refused.
 fn main(arguments: List<String>) -> Int {
-    basket := Basket { crates: [Crate { size: 1 }] }
+    let basket = Basket { crates: [Crate { size: 1 }] }
     if basket == basket {
         return 0
     }

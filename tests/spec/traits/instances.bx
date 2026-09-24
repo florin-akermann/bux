@@ -7,8 +7,8 @@
 import io
 
 fn main(arguments: List<String>) -> Int {
-    corner := Point { across: 1, down: 2 }
-    far := Point { across: 3, down: 4 }
+    let corner = Point { across: 1, down: 2 }
+    let far = Point { across: 3, down: 4 }
     if has_value([corner], far) {
         io.println("one corner holds the far point")
     } else {

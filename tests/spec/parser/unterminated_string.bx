@@ -1,4 +1,4 @@
 // expect-error: L0101
 fn f() {
-    a := "no closing quote
+    let a = "no closing quote
 }

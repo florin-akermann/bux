@@ -9,7 +9,7 @@ import io
 import list
 
 fn main(arguments: List<String>) -> Int {
-    values := [1, 2, 3]
+    let values = [1, 2, 3]
     io.println("at 0 it holds " + read_at(values, 0))
     io.println("at 4294967296 it holds " + read_at(values, 4294967296))
     io.println("at -4294967296 it holds " + read_at(values, -4294967296))

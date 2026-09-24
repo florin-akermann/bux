@@ -5,11 +5,11 @@ import list
 
 // example: grouped(total: 7, part: 3, share: 2) == 31
 fn grouped(total: Int, part: Int, share: Int) -> Int {
-    left := total - part - share
-    divided := or(total * part / share, 0)
-    added := total + part * share
-    bracketed := (total + part) * share
-    negated := -total + part
+    let left = total - part - share
+    let divided = or(total * part / share, 0)
+    let added = total + part * share
+    let bracketed = (total + part) * share
+    let negated = -total + part
     if total == part + share || total > part && part == share || !(total < share) && -share < 0 {
         return left + divided + added + bracketed + negated - 10
     }
@@ -18,8 +18,8 @@ fn grouped(total: Int, part: Int, share: Int) -> Int {
 
 // example: decoded() == 10
 fn decoded() -> Int {
-    words := ["hello", "a\"b", "a\nb", "a\\b", "tab\there", "return\r"]
-    empty := []
+    let words = ["hello", "a\"b", "a\nb", "a\\b", "tab\there", "return\r"]
+    let empty = []
     list.length(words) + list.length(empty) + list.length([list.length(words) + 1, 2]) + 2
 }
 
@@ -88,8 +88,8 @@ extern method char held(text: String, int int: Int) -> Option<Int> = "charAt"
 
 // example: rows_counted(Ok([])) == 1
 fn rows_counted(stored: Result<List<Rows>, String>) -> Int {
-    rows := Rows { cells: [[1]], count: 1 }
-    shelf := Stocked([[rows]])
+    let rows = Rows { cells: [[1]], count: 1 }
+    let shelf = Stocked([[rows]])
     match shelf {
         Stocked(_) => rows.count
         Bare => list.length(ok_or(stored, []))

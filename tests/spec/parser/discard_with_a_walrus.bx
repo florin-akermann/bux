@@ -1,6 +1,0 @@
-// expect-error: L0100
-// `_ = value` throws a value away on purpose, and `=` is the one sign that follows the `_`.
-fn thrown(count: Int) -> Int {
-    _ := count
-    count
-}

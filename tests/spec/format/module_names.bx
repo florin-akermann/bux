@@ -2,7 +2,7 @@
 // A name reached through a module is written with no space around its dot, and a type of
 // another module takes its arguments after the whole name. No module `demo` is there.
 fn held(value: demo.Held<Int>, payment: demo.Payment) -> demo.User {
-    built := demo.User { id: 1 }
+    let built = demo.User { id: 1 }
     match payment {
         demo.Sent(how) => how
         demo.Pending => built

@@ -154,7 +154,7 @@ A function adds its type parameters to the type scope, and its parameters to the
 A type declaration adds its type parameters to the type scope of its own definition.
 
 Inside a body, a binding is in scope from the statement after it to the end of its block.
-`total := total + 1` therefore does not see the `total` it is binding.
+`let total = total + 1` therefore does not see the `total` it is binding.
 A `for … in` binding is in scope in the loop body, and a pattern's bindings in the arm's body.
 
 ## The prelude
@@ -274,7 +274,7 @@ A declaration that hides a prelude name is shadowed, because the prelude is alre
 
 Version 0.1 reaches a function by calling it, which `docs/design.md` section 11 states.
 A function name is `L0304` wherever it is written but as the name of a call.
-`held := helper`, `helper = 1`, and `filter(users, is_active)` are each refused at the name.
+`let held = helper`, `helper = 1`, and `filter(users, is_active)` are each refused at the name.
 A module name is `L0304` wherever it is written but on the left of a `.`.
 Its message is `x` is a module, so a name inside it is what is written.
 Neither has a type or a shape in version 0.1, so code generation is never handed one.
@@ -286,7 +286,7 @@ knows whether that module declares a function of that name or a variant carrying
 
 The name an assignment names is a `var` binding, which `docs/design.md` section 10 states.
 Anything else is `L0305`, pointing at the name on the left of the `=` or the `+=`.
-A `:=` binding, a parameter, and a `for … in` binding each never change.
+A `let` binding, a parameter, and a `for … in` binding each never change.
 Neither does a name a pattern binds, which an arm's body has no statement position to assign in.
 A constructor never changes either: it names a way to build a value, not a place to put one.
 Without the refusal it lowers into a store with nowhere to write, and does nothing at all.

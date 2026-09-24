@@ -27,7 +27,7 @@ Neither is a prelude name, so a program reaches one by importing it:
 import map
 
 fn oldest() -> Int {
-    ages := map.insert(map.insert(map.empty(), "ada", 36), "alan", 41)
+    let ages = map.insert(map.insert(map.empty(), "ada", 36), "alan", 41)
     or(map.get(ages, "ada"), 0)
 }
 ```

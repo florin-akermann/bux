@@ -23,8 +23,8 @@ import unify
 /// The prelude a program is checked against, read out of the prelude's own `source`.
 // example: !has_names(prelude_read("fn ("))
 fn prelude_read(source: String) -> Prelude {
-    program := ok_or(parser.parse(source), ast.Program { items: [] })
-    names := resolver.prelude_of(program)
+    let program = ok_or(parser.parse(source), ast.Program { items: [] })
+    let names = resolver.prelude_of(program)
     match resolver.prelude_resolved(program) {
         Ok(resolved) => Prelude { names: names, declared: declared.prelude_environment(resolved) }
         Err(_) => Prelude { names: names, declared: declared.prelude_environment(resolver.Resolved { module: "prelude", program: program, found: map.empty() }) }
@@ -34,8 +34,8 @@ fn prelude_read(source: String) -> Prelude {
 /// What a checked module offers the modules that import it.
 // example: list.length(surface_of(checked_of("fn count() -> Int {\n    1\n}\n")).functions) == 1
 fn surface_of(checked: infer.Inference) -> surface.Surface {
-    environment := checked.environment
-    program := checked.resolved.program
+    let environment = checked.environment
+    let program = checked.resolved.program
     surface.Surface { functions: declared.offered_functions(environment, program), types: declared.offered_types(environment, program), instances: declared.given_instances(environment, checked.resolved) }
 }
 
@@ -44,7 +44,7 @@ fn surface_of(checked: infer.Inference) -> surface.Surface {
 fn page_of(checked: infer.Inference) -> String {
     var page = ""
     for item in checked.resolved.program.items {
-        stanza := stanza_of(checked, item)
+        let stanza = stanza_of(checked, item)
         if stanza != "" && page != "" {
             page += "\n"
         }
@@ -81,8 +81,8 @@ fn derived_heads(declaration: ast.DeriveDeclaration) -> String {
 /// `fn shared(total: Int, people: Int) -> Int`, with the types inference settled on.
 // example: page_of(checked_of("fn pick<T>(first: T, second) -> T {\n    first\n}\n")) == "fn pick<T>(first: T, second: _) -> T\n"
 fn signature_of(checked: infer.Inference, function: ast.FunctionDeclaration) -> String {
-    whole := unify.solved(checked.table, or(map.get(checked.named, function.name.span.start), unify.Unit))
-    taken := unify.parameters_of(whole)
+    let whole = unify.solved(checked.table, or(map.get(checked.named, function.name.span.start), unify.Unit))
+    let taken = unify.parameters_of(whole)
     var takes = []
     var index = 0
     for parameter in function.parameters {
@@ -110,8 +110,8 @@ fn has_value_named(names: resolver.Prelude, named: String) -> Bool {
 /// `source`, checked as one module against the small prelude, and nothing where it is refused.
 // example: list.length(checked_of("fn count() -> Int {\n    1\n}\n").functions) == 1
 fn checked_of(source: String) -> infer.Inference {
-    resolved := declared.resolved_of(source)
-    empty := infer.inference_of(resolved, surface.nothing_imported(), infer.no_declaring())
+    let resolved = declared.resolved_of(source)
+    let empty = infer.inference_of(resolved, surface.nothing_imported(), infer.no_declaring())
     ok_or(check(resolved, surface.nothing_imported(), little_prelude()), empty)
 }
 
@@ -130,7 +130,7 @@ fn page_code(source: String) -> String {
 fn check(resolved: resolver.Resolved, imported: surface.Imported, prelude: Prelude) -> Result<infer.Inference, refusal.TypeError> {
     _ = declared.nothing_holds_itself(resolved)?
     _ = processes.every_process_shaped(resolved.program)?
-    declaring := declared.environment_of(prelude.declared, resolved, surface.every_type(imported), surface.every_instance(imported), unify.empty_table())?
+    let declaring = declared.environment_of(prelude.declared, resolved, surface.every_type(imported), surface.every_instance(imported), unify.empty_table())?
     carried.nothing_carried(infer.module_inferred(resolved, imported, declaring)?)
 }
 

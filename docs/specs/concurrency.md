@@ -73,7 +73,7 @@ The rule forces the work out of the branch, and the name of the work into the so
 `spawn` starts a process and gives its handle.
 
 ```text
-counting := spawn Counter(10)
+let counting = spawn Counter(10)
 ```
 
 `spawn` is followed by a call of a process the module declares.

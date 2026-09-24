@@ -1,6 +1,6 @@
 // Canonical form writes a process as it writes an instance, and one space after `spawn`.
 fn main(arguments: List<String>) -> Int {
-    counting := spawn   Counter( 10 )
+    let counting = spawn   Counter( 10 )
     _ = send(counting, Add(3), NoLimit)
     _ = send(counting, Stop, NoLimit)
     ended(counting) - 13

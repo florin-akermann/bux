@@ -33,8 +33,8 @@ fn every_example_held(directory: String, paths: List<String>, library: ir.Librar
 /// The example at `path`, held to its header and, where it parses, to canonical form.
 // example: example_held("no-such-directory/a.bx", ir.little_library(), 1).failures == ["no-such-directory/a.bx: expected \"accepted\", found \"error: no-such-directory/a.bx: No such file or directory (os error 2)\""]
 fn example_held(path: String, library: ir.Library, limit: Int) -> held.Held {
-    source := ok_or(files.read(path), "")
-    found := stated_held(Opened { path: path, source: source }, library, limit)
+    let source = ok_or(files.read(path), "")
+    let found = stated_held(Opened { path: path, source: source }, library, limit)
     if is_departing(source) && !is_stated_departing(header.expectation_of(source)) {
         return held.with_failure(found, path + ": not in canonical form, which `bux fmt` writes")
     }
@@ -84,7 +84,7 @@ fn compiled(path: String, library: ir.Library) -> held.Held {
 /// The example `opened`, which the compiler must refuse with `code` and with no other code.
 // example: list.length(refused(opened: Opened { path: "no-such-directory/a.bx", source: "" }, code: "L0100", library: ir.little_library()).failures) == 1
 fn refused(opened: Opened, code: String, library: ir.Library) -> held.Held {
-    expected := "error[" + code + "] and no other"
+    let expected = "error[" + code + "] and no other"
     match command.checked(opened.path, library) {
         Ok(_) => held.with_failure(held.nothing_failed(1), held.failure(opened.path, expected, "accepted"))
         Err(command.Unusable(errors)) => held.with_failure(held.nothing_failed(1), held.failure(opened.path, expected, first_line(errors)))
@@ -130,14 +130,14 @@ fn run(opened: Opened, ran: header.Ran, library: ir.Library, limit: Int) -> held
 /// The copy keeps the name of the example, so an example named as a library module runs so named.
 // example: list.length(run_in(Copied { opened: Opened { path: "no-such-directory/a.bx", source: "" }, copy: "no-such-directory", limit: 1 }, header.Ran { arguments: [], output: "", errors: "", status: 0 }, ir.little_library()).failures) == 1
 fn run_in(copied: Copied, ran: header.Ran, library: ir.Library) -> held.Held {
-    example := modules.joined(copied.copy, modules.stem_of(copied.opened.path) + ".bx")
+    let example = modules.joined(copied.copy, modules.stem_of(copied.opened.path) + ".bx")
     _ = files.write(example, copied.opened.source)
     for beside in walk.files_in(modules.directory_of(copied.opened.path), ".bx") {
         if beside != copied.opened.path {
             _ = files.write(modules.joined(copied.copy, modules.stem_of(beside) + ".bx"), ok_or(files.read(beside), ""))
         }
     }
-    found := started(copied, ran, command.answered_within(command.all_of(["run", example], ran.arguments), library))
+    let found = started(copied, ran, command.answered_within(command.all_of(["run", example], ran.arguments), library))
     command.removed_whole(copied.copy)
     found
 }
@@ -186,7 +186,7 @@ fn first_line(text: String) -> String {
 /// Whether `JAVA_HOME` names a JDK, which a run needs.
 // example: is_a_jdk_named() || !is_a_jdk_named()
 fn is_a_jdk_named() -> Bool {
-    home := or(environment.read("JAVA_HOME"), "")
+    let home = or(environment.read("JAVA_HOME"), "")
     home != "" && modules.is_file(modules.file_at(modules.joined(modules.joined(home, "bin"), "java")))
 }
 

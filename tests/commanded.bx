@@ -59,7 +59,7 @@ fn golden_files() -> List<String> {
 /// The text of a golden file: each of `lines` and the answer it gets now.
 // example: case_written(Case { words: ["a"], said: command.unusable("b") }) == "$ a\nstatus 2\n! error: b\n"
 fn golden_written(lines: List<List<String>>, library: ir.Library, limit: Int) -> String {
-    stage := staged()
+    let stage = staged()
     var written = ""
     for words in lines {
         if written != "" {
@@ -75,7 +75,7 @@ fn golden_written(lines: List<List<String>>, library: ir.Library, limit: Int) ->
 /// stage of the file's own.
 // example: list.length(cases_read("")) == 0
 fn golden_held(path: String, library: ir.Library, limit: Int) -> held.Held {
-    golden := Golden { path: path, stage: Stage { directory: staged(), limit: limit } }
+    let golden = Golden { path: path, stage: Stage { directory: staged(), limit: limit } }
     var found = held.nothing_failed(0)
     for written in cases_read(ok_or(files.read(path), "")) {
         found = held.added(found, case_held(golden, written, library))
@@ -90,7 +90,7 @@ fn golden_held(path: String, library: ir.Library, limit: Int) -> held.Held {
 /// One command line of `golden`, held to the answer written under it.
 // example: is_jvm_needed(["run", "a.bx"])
 fn case_held(golden: Golden, written: Case, library: ir.Library) -> held.Held {
-    at := golden.path + ": " + words_line(written.words)
+    let at = golden.path + ": " + words_line(written.words)
     if is_jvm_needed(written.words) && !exemplified.is_a_jdk_named() {
         return held.with_skip(held.nothing_failed(0), at + ": JAVA_HOME names no JDK, and the command line starts a JVM")
     }
@@ -101,7 +101,7 @@ fn case_held(golden: Golden, written: Case, library: ir.Library) -> held.Held {
 // example: !is_jvm_needed(["check", "a.bx"])
 // example: !is_jvm_needed([])
 fn is_jvm_needed(words: List<String>) -> Bool {
-    first := or(list.at(words, 0), "")
+    let first = or(list.at(words, 0), "")
     first == "run" || first == "test"
 }
 
@@ -112,14 +112,14 @@ fn answered_in(words: List<String>, stage: Stage, library: ir.Library) -> comman
     for word in words {
         placed = list.push(placed, placed_in(word: word, stage: stage.directory))
     }
-    said := ended_in(command.answered_within(placed, library), stage)
+    let said = ended_in(command.answered_within(placed, library), stage)
     command.Said { output: enacted.unstaged(said.output, stage.directory), errors: enacted.unstaged(said.errors, stage.directory), status: said.status }
 }
 
 /// `word`, read in `stage` where its first part names an entry of the stage.
 // example: placed_in(word: "a/b", stage: "no-such-directory") == "a/b"
 fn placed_in(word: String, stage: String) -> String {
-    first := first_part(word)
+    let first = first_part(word)
     if first == "" || command.has_prefix(word, "-") || !command.is_there(command.place_at(modules.joined(stage, first))) {
         return word
     }
@@ -149,7 +149,7 @@ fn ended_in(answer: command.Answer, stage: Stage) -> command.Said {
 /// A stage to answer command lines in, or a place nothing can be written into.
 // example: strings.length(echo_text()) > 0
 fn staged() -> String {
-    stage := ok_or(command.somewhere_of_its_own(), "/no-such-directory-for-a-stage")
+    let stage = ok_or(command.somewhere_of_its_own(), "/no-such-directory-for-a-stage")
     copied(from: "tests/spec", to: modules.joined(stage, "tests/spec"))
     copied(from: "library", to: modules.joined(stage, "library"))
     _ = command.has_made_all(command.place_at(modules.joined(stage, "compiler")))
@@ -164,7 +164,7 @@ fn staged() -> String {
 fn copied(from: String, to: String) -> () {
     _ = command.has_made_all(command.place_at(to))
     for name in ok_or(files.listed(from), []) {
-        path := modules.joined(from, name)
+        let path = modules.joined(from, name)
         if command.is_folder(command.place_at(path)) {
             copied(from: path, to: modules.joined(to, name))
         } else if is_carried(name) {
@@ -203,8 +203,8 @@ fn every_explanation_held(library: ir.Library) -> held.Held {
 /// `explain` on the code the file at `path` explains, held to the text of that file.
 // example: list.length(explanation_held("no-such-directory/L0100.md", ir.little_library()).failures) == 1
 fn explanation_held(path: String, library: ir.Library) -> held.Held {
-    code := modules.stem_of(path)
-    expected := command.Said { output: ok_or(files.read(path), ""), errors: "", status: 0 }
+    let code = modules.stem_of(path)
+    let expected = command.Said { output: ok_or(files.read(path), ""), errors: "", status: 0 }
     enacted.said_held("explain " + code, expected, command.said_by(command.answered_within(["explain", code], library)))
 }
 
@@ -239,8 +239,8 @@ fn closed(cases: List<Case>, current: Case, count: Int) -> List<Case> {
 // example: with_line(Case { words: [], said: command.nothing_said() }, "status 2").said.status == 2
 // example: with_line(Case { words: [], said: command.nothing_said() }, "! a").said.errors == "a\n"
 fn with_line(written: Case, line: String) -> Case {
-    said := written.said
-    kind := or(strings.cut(line, 0, 1), "")
+    let said = written.said
+    let kind = or(strings.cut(line, 0, 1), "")
     if kind == ">" {
         return written { said: said { output: said.output + stream_line(line) } }
     }
@@ -259,7 +259,7 @@ fn with_line(written: Case, line: String) -> Case {
 // example: stream_line("> a") == "a\n"
 // example: stream_line(">~ a") == "a"
 fn stream_line(line: String) -> String {
-    rest := or(strings.cut(line, 1, strings.length(line)), "")
+    let rest = or(strings.cut(line, 1, strings.length(line)), "")
     if command.has_prefix(rest, "~ ") {
         return or(strings.cut(rest, 2, strings.length(rest)), "")
     }
@@ -272,7 +272,7 @@ fn stream_line(line: String) -> String {
 /// One command line and its answer, as a golden file writes them.
 // example: case_written(Case { words: [], said: command.nothing_said() }) == "$\nstatus 0\n"
 fn case_written(written: Case) -> String {
-    said := written.said
+    let said = written.said
     words_line(written.words) + "\nstatus " + shown(said.status) + "\n" + stream_written(mark: ">", text: said.output) + stream_written(mark: "!", text: said.errors)
 }
 
@@ -290,12 +290,12 @@ fn words_line(words: List<String>) -> String {
 // example: stream_written(mark: ">", text: "a\n\nb") == "> a\n>\n>~ b\n"
 // example: stream_written(mark: "!", text: "") == ""
 fn stream_written(mark: String, text: String) -> String {
-    lines := walk.lines_of(text)
-    is_open := text != "" && !walk.is_ending_in(text, "\n")
+    let lines = walk.lines_of(text)
+    let is_open = text != "" && !walk.is_ending_in(text, "\n")
     var written = ""
     var index = 0
     for index < list.length(lines) {
-        line := or(list.at(lines, index), "")
+        let line = or(list.at(lines, index), "")
         if is_open && index + 1 == list.length(lines) {
             written += mark + "~ " + line + "\n"
         } else {

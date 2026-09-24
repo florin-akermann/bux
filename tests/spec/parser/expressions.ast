@@ -28,54 +28,54 @@ function named 195..395
           else
             block 357..387
               string "many" 371..377
-function answered 430..647
+function answered 430..650
   parameter word 442..454
     named-type String 448..454
   result
     named-type Int 459..462
-  block 463..647
-    binding Immutable held 469..492
-      list 477..492
-        name word 478..482
-        string "maybe" 484..491
-    discard 497..518
-      call 501..518
-        field length 501..512
-          name list 501..505
-        name held 513..517
-    match 523..645
-      binary Equal 529..542
-        name word 529..533
-        string "yes" 537..542
-      arm 553..591
-        pattern-bool true 553..557
-        call 561..591
-          name weighed 561..568
-          argument word 569..579
-            name word 575..579
-          argument weight 581..590
-            integer 1 589..590
-      arm 600..639
-        pattern-bool false 600..605
-        call 609..639
-          name weighed 609..616
-          argument word 617..627
-            name word 623..627
-          argument weight 629..638
-            integer 0 637..638
-function weighed 697..807
-  parameter word 708..720
-    named-type String 714..720
-  parameter weight 722..733
-    named-type Int 730..733
+  block 463..650
+    binding Immutable held 469..495
+      list 480..495
+        name word 481..485
+        string "maybe" 487..494
+    discard 500..521
+      call 504..521
+        field length 504..515
+          name list 504..508
+        name held 516..520
+    match 526..648
+      binary Equal 532..545
+        name word 532..536
+        string "yes" 540..545
+      arm 556..594
+        pattern-bool true 556..560
+        call 564..594
+          name weighed 564..571
+          argument word 572..582
+            name word 578..582
+          argument weight 584..593
+            integer 1 592..593
+      arm 603..642
+        pattern-bool false 603..608
+        call 612..642
+          name weighed 612..619
+          argument word 620..630
+            name word 626..630
+          argument weight 632..641
+            integer 0 640..641
+function weighed 700..810
+  parameter word 711..723
+    named-type String 717..723
+  parameter weight 725..736
+    named-type Int 733..736
   result
-    named-type Int 738..741
-  block 742..807
-    match 748..805
-      name word 754..758
-      arm 769..784
-        pattern-string "yes" 769..774
-        name weight 778..784
-      arm 793..799
-        pattern-wildcard 793..794
-        integer 0 798..799
+    named-type Int 741..744
+  block 745..810
+    match 751..808
+      name word 757..761
+      arm 772..787
+        pattern-string "yes" 772..777
+        name weight 781..787
+      arm 796..802
+        pattern-wildcard 796..797
+        integer 0 801..802

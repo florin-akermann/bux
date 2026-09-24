@@ -3,10 +3,10 @@
 // `docs/specs/codegen.md` writes one method per set of types a use settles, and none for the
 // declaration itself, so an `Int` crossing a generic is the same 64 bits it is anywhere else.
 fn main(arguments: List<String>) -> Int {
-    counted := kept(7)
-    flagged := is_kept(true)
-    tagged := held(Tag { at: counted })
-    nested := twice(3)
+    let counted = kept(7)
+    let flagged = is_kept(true)
+    let tagged = held(Tag { at: counted })
+    let nested = twice(3)
     0
 }
 

@@ -49,12 +49,12 @@ fn shaped(declaration: ast.ProcessDeclaration) -> Result<(), refusal.TypeError> 
 // example: shape_code("process Counter {\n    fn start() -> Int {\n        0\n    }\n}\n") == "L0803 8..15"
 // example: shape_code("process Counter {\n    fn start() -> Int {\n        0\n    }\n\n    fn receive(total: Int, message: Int) -> Next<Int> {\n        match message {\n            _ => Done\n        }\n    }\n\n    fn more() -> Int {\n        0\n    }\n}\n") == "L0804 185..189"
 fn in_their_places(declaration: ast.ProcessDeclaration) -> Result<(), refusal.TypeError> {
-    name := declaration.name.text
-    starting := named_at(declaration, 0, "start")
+    let name = declaration.name.text
+    let starting = named_at(declaration, 0, "start")
     if !starting.is_named {
         return Err(refusal.TypeError { kind: refusal.StartsWithoutStart(name), span: starting.name.span })
     }
-    receiving := named_at(declaration, 1, "receive")
+    let receiving = named_at(declaration, 1, "receive")
     if !receiving.is_named {
         return Err(refusal.TypeError { kind: refusal.ReceivesNothing(name), span: receiving.name.span })
     }
@@ -106,12 +106,12 @@ fn is_written(written: Option<ast.TypeRef>) -> Bool {
 /// `match` on the message, each arm one call or one name.
 // example: shape_code("process Counter {\n    fn start() -> Int {\n        0\n    }\n\n    fn receive(total: Int) -> Next<Int> {\n        Done\n    }\n}\n") == "L0807 66..73"
 fn received(declaration: ast.ProcessDeclaration) -> Result<(), refusal.TypeError> {
-    receive := or(list.at(declaration.functions, 1), empty_function(declaration.name))
+    let receive = or(list.at(declaration.functions, 1), empty_function(declaration.name))
     if list.length(receive.parameters) != 2 {
         return Err(refusal.TypeError { kind: refusal.ReceivesTwoValues(declaration.name.text), span: receive.name.span })
     }
-    message := or(list.at(receive.parameters, 1), empty_parameter(receive.name)).name.text
-    matched := one_match_on(receive.body, message)?
+    let message = or(list.at(receive.parameters, 1), empty_parameter(receive.name)).name.text
+    let matched = one_match_on(receive.body, message)?
     for arm in matched.arms {
         if !is_one_call_or_one_name(arm.body) {
             return Err(refusal.TypeError { kind: refusal.ArmDoesTheWork(message), span: arm.body.span })
@@ -123,11 +123,11 @@ fn received(declaration: ast.ProcessDeclaration) -> Result<(), refusal.TypeError
 /// The one `match` on `message` that `body` is, or the refusal of a body that is anything else.
 // example: shape_code("process Counter {\n    fn start() -> Int {\n        0\n    }\n\n    fn receive(total: Int, message: Int) -> Next<Int> {\n        Done\n    }\n}\n") == "L0808 113..133"
 fn one_match_on(body: ast.Block, message: String) -> Result<ast.MatchExpr, refusal.TypeError> {
-    refused := refusal.TypeError { kind: refusal.ReceivesWithoutAMatch(message), span: body.span }
+    let refused = refusal.TypeError { kind: refusal.ReceivesWithoutAMatch(message), span: body.span }
     if list.length(body.statements) != 1 {
         return Err(refused)
     }
-    statement := or(list.at(body.statements, 0), ast.Statement { kind: ast.Break, span: body.span })
+    let statement = or(list.at(body.statements, 0), ast.Statement { kind: ast.Break, span: body.span })
     match statement.kind {
         ast.Evaluated(written) => match_on(written, message, refused)
         _ => Err(refused)

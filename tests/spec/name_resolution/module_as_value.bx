@@ -3,6 +3,6 @@
 import io
 
 fn go() -> Int {
-    held := io
+    let held = io
     1
 }

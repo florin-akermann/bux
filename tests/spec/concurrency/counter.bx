@@ -5,7 +5,7 @@
 import io
 
 fn main(arguments: List<String>) -> Int {
-    counting := spawn Counter(10)
+    let counting = spawn Counter(10)
     for amount in [1, 2, 3] {
         _ = send(counting, Add(amount), NoLimit)
     }

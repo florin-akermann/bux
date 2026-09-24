@@ -17,7 +17,7 @@ fn named(count: Int) -> String {
 
 // example: answered("yes") == 1
 fn answered(word: String) -> Int {
-    held := [word, "maybe"]
+    let held = [word, "maybe"]
     _ = list.length(held)
     match word == "yes" {
         true => weighed(word: word, weight: 1)

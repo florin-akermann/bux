@@ -28,11 +28,11 @@ fn count_active<T>(users: List<User>, limit: Int) -> Result<Int, String> {
             break
         }
     }
-    first := first_user(users)?
+    let first = first_user(users)?
     if identifier(first) == -7 {
         return Err("bad id")
     }
-    renamed := first { active: false }
+    let renamed = first { active: false }
     Ok(or(total / 1, 0) - 0)
 }
 

@@ -31,8 +31,8 @@ fn held_over(property: Property, cases: Int, prelude: types.Prelude) -> held.Hel
     var found = held.nothing_failed(cases)
     var index = 0
     for index < cases {
-        seed := drawn.seed_of(index)
-        tried := tried_by(property: property, draw: drawn.seeded(seed), prelude: prelude)
+        let seed = drawn.seed_of(index)
+        let tried = tried_by(property: property, draw: drawn.seeded(seed), prelude: prelude)
         if tried.why != "" {
             found = held.with_failure(found, held.drawn_failure(name_of(property), seed, tried.case, tried.why))
         }
@@ -75,23 +75,23 @@ fn name_of(property: Property) -> String {
 /// cases do not parse, and a case that does not type holds at once.
 // example: checking_never_panics_and_is_deterministic(drawn.seeded(1), types.little_prelude()).why == ""
 fn checking_never_panics_and_is_deterministic(draw: drawn.Draw, prelude: types.Prelude) -> Tried {
-    pieces := [payment_arm(0), payment_arm(1), payment_arm(2), "        other => \"else\"\n", "        _ => \"any\"\n", "        Pending | Failed(_) => \"two\"\n", "        Failed(\"no\") => \"no\"\n", "é", "(", "=> "]
-    source := payments(drawn.text_of(drawn.next(draw), pieces, drawn.number(draw, 6)))
+    let pieces = [payment_arm(0), payment_arm(1), payment_arm(2), "        other => \"else\"\n", "        _ => \"any\"\n", "        Pending | Failed(_) => \"two\"\n", "        Failed(\"no\") => \"no\"\n", "é", "(", "=> "]
+    let source = payments(drawn.text_of(drawn.next(draw), pieces, drawn.number(draw, 6)))
     Tried { case: source, why: answered_alike(source, prelude) }
 }
 
 /// A `match` whose arms are rotated out of the order the type declares its variants is refused.
 // example: a_match_whose_arms_are_rotated_out_of_the_declared_order_is_refused(drawn.seeded(1), types.little_prelude()).why == ""
 fn a_match_whose_arms_are_rotated_out_of_the_declared_order_is_refused(draw: drawn.Draw, prelude: types.Prelude) -> Tried {
-    rotation := 1 + drawn.number(draw, 2)
+    let rotation = 1 + drawn.number(draw, 2)
     var arms = ""
     var index = 0
     for index < 3 {
         arms += payment_arm(or((index + rotation) % 3, 0))
         index += 1
     }
-    source := payments(arms)
-    answer := answer_of(source, prelude)
+    let source = payments(arms)
+    let answer = answer_of(source, prelude)
     var why = ""
     if !is_opening(text: answer, opening: "L0501 ") || !has_text(text: answer, piece: " this `match` writes ") {
         why = "the check says " + held.quoted(answer)
@@ -102,8 +102,8 @@ fn a_match_whose_arms_are_rotated_out_of_the_declared_order_is_refused(draw: dra
 /// A `match` with one variant of the payment left out is refused.
 // example: a_match_with_one_of_its_variants_left_out_is_refused(drawn.seeded(1), types.little_prelude()).why == ""
 fn a_match_with_one_of_its_variants_left_out_is_refused(draw: drawn.Draw, prelude: types.Prelude) -> Tried {
-    source := payments(all_but(drawn.number(draw, 3)))
-    answer := answer_of(source, prelude)
+    let source = payments(all_but(drawn.number(draw, 3)))
+    let answer = answer_of(source, prelude)
     var why = ""
     if !is_opening(text: answer, opening: "L0500 ") {
         why = "the check says " + held.quoted(answer)
@@ -120,8 +120,8 @@ fn a_name_that_binds_covers_whatever_else_is_written(draw: drawn.Draw, prelude: 
         arms += payment_arm(index)
         index += 1
     }
-    source := payments(arms + "        other => \"something else\"\n")
-    answer := answer_of(source, prelude)
+    let source = payments(arms + "        other => \"something else\"\n")
+    let answer = answer_of(source, prelude)
     var why = ""
     if answer != "" {
         why = "the check says " + held.quoted(answer)
@@ -132,21 +132,21 @@ fn a_name_that_binds_covers_whatever_else_is_written(draw: drawn.Draw, prelude: 
 /// The refusal of a `match` with a variant left out points at a stretch inside the source.
 // example: a_refusal_points_inside_the_source(drawn.seeded(1), types.little_prelude()).why == ""
 fn a_refusal_points_inside_the_source(draw: drawn.Draw, prelude: types.Prelude) -> Tried {
-    source := payments(all_but(drawn.number(draw, 3)))
+    let source = payments(all_but(drawn.number(draw, 3)))
     Tried { case: source, why: pointed_inside(source, prelude) }
 }
 
 /// `A | B` in one arm covers exactly what `A` and `B` cover in two arms.
 // example: one_arm_of_alternatives_covers_what_the_same_arms_cover_separately(drawn.seeded(1), types.little_prelude()).why == ""
 fn one_arm_of_alternatives_covers_what_the_same_arms_cover_separately(draw: drawn.Draw, prelude: types.Prelude) -> Tried {
-    named := first_colours(1 + drawn.number(draw, 3))
+    let named = first_colours(1 + drawn.number(draw, 3))
     var apart = ""
     for name in named {
         apart += "        " + name + " => \"seen\"\n"
     }
-    together := "        " + strings.join(named, " | ") + " => \"seen\"\n"
-    apart_answer := answer_of(colours(apart), prelude)
-    together_answer := answer_of(colours(together), prelude)
+    let together = "        " + strings.join(named, " | ") + " => \"seen\"\n"
+    let apart_answer = answer_of(colours(apart), prelude)
+    let together_answer = answer_of(colours(together), prelude)
     var why = ""
     if !is_typed_answer(apart_answer) || is_accepted(apart_answer) != is_accepted(together_answer) {
         why = "apart the check says " + held.quoted(apart_answer) + ", together " + held.quoted(together_answer)
@@ -179,7 +179,7 @@ fn colours(arms: String) -> String {
 /// the values, all of them, or all of them out of order.
 // example: has_text(text: a_drawn_match_is_checked_alike_twice_and_a_refusal_points_inside_it(drawn.seeded(1), types.little_prelude()).case, piece: "match ")
 fn a_drawn_match_is_checked_alike_twice_and_a_refusal_points_inside_it(draw: drawn.Draw, prelude: types.Prelude) -> Tried {
-    source := drawn_match(draw)
+    let source = drawn_match(draw)
     var why = answered_alike(source, prelude)
     if why == "" && answer_of(source, prelude) != "" {
         why = pointed_inside(source, prelude)
@@ -193,8 +193,8 @@ fn a_drawn_match_is_checked_alike_twice_and_a_refusal_points_inside_it(draw: dra
 /// Why two checks of `source` differ, and `""` where they agree or `source` does not type.
 // example: answered_alike("fn f() -> Int {\n    1\n}\n", types.little_prelude()) == ""
 fn answered_alike(source: String, prelude: types.Prelude) -> String {
-    first := answer_of(source, prelude)
-    second := answer_of(source, prelude)
+    let first = answer_of(source, prelude)
+    let second = answer_of(source, prelude)
     if first != second {
         return "one check says " + held.quoted(first) + ", the other " + held.quoted(second)
     }
@@ -228,9 +228,9 @@ fn span_outside(span: lexer.Span, bytes: Int) -> String {
 /// The truth is a field of a record, because a `Bool` parameter is refused before the check.
 // example: has_text(text: drawn_match(drawn.seeded(1)), piece: "type Status")
 fn drawn_match(draw: drawn.Draw) -> String {
-    over := drawn.number(draw, 4)
-    scrutinee := or(list.at(["status", "maybe", "count", "given.flag"], over), "given.flag")
-    patterns := or(list.at(patterns_over(), over), ["_"])
+    let over = drawn.number(draw, 4)
+    let scrutinee = or(list.at(["status", "maybe", "count", "given.flag"], over), "given.flag")
+    let patterns = or(list.at(patterns_over(), over), ["_"])
     var body = ""
     var at = drawn.next(draw)
     for index in [0, 1, 2, 3] {
@@ -245,8 +245,8 @@ fn drawn_match(draw: drawn.Draw) -> String {
 /// The patterns an arm over each parameter of a drawn `match` writes, in the order of the four.
 // example: list.length(patterns_over()) == 4
 fn patterns_over() -> List<List<String>> {
-    status := ["Pending", "Running(_)", "Running(1)", "Failed(_, true)", "Failed(0, _)", "Failed(_, _)", "Pending | Running(_)", "Running(_) | Pending", "Failed(_, false) | Pending", "other", "_"]
-    maybe := ["Some(Pending)", "Some(Running(_))", "Some(Failed(_, _))", "Some(Pending | Failed(_, _))", "Some(Failed(_, _) | Running(2))", "None", "Some(other)", "Some(_) | None", "None | Some(_)", "_"]
+    let status = ["Pending", "Running(_)", "Running(1)", "Failed(_, true)", "Failed(0, _)", "Failed(_, _)", "Pending | Running(_)", "Running(_) | Pending", "Failed(_, false) | Pending", "other", "_"]
+    let maybe = ["Some(Pending)", "Some(Running(_))", "Some(Failed(_, _))", "Some(Pending | Failed(_, _))", "Some(Failed(_, _) | Running(2))", "None", "Some(other)", "Some(_) | None", "None | Some(_)", "_"]
     [status, maybe, ["0", "1 | 2", "other", "_"], ["true", "false", "false | true", "_"]]
 }
 
@@ -265,7 +265,7 @@ fn all_but(left_out: Int) -> String {
 /// The arm for the variant of the payment at `index`, in the order the type declares them.
 // example: payment_arm(0) == "        Pending => \"waiting\"\n"
 fn payment_arm(index: Int) -> String {
-    arms := ["        Pending => \"waiting\"\n", "        Authorized { authorization_id } => authorization_id\n", "        Failed(reason) => reason\n"]
+    let arms = ["        Pending => \"waiting\"\n", "        Authorized { authorization_id } => authorization_id\n", "        Failed(reason) => reason\n"]
     or(list.at(arms, index), "")
 }
 

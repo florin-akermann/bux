@@ -61,7 +61,7 @@ fn differing(first: List<jvm.ClassFile>, second: List<jvm.ClassFile>) -> String 
     }
     var index = 0
     for file in first {
-        other := or(list.at(second, index), jvm.ClassFile { path: "", bytes: [] })
+        let other = or(list.at(second, index), jvm.ClassFile { path: "", bytes: [] })
         if file.path != other.path || file.bytes != other.bytes {
             return file.path + " is written apart from " + other.path
         }

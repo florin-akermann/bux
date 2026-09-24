@@ -28,9 +28,9 @@ fn a_literal_nothing_settles_is_an_int(cases: Int, library: ir.Library) -> held.
 /// A drawn literal from minus a million to a million, given back as an `Int`.
 // example: unsettled_tried(drawn.seeded(1), ir.little_library()).input != ""
 fn unsettled_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
-    written := shown(drawn.number(draw, 2000001) - 1000000)
-    source := "fn counted() -> Int {\n    " + written + "\n}\n\n" + int32()
-    typed := checking.type_written(source, written, 1, library)
+    let written = shown(drawn.number(draw, 2000001) - 1000000)
+    let source = "fn counted() -> Int {\n    " + written + "\n}\n\n" + int32()
+    let typed = checking.type_written(source, written, 1, library)
     if typed != "Int" {
         return checking.Tried { input: source, why: written + " is " + typed }
     }
@@ -50,9 +50,9 @@ fn a_literal_is_accepted_exactly_inside_its_range(cases: Int, library: ir.Librar
 /// A drawn literal at the edge of the range of an `Int32`, given back as an `Int32`.
 // example: edge_tried(drawn.seeded(1), ir.little_library()).input != ""
 fn edge_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
-    edge := drawn.picked(draw, at_the_edge(), Edge { written: "0", fits: Fits })
-    source := "fn counted() -> Int32 {\n    " + edge.written + "\n}\n\n" + int32()
-    answer := checking.checked(source, library)
+    let edge = drawn.picked(draw, at_the_edge(), Edge { written: "0", fits: Fits })
+    let source = "fn counted() -> Int32 {\n    " + edge.written + "\n}\n\n" + int32()
+    let answer = checking.checked(source, library)
     if fit_of(answer: answer, source: source, written: edge.written) != edge.fits {
         return checking.Tried { input: source, why: edge.written + ": " + checking.message_of(answer) }
     }
@@ -91,9 +91,9 @@ fn a_whole_number_where_an_int_is_expected_is_an_int(cases: Int, library: ir.Lib
 /// A drawn whole number from zero to the largest `Int`, added to an `Int`.
 // example: whole_tried(drawn.seeded(1), ir.little_library()).input != ""
 fn whole_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
-    written := shown(whole_number(draw))
-    source := "fn counted(number: Int) -> Int {\n    number + " + written + "\n}\n"
-    typed := checking.type_written(source, written, 1, library)
+    let written = shown(whole_number(draw))
+    let source = "fn counted(number: Int) -> Int {\n    number + " + written + "\n}\n"
+    let typed = checking.type_written(source, written, 1, library)
     if typed != "Int" {
         return checking.Tried { input: source, why: written + " is " + typed }
     }
@@ -123,9 +123,9 @@ fn an_operator_over_ints_gives_back_what_it_always_gave(cases: Int, library: ir.
 /// A drawn operator written over two `Int`s.
 // example: over_ints_tried(drawn.seeded(1), ir.little_library()).input != ""
 fn over_ints_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
-    operator := drawn.picked(draw, over_ints(), Operator { written: "one + other", gives: "Int" })
-    source := written_over(written: operator.written, over: "Int", declares: "")
-    typed := checking.type_written(source, operator.written, 1, library)
+    let operator = drawn.picked(draw, over_ints(), Operator { written: "one + other", gives: "Int" })
+    let source = written_over(written: operator.written, over: "Int", declares: "")
+    let typed = checking.type_written(source, operator.written, 1, library)
     if typed != operator.gives {
         return checking.Tried { input: source, why: operator.written + " is " + typed }
     }
@@ -145,9 +145,9 @@ fn an_operator_over_a_type_with_no_instance_is_refused(cases: Int, library: ir.L
 /// A drawn operator written over two values of a record that has no instances.
 // example: over_point_tried(drawn.seeded(1), ir.little_library()).input != ""
 fn over_point_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
-    operator := drawn.picked(draw, over_ints(), Operator { written: "one + other", gives: "Int" })
-    source := written_over(written: operator.written, over: "Point", declares: "\ntype Point = {\n    across: Int\n}\n")
-    message := checking.message_of(checking.checked(source, library))
+    let operator = drawn.picked(draw, over_ints(), Operator { written: "one + other", gives: "Int" })
+    let source = written_over(written: operator.written, over: "Point", declares: "\ntype Point = {\n    across: Int\n}\n")
+    let message = checking.message_of(checking.checked(source, library))
     if checking.occurrence(message, "`Point` has no `", 1).start != 0 {
         return checking.Tried { input: source, why: "the refusal says " + held.quoted(message) }
     }

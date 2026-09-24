@@ -63,7 +63,7 @@ A newline is **significant** when the token before it can end a statement, a fie
 an identifier, an integer, a string, `true`, `false`, `break`, `continue`, `return`, `?`,
 `)`, `]`, `}`, or `>`.
 Every other newline is dropped before parsing begins, so an expression continues across a line
-break after an operator, a comma, `=`, `:=`, `+=`, `->`, `=>`, `|`, or an opening bracket.
+break after an operator, a comma, `=`, `+=`, `->`, `=>`, `|`, or an opening bracket.
 
 `>` is in that list because it closes a type argument list, which is how `ids: List<Int>` ends.
 It is also the greater-than operator, so that one operator is never the last token of a line.
@@ -79,79 +79,84 @@ Significant newlines before a closing `}` or `)` are allowed and terminate nothi
 ## Grammar
 
 Uppercase and lowercase spellings are not distinguished; `Name` below is any identifier.
+A rule is written `name = definition`, and a quoted text in a definition is a token.
 
 ```text
-program        := { item }
+program         = { item }
 
-item           := import | type_declaration | trait | instance | derive | function
+item            = import | type_declaration | trait | instance | derive | function
                 | extern_type | extern | process
 
-import         := "import" Name
+import          = "import" Name
 
-type_declaration := "type" Name [ type_parameters ] "=" type_definition
-type_parameters  := "<" Name { "," Name } ">"
-type_definition  := record_type | variant | { "|" variant }
-record_type      := "{" { Name ":" type } "}"
-variant          := Name [ "(" type { "," type } ")" | record_type ]
+type_declaration  = "type" Name [ type_parameters ] "=" type_definition
+type_parameters   = "<" Name { "," Name } ">"
+type_definition   = record_type | variant | { "|" variant }
+record_type       = "{" { Name ":" type } "}"
+variant           = Name [ "(" type { "," type } ")" | record_type ]
 
-type           := Name [ "<" type { "," type } ">" ] | "(" ")"
+type            = Name [ "<" type { "," type } ">" ] | "(" ")"
 
-trait          := "trait" Name "<" Name ">" "{" signature { signature } "}"
-signature      := "fn" Name "(" [ parameters ] ")" [ "->" type ]
-instance       := "instance" Name "<" Name ">" "{" function { function } "}"
-derive         := "derive" Name { "," Name } "for" Name
-process        := "process" Name "{" { function } "}"
+trait           = "trait" Name "<" Name ">" "{" signature { signature } "}"
+signature       = "fn" Name "(" [ parameters ] ")" [ "->" type ]
+instance        = "instance" Name "<" Name ">" "{" function { function } "}"
+derive          = "derive" Name { "," Name } "for" Name
+process         = "process" Name "{" { function } "}"
 
-extern_type    := "extern" "type" [ "interface" ] Name "=" String
-extern         := "extern" ( extern_field | extern_static | extern_method | extern_new )
-extern_field   := "field" [ width ] Name "(" ")" "->" type "=" String
-extern_static  := "static" [ width ] Name "(" [ taken ] ")" "->" type "=" String
-extern_method  := "method" [ width ] Name "(" taken ")" "->" type "=" String
-extern_new     := "new" [ width ] Name "(" [ taken ] ")" "->" type
-taken          := extern_parameter { "," extern_parameter }
-extern_parameter := [ "int" ] parameter
-width          := "int" | "char"
+extern_type     = "extern" "type" [ "interface" ] Name "=" String
+extern          = "extern" ( extern_field | extern_static | extern_method | extern_new )
+extern_field    = "field" [ width ] Name "(" ")" "->" type "=" String
+extern_static   = "static" [ width ] Name "(" [ taken ] ")" "->" type "=" String
+extern_method   = "method" [ width ] Name "(" taken ")" "->" type "=" String
+extern_new      = "new" [ width ] Name "(" [ taken ] ")" "->" type
+taken           = extern_parameter { "," extern_parameter }
+extern_parameter  = [ "int" ] parameter
+width           = "int" | "char"
 
-function       := "fn" Name [ constrained_parameters ] "(" [ parameters ] ")" [ "->" type ] block
-constrained_parameters := "<" constrained { "," constrained } ">"
-constrained    := Name [ ":" constraint { "+" constraint } ]
-constraint     := Name "<" type ">"
-parameters     := parameter { "," parameter }
-parameter      := Name [ ":" type ]
+function        = "fn" Name [ constrained_parameters ] "(" [ parameters ] ")" [ "->" type ] block
+constrained_parameters  = "<" constrained { "," constrained } ">"
+constrained     = Name [ ":" constraint { "+" constraint } ]
+constraint      = Name "<" type ">"
+parameters      = parameter { "," parameter }
+parameter       = Name [ ":" type ]
 
-block          := "{" { statement } "}"
-statement      := binding | assignment | discard | "return" [ expression ]
+block           = "{" { statement } "}"
+statement       = binding | assignment | discard | "return" [ expression ]
                 | "break" | "continue" | for | expression
-binding        := Name ":=" expression | "var" Name "=" expression
-assignment     := Name ( "=" | "+=" ) expression
-discard        := "_" "=" expression
-for            := "for" [ Name "in" expression | expression ] block
+binding         = ( "let" | "var" ) Name "=" expression
+assignment      = Name ( "=" | "+=" ) expression
+discard         = "_" "=" expression
+for             = "for" [ Name "in" expression | expression ] block
 
-expression     := or
-or             := and { "||" and }
-and            := comparison { "&&" comparison }
-comparison     := sum [ ( "==" | "!=" | "<" | "<=" | ">" | ">=" ) sum ]
-sum            := product { ( "+" | "-" ) product }
-product        := unary { ( "*" | "/" | "%" ) unary }
-unary          := [ "!" | "-" ] unary | "spawn" postfix | postfix
-postfix        := primary { "(" [ arguments ] ")" | "." Name | "?" }
-arguments      := expression { "," expression }
+expression      = or
+or              = and { "||" and }
+and             = comparison { "&&" comparison }
+comparison      = sum [ ( "==" | "!=" | "<" | "<=" | ">" | ">=" ) sum ]
+sum             = product { ( "+" | "-" ) product }
+product         = unary { ( "*" | "/" | "%" ) unary }
+unary           = [ "!" | "-" ] unary | "spawn" postfix | postfix
+postfix         = primary { "(" [ arguments ] ")" | "." Name | "?" }
+arguments       = expression { "," expression }
                 | named_argument { "," named_argument }
-named_argument := Name ":" expression
-primary        := Name [ record_literal ] | Integer | String | "true" | "false"
+named_argument  = Name ":" expression
+primary         = Name [ record_literal ] | Integer | String | "true" | "false"
                 | "(" ")" | "(" expression ")" | written_list | if | match
-written_list   := "[" [ expression { "," expression } ] "]"
-record_literal := "{" [ field_value { "," field_value } ] "}"
-field_value    := Name ":" expression
+written_list    = "[" [ expression { "," expression } ] "]"
+record_literal  = "{" [ field_value { "," field_value } ] "}"
+field_value     = Name ":" expression
 
-if             := "if" expression block [ "else" ( block | if ) ]
-match          := "match" expression "{" { match_arm } "}"
-match_arm      := pattern "=>" expression
+if              = "if" expression block [ "else" ( block | if ) ]
+match           = "match" expression "{" { match_arm } "}"
+match_arm       = pattern "=>" expression
 
-pattern        := alternative { "|" alternative }
-alternative    := Name [ "(" pattern { "," pattern } ")" | "{" Name { "," Name } "}" ]
+pattern         = alternative { "|" alternative }
+alternative     = Name [ "(" pattern { "," pattern } ")" | "{" Name { "," Name } "}" ]
                 | Integer | String | "true" | "false" | "_"
 ```
+
+A binding opens with `let` for a name that never changes, or with `var` for one that can.
+Only a `var` is assigned to afterwards, and each of the two joins its name to its value with `=`.
+`total := 0` is `L0109`, because `:=` is no token; its help names `let total =` in its place.
 
 A comparison does not chain: `a < b < c` is a parse error, as it is in Go.
 Every other binary operator is left-associative.
@@ -211,7 +216,7 @@ The found part names what is there the same way, or `the end of the file`.
 Every parse error carries a code, and `docs/specs/diagnostics.md` is the catalogue of them.
 An `expected <what>, found <what>` error is `L0100`, whatever it expected.
 
-Nine failures are not about which token was found, and have their own words:
+Ten failures are not about which token was found, and have their own words:
 
 | Error               | Code    | Message                                    | Help                        |
 |---------------------|---------|--------------------------------------------|-----------------------------|
@@ -224,6 +229,7 @@ Nine failures are not about which token was found, and have their own words:
 | nesting too deep    | `L0106` | this nests too deeply to parse             | how deep brackets may nest  |
 | assigned to a value | `L0107` | only a name is assigned to                 | build the value it becomes  |
 | partly named call   | `L0108` | this call names some of its arguments and not others | all of them or none |
+| binding with `:=`   | `L0109` | `` `:=` `` does not bind a name             | the `let` that binds it      |
 
 An assignment names a name, which `docs/design.md` section 10 states.
 `user.name = "Bob"` and `first(users).id = 1` are `L0107`, pointing at what was written there.

@@ -30,12 +30,12 @@ fn has_value(environment: Environment, key: String) -> Bool {
 /// A record holds another by value, so a ring of records has no first value to build.
 // example: refusal.code_given(nothing_holds_itself(resolved_of("type Box = {\n    held: Box\n}\n"))) == "L0415 5..8"
 fn nothing_holds_itself(resolved: resolver.Resolved) -> Result<(), refusal.TypeError> {
-    declared_records := records_of(resolved.program)
-    holding := held_by(declared_records)
+    let declared_records = records_of(resolved.program)
+    let holding = held_by(declared_records)
     var walk = Walk { reached: map.empty(), path: [] }
     for record in declared_records {
         if !is_walked(walk, record.name.text) {
-            found := ring_from(walk, record.name.text, holding)
+            let found = ring_from(walk, record.name.text, holding)
             walk = found.walk
             _ = no_ring(found.ring, declared_records)?
         }
@@ -66,13 +66,13 @@ fn is_walked(walk: Walk, named: String) -> Bool {
 fn ring_from(walk: Walk, at: String, holding: map.Map<String, List<String>>) -> Walked {
     var walking = walk { reached: map.insert(walk.reached, at, OnTheWayIn), path: list.push(walk.path, at) }
     for held in or(map.get(holding, at), []) {
-        step := step_into(walking, held, holding)
+        let step = step_into(walking, held, holding)
         if list.length(step.ring) > 0 {
             return step
         }
         walking = step.walk
     }
-    left := walking { reached: map.insert(walking.reached, at, Left), path: without_last(walking.path) }
+    let left = walking { reached: map.insert(walking.reached, at, Left), path: without_last(walking.path) }
     Walked { walk: left, ring: [] }
 }
 
@@ -99,7 +99,7 @@ fn stepped_past(walk: Walk, held: String, stage: Stage) -> Walked {
 fn without_last(path: List<String>) -> List<String> {
     var kept = []
     var index = 0
-    last := list.length(path) - 1
+    let last = list.length(path) - 1
     for one in path {
         if index < last {
             kept = list.push(kept, one)
@@ -149,7 +149,7 @@ fn held_by(declared_records: List<RecordOf>) -> map.Map<String, List<String>> {
     for record in declared_records {
         var held = []
         for field in record.fields {
-            head := head_of(field.type_ref)
+            let head = head_of(field.type_ref)
             if is_a_record(declared_records, head) {
                 held = list.push(held, head)
             }
@@ -210,7 +210,7 @@ fn given_instances(environment: Environment, resolved: resolver.Resolved) -> Lis
     var given = []
     for item in resolved.program.items {
         for claim in claims_of(item) {
-            asks := or(map.get(environment.instances, claim.of + " " + claim.for_type), [])
+            let asks = or(map.get(environment.instances, claim.of + " " + claim.for_type), [])
             if is_offered(resolved.program, claim, asks) {
                 given = sorted_in(given, surface.OfferedInstance { of: claim.of, for_type: claim.for_type, asks: asks, holds: holds_as(environment, claim) })
             }
@@ -323,7 +323,7 @@ fn offered_types(environment: Environment, program: ast.Program) -> List<surface
 /// One declared type as a module importing this one reads it, with what builds it.
 // example: offered_type(empty_environment(WhereWritten), first_type("type Box = Box\n")).name == "Box"
 fn offered_type(environment: Environment, declaration: ast.TypeDeclaration) -> surface.OfferedType {
-    scheme := or(map.get(environment.declared, declaration.name.text), unify.monomorphic(unify.Unit))
+    let scheme = or(map.get(environment.declared, declaration.name.text), unify.monomorphic(unify.Unit))
     surface.OfferedType { name: declaration.name.text, over: scheme.quantified, declared: scheme.body, built_by: built_by_of(environment, declaration) }
 }
 
@@ -350,9 +350,9 @@ fn each_built_with(environment: Environment, variants: List<ast.Variant>) -> Lis
 /// One constructor as a module importing this one reads it, which is what it carries.
 // example: built_with_of(empty_environment(WhereWritten), ast.Name { text: "Box", span: lexer.Span { start: 5, length: 3 } }).name == "Box"
 fn built_with_of(environment: Environment, named: ast.Name) -> surface.OfferedConstructor {
-    key := at_key(named.span.start)
-    scheme := or(map.get(environment.values, key), unify.monomorphic(unify.Unit))
-    carries := if unify.is_function(scheme.body) {
+    let key = at_key(named.span.start)
+    let scheme = or(map.get(environment.values, key), unify.monomorphic(unify.Unit))
+    let carries = if unify.is_function(scheme.body) {
         unify.parameters_of(scheme.body)
     } else {
         []
@@ -415,8 +415,8 @@ fn environment_of(prelude: Environment, resolved: resolver.Resolved, reached: Li
         environment = given_by_another_module(environment, offered_instance)
     }
     environment = note_types(environment, resolved)
-    traited := declare_traits(environment, resolved)?
-    items := declare_items(Declaring { environment: traited, table: table }, resolved)?
+    let traited = declare_traits(environment, resolved)?
+    let items = declare_items(Declaring { environment: traited, table: table }, resolved)?
     _ = hold_what_they_need(items.environment, resolved)?
     Ok(items)
 }
@@ -440,7 +440,7 @@ fn offered_by_another_module(environment: Environment, offered: surface.OfferedT
 /// One instance another module gives a type it declares, which travels with that type.
 // example: is_answered(environment: given_by_another_module(empty_environment(WhereWritten), surface.OfferedInstance { of: "Eq", for_type: "demo.User", asks: [], holds: None }), of: "Eq", at: unify.Named { name: "demo.User", arguments: [] }, promised: [])
 fn given_by_another_module(environment: Environment, given: surface.OfferedInstance) -> Environment {
-    filed := environment { instances: map.insert(environment.instances, given.of + " " + given.for_type, given.asks) }
+    let filed = environment { instances: map.insert(environment.instances, given.of + " " + given.for_type, given.asks) }
     match given.holds {
         Some(bounds) => filed { holds: map.insert(filed.holds, given.for_type, bounds), written_at: set.insert(filed.written_at, given.for_type) }
         None => filed
@@ -482,17 +482,17 @@ fn process_declared(declaring: Declaring, resolved: resolver.Resolved, declarati
     for function in declaration.functions {
         walked = function_declared(walked, resolved, function)?
     }
-    environment := walked.environment
-    started := process_function_type(environment, declaration, "start")
-    received := process_function_type(environment, declaration, "receive")
-    state := unify.result_of(started)
-    message := or(list.at(unify.parameters_of(received), 1), unify.Unit)
-    wanted := unify.Function { parameters: [state, message], result: unify.Named { name: "Next", arguments: [state] } }
+    let environment = walked.environment
+    let started = process_function_type(environment, declaration, "start")
+    let received = process_function_type(environment, declaration, "receive")
+    let state = unify.result_of(started)
+    let message = or(list.at(unify.parameters_of(received), 1), unify.Unit)
+    let wanted = unify.Function { parameters: [state, message], result: unify.Named { name: "Next", arguments: [state] } }
     if received != wanted {
         return Err(refusal.TypeError { kind: refusal.ReceivesAnotherState { state: state, receive: received }, span: process_function_name(declaration, "receive").span })
     }
-    handle := unify.Named { name: "Process", arguments: [message, state] }
-    spawned := unify.monomorphic(unify.Function { parameters: unify.parameters_of(started), result: handle })
+    let handle = unify.Named { name: "Process", arguments: [message, state] }
+    let spawned = unify.monomorphic(unify.Function { parameters: unify.parameters_of(started), result: handle })
     Ok(walked { environment: bound(environment, declared_at(environment, declaration.name), spawned) })
 }
 
@@ -520,8 +520,8 @@ fn process_function_name(declaration: ast.ProcessDeclaration, named: String) -> 
 /// An instance: that it exists, then each method it writes, held to its trait's signature.
 // example: declared_code("instance Eq<Box> {\n    fn is_equal(one: Box, other: Box) -> Bool {\n        true\n    }\n}\n\ntype Box = {\n}\n") == ""
 fn instance_declared(declaring: Declaring, resolved: resolver.Resolved, declaration: ast.InstanceDeclaration) -> Result<Declaring, refusal.TypeError> {
-    noted := note_instance(declaring.environment, resolved, declaration)?
-    given := unify.Named { name: declaration.for_type.text, arguments: standing_for(declaration) }
+    let noted = note_instance(declaring.environment, resolved, declaration)?
+    let given = unify.Named { name: declaration.for_type.text, arguments: standing_for(declaration) }
     var walked = declaring { environment: noted }
     for method in declaration.methods {
         walked = function_declared(walked, resolved, method)?
@@ -533,7 +533,7 @@ fn instance_declared(declaring: Declaring, resolved: resolver.Resolved, declarat
 /// The declaring, with what the method `named` of the trait `of` must be at `given`.
 // example: has_value(method_written_as(Declaring { environment: empty_environment(ByName), table: unify.empty_table() }, "Eq", ast.Name { text: "is_equal", span: lexer.Span { start: 0, length: 8 } }, unify.int()).environment, "is_equal") == false
 fn method_written_as(declaring: Declaring, of: String, named: ast.Name, given: unify.Type) -> Declaring {
-    environment := declaring.environment
+    let environment = declaring.environment
     match method_at(environment: environment, of: of, method: named.text, given: given) {
         Some(declared_one) => declaring { environment: environment { written_as: map.insert(environment.written_as, declared_at(environment, named), declared_one) } }
         None => declaring
@@ -690,7 +690,7 @@ fn positions_held(types: List<ast.TypeRef>, variant_name: String) -> List<Held> 
 /// Refuses one value a deriving type holds whose own type has no instance of the trait.
 // example: declared_code("derive Eq for Box\n\nderive Eq for Inner\n\ntype Box = {\n    held: Inner\n}\n\ntype Inner = {\n    count: Int\n}\n") == ""
 fn holds_an_instance(environment: Environment, resolved: resolver.Resolved, deriving: Deriving, held: Held) -> Result<(), refusal.TypeError> {
-    of_type := type_written(environment, resolved, held.written)?
+    let of_type = type_written(environment, resolved, held.written)?
     if is_answered(environment: environment, of: deriving.of, at: of_type, promised: []) {
         return Ok(())
     }
@@ -783,15 +783,15 @@ fn prelude_environment(resolved: resolver.Resolved) -> Environment {
     environment = bound(environment, "ended", ended_scheme())
     environment = held_by_the_compiler(environment, "prelude")
     environment = note_types(environment, resolved)
-    settled := ok_or(carried(environment, resolved), environment)
+    let settled = ok_or(carried(environment, resolved), environment)
     settled { keyed: WhereWritten }
 }
 
 /// The prelude's traits, then every declaration a module reaches of it.
 // example: refusal.code_given(carried(note_types(empty_environment(ByName), little_resolved()), little_resolved())) == ""
 fn carried(environment: Environment, resolved: resolver.Resolved) -> Result<Environment, refusal.TypeError> {
-    traited := declare_traits(environment, resolved)?
-    reached := declare_reachable(Declaring { environment: traited, table: unify.empty_table() }, resolved)?
+    let traited = declare_traits(environment, resolved)?
+    let reached = declare_reachable(Declaring { environment: traited, table: unify.empty_table() }, resolved)?
     Ok(reached.environment)
 }
 
@@ -825,7 +825,7 @@ fn reachable_item(declaring: Declaring, resolved: resolver.Resolved, item: ast.I
 /// That an instance of the prelude exists, which is all a module reaches of it.
 // example: declared_code("fn f() -> Int {\n    1\n}\n") == ""
 fn instance_noted(declaring: Declaring, resolved: resolver.Resolved, declaration: ast.InstanceDeclaration) -> Result<Declaring, refusal.TypeError> {
-    noted := note_instance(declaring.environment, resolved, declaration)?
+    let noted = note_instance(declaring.environment, resolved, declaration)?
     Ok(declaring { environment: noted })
 }
 
@@ -836,7 +836,7 @@ fn held_by_the_compiler(environment: Environment, module: String) -> Environment
     if module != "prelude" {
         return environment
     }
-    pushed := bound(environment, "push", surface.push_scheme())
+    let pushed = bound(environment, "push", surface.push_scheme())
     bound(pushed, "at", surface.at_scheme())
 }
 
@@ -864,7 +864,7 @@ fn type_noted(environment: Environment, item: ast.Item) -> Environment {
 /// One declared type, noted with its arity and, for a Java class, how it is called.
 // example: or(map.get(arity_noted(empty_environment(ByName), first_type("type Box = Box(Int)\n")).arities, "Box"), 9) == 0
 fn arity_noted(environment: Environment, declaration: ast.TypeDeclaration) -> Environment {
-    noted := environment { arities: map.insert(environment.arities, declared_at(environment, declaration.name), list.length(declaration.parameters)) }
+    let noted = environment { arities: map.insert(environment.arities, declared_at(environment, declaration.name), list.length(declaration.parameters)) }
     match declaration.definition {
         ast.Foreign { class, called } => noted { foreign: map.insert(noted.foreign, declaration.name.text, called) }
         _ => noted
@@ -893,13 +893,13 @@ fn trait_declared(environment: Environment, resolved: resolver.Resolved, item: a
 /// A trait gives each of its methods a type, written over the one parameter it declares.
 // example: declared_code("trait Sized<T> {\n    fn size(value) -> Int\n}\n") == "L0419 29..34"
 fn declare_trait(environment: Environment, resolved: resolver.Resolved, declaration: ast.TraitDeclaration) -> Result<Environment, refusal.TypeError> {
-    written := unify.written_parameter(declaration.parameter.text, declaration.parameter.span.start)
-    over := unify.Written(written)
-    asks := [unify.Required { trait_name: declaration.name.text, at: unify.Parameter(written) }]
+    let written = unify.written_parameter(declaration.parameter.text, declaration.parameter.span.start)
+    let over = unify.Written(written)
+    let asks = [unify.Required { trait_name: declaration.name.text, at: unify.Parameter(written) }]
     var declared = environment
     for method in declaration.methods {
-        signature := signature_of(declared, resolved, method)?
-        key := declared_at(declared, method.name)
+        let signature = signature_of(declared, resolved, method)?
+        let key = declared_at(declared, method.name)
         declared = bound(declared, key, unify.Scheme { quantified: [over], body: signature, required: asks })
         declared = declared { methods: map.insert(declared.methods, key, over), declares: map.insert(declared.declares, declaration.name.text + " " + method.name.text, key) }
     }
@@ -913,7 +913,7 @@ fn signature_of(environment: Environment, resolved: resolver.Resolved, method: a
     for parameter in method.parameters {
         taken = list.push(taken, stated(environment, resolved, parameter)?)
     }
-    given := result_written(environment, resolved, method.result)?
+    let given = result_written(environment, resolved, method.result)?
     Ok(unify.Function { parameters: taken, result: given })
 }
 
@@ -929,10 +929,10 @@ fn result_written(environment: Environment, resolved: resolver.Resolved, given_b
 /// A type declaration, which gives a type to each constructor it declares.
 // example: declared_code("type Box = Box(List)\n") == "L0401 15..19"
 fn type_declared(declaring: Declaring, resolved: resolver.Resolved, declaration: ast.TypeDeclaration) -> Result<Declaring, refusal.TypeError> {
-    environment := declaring.environment
-    shape := Shape { over: quantified_of(declaration.parameters), declared: unify.Named { name: declaration.name.text, arguments: parameters_as_types(declaration.parameters) } }
-    noted := environment { declared: map.insert(environment.declared, declaration.name.text, unify.Scheme { quantified: shape.over, body: shape.declared, required: [] }) }
-    built := definition_declared(noted, resolved, declaration, shape)?
+    let environment = declaring.environment
+    let shape = Shape { over: quantified_of(declaration.parameters), declared: unify.Named { name: declaration.name.text, arguments: parameters_as_types(declaration.parameters) } }
+    let noted = environment { declared: map.insert(environment.declared, declaration.name.text, unify.Scheme { quantified: shape.over, body: shape.declared, required: [] }) }
+    let built = definition_declared(noted, resolved, declaration, shape)?
     Ok(declaring { environment: built })
 }
 
@@ -956,8 +956,8 @@ fn class_declared(environment: Environment, named: ast.JavaName) -> Result<Envir
 /// A record, built by the one constructor its own name is.
 // example: declared_code("type Box = {\n    held: List\n}\n") == "L0401 23..27"
 fn record_declared(environment: Environment, resolved: resolver.Resolved, named: ast.Name, fields: List<ast.RecordField>, shape: Shape) -> Result<Environment, refusal.TypeError> {
-    filed := environment { records: map.insert(environment.records, named.text, declared_at(environment, named)) }
-    built := built_from(filed, resolved, named, fields)?
+    let filed = environment { records: map.insert(environment.records, named.text, declared_at(environment, named)) }
+    let built = built_from(filed, resolved, named, fields)?
     Ok(built_with(filed, built, shape))
 }
 
@@ -966,7 +966,7 @@ fn record_declared(environment: Environment, resolved: resolver.Resolved, named:
 fn variants_declared(environment: Environment, resolved: resolver.Resolved, variants: List<ast.Variant>, shape: Shape) -> Result<Environment, refusal.TypeError> {
     var declared = environment
     for variant in variants {
-        built := built_variant(declared, resolved, variant)?
+        let built = built_variant(declared, resolved, variant)?
         declared = built_with(declared, built, shape)
     }
     Ok(declared)
@@ -997,12 +997,12 @@ fn built_from(environment: Environment, resolved: resolver.Resolved, named: ast.
 /// The environment with one constructor filed: its labels, and its type over the declaration's.
 // example: has_value(built_with(empty_environment(ByName), Built { key: "Made", labels: [], carries: [] }, Shape { over: [], declared: unify.int() }), "Made")
 fn built_with(environment: Environment, built: Built, shape: Shape) -> Environment {
-    body := if list.length(built.carries) == 0 {
+    let body = if list.length(built.carries) == 0 {
         shape.declared
     } else {
         unify.Function { parameters: built.carries, result: shape.declared }
     }
-    labelled := environment { labels: map.insert(environment.labels, built.key, built.labels) }
+    let labelled = environment { labels: map.insert(environment.labels, built.key, built.labels) }
     bound(labelled, built.key, unify.Scheme { quantified: shape.over, body: body, required: [] })
 }
 
@@ -1010,19 +1010,19 @@ fn built_with(environment: Environment, built: Built, shape: Shape) -> Environme
 // example: declared_code("instance IntegerLiteral<Small> {\n    fn lowest() -> Int {\n        0 + 0\n    }\n\n    fn highest() -> Int {\n        9\n    }\n\n    fn from_literal(literal: Int) -> Small {\n        Small\n    }\n}\n\ntype Small = Small\n") == "L0421 56..77"
 fn note_instance(environment: Environment, resolved: resolver.Resolved, declaration: ast.InstanceDeclaration) -> Result<Environment, refusal.TypeError> {
     _ = counting(environment, resolved, declaration.for_type, list.length(declaration.arguments))?
-    for_type := declaration.for_type.text
-    filed := environment { instances: map.insert(environment.instances, declaration.trait_name.text + " " + for_type, asked_of(declaration)) }
+    let for_type = declaration.for_type.text
+    let filed = environment { instances: map.insert(environment.instances, declaration.trait_name.text + " " + for_type, asked_of(declaration)) }
     if declaration.trait_name.text != "IntegerLiteral" {
         return Ok(filed)
     }
-    bounds := stated_bounds(declaration)?
+    let bounds = stated_bounds(declaration)?
     Ok(filed { holds: map.insert(filed.holds, for_type, bounds), written_at: set.insert(filed.written_at, for_type) })
 }
 
 /// A derive, which claims each instance it names for the whole type.
 // example: declared_code("derive Eq for Box\n\ntype Box<T> = {\n}\n") == "L0401 14..17"
 fn derive_declared(declaring: Declaring, resolved: resolver.Resolved, declaration: ast.DeriveDeclaration) -> Result<Declaring, refusal.TypeError> {
-    environment := declaring.environment
+    let environment = declaring.environment
     _ = counting(environment, resolved, declaration.for_type, 0)?
     var claimed = environment
     for named in declaration.traits {
@@ -1034,17 +1034,17 @@ fn derive_declared(declaring: Declaring, resolved: resolver.Resolved, declaratio
 /// A function's type as its signature reads, with a fresh variable where nothing is written.
 // example: declared_code("fn f(held) {\n    held\n}\n") == ""
 fn function_declared(declaring: Declaring, resolved: resolver.Resolved, function: ast.FunctionDeclaration) -> Result<Declaring, refusal.TypeError> {
-    environment := declaring.environment
+    let environment = declaring.environment
     var table = declaring.table
     var taken = []
     for parameter in function.parameters {
-        made := written_or_fresh(environment, resolved, table, parameter.type_ref)?
+        let made = written_or_fresh(environment, resolved, table, parameter.type_ref)?
         taken = list.push(taken, made.made)
         table = made.table
     }
-    given := written_or_fresh(environment, resolved, table, function.result)?
-    required := constraints_of(environment, resolved, function.type_parameters)?
-    scheme := unify.Scheme { quantified: written_over(function.type_parameters), body: unify.Function { parameters: taken, result: given.made }, required: required }
+    let given = written_or_fresh(environment, resolved, table, function.result)?
+    let required = constraints_of(environment, resolved, function.type_parameters)?
+    let scheme = unify.Scheme { quantified: written_over(function.type_parameters), body: unify.Function { parameters: taken, result: given.made }, required: required }
     Ok(Declaring { environment: bound(environment, declared_at(environment, function.name), scheme), table: given.table })
 }
 
@@ -1072,22 +1072,22 @@ fn constraints_of(environment: Environment, resolved: resolver.Resolved, paramet
 /// An `extern`'s type as its signature reads, held to the rules of the Java boundary.
 // example: declared_code("extern static clock(held: Int) -> Int = \"f\"\n") == "L0426 40..43"
 fn extern_declared(declaring: Declaring, resolved: resolver.Resolved, declaration: ast.ExternDeclaration) -> Result<Declaring, refusal.TypeError> {
-    environment := declaring.environment
+    let environment = declaring.environment
     var taken = []
     for parameter in declaration.parameters {
         taken = list.push(taken, extern_parameter(environment, resolved, parameter)?)
     }
-    given := type_written(environment, resolved, declaration.result)?
+    let given = type_written(environment, resolved, declaration.result)?
     _ = boundary.crosses(given, boundary.crossing_of(declaration), environment.foreign, declaration.result.span)?
     _ = boundary.gives_back_checked(declaration, taken, given, environment.foreign)?
-    signature := unify.Function { parameters: taken, result: given }
+    let signature = unify.Function { parameters: taken, result: given }
     Ok(declaring { environment: bound(environment, declared_at(environment, declaration.name), unify.monomorphic(signature)) })
 }
 
 /// One parameter of an `extern`, which states its type and crosses the boundary with it.
 // example: declared_code("extern static clock(int held: String) -> Int = \"a.B.c\"\n") == "L0429 24..28"
 fn extern_parameter(environment: Environment, resolved: resolver.Resolved, parameter: ast.ExternParameter) -> Result<unify.Type, refusal.TypeError> {
-    held := stated(environment, resolved, parameter.declared)?
+    let held = stated(environment, resolved, parameter.declared)?
     _ = boundary.crosses(held, refusal.Taken, environment.foreign, type_span(parameter.declared))?
     _ = boundary.narrowed(parameter, held)?
     Ok(held)
@@ -1181,7 +1181,7 @@ fn first_named(parameters: List<ast.TypeParameter>, text: String) -> List<ast.Ty
 /// Holds the type called `for_type` to being written with `given` arguments.
 // example: declared_code("derive Eq for Box\n\ntype Box = {\n}\n") == ""
 fn counting(environment: Environment, resolved: resolver.Resolved, for_type: ast.Name, given: Int) -> Result<(), refusal.TypeError> {
-    definition := definition_of(resolved, resolver.TypeNamespace, for_type)
+    let definition = definition_of(resolved, resolver.TypeNamespace, for_type)
     counted(name: for_type, takes: or(map.get(environment.arities, key_of(environment, definition, for_type)), 0), given: given)
 }
 
@@ -1191,7 +1191,7 @@ fn counting(environment: Environment, resolved: resolver.Resolved, for_type: ast
 // example: declared_code("fn f(held: Option<Int, Int>) -> Int {\n    1\n}\n") == "L0401 11..17"
 // example: declared_code("fn f(held: List<Option<()>>) -> Int {\n    1\n}\n") == "L0432 16..26"
 fn type_written(environment: Environment, resolved: resolver.Resolved, written: ast.TypeRef) -> Result<unify.Type, refusal.TypeError> {
-    found := match written.kind {
+    let found = match written.kind {
         ast.NamedType { path, arguments } => named_written(environment, resolved, path, arguments)
         ast.UnitType => Ok(unify.Unit)
     }
@@ -1210,7 +1210,7 @@ fn named_written(environment: Environment, resolved: resolver.Resolved, path: as
 /// A type written by its name alone, which is a type parameter or a declared type.
 // example: declared_code("fn f<T>(held: T<Int>) -> Int {\n    1\n}\n") == "L0401 14..15"
 fn bare_written(environment: Environment, resolved: resolver.Resolved, named: ast.Name, arguments: List<ast.TypeRef>) -> Result<unify.Type, refusal.TypeError> {
-    definition := definition_of(resolved, resolver.TypeNamespace, named)
+    let definition = definition_of(resolved, resolver.TypeNamespace, named)
     if definition.kind == resolver.TypeParameter {
         _ = counted(name: named, takes: 0, given: list.length(arguments))?
         return Ok(unify.Parameter(parameter_of(definition, named)))
@@ -1232,7 +1232,7 @@ fn types_written(environment: Environment, resolved: resolver.Resolved, types: L
 /// A type another module declares, reached through the name that module is imported by.
 // example: refusal.code_given(reached_written(empty_environment(WhereWritten), ast.Path { module: Some(ast.Name { text: "io", span: lexer.Span { start: 0, length: 2 } }), name: ast.Name { text: "File", span: lexer.Span { start: 3, length: 4 } } }, [])) == "L0414 0..7"
 fn reached_written(environment: Environment, path: ast.Path, held: List<unify.Type>) -> Result<unify.Type, refusal.TypeError> {
-    written_one := written_name(path)
+    let written_one = written_name(path)
     match map.get(environment.arities, written_one.text) {
         Some(takes) => counted_named(written_one, takes, held)
         None => Err(refusal.TypeError { kind: refusal.NotInModule { module: module_text(path), name: path.name.text }, span: written_one.span })
@@ -1333,8 +1333,8 @@ fn bound(environment: Environment, key: String, scheme: unify.Scheme) -> Environ
 /// The bounds `declaration` states, read off the bodies of its `lowest` and its `highest`.
 // example: declared_code("instance IntegerLiteral<Small> {\n    fn lowest() -> Int {\n        0\n    }\n\n    fn highest() -> Int {\n        9\n    }\n\n    fn from_literal(literal: Int) -> Small {\n        Small\n    }\n}\n\ntype Small = Small\n") == ""
 fn stated_bounds(declaration: ast.InstanceDeclaration) -> Result<surface.Bounds, refusal.TypeError> {
-    least := bound_of(declaration, "lowest")?
-    most := bound_of(declaration, "highest")?
+    let least = bound_of(declaration, "lowest")?
+    let most = bound_of(declaration, "highest")?
     Ok(surface.Bounds { least: least, most: most })
 }
 
@@ -1395,7 +1395,7 @@ fn number_of(kind: ast.ExprKind) -> List<Int> {
 fn traits_of(program: ast.Program) -> set.Set<String> {
     var traits = set.empty()
     for item in program.items {
-        named := trait_name_of(item)
+        let named = trait_name_of(item)
         if named != "" {
             traits = set.insert(traits, named)
         }
@@ -1416,7 +1416,7 @@ fn trait_name_of(item: ast.Item) -> String {
 // example: or(map.get(prelude_arities(), "List"), 0) == 1
 // example: or(map.get(prelude_arities(), "Process"), 0) == 2
 fn prelude_arities() -> map.Map<String, Int> {
-    held := map.insert(map.insert(map.empty(), "Bool", 0), "Int", 0)
+    let held = map.insert(map.insert(map.empty(), "Bool", 0), "Int", 0)
     map.insert(map.insert(map.insert(held, "List", 1), "Process", 2), "String", 0)
 }
 
@@ -1424,26 +1424,26 @@ fn prelude_arities() -> map.Map<String, Int> {
 /// it.
 // example: unify.text_of(send_scheme().body) == "(Process<M, S>, M, Waiting) -> Sent"
 fn send_scheme() -> unify.Scheme {
-    message := unify.prelude_parameter("M")
-    state := unify.prelude_parameter("S")
-    handle := unify.Named { name: "Process", arguments: [unify.Parameter(message), unify.Parameter(state)] }
-    taken := [handle, unify.Parameter(message), unify.Named { name: "Waiting", arguments: [] }]
+    let message = unify.prelude_parameter("M")
+    let state = unify.prelude_parameter("S")
+    let handle = unify.Named { name: "Process", arguments: [unify.Parameter(message), unify.Parameter(state)] }
+    let taken = [handle, unify.Parameter(message), unify.Named { name: "Waiting", arguments: [] }]
     unify.Scheme { quantified: [unify.Written(message), unify.Written(state)], body: unify.Function { parameters: taken, result: unify.Named { name: "Sent", arguments: [] } }, required: [] }
 }
 
 /// `ended(handle)`: the state a process held when `receive` gave `Done`, once it has.
 // example: unify.text_of(ended_scheme().body) == "(Process<M, S>) -> S"
 fn ended_scheme() -> unify.Scheme {
-    message := unify.prelude_parameter("M")
-    state := unify.prelude_parameter("S")
-    handle := unify.Named { name: "Process", arguments: [unify.Parameter(message), unify.Parameter(state)] }
+    let message = unify.prelude_parameter("M")
+    let state = unify.prelude_parameter("S")
+    let handle = unify.Named { name: "Process", arguments: [unify.Parameter(message), unify.Parameter(state)] }
     unify.Scheme { quantified: [unify.Written(message), unify.Written(state)], body: unify.Function { parameters: [handle], result: unify.Parameter(state) }, required: [] }
 }
 
 /// `todo(reason)`: a hole, which is whatever type the place it is written in expects.
 // example: unify.text_of(todo_scheme().body) == "(String) -> T"
 fn todo_scheme() -> unify.Scheme {
-    value := unify.prelude_parameter("T")
+    let value = unify.prelude_parameter("T")
     unify.Scheme { quantified: [unify.Written(value)], body: unify.Function { parameters: [unify.text_type()], result: unify.Parameter(value) }, required: [] }
 }
 
@@ -1456,14 +1456,14 @@ fn empty_environment(keyed: Keyed) -> Environment {
 /// The small prelude, resolved as the prelude.
 // example: list.length(little_resolved().program.items) > 0
 fn little_resolved() -> resolver.Resolved {
-    prelude := little_prelude()
+    let prelude = little_prelude()
     ok_or(resolver.prelude_resolved(prelude), resolver.Resolved { module: "prelude", program: prelude, found: map.empty() })
 }
 
 /// The first variant of the first type `source` declares.
 // example: first_variant("type Box = Box\n").name.text == "Box"
 fn first_variant(source: String) -> ast.Variant {
-    declaration := first_type(source)
+    let declaration = first_type(source)
     match declaration.definition {
         ast.Variants(variants) => or(list.at(variants, 0), no_variant())
         _ => no_variant()
@@ -1512,7 +1512,7 @@ fn first_item(source: String) -> ast.Item {
 /// `source`, resolved against the small prelude.
 // example: resolved_of("fn f() -> Int {\n    1\n}\n").module == "main"
 fn resolved_of(source: String) -> resolver.Resolved {
-    program := first_program(source)
+    let program = first_program(source)
     ok_or(resolver.resolve(program, "main", resolver.prelude_of(little_prelude())), resolver.Resolved { module: "main", program: program, found: map.empty() })
 }
 

@@ -6,7 +6,7 @@
 import io
 
 fn main(arguments: List<String>) -> Int {
-    user := User { id: 1, home: Address { number: 7, zone: 2 } }
+    let user = User { id: 1, home: Address { number: 7, zone: 2 } }
     io.println(told(user: user))
     0
 }

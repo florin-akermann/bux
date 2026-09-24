@@ -419,7 +419,7 @@ declares them, and one constructor taking them in that order.
 of the old one.
 
 A record a function builds and never lets go of is not built at all.
-`point := Point { across: 1, down: 2 }` puts each field in a local of its own, and `point.across`
+`let point = Point { across: 1, down: 2 }` puts each field in a local of its own, and `point.across`
 reads that local: no `new` is emitted, no constructor is called, and no `getfield` is read.
 A Bux value has no identity, which `docs/design.md` section 2 states, so a value split across
 locals is the same value as one laid out on the heap and nothing a program can ask tells them apart.
@@ -427,7 +427,7 @@ This is what Valhalla calls scalarization, and the language meets its preconditi
 
 A binding is split when every one of these holds:
 
-- it is written with `:=`, so what the name holds never changes;
+- it is written with `let`, so what the name holds never changes;
 - its value is a record literal naming its type, rather than an update of another record;
 - every other mention of the name in the function reads one field of it.
 
@@ -577,7 +577,7 @@ These hold and are checked by drawn properties in the runner:
 8. Every method of every class ends by leaving it.
 9. No class a module writes declares a method a JVM class inherits.
 10. The one `equals` a module calls is the one `String` declares.
-11. A record bound with `:=` and mentioned only to read its fields is lowered without a `new`.
+11. A record bound with `let` and mentioned only to read its fields is lowered without a `new`.
 12. Such a program computes what the same program computes when the record is built.
 13. Every descriptor a class asks to load first names another class the same build writes.
 14. A written list of `n` elements gathers them into an array of `n` and builds one list.

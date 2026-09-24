@@ -16,7 +16,7 @@ import strings
 /// One `Held` for each property of name resolution, in a fixed order.
 // example: list.length(every_property(1, ir.little_library())) == 4
 fn every_property(cases: Int, library: ir.Library) -> List<held.Held> {
-    names := library.prelude.names
+    let names = library.prelude.names
     [resolving_is_deterministic(cases, names), a_module_of_pieces_resolves(cases, names), a_refusal_points_inside_the_source(cases, names), every_declared_name_is_declared_there(cases, names)]
 }
 
@@ -26,8 +26,8 @@ fn resolving_is_deterministic(cases: Int, names: resolver.Prelude) -> held.Held 
     var found = held.nothing_failed(cases)
     var case = 0
     for case < cases {
-        source := drawn_source(drawn.seeded(drawn.seed_of(case)))
-        first := resolver.printed(source, names)
+        let source = drawn_source(drawn.seeded(drawn.seed_of(case)))
+        let first = resolver.printed(source, names)
         if first != resolver.printed(source, names) {
             found = held.with_failure(found, held.drawn_failure("resolving_is_deterministic", drawn.seed_of(case), source, "two answers"))
         }
@@ -42,8 +42,8 @@ fn a_module_of_pieces_resolves(cases: Int, names: resolver.Prelude) -> held.Held
     var found = held.nothing_failed(cases)
     var case = 0
     for case < cases {
-        source := module_of(drawn.seeded(drawn.seed_of(case)), pieces())
-        answer := resolver.printed(source, names)
+        let source = module_of(drawn.seeded(drawn.seed_of(case)), pieces())
+        let answer = resolver.printed(source, names)
         if !is_resolved(answer) {
             found = held.with_failure(found, held.drawn_failure("a_module_of_pieces_resolves", drawn.seed_of(case), source, answer))
         }
@@ -59,10 +59,10 @@ fn a_refusal_points_inside_the_source(cases: Int, names: resolver.Prelude) -> he
     var found = held.nothing_failed(cases)
     var case = 0
     for case < cases {
-        start := drawn.seeded(drawn.seed_of(case))
-        refused := drawn.picked(start, refusals(), "")
-        source := module_of(drawn.next(start), pieces()) + "\n\n" + refused + "\n"
-        why := refusal_outside(source, names)
+        let start = drawn.seeded(drawn.seed_of(case))
+        let refused = drawn.picked(start, refusals(), "")
+        let source = module_of(drawn.next(start), pieces()) + "\n\n" + refused + "\n"
+        let why = refusal_outside(source, names)
         if why != "" {
             found = held.with_failure(found, held.drawn_failure("a_refusal_points_inside_the_source", drawn.seed_of(case), source, why))
         }
@@ -107,8 +107,8 @@ fn every_declared_name_is_declared_there(cases: Int, names: resolver.Prelude) ->
     var found = held.nothing_failed(cases)
     var case = 0
     for case < cases {
-        source := module_of(drawn.seeded(drawn.seed_of(case)), pieces())
-        why := undeclared_name(source, names)
+        let source = module_of(drawn.seeded(drawn.seed_of(case)), pieces())
+        let why = undeclared_name(source, names)
         if why != "" {
             found = held.with_failure(found, held.drawn_failure("every_declared_name_is_declared_there", drawn.seed_of(case), source, why))
         }
@@ -140,7 +140,7 @@ fn resolved_undeclared(answer: Result<resolver.Resolved, resolver.ResolveError>,
 // example: first_undeclared(resolver.Resolved { module: "demo", program: ast.Program { items: [] }, found: map.empty() }, "") == ""
 fn first_undeclared(resolved: resolver.Resolved, source: String) -> String {
     for one in declared_names(resolved.program) {
-        why := declared_elsewhere(resolved, one, source)
+        let why = declared_elsewhere(resolved, one, source)
         if why != "" {
             return why
         }
@@ -151,7 +151,7 @@ fn first_undeclared(resolved: resolver.Resolved, source: String) -> String {
 /// Why `one` is not declared at the place it is written in `source`, and `""` where it is.
 // example: declared_elsewhere(resolver.Resolved { module: "demo", program: ast.Program { items: [] }, found: map.empty() }, Declaring { namespace: resolver.ValueNamespace, name: ast.Name { text: "f", span: stretch(start: 0, length: 1) } }, "f") == "`f` resolves to nothing"
 fn declared_elsewhere(resolved: resolver.Resolved, one: Declaring, source: String) -> String {
-    name := one.name
+    let name = one.name
     if or(strings.cut(source, name.span.start, name.span.start + name.span.length), "") != name.text {
         return "`" + name.text + "` is not the text at its span"
     }
@@ -236,12 +236,12 @@ fn is_resolved(answer: String) -> Bool {
 /// A module of the distinct pieces drawn from `among`; a piece drawn twice is written once.
 // example: list.has_value(["a", ""], module_of(drawn.seeded(1), ["a"]))
 fn module_of(draw: drawn.Draw, among: List<String>) -> String {
-    count := drawn.number(draw, list.length(among) + 2)
+    let count = drawn.number(draw, list.length(among) + 2)
     var at = drawn.next(draw)
     var chosen = []
     var index = 0
     for index < count {
-        piece := drawn.picked(at, among, "")
+        let piece = drawn.picked(at, among, "")
         if !list.has_value(chosen, piece) {
             chosen = list.push(chosen, piece)
         }
@@ -261,7 +261,7 @@ fn pieces() -> List<String> {
 /// The pieces that are refused however sound the module around them is.
 // example: list.length(refusals()) == 4
 fn refusals() -> List<String> {
-    ["fn refused() -> Int {\n    nothing_names_this\n}", "fn refused() -> Missing {\n    1\n}", "fn refused(seen: Int) -> Int {\n    seen := 1\n    seen\n}", "fn Ok() -> Int {\n    1\n}"]
+    ["fn refused() -> Int {\n    nothing_names_this\n}", "fn refused() -> Missing {\n    1\n}", "fn refused(seen: Int) -> Int {\n    let seen = 1\n    seen\n}", "fn Ok() -> Int {\n    1\n}"]
 }
 
 /// A module of one to five drawn declarations, written as the grammar writes them.
@@ -269,7 +269,7 @@ fn refusals() -> List<String> {
 /// The names clash, hide, and go missing often, so a drawn module is refused as often as not.
 // example: strings.length(drawn_source(drawn.seeded(1))) > 0
 fn drawn_source(draw: drawn.Draw) -> String {
-    count := drawn.number(draw, 5) + 1
+    let count = drawn.number(draw, 5) + 1
     var at = drawn.next(draw)
     var items = []
     for list.length(items) < count {
@@ -282,9 +282,9 @@ fn drawn_source(draw: drawn.Draw) -> String {
 /// One declaration of a kind the resolver walks, drawn from `draw`.
 // example: strings.length(drawn_item(drawn.seeded(3))) > 0
 fn drawn_item(draw: drawn.Draw) -> String {
-    name := drawn.picked(after(draw, 1), declared(), "f")
-    type_name := drawn.picked(after(draw, 2), written_types(), "Int")
-    other := drawn.picked(after(draw, 3), declared(), "f")
+    let name = drawn.picked(after(draw, 1), declared(), "f")
+    let type_name = drawn.picked(after(draw, 2), written_types(), "Int")
+    let other = drawn.picked(after(draw, 3), declared(), "f")
     match drawn.number(draw, 7) {
         0 => "import " + drawn.picked(after(draw, 4), ["io", "list", "f"], "io")
         1 => "type " + name + " = {\n    held: " + type_name + "\n}"
@@ -299,7 +299,7 @@ fn drawn_item(draw: drawn.Draw) -> String {
 /// A function whose body binds, assigns, loops, calls, and matches drawn names.
 // example: strings.length(drawn_function(draw: drawn.seeded(1), name: "f", type_name: "Int")) > 0
 fn drawn_function(draw: drawn.Draw, name: String, type_name: String) -> String {
-    count := drawn.number(draw, 4)
+    let count = drawn.number(draw, 4)
     var body = ""
     var at = drawn.next(draw)
     var index = 0
@@ -314,10 +314,10 @@ fn drawn_function(draw: drawn.Draw, name: String, type_name: String) -> String {
 /// One statement of a drawn body.
 // example: strings.length(drawn_statement(drawn.seeded(1))) > 0
 fn drawn_statement(draw: drawn.Draw) -> String {
-    bound := drawn.picked(after(draw, 1), written(), "held")
-    value := drawn_expression(after(draw, 2))
+    let bound = drawn.picked(after(draw, 1), written(), "held")
+    let value = drawn_expression(after(draw, 2))
     match drawn.number(draw, 6) {
-        0 => bound + " := " + value
+        0 => "let " + bound + " = " + value
         1 => "var " + bound + " = " + value
         2 => bound + " = " + value
         3 => "for " + bound + " in " + value + " {\n        " + drawn_expression(after(draw, 5)) + "\n    }"
@@ -329,8 +329,8 @@ fn drawn_statement(draw: drawn.Draw) -> String {
 /// A name, a call, a dotted call, a dotted name, or a record, over drawn names.
 // example: strings.length(drawn_expression(drawn.seeded(1))) > 0
 fn drawn_expression(draw: drawn.Draw) -> String {
-    one := drawn.picked(after(draw, 1), written(), "held")
-    other := drawn.picked(after(draw, 2), written(), "held")
+    let one = drawn.picked(after(draw, 1), written(), "held")
+    let other = drawn.picked(after(draw, 2), written(), "held")
     match drawn.number(draw, 5) {
         0 => one
         1 => one + "(" + other + ")"
@@ -343,7 +343,7 @@ fn drawn_expression(draw: drawn.Draw) -> String {
 /// A binding, a constructor, an or-pattern, a record, or a dotted name, over a drawn name.
 // example: strings.length(drawn_pattern(drawn.seeded(1))) > 0
 fn drawn_pattern(draw: drawn.Draw) -> String {
-    one := drawn.picked(after(draw, 1), written(), "held")
+    let one = drawn.picked(after(draw, 1), written(), "held")
     match drawn.number(draw, 5) {
         0 => one
         1 => "Some(" + one + ")"

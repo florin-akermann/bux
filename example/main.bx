@@ -6,10 +6,10 @@
 import io
 
 fn main(arguments: List<String>) -> Int {
-    ordered := Placed(Basket { apples: 3, pears: 4 })
-    held := picked(ordered) + picked(Unplaced)
-    each := shared(total: held, people: 2)
-    most := fullest([Basket { apples: 1, pears: 1 }, Basket { apples: each, pears: each }])
+    let ordered = Placed(Basket { apples: 3, pears: 4 })
+    let held = picked(ordered) + picked(Unplaced)
+    let each = shared(total: held, people: 2)
+    let most = fullest([Basket { apples: 1, pears: 1 }, Basket { apples: each, pears: each }])
     io.println("held: " + shown(held))
     io.println("each: " + shown(each))
     io.println("most: " + shown(most))
@@ -28,7 +28,7 @@ fn shared(total: Int, people: Int) -> Int {
 fn fullest(baskets: List<Basket>) -> Int {
     var most = 0
     for basket in baskets {
-        held := picked(Placed(basket))
+        let held = picked(Placed(basket))
         if held > most {
             most = held
         }

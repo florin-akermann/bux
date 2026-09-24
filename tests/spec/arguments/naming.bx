@@ -1,10 +1,10 @@
 // expect-run
 // A named call passes its arguments in order like any other, and says what that order is.
 fn main(arguments: List<String>) -> Int {
-    shorter := rename(from: "old", to: "new")
-    wider := repeat(word: "ha", times: 3)
-    apart := label("done", 1)
-    kept := pair(first: shorter, second: wider)
+    let shorter = rename(from: "old", to: "new")
+    let wider = repeat(word: "ha", times: 3)
+    let apart = label("done", 1)
+    let kept = pair(first: shorter, second: wider)
     _ = apart
     _ = kept
     0

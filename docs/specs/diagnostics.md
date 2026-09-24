@@ -78,6 +78,7 @@ The grammar raises these, in `compiler/parser.bx`:
 - `L0106` — brackets nest deeper than the parser descends.
 - `L0107` — something other than a name is written on the left of `=` or `+=`.
 - `L0108` — a call names some of its arguments and not others.
+- `L0109` — a statement binds a name with `:=`, which is not part of Bux.
 
 Canonical form raises these, in `compiler/format.bx`:
 

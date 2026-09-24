@@ -33,10 +33,10 @@ fn every_run_held(library: ir.Library, limit: Int) -> held.Held {
 /// Every class `build` writes is one a JVM loads and verifies.
 // example: class_named("bux/Result$Ok.class") == "bux.Result$Ok"
 fn classes_verified(library: ir.Library, limit: Int) -> held.Held {
-    scene := enacted.scene_of([enacted.Written { at: "example.bx", text: everything_text() }])
-    said := enacted.said_to(["build", modules.joined(scene, "example.bx")], library)
+    let scene = enacted.scene_of([enacted.Written { at: "example.bx", text: everything_text() }])
+    let said = enacted.said_to(["build", modules.joined(scene, "example.bx")], library)
     var facts = [enacted.status_fact(said, 0)]
-    target := modules.joined(scene, "target")
+    let target = modules.joined(scene, "target")
     for class in enacted.relative_files(target) {
         if walk.is_ending_in(class, ".class") {
             facts = list.push(facts, class_loaded(target: target, class: class, limit: limit))
@@ -50,8 +50,8 @@ fn classes_verified(library: ir.Library, limit: Int) -> held.Held {
 /// says nothing but that the class declares no `main`.
 // example: is_loaded("Error: Main method not found in class a")
 fn class_loaded(target: String, class: String, limit: Int) -> enacted.Fact {
-    line := [java(), "--enable-preview", "-cp", target, class_named(class)]
-    errors := errors_of(walk.completed(line, target, limit))
+    let line = [java(), "--enable-preview", "-cp", target, class_named(class)]
+    let errors = errors_of(walk.completed(line, target, limit))
     if is_loaded(errors) {
         return enacted.Fact { what: class, expected: "loaded", found: "loaded" }
     }
@@ -86,7 +86,7 @@ fn dotted(path: String) -> String {
     var written = ""
     var index = 0
     for index < strings.length(path) {
-        unit := or(strings.cut(path, index, index + 1), "")
+        let unit = or(strings.cut(path, index, index + 1), "")
         if unit == "/" {
             written += "."
         } else {
@@ -109,8 +109,8 @@ fn every_test_held(library: ir.Library) -> held.Held {
 /// `test` says nothing and ends with 0 where every example held.
 // example: strings.length(enacted.holds_text()) > 0
 fn examples_tested(library: ir.Library) -> held.Held {
-    scene := enacted.scene_of([enacted.Written { at: "example.bx", text: enacted.holds_text() }])
-    said := enacted.said_to(["test", modules.joined(scene, "example.bx")], library)
+    let scene = enacted.scene_of([enacted.Written { at: "example.bx", text: enacted.holds_text() }])
+    let said = enacted.said_to(["test", modules.joined(scene, "example.bx")], library)
     command.removed_whole(scene)
     enacted.facts_held("test says nothing where every example held", enacted.said_facts("test", said))
 }
@@ -118,28 +118,28 @@ fn examples_tested(library: ir.Library) -> held.Held {
 /// `test` reports the example that did not hold, where it is written.
 // example: enacted.first_line_of(does_not_hold_text()) == "// example: shared(total: 7) == 8"
 fn example_not_held(library: ir.Library) -> held.Held {
-    scene := enacted.scene_of([enacted.Written { at: "example.bx", text: does_not_hold_text() }])
-    said := enacted.said_to(["test", modules.joined(scene, "example.bx")], library)
+    let scene = enacted.scene_of([enacted.Written { at: "example.bx", text: does_not_hold_text() }])
+    let said = enacted.said_to(["test", modules.joined(scene, "example.bx")], library)
     command.removed_whole(scene)
-    facts := [enacted.status_fact(said, 1), enacted.within_fact("errors", said.errors, "error[L0603]: the example of `shared` does not hold"), enacted.within_fact("errors", said.errors, "// example: shared(total: 7) == 8")]
+    let facts = [enacted.status_fact(said, 1), enacted.within_fact("errors", said.errors, "error[L0603]: the example of `shared` does not hold"), enacted.within_fact("errors", said.errors, "// example: shared(total: 7) == 8")]
     enacted.facts_held("test reports the example that did not hold", facts)
 }
 
 /// A line a program writes itself is not read as an example that did not hold.
 // example: enacted.first_line_of(writes_a_line_text()) == "import io"
 fn line_written_by_the_program(library: ir.Library) -> held.Held {
-    scene := enacted.scene_of([enacted.Written { at: "example.bx", text: writes_a_line_text() }])
-    said := enacted.said_to(["test", modules.joined(scene, "example.bx")], library)
+    let scene = enacted.scene_of([enacted.Written { at: "example.bx", text: writes_a_line_text() }])
+    let said = enacted.said_to(["test", modules.joined(scene, "example.bx")], library)
     command.removed_whole(scene)
-    facts := [enacted.status_fact(said, 0), enacted.Fact { what: "errors", expected: "", found: said.errors }]
+    let facts = [enacted.status_fact(said, 0), enacted.Fact { what: "errors", expected: "", found: said.errors }]
     enacted.facts_held("a line the program writes itself is not a failed example", facts)
 }
 
 /// `test` runs the examples of a module that imports another.
 // example: enacted.first_line_of(twice_text()) == "import greeting"
 fn imported_examples_tested(library: ir.Library) -> held.Held {
-    scene := enacted.scene_of([enacted.Written { at: "example.bx", text: twice_text() }, enacted.Written { at: "greeting.bx", text: enacted.greeting_text() }])
-    said := enacted.said_to(["test", modules.joined(scene, "example.bx")], library)
+    let scene = enacted.scene_of([enacted.Written { at: "example.bx", text: twice_text() }, enacted.Written { at: "greeting.bx", text: enacted.greeting_text() }])
+    let said = enacted.said_to(["test", modules.joined(scene, "example.bx")], library)
     command.removed_whole(scene)
     enacted.facts_held("test runs the examples of a module that imports another", [enacted.status_fact(said, 0)])
 }
@@ -148,19 +148,19 @@ fn imported_examples_tested(library: ir.Library) -> held.Held {
 /// `docs/specs/example-program.md` states.
 // example: strings.length(java()) >= 0
 fn example_program_run(library: ir.Library, limit: Int) -> held.Held {
-    scene := enacted.scene_of([enacted.Written { at: "main.bx", text: ok_or(files.read("example/main.bx"), "") }])
-    answer := command.answered_within(["run", modules.joined(scene, "main.bx")], library)
-    said := ended_said(answer, scene, limit)
+    let scene = enacted.scene_of([enacted.Written { at: "main.bx", text: ok_or(files.read("example/main.bx"), "") }])
+    let answer = command.answered_within(["run", modules.joined(scene, "main.bx")], library)
+    let said = ended_said(answer, scene, limit)
     command.removed_whole(scene)
-    facts := [enacted.status_fact(said, 0), enacted.Fact { what: "output", expected: "held: 7\neach: 3\nmost: 6\n", found: said.output }]
+    let facts = [enacted.status_fact(said, 0), enacted.Fact { what: "output", expected: "held: 7\neach: 3\nmost: 6\n", found: said.output }]
     enacted.facts_held("example/main.bx writes every answer it works out", facts)
 }
 
 /// Every example of `example/main.bx` holds.
 // example: ended_said(command.Spoken(command.nothing_said()), "no-such-directory", 1).status == 0
 fn example_program_tested(library: ir.Library) -> held.Held {
-    scene := enacted.scene_of([enacted.Written { at: "main.bx", text: ok_or(files.read("example/main.bx"), "") }])
-    said := enacted.said_to(["test", modules.joined(scene, "main.bx")], library)
+    let scene = enacted.scene_of([enacted.Written { at: "main.bx", text: ok_or(files.read("example/main.bx"), "") }])
+    let said = enacted.said_to(["test", modules.joined(scene, "main.bx")], library)
     command.removed_whole(scene)
     enacted.facts_held("every example of example/main.bx holds", enacted.said_facts("test", said))
 }
@@ -186,9 +186,9 @@ fn every_missing_jdk_held(limit: Int) -> held.Held {
 /// `run` says which variable names the JDK where nothing does, having compiled the program first.
 // example: no_jdk_line() == "error: JAVA_HOME is not set, and running a program needs the JDK it names\n"
 fn run_without_a_jdk(limit: Int) -> held.Held {
-    scene := enacted.scene_of([enacted.Written { at: "example.bx", text: enacted.counting_program_text() }])
-    said := without_a_jdk(["run", modules.joined(scene, "example.bx")], scene, limit)
-    facts := [enacted.status_fact(said, 2), enacted.Fact { what: "errors", expected: no_jdk_line(), found: said.errors }, enacted.presence_fact(scene, "target/example.class")]
+    let scene = enacted.scene_of([enacted.Written { at: "example.bx", text: enacted.counting_program_text() }])
+    let said = without_a_jdk(["run", modules.joined(scene, "example.bx")], scene, limit)
+    let facts = [enacted.status_fact(said, 2), enacted.Fact { what: "errors", expected: no_jdk_line(), found: said.errors }, enacted.presence_fact(scene, "target/example.class")]
     command.removed_whole(scene)
     enacted.facts_held("run says which variable names the JDK where nothing does", facts)
 }
@@ -196,31 +196,31 @@ fn run_without_a_jdk(limit: Int) -> held.Held {
 /// `run` reports a program that does not compile, even where no JDK could run it.
 // example: strings.length(enacted.refused_program_text()) > 0
 fn refused_without_a_jdk(limit: Int) -> held.Held {
-    scene := enacted.scene_of([enacted.Written { at: "example.bx", text: enacted.refused_program_text() }])
-    said := without_a_jdk(["run", modules.joined(scene, "example.bx")], scene, limit)
+    let scene = enacted.scene_of([enacted.Written { at: "example.bx", text: enacted.refused_program_text() }])
+    let said = without_a_jdk(["run", modules.joined(scene, "example.bx")], scene, limit)
     command.removed_whole(scene)
-    facts := [enacted.status_fact(said, 1), enacted.opening_fact("errors", said.errors, "error[L03")]
+    let facts = [enacted.status_fact(said, 1), enacted.opening_fact("errors", said.errors, "error[L03")]
     enacted.facts_held("run reports a program that does not compile where no JDK is", facts)
 }
 
 /// `run` says where it looked where `JAVA_HOME` names no JDK.
 // example: java_of("/a") == "/a/bin/java"
 fn run_where_no_jdk_is(limit: Int) -> held.Held {
-    scene := enacted.scene_of([enacted.Written { at: "example.bx", text: enacted.counting_program_text() }])
-    home := modules.joined(scene, "nowhere")
-    said := command_line_said(command.all_of(["/usr/bin/env", "JAVA_HOME=" + home], command_line(["run", modules.joined(scene, "example.bx")])), scene, limit)
+    let scene = enacted.scene_of([enacted.Written { at: "example.bx", text: enacted.counting_program_text() }])
+    let home = modules.joined(scene, "nowhere")
+    let said = command_line_said(command.all_of(["/usr/bin/env", "JAVA_HOME=" + home], command_line(["run", modules.joined(scene, "example.bx")])), scene, limit)
     command.removed_whole(scene)
-    facts := [enacted.status_fact(said, 2), enacted.Fact { what: "errors", expected: "error: " + java_of(home) + ": JAVA_HOME names no JDK\n", found: said.errors }]
+    let facts = [enacted.status_fact(said, 2), enacted.Fact { what: "errors", expected: "error: " + java_of(home) + ": JAVA_HOME names no JDK\n", found: said.errors }]
     enacted.facts_held("run says where it looked where JAVA_HOME names no JDK", facts)
 }
 
 /// `test` says which variable names the JDK where nothing does.
 // example: strings.length(enacted.holds_text()) > 0
 fn test_without_a_jdk(limit: Int) -> held.Held {
-    scene := enacted.scene_of([enacted.Written { at: "example.bx", text: enacted.holds_text() }])
-    said := without_a_jdk(["test", modules.joined(scene, "example.bx")], scene, limit)
+    let scene = enacted.scene_of([enacted.Written { at: "example.bx", text: enacted.holds_text() }])
+    let said = without_a_jdk(["test", modules.joined(scene, "example.bx")], scene, limit)
     command.removed_whole(scene)
-    facts := [enacted.status_fact(said, 2), enacted.within_fact("errors", said.errors, "JAVA_HOME is not set")]
+    let facts = [enacted.status_fact(said, 2), enacted.within_fact("errors", said.errors, "JAVA_HOME is not set")]
     enacted.facts_held("test says which variable names the JDK where nothing does", facts)
 }
 
@@ -236,20 +236,20 @@ fn every_injection_removed(limit: Int) -> held.Held {
 /// the program writes no second line.
 // example: enacted.first_line_of(options_seen_text()) == "import environment"
 fn run_without_injected_options(limit: Int) -> held.Held {
-    scene := enacted.scene_of([enacted.Written { at: "example.bx", text: options_seen_text() }])
-    said := with_injected_options(["run", modules.joined(scene, "example.bx")], scene, limit)
+    let scene = enacted.scene_of([enacted.Written { at: "example.bx", text: options_seen_text() }])
+    let said = with_injected_options(["run", modules.joined(scene, "example.bx")], scene, limit)
     command.removed_whole(scene)
-    facts := [enacted.status_fact(said, 0), enacted.Fact { what: "output", expected: "no options\n", found: said.output }, enacted.Fact { what: "errors", expected: picked_up_line(), found: said.errors }]
+    let facts = [enacted.status_fact(said, 0), enacted.Fact { what: "output", expected: "no options\n", found: said.output }, enacted.Fact { what: "errors", expected: picked_up_line(), found: said.errors }]
     enacted.facts_held("run starts a program without JAVA_TOOL_OPTIONS", facts)
 }
 
 /// `test` runs the examples of a module without `JAVA_TOOL_OPTIONS`.
 // example: enacted.first_line_of(options_example_text()) == "import environment"
 fn test_without_injected_options(limit: Int) -> held.Held {
-    scene := enacted.scene_of([enacted.Written { at: "example.bx", text: options_example_text() }])
-    said := with_injected_options(["test", modules.joined(scene, "example.bx")], scene, limit)
+    let scene = enacted.scene_of([enacted.Written { at: "example.bx", text: options_example_text() }])
+    let said = with_injected_options(["test", modules.joined(scene, "example.bx")], scene, limit)
     command.removed_whole(scene)
-    facts := [enacted.status_fact(said, 0), enacted.Fact { what: "errors", expected: picked_up_line(), found: said.errors }]
+    let facts = [enacted.status_fact(said, 0), enacted.Fact { what: "errors", expected: picked_up_line(), found: said.errors }]
     enacted.facts_held("test runs the examples without JAVA_TOOL_OPTIONS", facts)
 }
 
@@ -308,8 +308,8 @@ fn program_said(completion: Result<walk.Ended, walk.Unended>) -> command.Said {
 /// there as resources. Each is named by its whole path.
 // example: or(list.at(command_line(["a"]), 5), "") == "a"
 fn command_line(words: List<String>) -> List<String> {
-    root := or(property("user.dir"), ".")
-    compiler := modules.joined(root, "compiler")
+    let root = or(property("user.dir"), ".")
+    let compiler = modules.joined(root, "compiler")
     command.all_of([java(), "--enable-preview", "-cp", modules.joined(compiler, "target") + ":" + compiler + ":" + root, "main"], words)
 }
 

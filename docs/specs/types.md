@@ -143,7 +143,7 @@ A declaration sits below what uses it, which `docs/specs/modules.md` requires, s
 reaches a function before anything that calls it and a body with no signature has been given one
 by the time a call reads it.
 
-`total := count(users)` generalises what it binds, so a name bound this way is as polymorphic as
+`let total = count(users)` generalises what it binds, so a name bound this way is as polymorphic as
 the value it was given.
 `var total = 0` does not, because a mutable binding is assigned to later and must stay one type.
 

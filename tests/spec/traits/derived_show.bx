@@ -7,7 +7,7 @@
 import io
 
 fn main(arguments: List<String>) -> Int {
-    ada := User { id: 1, name: "ada" }
+    let ada = User { id: 1, name: "ada" }
     io.println(shown(ada))
     io.println(shown(Pending))
     io.println(shown(Failed("late")))

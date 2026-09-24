@@ -9,9 +9,9 @@
 import io
 
 fn main(arguments: List<String>) -> Int {
-    ada := User { id: 1, name: "ada" }
-    bo := User { id: 2, name: "ada" }
-    zoe := User { id: 1, name: "zoe" }
+    let ada = User { id: 1, name: "ada" }
+    let bo = User { id: 2, name: "ada" }
+    let zoe = User { id: 1, name: "zoe" }
     if ada < bo {
         io.println("a user with a smaller id comes first")
     }
@@ -24,7 +24,7 @@ fn main(arguments: List<String>) -> Int {
     if Failed("late") < Failed("lost") {
         io.println("two failures are ordered by what they carry")
     }
-    payments := [Pending, Failed("late"), Failed("lost")]
+    let payments = [Pending, Failed("late"), Failed("lost")]
     if is_a_total_order(payments) {
         io.println("exactly one of the three holds for every two payments")
     }

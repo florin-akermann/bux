@@ -1,11 +1,11 @@
 // Parametric polymorphism: one declaration used at a type of its own each time.
 fn go(words: List<String>) -> String {
-    number := identity(1)
-    word := identity("two")
-    nothing := none_of()
-    counted := unwrap_or(nothing, number)
-    named := unwrap_or(nothing, word)
-    found := unwrap_or(first_of(words), named)
+    let number = identity(1)
+    let word = identity("two")
+    let nothing = none_of()
+    let counted = unwrap_or(nothing, number)
+    let named = unwrap_or(nothing, word)
+    let found = unwrap_or(first_of(words), named)
     if counted > 0 {
         return found
     }

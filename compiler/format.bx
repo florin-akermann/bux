@@ -14,7 +14,7 @@ import strings
 // example: ok_or(format("fn main( )  {}"), "") == "fn main() {\n}\n"
 // example: ok_or(format("fn ("), "refused") == "refused"
 fn format(source: String) -> Result<String, parser.ParseError> {
-    parsed := parser.parse(source)?
+    let parsed = parser.parse(source)?
     Ok(program(printer_of(source), parsed).text)
 }
 
@@ -38,7 +38,7 @@ fn check(source: String) -> Result<(), CheckError> {
 /// Nothing where the program `parsed` out of `source` is written as canonical form writes it.
 // example: is_canonical(parsed_checked("", ast.Program { items: [] }))
 fn parsed_checked(source: String, parsed: ast.Program) -> Result<(), CheckError> {
-    canonical := program(printer_of(source), parsed).text
+    let canonical = program(printer_of(source), parsed).text
     if canonical != source {
         return Err(NotCanonical { deviation: first_deviation(source: source, canonical: canonical), canonical: canonical })
     }
@@ -159,7 +159,7 @@ fn deviation_span(deviation: Deviation) -> lexer.Span {
 // example: shown_deviation(first_deviation(source: "a\n\nb\n", canonical: "a\nb\n")) == "2..2"
 // example: shown_deviation(first_deviation(source: "a", canonical: "a\n")) == "0..1"
 fn first_deviation(source: String, canonical: String) -> Deviation {
-    wanted := lines_written(canonical)
+    let wanted = lines_written(canonical)
     var last = WrittenLine { text: "", span: lexer.Span { start: 0, length: 0 } }
     var index = 0
     for written in lines_written(source) {
@@ -167,7 +167,7 @@ fn first_deviation(source: String, canonical: String) -> Deviation {
         if index >= list.length(wanted) {
             return ExtraLine(written.span)
         }
-        text := or(list.at(wanted, index), written).text
+        let text = or(list.at(wanted, index), written).text
         if written.text == "" && text != "" {
             return ExtraLine(written.span)
         }
@@ -218,7 +218,7 @@ fn lines_written(text: String) -> List<WrittenLine> {
 /// The line from code unit `start` up to `end` of `text`, which starts at byte `at`.
 // example: line_from(text: "ab", start: 1, end: 2, at: 1).text == "b"
 fn line_from(text: String, start: Int, end: Int, at: Int) -> WrittenLine {
-    cut := or(strings.cut(text, start, end), "")
+    let cut = or(strings.cut(text, start, end), "")
     WrittenLine { text: cut, span: lexer.Span { start: at, length: lexer.byte_length(lexer.Rest { source: cut, start: 0 }, strings.length(cut)) } }
 }
 
@@ -231,7 +231,7 @@ fn line_from(text: String, start: Int, end: Int, at: Int) -> WrittenLine {
 fn out_of_order(parsed: ast.Program) -> Option<OutOfOrder> {
     var above = Above { declared: false, last: "" }
     for written in parsed.items {
-        found := misplaced(written, above)
+        let found = misplaced(written, above)
         if is_misplaced(found) {
             return found
         }
@@ -261,7 +261,7 @@ fn misplaced(written: ast.Item, above: Above) -> Option<OutOfOrder> {
 /// Why `imported` is out of place, where it is: a declaration above it, or an import sorting after.
 // example: order_message(or(import_misplaced(ast.ImportDeclaration { module: ast.Name { text: "io", span: lexer.Span { start: 7, length: 2 } }, span: lexer.Span { start: 0, length: 9 } }, Above { declared: false, last: "list" }), OutOfOrder { module: "", against: AfterADeclaration, span: lexer.Span { start: 0, length: 0 } })) == "`import io` is written after `import list`"
 fn import_misplaced(imported: ast.ImportDeclaration, above: Above) -> Option<OutOfOrder> {
-    named := imported.module.text
+    let named = imported.module.text
     if above.declared {
         return Some(OutOfOrder { module: named, against: AfterADeclaration, span: imported.span })
     }
@@ -324,14 +324,14 @@ fn is_spelled_canonically(named: Declared) -> Bool {
     if named.kind == TypeParameterName {
         return true
     }
-    canonical := spelling(written: named.name.text, kind: named.kind)
+    let canonical = spelling(written: named.name.text, kind: named.kind)
     strings.length(canonical) >= 2 && canonical == named.name.text
 }
 
 /// How `named` departs from canonical form: it is an initial, or it is in the other case.
 // example: name_message(misspelling_of(Declared { name: ast.Name { text: "x", span: lexer.Span { start: 0, length: 1 } }, kind: ParameterName })) == "`x` is an initial, which names nothing a reader can look for"
 fn misspelling_of(named: Declared) -> Misspelling {
-    canonical := spelling(written: named.name.text, kind: named.kind)
+    let canonical = spelling(written: named.name.text, kind: named.kind)
     if strings.length(canonical) < 2 {
         return Initial(named.name)
     }
@@ -393,7 +393,7 @@ fn convention_of(kind: NameKind) -> String {
 // example: spelling(written: "HTTPServer", kind: FunctionName) == "http_server"
 // example: spelling(written: "user_id", kind: TypeName) == "UserId"
 fn spelling(written: String, kind: NameKind) -> String {
-    parts := words_of(written)
+    let parts = words_of(written)
     if !is_pascal_case(kind) {
         return strings.join(parts, "_")
     }
@@ -422,7 +422,7 @@ fn words_of(written: String) -> List<String> {
     var current = ""
     var at = 0
     for at < strings.length(written) {
-        unit := or(strings.at(written, at), 0)
+        let unit = or(strings.at(written, at), 0)
         if unit == 95 || is_a_word_start(written, at) {
             parts = kept(parts, current)
             current = ""
@@ -455,7 +455,7 @@ fn is_a_word_start(written: String, at: Int) -> Bool {
     if at == 0 || !is_uppercase(or(strings.at(written, at), 0)) {
         return false
     }
-    before := or(strings.at(written, at - 1), 0)
+    let before = or(strings.at(written, at - 1), 0)
     !is_uppercase(before) && before != 95 || is_lowercase(or(strings.at(written, at + 1), 0))
 }
 
@@ -471,7 +471,7 @@ fn lowercase(letter: String, unit: Int) -> String {
 /// `lowered` with its first letter in uppercase, which is how `PascalCase` writes a word.
 // example: capitalized("server") == "Server"
 fn capitalized(lowered: String) -> String {
-    first := or(strings.at(lowered, 0), 0)
+    let first = or(strings.at(lowered, 0), 0)
     if !is_lowercase(first) {
         return lowered
     }
@@ -674,8 +674,8 @@ fn item(printer: Printer, declared: ast.Item) -> Printer {
 // example: ok_or(format("extern  new now( ) -> Clock"), "") == "extern new now() -> Clock\n"
 // example: ok_or(format("extern method int length(text: String, int at: Int) -> Int = \"length\""), "") == "extern method int length(text: String, int at: Int) -> Int = \"length\"\n"
 fn extern_text(declaration: ast.ExternDeclaration) -> String {
-    width := ast.written_before(ast.gives_word(declaration.gives))
-    head := "extern " + ast.reaches_word(declaration.reaches) + " " + width + declaration.name.text
+    let width = ast.written_before(ast.gives_word(declaration.gives))
+    let head = "extern " + ast.reaches_word(declaration.reaches) + " " + width + declaration.name.text
     head + taken_text(declaration.parameters) + " -> " + type_text(declaration.result) + java_text(declaration.reaches)
 }
 
@@ -716,7 +716,7 @@ fn derive_text(declaration: ast.DeriveDeclaration) -> String {
 // example: ok_or(format("type User = { id: Int }"), "") == "type User = {\n    id: Int\n}\n"
 // example: ok_or(format("type Id = Id(Int)"), "") == "type Id = Id(Int)\n"
 fn type_declaration(printer: Printer, declaration: ast.TypeDeclaration) -> Printer {
-    opened := open_line(comments_above(printer, declaration.span))
+    let opened = open_line(comments_above(printer, declaration.span))
     match declaration.definition {
         ast.RecordType(fields) => end_line(record_body(word(opened, type_head(declaration)), fields, declaration.span))
         ast.Variants(variants) => variants_of(word(opened, type_head(declaration)), variants, declaration.span)
@@ -748,7 +748,7 @@ fn variants_of(printer: Printer, variants: List<ast.Variant>, enclosing: lexer.S
 fn variant_lines(printer: Printer, variants: List<ast.Variant>, enclosing: lexer.Span) -> Printer {
     var printed = indented(end_line(printer))
     for declared in variants {
-        opened := open_line(comments_above(printed, declared.span))
+        let opened = open_line(comments_above(printed, declared.span))
         printed = end_line(variant(word(opened, "| "), declared, declared.span))
     }
     dedented(comments_before(printed, end_of(enclosing)))
@@ -757,7 +757,7 @@ fn variant_lines(printer: Printer, variants: List<ast.Variant>, enclosing: lexer
 /// A variant's name, then what it carries: nothing, a type for each value, or a record body.
 // example: ok_or(format("type Pair = Pair(Int,String)"), "") == "type Pair = Pair(Int, String)\n"
 fn variant(printer: Printer, declared: ast.Variant, enclosing: lexer.Span) -> Printer {
-    named := word(printer, declared.name.text)
+    let named = word(printer, declared.name.text)
     match declared.payload {
         ast.NoPayload => named
         ast.TuplePayload(types) => word(named, "(" + strings.join(type_texts(types), ", ") + ")")
@@ -781,7 +781,7 @@ fn record_body(printer: Printer, fields: List<ast.RecordField>, enclosing: lexer
 /// `trait Eq<T> { … }`, with one signature per line and no blank line between two of them.
 // example: ok_or(format("trait Named<T> {\n    fn name(value: T)->String\n}"), "") == "trait Named<T> {\n    fn name(value: T) -> String\n}\n"
 fn trait_declaration(printer: Printer, declaration: ast.TraitDeclaration) -> Printer {
-    opened := open_line(comments_above(printer, declaration.span))
+    let opened = open_line(comments_above(printer, declaration.span))
     var printed = open_block(word(opened, "trait " + declaration.name.text + "<" + declaration.parameter.text + ">"))
     for method in declaration.methods {
         printed = line(printed, method.span, "fn " + method.name.text + parameters_text(method.parameters) + result_text(method.result))
@@ -794,7 +794,7 @@ fn trait_declaration(printer: Printer, declaration: ast.TraitDeclaration) -> Pri
 /// The instance states its type parameters once, so each method is written without them.
 // example: ok_or(format("instance<T: Eq<T>> Eq<Box<T>> {\n    fn is_equal(one: Box<T>, other: Box<T>) -> Bool {\n        true\n    }\n}"), "") == "instance<T: Eq<T>> Eq<Box<T>> {\n    fn is_equal(one: Box<T>, other: Box<T>) -> Bool {\n        true\n    }\n}\n"
 fn instance_declaration(printer: Printer, declaration: ast.InstanceDeclaration) -> Printer {
-    opened := open_line(comments_above(printer, declaration.span))
+    let opened = open_line(comments_above(printer, declaration.span))
     var printed = open_block(word(opened, instance_head(declaration)))
     var position = 0
     for method in declaration.methods {
@@ -810,7 +810,7 @@ fn instance_declaration(printer: Printer, declaration: ast.InstanceDeclaration) 
 /// `process Counter { … }`, with one blank line between two of the functions it declares.
 // example: ok_or(format("process Counter{\n    fn start() -> Int {\n        0\n    }\n}"), "") == "process Counter {\n    fn start() -> Int {\n        0\n    }\n}\n"
 fn process_declaration(printer: Printer, declaration: ast.ProcessDeclaration) -> Printer {
-    opened := open_line(comments_above(printer, declaration.span))
+    let opened = open_line(comments_above(printer, declaration.span))
     var printed = open_block(word(opened, "process " + declaration.name.text))
     var position = 0
     for function_written in declaration.functions {
@@ -826,15 +826,15 @@ fn process_declaration(printer: Printer, declaration: ast.ProcessDeclaration) ->
 /// `instance<T: Eq<T>> Eq<List<T>>`: the first line of an instance.
 // example: ok_or(format("instance Ord<Id>{\n    fn is_less(one: Id, other: Id) -> Bool {\n        true\n    }\n}"), "") == "instance Ord<Id> {\n    fn is_less(one: Id, other: Id) -> Bool {\n        true\n    }\n}\n"
 fn instance_head(declaration: ast.InstanceDeclaration) -> String {
-    over := constrained_text(declaration.type_parameters)
+    let over = constrained_text(declaration.type_parameters)
     "instance" + over + " " + declaration.trait_name.text + "<" + declaration.for_type.text + type_parameters_text(declaration.arguments) + ">"
 }
 
 /// One function, written over the type parameters `over` names and over no others.
 // example: ok_or(format("fn pick<T>(first: T, second) -> T {\n    first\n}"), "") == "fn pick<T>(first: T, second) -> T {\n    first\n}\n"
 fn function(printer: Printer, declaration: ast.FunctionDeclaration, over: List<ast.TypeParameter>) -> Printer {
-    opened := open_line(comments_above(printer, declaration.span))
-    signature := "fn " + declaration.name.text + constrained_text(over) + parameters_text(declaration.parameters) + result_text(declaration.result)
+    let opened = open_line(comments_above(printer, declaration.span))
+    let signature = "fn " + declaration.name.text + constrained_text(over) + parameters_text(declaration.parameters) + result_text(declaration.result)
     end_line(block(word(opened, signature), declaration.body, Closed))
 }
 
@@ -842,13 +842,13 @@ fn function(printer: Printer, declaration: ast.FunctionDeclaration, over: List<a
 ///
 /// The `}` line is left open, because an `if` continues it with an `else`, and a `closing` of
 /// `LeftOpen` leaves the `}` itself to the caller for the same reason.
-// example: ok_or(format("fn go() {\n    x := 1 // one\n    // last\n}"), "") == "fn go() {\n    // one\n    x := 1\n    // last\n}\n"
+// example: ok_or(format("fn go() {\n    let x = 1 // one\n    // last\n}"), "") == "fn go() {\n    // one\n    let x = 1\n    // last\n}\n"
 fn block(printer: Printer, body: ast.Block, closing: Closing) -> Printer {
     var printed = open_block(printer)
     for statement in body.statements {
         printed = appended(outer: printed, inner: statement_line(fresh(printed), statement))
     }
-    closed := open_line(dedented(comments_before(printed, end_of(body.span))))
+    let closed = open_line(dedented(comments_before(printed, end_of(body.span))))
     match closing {
         Closed => word(closed, "}")
         LeftOpen => closed
@@ -876,12 +876,12 @@ fn statement_text(printer: Printer, statement: ast.Statement) -> Printer {
     }
 }
 
-/// `total := `, or `var total = ` where the name may be assigned to again.
+/// `let total = `, or `var total = ` where the name may be assigned to again.
 // example: binding_head(ast.Mutable, "total") == "var total = "
-// example: binding_head(ast.Immutable, "total") == "total := "
+// example: binding_head(ast.Immutable, "total") == "let total = "
 fn binding_head(mutability: ast.Mutability, name: String) -> String {
     match mutability {
-        ast.Immutable => name + " := "
+        ast.Immutable => "let " + name + " = "
         ast.Mutable => "var " + name + " = "
     }
 }
@@ -908,7 +908,7 @@ fn returned(printer: Printer, value: Option<ast.Expr>) -> Printer {
 // example: ok_or(format("fn go() {\n    for  {\n        break\n    }\n}"), "") == "fn go() {\n    for {\n        break\n    }\n}\n"
 // example: ok_or(format("fn go(users: List<Int>) {\n    for user in users {\n    }\n}"), "") == "fn go(users: List<Int>) {\n    for user in users {\n    }\n}\n"
 fn for_loop(printer: Printer, written: ast.ForLoop) -> Printer {
-    opened := word(printer, "for")
+    let opened = word(printer, "for")
     match written.header {
         ast.Forever => block(printer: opened, body: written.body, closing: Closed)
         ast.While(condition) => block(printer: nested(word(opened, " "), condition, 0, Forbidden), body: written.body, closing: Closed)
@@ -1018,22 +1018,22 @@ fn is_opened_by_a_number(written: ast.Expr) -> Bool {
 // example: nested(printer_of(""), expression_of("(a < b) == c"), 0, Allowed).text == "(a < b) == c"
 // example: nested(printer_of(""), expression_of("a || b && c * (d + e)"), 0, Allowed).text == "a || b && c * (d + e)"
 fn binary(printer: Printer, infix: Infix, records: Records) -> Printer {
-    level := operator_power(infix.operator)
-    leftmost := if level == comparison_power() {
+    let level = operator_power(infix.operator)
+    let leftmost = if level == comparison_power() {
         level + 1
     } else {
         level
     }
-    left := nested(printer: printer, written: infix.left, least: leftmost, records: records)
+    let left = nested(printer: printer, written: infix.left, least: leftmost, records: records)
     nested(printer: word(left, " " + operator_text(infix.operator) + " "), written: infix.right, least: level + 1, records: records)
 }
 
 /// `callee(values)`, with each argument's name where the call writes one.
 // example: nested(printer_of(""), expression_of("rename(from : a,to: b)"), 0, Allowed).text == "rename(from: a, to: b)"
 fn call(printer: Printer, applied: Applied, records: Records) -> Printer {
-    callee := nested(printer: printer, written: applied.callee, least: postfix_power(), records: records)
-    opened := word(callee, "(")
-    passed := match applied.arguments {
+    let callee = nested(printer: printer, written: applied.callee, least: postfix_power(), records: records)
+    let opened = word(callee, "(")
+    let passed = match applied.arguments {
         ast.Positional(values) => listed_values(opened, values)
         ast.Named(named) => named_values(opened, named)
     }
@@ -1074,7 +1074,7 @@ fn named_values(printer: Printer, arguments: List<ast.NamedArgument>) -> Printer
 // example: nested(printer_of(""), expression_of("demo.User{id:1,name:\"a\"}"), 0, Allowed).text == "demo.User { id: 1, name: \"a\" }"
 // example: nested(printer_of(""), expression_of("User{ }"), 0, Allowed).text == "User {}"
 fn record(printer: Printer, base: ast.Path, fields: List<ast.FieldValue>) -> Printer {
-    named := word(printer, ast.path_text(base))
+    let named = word(printer, ast.path_text(base))
     if list.length(fields) == 0 {
         return word(named, " {}")
     }
@@ -1093,21 +1093,21 @@ fn record(printer: Printer, base: ast.Path, fields: List<ast.FieldValue>) -> Pri
 /// `if a {`, its block, and every `} else if b {` and `} else {` that follows on one line.
 // example: ok_or(format("fn go() {\n    if a { b } else if (User {}).on { c } else { d }\n}"), "") == "fn go() {\n    if a {\n        b\n    } else if (User {}).on {\n        c\n    } else {\n        d\n    }\n}\n"
 fn if_expression(printer: Printer, chain: ast.IfExpr) -> Printer {
-    count := list.length(chain.branches)
-    last := match chain.otherwise {
+    let count = list.length(chain.branches)
+    let last = match chain.otherwise {
         Some(otherwise) => LeftOpen
         None => Closed
     }
     var printed = printer
     var position = 0
     for branch in chain.branches {
-        opener := if position > 0 {
+        let opener = if position > 0 {
             "} else if "
         } else {
             "if "
         }
-        condition := nested(printer: word(printed, opener), written: branch.condition, least: 0, records: Forbidden)
-        closing := if position + 1 < count {
+        let condition = nested(printer: word(printed, opener), written: branch.condition, least: 0, records: Forbidden)
+        let closing = if position + 1 < count {
             LeftOpen
         } else {
             last
@@ -1124,11 +1124,11 @@ fn if_expression(printer: Printer, chain: ast.IfExpr) -> Printer {
 /// `match scrutinee {`, then one `pattern => body` per line, then `}`.
 // example: ok_or(format("fn go() {\n    match x {\n        A|B=>1 // both\n    }\n}"), "") == "fn go() {\n    match x {\n        // both\n        A | B => 1\n    }\n}\n"
 fn match_expression(printer: Printer, matched: ast.MatchExpr, span: lexer.Span) -> Printer {
-    scrutinee := nested(printer: word(printer, "match "), written: matched.scrutinee, least: 0, records: Forbidden)
+    let scrutinee = nested(printer: word(printer, "match "), written: matched.scrutinee, least: 0, records: Forbidden)
     var printed = open_block(scrutinee)
     for arm in matched.arms {
-        opened := open_line(comments_above(printed, arm.span))
-        body := nested(printer: word(opened, pattern_text(arm.pattern) + " => "), written: arm.body, least: 0, records: Allowed)
+        let opened = open_line(comments_above(printed, arm.span))
+        let body = nested(printer: word(opened, pattern_text(arm.pattern) + " => "), written: arm.body, least: 0, records: Allowed)
         printed = end_line(body)
     }
     close_block(printed, end_of(span))
@@ -1197,7 +1197,7 @@ fn constrained_text(parameters: List<ast.TypeParameter>) -> String {
         var constrained = declared.name.text
         var position = 0
         for constraint in declared.constraints {
-            joiner := if position == 0 {
+            let joiner = if position == 0 {
                 ": "
             } else {
                 " + "
@@ -1403,8 +1403,8 @@ fn comments_above(printer: Printer, span: lexer.Span) -> Printer {
 fn comments_before(printer: Printer, offset: Int) -> Printer {
     var printed = printer
     for has_comment_before(printed, offset) {
-        text := trimmed(or(list.at(printed.texts, printed.written), ""))
-        completion := end_line(word(open_line(printed), text))
+        let text = trimmed(or(list.at(printed.texts, printed.written), ""))
+        let completion = end_line(word(open_line(printed), text))
         printed = completion { written: completion.written + 1 }
     }
     printed
@@ -1434,7 +1434,7 @@ fn end_of_line(printer: Printer, offset: Int) -> Int {
     var low = 0
     var high = list.length(printer.newlines)
     for low < high {
-        middle := or((low + high) / 2, 0)
+        let middle = or((low + high) / 2, 0)
         if or(list.at(printer.newlines, middle), 0) < offset {
             low = middle + 1
         } else {
@@ -1546,7 +1546,7 @@ fn end_of(span: lexer.Span) -> Int {
 /// The expression `source` parses to, and `()` where it does not parse.
 // example: is_record(expression_of("User {}").kind)
 fn expression_of(source: String) -> ast.Expr {
-    unit := ast.Expr { kind: ast.Unit, span: lexer.Span { start: 0, length: 0 } }
+    let unit = ast.Expr { kind: ast.Unit, span: lexer.Span { start: 0, length: 0 } }
     match parser.expression(parser.over(source), parser.Allowed) {
         Ok(parsed) => parsed.value
         Err(refused) => unit
@@ -1556,7 +1556,7 @@ fn expression_of(source: String) -> ast.Expr {
 /// The pattern `source` parses to, and `_` where it does not parse.
 // example: pattern_text(pattern_of("_")) == "_"
 fn pattern_of(source: String) -> ast.Pattern {
-    wildcard := ast.Pattern { kind: ast.Wildcard, span: lexer.Span { start: 0, length: 0 } }
+    let wildcard = ast.Pattern { kind: ast.Wildcard, span: lexer.Span { start: 0, length: 0 } }
     match parser.pattern(parser.over(source)) {
         Ok(parsed) => parsed.value
         Err(refused) => wildcard
@@ -1566,7 +1566,7 @@ fn pattern_of(source: String) -> ast.Pattern {
 /// The type `source` parses to, and `()` where it does not parse.
 // example: type_text(type_of("()")) == "()"
 fn type_of(source: String) -> ast.TypeRef {
-    unit := ast.TypeRef { kind: ast.UnitType, span: lexer.Span { start: 0, length: 0 } }
+    let unit = ast.TypeRef { kind: ast.UnitType, span: lexer.Span { start: 0, length: 0 } }
     match parser.type_ref(parser.over(source)) {
         Ok(parsed) => parsed.value
         Err(refused) => unit

@@ -31,8 +31,8 @@ fn held_over(property: Property, cases: Int) -> held.Held {
     var found = held.nothing_failed(cases)
     var index = 0
     for index < cases {
-        seed := drawn.seed_of(index)
-        tried := tried_by(property, drawn.seeded(seed))
+        let seed = drawn.seed_of(index)
+        let tried = tried_by(property, drawn.seeded(seed))
         if tried.why != "" {
             found = held.with_failure(found, held.drawn_failure(name_of(property), seed, tried.case, tried.why))
         }
@@ -44,8 +44,8 @@ fn held_over(property: Property, cases: Int) -> held.Held {
 /// One case of `property`, drawn from `draw`.
 // example: tried_by(EveryOneAccepted, drawn.seeded(1)).why == ""
 fn tried_by(property: Property, draw: drawn.Draw) -> Tried {
-    many := 1 + drawn.number(draw, 5)
-    source := documented(many)
+    let many = 1 + drawn.number(draw, 5)
+    let source = documented(many)
     match property {
         EveryOneFound => every_example_a_module_states_is_found_however_many_functions_it_declares(many)
         EveryOneAccepted => a_module_whose_every_function_states_an_example_is_accepted(source)
@@ -68,8 +68,8 @@ fn name_of(property: Property) -> String {
 /// There are as many examples as there are functions, each of which states one.
 // example: every_example_a_module_states_is_found_however_many_functions_it_declares(2).why == ""
 fn every_example_a_module_states_is_found_however_many_functions_it_declares(many: Int) -> Tried {
-    source := documented(many)
-    found := list.length(ok_or(stated_in(source), []))
+    let source = documented(many)
+    let found = list.length(ok_or(stated_in(source), []))
     var why = ""
     if found != many {
         why = shown(found) + " examples are found"
@@ -80,7 +80,7 @@ fn every_example_a_module_states_is_found_however_many_functions_it_declares(man
 /// A module whose every function states an example earns no refusal.
 // example: a_module_whose_every_function_states_an_example_is_accepted(documented(2)).why == ""
 fn a_module_whose_every_function_states_an_example_is_accepted(source: String) -> Tried {
-    why := match stated_in(source) {
+    let why = match stated_in(source) {
         Ok(_) => ""
         Err(refusals) => shown(list.length(refusals)) + " refusals are earned"
     }
@@ -92,7 +92,7 @@ fn a_module_whose_every_function_states_an_example_is_accepted(source: String) -
 fn the_text_of_an_example_is_the_text_of_its_line_after_the_marker(source: String) -> Tried {
     var why = ""
     for example in ok_or(stated_in(source), []) {
-        line := or(strings.cut(source, example.span.start, example.span.start + example.span.length), "")
+        let line = or(strings.cut(source, example.span.start, example.span.start + example.span.length), "")
         if why == "" && line != "// example: " + example.expression {
             why = "the span covers " + held.quoted(line)
         }
@@ -103,11 +103,11 @@ fn the_text_of_an_example_is_the_text_of_its_line_after_the_marker(source: Strin
 /// A span anywhere in what a run writes is placed back inside the file the examples came from.
 // example: a_span_a_run_reports_is_a_span_of_the_file_the_examples_were_read_out_of(source: documented(2), draw: drawn.seeded(1)).why == ""
 fn a_span_a_run_reports_is_a_span_of_the_file_the_examples_were_read_out_of(source: String, draw: drawn.Draw) -> Tried {
-    program := parsed(source)
-    empty_run := command.Run { source: "", stretches: [], examples: [], module: lexer.Span { start: 0, length: 0 } }
-    run := ok_or(command.run_of(command.Page { source: source, path: "demo.bx" }, program, ok_or(stated_in(source), [])), empty_run)
-    offset := drawn.number(draw, command.byte_count(run.source) + 1)
-    points := command.in_original(run, lexer.Span { start: offset, length: 1 })
+    let program = parsed(source)
+    let empty_run = command.Run { source: "", stretches: [], examples: [], module: lexer.Span { start: 0, length: 0 } }
+    let run = ok_or(command.run_of(command.Page { source: source, path: "demo.bx" }, program, ok_or(stated_in(source), [])), empty_run)
+    let offset = drawn.number(draw, command.byte_count(run.source) + 1)
+    let points = command.in_original(run, lexer.Span { start: offset, length: 1 })
     var why = ""
     if run.source == "" || points.start + points.length > command.byte_count(source) {
         why = "offset " + shown(offset) + " of the run is placed at " + shown(points)

@@ -70,8 +70,8 @@ fn checked(property: Property, cases: Int, library: ir.Library) -> held.Held {
     var found = held.nothing_failed(cases)
     var case = 0
     for case < cases {
-        seed := drawn.seed_of(case)
-        one := drawing(property: property, draw: drawn.seeded(seed), library: library)
+        let seed = drawn.seed_of(case)
+        let one = drawing(property: property, draw: drawn.seeded(seed), library: library)
         found = compiled.noted(found, one.why, held.drawn_failure(name_of(property), seed, one.source, one.why))
         case += 1
     }
@@ -111,15 +111,15 @@ fn name_of(property: Property) -> String {
 /// One module lowered twice, which must be written as the same bytes both times.
 // example: twice(drawn.seeded(1), ir.little_library()).source != ""
 fn twice(draw: drawn.Draw, library: ir.Library) -> Drawing {
-    source := drawn.picked(draw, sources(), "")
+    let source = drawn.picked(draw, sources(), "")
     Drawing { source: source, why: compiled.differing(compiled.written_alone(source, library), compiled.written_alone(source, library)) }
 }
 
 /// No class name twice among the classes of one module.
 // example: named_once(drawn.seeded(1), ir.little_library()).source != ""
 fn named_once(draw: drawn.Draw, library: ir.Library) -> Drawing {
-    source := drawn.picked(draw, sources(), "")
-    lowered := compiled.lowered_alone(source, library)
+    let source = drawn.picked(draw, sources(), "")
+    let lowered = compiled.lowered_alone(source, library)
     var why = refused(lowered)
     for module in lowered {
         var names = []
@@ -136,12 +136,12 @@ fn named_once(draw: drawn.Draw, library: ir.Library) -> Drawing {
 /// Every method of every module ending with a return.
 // example: leaving(drawn.seeded(1), ir.little_library()).source != ""
 fn leaving(draw: drawn.Draw, library: ir.Library) -> Drawing {
-    source := drawn.picked(draw, sources(), "")
-    lowered := compiled.lowered_alone(source, library)
+    let source = drawn.picked(draw, sources(), "")
+    let lowered = compiled.lowered_alone(source, library)
     var why = refused(lowered)
     for class in compiled.every_class(lowered) {
         for method in class.methods {
-            last := list.at(method.body.instructions, list.length(method.body.instructions) - 1)
+            let last = list.at(method.body.instructions, list.length(method.body.instructions) - 1)
             if !is_return(or(last, ir.Copy)) {
                 why = class.name + "." + method.name + " ends with no return"
             }
@@ -163,9 +163,9 @@ fn is_return(instruction: ir.Instruction) -> Bool {
 /// The class `demo` with a `main` that gives back nothing exactly when the source has `main`.
 // example: entry_point(drawn.seeded(1), ir.little_library()).source != ""
 fn entry_point(draw: drawn.Draw, library: ir.Library) -> Drawing {
-    source := drawn.picked(draw, sources(), "")
-    lowered := compiled.lowered_alone(source, library)
-    declared := compiled.is_holding(source, "fn main(arguments: List<String>) -> Int {")
+    let source = drawn.picked(draw, sources(), "")
+    let lowered = compiled.lowered_alone(source, library)
+    let declared = compiled.is_holding(source, "fn main(arguments: List<String>) -> Int {")
     var why = refused(lowered)
     if why == "" && is_entered(lowered) != declared {
         why = "an entry point is written: " + shown(is_entered(lowered)) + ", and `main` is declared: " + shown(declared)
@@ -189,9 +189,9 @@ fn is_entered(lowered: List<ir.Lowered>) -> Bool {
 /// No method named as one of the methods every JVM class inherits.
 // example: inherited(drawn.seeded(1), ir.little_library()).source != ""
 fn inherited(draw: drawn.Draw, library: ir.Library) -> Drawing {
-    source := drawn.picked(draw, sources(), "")
-    lowered := compiled.lowered_alone(source, library)
-    object := ["equals", "hashCode", "getClass", "toString", "clone", "finalize", "wait", "notify", "notifyAll"]
+    let source = drawn.picked(draw, sources(), "")
+    let lowered = compiled.lowered_alone(source, library)
+    let object = ["equals", "hashCode", "getClass", "toString", "clone", "finalize", "wait", "notify", "notifyAll"]
     var why = refused(lowered)
     for class in compiled.every_class(lowered) {
         for method in class.methods {
@@ -206,8 +206,8 @@ fn inherited(draw: drawn.Draw, library: ir.Library) -> Drawing {
 /// Every `equals` called, in every method of every module, being the one of `java/lang/String`.
 // example: string_equality(drawn.seeded(1), ir.little_library()).source != ""
 fn string_equality(draw: drawn.Draw, library: ir.Library) -> Drawing {
-    source := drawn.picked(draw, sources(), "")
-    lowered := compiled.lowered_alone(source, library)
+    let source = drawn.picked(draw, sources(), "")
+    let lowered = compiled.lowered_alone(source, library)
     var why = refused(lowered)
     for class in compiled.every_class(lowered) {
         for method in class.methods {
@@ -231,14 +231,14 @@ fn equality_why(reference: ir.MethodRef, why: String) -> String {
 /// A list of a drawn length: an array that long, one store for each element, and one list built.
 // example: list_written(drawn.seeded(1), ir.little_library()).why == ""
 fn list_written(draw: drawn.Draw, library: ir.Library) -> Drawing {
-    many := drawn.picked(draw, [0, 1, 2, 3, 7], 0)
+    let many = drawn.picked(draw, [0, 1, 2, 3, 7], 0)
     var elements = []
     for list.length(elements) < many {
         elements = list.push(elements, list.length(elements))
     }
-    source := "fn written() -> List<Int> {\n    " + shown(elements) + "\n}\n"
-    lowered := compiled.lowered_alone(source, library)
-    body := compiled.instructions_of(lowered, "written")
+    let source = "fn written() -> List<Int> {\n    " + shown(elements) + "\n}\n"
+    let lowered = compiled.lowered_alone(source, library)
+    let body = compiled.instructions_of(lowered, "written")
     Drawing { source: source, why: listing_why(body, many) }
 }
 
@@ -257,7 +257,7 @@ fn listing_why(body: List<ir.Instruction>, many: Int) -> String {
     if stored != many {
         return "it stores " + shown(stored) + " elements"
     }
-    built := list.length(listed_calls(body))
+    let built = list.length(listed_calls(body))
     if built != 1 {
         return "it builds " + shown(built) + " lists"
     }
@@ -289,7 +289,7 @@ fn is_stored_in_array(instruction: ir.Instruction) -> Bool {
 fn listed_calls(body: List<ir.Instruction>) -> List<String> {
     var calls = []
     for instruction in body {
-        reference := or(compiled.called(instruction), no_call())
+        let reference = or(compiled.called(instruction), no_call())
         if reference.class == "bux/List" && reference.name == "of" {
             calls = list.push(calls, reference.name)
         }
@@ -306,13 +306,13 @@ fn no_call() -> ir.MethodRef {
 /// A list of a drawn number of `()`, each of which a bare `java/lang/Object` stands for.
 // example: units(drawn.seeded(1), ir.little_library()).why == ""
 fn units(draw: drawn.Draw, library: ir.Library) -> Drawing {
-    many := drawn.picked(draw, [0, 1, 2, 3, 7], 0)
+    let many = drawn.picked(draw, [0, 1, 2, 3, 7], 0)
     var written = []
     for list.length(written) < many {
         written = list.push(written, "()")
     }
-    source := "fn written() -> List<()> {\n    [" + strings.join(written, ", ") + "]\n}\n"
-    lowered := compiled.lowered_alone(source, library)
+    let source = "fn written() -> List<()> {\n    [" + strings.join(written, ", ") + "]\n}\n"
+    let lowered = compiled.lowered_alone(source, library)
     var standing = 0
     for instruction in compiled.instructions_of(lowered, "written") {
         if list.has_value(compiled.class_reached(instruction), "java/lang/Object") && is_new(instruction) {
@@ -339,7 +339,7 @@ fn is_new(instruction: ir.Instruction) -> Bool {
 /// The modules most properties draw from, each written in one construct or another.
 // example: list.length(sources()) == 10
 fn sources() -> List<String> {
-    ["fn written() -> List<Int> {\n    [1, 2, 3]\n}\n", "fn saved() -> Result<(), String> {\n    Ok(())\n}\n", "fn answer() -> Int {\n    7\n}\n", "fn held(user: User) -> Int {\n    user.id\n}\n\ntype User = {\n    id: Int\n    active: Bool\n}\n", "fn told(payment: Payment) -> String {\n    match payment {\n        Pending => \"waiting\"\n        Failed(reason) => reason\n    }\n}\n\ntype Payment =\n    | Pending\n    | Failed(String)\n", "fn walked(counts: List<Int>) -> Int {\n    var total = 0\n    for count in counts {\n        total += count\n    }\n    total\n}\n", "fn used() -> Result<Int, String> {\n    value := held()?\n    Ok(value + 1)\n}\n\nfn held() -> Result<Int, String> {\n    Ok(1)\n}\n", "fn wrapped() -> Option<Int> {\n    Some(identity(2))\n}\n\nfn identity<T>(value: T) -> T {\n    value\n}\n", "fn counted() -> Int {\n    2\n}\n\nfn main(arguments: List<String>) -> Int {\n    0\n}\n", "fn is_same(word: String, count: Int) -> Bool {\n    word == \"one\" && count != 2\n}\n"]
+    ["fn written() -> List<Int> {\n    [1, 2, 3]\n}\n", "fn saved() -> Result<(), String> {\n    Ok(())\n}\n", "fn answer() -> Int {\n    7\n}\n", "fn held(user: User) -> Int {\n    user.id\n}\n\ntype User = {\n    id: Int\n    active: Bool\n}\n", "fn told(payment: Payment) -> String {\n    match payment {\n        Pending => \"waiting\"\n        Failed(reason) => reason\n    }\n}\n\ntype Payment =\n    | Pending\n    | Failed(String)\n", "fn walked(counts: List<Int>) -> Int {\n    var total = 0\n    for count in counts {\n        total += count\n    }\n    total\n}\n", "fn used() -> Result<Int, String> {\n    let value = held()?\n    Ok(value + 1)\n}\n\nfn held() -> Result<Int, String> {\n    Ok(1)\n}\n", "fn wrapped() -> Option<Int> {\n    Some(identity(2))\n}\n\nfn identity<T>(value: T) -> T {\n    value\n}\n", "fn counted() -> Int {\n    2\n}\n\nfn main(arguments: List<String>) -> Int {\n    0\n}\n", "fn is_same(word: String, count: Int) -> Bool {\n    word == \"one\" && count != 2\n}\n"]
 }
 
 /// `the compiler refused it` where nothing was lowered, and nothing where something was.

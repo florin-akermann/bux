@@ -7,9 +7,9 @@ import io
 import list
 
 fn main(arguments: List<String>) -> Int {
-    collecting := spawn Collector()
-    first := spawn Worker(collecting)
-    second := spawn Worker(collecting)
+    let collecting = spawn Collector()
+    let first = spawn Worker(collecting)
+    let second = spawn Worker(collecting)
     for number in [1, 3, 5] {
         _ = send(first, Square(number), NoLimit)
     }

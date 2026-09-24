@@ -1,11 +1,11 @@
-function classify 91..508
+function classify 91..511
   parameter total 103..113
     named-type Int 110..113
   parameter limit 115..125
     named-type Int 122..125
   result
     named-type String 130..136
-  block 137..508
+  block 137..511
     if 143..334
       branch 143..190
         binary Less 146..159
@@ -49,14 +49,14 @@ function classify 91..508
     for 403..428
       block 407..428
         break 417..422
-    binding Immutable ok 433..452
-      binary Equal 439..452
-        name seen 439..443
-        name limit 447..452
-    if 457..492
-      branch 457..492
-        name ok 460..462
-        block 463..492
-          return 473..486
-            string "done" 480..486
-    string "unknown" 497..506
+    binding Immutable ok 433..455
+      binary Equal 442..455
+        name seen 442..446
+        name limit 450..455
+    if 460..495
+      branch 460..495
+        name ok 463..465
+        block 466..495
+          return 476..489
+            string "done" 483..489
+    string "unknown" 500..509

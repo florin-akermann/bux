@@ -8,7 +8,7 @@ import io
 import list
 
 fn main(arguments: List<String>) -> Int {
-    counted := counting(1000000)
+    let counted = counting(1000000)
     io.println("the list holds " + shown(list.length(counted)))
     io.println("at 999999 it holds " + shown(or(list.at(counted, 999999), 0)))
     0

@@ -26,8 +26,8 @@ fn every_extern_declaration_round_trips(cases: Int) -> held.Held {
     var found = held.nothing_failed(cases)
     var case = 0
     for case < cases {
-        source := declaration(drawn.seed_of(case))
-        canonical := ok_or(format.format(source), "refused")
+        let source = declaration(drawn.seed_of(case))
+        let canonical = ok_or(format.format(source), "refused")
         if canonical != source {
             found = held.with_failure(found, held.drawn_failure("every_extern_declaration_round_trips", drawn.seed_of(case), source, "formatting writes " + held.quoted(canonical)))
         }
@@ -40,14 +40,14 @@ fn every_extern_declaration_round_trips(cases: Int) -> held.Held {
 /// carries, after the declaration of the type it reaches.
 // example: strings.length(declaration(1)) > 0
 fn declaration(seed: Int) -> String {
-    kind := drawn.number(stepped(seed: seed, steps: 0), 4)
-    width := drawn.picked(stepped(seed: seed, steps: 1), ["", "int ", "char "], "")
-    name := drawn.picked(stepped(seed: seed, steps: 2), ["reached", "held_by", "opened", "int"], "")
-    result := drawn.picked(stepped(seed: seed, steps: 3), ["Bool", "Int", "String", "File", "()", "Option<File>", "Option<Int>", "Result<File, String>"], "")
-    class := drawn.picked(stepped(seed: seed, steps: 4), ["", "interface "], "")
-    taken := drawn.picked(stepped(seed: seed, steps: 5), ["", "int "], "") + drawn.picked(stepped(seed: seed, steps: 6), ["held", "int"], "")
-    member := or(list.at(["field ", "static ", "method ", "new "], kind), "") + width + name + extern_parameters(kind, taken)
-    reached := or(list.at([" = \"java.lang.System.out\"", " = \"java.lang.System.identityHashCode\"", " = \"toPath\"", ""], kind), "")
+    let kind = drawn.number(stepped(seed: seed, steps: 0), 4)
+    let width = drawn.picked(stepped(seed: seed, steps: 1), ["", "int ", "char "], "")
+    let name = drawn.picked(stepped(seed: seed, steps: 2), ["reached", "held_by", "opened", "int"], "")
+    let result = drawn.picked(stepped(seed: seed, steps: 3), ["Bool", "Int", "String", "File", "()", "Option<File>", "Option<Int>", "Result<File, String>"], "")
+    let class = drawn.picked(stepped(seed: seed, steps: 4), ["", "interface "], "")
+    let taken = drawn.picked(stepped(seed: seed, steps: 5), ["", "int "], "") + drawn.picked(stepped(seed: seed, steps: 6), ["held", "int"], "")
+    let member = or(list.at(["field ", "static ", "method ", "new "], kind), "") + width + name + extern_parameters(kind, taken)
+    let reached = or(list.at([" = \"java.lang.System.out\"", " = \"java.lang.System.identityHashCode\"", " = \"toPath\"", ""], kind), "")
     "extern type " + class + "File = \"java.io.File\"\n\nextern " + member + " -> " + result + reached + "\n"
 }
 
@@ -67,9 +67,9 @@ fn formatting_is_deterministic_and_idempotent(cases: Int) -> held.Held {
     var found = held.nothing_failed(cases)
     var case = 0
     for case < cases {
-        source := drawn_program(drawn.seed_of(case))
-        written := person_written(drawn.seed_of(case))
-        why := first_of(first: first_of(first: unparsed(source), second: idempotence_fault(source)), second: idempotence_fault(written))
+        let source = drawn_program(drawn.seed_of(case))
+        let written = person_written(drawn.seed_of(case))
+        let why = first_of(first: first_of(first: unparsed(source), second: idempotence_fault(source)), second: idempotence_fault(written))
         if why != "" {
             found = held.with_failure(found, held.drawn_failure("formatting_is_deterministic_and_idempotent", drawn.seed_of(case), source + "\n---\n" + written, why))
         }
@@ -84,14 +84,14 @@ fn formatting_is_deterministic_and_idempotent(cases: Int) -> held.Held {
 // example: idempotence_fault("fn main( )  {}") == ""
 // example: idempotence_fault("fn (") == ""
 fn idempotence_fault(source: String) -> String {
-    once := ok_or(format.format(source), "")
+    let once = ok_or(format.format(source), "")
     if !parsing.is_parsed(source) {
         return ""
     }
     if ok_or(format.format(source), "") != once {
         return "two formattings of " + held.quoted(source) + " disagree"
     }
-    again := ok_or(format.format(once), "refused")
+    let again = ok_or(format.format(once), "refused")
     if again != once {
         return "formatting " + held.quoted(once) + " again writes " + held.quoted(again)
     }
@@ -104,9 +104,9 @@ fn formatting_keeps_the_tree(cases: Int) -> held.Held {
     var found = held.nothing_failed(cases)
     var case = 0
     for case < cases {
-        source := drawn_program(drawn.seed_of(case))
-        written := person_written(drawn.seed_of(case))
-        why := first_of(first: first_of(first: unparsed(source), second: tree_fault(source)), second: tree_fault(written))
+        let source = drawn_program(drawn.seed_of(case))
+        let written = person_written(drawn.seed_of(case))
+        let why = first_of(first: first_of(first: unparsed(source), second: tree_fault(source)), second: tree_fault(written))
         if why != "" {
             found = held.with_failure(found, held.drawn_failure("formatting_keeps_the_tree", drawn.seed_of(case), source + "\n---\n" + written, why))
         }
@@ -119,12 +119,12 @@ fn formatting_keeps_the_tree(cases: Int) -> held.Held {
 // example: tree_fault("fn main( )  {  -(7.abs())\n}") == ""
 // example: tree_fault("fn (") == ""
 fn tree_fault(source: String) -> String {
-    canonical := ok_or(format.format(source), "")
+    let canonical = ok_or(format.format(source), "")
     if !parsing.is_parsed(source) {
         return ""
     }
-    before := tree(source)
-    after := tree(canonical)
+    let before = tree(source)
+    let after = tree(canonical)
     if before != after {
         return "the tree " + held.quoted(before) + " becomes " + held.quoted(after)
     }
@@ -150,7 +150,7 @@ fn without_span(line: String) -> String {
     for index >= 0 && or(strings.at(line, index), 0) != 32 {
         index = index - 1
     }
-    last := or(strings.cut(line, index + 1, strings.length(line)), "")
+    let last = or(strings.cut(line, index + 1, strings.length(line)), "")
     if index < 0 || !is_span_text(last) {
         return line
     }
@@ -166,7 +166,7 @@ fn is_span_text(text: String) -> Bool {
     var digits = 0
     var index = 0
     for index < strings.length(text) {
-        unit := or(strings.at(text, index), 0)
+        let unit = or(strings.at(text, index), 0)
         if unit == 46 {
             dots += 1
         } else if unit >= 48 && unit <= 57 {
@@ -185,9 +185,9 @@ fn every_comment_survives_in_source_order(cases: Int) -> held.Held {
     var found = held.nothing_failed(cases)
     var case = 0
     for case < cases {
-        source := drawn_program(drawn.seed_of(case))
-        written := person_written(drawn.seed_of(case))
-        why := first_of(first: first_of(first: unparsed(source), second: comment_fault(source)), second: comment_fault(written))
+        let source = drawn_program(drawn.seed_of(case))
+        let written = person_written(drawn.seed_of(case))
+        let why = first_of(first: first_of(first: unparsed(source), second: comment_fault(source)), second: comment_fault(written))
         if why != "" {
             found = held.with_failure(found, held.drawn_failure("every_comment_survives_in_source_order", drawn.seed_of(case), source + "\n---\n" + written, why))
         }
@@ -200,12 +200,12 @@ fn every_comment_survives_in_source_order(cases: Int) -> held.Held {
 // example: comment_fault("fn main( )  {  // why\n1 // one   \n}") == ""
 // example: comment_fault("fn (") == ""
 fn comment_fault(source: String) -> String {
-    canonical := ok_or(format.format(source), "")
+    let canonical = ok_or(format.format(source), "")
     if !parsing.is_parsed(source) {
         return ""
     }
-    before := comments(source)
-    after := comments(canonical)
+    let before = comments(source)
+    let after = comments(canonical)
     if before != after {
         return "the comments " + shown(before) + " become " + shown(after)
     }
@@ -248,8 +248,8 @@ fn the_canonical_text_of_a_refusal_is_canonical(cases: Int) -> held.Held {
     var found = held.nothing_failed(cases)
     var case = 0
     for case < cases {
-        written := spaced_as_a_person_might(drawn.seed_of(case))
-        why := refusal_fault(written)
+        let written = spaced_as_a_person_might(drawn.seed_of(case))
+        let why = refusal_fault(written)
         if why != "" {
             found = held.with_failure(found, held.drawn_failure("the_canonical_text_of_a_refusal_is_canonical", drawn.seed_of(case), written, why))
         }
@@ -271,7 +271,7 @@ fn refusal_fault(written: String) -> String {
 /// Why `text` is not in canonical form, and `""` where it is.
 // example: canonical_fault("fn main() {\n}\n") == ""
 fn canonical_fault(text: String) -> String {
-    again := ok_or(format.format(text), "refused")
+    let again = ok_or(format.format(text), "refused")
     if again != text {
         return "the canonical text " + held.quoted(text) + " formats to " + held.quoted(again)
     }
@@ -284,13 +284,13 @@ fn canonical_fault(text: String) -> String {
 /// any line break: a run of blank lines deep in a file is the case the first line would not show.
 // example: strings.length(spaced_as_a_person_might(1)) > 0
 fn spaced_as_a_person_might(seed: Int) -> String {
-    lines := walk.lines_of(drawn_program(seed))
-    wrong := drawn.number(stepped(seed: seed, steps: 7), list.length(lines) - 1) + 1
+    let lines = walk.lines_of(drawn_program(seed))
+    let wrong = drawn.number(stepped(seed: seed, steps: 7), list.length(lines) - 1) + 1
     var draw = stepped(seed: seed, steps: 8)
     var written = or(list.at(lines, 0), "")
     var index = 1
     for index < list.length(lines) {
-        spacing := drawn.picked(draw, ["\n", "\n\n", "\n\n\n", "\n   \n", "  \n", "\n\t"], "\n")
+        let spacing = drawn.picked(draw, ["\n", "\n\n", "\n\n\n", "\n   \n", "  \n", "\n\t"], "\n")
         written += spacing_at(index: index, wrong: wrong, drawn_spacing: spacing, seed: seed) + or(list.at(lines, index), "")
         draw = drawn.next(draw)
         index += 1
@@ -314,8 +314,8 @@ fn every_spelling_canonical_form_advises_is_one_it_accepts(cases: Int) -> held.H
     var found = held.nothing_failed(cases)
     var case = 0
     for case < cases {
-        name := drawn_name(drawn.seed_of(case))
-        spelled := spelling(name)
+        let name = drawn_name(drawn.seed_of(case))
+        let spelled = spelling(name)
         if spelled != "" && !format.is_canonical(format.check(declaring(spelled))) {
             found = held.with_failure(found, held.drawn_failure("every_spelling_canonical_form_advises_is_one_it_accepts", drawn.seed_of(case), name, "canonical form refuses its own spelling " + held.quoted(spelled)))
         }
@@ -350,8 +350,8 @@ fn declaring(name: String) -> String {
 /// An underscore never stands alone, because `_` is a keyword rather than a name.
 // example: strings.length(drawn_name(1)) > 0
 fn drawn_name(seed: Int) -> String {
-    opener := drawn.picked(stepped(seed: seed, steps: 0), ["a", "A", "u", "U", "_a", "_U"], "a")
-    count := drawn.number(stepped(seed: seed, steps: 1), 6)
+    let opener = drawn.picked(stepped(seed: seed, steps: 0), ["a", "A", "u", "U", "_a", "_U"], "a")
+    let count = drawn.number(stepped(seed: seed, steps: 1), 6)
     opener + drawn.text_of(stepped(seed: seed, steps: 2), ["a", "b", "U", "I", "_", "2"], count)
 }
 
@@ -374,7 +374,7 @@ fn drawn_program(seed: Int) -> String {
 // example: strings.length(expression(1)) > 0
 fn expression(seed: Int) -> String {
     var written = drawn.picked(stepped(seed: seed, steps: 20), ["a", "7", "0", "f(1, b)", "[]"], "a")
-    count := drawn.number(stepped(seed: seed, steps: 21), 13)
+    let count = drawn.number(stepped(seed: seed, steps: 21), 13)
     for layer in drawn.numbers(stepped(seed: seed, steps: 22), count, list.length(wrappers())) {
         written = wrapped(wrapper: or(list.at(wrappers(), layer), "_"), inner: written)
     }
