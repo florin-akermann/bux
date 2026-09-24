@@ -1099,7 +1099,7 @@ fn named_values(printer: Printer, arguments: List<ast.NamedArgument>) -> Printer
     printed
 }
 
-/// `User { id: id }`, or `User {}` where it names no field.
+/// `User { id: id }` or `User { id }`, or `User {}` where it names no field.
 // example: nested(printer_of(""), expression_of("demo.User{id:1,name:\"a\"}"), 0, Allowed).text == "demo.User { id: 1, name: \"a\" }"
 // example: nested(printer_of(""), expression_of("User{ }"), 0, Allowed).text == "User {}"
 fn record(printer: Printer, base: ast.Path, fields: List<ast.FieldValue>) -> Printer {
@@ -1113,10 +1113,19 @@ fn record(printer: Printer, base: ast.Path, fields: List<ast.FieldValue>) -> Pri
         if position > 0 {
             printed = word(printed, ", ")
         }
-        printed = nested(printer: word(printed, field.name.text + ": "), written: field.value, least: 0, records: Allowed)
+        printed = field_printed(printed, field)
         position += 1
     }
     word(printed, " }")
+}
+
+/// One field of a record literal in the form the author wrote: `id: id`, or a bare `id`.
+// example: nested(printer_of(""), expression_of("User{id,name:name}"), 0, Allowed).text == "User { id, name: name }"
+fn field_printed(printer: Printer, field: ast.FieldValue) -> Printer {
+    match field.given {
+        ast.Bare => word(printer, field.name.text)
+        ast.Given(value) => nested(printer: word(printer, field.name.text + ": "), written: value, least: 0, records: Allowed)
+    }
 }
 
 /// `if a {`, its block, and every `} else if b {` and `} else {` that follows on one line.

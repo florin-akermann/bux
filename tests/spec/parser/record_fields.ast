@@ -1,0 +1,20 @@
+function built 276..376
+  parameter id 285..292
+    named-type Int 289..292
+  parameter name 294..306
+    named-type String 300..306
+  result
+    named-type User 311..315
+  block 316..376
+    binding Immutable user 322..356
+      record User 333..356
+        field-value id 340..342
+        field-value name 344..354
+          name name 350..354
+    record user 361..374
+      field-value name 368..372
+type User 378..422
+  field id 396..403
+    named-type Int 400..403
+  field name 408..420
+    named-type String 414..420

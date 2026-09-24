@@ -606,6 +606,10 @@ let user = User {
 }
 ```
 
+A field is written bare where its value is the binding of the same name, as a pattern writes it:
+`User { id, name: "Alice", email }` reads the bindings `id` and `email`.
+The bare form and the `id: id` form are two forms, not one, and each is canonical.
+
 Record updates should be concise:
 
 ```text

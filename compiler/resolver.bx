@@ -774,7 +774,7 @@ fn each_expression(resolver: Resolver, values: List<ast.Expr>) -> Result<Resolve
 fn record_literal(resolver: Resolver, base: ast.Path, fields: List<ast.FieldValue>) -> Result<Resolver, ResolveError> {
     var walked = built_as(resolver, base)?
     for field in fields {
-        walked = expression(resolver: walked, walked: field.value)?
+        walked = expression(resolver: walked, walked: ast.field_expression(field))?
     }
     Ok(walked)
 }

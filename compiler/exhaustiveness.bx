@@ -215,7 +215,7 @@ fn each_checked(reading: Reading, values: List<ast.Expr>) -> Result<(), MatchErr
 // example: said(fields_checked(no_reading(), [])) == ""
 fn fields_checked(reading: Reading, fields: List<ast.FieldValue>) -> Result<(), MatchError> {
     for field in fields {
-        _ = expression_checked(reading, field.value)?
+        _ = expression_checked(reading, ast.field_expression(field))?
     }
     Ok(())
 }
