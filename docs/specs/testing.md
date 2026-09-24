@@ -87,6 +87,17 @@ A run of a package does not stop at a module that fails.
 It runs each module as `bux test <file>` runs it, and it reports what each module found.
 Thus one run names every module that fails.
 
+## A package runs on a pool
+
+The modules of a package run at the same time, on one worker for each processor of the JVM.
+A pool, which is a `process`, gives each module to the next worker that is free.
+The pool keeps each answer by the number of its module in the sorted order.
+So the report is in file order, and it is the report of the modules run one after another.
+The exit code and each line are the same as in a run of one module after another.
+A worker keeps a memo of the modules it typed, and it uses the memo for its next module.
+So a module that many modules import is typed once for each worker, and not once for each module.
+A JVM error that stops a worker, such as a stack overflow, stops the run with that error.
+
 ## How a run is put together
 
 `docs/specs/doc-examples.md` states the module that a run writes for the examples.
@@ -143,3 +154,6 @@ These hold and are checked by drawn properties in the runner:
 1. The word `test` is read as a keyword, and a longer name that opens with it is a name.
 2. A test written among the statements of a body is refused as `L0110`, at the word `test`.
 3. A declaration written below a test is `L0201`, and a test written last is in place.
+4. A drawn package on a pool of drawn size reports what its modules report when run in turn.
+   `tests/packaged.bx` holds it, and each module of a drawn package has a drawn outcome.
+   The example of a module holds or fails, the compiler refuses the module, or it states nothing.

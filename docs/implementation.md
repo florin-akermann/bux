@@ -308,8 +308,7 @@ A module of `tests/` or `compiler/` costs much more than one of `tests/spec`, so
 Before Item 103 one job held most modules of `tests/`, and it took 47 s of the 56 s of wall time.
 On 2026-09-24 the median of three `bin/runner` wall times was 56 s before Item 103 and 43 s after.
 The runs of before and after took turns, under a load of 15 to 22 on 12 cores from other runners.
-Each golden file is one job, and each other check of the command line is one job.
-The properties are one job, and the siblings are one job.
+Each golden file, each other check of the command line, the properties, and the siblings is a job.
 A worker sends the answer of its job to the pool, which holds each answer by the number of the job.
 When every worker has left, the pool ends, and the runner counts the parts from its last state.
 The runner waits for each worker before the pool, so a JVM error in a worker stops the runner.
@@ -394,7 +393,6 @@ Item 111 profiled an Apple M4 Pro with 12 processors, on JDK 28-ea+16, under a l
 Each number is a median of two runs or more of `bin/bux` or `bin/runner`, with this flag added.
 `-XX:StartFlightRecording=filename=build.jfr,settings=profile,jdk.ExecutionSample#period=1ms`.
 `jfr print --json --stack-depth 4096 --events jdk.ExecutionSample build.jfr` gives the samples.
-A script outside the repository gave each sample to its top frame in a module of the compiler.
 Loading is `lexer`, `parser`, `format`, `ast`, `modules`, and the rest of `command`.
 Resolving is `resolver`, lowering is `ir`, and class writing is `jvm`, `bytes`, and disk writes.
 Typing is `declared`, `infer`, `unify`, `types`, `surface`, `exhaustiveness`, and `holes`.
@@ -429,6 +427,9 @@ A build writes 575 specialized bodies of 42 generics, the methods `name$Type` of
 In one pass, the 533 later copies take 17% of the code bytes, and so 0.17 s of lowering and writing.
 `bux test tests` took 118 s and 110 s; with JFR it took 177 s and waited 9.9 s on its 43 JVMs.
 At 0.064 s their starts cost 2.8 s; Item 123 said 0.12 s, and a start took 0.11 s at a load of 20.
+Item 112 put `bux test <package>` on a pool; the medians of three, before and after, took turns.
+`bux test compiler` took 28.8 s and 10.2 s, and `bux test tests` took 106.6 s and 20.8 s.
+`bin/runner` took 55.7 s and 57.0 s, at a load of 4 to 22, and the pool property adds 20 s of work.
 
 ### Drawn properties
 

@@ -365,7 +365,7 @@ fn tested(path: String, library: ir.Library) -> Said {
     if is_folder(place_at(path)) {
         return package_tested(path, library)
     }
-    reported(module_tested(path, library))
+    reported(module_tested(path, Typing { library: library, memo: no_memo() }).tried)
 }
 
 /// Whether an archive that the package at `path` reaches is at a path that holds a `:`.
@@ -410,14 +410,14 @@ fn package_directory_of(path: String) -> String {
     modules.directory_of(path)
 }
 
-/// Runs the examples and the tests of every module of the package in `directory`, in the order
-/// `across` takes them, and reports what every module found.
+/// Runs the examples and the tests of every module of the package in `directory`, on one worker
+/// for each processor, and reports what every module found, in the order `across` takes them.
 ///
 /// A module that is refused does not stop the run, so one report names every module that fails.
 // example: package_tested("no-such-directory", ir.little_library()).status == 2
 fn package_tested(directory: String, library: ir.Library) -> Said {
     match package_found(directory) {
-        Ok(package) => reported(every_module_tested(package, library))
+        Ok(package) => reported(every_module_tested(package, library, processors()))
         Err(said) => said
     }
 }
@@ -434,16 +434,144 @@ fn package_found(directory: String) -> Result<Package, Said> {
     }
 }
 
-/// What the run of every module among the entries of `package` found, one module after another.
-// example: every_module_tested(Package { directory: "no-such-directory", names: ["a.txt"] }, ir.little_library()).said.status == 0
-fn every_module_tested(package: Package, library: ir.Library) -> Tried {
-    var found = only_said(nothing_said())
+/// What the run of every module among the entries of `package` found, in the order of the entries,
+/// as a run of one module after another finds it.
+///
+/// A pool of `workers` workers hands each module to the next free worker. Each worker is waited
+/// for before the pool, so a JVM error that stops a worker stops the command with it.
+// example: every_module_tested(Package { directory: "no-such-directory", names: ["a.txt"] }, ir.little_library(), 2).said.status == 0
+fn every_module_tested(package: Package, library: ir.Library, workers: Int) -> Tried {
+    let paths = module_paths(package)
+    let pooling = spawn Pool(paths, workers)
+    var working = []
+    for list.length(working) < workers {
+        let worker = spawn Worker(pooling, library)
+        _ = send(pooling, Joined(worker), NoLimit)
+        working = list.push(working, worker)
+    }
+    for worker in working {
+        _ = ended(worker)
+    }
+    in_file_order(paths, ended(pooling).answers)
+}
+
+/// The path of each module among the entries of `package`, in the order of the entries.
+// example: module_paths(Package { directory: "a", names: ["b.bx", "c.txt"] }) == ["a/b.bx"]
+fn module_paths(package: Package) -> List<String> {
+    var paths = []
     for name in package.names {
         if is_a_module_name(name) {
-            found = tried_both(first: found, second: module_tested(modules.joined(package.directory, name), library))
+            paths = list.push(paths, modules.joined(package.directory, name))
         }
     }
+    paths
+}
+
+/// What the runs of `paths` found together, each answer taken by the number of its module.
+///
+/// A module with no answer is a refusal of the command, which a pool that ends only when its
+/// workers leave never gives.
+// example: in_file_order(["a.bx"], map.empty()).said.errors == "error: a.bx: no worker gave an answer\n"
+fn in_file_order(paths: List<String>, answers: map.Map<Int, Tried>) -> Tried {
+    var found = only_said(nothing_said())
+    var number = 0
+    for path in paths {
+        found = tried_both(first: found, second: or(map.get(answers, number), only_said(unusable(path + ": no worker gave an answer"))))
+        number += 1
+    }
     found
+}
+
+/// The pool of `bux test`: it hands each module to a worker that asks, holds each answer by the
+/// number of its module, and ends when every worker has left.
+process Pool {
+    fn start(paths: List<String>, workers: Int) -> Pooling {
+        Pooling { paths: paths, handed: 0, answers: map.empty(), workers: workers }
+    }
+
+    fn receive(pooling: Pooling, message: Pooled) -> Next<Pooling> {
+        match message {
+            Joined(worker) => Continue(handed_to(pooling, worker))
+            Finished(answer, worker) => Continue(answer_kept(pooling, answer, worker))
+            Left => worker_left(pooling)
+        }
+    }
+}
+
+/// `pooling` with `answer` held by the number of its module, and `worker` handed the next module.
+// example: every_module_tested(Package { directory: "no-such-directory", names: ["a.bx", "b.bx"] }, ir.little_library(), 2).said.errors == "error: no-such-directory/a.bx: No such file or directory (os error 2)\n\nerror: no-such-directory/b.bx: No such file or directory (os error 2)\n"
+fn answer_kept(pooling: Pooling, answer: Answered, worker: Process<Work, Working>) -> Pooling {
+    handed_to(pooling { answers: map.insert(pooling.answers, answer.number, answer.tried) }, worker)
+}
+
+/// `pooling` after `worker` is sent the next module, or told to stop where no module is left.
+// example: every_module_tested(Package { directory: "no-such-directory", names: ["a.bx"] }, ir.little_library(), 2).said.status == 2
+fn handed_to(pooling: Pooling, worker: Process<Work, Working>) -> Pooling {
+    match list.at(pooling.paths, pooling.handed) {
+        Some(path) => handed_module(pooling, Handed { number: pooling.handed, path: path, worker: worker })
+        None => stopped(pooling, worker)
+    }
+}
+
+/// `pooling` once the module of `handed` is sent to its worker, with one more module handed.
+// example: every_module_tested(Package { directory: "no-such-directory", names: ["a.bx", "b.bx"] }, ir.little_library(), 2).said.status == 2
+fn handed_module(pooling: Pooling, handed: Handed) -> Pooling {
+    _ = send(handed.worker, Give(handed), NoLimit)
+    pooling { handed: pooling.handed + 1 }
+}
+
+/// `pooling` once `worker` is told to stop.
+// example: every_module_tested(Package { directory: "no-such-directory", names: [] }, ir.little_library(), 2).said.status == 0
+fn stopped(pooling: Pooling, worker: Process<Work, Working>) -> Pooling {
+    _ = send(worker, Stop, NoLimit)
+    pooling
+}
+
+/// The pool with one worker fewer, which has ended where that worker was the last.
+// example: every_module_tested(Package { directory: "no-such-directory", names: [] }, ir.little_library(), 2).said.output == ""
+fn worker_left(pooling: Pooling) -> Next<Pooling> {
+    if pooling.workers == 1 {
+        return Done
+    }
+    Continue(pooling { workers: pooling.workers - 1 })
+}
+
+/// A worker of `bux test`: it runs each module it is handed, sends the answer to the pool, and
+/// leaves when told to stop. Its memo goes from one module to the next, so it types each module
+/// that its modules import once.
+process Worker {
+    fn start(pool: Process<Pooled, Pooling>, library: ir.Library) -> Working {
+        Working { pool: pool, typing: Typing { library: library, memo: no_memo() } }
+    }
+
+    fn receive(working: Working, message: Work) -> Next<Working> {
+        match message {
+            Give(handed) => Continue(worked(working, handed))
+            Stop => quit(working)
+        }
+    }
+}
+
+/// `working`, with the memo the run of the module of `handed` left, once its answer is sent.
+// example: every_module_tested(Package { directory: "no-such-directory", names: ["a.bx"] }, ir.little_library(), 2).said.errors == "error: no-such-directory/a.bx: No such file or directory (os error 2)\n"
+fn worked(working: Working, handed: Handed) -> Working {
+    let ran = module_tested(handed.path, working.typing)
+    _ = send(working.pool, Finished(Answered { number: handed.number, tried: ran.tried }, handed.worker), NoLimit)
+    let typing = working.typing
+    working { typing: typing { memo: ran.memo } }
+}
+
+/// The end of a worker, once it tells the pool that it has left.
+// example: every_module_tested(Package { directory: "no-such-directory", names: [] }, ir.little_library(), 2).said.errors == ""
+fn quit(working: Working) -> Next<Working> {
+    _ = send(working.pool, Left, NoLimit)
+    Done
+}
+
+/// The processors the JVM may use, which is how many workers a pool has.
+// example: processors() > 0
+fn processors() -> Int {
+    processors_of(machine())
 }
 
 /// Whether a file called `name` is a module: its extension is `bx`, after a dot that opens no name.
@@ -468,12 +596,14 @@ fn last_dot(name: String) -> Int {
     found
 }
 
-/// What the run of the module in `path` found, or the refusal of the module.
-// example: module_tested("no-such-directory/a.bx", ir.little_library()).said.status == 2
-fn module_tested(path: String, library: ir.Library) -> Tried {
-    match checked(path, library) {
-        Ok(program) => program_tested(program, library)
-        Err(not) => only_said(not_compiled_said(not, AsPage))
+/// What the run of the module in `path` found, or the refusal of the module, with each module
+/// typed once: a module that `typing.memo` holds is not typed again.
+// example: module_tested("no-such-directory/a.bx", Typing { library: ir.little_library(), memo: no_memo() }).tried.said.status == 2
+fn module_tested(path: String, typing: Typing) -> Tested {
+    let loaded = checked_once(path, typing.library, typing.memo)
+    match loaded.found {
+        Ok(program) => program_tested(program, typing { memo: loaded.memo })
+        Err(not) => Tested { tried: only_said(not_compiled_said(not, AsPage)), memo: loaded.memo }
     }
 }
 
@@ -506,30 +636,21 @@ fn tried_both(first: Tried, second: Tried) -> Tried {
 
 /// The examples and the tests of the module `program` was checked for, run, or the reason there is
 /// no run.
-// example: program_tested(Checked { modules: [], root: Typed { module: modules.Module { name: "main", path: "main.bx", source: "", program: ast.Program { items: [] } }, inferred: types.checked_of("") } }, ir.little_library()).said.status == 0
-fn program_tested(program: Checked, library: ir.Library) -> Tried {
+// example: program_tested(Checked { modules: [], root: Typed { module: modules.Module { name: "main", path: "main.bx", source: "", program: ast.Program { items: [] } }, inferred: types.checked_of("") } }, Typing { library: ir.little_library(), memo: no_memo() }).tried.said.status == 0
+fn program_tested(program: Checked, typing: Typing) -> Tested {
     let root = program.root
     match stated_in(root, ast.tests_of(root.inferred.resolved.program)) {
-        Ok(found) => run_held(found, root, library)
-        Err(refusals) => only_said(refused_each(refusals, page_of(root)))
+        Ok(found) => run_held(found, root, typing)
+        Err(refusals) => Tested { tried: only_said(refused_each(refusals, page_of(root))), memo: typing.memo }
     }
 }
 
 /// What the run of the examples and the tests found, and nothing where the module states none.
-// example: run_held(None, Typed { module: modules.Module { name: "main", path: "main.bx", source: "", program: ast.Program { items: [] } }, inferred: types.checked_of("") }, ir.little_library()).said.status == 0
-fn run_held(found: Option<Run>, root: Typed, library: ir.Library) -> Tried {
+// example: run_held(None, Typed { module: modules.Module { name: "main", path: "main.bx", source: "", program: ast.Program { items: [] } }, inferred: types.checked_of("") }, Typing { library: ir.little_library(), memo: no_memo() }).tried.said.status == 0
+fn run_held(found: Option<Run>, root: Typed, typing: Typing) -> Tested {
     match found {
-        Some(run) => settled(examples_held(run, root, library))
-        None => only_said(nothing_said())
-    }
-}
-
-/// What the run found, or the refusal that stopped it, as a run that tried nothing.
-// example: settled(Err(nothing_said())).said.status == 0
-fn settled(answer: Result<Tried, Said>) -> Tried {
-    match answer {
-        Ok(tried) => tried
-        Err(said) => only_said(said)
+        Some(run) => examples_held(run, root, typing)
+        None => Tested { tried: only_said(nothing_said()), memo: typing.memo }
     }
 }
 
@@ -566,14 +687,38 @@ fn is_none_run(found: Result<Option<Run>, List<Diagnostic>>) -> Bool {
 /// The class files go somewhere of the run's own, so nothing a build wrote is touched, and that
 /// place is taken away again whether the examples held or not. Every module the one under test
 /// imports is written there too, because the run reaches them as the module does.
-// example: is_refused(examples_held(Run { source: "", stretches: [], examples: [], tests: [], module: lexer.Span { start: 0, length: 0 } }, Typed { module: modules.Module { name: "main", path: "a.b.bx", source: "", program: ast.Program { items: [] } }, inferred: types.checked_of("") }, ir.little_library()))
-fn examples_held(run: Run, root: Typed, library: ir.Library) -> Result<Tried, Said> {
-    let module = named_module(root.module.path)?
-    let classes = refusing(run_classes(run, root, library), run, root)?
+// example: examples_held(Run { source: "", stretches: [], examples: [], tests: [], module: lexer.Span { start: 0, length: 0 } }, Typed { module: modules.Module { name: "main", path: "a.b.bx", source: "", program: ast.Program { items: [] } }, inferred: types.checked_of("") }, Typing { library: ir.little_library(), memo: no_memo() }).tried.said.status == 2
+fn examples_held(run: Run, root: Typed, typing: Typing) -> Tested {
+    match named_module(root.module.path) {
+        Ok(module) => named_held(module, run, root, typing)
+        Err(said) => Tested { tried: only_said(said), memo: typing.memo }
+    }
+}
+
+/// The run, compiled with the modules `typing.memo` holds, as the class `module`, then started.
+// example: named_held("main", Run { source: "fn (", stretches: [], examples: [], tests: [], module: lexer.Span { start: 0, length: 0 } }, Typed { module: modules.Module { name: "main", path: "no-such-directory/main.bx", source: "", program: ast.Program { items: [] } }, inferred: types.checked_of("") }, Typing { library: ir.little_library(), memo: no_memo() }).tried.said.status == 1
+fn named_held(module: String, run: Run, root: Typed, typing: Typing) -> Tested {
+    let classes = run_classes_once(run, root, typing.library, typing.memo)
+    Tested { tried: settled(classes_held(Named { module: module, classes: classes.found }, run, root)), memo: classes.memo }
+}
+
+/// What the run found, or the refusal that stopped it, as a run that tried nothing.
+// example: settled(Err(nothing_said())).said.status == 0
+fn settled(answer: Result<Tried, Said>) -> Tried {
+    match answer {
+        Ok(tried) => tried
+        Err(said) => only_said(said)
+    }
+}
+
+/// The classes of `named` written somewhere of the run's own and started, and what that found.
+// example: is_refused(classes_held(Named { module: "main", classes: Err(Unusable("")) }, Run { source: "", stretches: [], examples: [], tests: [], module: lexer.Span { start: 0, length: 0 } }, Typed { module: modules.Module { name: "main", path: "main.bx", source: "", program: ast.Program { items: [] } }, inferred: types.checked_of("") }))
+fn classes_held(named: Named, run: Run, root: Typed) -> Result<Tried, Said> {
+    let classes = refusing(named.classes, run, root)?
     let reached = refusing(archives_of(root.module.path), run, root)?
     let java = java_found()?
     let beside = somewhere_of_its_own()?
-    let tried = ran_in(Beside { java: java, module: module, beside: beside, archives: reached }, classes, run, root)
+    let tried = ran_in(Beside { java: java, module: named.module, beside: beside, archives: reached }, classes, run, root)
     removed_whole(beside)
     Ok(tried)
 }
@@ -636,12 +781,6 @@ fn has_unit_of(text: String, units: List<Int>) -> Bool {
         index += 1
     }
     false
-}
-
-/// The class files of the modules of the run, checked as the run wrote them, lowered, and written.
-// example: !is_refused(page_said(run_classes(Run { source: "", stretches: [], examples: [], tests: [], module: lexer.Span { start: 0, length: 0 } }, Typed { module: modules.Module { name: "main", path: "no-such-directory/main.bx", source: "", program: ast.Program { items: [] } }, inferred: types.checked_of("") }, ir.little_library())))
-fn run_classes(run: Run, root: Typed, library: ir.Library) -> Result<List<jvm.ClassFile>, NotCompiled> {
-    run_classes_once(run, root, library, no_memo()).found
 }
 
 /// The class files of the modules of the run, checked as the run wrote them, lowered, and
@@ -3232,6 +3371,58 @@ type Parsed =
     | Asked(Command)
     | Running(Started)
 
+/// What the run of one module found, and the memo as that run left it.
+type Tested = {
+    tried: Tried
+    memo: Memo
+}
+
+/// The class a run is named, and its class files, or why the run was not compiled.
+type Named = {
+    module: String
+    classes: Result<List<jvm.ClassFile>, NotCompiled>
+}
+
+/// What the pool of `bux test` is sent: a worker that asks for a module, an answer and its worker,
+/// or a worker that has left.
+type Pooled =
+    | Joined(Process<Work, Working>)
+    | Finished(Answered, Process<Work, Working>)
+    | Left
+
+/// What a worker of `bux test` is sent: a module to run, or the word to stop.
+type Work =
+    | Give(Handed)
+    | Stop
+
+/// A module to run, the number it has in the order of the package, and the worker it goes to.
+type Handed = {
+    number: Int
+    path: String
+    worker: Process<Work, Working>
+}
+
+/// What the run of one module found, and the number of that module.
+type Answered = {
+    number: Int
+    tried: Tried
+}
+
+/// The state of a worker: the pool it answers to, the library, and the memo it keeps.
+type Working = {
+    pool: Process<Pooled, Pooling>
+    typing: Typing
+}
+
+/// The state of the pool: every module, how many are handed, each answer by the number of its
+/// module, and how many workers have not left.
+type Pooling = {
+    paths: List<String>
+    handed: Int
+    answers: map.Map<Int, Tried>
+    workers: Int
+}
+
 /// What a run of one module or of a package found: what it says, how many tests and examples it
 /// tried, and how many of them did not hold.
 type Tried = {
@@ -3572,8 +3763,17 @@ extern method held_as_constant(text: String) -> Constant = "describeConstable"
 /// The text that the constant holds, as the `java.lang.Object` that `Map.remove` takes.
 extern method as_object(constant: Constant) -> VariableName = "orElseThrow"
 
+/// The JVM this program runs on, which says how many processors it may use.
+extern static machine() -> Machine = "java.lang.Runtime.getRuntime"
+
+/// How many processors the JVM may use, which is never fewer than one.
+extern method int processors_of(running: Machine) -> Int = "availableProcessors"
+
 /// A file or a directory, named by its path.
 extern type Entry = "java.io.File"
+
+/// The JVM this program runs on.
+extern type Machine = "java.lang.Runtime"
 
 /// The environment of a program not started yet, from the name of a variable to its value.
 extern type interface Variables = "java.util.Map"
