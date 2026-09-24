@@ -1,0 +1,22 @@
+// expect-run
+// > one
+// > two
+// > three
+// A file grows one part at a time, so a program writes a file too large for one `String`.
+// `files.append` writes each later part after what the file already holds.
+import files
+import io
+
+fn main(arguments: List<String>) -> Int {
+    io.print(ok_or(grown("appended.txt"), "the file was not appended to\n"))
+    0
+}
+
+/// The text the file at `path` holds after one line is written whole and two are appended.
+// example: ok_or(grown(""), "nothing") == "nothing"
+fn grown(path: String) -> Result<String, String> {
+    _ = files.write(path, "one\n")?
+    _ = files.append(path, "two\n")?
+    let at = files.append(path, "three\n")?
+    files.read(at)
+}

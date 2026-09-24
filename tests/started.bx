@@ -167,12 +167,13 @@ fn example_program_tested(library: ir.Library) -> held.Held {
 }
 
 /// The checks of `1brc/src/main.bx`, which `docs/specs/billion-rows.md` states: each sample,
-/// the run with no file named, and the examples of the module.
+/// the run with no file named, the examples of the module, and the tests of its generator.
 // example: sample_named("a.txt") == "1brc/tests/samples/a.txt"
 fn billion_rows_held(library: ir.Library, limit: Int) -> held.Held {
     var found = every_sample_answered(library, limit)
     found = held.added(found, billion_rows_unnamed(library, limit))
-    held.added(found, billion_rows_tested(library))
+    found = held.added(found, billion_rows_tested(library))
+    held.added(found, measurements_tested(library))
 }
 
 /// `1brc/src/main.bx` writes the line each sample expects, in `1brc/tests/samples/<name>.out`.
@@ -225,6 +226,19 @@ fn billion_rows_tested(library: ir.Library) -> held.Held {
     let said = enacted.said_to(["test", modules.joined(scene, "main.bx")], library)
     command.removed_whole(scene)
     enacted.facts_held("every example of 1brc/src/main.bx holds", enacted.said_facts("test", said))
+}
+
+/// Every example and every test of `1brc/src/create_measurements.bx` holds.
+///
+/// A test of it starts `bin/bux run 1brc/src/main.bx`, which the runner's own directory holds, so
+/// only the module is copied into the scene.
+// example: strings.length(billion_rows_text()) >= 0
+fn measurements_tested(library: ir.Library) -> held.Held {
+    let text = ok_or(files.read("1brc/src/create_measurements.bx"), "")
+    let scene = enacted.scene_of([enacted.Written { at: "create_measurements.bx", text: text }])
+    let said = enacted.said_to(["test", modules.joined(scene, "create_measurements.bx")], library)
+    command.removed_whole(scene)
+    enacted.facts_held("every example and test of 1brc/src/create_measurements.bx holds", enacted.said_facts("test", said))
 }
 
 /// The text of `1brc/src/main.bx`.
