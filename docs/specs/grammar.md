@@ -249,7 +249,7 @@ A value is changed by building the one it becomes rather than by reaching inside
 `=` and `+=` are the whole of the rule, and the grammar above is what makes that so.
 `++`, `--`, `-=`, `*=`, `/=`, and `%=` are not in it, so each is `L0100` where it is written:
 the grammar expected an expression and the source wrote an operator.
-`docs/design.md` section 2 says why they are refused rather than deferred, and
+`docs/rationale.md` section 2 says why they are refused rather than deferred, and
 `docs/principles.md` question 9 is what a proposal for one has to answer.
 
 ## Executable examples

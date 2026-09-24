@@ -17,7 +17,7 @@ import types
 
 /// Each module typed and checked in the order it was loaded, or the answer where one is not.
 // example: list.length(ok_or(modules_checked([], types.little_prelude()), [types.checked_of("")])) == 0
-fn modules_checked(loaded: List<modules.Module>, prelude: types.Prelude) -> Result<List<infer.Inference>, String> {
+fn modules_checked(loaded: List<modules.Module>, prelude: types.Prelude) -> Result<List<infer.Inference>, Unchecked> {
     var imported = surface.nothing_imported()
     var checked = []
     for module in loaded {
@@ -29,31 +29,31 @@ fn modules_checked(loaded: List<modules.Module>, prelude: types.Prelude) -> Resu
     Ok(checked)
 }
 
-/// One module, resolved and typed, and `skipped` where it is not.
+/// One module, resolved and typed, and `Skipped` where it is not.
 // example: list.length(ok_or(typed(modules.Module { name: "main", path: "main.bx", source: "", program: ast.Program { items: [] } }, surface.nothing_imported(), types.little_prelude()), types.checked_of("fn f() -> Int {\n    1\n}\n")).resolved.program.items) == 0
-fn typed(module: modules.Module, imported: surface.Imported, prelude: types.Prelude) -> Result<infer.Inference, String> {
+fn typed(module: modules.Module, imported: surface.Imported, prelude: types.Prelude) -> Result<infer.Inference, Unchecked> {
     match resolver.resolve(module.program, module.name, prelude.names) {
         Ok(resolved) => typed_or_skipped(types.check(resolved, imported, prelude))
-        Err(_) => Err("skipped\n")
+        Err(_) => Err(Skipped)
     }
 }
 
-/// The typed module, and `skipped` where inference refuses it.
+/// The typed module, and `Skipped` where inference refuses it.
 // example: list.length(ok_or(typed_or_skipped(Ok(types.checked_of(""))), types.checked_of("fn f() -> Int {\n    1\n}\n")).resolved.program.items) == 0
-fn typed_or_skipped<E>(answer: Result<infer.Inference, E>) -> Result<infer.Inference, String> {
+fn typed_or_skipped<E>(answer: Result<infer.Inference, E>) -> Result<infer.Inference, Unchecked> {
     match answer {
         Ok(inferred) => Ok(inferred)
-        Err(_) => Err("skipped\n")
+        Err(_) => Err(Skipped)
     }
 }
 
-/// `answer`, with a refusal printed as the answer of the module called `module`.
+/// `answer`, with a refusal held as the refusal of the module called `module`.
 // example: said_in(refused_in("main", Ok(()))) == ""
 // example: said_in(refused_in("main", Err(OutOfOrder { arm: "A", before: "B", span: lexer.Span { start: 1, length: 2 } }))) == "refused main\nL0501 1..3 this `match` writes `A` after `B`\nhelp: arms come in the order the type declares its variants: `A` before `B`\n"
-fn refused_in(module: String, answer: Result<(), MatchError>) -> Result<(), String> {
+fn refused_in(module: String, answer: Result<(), MatchError>) -> Result<(), Unchecked> {
     match answer {
         Ok(_) => Ok(())
-        Err(refused) => Err("refused " + module + "\n" + refusal_printed(refused))
+        Err(refused) => Err(Refused { module: module, refusal: refused })
     }
 }
 
@@ -75,12 +75,21 @@ fn said(answer: Result<(), MatchError>) -> String {
     }
 }
 
-/// The same, once the refusal is printed as the answer of a module.
-// example: said_in(Err("skipped\n")) == "skipped\n"
-fn said_in(answer: Result<(), String>) -> String {
+/// The same, once the refusal is held as the answer of a module.
+// example: said_in(Err(Skipped)) == "skipped\n"
+fn said_in(answer: Result<(), Unchecked>) -> String {
     match answer {
         Ok(_) => ""
-        Err(refused) => refused
+        Err(unchecked) => unchecked_printed(unchecked)
+    }
+}
+
+/// A module the check does not accept, printed: the word `skipped`, or the refusal with its module.
+// example: unchecked_printed(Skipped) == "skipped\n"
+fn unchecked_printed(unchecked: Unchecked) -> String {
+    match unchecked {
+        Skipped => "skipped\n"
+        Refused { module, refusal } => "refused " + module + "\n" + refusal_printed(refusal)
     }
 }
 
@@ -951,6 +960,14 @@ type Step = {
     at: Int
     name: String
 }
+
+/// Why a module is not checked: a phase before this refused it, or this check refused it.
+type Unchecked =
+    | Skipped
+    | Refused {
+        module: String
+        refusal: MatchError
+    }
 
 /// A `match` the check refuses: what it leaves out, or the arm it writes out of place.
 type MatchError =

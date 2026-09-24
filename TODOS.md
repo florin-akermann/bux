@@ -20,35 +20,9 @@ It settles a `main` that reads no arguments the same way.
 [109][d] - `tests/spec/name_resolution/` shows each refusal.
 A drawn property holds that every name the compiler accepts is read at least once.
 
-## 🔴 Item 110: `bin/bootstrap` compares the two stages with one `diff`, not one `cmp` per class
-On 2026-09-24 `bin/bootstrap` took 7.3 s, and its loop of 918 `cmp` calls took 2.6 s of them.
-One `diff -rq` over the two `target/` directories takes 0.03 s and names every file that differs.
-The script keeps its contract: it names the first class that differs and ends with status 1.
-[110][a] - `docs/specs/run.md` section "The bootstrap" states that one `diff` compares the stages.
-[110][b] - `bin/bootstrap` runs one `diff -rq`, and it names the first class of the answer.
-It still refuses with status 1 when one stage holds a class the other does not.
-[110][c] - `docs/implementation.md` section 7 records the wall time before and after.
-
-## 🔴 Item 111: A profile says where a build and a runner pass spend their time
-Item 091 put the class writer on 1400 processes and measured no gain, because the guess was wrong.
-So the speed-up starts with a measurement, and every item after this one cites it.
-On 2026-09-24 a JVM that prints `bux help` took 0.12 s.
-`bux check compiler/main.bx` took 2.0 s to 2.8 s.
-`bux build compiler/main.bx` took 2.8 s to 3.3 s.
-The same build with `-XX:TieredStopAtLevel=1` took 4.2 s, so the time is work and not JIT waiting.
-A class data archive of the compiler's classes changed nothing, so class loading is not the cost.
-`bin/runner` took 62 s of wall time and 311 s of processor time, on 12 workers.
-Its jobs of example lines took 326 s of that, its command lines 44 s, its examples 18 s.
-[111][a] - JFR, which ships with the JDK, records one `bux build compiler/main.bx`.
-`docs/implementation.md` section 7 records the seconds of each phase, from the lexer to the writer.
-[111][b] - JFR records one job of example lines over the modules of `compiler/`.
-Section 7 records the seconds of typing, of lowering, of class writing, and of the JVM starts.
-[111][c] - Section 7 records how many JVMs one runner pass starts, and what one start costs.
-[111][d] - Each of Items 112 and 115 to 117 names the number of this profile it attacks.
-An item whose number is small is removed from `TODOS.md` rather than built.
-
 ## 🔴 Item 112: `bux test` runs the modules of a package on a pool of workers
 **Depends on:** Item 111 — the profile says what a module run spends on typing before it starts.
+Attacks: typing, 2.4 s of the 11.2 s that one job over `compiler/` compiles (section 7).
 `every_module_tested` in `compiler/command.bx` runs the modules of a package one after another.
 `tests/runner.bx` owns a pool of one worker per processor, and only the compiler's tests use it.
 The pool moves into `bux test`, where every package gets it, and the runner keeps working meanwhile.
@@ -93,6 +67,7 @@ A part that started JVMs still does, from inside its test, and the limit of 60 s
 
 ## 🔴 Item 115: The compiler types independent modules at the same time
 **Depends on:** Item 111, Item 112 — the profile prices inference, and 112 holds the pool.
+Attacks: typing, 1.3 s of the 3.5 s of `bux build compiler/main.bx`, 37% (section 7).
 `each_accepted` in `compiler/command.bx` types the modules one after another in load order.
 A module needs only the surface of each module it imports, so modules of one wave are independent.
 The pool of Item 112 types every module whose imports are typed.
@@ -105,6 +80,7 @@ It records `bin/bootstrap` with them.
 
 ## 🔴 Item 116: The lowering lowers the modules of one pass at the same time
 **Depends on:** Item 111, Item 115 — the profile prices lowering, and 115 pools the phases.
+Attacks: lowering, 0.46 s of the 3.5 s of `bux build compiler/main.bx`, 13% (section 7).
 `pass_over` in `compiler/ir.bx` lowers each module in turn.
 The asks of one module reach the next module of the same pass.
 A pass that gives every module the asks known when the pass starts lowers each module alone.
@@ -115,19 +91,6 @@ Item 091 measured the writer at 0.31 s, so it stays on one thread unless the pro
 [116][b] - `pass_over` hands each module of a pass to the pool.
 [116][c] - A drawn property holds that a program lowered in a pool gives the classes of one thread.
 [116][d] - Section 7 records `bux build compiler/main.bx` and `bin/bootstrap` before and after.
-
-## 🔴 Item 117: A run of `bux test` writes only the classes its run adds
-**Depends on:** Item 111, Item 114 — the profile says what a run spends on its classes.
-Each run writes the classes of its whole import closure into a directory of its own.
-A run of a module of `tests/` writes about 900 classes, and 73 modules do so in one suite.
-`docs/implementation.md` section 7 says why one shared build is not correct.
-A run asks generics for types that no build asks for, and each lands in the class that declares it.
-The classes a run changes are those of the modules that declare an asked generic, and no other.
-[117][a] - `docs/specs/testing.md` states which classes a run shares with the run before it.
-[117][b] - A worker writes a class again only where its bytes differ from the last run it made.
-Each run still starts a JVM with a class path of its own.
-[117][c] - A property holds that the class path of a run holds every class its program reaches.
-[117][d] - Section 7 records the wall time of `bux test tests` before and after.
 
 ## 🔴 Item 118: `docs/design.md` splits into rules and rationale
 `docs/design.md` is 1367 lines, and most of it argues with Erlang, Go, and Rust.
@@ -173,18 +136,6 @@ An import that reaches a private name is refused with a code and a help that nam
 [120][e] - `tests/spec/modules/` and `tests/spec/examples/` show the refusal and the exemption.
 [120][f] - The helpers of `compiler/exhaustiveness.bx` named above become `private` or tests.
 
-## 🔴 Item 121: A function value is removed from the roadmap
-`docs/design.md` section 11 still promises `map(filter(users, is_active), user_name)`.
-With named functions only and an example per function, that pipeline costs more than a `for` loop.
-Section 12 already makes the loop the idiom.
-Section 14 names the absence of a closure as what keeps the escape check at one paragraph.
-So the promise is withdrawn rather than kept, and nothing is added to the language.
-[121][a] - `docs/design.md` section 11 states that a function is reached by a call and no other way.
-The snippet that passes `is_active` to `filter` is removed.
-[121][b] - `docs/design.md` section 12 and `docs/implementation.md` section 4 drop `map`, `filter`.
-[121][c] - `docs/principles.md` question 12 names a higher-order function as a loop written twice.
-[121][d] - `docs/implementation.md` sections 11 and 12 drop the function value from every version.
-
 ## 🔴 Item 122: Record construction puns a field as a pattern does
 A pattern writes `Authorized { authorization_id }`, and construction writes `User { id: id }`.
 That is two rules for one shape, and one of them costs a token per field.
@@ -207,13 +158,3 @@ It records the seconds spent on the second and later copies of one body.
 [123][b] - Section 7 records the JVM starts of one `bux test tests`, and the seconds they cost.
 [123][c] - Items 112, 115, 116, and 117 each cite the number of this item they attack, or go.
 
-## 🔴 Item 124: The compiler names a skipped module with a type, not `"skipped\n"`
-`compiler/exhaustiveness.bx` and `compiler/ir.bx` give back `Result<T, String>`.
-Each writes `Err("skipped\n")` where an earlier phase refused the module.
-`docs/principles.md` question 3 asks for a domain type over `String`.
-The compiler is the first program held to it.
-A caller that matches on the string cannot be checked, and a caller that matches on a variant can.
-[124][a] - A variant type in `compiler/refusal.bx` or beside it names the two outcomes.
-One is a module skipped because an earlier phase refused it, and one is a refusal of this module.
-[124][b] - `modules_checked`, `typed`, `typed_or_skipped`, `refused_in`, and callers give it back.
-[124][c] - `bin/bootstrap` holds the classes byte for byte, and every command prints what it did.

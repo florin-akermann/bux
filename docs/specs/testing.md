@@ -7,7 +7,7 @@ Some claims need more than one expression: they bind names, build a value in a l
 Without a test block, such a claim becomes a function that only an example calls.
 That function then needs an example of its own, and it ships in every program.
 A `test` block states such a claim, and `bux test` runs it with the examples.
-`docs/design.md` section 11 gives the reason, and this page states the behaviour.
+`docs/rationale.md` section 11 gives the reason, and this page states the behaviour.
 
 ## What a test is
 
