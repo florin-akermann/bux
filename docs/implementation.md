@@ -545,6 +545,9 @@ Then the bootstrap of section 6, and the deletion of the Rust crates.
 
 Concurrency comes first, and its first user is the compiler with its checks, which it makes fast.
 That is `TODOS.md` Item 091, and the compiler dogfoods each part before any other program.
+The second dogfood program is `1brc/src/main.bx`, the One Billion Row Challenge.
+It reads one file with one process for each processor, over `library/` alone.
+`docs/specs/billion-rows.md` states it, and section 7 records its wall time.
 
 Add, once the compiler is Bux:
 
