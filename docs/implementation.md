@@ -381,6 +381,11 @@ On 2026-09-24 `bin/bootstrap` took 5.6 s before Item 091 and 5.8 s after it.
 Item 091 did not put the compiler on processes, because a measurement showed no gain.
 A build of the compiler wrote its 1400 classes in 0.31 s on one thread and on 1400 processes.
 The processes spent four times the processor time, most likely in code the JIT had not compiled.
+Before Item 110 `bin/bootstrap` compared the stages with one `cmp` for each class.
+Item 110 compares them with one `diff -rq` over the two `target/` directories.
+On 2026-09-24 it compared 923 classes, and one `diff -rq` took 0.08 s.
+The median of three `bin/bootstrap` wall times was 7.6 s before Item 110 and 6.2 s after.
+The runs of before and after took turns, under a load of 11 to 12 on 12 cores from other work.
 
 ### Drawn properties
 

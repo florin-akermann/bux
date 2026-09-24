@@ -41,15 +41,24 @@ cp -R compiler "$copy/compiler"
 rm -rf "$copy/compiler/target"
 "$java" --enable-preview -cp "$root/compiler/target:$root/compiler:$root" main build "$copy/compiler/main.bx"
 
-one=$(cd compiler/target && find . -name '*.class' | LC_ALL=C sort)
-two=$(cd "$copy/compiler/target" && find . -name '*.class' | LC_ALL=C sort)
-if [ "$one" != "$two" ]; then
-    echo "error: stage 2 does not write the classes stage 1 holds" >&2
-    exit 1
+# One diff compares the stages. Its first line names the first class that differs, as
+# "Files A and B differ", or the first class or directory that only one stage holds, as
+# "Only in D: C". A status of 2 from diff is a comparison that failed, and diff names why.
+status=0
+answer=$(diff -rq compiler/target "$copy/compiler/target") || status=$?
+if [ "$status" -ne 1 ]; then
+    exit "$status"
 fi
-for class in $one; do
-    if ! cmp -s "compiler/target/$class" "$copy/compiler/target/$class"; then
-        echo "error: compiler/target/${class#./}: stage 2 differs from stage 1" >&2
-        exit 1
-    fi
-done
+first=$(printf '%s\n' "$answer" | head -n 1)
+case $first in
+    "Only in "*)
+        place=${first#Only in }
+        class=${place%%: *}/${place#*: }
+        ;;
+    *)
+        class=${first#Files }
+        class=${class%% and *}
+        ;;
+esac
+echo "error: ${class#"$copy"/}: stage 2 differs from stage 1" >&2
+exit 1
