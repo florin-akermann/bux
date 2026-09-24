@@ -150,6 +150,7 @@ The JVM classes these reach are `java.lang.String`, `java.lang.System`, `java.la
 `java.io.PrintWriter`, `java.io.File`, `java.nio.file.Path`, `java.nio.file.Files`,
 `java.nio.charset.Charset`, `java.nio.charset.StandardCharsets`, `java.util.stream.Stream`,
 `java.util.List`, and `java.util.Iterator`.
+`environment.processors` reaches `java.lang.Runtime`, which the section below states.
 A class file is built of three more that no declaration here writes.
 `java.lang.Boolean` is what the `Bool` an `Ok` carries is boxed as.
 `java.lang.Throwable` and `java.lang.AssertionError` are what a guard and an unreachable arm are
@@ -195,10 +196,12 @@ That encoding writes each char from 0 to 255 as the one byte of the same value.
 `strings.as_latin_1` names that encoding, beside `strings.as_utf_8`.
 `strings` declares both and their type `strings.Encoding`, and `files` uses those three.
 Each byte is a string of one char, which `java.lang.Character.toString(int)` gives.
-That member takes an `int`, so its declaration `files.one_char` narrows and gives an `Option`.
+That member takes an `int`, so its declaration `strings.one_char` narrows and gives an `Option`.
 The writer is closed and asked `checkError`, as `files.write` asks it.
-`files` adds `write_bytes`, `bytes_sent`, and `one_char` for this.
-So `files` reaches two more JVM classes: `java.lang.Character`, and `java.lang.Long`.
+`files` adds `write_bytes` and `bytes_sent` for this, and `strings` declares `one_char`.
+`strings` declares each member of `java.lang.Character` that the library and the compiler reach.
+So `files` reaches one more JVM class, `java.lang.Long`.
+`strings` reaches `java.lang.Character`.
 The refusal of a value shows that value, and `java.lang.Long.toString` shows a number.
 
 `tests/spec/io/bytes_written.bx` writes bytes, reads them back as text, and shows them.
@@ -366,7 +369,7 @@ So each of these names is reachable:
 - `programs.errors_of`, `programs.waited_for`, `programs.over`, and `programs.delimited`.
 - `programs.token`, `programs.closed`, and `programs.nothing_at_all`.
 - `programs.ProcessBuilder`, `programs.Running`, `programs.InputStream`, and `programs.Scanner`.
-- `programs.Redirect`.
+- `programs.Redirect`, and the members the section below adds.
 
 That is what writing the module in Bux costs, as it is for `io` and `files`.
 A program that wants a program started writes `programs.run`, and the rest is how that is built.
@@ -384,6 +387,47 @@ A stream nobody wrote on holds no token at all, and `programs.nothing_at_all` is
 states that case in an example.
 `start`, `waitFor`, and `next` each give back a `Result`, so each is a guarded method of its own,
 which every `extern` already is.
+
+## What the compiler and the runner stand on
+
+`docs/implementation.md` section 3 has every program reach the platform through the library.
+The compiler and the runner are programs, so each `extern` they call is declared in `library/`.
+Each is declared once, and a class that two modules reach has one `extern type` in one of them.
+A project check in the runner refuses an `extern` in a file outside `library/` and `tests/spec/`.
+
+`files` declares what the compiler asks of a path, each a member of `java.io.File`:
+
+```text
+files.is_there  files.is_file  files.is_directory  files.is_readable
+files.has_made_all  files.parent_path  files.canonical_path  files.path_separator
+```
+
+`files.named` gives the `files.File` each of these takes, and `files.make` makes one directory.
+`files` reads a part of a file into the `strings.Bytes` and `strings.Chars` that `strings` declares.
+
+`environment.property` is `java.lang.System.getProperty`, and a property nothing set is `None`.
+`environment.processors` is `java.lang.Runtime.availableProcessors`, which is never below one.
+`clock.nanoseconds` is `java.lang.System.nanoTime`, whose difference in one run is a time.
+
+`programs` declares what the compiler and the runner do to a program before and after its start:
+
+```text
+programs.inheriting  programs.within  programs.input_from  programs.output_to
+programs.errors_to  programs.variables_of  programs.removed  programs.held_as_constant
+programs.as_object  programs.is_ended_within  programs.stopped  programs.seconds
+programs.Variables  programs.Constant  programs.TimeUnit
+```
+
+`programs.removed` takes the name of a variable as `files.Anything`, which is `java.lang.Object`.
+
+`strings` declares the members of `java.lang.Character` that a module reaches.
+They are `strings.one_char`, `strings.is_alphabetic`, and `strings.general_category`.
+Each takes an `int`, so each narrows its argument and gives back an `Option`.
+
+`jars` opens a Java archive and reads its manifest and its entries, over `java.util.jar.JarFile`.
+Its members are `opened`, `manifest_of`, `main_attributes`, `value_of`, `entry_of`, and `closed`.
+`bits` gathers, spreads, and turns the 64 bits of an `Int`, over `java.lang.Long`.
+Its members are `gathered`, `spread`, and `turned`, which `compiler/digest.bx` calls.
 
 ## Properties
 

@@ -4,6 +4,7 @@
 // `docs/specs/run.md` states the launcher. Each check starts it through `sh` in a directory of its
 // own, so what it writes lands there, and `env` sets or clears `JAVA_HOME` for that start alone.
 // `docs/implementation.md` section 7 states the limit.
+import clock
 import command
 import files
 import held
@@ -38,9 +39,9 @@ fn stopped_held() -> held.Held {
 // example: stopped_in("no-such-directory").cases == 1
 fn stopped_in(directory: String) -> held.Held {
     _ = files.write(modules.joined(directory, "forever.sh"), forever_text())
-    let from = command.nanoseconds()
+    let from = clock.nanoseconds()
     let completion = walk.completed(["sh", "forever.sh"], directory, 1)
-    let milliseconds = or((command.nanoseconds() - from) / 1000000, 0)
+    let milliseconds = or((clock.nanoseconds() - from) / 1000000, 0)
     command.removed_whole(directory)
     stopped_compared(completion, milliseconds)
 }

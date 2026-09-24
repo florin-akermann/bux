@@ -1,4 +1,4 @@
-// Reading a file, writing one, and listing, making, and removing a directory.
+// Reading a file, writing one, listing, making, and removing a directory, and asking about a path.
 //
 // `docs/specs/io.md` states what each of these gives back. Each is written over `extern`
 // declarations, which `docs/specs/interop.md` states, and every step that can throw gives a
@@ -71,7 +71,7 @@ fn too_long(path: String, length: Int) -> String {
 
 /// The bytes of the file at `path` that fill `buffer` from `from` on, or what stopped the read.
 // example: ok_or(part_before(path: "no-such-file.bin", from: 0, to: 9, end: 9), "none") == "none"
-fn read_into(path: String, buffer: Bytes, from: Int) -> Result<String, String> {
+fn read_into(path: String, buffer: strings.Bytes, from: Int) -> Result<String, String> {
     match opened_to_read(path) {
         Ok(stream) => read_and_let_go(stream: stream, buffer: buffer, from: from)
         Err(why) => Err(why)
@@ -82,7 +82,7 @@ fn read_into(path: String, buffer: Bytes, from: Int) -> Result<String, String> {
 ///
 /// The stream goes back to the file system here, whether the read worked or did not.
 // example: ok_or(part_before(path: "no-such-file.bin", from: 0, to: 9, end: 9), "none") == "none"
-fn read_and_let_go(stream: Source, buffer: Bytes, from: Int) -> Result<String, String> {
+fn read_and_let_go(stream: Source, buffer: strings.Bytes, from: Int) -> Result<String, String> {
     let part = filled(channel: channel_of(stream), buffer: buffer, from: from)
     let_go(stream)
     part
@@ -94,7 +94,7 @@ fn read_and_let_go(stream: Source, buffer: Bytes, from: Int) -> Result<String, S
 /// the end of the file. A count of `0` ends the reads too, so no loop waits on a file that holds
 /// no more.
 // example: ok_or(part_before(path: "no-such-file.bin", from: 0, to: 9, end: 9), "none") == "none"
-fn filled(channel: Channel, buffer: Bytes, from: Int) -> Result<String, String> {
+fn filled(channel: Channel, buffer: strings.Bytes, from: Int) -> Result<String, String> {
     var at = from
     for has_room(buffer) {
         let answer = read_at(channel, buffer, at)
@@ -109,7 +109,7 @@ fn filled(channel: Channel, buffer: Bytes, from: Int) -> Result<String, String> 
 
 /// The text of `buffer` where `answer` is a count, and why the read failed where it is not.
 // example: ok_or(part_before(path: "no-such-file.bin", from: 0, to: 9, end: 9), "none") == "none"
-fn text_or_why(answer: Result<Int, String>, buffer: Bytes) -> Result<String, String> {
+fn text_or_why(answer: Result<Int, String>, buffer: strings.Bytes) -> Result<String, String> {
     match answer {
         Ok(_) => Ok(text_of(buffer))
         Err(why) => Err(why)
@@ -118,8 +118,8 @@ fn text_or_why(answer: Result<Int, String>, buffer: Bytes) -> Result<String, Str
 
 /// The bytes `buffer` holds from its start up to where the reads stopped, one char for each.
 // example: ok_or(part_before(path: "no-such-file.bin", from: 0, to: 9, end: 9), "none") == "none"
-fn text_of(buffer: Bytes) -> String {
-    text_in(decoded_as(strings.as_latin_1(), flipped(buffer)))
+fn text_of(buffer: strings.Bytes) -> String {
+    strings.spelled(strings.decoded(strings.as_latin_1(), flipped(buffer)))
 }
 
 /// How many bytes the file at `path` holds, or what went wrong asking the file system.
@@ -193,7 +193,7 @@ fn write_bytes(path: String, bytes: List<Int>) -> Result<String, String> {
 // example: ok_or(write_bytes(path: "", bytes: []), "nothing written") == "nothing written"
 fn bytes_sent(sink: Writer, bytes: List<Int>, to: String) -> Result<String, String> {
     for byte in bytes {
-        put(sink, or(one_char(byte), ""))
+        put(sink, or(strings.one_char(byte), ""))
     }
     closed(sink)
     if failed(sink) {
@@ -280,24 +280,18 @@ extern new opened_to_read(path: String) -> Result<Source, String>
 extern method channel_of(stream: Source) -> Channel = "getChannel"
 
 /// Reads what fits in `buffer` from `position` on, and gives the count read, or `-1` at the end.
-extern method int read_at(channel: Channel, buffer: Bytes, position: Int) -> Result<Int, String> = "read"
+extern method int read_at(channel: Channel, buffer: strings.Bytes, position: Int) -> Result<Int, String> = "read"
 
 /// A buffer with room for `capacity` bytes, and `None` where `capacity` does not fit in an `int`.
 ///
 /// The `Err` is a JVM that has no memory left for so many bytes.
-extern static allotted(int capacity: Int) -> Result<Option<Bytes>, String> = "java.nio.ByteBuffer.allocate"
+extern static allotted(int capacity: Int) -> Result<Option<strings.Bytes>, String> = "java.nio.ByteBuffer.allocate"
 
 /// Whether `buffer` has room for another byte.
-extern method has_room(buffer: Bytes) -> Bool = "hasRemaining"
+extern method has_room(buffer: strings.Bytes) -> Bool = "hasRemaining"
 
 /// `buffer`, turned to be read from its start up to where the reads into it stopped.
-extern method flipped(buffer: Bytes) -> Bytes = "flip"
-
-/// The chars `encoding` reads `bytes` as, which for ISO-8859-1 is one char for each byte.
-extern method decoded_as(encoding: strings.Encoding, bytes: Bytes) -> Chars = "decode"
-
-/// The text of the chars `chars` holds.
-extern method text_in(chars: Chars) -> String = "toString"
+extern method flipped(buffer: strings.Bytes) -> strings.Bytes = "flip"
 
 /// Closes `stream` and its channel, which gives the file back to the file system.
 ///
@@ -307,9 +301,6 @@ extern method let_go(stream: Source) -> () = "close"
 
 /// A file at `path` opened to be written whole, which is a file emptied of whatever it held.
 extern new opened(path: String, written_as: strings.Encoding) -> Result<Writer, String>
-
-/// The text of the one char `code` stands for, where `code` fits in an `int`.
-extern static one_char(int code: Int) -> Option<String> = "java.lang.Character.toString"
 
 /// Writes `text` on `sink` and nothing else.
 extern method put(sink: Writer, text: String) -> () = "print"
@@ -359,6 +350,30 @@ extern method as_a_path(file: File) -> Result<Path, String> = "toPath"
 /// The file the text `path` names.
 extern new named(path: String) -> File
 
+/// Whether anything is at `file`, a file or a directory.
+extern method is_there(file: File) -> Bool = "exists"
+
+/// Whether `file` is a file that is there, rather than a directory or nothing at all.
+extern method is_file(file: File) -> Bool = "isFile"
+
+/// Whether `file` is a directory that is there.
+extern method is_directory(file: File) -> Bool = "isDirectory"
+
+/// Whether this process may read `file`.
+extern method is_readable(file: File) -> Bool = "canRead"
+
+/// Whether the directory at `file`, and every one above it that was missing, was made.
+extern method has_made_all(file: File) -> Bool = "mkdirs"
+
+/// The path of the directory above `file`, and `None` where its path names none.
+extern method parent_path(file: File) -> Option<String> = "getParent"
+
+/// The one path the JVM gives `file` however it is spelled, which is what compares two routes.
+extern method canonical_path(file: File) -> Result<String, String> = "getCanonicalPath"
+
+/// What the JVM writes between two entries of a class path.
+extern field path_separator() -> String = "java.io.File.pathSeparator"
+
 /// A file the file system holds, named rather than opened.
 extern type File = "java.io.File"
 
@@ -385,9 +400,3 @@ extern type Source = "java.io.FileInputStream"
 
 /// What reads a file at a position, which a stream opened to read it gives.
 extern type Channel = "java.nio.channels.FileChannel"
-
-/// Bytes a JVM holds apart from any array, which a channel reads into.
-extern type Bytes = "java.nio.ByteBuffer"
-
-/// Chars a JVM holds apart from any text, which an encoding reads bytes into.
-extern type Chars = "java.nio.CharBuffer"

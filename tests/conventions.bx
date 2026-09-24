@@ -1,18 +1,98 @@
 // The drawn properties of how a body and a call are written, which `docs/specs/discarding.md`,
-// `docs/specs/arguments.md`, and `docs/specs/naming.md` state.
+// `docs/specs/arguments.md`, and `docs/specs/naming.md` state, and the one rule of the tree.
 //
 // Each case draws a small module from a fixed seed and asks whether the type inference accepts it,
 // in-process, against the prelude the runner reads. A failure names the seed and the module.
+// The rule of the tree is that only `library/` declares an `extern`, which
+// `docs/implementation.md` section 3 states, and a failure names each file that breaks it.
 import checking
 import drawn
+import files
 import held
 import ir
+import lexer
 import list
+import modules
+import walk
 
 /// One `Held` for each property of how a body and a call are written, in a fixed order.
-// example: list.length(every_property(0, ir.little_library())) == 8
+// example: list.length(every_property(0, ir.little_library())) == 9
 fn every_property(cases: Int, library: ir.Library) -> List<held.Held> {
-    [a_statement_that_leaves_a_value_is_refused_above_the_last(cases, library), the_last_statement_is_the_value_given_back(cases, library), an_underscore_makes_any_statement_compile(cases, library), a_repeated_type_is_called_by_name_only(cases, library), differing_types_are_called_either_way(cases, library), a_call_that_compiles_compiles_named(cases, library), a_bool_parameter_compiles_only_in_an_all_bool_signature(cases, library), a_bool_function_compiles_where_its_name_asks(cases, library)]
+    [a_statement_that_leaves_a_value_is_refused_above_the_last(cases, library), the_last_statement_is_the_value_given_back(cases, library), an_underscore_makes_any_statement_compile(cases, library), a_repeated_type_is_called_by_name_only(cases, library), differing_types_are_called_either_way(cases, library), a_call_that_compiles_compiles_named(cases, library), a_bool_parameter_compiles_only_in_an_all_bool_signature(cases, library), a_bool_function_compiles_where_its_name_asks(cases, library), only_the_library_has_an_extern("")]
+}
+
+/// Every `.bx` file under `root` outside `library/` and `tests/spec/` declares no `extern`.
+///
+/// `tests/spec/` is exempt, because its files are the executable examples of the language, and
+/// the examples of `docs/specs/interop.md` declare an `extern` each.
+// example: held.is_held(only_the_library_has_an_extern("no-such-directory"))
+// example: !held.is_held(only_the_library_has_an_extern("tests/spec/interop"))
+fn only_the_library_has_an_extern(root: String) -> held.Held {
+    let paths = held_to_the_library_rule(root)
+    var found = held.nothing_failed(list.length(paths))
+    for path in paths {
+        if has_an_extern(ok_or(files.read(path), "")) {
+            found = held.with_failure(found, path + " declares an extern, and docs/implementation.md section 3 lets only library/ declare one")
+        }
+    }
+    found
+}
+
+/// Every `.bx` file under `directory` that the rule of the library holds to, in the order names
+/// sort.
+///
+/// `library/` and `tests/spec/` are not walked. Nor is a `target/`, which a build writes and which
+/// holds a copy of `library/`, or a directory whose name opens with a dot, which no source is in.
+// example: list.length(held_to_the_library_rule("no-such-directory")) == 0
+// example: list.has_value(held_to_the_library_rule("tests"), "tests/walk.bx")
+// example: !list.has_value(held_to_the_library_rule("tests"), "tests/spec/interop/optional.bx")
+fn held_to_the_library_rule(directory: String) -> List<String> {
+    var found = []
+    for name in ok_or(files.listed(listing_of(directory)), []) {
+        let path = modules.joined(directory, name)
+        if !files.is_directory(files.named(path)) {
+            if walk.is_ending_in(name, ".bx") {
+                found = list.push(found, path)
+            }
+        } else if is_walked(path: path, name: name) {
+            for below in held_to_the_library_rule(path) {
+                found = list.push(found, below)
+            }
+        }
+    }
+    found
+}
+
+/// The path a listing of `directory` reads, which is `.` for the root, written as no directory.
+// example: listing_of("") == "."
+// example: listing_of("tests") == "tests"
+fn listing_of(directory: String) -> String {
+    if directory == "" {
+        return "."
+    }
+    directory
+}
+
+/// Whether the directory at `path`, called `name`, is walked for the rule of the library.
+// example: is_walked(path: "compiler", name: "compiler")
+// example: !is_walked(path: "library", name: "library")
+// example: !is_walked(path: "tests/spec", name: "spec")
+// example: !is_walked(path: "compiler/target", name: "target")
+// example: !is_walked(path: ".git", name: ".git")
+fn is_walked(path: String, name: String) -> Bool {
+    !list.has_value(["library", "tests/spec"], path) && name != "target" && !lexer.has_prefix(lexer.Rest { source: name, start: 0 }, ".")
+}
+
+/// Whether `source` declares an `extern`, which in canonical form opens a line of its own.
+// example: has_an_extern("fn now() -> Int {\n    1\n}\n\nextern static f() -> Int = \"a.B.c\"\n")
+// example: !has_an_extern("// an `extern` is refused here\nfn now() -> Int {\n    1\n}\n")
+fn has_an_extern(source: String) -> Bool {
+    for line in walk.lines_of(source) {
+        if lexer.has_prefix(lexer.Rest { source: line, start: 0 }, "extern ") {
+            return true
+        }
+    }
+    false
 }
 
 /// A statement above the last one is refused exactly where it leaves something other than `()`.
