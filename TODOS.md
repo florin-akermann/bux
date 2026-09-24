@@ -21,21 +21,6 @@ Item 091 measured the writer at 0.31 s, so it stays on one thread unless the pro
 [116][c] - A drawn property holds that a program lowered in a pool gives the classes of one thread.
 [116][d] - Section 7 records `bux build src/main.bx` and `bin/bootstrap` before and after.
 
-## 🔴 Item 127: `String` is a Bux value over bytes, and `Eq<String>` runs Bux code
-`docs/implementation.md` section 12 states the change and asks for the cost first.
-`java.lang.String` carries a `String`, and it is the one Java class under a Bux value.
-The prelude writes `Eq<String>` as Bux code, but the lowering puts `String.equals` under it.
-So one prelude type has a power a declared type lacks, against `docs/design.md` section 3.
-A `String` over its bytes moves that logic into `library/strings.bx`, written once in Bux.
-`src/bytes.bx` already holds a run of bytes as a `List<Int>`, so the bytes need no new type.
-[127][a] - Section 7 prices `==`, `length`, `cut_out`, and `+` over `java.lang.String` and bytes.
-The price is the build of the compiler before and after.
-[127][b] - The item stops at [a], and section 12 records the numbers, when the build is slower.
-[127][c] - `library/strings.bx` declares `String` as a record over bytes, and `Eq<String>` as Bux.
-[127][d] - The lowering puts nothing under `Eq<String>`, and an `extern` with text converts it.
-[127][e] - `bin/bootstrap` gets a new seed, as section 6 reason two states.
-[127][f] - `tests/spec/library/` holds, and a drawn property round trips bytes through `String`.
-
 ## 🔴 Item 134: A package is `src/`, `tests/`, and `target/` under its manifest
 **Depends on:** Item 133 — the compiler is a package, and it moves before the rule can refuse it.
 A package is one flat directory today, a test has no place of its own, and `target/` sits beside it.
