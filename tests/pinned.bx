@@ -1,4 +1,4 @@
-// The drawn properties of the `jar` line of a manifest and of the hash it states.
+// The drawn properties of the `jar` line of a manifest, of the hash it states, and of a path.
 //
 // `docs/specs/packages.md` states the line, and `compiler/digest.bx` is the SHA-256 it is held to.
 // That digest is held here to `shasum`, which is the reference, run once over every drawn file.
@@ -16,9 +16,9 @@ import strings
 import walk
 
 /// One `Held` for each property of the `jar` line and of its hash, in a fixed order.
-// example: list.length(every_property(0, ir.little_library())) == 3
+// example: list.length(every_property(0, ir.little_library())) == 4
 fn every_property(cases: Int, library: ir.Library) -> List<held.Held> {
-    [a_printed_jar_line_reads_back(cases), a_malformed_jar_line_is_refused(cases), every_digest_is_the_one_shasum_gives(cases)]
+    [a_printed_jar_line_reads_back(cases), a_malformed_jar_line_is_refused(cases), a_path_with_a_colon_is_refused(cases), every_digest_is_the_one_shasum_gives(cases)]
 }
 
 /// Each drawn `jar` line reads back as the path and the hash it was printed with, in line order.
@@ -84,6 +84,48 @@ fn malformed_tried(draw: drawn.Draw) -> checking.Tried {
         Ok(_) => checking.Tried { input: manifest, why: "the line was read" }
         Err(error) => checking.Tried { input: manifest, why: refused_at(error: error, start: start) }
     }
+}
+
+/// Each `depends` or `jar` path with a `:` at a drawn place is refused as L0315, at its line.
+// example: a_path_with_a_colon_is_refused(2).cases == 2
+fn a_path_with_a_colon_is_refused(cases: Int) -> held.Held {
+    var found = held.nothing_failed(cases)
+    for seed in checking.seeds(cases) {
+        found = checking.noted(found, "a_path_with_a_colon_is_refused", seed, colon_tried(drawn.seeded(seed)))
+    }
+    found
+}
+
+/// One drawn path with a `:` put in at a drawn place, stated by a drawn `depends` or `jar` line.
+///
+/// A well-formed `depends` line comes first, so the refused line is the fourth line.
+// example: colon_tried(drawn.seeded(1)).why == ""
+fn colon_tried(draw: drawn.Draw) -> checking.Tried {
+    let archive = drawn_archive(draw)
+    let at = drawn.number(checking.after(draw, 5), strings.length(archive.path) + 1)
+    let path = or(strings.cut(archive.path, 0, at), "") + ":" + or(strings.cut(archive.path, at, strings.length(archive.path)), "")
+    let bad = drawn.picked(checking.after(draw, 7), ["depends " + path, jar_line(archive { path: path })], "jar")
+    let well = heading() + "depends ../lender\n"
+    let manifest = well + bad + "\n"
+    let start = lexer.byte_length(lexer.Rest { source: well, start: 0 }, strings.length(well))
+    match modules.read_out_of(manifest) {
+        Ok(_) => checking.Tried { input: manifest, why: "the line was read" }
+        Err(error) => checking.Tried { input: manifest, why: split_at(error: error, start: start, path: path) }
+    }
+}
+
+/// `""` where `error` is L0315 at byte `start` and says `path` holds `:`, and why not otherwise.
+// example: split_at(error: modules.LoadError { kind: modules.SplitsTheClassPath("a:b"), span: span_at(3) }, start: 3, path: "a:b") == ""
+fn split_at(error: modules.LoadError, start: Int, path: String) -> String {
+    let at = refused_at(error: error, start: start)
+    if at != "" {
+        return at
+    }
+    let said = modules.message(error.kind)
+    if said != "`" + path + "` holds `:`" {
+        return "refused with `" + said + "`"
+    }
+    ""
 }
 
 /// `""` where `error` is L0315 and starts at byte `start`, and what it is otherwise.

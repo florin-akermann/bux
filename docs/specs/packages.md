@@ -48,6 +48,7 @@ There is one way to write a manifest.
 The order above is the only order, and a `jar` line comes after every `depends` line.
 A line that is none of `package`, `version`, `depends`, and `jar` is refused.
 A word holds no space, so a directory whose name holds one is not one a `depends` names.
+No path on the class path holds `:`, so a `depends` or a `jar` path that holds one is `L0315`.
 
 The name and the version are stated and nothing reads either yet.
 Comparing two versions needs two packages of one name to reach, and nothing reaches a second copy
@@ -182,6 +183,7 @@ exit code 2, as it does for a directory it cannot list.
 | module is two files   | `L0317` | `demo` is both `../shapes/demo.bx` and `demo.bx`       |
 | not an archive line   | `L0315` | `jar` states a path and a hash, and this line does not |
 | archive stated twice  | `L0315` | `lib/x.jar` is stated twice                            |
+| path holds `:`        | `L0315` | `lib:x.jar` holds `:`                                  |
 | archive is not there  | `L0606` | `lib/x.jar` is not there                               |
 | hash is another       | `L0607` | `lib/x.jar` has the hash `sha256:…`, and this line states another |
 | names more archives   | `L0608` | `lib/x.jar` names more archives in its `Class-Path`    |
@@ -194,13 +196,14 @@ A directory depended on twice helps with ``a manifest states one `depends` for e
 reaches``.
 `L0316` helps with ``a package is a directory holding `bux.package```.
 `L0317` helps with `one name has one definition; rename one of the two modules`.
-A malformed `jar` line, an archive stated twice, and `L0606` to `L0609` help with the texts below.
+A malformed `jar` line, a repeated archive, a path with `:`, and `L0606` to `L0609` help as below.
 The texts are in that order, after the first text.
 
 ```text
 a manifest is `package`, then `version`, then a `depends` for each dependency, then a `jar` for each archive
 a `jar` line is `jar`, a path, and `sha256:` with 64 lowercase hexadecimal digits
 a manifest states one `jar` for each archive it reaches
+a class path puts `:` between two paths, so a path on it cannot hold one
 a `jar` line names a file on disk already, and nothing is fetched
 a hash pins the bytes of an archive; state the hash of the archive the package uses
 a run reaches only the archives a manifest states; use an archive with no `Class-Path`
@@ -213,6 +216,7 @@ a `jar` line names a zip file of classes, as the `jar` tool of the JDK writes on
 `L0315` refuses a line the manifest has no place for, a keyword whose word is missing or holds a
 space, and a directory two `depends` both name.
 It also refuses a `jar` line that is not `jar`, a path, and a hash, and a repeated `jar` line.
+It refuses a `depends` or a `jar` path that holds `:`, before anything is built or run.
 It points at the line, and at the whole manifest where the line it wanted is not written at all.
 A line break is the bytes it is written as, so a manifest written with a carriage return before
 each one points at its lines like any other.
@@ -239,10 +243,11 @@ These hold and are checked by drawn properties in the runner:
 3. Reading a manifest never panics, and a refusal of one points inside the manifest it is about.
 4. A printed `jar` line reads back as the path and the hash it was printed with, in line order.
 5. Each malformed shape of a `jar` line is refused as `L0315`, at the line itself.
-6. The SHA-256 of `compiler/digest.bx` is the one that `shasum -a 256` gives for a drawn file.
+6. A `depends` or a `jar` path with a `:` at a drawn place is refused as `L0315`, at that line.
+7. The SHA-256 of `compiler/digest.bx` is the one that `shasum -a 256` gives for a drawn file.
 
-`tests/pinned.bx` holds properties 4 to 6.
-The runner skips property 6 with the reason when `shasum` cannot be run.
+`tests/pinned.bx` holds properties 4 to 7.
+The runner skips property 7 with the reason when `shasum` cannot be run.
 `tests/archived.bx` packs a class with the `jar` tool of the JDK, and holds each refusal.
 It shows that `run` and `test` reach the class, and that `L0434` refuses it with no stated archive.
 It shows that a dependency's archive is reached too.
