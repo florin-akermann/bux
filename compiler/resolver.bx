@@ -139,7 +139,7 @@ fn with_held(held: set.Set<Int>, declared: ast.Item) -> set.Set<Int> {
 }
 
 /// `held` with the parameters of each function of a process but `start` and `receive`.
-// example: set.has_value(with_process_held(set.empty(), ast.ProcessDeclaration { name: ast.Name { text: "Counter", span: lexer.Span { start: 8, length: 7 } }, functions: [], span: lexer.Span { start: 0, length: 17 } }), 0) == false
+// example: set.has_value(with_process_held(set.empty(), ast.ProcessDeclaration { name: ast.Name { text: "Counter", span: lexer.Span { start: 8, length: 7 } }, functions: [], span: lexer.Span { start: 0, length: 17 }, visibility: ast.Public }), 0) == false
 fn with_process_held(held: set.Set<Int>, declaration: ast.ProcessDeclaration) -> set.Set<Int> {
     var walked = held
     for function_declared in declaration.functions {
@@ -149,7 +149,7 @@ fn with_process_held(held: set.Set<Int>, declaration: ast.ProcessDeclaration) ->
 }
 
 /// `held` with the parameters of `declaration`, unless its name is one whose shape is fixed.
-// example: set.has_value(with_chosen(set.empty(), ast.FunctionDeclaration { name: ast.Name { text: "main", span: lexer.Span { start: 3, length: 4 } }, type_parameters: [], parameters: [], result: None, body: ast.Block { statements: [], span: lexer.Span { start: 8, length: 2 } }, span: lexer.Span { start: 0, length: 10 } }, ["main"]), 3) == false
+// example: set.has_value(with_chosen(set.empty(), ast.FunctionDeclaration { name: ast.Name { text: "main", span: lexer.Span { start: 3, length: 4 } }, type_parameters: [], parameters: [], result: None, body: ast.Block { statements: [], span: lexer.Span { start: 8, length: 2 } }, span: lexer.Span { start: 0, length: 10 }, visibility: ast.Public }, ["main"]), 3) == false
 fn with_chosen(held: set.Set<Int>, declaration: ast.FunctionDeclaration, fixed: List<String>) -> set.Set<Int> {
     if list.has_value(fixed, declaration.name.text) {
         return held
@@ -209,13 +209,16 @@ fn unread_parameter(name: ast.Name, held: set.Set<Int>) -> Option<ResolveErrorKi
 
 /// The names in scope in every module, read out of the prelude's tree.
 ///
+/// A `private` declaration of the prelude is reached only in the prelude, so it is not among them.
 /// Its scope also holds what the compiler holds, which no source declares: five types, `todo`,
 /// `send`, and `ended`.
 // example: printed("fn f() -> Thing {\n    Made\n}\n\ntype Thing =\n    | Made\n", prelude_of(ok_or(parser.parse("type Other =\n    | Made\n"), ast.Program { items: [] }))) == "refused\nL0302 49..53 `Made` is already in scope here\nhelp: rename the inner one; Bux never hides a name\n"
 fn prelude_of(program: ast.Program) -> Prelude {
     var prelude = Prelude { types: held_as(names: map.empty(), texts: held_types(), kind: Type), values: held_as(names: map.empty(), texts: held_values(), kind: Function), instances: set.empty(), traits: map.empty() }
     for declared in program.items {
-        prelude = with_supplied(prelude, declared)
+        if !ast.is_kept(declared) {
+            prelude = with_supplied(prelude, declared)
+        }
     }
     prelude
 }
@@ -388,7 +391,7 @@ fn declare_trait(resolver: Resolver, declaration: ast.TraitDeclaration) -> Resul
 }
 
 /// The name of each method a trait declares, in the order it declares them.
-// example: list.length(method_names(ast.TraitDeclaration { name: ast.Name { text: "T", span: lexer.Span { start: 0, length: 1 } }, parameter: ast.Name { text: "A", span: lexer.Span { start: 0, length: 1 } }, methods: [], span: lexer.Span { start: 0, length: 1 } })) == 0
+// example: list.length(method_names(ast.TraitDeclaration { name: ast.Name { text: "T", span: lexer.Span { start: 0, length: 1 } }, parameter: ast.Name { text: "A", span: lexer.Span { start: 0, length: 1 } }, methods: [], span: lexer.Span { start: 0, length: 1 }, visibility: ast.Public })) == 0
 fn method_names(declaration: ast.TraitDeclaration) -> List<String> {
     var names = []
     for method in declaration.methods {

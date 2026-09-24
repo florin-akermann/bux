@@ -984,7 +984,7 @@ fn type_declaration(printer: Printer, declaration: ast.TypeDeclaration) -> Print
 /// `type User<T> =`, which every type a declaration writes the body of opens with.
 // example: ok_or(format("type Box < T > = Box(T)"), "") == "type Box<T> = Box(T)\n"
 fn type_head(declaration: ast.TypeDeclaration) -> String {
-    "type " + declaration.name.text + type_parameters_text(declaration.parameters) + " ="
+    kept_before(declaration.visibility) + "type " + declaration.name.text + type_parameters_text(declaration.parameters) + " ="
 }
 
 /// One variant on the `type` line, or two or more with a `|` each, one per line.
@@ -1039,7 +1039,7 @@ fn record_body(printer: Printer, fields: List<ast.RecordField>, enclosing: lexer
 // example: ok_or(format("trait Named<T> {\n    fn name(value: T)->String\n}"), "") == "trait Named<T> {\n    fn name(value: T) -> String\n}\n"
 fn trait_declaration(printer: Printer, declaration: ast.TraitDeclaration) -> Printer {
     let opened = open_line(comments_above(printer, declaration.span))
-    var printed = open_block(word(opened, "trait " + declaration.name.text + "<" + declaration.parameter.text + ">"))
+    var printed = open_block(word(opened, kept_before(declaration.visibility) + "trait " + declaration.name.text + "<" + declaration.parameter.text + ">"))
     for method in declaration.methods {
         printed = line(printed, method.span, "fn " + method.name.text + parameters_text(method.parameters) + result_text(method.result))
     }
@@ -1068,7 +1068,7 @@ fn instance_declaration(printer: Printer, declaration: ast.InstanceDeclaration) 
 // example: ok_or(format("process Counter{\n    fn start() -> Int {\n        0\n    }\n}"), "") == "process Counter {\n    fn start() -> Int {\n        0\n    }\n}\n"
 fn process_declaration(printer: Printer, declaration: ast.ProcessDeclaration) -> Printer {
     let opened = open_line(comments_above(printer, declaration.span))
-    var printed = open_block(word(opened, "process " + declaration.name.text))
+    var printed = open_block(word(opened, kept_before(declaration.visibility) + "process " + declaration.name.text))
     var position = 0
     for function_written in declaration.functions {
         if position > 0 {
@@ -1091,8 +1091,15 @@ fn instance_head(declaration: ast.InstanceDeclaration) -> String {
 // example: ok_or(format("fn pick<T>(first: T, second) -> T {\n    first\n}"), "") == "fn pick<T>(first: T, second) -> T {\n    first\n}\n"
 fn function(printer: Printer, declaration: ast.FunctionDeclaration, over: List<ast.TypeParameter>) -> Printer {
     let opened = open_line(comments_above(printer, declaration.span))
-    let signature = "fn " + declaration.name.text + constrained_text(over) + parameters_text(declaration.parameters) + result_text(declaration.result)
+    let signature = kept_before(declaration.visibility) + "fn " + declaration.name.text + constrained_text(over) + parameters_text(declaration.parameters) + result_text(declaration.result)
     end_line(block(word(opened, signature), declaration.body, Closed))
+}
+
+/// `private ` before a declaration kept in its module, and nothing before any other.
+// example: ok_or(format("private  fn go() {\n}"), "") == "private fn go() {\n}\n"
+// example: kept_before(ast.Public) == ""
+fn kept_before(visibility: ast.Visibility) -> String {
+    ast.written_before(ast.visibility_word(visibility))
 }
 
 /// `{`, one statement per line one level in, and the `}` that closes them.

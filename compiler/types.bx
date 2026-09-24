@@ -37,15 +37,18 @@ fn prelude_read(source: String) -> Prelude {
 fn surface_of(checked: infer.Inference) -> surface.Surface {
     let environment = checked.environment
     let program = checked.resolved.program
-    surface.Surface { functions: declared.offered_functions(environment, program), processes: declared.offered_processes(environment, program), types: declared.offered_types(environment, program), instances: declared.given_instances(environment, checked.resolved) }
+    surface.Surface { functions: declared.offered_functions(environment, program), processes: declared.offered_processes(environment, program), types: declared.offered_types(environment, program), instances: declared.given_instances(environment, checked.resolved), kept: declared.kept_by(program) }
 }
 
-/// The API page of a checked module: every item but an import, with one blank line between two.
+/// The API page of a checked module: every item but an import and a `private` declaration, with one
+/// blank line between two.
 // example: page_of(checked_of("fn count() -> Int {\n    1\n}\n\ntype Box = Box\n")) == "fn count() -> Int\n\ntype Box = Box\n"
+// example: page_of(checked_of("private fn count() -> Int {\n    1\n}\n\ntype Box = Box\n")) == "type Box = Box\n"
 fn page_of(checked: infer.Inference) -> String {
     var page = ""
+    let kept = declared.kept_by(checked.resolved.program)
     for item in checked.resolved.program.items {
-        let stanza = stanza_of(checked, item)
+        let stanza = stanza_of(checked, item, kept)
         if stanza != "" && page != "" {
             page += "\n"
         }
@@ -54,9 +57,13 @@ fn page_of(checked: infer.Inference) -> String {
     page
 }
 
-/// What one item puts on the page, which is nothing at all for an import or a test.
-// example: stanza_of(checked_of(""), declared.first_item("derive Eq, Ord for Box\n")) == "instance Eq<Box>\ninstance Ord<Box>\n"
-fn stanza_of(checked: infer.Inference, item: ast.Item) -> String {
+/// What one item puts on the page, which is nothing at all for an import or a test, and for a
+/// declaration that is `private` or that gives an instance of a trait or for a type in `kept`.
+// example: stanza_of(checked_of(""), declared.first_item("derive Eq, Ord for Box\n"), []) == "instance Eq<Box>\ninstance Ord<Box>\n"
+fn stanza_of(checked: infer.Inference, item: ast.Item, kept: List<surface.KeptName>) -> String {
+    if ast.is_kept(item) || is_about_kept(item, kept) {
+        return ""
+    }
     match item {
         ast.Import(_) => ""
         ast.Type(declaration) => format.type_declaration(format.printer_of(""), declaration).text
@@ -67,6 +74,17 @@ fn stanza_of(checked: infer.Inference, item: ast.Item) -> String {
         ast.Extern(declaration) => format.extern_text(declaration) + "\n"
         ast.Process(declaration) => "process " + declaration.name.text + "\n"
         ast.Test(_) => ""
+    }
+}
+
+/// Whether `item` gives an instance of a trait in `kept`, or for a type in `kept`.
+// example: is_about_kept(declared.first_item("derive Eq for Box\n"), [surface.KeptType("Box")])
+// example: !is_about_kept(declared.first_item("derive Eq for Box\n"), [surface.KeptValue("Box")])
+fn is_about_kept(item: ast.Item, kept: List<surface.KeptName>) -> Bool {
+    match item {
+        ast.Instance(declaration) => list.has_value(kept, surface.KeptType(declaration.trait_name.text)) || list.has_value(kept, surface.KeptType(declaration.for_type.text))
+        ast.Derive(declaration) => list.has_value(kept, surface.KeptType(declaration.for_type.text))
+        _ => false
     }
 }
 
@@ -120,7 +138,7 @@ fn page_code(source: String) -> String {
 fn check(resolved: resolver.Resolved, imported: surface.Imported, prelude: Prelude) -> Result<infer.Inference, refusal.TypeError> {
     _ = declared.nothing_holds_itself(resolved)?
     _ = processes.every_process_shaped(resolved.program)?
-    let declaring = declared.environment_of(prelude.declared, resolved, surface.every_type(imported), surface.every_instance(imported), unify.empty_table())?
+    let declaring = declared.environment_of(declared.with_kept(prelude.declared, imported.kept), resolved, surface.every_type(imported), surface.every_instance(imported), unify.empty_table())?
     _ = processes.nothing_foreign_held(declaring.environment, resolved.program, surface.every_type(imported))?
     let inference = infer.module_inferred(resolved, imported, declaring)?
     _ = every_signature_written(inference)?

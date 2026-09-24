@@ -1,0 +1,16 @@
+// A public function states an example, because another module reaches for it.
+// A `private` function is reached only in its module, so it may state none, and a build takes it.
+// An example that a private function states is held as any other.
+// example: doubled(3) == 6
+fn doubled(count: Int) -> Int {
+    added(one: count, other: count)
+}
+
+private fn added(one: Int, other: Int) -> Int {
+    one + other
+}
+
+// example: halved(6) == 3
+private fn halved(count: Int) -> Int {
+    or(count / 2, 0)
+}

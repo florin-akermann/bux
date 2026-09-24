@@ -1027,7 +1027,7 @@ fn started_by(item: ast.Item, at: Int) -> List<ast.FunctionDeclaration> {
 }
 
 /// The first function of a process, which the shape check holds to be `start`, as a list of one.
-// example: list.length(first_function(ast.ProcessDeclaration { name: no_name(), functions: [], span: no_name().span })) == 0
+// example: list.length(first_function(ast.ProcessDeclaration { name: no_name(), functions: [], span: no_name().span, visibility: ast.Public })) == 0
 fn first_function(declaration: ast.ProcessDeclaration) -> List<ast.FunctionDeclaration> {
     match list.at(declaration.functions, 0) {
         Some(function) => [function]
@@ -1181,6 +1181,7 @@ fn unreachable_field(through: unify.Type, field: ast.Name) -> refusal.TypeError 
 /// where `spawn` calls it.
 // example: typed_code("import demo\n\nfn count() -> Int {\n    demo.total\n}\n") == "L0414 42..47"
 fn inside(inference: Inference, module: String, lookup: Lookup) -> Result<Inference, refusal.TypeError> {
+    _ = declared.value_reachable(inference.environment, module, lookup.field)?
     let offering = or(surface.surface_of(inference.imported, module), surface.no_surface())
     let spawnable = map.get(offering.processes, lookup.field.text)
     match lookup.how {
@@ -1529,6 +1530,7 @@ fn bare_constructor(inference: Inference, named: ast.Name) -> BuiltUse {
 /// A constructor reached through the module that declares it.
 // example: refusal.code_given(reached_constructor(nothing_inferred(), no_name(), ast.Path { module: None, name: no_name() })) == "L0414 0..0"
 fn reached_constructor(inference: Inference, module: ast.Name, path: ast.Path) -> Result<BuiltUse, refusal.TypeError> {
+    _ = declared.value_reachable(inference.environment, module.text, path.name)?
     let key = ast.path_text(path)
     match map.get(inference.environment.values, key) {
         Some(scheme) => Ok(built_use(instantiated(inference, scheme), key))

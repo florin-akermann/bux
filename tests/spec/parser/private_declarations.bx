@@ -1,0 +1,29 @@
+// `private` comes before each of the four declarations that declare a name another module reaches.
+// example: count_of(Tally(2)) == 2
+fn count_of(tally: Tally) -> Int {
+    match tally {
+        Tally(count) => count
+    }
+}
+
+private fn doubled(count: Int) -> Int {
+    count + count
+}
+
+private trait Counted<T> {
+    fn counted(value: T) -> Int
+}
+
+private process Counter {
+    fn start(initial: Int) -> Int {
+        initial
+    }
+
+    fn receive(total: Int, message: Tally) -> Next<Int> {
+        match message {
+            Tally(count) => Continue(total + count)
+        }
+    }
+}
+
+private type Tally = Tally(Int)

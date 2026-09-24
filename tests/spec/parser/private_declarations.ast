@@ -1,0 +1,58 @@
+function count_of 136..226
+  parameter tally 148..160
+    named-type Tally 155..160
+  result
+    named-type Int 165..168
+  block 169..226
+    match 175..224
+      name tally 181..186
+      arm 197..218
+        pattern-tuple Tally 197..209
+          pattern count 203..208
+        name count 213..218
+private function doubled 228..287
+  parameter count 247..257
+    named-type Int 254..257
+  result
+    named-type Int 262..265
+  block 266..287
+    binary Add 272..285
+      name count 272..277
+      name count 280..285
+private trait Counted 289..349
+  type-parameter T 311..312
+  signature counted 320..347
+    parameter value 331..339
+      named-type T 338..339
+    result
+      named-type Int 344..347
+private process Counter 351..587
+  function start 381..434
+    parameter initial 390..402
+      named-type Int 399..402
+    result
+      named-type Int 407..410
+    block 411..434
+      name initial 421..428
+  function receive 440..585
+    parameter total 451..461
+      named-type Int 458..461
+    parameter message 463..477
+      named-type Tally 472..477
+    result
+      named-type Next 482..491
+        named-type Int 487..490
+    block 492..585
+      match 502..579
+        name message 508..515
+        arm 530..569
+          pattern-tuple Tally 530..542
+            pattern count 536..541
+          call 546..569
+            name Continue 546..554
+            binary Add 555..568
+              name total 555..560
+              name count 563..568
+private type Tally 589..620
+  variant Tally 610..620
+    named-type Int 616..619

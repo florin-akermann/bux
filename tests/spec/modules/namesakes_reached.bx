@@ -1,0 +1,18 @@
+// expect-run
+// > large
+// > tray
+// The public type `Box` is reached although a private constructor of `namesakes` is named `Box`.
+// The public constructor `Tray` is reached although a private type of `namesakes` is named `Tray`.
+import io
+import namesakes
+
+fn main(arguments: List<String>) -> Int {
+    io.println(namesakes.sized(largest()))
+    io.println(namesakes.unpacked(namesakes.Tray("tray")))
+    0
+}
+
+// example: namesakes.sized(largest()) == "large"
+fn largest() -> namesakes.Box {
+    namesakes.Large
+}

@@ -1,0 +1,8 @@
+// expect-error: L0322
+// A variant of a `private` type stays in its module with the type, so `kept.Low` is refused.
+import kept
+
+// example: said() == "low"
+fn said() -> String {
+    kept.said(kept.Low)
+}

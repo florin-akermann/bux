@@ -1,11 +1,11 @@
-# An example on every function
+# An example on every public function
 
 ## Intent
 
 A signature says what a function takes and gives back, and says nothing about what it does.
 An example says that, and says it so that the compiler can hold the function to it.
 
-`docs/design.md` section 11 requires one of every function a module declares.
+`docs/design.md` section 11 requires one of every public function a module declares.
 Prose about a function is a claim nobody checks, and it drifts the moment the body changes.
 An example is the same claim written as Bux, so `bux test` runs it and a wrong one is reported.
 
@@ -57,13 +57,18 @@ file's header is never read as documentation.
 
 ## Which functions carry one
 
-Every function a module declares at the top level carries at least one example, except `main` and
-one whose signature gives nothing back.
-`docs/specs/api-surface.md` states that every such name is public, so every one of them is a name
-another module will reach for.
+Every public function a module declares at the top level carries at least one example.
+`main`, a function whose signature gives nothing back, and a `private` function are exempt.
+`docs/specs/api-surface.md` puts each public function on the page, where another module finds it.
 
 `main` is exempt because it is reached by running the module rather than by calling it.
 Running the module is the example of `main`.
+
+A `private` function is exempt because only the functions of its module call it.
+`docs/specs/modules.md` states that no other module reaches it.
+The examples of the functions that call it run it, so a fault in it can still fail an example.
+A private function may state examples all the same, and `bux test` runs each one as any other.
+An example above it is in the comment above a function, so it is never `L0602`.
 
 A function written `-> ()` is exempt because an example is an expression that is true, and no
 expression over a call giving nothing back is one.
@@ -228,6 +233,6 @@ It writes and starts each run as `bux test` does, each in a JVM of its own.
 These hold and are checked by drawn properties in the runner:
 
 1. Every example a module states is found, wherever in the module it is written.
-2. A module whose every function states an example is accepted, however many they state.
+2. A module whose every public function states an example is accepted, however many they state.
 3. The text of an example is the text of the line it is written on, after the marker.
 4. A span an example run reports is a span of the file the examples were read out of.

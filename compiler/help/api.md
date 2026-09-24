@@ -1,8 +1,8 @@
 Print what a module offers, and nothing else.
 
 `bux api` runs the front end over a file and prints one page: every name the file declares at
-the top level, with the type it has. That is the whole surface, because every top-level
-declaration is public and there is no private one. Learning a signature is then reading a page
+the top level and does not declare `private`, with the type it has. That is the whole surface,
+because another module reaches no other name. Learning a signature is then reading a page
 rather than reading a file.
 
 A function is printed as its signature and nothing after it: one line, and no body under it.

@@ -1,0 +1,13 @@
+// expect-run
+// > hello, world
+// > glad
+// A module reaches every public name of a module it imports.
+// A value of a private type reaches it too, although the name of that type does not.
+import io
+import kept
+
+fn main(arguments: List<String>) -> Int {
+    io.println(kept.greeted("world"))
+    io.println(kept.said(kept.glad()))
+    0
+}

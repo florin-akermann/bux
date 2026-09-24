@@ -248,9 +248,9 @@ fn is_word_letter(letter: String) -> Bool {
 }
 
 /// Every keyword, so that a word can be looked up among them.
-// example: list.length(keywords()) == 23
+// example: list.length(keywords()) == 24
 fn keywords() -> List<Keyword> {
-    [Fn, Type, Trait, Instance, Derive, Process, Test, Spawn, Let, Var, If, Else, For, In, Match, Break, ContinueLoop, Return, Import, Extern, True, False, Underscore]
+    [Fn, Type, Trait, Instance, Derive, Process, Private, Test, Spawn, Let, Var, If, Else, For, In, Match, Break, ContinueLoop, Return, Import, Extern, True, False, Underscore]
 }
 
 /// Every punctuation, longest first, so that `==` wins over `=` and `->` over `-`.
@@ -297,6 +297,7 @@ fn keyword_text(keyword: Keyword) -> String {
         Instance => "instance"
         Derive => "derive"
         Process => "process"
+        Private => "private"
         Test => "test"
         Spawn => "spawn"
         Let => "let"
@@ -407,6 +408,7 @@ type Keyword =
     | Instance
     | Derive
     | Process
+    | Private
     | Test
     | Spawn
     | Let

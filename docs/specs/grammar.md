@@ -85,7 +85,9 @@ A rule is written `name = definition`, and a quoted text in a definition is a to
 program         = { item }
 
 item            = import | type_declaration | trait | instance | derive | function
-                | extern_type | extern | process | test
+                | extern_type | extern | process | test | private
+
+private         = "private" ( function | type_declaration | trait | process )
 
 import          = "import" Name
 
@@ -162,6 +164,12 @@ Only a `var` is assigned to afterwards, and each of the two joins its name to it
 A test is an item and never a statement, which `docs/specs/testing.md` states.
 A `test` written where a statement belongs is `L0110`, at the word `test`.
 The name of a test is a string literal, and the parser reads its escapes as any string's.
+
+`private` is written before a function, a type, a trait, or a process, and before nothing else.
+Anything else after it is `L0100`, which expects `a function, a type, a trait, or a process`.
+The help of that refusal says that only these four declare a name another module reaches.
+The span of a private declaration starts at `private`, and its tree line opens with `private`.
+`docs/specs/modules.md` states what `private` means.
 
 A comparison does not chain: `a < b < c` is a parse error, as it is in Go.
 Every other binary operator is left-associative.

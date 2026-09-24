@@ -13,11 +13,17 @@ Every function writes its signature, so the page states each type without a body
 
 ## What is public
 
-Every name a file declares at the top level is public.
-`docs/specs/modules.md` states that there is no private declaration, so nothing is left out.
+Every name a file declares at the top level is public, unless its declaration is `private`.
+`docs/specs/modules.md` states that a private name is reached only in its module.
 
-The page therefore holds every type the file declares and every function it declares.
+The page therefore holds every public type and every public function the file declares.
 It holds nothing else.
+
+A private declaration is not on the page, because no other module can write its name.
+An instance and a derive of a private type or of a private trait are not on the page either.
+Each of them names something that no page states.
+A public function can take or give back a value of a private type, and its signature says so.
+That type is not on the page, and a caller holds such a value without writing its name.
 
 An import is not on the page: `import io` brings a name in rather than putting one out.
 The module that was imported has a page of its own, and that is where its names are stated.
@@ -88,5 +94,5 @@ refusing one to `bux build`.
 These hold and are checked by drawn properties in the runner:
 
 1. A module of types alone, holding no comment, is its own page, character for character.
-2. Every name a module declares at the top level is on its page.
+2. Every public name a module declares at the top level is on its page, and no private one is.
 3. Printing a page never panics and is deterministic.

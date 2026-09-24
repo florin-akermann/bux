@@ -1,0 +1,8 @@
+// expect-error: L0322
+// `opening` is a `private` function of `kept`, so no other module reaches it.
+import kept
+
+// example: opened() == "hello, "
+fn opened() -> String {
+    kept.opening()
+}
