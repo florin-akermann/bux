@@ -468,6 +468,28 @@ So `Map.Empty` is 25% of the allocation pressure, and `Object[]`, the arrays of 
 `Long.valueOf` is `digit_of` and `without_digit`, which box the `Int` of `or(code % 32, 0)`.
 That is 6%, below ten percent, so it gets no item.
 
+### The node copy without a fresh row
+
+Item 138 made `with_child` walk the `children` it copies, so it calls `no_children` no more.
+On 2026-09-24 one input of one billion lines went through three runs of each, in turns.
+"Before" is a checkout of main, and "after" is the same with the change; the output was the same.
+The load was 17 to 34 from other sessions, above 12, and it did not decrease that day.
+Processor time is the number, because in Item 131 it changed by 5% at loads of 7 to 24.
+
+| Run | Wall time | Processor time | Peak RSS | Load |
+|-----|-----------|----------------|----------|------|
+| Before | 134.2 s | 851 s | 4.8 GB | 10.9 to 21.6 |
+| After | 104.7 s | 696 s | 2.7 GB | 21.6 to 23.8 |
+| Before | 156.8 s | 823 s | 4.1 GB | 23.8 to 34.5 |
+| After | 72.4 s | 793 s | 2.5 GB | 32.0 to 21.1 |
+| Before | 126.6 s | 803 s | 3.9 GB | 17.6 to 23.6 |
+| After | 69.0 s | 789 s | 2.4 GB | 23.6 to 15.8 |
+
+The median processor time went from 823 s to 789 s, which is 4% less and inside the noise of 5%.
+The median wall time went from 134.2 s to 72.4 s, and the median peak RSS from 4.1 GB to 2.5 GB.
+So the change shows in the wall time and in the memory more than in the processor time.
+The wall time varies with the load, so a run at a load below 12 must confirm the 46%.
+
 ### The share of the machine
 
 Item 136 bounds the heap of each JVM, because the JDK gives each one a quarter of the memory.
