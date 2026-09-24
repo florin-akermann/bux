@@ -808,7 +808,8 @@ The formatter is therefore part of the compiler front end, and the pretty-printe
 Compilation requires `format(source) == source`, byte for byte.
 
 The printer reads the source and not the tree alone, because comments are not part of the tree.
-Formatting preserves the tree all the same: `parse(format(source))` equals `parse(source)`.
+Formatting keeps each item all the same: `parse(format(source))` holds the items of the source.
+Only the order of the items can change.
 
 The formatter has no options.
 `docs/specs/formatting.md` states the canonical form it writes, construct by construct.
@@ -851,8 +852,14 @@ A test uses the declarations of its module, and nothing uses a test.
 **A `match` lists its arms in the order the type declares its variants**.
 A new variant then has exactly one place to be handled, and no diff is ever reorder-only.
 
-Order is checked and never rewritten.
-`bux fmt` repairs whitespace, and the compiler says where a declaration belongs.
+**`bux fmt` repairs each order the compiler can compute**.
+It sorts the imports, and it moves a declaration written after a test above the tests.
+It moves a declaration below what uses it, as the resolver finds the uses.
+Two declarations that use each other keep the order the author wrote.
+`bux build` and `bux check` still refuse a file out of order, and the help names `bux fmt`.
+
+Arm order is checked and not rewritten, because the formatter does not know the types.
+Naming is not rewritten either, because the compiler cannot choose a name.
 
 ---
 

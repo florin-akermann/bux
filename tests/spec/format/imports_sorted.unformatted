@@ -1,0 +1,12 @@
+// `bux fmt` sorts the imports by the module they name, and puts them above every declaration.
+import strings
+
+fn spoken(words: List<String>) -> String {
+    strings.join(words, " ")
+}
+
+fn counted(words: List<String>) -> Int {
+    list.length(words)
+}
+
+import list

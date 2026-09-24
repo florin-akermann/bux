@@ -206,7 +206,10 @@ A name is the author's decision, so the compiler checks a name and never rewrite
 ### Order
 
 Whitespace is nobody's decision, so `bux fmt` repairs it.
-The place of a declaration is the author's decision, so the compiler says where and never moves it.
+The place of an import, a test, and a declaration has one answer, and the compiler knows it.
+A refusal of that place costs an agent a round trip, and the round trip costs more than the rule.
+So `bux fmt` writes the answer, and `bux build` still refuses a file that is out of order.
+Arm order stays a refusal, because the formatter does not know the types.
 
 ---
 

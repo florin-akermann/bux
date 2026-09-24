@@ -159,7 +159,7 @@ fn program_ended(line: List<String>) -> Said {
 // example: command_said(Explain("L9999"), ir.little_library()).errors == "error: there is no diagnostic L9999\n"
 fn command_said(command: Command, library: ir.Library) -> Said {
     match command {
-        Fmt(file) => formatted(file)
+        Fmt(file) => formatted(file, library.prelude.names)
         Check { path, form } => checked_said(Checking { path: path, form: form }, library)
         Build(path) => built_said(path, library)
         Test(file) => tested(file, library)
@@ -169,20 +169,36 @@ fn command_said(command: Command, library: ir.Library) -> Said {
 }
 
 /// Writes the canonical text of `path` back to it, leaving a canonical file untouched.
-// example: formatted("no-such-directory/main.bx").errors == "error: no-such-directory/main.bx: No such file or directory (os error 2)\n"
-fn formatted(path: String) -> Said {
+// example: formatted("no-such-directory/main.bx", ir.little_library().prelude.names).errors == "error: no-such-directory/main.bx: No such file or directory (os error 2)\n"
+fn formatted(path: String, names: resolver.Prelude) -> Said {
     match files.read(path) {
-        Ok(source) => source_formatted(Page { source: source, path: path })
+        Ok(source) => source_formatted(Page { source: source, path: path }, names)
         Err(_) => unusable(path + ": " + read_refusal(path))
     }
 }
 
 /// The canonical text of `page` written back to its file, where it differs from what is there.
-// example: source_formatted(Page { source: "fn (", path: "a.bx" }).status == 1
-fn source_formatted(page: Page) -> Said {
-    match format.format(page.source) {
+// example: source_formatted(Page { source: "fn (", path: "a.bx" }, ir.little_library().prelude.names).status == 1
+fn source_formatted(page: Page, names: resolver.Prelude) -> Said {
+    match repaired(page.source, names) {
         Ok(canonical) => rewritten(page, canonical)
         Err(error) => refused_each([parse_diagnostic(error)], page)
+    }
+}
+
+/// The text `bux fmt` writes for `source`, or the error the parser refuses it with.
+///
+/// The formatter writes canonical form with each import and each test in place. The resolver then
+/// says which declaration uses which, and each declaration moves below what uses it. A module the
+/// resolver refuses keeps the order of its declarations, and `bux build` reports the refusal.
+// example: ok_or(repaired("fn one() -> Int {\n    1\n}\n\nfn two() -> Int {\n    one()\n}\n", ir.little_library().prelude.names), "") == "fn two() -> Int {\n    one()\n}\n\nfn one() -> Int {\n    1\n}\n"
+// example: ok_or(repaired("fn one() -> Int {\n    missing()\n}\n\nfn two() -> Int {\n    one()\n}\n", ir.little_library().prelude.names), "") == "fn one() -> Int {\n    missing()\n}\n\nfn two() -> Int {\n    one()\n}\n"
+fn repaired(source: String, names: resolver.Prelude) -> Result<String, parser.ParseError> {
+    let canonical = format.format(source)?
+    let parsed = parser.parse(canonical)?
+    match resolver.top_down(parsed, names) {
+        Ok(ordered) => Ok(format.reordered(canonical, ordered))
+        Err(_) => Ok(canonical)
     }
 }
 

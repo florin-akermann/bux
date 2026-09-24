@@ -219,7 +219,8 @@ A declaration is therefore written below what uses it, which `docs/design.md` se
 and a declaration written above something that uses it is refused.
 
 The rule is checked here because this is the phase that knows which name means which declaration.
-Nothing is moved: the refusal says where the declaration belongs and the author moves it.
+The refusal says where the declaration belongs, and `bux fmt` moves it there.
+`resolver.top_down` gives `bux fmt` that order, which `docs/specs/formatting.md` states.
 
 Two declarations that use each other are written either way, because no order undoes a cycle.
 A use is out of order only when what it uses cannot reach back to it, so recursion is never
@@ -248,7 +249,7 @@ Canonical form puts every import first and sorted, which settles where it goes w
 `L0300` helps with `a name is declared in this file, imported, or supplied by the prelude`.
 `L0301` helps with `one name has one definition; rename one of the two`.
 `L0302` helps with `rename the inner one; Bux never hides a name`.
-`L0303` helps with `a file reads top down: move it below what uses it`.
+`L0303` helps with ``a file reads top down: `bux fmt` moves it below what uses it``.
 `L0304` helps with `version 0.1 reaches a function by calling it; write the call`.
 `L0304` helps a module with ``a module is what a name is reached through, as `io.println` is``.
 `L0305` helps with ``mutation is explicit: bind it with `var`, or bind a new name``.
@@ -313,6 +314,9 @@ The answer is the tree and, for each name that has a definition, the definition 
 The resolver reads no file and no resource, so the caller gives it the prelude.
 `resolver.resolve(program, module, prelude)` resolves one module against that prelude.
 `resolver.prelude_resolved(program)` resolves the prelude itself, with the names the JVM holds.
+`resolver.top_down(program, prelude)` gives the program with each declaration below what uses it.
+A declaration moves only where a use makes it move.
+Two declarations that use each other keep the order the author wrote.
 
 It stops at the first refusal, which has a code, a span, a message, and a help line.
 

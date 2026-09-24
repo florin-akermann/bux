@@ -13,18 +13,18 @@ byte.
 The formatter has no options, so no diff is ever a formatting diff and no two agents disagree
 about layout.
 
-Formatting preserves meaning: `parse(format(source))` equals `parse(source)`, always.
-The printer therefore never reorders, adds, or drops anything the parse tree holds.
+Formatting preserves meaning: `parse(format(source))` holds each item of `parse(source)`, always.
+The printer never adds or drops anything the parse tree holds.
+It moves an item only where canonical form has one place for it, as the section below states.
 
 How a name is spelled is part of canonical form too, and `docs/specs/naming.md` states it: a
 function is `snake_case`, a type is `PascalCase`, and neither is rewritten.
 
-Sequence is part of canonical form, and the printer is not what enforces it.
-`docs/design.md` section 13 puts imports first and sorted, a declaration above what uses it, and a
-match arm in the order the type declares its variants.
+Sequence is part of canonical form too.
+`docs/design.md` section 13 puts imports first and sorted, and a declaration below what uses it.
+It puts a match arm in the order the type declares its variants.
 It also puts tests last, after every declaration, in the order the author writes them.
-Order is checked and never rewritten: `bux fmt` repairs whitespace, which is nobody's decision,
-while where a declaration belongs is the author's.
+`bux fmt` repairs each of these orders except arm order, as "The orders `bux fmt` repairs" states.
 
 The formatter reads the source, not only the tree, because comments are not part of the tree.
 `docs/specs/grammar.md` drops comment tokens before parsing, and the printer puts them back from
@@ -126,14 +126,15 @@ order, and no comment is ever dropped or duplicated.
 ## `bux fmt` and `bux check`
 
 `bux fmt <file>` rewrites the file in canonical form, and writes nothing when it already is.
+It repairs the layout and the orders that the next section names.
 `bux check <file>` reports the first line that is not in canonical form and exits non-zero.
 
 A file that does not parse is reported as the parse error, by both commands, and neither writes.
 Exit codes are `0` for a file in canonical form, `1` for one that is not, and `2` for one that
 cannot be read.
 A refusal is rendered as a diagnostic, which `docs/specs/diagnostics.md` lays out, under `L0200`.
-An import written after a declaration, or two imports out of sort, is `L0201` instead, and its
-`help:` says where the import belongs.
+An import written after a declaration, or two imports out of sort, is `L0201` instead.
+Its `help:` says where the import belongs, and that `bux fmt` puts it there.
 
 A deviation points at the line it is about, and its `help:` names the text canonical form writes
 there.
@@ -142,11 +143,45 @@ reported for the way it ends, which is how a missing final newline reads.
 A blank line where canonical form writes text is such a line, as a blank between two imports is.
 Its `help:` says to run `bux fmt`, which takes the line out.
 
+## The orders `bux fmt` repairs
+
+A refusal of an order costs a round trip: write, build, read the refusal, move the text, build.
+Where the compiler knows the one answer, `bux fmt` writes it and the round trip goes away.
+
+1. The formatter sorts the imports by the module they name, and puts them above every declaration.
+2. The formatter moves a declaration written after a test above the tests.
+   The tests keep the order the author wrote them in.
+3. `bux fmt` moves each declaration below each declaration that uses it.
+   Two declarations that use each other keep the order the author wrote them in.
+
+Each repair moves an item as little as the rule lets it.
+Of the declarations that are free to go next, the one written first goes next.
+A file already in order is written as it is.
+
+Each item moves with the comments directly above it.
+The comments above the first item are the header of the file, and they stay at the top.
+A `///` or `// example:` line begins what moves with the first item.
+So a doc comment and an example move with their declaration.
+Another comment above the first item is part of the header, and it does not move with the item.
+A comment after the last item stays after the last item.
+
+The third repair needs to know which name means which declaration, so the resolver gives it.
+`bux fmt` parses the file, prints it, resolves it, puts the declarations in order, and prints again.
+A file the resolver refuses keeps the order of its declarations, and `bux build` reports why.
+
+Two orders stay refusals.
+A name is the author's decision, so `bux fmt` does not rename a declaration.
+Arm order needs the types, and the formatter does not know them.
+
+`bux build` and `bux check` still refuse a file out of order, as `L0201` and `L0303`.
+Each help says what `bux fmt` does about it.
+
 ## Executable examples
 
 `tests/spec/format/<name>.bx` files are already in canonical form, and formatting one changes
 nothing.
-A sibling `<name>.unformatted` file, where there is one, formats to the `.bx` file beside it.
+A sibling `<name>.unformatted` file, where there is one, is what `bux fmt` writes as the `.bx` file.
+`imports_sorted`, `test_moved_last`, and `declaration_below_its_use` show the three repairs.
 `tests/siblings.bx` walks that directory and names the failing file.
 
 Every `.bx` file under `tests/spec/` is in canonical form unless it says which diagnostic refuses
@@ -164,7 +199,7 @@ those is checked.
 Import order is syntax, so `compiler/format.bx` checks it with canonical form and raises `L0201`.
 The place of a test is syntax too, so `compiler/format.bx` raises `L0201` below a test.
 The message is "this declaration is written after a test".
-The help is "tests come last, after every declaration".
+The help is "tests come last, after every declaration: `bux fmt` moves it above them".
 Whether a declaration is written above what uses it needs to know which name means which
 declaration, so `compiler/resolver.bx` checks it and raises `L0303`.
 `docs/specs/modules.md` states that rule.
@@ -176,10 +211,16 @@ Arm order needs the variant list, so `compiler/exhaustiveness.bx` checks it and 
 `compiler/format.bx` is this formatter, written in Bux.
 It prints the tree of `compiler/parser.bx`, and it reads the comments from `compiler/lexer.bx`.
 `format.format(source)` gives the canonical text, or the parse error where the source is no program.
+That text has each import and each test in place.
+`format.reordered(canonical, wanted)` writes a canonical text with its items in the order given.
+`resolver.top_down(program, prelude)` gives that order for the declarations.
+`command.repaired(source, prelude)` joins the two, and it is the text `bux fmt` writes.
 `format.check(source)` holds a source to canonical form, as `bux check` does.
 It gives the first refusal it finds: the parse error, then `L0200`, `L0201`, `L0202`, `L0203`.
+It holds the layout to what the printer writes before any item moves, so an order is `L0201`.
 
 `tests/layout.bx` holds the formatter to the properties below, on drawn programs and drawn files.
+`tests/ordered.bx` holds `bux fmt` to property 7, on modules drawn in any order.
 `tests/exemplified.bx` holds every example under `tests/spec` to canonical form.
 `tests/commanded.bx` holds `bux check` and `bux fmt` to golden answers on every example.
 
@@ -189,7 +230,10 @@ These hold and are checked by drawn properties in the runner:
 
 1. Formatting is idempotent: `format(format(source))` equals `format(source)`.
 2. Formatted output parses.
-3. Formatting preserves the tree: `parse(format(source))` equals `parse(source)`, up to spans.
-4. Every comment of the source appears once in the output, in source order.
+3. Formatting preserves each item: `parse(format(source))` holds the items of `parse(source)`.
+   The two agree up to spans once the imports are sorted first and the tests put last.
+4. Every comment of the source appears once in the output.
+   Where no item moves, the comments are in source order.
 5. Formatting is deterministic.
 6. A declaration written below a test is `L0201`, and a test written last is in place.
+7. A module in any order builds once `bux fmt` repairs it, and a second `bux fmt` changes nothing.
