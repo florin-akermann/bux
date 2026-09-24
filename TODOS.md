@@ -124,18 +124,6 @@ An import that reaches a private name is refused with a code and a help that nam
 [120][e] - `tests/spec/modules/` and `tests/spec/examples/` show the refusal and the exemption.
 [120][f] - The helpers of `compiler/exhaustiveness.bx` named above become `private` or tests.
 
-## 🔴 Item 122: Record construction puns a field as a pattern does
-A pattern writes `Authorized { authorization_id }`, and construction writes `User { id: id }`.
-That is two rules for one shape, and one of them costs a token per field.
-`docs/specs/patterns.md` says none of the pattern forms is a shorthand for another.
-Construction gets the same rule: `User { id }` and `User { id: id }` are two forms, not one.
-[122][a] - `docs/design.md` section 9 and `docs/specs/grammar.md` make `: expression` optional.
-A bare name reads the binding of that name, and a name not in scope is refused as it is now.
-[122][b] - `docs/specs/formatting.md` states that the formatter keeps the form the author wrote.
-[122][c] - The parser, formatter, resolver, and inference accept a bare field name.
-[122][d] - `tests/spec/parser/` and `tests/spec/format/` show both forms.
-A property holds that `User { id }` and `User { id: id }` type and lower alike.
-
 ## 🔴 Item 123: The profile prices specialization and counts the JVM starts of one suite
 **Depends on:** Item 111 — this item adds two numbers to the profile that item records.
 A generic is compiled once for each set of types, so one body is written several times.
