@@ -36,24 +36,6 @@ Item 091 measured the writer at 0.31 s, so it stays on one thread unless the pro
 [116][c] - A drawn property holds that a program lowered in a pool gives the classes of one thread.
 [116][d] - Section 7 records `bux build compiler/main.bx` and `bin/bootstrap` before and after.
 
-## 🔴 Item 120: A `private` declaration exists, and only a public function carries an example
-Every name a module declares is public, so every helper is API, and every helper pays an example.
-`compiler/exhaustiveness.bx` shows the cost.
-Five helpers exist only to keep the examples of other functions on one line.
-They are `said_in`, `found_printed`, `no_reading`, `no_space`, and `status_module`.
-`docs/rationale.md` section 11 says the `test` block was added to prevent that shape.
-One keyword is a smaller surface than the helpers it removes, and `bux api` lists less.
-[120][a] - `docs/design.md` sections 11 and 16 state `private` and narrow the example rule.
-[120][b] - `docs/specs/modules.md` states that a `private` name is reached only in its module.
-`docs/specs/api-surface.md` leaves a private declaration out of the page.
-[120][c] - `docs/specs/doc-examples.md` requires an example of a public function only.
-A private function may state one, and `bux test` runs it.
-[120][d] - The lexer, parser, formatter, and resolver carry `private`.
-An import that reaches a private name is refused with a code and a help that names the module.
-[120][e] - `tests/spec/modules/` and `tests/spec/examples/` show the refusal and the exemption.
-[120][f] - The helpers of `compiler/exhaustiveness.bx` named above become `private` or tests.
-
-
 ## 🔴 Item 126: The lowering names no JVM shape, and `compiler/jvm.bx` spells every one
 `compiler/ir.bx` names a class, a descriptor, a slot, or a `java/` member on about 160 lines.
 It builds the instructions of the JVM, and `compiler/jvm.bx` only writes them as a class file.
@@ -83,20 +65,6 @@ The price is the build of the compiler before and after.
 [127][d] - The lowering puts nothing under `Eq<String>`, and an `extern` with text converts it.
 [127][e] - `bin/bootstrap` gets a new seed, as section 6 reason two states.
 [127][f] - `tests/spec/library/` holds, and a drawn property round trips bytes through `String`.
-
-## 🔴 Item 128: The library declares every `extern`, and the compiler declares none
-98 `extern` declarations exist: 59 in `library/` and 39 in `compiler/`.
-`compiler/command.bx` declares 17, `compiler/archives.bx` 10, and `compiler/modules.bx` 6.
-Three more files declare the six others.
-`java.io.File` is declared three times.
-It is `File` in `library/files.bx` and `compiler/modules.bx`, and `Entry` in `compiler/command.bx`.
-`docs/design.md` section 2 gives one thing one spelling, and three for one class break it.
-`docs/implementation.md` section 3 says a program reaches the platform through the library.
-The compiler is a program, and it is the first one the rule holds to.
-[128][a] - Section 4 lists what the library stands on: files, processes, the clock, and streams.
-[128][b] - Each `extern` of `compiler/` moves to its library module, or one there replaces it.
-[128][c] - A project check refuses an `extern` outside `library/`, and its message names section 3.
-[128][d] - Section 4 records the count of `extern` declarations before and after.
 
 ## 🔴 Item 130: `1brc/src/main.bx` answers the One Billion Row Challenge
 **Depends on:** Item 129, Item 134 — a worker reads part of the file, and 1brc keeps the layout.
