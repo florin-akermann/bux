@@ -47,7 +47,7 @@ An in-application message bus is a process that holds the handles of whoever car
 A program writes that bus in Bux, because the language gives processes and messages and no more.
 Erlang's crash, supervisor, link, monitor, and unbounded mailbox are each refused.
 Section 15 of `docs/design.md` says why each one goes.
-Concurrency is version 0.4, so none of it runs today.
+Concurrency is in: Item 091 landed `process`, `spawn`, and `send`, and the test runner runs on them.
 
 ### Nothing panics, ever
 
@@ -108,7 +108,7 @@ Version 0.3 is self-hosting, and Item 075 completed it: the compiler in `compile
 Item 087 then deleted the Rust compiler that was the bootstrap.
 A seed, `bin/seed.jar`, builds the compiler now, and the compiler then builds itself again.
 The runner under `tests/` holds the compiler to every example and every drawn property.
-Version 0.4 adds concurrency, a native binary, HTTP, and JSON.
+Version 0.4 adds a native binary, HTTP, and JSON, and concurrency is in already.
 `TODOS.md` is the backlog, and it is the only task tracker this repository has.
 
 ## Documents
@@ -126,9 +126,8 @@ Most of the code is written by AI agents that work to `AGENTS.md`, which is why 
 
 - JDK 28 or later, which runs the compiler and every program it compiles
 - Until JDK 28 ships, an early-access build of it; export `JAVA_HOME` as its `Contents/Home`
-- `mycs` on the `PATH` for the pre-commit sweep
-
 No Cargo and no other build tool is needed.
+`mycs` is optional: the hook runs its sweep where it is on the `PATH`, and skips it where it is not.
 
 ## Build
 

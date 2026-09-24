@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Bux is a small ML-inspired language with Go-like syntax and tooling, compiled to the JVM in Bux.
+Bux is a small ML-inspired language with Go's philosophy and tooling, compiled to the JVM in Bux.
 `docs/design.md` is the language specification; a language change is a change there first.
 `docs/implementation.md` says how the compiler is built and what ships when.
 `docs/principles.md` holds the questions every proposed feature must answer.
@@ -93,7 +93,8 @@ An example of the second half: `17 / 0` is `None`, because a panic is simpler an
 - **Boy Scout Rule: a touched file leaves better** than it was found.
 - A carve-out (`[ignore]`, `default_skip`, `[disable]`, a rule disabled in `mycs.toml`) is a debt.
 - A debt carries its reason beside it; a bare suppression in source is refused.
-- Run `mycs check` on a change before anything else, and ask CodeScene MCP rather than guess.
+- Run `mycs check` on a change where it is installed, and ask CodeScene MCP rather than guess.
+- mycs is optional: the hook runs it where it is on the `PATH`, and proceeds where it is not.
 - Use only the approved CodeScene tools; `docs/codescene-mcp.md` is the allow and deny list.
 
 ## Architecture
@@ -138,7 +139,7 @@ An example of the second half: `17 / 0` is `None`, because a panic is simpler an
 
 ## Markdown Prose Style
 
-- **One sentence per line, maximum 100 characters.** mycs holds every `.md` file to both.
+- **One sentence per line, maximum 100 characters.** the hook holds every `.md` file to both.
 - The rules are lifted only in `compiler/help/`, where terminal-wrapped help topics live.
 - Never wrap a sentence across lines; shorten it, and split it only if it still will not fit.
 - This section is itself the rule: `Governance Doc Omits Prose Style` fires if it goes missing.

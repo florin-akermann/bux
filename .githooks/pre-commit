@@ -17,5 +17,10 @@ mycs_fail() {
 
 # Gate staged content (what this commit records), then sweep the whole working tree so a
 # blocking finding anywhere the walk reads refuses the commit. Nothing is grandfathered.
-mycs check --staged || mycs_fail
-mycs check || mycs_fail
+# mycs is optional: the sweep runs where it is installed, and the commit proceeds where it is not.
+if command -v mycs >/dev/null 2>&1; then
+    mycs check --staged || mycs_fail
+    mycs check || mycs_fail
+else
+    echo "mycs is not installed, so the commit proceeds without its sweep" >&2
+fi

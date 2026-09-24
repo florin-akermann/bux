@@ -168,7 +168,7 @@ The goal is:
 
 ## 3. One-sentence description
 
-> A small ML-inspired language with Go-like syntax and tooling, compiled to the JVM by a Bux compiler.
+> A small ML-inspired language with Go's philosophy and tooling, compiled to the JVM by a Bux compiler.
 
 Or more succinctly:
 
