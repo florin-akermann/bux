@@ -34,9 +34,9 @@ fn inference_is_deterministic(cases: Int, library: ir.Library) -> held.Held {
 /// A drawn module, checked twice.
 // example: deterministic_tried(drawn.seeded(1), ir.little_library()).why == ""
 fn deterministic_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
-    source := drawn_module(draw)
-    once := answer_text(checking.checked(source, library))
-    again := answer_text(checking.checked(source, library))
+    let source = drawn_module(draw)
+    let once = answer_text(checking.checked(source, library))
+    let again = answer_text(checking.checked(source, library))
     if once != again {
         return checking.Tried { input: source, why: "one check gave " + held.quoted(once) + " and the next gave " + held.quoted(again) }
     }
@@ -66,12 +66,12 @@ fn a_call_in_front_is_refused_for_the_plain_call(cases: Int, library: ir.Library
 /// A drawn call, written in front of the name and plainly: the first refused, the second not.
 // example: call_tried(drawn.seeded(1), ir.little_library()).why == ""
 fn call_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
-    first := drawn.picked(draw, ["count", "1", "twice(count)"], "count")
-    rest := drawn.picked(drawn.next(draw), ["said", "\"hi\""], "said")
-    in_front := first + ".held(" + rest + ")"
-    plain := "held(" + first + ", " + rest + ")"
-    refused := checking.checked(calling(in_front), library)
-    said := checking.code_of(refused) + " " + help_given(refused)
+    let first = drawn.picked(draw, ["count", "1", "twice(count)"], "count")
+    let rest = drawn.picked(drawn.next(draw), ["said", "\"hi\""], "said")
+    let in_front = first + ".held(" + rest + ")"
+    let plain = "held(" + first + ", " + rest + ")"
+    let refused = checking.checked(calling(in_front), library)
+    let said = checking.code_of(refused) + " " + help_given(refused)
     if said != "L0433 write `" + plain + "`" {
         return checking.Tried { input: in_front, why: "in front it gives " + held.quoted(said) }
     }
@@ -90,7 +90,7 @@ fn help_given(answer: Result<infer.Inference, command.Diagnostic>) -> String {
 /// A module that binds what `call` gives back, with the functions it calls declared below.
 // example: strings.length(calling("held(1, said)")) > 0
 fn calling(call: String) -> String {
-    "fn go(count: Int, said: String) -> String {\n    answer := " + call + "\n    answer\n}\n\nfn held(count: Int, said: String) -> String {\n    said\n}\n\nfn twice(count: Int) -> Int {\n    count + count\n}\n"
+    "fn go(count: Int, said: String) -> String {\n    let answer = " + call + "\n    answer\n}\n\nfn held(count: Int, said: String) -> String {\n    said\n}\n\nfn twice(count: Int) -> Int {\n    count + count\n}\n"
 }
 
 /// A module of distinct pieces, each of which infers on its own, infers.
@@ -98,7 +98,7 @@ fn calling(call: String) -> String {
 fn a_module_of_pieces_infers(cases: Int, library: ir.Library) -> held.Held {
     var found = held.nothing_failed(cases)
     for seed in checking.seeds(cases) {
-        source := checking.module_of(drawn.seeded(seed), pieces())
+        let source = checking.module_of(drawn.seeded(seed), pieces())
         found = checking.noted(found, "a_module_of_pieces_infers", seed, checking.Tried { input: source, why: refusal_text(checking.checked(source, library)) })
     }
     found
@@ -118,8 +118,8 @@ fn a_refusal_points_inside_the_source(cases: Int, library: ir.Library) -> held.H
 /// A drawn module of pieces, with a piece that is refused below them.
 // example: refusal_tried(drawn.seeded(1), ir.little_library()).why == ""
 fn refusal_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
-    refused := drawn.picked(draw, refusals(), "")
-    source := checking.module_of(drawn.next(draw), pieces()) + "\n\n" + refused + "\n"
+    let refused = drawn.picked(draw, refusals(), "")
+    let source = checking.module_of(drawn.next(draw), pieces()) + "\n\n" + refused + "\n"
     match checking.checked(source, library) {
         Ok(_) => checking.Tried { input: source, why: "it is accepted" }
         Err(refusal) => checking.Tried { input: source, why: checking.outside(refusal.span, source) }
@@ -131,7 +131,7 @@ fn refusal_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
 fn every_expression_has_a_type(cases: Int, library: ir.Library) -> held.Held {
     var found = held.nothing_failed(cases)
     for seed in checking.seeds(cases) {
-        source := checking.module_of(drawn.seeded(seed), pieces())
+        let source = checking.module_of(drawn.seeded(seed), pieces())
         found = checking.noted(found, "every_expression_has_a_type", seed, checking.Tried { input: source, why: first_untyped(source, library) })
     }
     found
@@ -162,7 +162,7 @@ fn untyped_in(inference: infer.Inference, source: String) -> String {
 fn no_expression_is_left_unsettled(cases: Int, library: ir.Library) -> held.Held {
     var found = held.nothing_failed(cases)
     for seed in checking.seeds(cases) {
-        source := checking.module_of(drawn.seeded(seed), pieces())
+        let source = checking.module_of(drawn.seeded(seed), pieces())
         found = checking.noted(found, "no_expression_is_left_unsettled", seed, checking.Tried { input: source, why: first_unsettled(source, library) })
     }
     found
@@ -181,7 +181,7 @@ fn first_unsettled(source: String, library: ir.Library) -> String {
 // example: unsettled_in(or_nothing(checking.checked("fn one() -> Int {\n    1\n}\n", ir.little_library())), "fn one() -> Int {\n    1\n}\n") == ""
 fn unsettled_in(inference: infer.Inference, source: String) -> String {
     for written in expressions(inference.resolved.program) {
-        found := checking.type_in(Ok(inference), written.span)
+        let found = checking.type_in(Ok(inference), written.span)
         if checking.occurrence(found, "_", 1).start >= 0 {
             return held.quoted(text_at(source, written)) + " was left unsettled as " + found
         }
@@ -214,11 +214,11 @@ fn a_generic_is_general_enough_for_any_two_uses(cases: Int, library: ir.Library)
 /// Two drawn uses of one generic function, each of which gives back the type it was given.
 // example: generic_tried(drawn.seeded(1), ir.little_library()).why == ""
 fn generic_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
-    first := drawn.picked(draw, values(), Valued { written: "1", of: "Int" })
-    second := drawn.picked(drawn.next(draw), values(), Valued { written: "1", of: "Int" })
-    source := "fn is_general() -> " + second.of + " {\n    one := given(" + first.written + ")\n    two := given(" + second.written + ")\n    two\n}\n\nfn given<T>(value: T) -> T {\n    value\n}\n"
-    once := checking.type_written(source, "given(" + first.written + ")", 1, library)
-    twice := checking.type_written(source, "given(" + second.written + ")", 1, library)
+    let first = drawn.picked(draw, values(), Valued { written: "1", of: "Int" })
+    let second = drawn.picked(drawn.next(draw), values(), Valued { written: "1", of: "Int" })
+    let source = "fn is_general() -> " + second.of + " {\n    let one = given(" + first.written + ")\n    let two = given(" + second.written + ")\n    two\n}\n\nfn given<T>(value: T) -> T {\n    value\n}\n"
+    let once = checking.type_written(source, "given(" + first.written + ")", 1, library)
+    let twice = checking.type_written(source, "given(" + second.written + ")", 1, library)
     if once != first.of || twice != second.of {
         return checking.Tried { input: source, why: "the uses are " + once + " and " + twice }
     }
@@ -244,11 +244,11 @@ fn a_ring_of_records_is_refused_whatever_its_length(cases: Int, library: ir.Libr
 /// A drawn ring of records, whose refusal names the first of them and every step round.
 // example: ring_tried(drawn.seeded(1), ir.little_library()).why == ""
 fn ring_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
-    many := drawn.number(draw, 5) + 1
-    source := along(many: many, last: "Room")
-    message := checking.message_of(checking.checked(source, library))
-    opens := checking.occurrence(message, "`Room` holds ", 1).start == 0
-    closes := is_ending_in(text: message, ending: "`Room`")
+    let many = drawn.number(draw, 5) + 1
+    let source = along(many: many, last: "Room")
+    let message = checking.message_of(checking.checked(source, library))
+    let opens = checking.occurrence(message, "`Room` holds ", 1).start == 0
+    let closes = is_ending_in(text: message, ending: "`Room`")
     if !opens || !closes || times_written(text: message, piece: ", which holds ") != many - 1 {
         return checking.Tried { input: source, why: "the refusal says " + held.quoted(message) }
     }
@@ -260,7 +260,7 @@ fn ring_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
 fn a_chain_of_records_is_accepted(cases: Int, library: ir.Library) -> held.Held {
     var found = held.nothing_failed(cases)
     for seed in checking.seeds(cases) {
-        source := along(many: drawn.number(drawn.seeded(seed), 5) + 1, last: "Int")
+        let source = along(many: drawn.number(drawn.seeded(seed), 5) + 1, last: "Int")
         found = checking.noted(found, "a_chain_of_records_is_accepted", seed, checking.Tried { input: source, why: refusal_text(checking.checked(source, library)) })
     }
     found
@@ -280,16 +280,16 @@ fn an_option_of_unit_is_refused_where_it_is_reached(cases: Int, library: ir.Libr
 /// A drawn shape below a drawn module of pieces, once with `()` and once with `Bool` in it.
 // example: carrying_tried(drawn.seeded(1), ir.little_library()).why == ""
 fn carrying_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
-    shape := drawn.picked(draw, carryings(), Carrying { refused: "", accepted: "", at: "" })
-    above := checking.module_of(drawn.next(draw), pieces()) + "\n\n"
-    source := above + shape.refused + "\n"
-    answer := checking.checked(source, library)
-    at := checking.occurrence(source, shape.at, 1)
-    span := refused_span(answer)
+    let shape = drawn.picked(draw, carryings(), Carrying { refused: "", accepted: "", at: "" })
+    let above = checking.module_of(drawn.next(draw), pieces()) + "\n\n"
+    let source = above + shape.refused + "\n"
+    let answer = checking.checked(source, library)
+    let at = checking.occurrence(source, shape.at, 1)
+    let span = refused_span(answer)
     if checking.code_of(answer) != "L0432" || span.start != at.start || span.length != at.length {
         return checking.Tried { input: source, why: "the refusal is " + refusal_text(answer) + " at " + shown(span) + ", not at " + shown(at) }
     }
-    accepted := above + shape.accepted + "\n"
+    let accepted = above + shape.accepted + "\n"
     if !checking.is_accepted(accepted, library) {
         return checking.Tried { input: accepted, why: "the shape with `Bool` is refused: " + refusal_text(checking.checked(accepted, library)) }
     }
@@ -311,10 +311,10 @@ fn refused_span<T>(answer: Result<T, command.Diagnostic>) -> lexer.Span {
 /// meets it, and at a call of a generic over a `List<()>`.
 // example: list.length(carryings()) == 6
 fn carryings() -> List<Carrying> {
-    given := "\n\nfn is_given(given: ()) -> Bool {\n    true\n}"
-    given_flag := "\n\nfn is_given(given: Bool) -> Bool {\n    given\n}"
-    matched := " {\n        Some(inside) => is_given(inside)\n        None => false\n    }\n}"
-    first := "\n\nfn first<T>(items: List<T>) -> Option<T> {\n    for item in items {\n        return Some(item)\n    }\n    None\n}"
+    let given = "\n\nfn is_given(given: ()) -> Bool {\n    true\n}"
+    let given_flag = "\n\nfn is_given(given: Bool) -> Bool {\n    given\n}"
+    let matched = " {\n        Some(inside) => is_given(inside)\n        None => false\n    }\n}"
+    let first = "\n\nfn first<T>(items: List<T>) -> Option<T> {\n    for item in items {\n        return Some(item)\n    }\n    None\n}"
     [Carrying { refused: "fn is_held(maybe: Option<()>) -> Bool {\n    true\n}", accepted: "fn is_held(maybe: Option<Bool>) -> Bool {\n    true\n}", at: "Option<()>" }, Carrying { refused: "type Held = {\n    maybe: Option<()>\n}", accepted: "type Held = {\n    maybe: Option<Bool>\n}", at: "Option<()>" }, Carrying { refused: "fn held() -> List<Option<()>> {\n    []\n}", accepted: "fn held() -> List<Option<Bool>> {\n    []\n}", at: "Option<()>" }, Carrying { refused: "fn is_there() -> Bool {\n    match Some(()) {\n        Some(_) => true\n        None => false\n    }\n}", accepted: "fn is_there() -> Bool {\n    match Some(true) {\n        Some(_) => true\n        None => false\n    }\n}", at: "Some(())" }, Carrying { refused: "fn is_there() -> Bool {\n    match None" + matched + given, accepted: "fn is_there() -> Bool {\n    match None" + matched + given_flag, at: "None" }, Carrying { refused: "fn is_first_given(all: List<()>) -> Bool {\n    match first(all)" + matched + first + given, accepted: "fn is_first_given(all: List<Bool>) -> Bool {\n    match first(all)" + matched + first + given_flag, at: "first(all)" }]
 }
 
@@ -363,7 +363,7 @@ fn times_written(text: String, piece: String) -> Int {
 // example: is_ending_in(text: "ab", ending: "b")
 // example: !is_ending_in(text: "ab", ending: "a")
 fn is_ending_in(text: String, ending: String) -> Bool {
-    from := strings.length(text) - strings.length(ending)
+    let from = strings.length(text) - strings.length(ending)
     from >= 0 && or(strings.cut(text, from, strings.length(text)), "") == ending
 }
 
@@ -372,10 +372,10 @@ fn is_ending_in(text: String, ending: String) -> Bool {
 /// Its parameters, its result, and its body are drawn, so it is refused as often as not.
 // example: strings.length(drawn_module(drawn.seeded(1))) > 0
 fn drawn_module(draw: drawn.Draw) -> String {
-    one := drawn_parameter(draw: draw, named: "one")
-    other := drawn_parameter(draw: checking.after(draw, 2), named: "other")
-    result := drawn.picked(checking.after(draw, 4), drawn_types(), "Int")
-    body := drawn_body(checking.after(draw, 5))
+    let one = drawn_parameter(draw: draw, named: "one")
+    let other = drawn_parameter(draw: checking.after(draw, 2), named: "other")
+    let result = drawn.picked(checking.after(draw, 4), drawn_types(), "Int")
+    let body = drawn_body(checking.after(draw, 5))
     "fn check(" + one + ", " + other + ") -> " + result + " {\n" + body + "}\n\nfn pick<T>(first: T, second: T) -> T {\n    first\n}\n\ntype Box = {\n    held: Int\n}\n"
 }
 
@@ -394,7 +394,7 @@ fn drawn_body(draw: drawn.Draw) -> String {
     var body = ""
     var at = drawn.next(draw)
     for index in checking.numbers_below(drawn.number(draw, 3)) {
-        body += "    held" + shown(index) + " := " + drawn_expression(at) + "\n"
+        body += "    let held" + shown(index) + " = " + drawn_expression(at) + "\n"
         at = drawn.next(at)
     }
     if drawn.number(at, 2) == 0 {

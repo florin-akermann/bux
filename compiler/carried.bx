@@ -15,7 +15,7 @@ import unify
 /// The code and span of the refusal `source` earns against the small prelude, or `""`.
 // example: carried_code("fn is_none() -> Bool {\n    match [None, Some(())] {\n        _ => true\n    }\n}\n") == "L0432 34..38"
 fn carried_code(source: String) -> String {
-    resolved := declared.resolved_of(source)
+    let resolved = declared.resolved_of(source)
     match declared.environment_of(declared.little_environment(), resolved, [], [], unify.empty_table()) {
         Ok(declaring) => refusal.code_given(inferred_and_read(infer.module_inferred(resolved, surface.nothing_imported(), declaring)))
         Err(refused) => infer.code_of_error(refused)

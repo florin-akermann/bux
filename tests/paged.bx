@@ -30,8 +30,8 @@ fn held_over(property: Property, cases: Int, prelude: types.Prelude) -> held.Hel
     var found = held.nothing_failed(cases)
     var index = 0
     for index < cases {
-        seed := drawn.seed_of(index)
-        tried := tried_by(property: property, draw: drawn.seeded(seed), prelude: prelude)
+        let seed = drawn.seed_of(index)
+        let tried = tried_by(property: property, draw: drawn.seeded(seed), prelude: prelude)
         if tried.why != "" {
             found = held.with_failure(found, held.drawn_failure(name_of(property), seed, tried.case, tried.why))
         }
@@ -63,8 +63,8 @@ fn name_of(property: Property) -> String {
 /// A module of type declarations alone, in canonical form and holding no comment, is its page.
 // example: a_module_of_types_alone_holding_no_comment_is_its_own_page(drawn.seeded(1), types.little_prelude()).why == ""
 fn a_module_of_types_alone_holding_no_comment_is_its_own_page(draw: drawn.Draw, prelude: types.Prelude) -> Tried {
-    source := module_of(declared_types(draw))
-    page := page_of(source, prelude)
+    let source = module_of(declared_types(draw))
+    let page = page_of(source, prelude)
     var why = ""
     if page != source {
         why = "the page is " + held.quoted(page)
@@ -75,8 +75,8 @@ fn a_module_of_types_alone_holding_no_comment_is_its_own_page(draw: drawn.Draw, 
 /// Every name a module declares at the top level, a variant among them, is on its page.
 // example: every_name_a_module_declares_is_on_its_page(drawn.seeded(1), types.little_prelude()).why == ""
 fn every_name_a_module_declares_is_on_its_page(draw: drawn.Draw, prelude: types.Prelude) -> Tried {
-    source := module_of(anything(draw))
-    page := page_of(source, prelude)
+    let source = module_of(anything(draw))
+    let page = page_of(source, prelude)
     var why = ""
     for declared in declarations(ok_or(parser.parse(source), ast.Program { items: [] })) {
         if why == "" && !has_text(text: page, piece: declared) {
@@ -89,9 +89,9 @@ fn every_name_a_module_declares_is_on_its_page(draw: drawn.Draw, prelude: types.
 /// A page printed twice is the same page.
 // example: printing_a_page_is_deterministic(drawn.seeded(1), types.little_prelude()).why == ""
 fn printing_a_page_is_deterministic(draw: drawn.Draw, prelude: types.Prelude) -> Tried {
-    source := module_of(anything(draw))
-    first := page_of(source, prelude)
-    second := page_of(source, prelude)
+    let source = module_of(anything(draw))
+    let first = page_of(source, prelude)
+    let second = page_of(source, prelude)
     var why = ""
     if first != second || first == "the module does not type" {
         why = "one page is " + held.quoted(first) + ", the other " + held.quoted(second)
@@ -131,7 +131,7 @@ fn declared_types(draw: drawn.Draw) -> List<String> {
 /// The type declaration numbered `which`, as canonical form writes it, with `number` in its names.
 // example: type_numbered(which: 2, number: 0) == "type Held0 = Held0(String)"
 fn type_numbered(which: Int, number: Int) -> String {
-    n := shown(number)
+    let n = shown(number)
     match which {
         0 => "type Basket" + n + " = {\n    apples: Int\n    pears: Int\n}"
         1 => "type Order" + n + " =\n    | Unplaced" + n + "\n    | Placed" + n + "(Int)"
@@ -143,7 +143,7 @@ fn type_numbered(which: Int, number: Int) -> String {
 /// The function numbered `which`, which needs no other declaration, with `number` in its name.
 // example: function_numbered(which: 0, number: 1) == "fn answer1() -> Int {\n    7\n}"
 fn function_numbered(which: Int, number: Int) -> String {
-    n := shown(number)
+    let n = shown(number)
     match which {
         0 => "fn answer" + n + "() -> Int {\n    7\n}"
         1 => "fn named" + n + "(word: String) -> String {\n    word\n}"

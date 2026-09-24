@@ -47,12 +47,12 @@ import walk
 import written
 
 fn main(arguments: List<String>) -> Int {
-    library := ir.library_read(or(modules.carried("prelude"), ""))
+    let library = ir.library_read(or(modules.carried("prelude"), ""))
     if or(list.at(arguments, 0), "") == "golden" {
         commanded.every_golden_written(library, start_limit())
         return 0
     }
-    counted := every_part_held(Setting { library: library, limit: start_limit() })
+    let counted = every_part_held(Setting { library: library, limit: start_limit() })
     for line in counted.told {
         io.println(line)
     }
@@ -72,8 +72,8 @@ fn main(arguments: List<String>) -> Int {
 /// depends on which worker ends first.
 // example: processors() > 0
 fn every_part_held(setting: Setting) -> Counted {
-    workers := processors()
-    jobs := every_job(chunks: workers, root: ok_or(modules.canonical_path(modules.file_at(".")), "."))
+    let workers = processors()
+    let jobs = every_job(chunks: workers, root: ok_or(modules.canonical_path(modules.file_at(".")), "."))
     counted_of(jobs, pooled(jobs, setting, workers).answers)
 }
 
@@ -105,7 +105,7 @@ fn every_job(chunks: Int, root: String) -> List<Job> {
 // example: chunks_of(values: ["a", "b", "c"], count: 2) == [["a", "b"], ["c"]]
 // example: chunks_of(values: [], count: 2) == [[]]
 fn chunks_of(values: List<String>, count: Int) -> List<List<String>> {
-    size := or((list.length(values) + count - 1) / count, list.length(values))
+    let size = or((list.length(values) + count - 1) / count, list.length(values))
     var pieces = []
     var piece = []
     for value in values {
@@ -128,10 +128,10 @@ fn chunks_of(values: List<String>, count: Int) -> List<List<String>> {
 /// stops the runner with that error, and the runner does not wait for an answer that never comes.
 // example: pooled([], Setting { library: ir.little_library(), limit: 1 }, 2).workers == 1
 fn pooled(jobs: List<Job>, setting: Setting, workers: Int) -> Pooling {
-    pooling := spawn Pool(jobs, workers)
+    let pooling = spawn Pool(jobs, workers)
     var working = []
     for list.length(working) < workers {
-        worker := spawn Worker(pooling, setting)
+        let worker = spawn Worker(pooling, setting)
         _ = send(pooling, Joined(worker), NoLimit)
         working = list.push(working, worker)
     }
@@ -212,9 +212,9 @@ process Worker {
 /// `working` once the job of `given` is held and its answer is sent to the pool.
 // example: list.length(or(map.get(pooled([ExamplesOf([])], Setting { library: ir.little_library(), limit: 1 }, 1).answers, 0), unanswered(0)).found) == 1
 fn worked(working: Working, given: Given) -> Working {
-    mark := command.nanoseconds()
-    found := job_held(given.job, working.setting)
-    answer := Answer { number: given.number, found: found, nanoseconds: command.nanoseconds() - mark }
+    let mark = command.nanoseconds()
+    let found = job_held(given.job, working.setting)
+    let answer = Answer { number: given.number, found: found, nanoseconds: command.nanoseconds() - mark }
     _ = send(working.pool, Finished(answer, given.worker), NoLimit)
     working
 }
@@ -251,13 +251,13 @@ fn processors() -> Int {
 /// What each part held, counted from the `answers` of the pool in the order of `jobs`.
 // example: list.length(counted_of([], map.empty()).told) == 5
 fn counted_of(jobs: List<Job>, answers: map.Map<Int, Answer>) -> Counted {
-    examples := part_tally(Examples, jobs, answers)
-    beside := part_tally(Siblings, jobs, answers)
-    lines := part_tally(Lines, jobs, answers)
-    properties := part_tally(Properties, jobs, answers)
-    commands := part_tally(Commands, jobs, answers)
-    each := [every_of(examples.found), every_of(beside.found), every_of(lines.found), every_of(properties.found), every_of(commands.found)]
-    told := [told_line("examples", examples), told_line("siblings", beside), told_line("example lines", lines), progress_line(part: "properties", cases: list.length(properties.found), nanoseconds: properties.nanoseconds), told_line("command lines", commands)]
+    let examples = part_tally(Examples, jobs, answers)
+    let beside = part_tally(Siblings, jobs, answers)
+    let lines = part_tally(Lines, jobs, answers)
+    let properties = part_tally(Properties, jobs, answers)
+    let commands = part_tally(Commands, jobs, answers)
+    let each = [every_of(examples.found), every_of(beside.found), every_of(lines.found), every_of(properties.found), every_of(commands.found)]
+    let told = [told_line("examples", examples), told_line("siblings", beside), told_line("example lines", lines), progress_line(part: "properties", cases: list.length(properties.found), nanoseconds: properties.nanoseconds), told_line("command lines", commands)]
     Counted { examples: every_of(examples.found), siblings: every_of(beside.found), lines: every_of(lines.found), properties: properties.found, commands: every_of(commands.found), all: every_of(each), told: told }
 }
 
@@ -270,7 +270,7 @@ fn part_tally(part: Part, jobs: List<Job>, answers: map.Map<Int, Answer>) -> Tal
     var number = 0
     for job in jobs {
         if part_of(job) == part {
-            answer := or(map.get(answers, number), unanswered(number))
+            let answer = or(map.get(answers, number), unanswered(number))
             tally = Tally { found: command.all_of(tally.found, answer.found), nanoseconds: tally.nanoseconds + answer.nanoseconds }
         }
         number += 1
@@ -317,14 +317,14 @@ fn start_limit() -> Int {
 /// The line written for a part: its name, how many cases it held, and its whole seconds.
 // example: progress_line(part: "examples", cases: 332, nanoseconds: 41400000000) == "examples: 332 held in 41 s"
 fn progress_line(part: String, cases: Int, nanoseconds: Int) -> String {
-    seconds := or((nanoseconds + 500000000) / 1000000000, 0)
+    let seconds = or((nanoseconds + 500000000) / 1000000000, 0)
     part + ": " + shown(cases) + " held in " + shown(seconds) + " s"
 }
 
 /// Every drawn property, each tried on the same number of drawn cases, in a fixed order.
 // example: list.length(command.all_of([held.nothing_failed(1)], [held.nothing_failed(2)])) == 2
 fn every_property_held(library: ir.Library) -> List<held.Held> {
-    cases := 100
+    let cases = 100
     var found = lexing.every_property(cases, library)
     found = command.all_of(found, parsing.every_property(cases, library))
     found = command.all_of(found, layout.every_property(cases, library))
@@ -353,8 +353,8 @@ fn every_property_held(library: ir.Library) -> List<held.Held> {
 /// The line that counts what the runner held, what it could not try, and what failed.
 // example: summary(Counted { examples: held.nothing_failed(2), siblings: held.nothing_failed(1), lines: held.nothing_failed(3), properties: [held.nothing_failed(100)], commands: held.nothing_failed(4), all: held.nothing_failed(110), told: [] }) == "runner: 2 examples, 1 siblings, 3 example lines, 1 properties of 100 drawn cases, 4 command lines; 0 failed, 0 skipped"
 fn summary(counted: Counted) -> String {
-    drawn := shown(list.length(counted.properties)) + " properties of " + shown(every_of(counted.properties).cases) + " drawn cases"
-    held_part := shown(counted.examples.cases) + " examples, " + shown(counted.siblings.cases) + " siblings, " + shown(counted.lines.cases) + " example lines, " + drawn + ", " + shown(counted.commands.cases) + " command lines"
+    let drawn = shown(list.length(counted.properties)) + " properties of " + shown(every_of(counted.properties).cases) + " drawn cases"
+    let held_part = shown(counted.examples.cases) + " examples, " + shown(counted.siblings.cases) + " siblings, " + shown(counted.lines.cases) + " example lines, " + drawn + ", " + shown(counted.commands.cases) + " command lines"
     "runner: " + held_part + "; " + shown(list.length(counted.all.failures)) + " failed, " + shown(list.length(counted.all.skipped)) + " skipped"
 }
 

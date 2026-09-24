@@ -49,7 +49,7 @@ fn opened_by(phase: Phase) -> String {
 /// The file at `path` held to its sibling, which is what `phase` makes of it.
 // example: list.length(one_held("no-such-directory/a.bx", Tokens, ir.little_library()).failures) == 1
 fn one_held(path: String, phase: Phase, library: ir.Library) -> held.Held {
-    source := ok_or(files.read(path), "")
+    let source = ok_or(files.read(path), "")
     match sibling_of(path, phase) {
         Ok(sibling) => compared(path: sibling.path, expected: sibling.text, found: seen_by(Made { path: path, source: source }, phase, library))
         Err(why) => held.with_failure(held.nothing_failed(1), path + ": " + why)
@@ -81,8 +81,8 @@ fn or_path(read: Result<Sibling, String>) -> String {
 /// The `.ast` or the `.error` beside `path`, where exactly one of the two is there.
 // example: or_path(tree_or_error("no-such-directory/a.bx")) == "needs exactly one of .ast and .error beside it"
 fn tree_or_error(path: String) -> Result<Sibling, String> {
-    tree := read_sibling(path: path, extension: "ast")
-    error := read_sibling(path: path, extension: "error")
+    let tree = read_sibling(path: path, extension: "ast")
+    let error = read_sibling(path: path, extension: "error")
     match tree {
         Ok(found) => only(found, error)
         Err(_) => only_error(error)
@@ -110,7 +110,7 @@ fn only_error(error: Result<Sibling, String>) -> Result<Sibling, String> {
 /// The sibling of `path` with `extension`, read whole.
 // example: or_path(read_sibling(path: "no-such-directory/a.bx", extension: "api")) == "no .api beside it"
 fn read_sibling(path: String, extension: String) -> Result<Sibling, String> {
-    beside := walk.sibling(path, extension)
+    let beside = walk.sibling(path, extension)
     match files.read(beside) {
         Ok(text) => Ok(Sibling { path: beside, text: text })
         Err(_) => Err("no ." + extension + " beside it")
@@ -130,7 +130,7 @@ fn seen_by(file: Made, phase: Phase, library: ir.Library) -> String {
 }
 
 /// Every token of `source` on a line of its own: its kind, its span, and its text quoted.
-// example: tokens_listed("x := 1") == "Identifier 0..1 \"x\"\nPunct(:=) 2..4 \":=\"\nInteger 5..6 \"1\"\n"
+// example: tokens_listed("let x = 1") == "Keyword(let) 0..3 \"let\"\nIdentifier 4..5 \"x\"\nPunct(=) 6..7 \"=\"\nInteger 8..9 \"1\"\n"
 fn tokens_listed(source: String) -> String {
     var written = ""
     for token in lexer.lex(source) {

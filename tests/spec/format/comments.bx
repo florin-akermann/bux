@@ -3,7 +3,7 @@ import io
 
 fn go() {
     // start at nothing
-    total := 0
+    let total = 0
     // around again
     for {
         break

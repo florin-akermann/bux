@@ -96,7 +96,7 @@ fn offering(imported: Imported, module: String, surface: Surface) -> Imported {
     for offered in surface.types {
         own = set.insert(own, offered.name)
     }
-    rename := unify.Renaming { module: module, own: own }
+    let rename = unify.Renaming { module: module, own: own }
     var functions = map.empty()
     for one in surface.functions {
         functions = map.insert(functions, one.name, offered_renamed(one.offered, rename))
@@ -112,7 +112,7 @@ fn offering(imported: Imported, module: String, surface: Surface) -> Imported {
     for given in surface.instances {
         instances = list.push(instances, instance_renamed(given, module))
     }
-    reached := Reached { functions: functions, types: types, instances: instances }
+    let reached = Reached { functions: functions, types: types, instances: instances }
     Imported { surfaces: map.insert(imported.surfaces, module, reached), modules: list.push(imported.modules, module) }
 }
 
@@ -228,21 +228,21 @@ fn held_for(module: String) -> List<OfferedFunction> {
 /// `length<T>(values: List<T>) -> Int`, which the compiler holds.
 // example: unify.text_of(length_scheme().body) == "(List<T>) -> Int"
 fn length_scheme() -> unify.Scheme {
-    element := unify.Parameter(unify.prelude_parameter("T"))
+    let element = unify.Parameter(unify.prelude_parameter("T"))
     unify.Scheme { quantified: [unify.Written(unify.prelude_parameter("T"))], body: unify.Function { parameters: [unify.list_of(element)], result: unify.int() }, required: [] }
 }
 
 /// `push<T>(values: List<T>, value: T) -> List<T>`, which the compiler holds.
 // example: unify.text_of(push_scheme().body) == "(List<T>, T) -> List<T>"
 fn push_scheme() -> unify.Scheme {
-    element := unify.Parameter(unify.prelude_parameter("T"))
+    let element = unify.Parameter(unify.prelude_parameter("T"))
     unify.Scheme { quantified: [unify.Written(unify.prelude_parameter("T"))], body: unify.Function { parameters: [unify.list_of(element), element], result: unify.list_of(element) }, required: [] }
 }
 
 /// `at<T>(values: List<T>, index: Int) -> Option<T>`, which the compiler holds.
 // example: unify.text_of(at_scheme().body) == "(List<T>, Int) -> Option<T>"
 fn at_scheme() -> unify.Scheme {
-    element := unify.Parameter(unify.prelude_parameter("T"))
+    let element = unify.Parameter(unify.prelude_parameter("T"))
     unify.Scheme { quantified: [unify.Written(unify.prelude_parameter("T"))], body: unify.Function { parameters: [unify.list_of(element), unify.int()], result: unify.option_of(element) }, required: [] }
 }
 

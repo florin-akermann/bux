@@ -7,7 +7,7 @@
 import io
 
 fn main(arguments: List<String>) -> Int {
-    words := [["a"], ["b"]]
+    let words = [["a"], ["b"]]
     io.println(shown(index_of_part(words, [["b"]])))
     io.println(shown(index_of_part(words, [["c"]])))
     0

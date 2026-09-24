@@ -1,65 +1,65 @@
-function main 83..263
+function main 83..266
   parameter arguments 91..114
     named-type List 102..114
       named-type String 107..113
   result
     named-type Int 119..122
-  block 123..263
-    binding Immutable counting 129..158
-      spawn 141..158
-        call 147..158
-          name Counter 147..154
-          integer 10 155..157
-    discard 163..198
-      call 167..198
-        name send 167..171
-        name counting 172..180
-        call 182..188
-          name Add 182..185
-          integer 3 186..187
-        name NoLimit 190..197
-    discard 203..236
-      call 207..236
-        name send 207..211
-        name counting 212..220
-        name Stop 222..226
-        name NoLimit 228..235
-    binary Subtract 241..261
-      call 241..256
-        name ended 241..246
-        name counting 247..255
-      integer 13 259..261
-process Counter 322..577
-  function start 344..397
-    parameter initial 353..365
-      named-type Int 362..365
+  block 123..266
+    binding Immutable counting 129..161
+      spawn 144..161
+        call 150..161
+          name Counter 150..157
+          integer 10 158..160
+    discard 166..201
+      call 170..201
+        name send 170..174
+        name counting 175..183
+        call 185..191
+          name Add 185..188
+          integer 3 189..190
+        name NoLimit 193..200
+    discard 206..239
+      call 210..239
+        name send 210..214
+        name counting 215..223
+        name Stop 225..229
+        name NoLimit 231..238
+    binary Subtract 244..264
+      call 244..259
+        name ended 244..249
+        name counting 250..258
+      integer 13 262..264
+process Counter 325..580
+  function start 347..400
+    parameter initial 356..368
+      named-type Int 365..368
     result
-      named-type Int 370..373
-    block 374..397
-      name initial 384..391
-  function receive 403..575
-    parameter total 414..424
-      named-type Int 421..424
-    parameter message 426..442
-      named-type Counted 435..442
+      named-type Int 373..376
+    block 377..400
+      name initial 387..394
+  function receive 406..578
+    parameter total 417..427
+      named-type Int 424..427
+    parameter message 429..445
+      named-type Counted 438..445
     result
-      named-type Next 447..456
-        named-type Int 452..455
-    block 457..575
-      match 467..569
-        name message 473..480
-        arm 495..534
-          pattern-tuple Add 495..506
-            pattern amount 499..505
-          call 510..534
-            name Continue 510..518
-            binary Add 519..533
-              name total 519..524
-              name amount 527..533
-        arm 547..559
-          pattern Stop 547..551
-          name Done 555..559
-type Counted 607..647
-  variant Add 628..636
-    named-type Int 632..635
-  variant Stop 643..647
+      named-type Next 450..459
+        named-type Int 455..458
+    block 460..578
+      match 470..572
+        name message 476..483
+        arm 498..537
+          pattern-tuple Add 498..509
+            pattern amount 502..508
+          call 513..537
+            name Continue 513..521
+            binary Add 522..536
+              name total 522..527
+              name amount 530..536
+        arm 550..562
+          pattern Stop 550..554
+          name Done 558..562
+type Counted 610..650
+  variant Add 631..639
+    named-type Int 635..638
+  variant Stop 646..650

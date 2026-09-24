@@ -11,9 +11,9 @@
 import io
 
 fn main(arguments: List<String>) -> Int {
-    near := Wallet { point: Point { across: 1, down: 2 } }
-    far := Wallet { point: Point { across: 1, down: 3 } }
-    also_near := Wallet { point: Point { across: 1, down: 2 } }
+    let near = Wallet { point: Point { across: 1, down: 2 } }
+    let far = Wallet { point: Point { across: 1, down: 3 } }
+    let also_near = Wallet { point: Point { across: 1, down: 2 } }
     if near == also_near {
         io.println("two wallets of the same point are one value")
     }

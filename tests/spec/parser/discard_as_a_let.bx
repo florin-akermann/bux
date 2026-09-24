@@ -1,0 +1,6 @@
+// expect-error: L0100
+// `_` is not a name, so `let _ = count` binds nothing; `_ = count` throws the value away.
+fn thrown(count: Int) -> Int {
+    let _ = count
+    count
+}

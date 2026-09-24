@@ -21,7 +21,7 @@ fn modules_checked(loaded: List<modules.Module>, prelude: types.Prelude) -> Resu
     var imported = surface.nothing_imported()
     var checked = []
     for module in loaded {
-        inferred := typed(module, imported, prelude)?
+        let inferred = typed(module, imported, prelude)?
         _ = refused_in(module.name, check(inferred))?
         checked = list.push(checked, inferred)
         imported = surface.offering(imported, module.name, types.surface_of(inferred))
@@ -114,8 +114,8 @@ fn no_space() -> Space {
 /// Every `match` of `inferred` checked where it is written, or the first one refused.
 // example: refusal_of("fn f(held: Int) -> Int {\n    held\n}\n") == ""
 fn check(inferred: infer.Inference) -> Result<(), MatchError> {
-    program := inferred.resolved.program
-    reading := Reading { found: inferred.resolved.found, space: space_of(program, surface.every_type(inferred.imported)) }
+    let program = inferred.resolved.program
+    let reading = Reading { found: inferred.resolved.found, space: space_of(program, surface.every_type(inferred.imported)) }
     for function in infer.functions_of(program) {
         _ = block_checked(reading, function.body)?
     }
@@ -123,7 +123,7 @@ fn check(inferred: infer.Inference) -> Result<(), MatchError> {
 }
 
 /// Each statement of a block, in the order it is written.
-// example: refusal_of("fn f(held: Option<Int>) -> Int {\n    other := match held {\n        None => 1\n    }\n    other\n}\n") == "L0500 46..82 this `match` does not cover `Some(_)`"
+// example: refusal_of("fn f(held: Option<Int>) -> Int {\n    let other = match held {\n        None => 1\n    }\n    other\n}\n") == "L0500 49..85 this `match` does not cover `Some(_)`"
 fn block_checked(reading: Reading, walked: ast.Block) -> Result<(), MatchError> {
     for statement in walked.statements {
         _ = statement_checked(reading, statement)?
@@ -279,7 +279,7 @@ fn out_of_order(reading: Reading, matched: ast.MatchExpr) -> Option<MatchError> 
     for arm in matched.arms {
         written = list.push(written, arm.pattern)
     }
-    found := first_among(reading, written)
+    let found = first_among(reading, written)
     if is_found(found) {
         return found
     }
@@ -290,7 +290,7 @@ fn out_of_order(reading: Reading, matched: ast.MatchExpr) -> Option<MatchError> 
 // example: !is_found(first_among(no_reading(), []))
 fn first_among(reading: Reading, patterns: List<ast.Pattern>) -> Option<MatchError> {
     for pattern in patterns {
-        found := alternatives_of(reading, pattern)
+        let found = alternatives_of(reading, pattern)
         if is_found(found) {
             return found
         }
@@ -311,7 +311,7 @@ fn alternatives_of(reading: Reading, pattern: ast.Pattern) -> Option<MatchError>
 /// The first of `alternatives` out of place, or the first out of place inside one of them.
 // example: !is_found(alternatives_placed(no_reading(), []))
 fn alternatives_placed(reading: Reading, alternatives: List<ast.Pattern>) -> Option<MatchError> {
-    found := first_out_of_place(reading, alternatives)
+    let found = first_out_of_place(reading, alternatives)
     if is_found(found) {
         return found
     }
@@ -323,9 +323,9 @@ fn alternatives_placed(reading: Reading, alternatives: List<ast.Pattern>) -> Opt
 fn first_out_of_place(reading: Reading, written: List<ast.Pattern>) -> Option<MatchError> {
     var placed_above = []
     for pattern in written {
-        steps := steps_of(reading, pattern)
+        let steps = steps_of(reading, pattern)
         for above in placed_above {
-            found := out_of_place(written: steps, above: above, span: pattern.span)
+            let found = out_of_place(written: steps, above: above, span: pattern.span)
             if is_found(found) {
                 return found
             }
@@ -377,7 +377,7 @@ fn named_placed(reading: Reading, so_far: Placing, path: ast.Path) -> Placing {
 /// `so_far` with the constructor `path` names, where a declaration places it.
 // example: placed_at(no_reading(), Placing { steps: [], whole: true }, ast.Path { module: None, name: ast.Name { text: "None", span: lexer.Span { start: 0, length: 4 } } }).steps == [Step { at: 1, name: "None" }]
 fn placed_at(reading: Reading, so_far: Placing, path: ast.Path) -> Placing {
-    name := ast.path_text(path)
+    let name = ast.path_text(path)
     match declared_at(reading.space, name) {
         Some(at) => Placing { steps: list.push(so_far.steps, Step { at: at, name: name }), whole: true }
         None => so_far { whole: false }
@@ -406,8 +406,8 @@ fn each_placed(reading: Reading, so_far: Placing, elements: List<ast.Pattern>) -
 fn out_of_place(written: List<Step>, above: List<Step>, span: lexer.Span) -> Option<MatchError> {
     var index = 0
     for index < list.length(written) && index < list.length(above) {
-        here := or(list.at(written, index), Step { at: 0, name: "" })
-        there := or(list.at(above, index), here)
+        let here = or(list.at(written, index), Step { at: 0, name: "" })
+        let there = or(list.at(above, index), here)
         if here.at > there.at {
             return None
         }
@@ -474,7 +474,7 @@ fn every_alternative(reading: Reading, alternatives: List<ast.Pattern>) -> List<
 /// declaration lists and the patterns written under it need not line up.
 // example: list.length(constructed(no_reading(), "None", [])) == 1
 fn constructed(reading: Reading, name: String, written: List<ast.Pattern>) -> List<Pat> {
-    count := carried_by(reading.space, name)
+    let count = carried_by(reading.space, name)
     var choices = [[]]
     var position = 0
     for position < count {
@@ -571,7 +571,7 @@ fn leading_siblings(space: Space, rows: List<List<Pat>>) -> Option<List<Signatur
 // example: or(first_constructor([[Wildcard], [Constructed { name: "None", arguments: [] }]]), "") == "None"
 fn first_constructor(rows: List<List<Pat>>) -> Option<String> {
     for row in rows {
-        name := leading_name(or(list.at(row, 0), Wildcard))
+        let name = leading_name(or(list.at(row, 0), Wildcard))
         if name != "" {
             return Some(name)
         }
@@ -616,7 +616,7 @@ fn each_constructor(space: Space, rows: List<List<Pat>>, narrower: Int, siblings
     var left = []
     for one in siblings {
         for row in uncovered(space, specialised(rows, one), one.carries + narrower) {
-            leading := Constructed { name: one.name, arguments: taken(row, one.carries) }
+            let leading = Constructed { name: one.name, arguments: taken(row, one.carries) }
             left = list.push(left, led_with(leading: [leading], rest: rest_of(row, one.carries)))
         }
     }
@@ -628,7 +628,7 @@ fn each_constructor(space: Space, rows: List<List<Pat>>, narrower: Int, siblings
 fn specialised(rows: List<List<Pat>>, one: Signature) -> List<List<Pat>> {
     var under = []
     for row in rows {
-        leading := or(list.at(row, 0), Literal)
+        let leading = or(list.at(row, 0), Literal)
         if is_about(leading, one) {
             under = list.push(under, led_with(leading: opened(leading, one), rest: rest_of(row, 1)))
         }
@@ -726,7 +726,7 @@ fn space_of(program: ast.Program, reached: List<surface.OfferedType>) -> Space {
 /// The same, with `signatures` as the constructors of one more type.
 // example: or(declared_at(declare(Space { declared: [], of_constructor: map.empty() }, [Signature { name: "A", carries: 0 }]), "A"), -1) == 0
 fn declare(space: Space, signatures: List<Signature>) -> Space {
-    at := list.length(space.declared)
+    let at = list.length(space.declared)
     var of_constructor = space.of_constructor
     for one in signatures {
         of_constructor = map.insert(of_constructor, one.name, at)

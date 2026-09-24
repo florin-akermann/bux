@@ -34,7 +34,7 @@ fn program(from: Cursor) -> Result<ast.Program, ParseError> {
     var cursor = from
     var items = []
     for !is_at_end(cursor) {
-        declared := item(cursor)?
+        let declared = item(cursor)?
         items = list.push(items, declared.value)
         cursor = expect_end_of_line(declared.cursor)?
     }
@@ -61,7 +61,7 @@ fn item(cursor: Cursor) -> Result<Parsed<ast.Item>, ParseError> {
         return derive_item(cursor)
     }
     if is_at_keyword(cursor, lexer.Fn) {
-        declared := function_declaration(cursor)?
+        let declared = function_declaration(cursor)?
         return Ok(Parsed { value: ast.Function(declared.value), cursor: declared.cursor })
     }
     if is_at_keyword(cursor, lexer.Extern) {
@@ -85,15 +85,15 @@ fn reaching_java(cursor: Cursor) -> Result<Parsed<ast.Item>, ParseError> {
 /// `extern type File = "java.io.File"`: a name for a Java class a value is held as.
 // example: item_printed(foreign_type(over("extern type interface Path = \"java.nio.file.Path\""))) == "type Path 0..49\n  java interface java.nio.file.Path 29..49\n"
 fn foreign_type(cursor: Cursor) -> Result<Parsed<ast.Item>, ParseError> {
-    start := offset(cursor)
-    past_extern := expect_keyword(cursor, lexer.Extern)?
-    past_type := expect_keyword(past_extern, lexer.Type)?
-    called := how_it_is_called(past_type)
-    name := expect_name(called.cursor, NameWanted)?
-    equals := expect_punct(name.cursor, lexer.Eq)?
-    class := java_name(equals)?
-    definition := ast.Foreign { class: class.value, called: called.value }
-    declared := ast.TypeDeclaration { name: name.value, parameters: [], definition: definition, span: span_since(class.cursor, start) }
+    let start = offset(cursor)
+    let past_extern = expect_keyword(cursor, lexer.Extern)?
+    let past_type = expect_keyword(past_extern, lexer.Type)?
+    let called = how_it_is_called(past_type)
+    let name = expect_name(called.cursor, NameWanted)?
+    let equals = expect_punct(name.cursor, lexer.Eq)?
+    let class = java_name(equals)?
+    let definition = ast.Foreign { class: class.value, called: called.value }
+    let declared = ast.TypeDeclaration { name: name.value, parameters: [], definition: definition, span: span_since(class.cursor, start) }
     Ok(Parsed { value: ast.Type(declared), cursor: class.cursor })
 }
 
@@ -113,17 +113,17 @@ fn how_it_is_called(cursor: Cursor) -> Parsed<ast.Called> {
 // example: printed("extern new now() -> Clock") == "extern new now 0..25\n  result\n    named-type Clock 20..25\n"
 // example: failed(declared_extern(over("extern method len() -> Int = \"length\""))) == "18..19 expected a name, found `)`\n"
 fn declared_extern(cursor: Cursor) -> Result<Parsed<ast.Item>, ParseError> {
-    start := offset(cursor)
-    past_extern := expect_keyword(cursor, lexer.Extern)?
-    member := extern_member(past_extern)?
-    gives := given_back(member.cursor)
-    name := expect_name(gives.cursor, FunctionNameWanted)?
-    opened := expect_punct(name.cursor, lexer.LParen)?
-    parameters := taken(opened, member.value)?
-    arrow := expect_punct(parameters.cursor, lexer.Arrow)?
-    result := type_ref(arrow)?
-    reaches := reaching(result.cursor, member.value)?
-    declared := ast.ExternDeclaration { name: name.value, reaches: reaches.value, gives: gives.value, parameters: parameters.value, result: result.value, span: span_since(reaches.cursor, start) }
+    let start = offset(cursor)
+    let past_extern = expect_keyword(cursor, lexer.Extern)?
+    let member = extern_member(past_extern)?
+    let gives = given_back(member.cursor)
+    let name = expect_name(gives.cursor, FunctionNameWanted)?
+    let opened = expect_punct(name.cursor, lexer.LParen)?
+    let parameters = taken(opened, member.value)?
+    let arrow = expect_punct(parameters.cursor, lexer.Arrow)?
+    let result = type_ref(arrow)?
+    let reaches = reaching(result.cursor, member.value)?
+    let declared = ast.ExternDeclaration { name: name.value, reaches: reaches.value, gives: gives.value, parameters: parameters.value, result: result.value, span: span_since(reaches.cursor, start) }
     Ok(Parsed { value: ast.Extern(declared), cursor: reaches.cursor })
 }
 
@@ -131,7 +131,7 @@ fn declared_extern(cursor: Cursor) -> Result<Parsed<ast.Item>, ParseError> {
 // example: position_after(extern_member(over("static x"))) == 1
 // example: failed(extern_member(over("fixed x"))) == "0..5 expected `field`, `static`, `method`, or `new`, found `fixed`\n"
 fn extern_member(cursor: Cursor) -> Result<Parsed<Member>, ParseError> {
-    word := word_at(cursor)
+    let word = word_at(cursor)
     if word == "field" {
         return Ok(Parsed { value: FieldMember, cursor: advanced(cursor) })
     }
@@ -151,7 +151,7 @@ fn extern_member(cursor: Cursor) -> Result<Parsed<Member>, ParseError> {
 // example: position_after(Ok(given_back(over("int length(")))) == 1
 // example: position_after(Ok(given_back(over("int(")))) == 0
 fn given_back(cursor: Cursor) -> Parsed<ast.Gives> {
-    word := word_before_a_name(cursor)
+    let word = word_before_a_name(cursor)
     if word == "int" {
         return Parsed { value: ast.GivesInt, cursor: advanced(cursor) }
     }
@@ -169,13 +169,13 @@ fn given_back(cursor: Cursor) -> Parsed<ast.Gives> {
 // example: failed(taken(over(")"), MethodMember)) == "0..1 expected a name, found `)`\n"
 fn taken(cursor: Cursor, member: Member) -> Result<Parsed<List<ast.ExternParameter>>, ParseError> {
     if member == FieldMember {
-        closed := expect_punct(cursor, lexer.RParen)?
+        let closed = expect_punct(cursor, lexer.RParen)?
         return Ok(Parsed { value: [], cursor: closed })
     }
     var parameters = []
     var step = opening(cursor, lexer.RParen, emptiness_of(member))
     for is_open(step) {
-        taken_one := extern_parameter(cursor_of(step))?
+        let taken_one = extern_parameter(cursor_of(step))?
         parameters = list.push(parameters, taken_one.value)
         step = after_element(taken_one.cursor, lexer.RParen)?
     }
@@ -194,8 +194,8 @@ fn emptiness_of(member: Member) -> Emptiness {
 /// One parameter of an `extern`, with `int` before its name where the member narrows it.
 // example: position_after(extern_parameter(over("int index: Int"))) == 4
 fn extern_parameter(cursor: Cursor) -> Result<Parsed<ast.ExternParameter>, ParseError> {
-    takes := narrowed(cursor)
-    declared := parameter(takes.cursor)?
+    let takes = narrowed(cursor)
+    let declared = parameter(takes.cursor)?
     Ok(Parsed { value: ast.ExternParameter { declared: declared.value, takes: takes.value }, cursor: declared.cursor })
 }
 
@@ -250,8 +250,8 @@ fn reaching(cursor: Cursor, member: Member) -> Result<Parsed<ast.Reaches>, Parse
     if member == NewMember {
         return Ok(Parsed { value: ast.Constructor, cursor: cursor })
     }
-    equals := expect_punct(cursor, lexer.Eq)?
-    named := java_name(equals)?
+    let equals = expect_punct(cursor, lexer.Eq)?
+    let named = java_name(equals)?
     Ok(Parsed { value: reached_by(member, named.value), cursor: named.cursor })
 }
 
@@ -277,18 +277,18 @@ fn reached_by(member: Member, named: ast.JavaName) -> ast.Reaches {
 // example: position_after(java_name(over("\"java.io.File\""))) == 1
 // example: failed(java_name(over("File"))) == "0..4 expected a Java name in quotes, found `File`\n"
 fn java_name(cursor: Cursor) -> Result<Parsed<ast.JavaName>, ParseError> {
-    token := expect(cursor, lexer.String, JavaNameWanted)?
-    text := decode_string(token.value)?
+    let token = expect(cursor, lexer.String, JavaNameWanted)?
+    let text = decode_string(token.value)?
     Ok(Parsed { value: ast.JavaName { text: text, span: token.value.span }, cursor: token.cursor })
 }
 
 /// `import io`: another module, by its name.
 // example: item_printed(import_item(over("import io"))) == "import io 0..9\n"
 fn import_item(cursor: Cursor) -> Result<Parsed<ast.Item>, ParseError> {
-    start := offset(cursor)
-    past_import := expect_keyword(cursor, lexer.Import)?
-    module := expect_name(past_import, NameWanted)?
-    declared := ast.ImportDeclaration { module: module.value, span: span_since(module.cursor, start) }
+    let start = offset(cursor)
+    let past_import = expect_keyword(cursor, lexer.Import)?
+    let module = expect_name(past_import, NameWanted)?
+    let declared = ast.ImportDeclaration { module: module.value, span: span_since(module.cursor, start) }
     Ok(Parsed { value: ast.Import(declared), cursor: module.cursor })
 }
 
@@ -296,13 +296,13 @@ fn import_item(cursor: Cursor) -> Result<Parsed<ast.Item>, ParseError> {
 // example: item_printed(type_item(over("type Id = Id(Int)"))) == "type Id 0..17\n  variant Id 10..17\n    named-type Int 13..16\n"
 // example: position_after(type_item(over("type Ids = List<Int>"))) == 4
 fn type_item(cursor: Cursor) -> Result<Parsed<ast.Item>, ParseError> {
-    start := offset(cursor)
-    past_type := expect_keyword(cursor, lexer.Type)?
-    name := expect_name(past_type, NameWanted)?
-    parameters := type_parameters(name.cursor)?
-    equals := expect_punct(parameters.cursor, lexer.Eq)?
-    definition := type_definition(equals)?
-    declared := ast.TypeDeclaration { name: name.value, parameters: parameters.value, definition: definition.value, span: span_since(definition.cursor, start) }
+    let start = offset(cursor)
+    let past_type = expect_keyword(cursor, lexer.Type)?
+    let name = expect_name(past_type, NameWanted)?
+    let parameters = type_parameters(name.cursor)?
+    let equals = expect_punct(parameters.cursor, lexer.Eq)?
+    let definition = type_definition(equals)?
+    let declared = ast.TypeDeclaration { name: name.value, parameters: parameters.value, definition: definition.value, span: span_since(definition.cursor, start) }
     Ok(Parsed { value: ast.Type(declared), cursor: definition.cursor })
 }
 
@@ -310,18 +310,18 @@ fn type_item(cursor: Cursor) -> Result<Parsed<ast.Item>, ParseError> {
 // example: position_after(type_definition(over("| On\n| Off"))) == 5
 fn type_definition(cursor: Cursor) -> Result<Parsed<ast.TypeDefinition>, ParseError> {
     if is_at_punct(cursor, lexer.LBrace) {
-        body := record_body(cursor)?
+        let body = record_body(cursor)?
         return Ok(Parsed { value: ast.RecordType(body.value), cursor: body.cursor })
     }
     if !is_at_variant_bar(cursor) {
-        only := variant(cursor)?
+        let only = variant(cursor)?
         return Ok(Parsed { value: ast.Variants([only.value]), cursor: only.cursor })
     }
     var variants = []
     var after = cursor
     for is_at_variant_bar(after) {
-        bar := expect_punct(skip_newline(after), lexer.Pipe)?
-        declared := variant(bar)?
+        let bar = expect_punct(skip_newline(after), lexer.Pipe)?
+        let declared = variant(bar)?
         variants = list.push(variants, declared.value)
         after = declared.cursor
     }
@@ -338,9 +338,9 @@ fn is_at_variant_bar(cursor: Cursor) -> Bool {
 /// One variant, with whatever it carries.
 // example: position_after(variant(over("Failed(String)"))) == 4
 fn variant(cursor: Cursor) -> Result<Parsed<ast.Variant>, ParseError> {
-    start := offset(cursor)
-    name := expect_name(cursor, NameWanted)?
-    payload := variant_payload(name.cursor)?
+    let start = offset(cursor)
+    let name = expect_name(cursor, NameWanted)?
+    let payload = variant_payload(name.cursor)?
     Ok(Parsed { value: ast.Variant { name: name.value, payload: payload.value, span: span_since(payload.cursor, start) }, cursor: payload.cursor })
 }
 
@@ -348,24 +348,24 @@ fn variant(cursor: Cursor) -> Result<Parsed<ast.Variant>, ParseError> {
 // example: failed(variant_payload(over("()"))) == "1..2 expected a type, found `)`\n"
 fn variant_payload(cursor: Cursor) -> Result<Parsed<ast.VariantPayload>, ParseError> {
     if is_at_punct(cursor, lexer.LBrace) {
-        body := record_body(cursor)?
+        let body = record_body(cursor)?
         return Ok(Parsed { value: ast.RecordPayload(body.value), cursor: body.cursor })
     }
     if !is_at_punct(cursor, lexer.LParen) {
         return Ok(Parsed { value: ast.NoPayload, cursor: cursor })
     }
-    types := type_list(advanced(cursor), lexer.RParen)?
+    let types = type_list(advanced(cursor), lexer.RParen)?
     Ok(Parsed { value: ast.TuplePayload(types.value), cursor: types.cursor })
 }
 
 /// `{ name: Type … }`, one field per line.
 // example: position_after(record_body(over("{\n    id: Int\n}"))) == 6
 fn record_body(cursor: Cursor) -> Result<Parsed<List<ast.RecordField>>, ParseError> {
-    opened := expect_punct(cursor, lexer.LBrace)?
+    let opened = expect_punct(cursor, lexer.LBrace)?
     var fields = []
     var step = line_opening(opened, lexer.RBrace)?
     for is_open(step) {
-        field := record_field(cursor_of(step))?
+        let field = record_field(cursor_of(step))?
         fields = list.push(fields, field.value)
         step = line_opening(after_line(field.cursor, lexer.RBrace)?, lexer.RBrace)?
     }
@@ -375,42 +375,42 @@ fn record_body(cursor: Cursor) -> Result<Parsed<List<ast.RecordField>>, ParseErr
 /// `name: Type`, one line of a record body.
 // example: position_after(record_field(over("id: Int"))) == 3
 fn record_field(cursor: Cursor) -> Result<Parsed<ast.RecordField>, ParseError> {
-    start := offset(cursor)
-    name := expect_name(cursor, NameWanted)?
-    colon := expect_punct(name.cursor, lexer.Colon)?
-    written := type_ref(colon)?
+    let start = offset(cursor)
+    let name = expect_name(cursor, NameWanted)?
+    let colon = expect_punct(name.cursor, lexer.Colon)?
+    let written = type_ref(colon)?
     Ok(Parsed { value: ast.RecordField { name: name.value, type_ref: written.value, span: span_since(written.cursor, start) }, cursor: written.cursor })
 }
 
 /// `trait Eq<T> { … }`: a name, the one type it is written over, and a signature per line.
 // example: item_printed(trait_item(over("trait Named<T> {\n    fn name(value: T) -> String\n}"))) == "trait Named 0..50\n  type-parameter T 12..13\n  signature name 21..48\n    parameter value 29..37\n      named-type T 36..37\n    result\n      named-type String 42..48\n"
 fn trait_item(cursor: Cursor) -> Result<Parsed<ast.Item>, ParseError> {
-    start := offset(cursor)
-    past_trait := expect_keyword(cursor, lexer.Trait)?
-    name := expect_name(past_trait, NameWanted)?
-    opened_angle := expect_punct(name.cursor, lexer.Lt)?
-    written_over := expect_name(opened_angle, NameWanted)?
-    closed_angle := expect_punct(written_over.cursor, lexer.Gt)?
-    opened := expect_punct(closed_angle, lexer.LBrace)?
+    let start = offset(cursor)
+    let past_trait = expect_keyword(cursor, lexer.Trait)?
+    let name = expect_name(past_trait, NameWanted)?
+    let opened_angle = expect_punct(name.cursor, lexer.Lt)?
+    let written_over = expect_name(opened_angle, NameWanted)?
+    let closed_angle = expect_punct(written_over.cursor, lexer.Gt)?
+    let opened = expect_punct(closed_angle, lexer.LBrace)?
     var methods = []
     var step = body_opening(opened, 0)
     for is_open(step) {
-        method := signature(cursor_of(step))?
+        let method = signature(cursor_of(step))?
         methods = list.push(methods, method.value)
         step = body_opening(method.cursor, 1)
     }
-    declared := ast.TraitDeclaration { name: name.value, parameter: written_over.value, methods: methods, span: span_since(cursor_of(step), start) }
+    let declared = ast.TraitDeclaration { name: name.value, parameter: written_over.value, methods: methods, span: span_since(cursor_of(step), start) }
     Ok(Parsed { value: ast.Trait(declared), cursor: cursor_of(step) })
 }
 
 /// A function's first line with no body, which is what a trait declares a method as.
 // example: position_after(signature(over("fn go() -> Int"))) == 6
 fn signature(cursor: Cursor) -> Result<Parsed<ast.Signature>, ParseError> {
-    start := offset(cursor)
-    past_fn := expect_keyword(cursor, lexer.Fn)?
-    name := expect_name(past_fn, FunctionNameWanted)?
-    shape := takes_and_gives(name.cursor)?
-    declared := ast.Signature { name: name.value, parameters: shape.value.parameters, result: shape.value.result, span: span_since(shape.cursor, start) }
+    let start = offset(cursor)
+    let past_fn = expect_keyword(cursor, lexer.Fn)?
+    let name = expect_name(past_fn, FunctionNameWanted)?
+    let shape = takes_and_gives(name.cursor)?
+    let declared = ast.Signature { name: name.value, parameters: shape.value.parameters, result: shape.value.result, span: span_since(shape.cursor, start) }
     Ok(Parsed { value: declared, cursor: shape.cursor })
 }
 
@@ -420,24 +420,24 @@ fn signature(cursor: Cursor) -> Result<Parsed<ast.Signature>, ParseError> {
 /// exactly as a constrained function is.
 // example: item_printed(instance_item(over("instance<T> Show<Box<T>> {\n    fn shown(value: Box<T>) -> String {\n        \"box\"\n    }\n}"))) == "instance Show<Box> 0..88\n  function shown 31..86\n    type-parameter T 9..10\n    parameter value 40..53\n      named-type Box 47..53\n        named-type T 51..52\n    result\n      named-type String 58..64\n    block 65..86\n      string \"box\" 75..80\n"
 fn instance_item(cursor: Cursor) -> Result<Parsed<ast.Item>, ParseError> {
-    start := offset(cursor)
-    past_instance := expect_keyword(cursor, lexer.Instance)?
-    over_types := constrained_parameters(past_instance)?
-    trait_name := expect_name(over_types.cursor, TraitWanted)?
-    opened_angle := expect_punct(trait_name.cursor, lexer.Lt)?
-    for_type := expect_name(opened_angle, TypeWanted)?
-    arguments := type_parameters(for_type.cursor)?
-    closed_angle := expect_punct(arguments.cursor, lexer.Gt)?
-    opened := expect_punct(closed_angle, lexer.LBrace)?
+    let start = offset(cursor)
+    let past_instance = expect_keyword(cursor, lexer.Instance)?
+    let over_types = constrained_parameters(past_instance)?
+    let trait_name = expect_name(over_types.cursor, TraitWanted)?
+    let opened_angle = expect_punct(trait_name.cursor, lexer.Lt)?
+    let for_type = expect_name(opened_angle, TypeWanted)?
+    let arguments = type_parameters(for_type.cursor)?
+    let closed_angle = expect_punct(arguments.cursor, lexer.Gt)?
+    let opened = expect_punct(closed_angle, lexer.LBrace)?
     var methods = []
     var step = body_opening(opened, 0)
     for is_open(step) {
-        method := function_declaration(cursor_of(step))?
-        generic := method.value
+        let method = function_declaration(cursor_of(step))?
+        let generic = method.value
         methods = list.push(methods, generic { type_parameters: over_types.value })
         step = body_opening(method.cursor, 1)
     }
-    declared := ast.InstanceDeclaration { trait_name: trait_name.value, type_parameters: over_types.value, for_type: for_type.value, arguments: arguments.value, methods: methods, span: span_since(cursor_of(step), start) }
+    let declared = ast.InstanceDeclaration { trait_name: trait_name.value, type_parameters: over_types.value, for_type: for_type.value, arguments: arguments.value, methods: methods, span: span_since(cursor_of(step), start) }
     Ok(Parsed { value: ast.Instance(declared), cursor: cursor_of(step) })
 }
 
@@ -446,37 +446,37 @@ fn instance_item(cursor: Cursor) -> Result<Parsed<ast.Item>, ParseError> {
 /// Any number of functions parses here, because the type phase holds them to the one process shape.
 // example: item_printed(process_item(over("process Counter {\n    fn start() -> Int {\n        0\n    }\n}"))) == "process Counter 0..59\n  function start 22..57\n    result\n      named-type Int 36..39\n    block 40..57\n      integer 0 50..51\n"
 fn process_item(cursor: Cursor) -> Result<Parsed<ast.Item>, ParseError> {
-    start := offset(cursor)
-    past_process := expect_keyword(cursor, lexer.Process)?
-    name := expect_name(past_process, NameWanted)?
-    opened := expect_punct(name.cursor, lexer.LBrace)?
+    let start = offset(cursor)
+    let past_process = expect_keyword(cursor, lexer.Process)?
+    let name = expect_name(past_process, NameWanted)?
+    let opened = expect_punct(name.cursor, lexer.LBrace)?
     var functions = []
     var step = body_opening(opened, 0)
     for is_open(step) {
-        function := function_declaration(cursor_of(step))?
+        let function = function_declaration(cursor_of(step))?
         functions = list.push(functions, function.value)
         step = body_opening(function.cursor, 1)
     }
-    declared := ast.ProcessDeclaration { name: name.value, functions: functions, span: span_since(cursor_of(step), start) }
+    let declared = ast.ProcessDeclaration { name: name.value, functions: functions, span: span_since(cursor_of(step), start) }
     Ok(Parsed { value: ast.Process(declared), cursor: cursor_of(step) })
 }
 
 /// `derive Eq, Ord for User`: the traits the compiler writes, and the type it writes them for.
 // example: item_printed(derive_item(over("derive Eq, Hash for Id"))) == "derive Eq, Hash for Id 0..22\n"
 fn derive_item(cursor: Cursor) -> Result<Parsed<ast.Item>, ParseError> {
-    start := offset(cursor)
-    past_derive := expect_keyword(cursor, lexer.Derive)?
-    first := expect_name(past_derive, NameWanted)?
+    let start = offset(cursor)
+    let past_derive = expect_keyword(cursor, lexer.Derive)?
+    let first = expect_name(past_derive, NameWanted)?
     var traits = [first.value]
     var after = first.cursor
     for is_at_punct(after, lexer.Comma) {
-        next := expect_name(advanced(after), NameWanted)?
+        let next = expect_name(advanced(after), NameWanted)?
         traits = list.push(traits, next.value)
         after = next.cursor
     }
-    past_for := expect_keyword(after, lexer.For)?
-    for_type := expect_name(past_for, NameWanted)?
-    declared := ast.DeriveDeclaration { traits: traits, for_type: for_type.value, span: span_since(for_type.cursor, start) }
+    let past_for = expect_keyword(after, lexer.For)?
+    let for_type = expect_name(past_for, NameWanted)?
+    let declared = ast.DeriveDeclaration { traits: traits, for_type: for_type.value, span: span_since(for_type.cursor, start) }
     Ok(Parsed { value: ast.Derive(declared), cursor: for_type.cursor })
 }
 
@@ -484,28 +484,28 @@ fn derive_item(cursor: Cursor) -> Result<Parsed<ast.Item>, ParseError> {
 // example: printed("fn go() {\n}") == "function go 0..11\n  block 8..11\n"
 // example: failed(function_declaration(over("fn (x)"))) == "3..4 expected a function name, found `(`\nhelp: every function has a name; Bux has no anonymous functions\n"
 fn function_declaration(cursor: Cursor) -> Result<Parsed<ast.FunctionDeclaration>, ParseError> {
-    start := offset(cursor)
-    past_fn := expect_keyword(cursor, lexer.Fn)?
-    name := expect_name(past_fn, FunctionNameWanted)?
-    generic := constrained_parameters(name.cursor)?
-    shape := takes_and_gives(generic.cursor)?
-    body := block(shape.cursor)?
-    declared := ast.FunctionDeclaration { name: name.value, type_parameters: generic.value, parameters: shape.value.parameters, result: shape.value.result, body: body.value, span: span_since(body.cursor, start) }
+    let start = offset(cursor)
+    let past_fn = expect_keyword(cursor, lexer.Fn)?
+    let name = expect_name(past_fn, FunctionNameWanted)?
+    let generic = constrained_parameters(name.cursor)?
+    let shape = takes_and_gives(generic.cursor)?
+    let body = block(shape.cursor)?
+    let declared = ast.FunctionDeclaration { name: name.value, type_parameters: generic.value, parameters: shape.value.parameters, result: shape.value.result, body: body.value, span: span_since(body.cursor, start) }
     Ok(Parsed { value: declared, cursor: body.cursor })
 }
 
 /// `(one: Int, other: Int) -> Bool`: what a function takes, and what it gives back.
 // example: position_after(takes_and_gives(over("(one: Int) -> Bool {"))) == 7
 fn takes_and_gives(cursor: Cursor) -> Result<Parsed<Shape>, ParseError> {
-    opened := expect_punct(cursor, lexer.LParen)?
+    let opened = expect_punct(cursor, lexer.LParen)?
     var parameters = []
     var step = opening(opened, lexer.RParen, MayBeEmpty)
     for is_open(step) {
-        declared := parameter(cursor_of(step))?
+        let declared = parameter(cursor_of(step))?
         parameters = list.push(parameters, declared.value)
         step = after_element(declared.cursor, lexer.RParen)?
     }
-    result := result_type(cursor_of(step))?
+    let result = result_type(cursor_of(step))?
     Ok(Parsed { value: Shape { parameters: parameters, result: result.value }, cursor: result.cursor })
 }
 
@@ -513,12 +513,12 @@ fn takes_and_gives(cursor: Cursor) -> Result<Parsed<Shape>, ParseError> {
 // example: position_after(parameter(over("count: Int"))) == 3
 // example: position_after(parameter(over("count)"))) == 1
 fn parameter(cursor: Cursor) -> Result<Parsed<ast.Parameter>, ParseError> {
-    start := offset(cursor)
-    name := expect_name(cursor, NameWanted)?
+    let start = offset(cursor)
+    let name = expect_name(cursor, NameWanted)?
     if !is_at_punct(name.cursor, lexer.Colon) {
         return Ok(Parsed { value: ast.Parameter { name: name.value, type_ref: None, span: span_since(name.cursor, start) }, cursor: name.cursor })
     }
-    written := type_ref(advanced(name.cursor))?
+    let written = type_ref(advanced(name.cursor))?
     Ok(Parsed { value: ast.Parameter { name: name.value, type_ref: Some(written.value), span: span_since(written.cursor, start) }, cursor: written.cursor })
 }
 
@@ -529,39 +529,39 @@ fn result_type(cursor: Cursor) -> Result<Parsed<Option<ast.TypeRef>>, ParseError
     if !is_at_punct(cursor, lexer.Arrow) {
         return Ok(Parsed { value: None, cursor: cursor })
     }
-    written := type_ref(advanced(cursor))?
+    let written = type_ref(advanced(cursor))?
     Ok(Parsed { value: Some(written.value), cursor: written.cursor })
 }
 
 /// A `{ … }` body, one statement per line, which spends one level of the nesting budget.
 // example: position_after(block(over("{\n    x\n}"))) == 4
 fn block(cursor: Cursor) -> Result<Parsed<ast.Block>, ParseError> {
-    start := offset(cursor)
-    opened := expect_punct(cursor, lexer.LBrace)?
-    inside := deeper(opened)?
+    let start = offset(cursor)
+    let opened = expect_punct(cursor, lexer.LBrace)?
+    let inside = deeper(opened)?
     var statements = []
     var step = line_opening(inside, lexer.RBrace)?
     for is_open(step) {
-        written := statement(cursor_of(step))?
+        let written = statement(cursor_of(step))?
         statements = list.push(statements, written.value)
         step = line_opening(after_line(written.cursor, lexer.RBrace)?, lexer.RBrace)?
     }
-    closed := cursor_of(step)
+    let closed = cursor_of(step)
     Ok(Parsed { value: ast.Block { statements: statements, span: span_since(closed, start) }, cursor: shallower(closed) })
 }
 
 /// One statement of a block.
 // example: position_after(statement(over("total += 1"))) == 3
 fn statement(cursor: Cursor) -> Result<Parsed<ast.Statement>, ParseError> {
-    start := offset(cursor)
-    kind := statement_kind(cursor)?
+    let start = offset(cursor)
+    let kind = statement_kind(cursor)?
     Ok(Parsed { value: ast.Statement { kind: kind.value, span: span_since(kind.cursor, start) }, cursor: kind.cursor })
 }
 
 /// Which statement the cursor is at, which its first token or two say.
 // example: position_after(statement_kind(over("break"))) == 1
 fn statement_kind(cursor: Cursor) -> Result<Parsed<ast.StatementKind>, ParseError> {
-    if is_at_keyword(cursor, lexer.Var) {
+    if is_at_keyword(cursor, lexer.Let) || is_at_keyword(cursor, lexer.Var) {
         return binding(cursor)
     }
     if is_at_keyword(cursor, lexer.Return) {
@@ -576,8 +576,8 @@ fn statement_kind(cursor: Cursor) -> Result<Parsed<ast.StatementKind>, ParseErro
     if is_at_keyword(cursor, lexer.For) {
         return for_statement(cursor)
     }
-    if is_ahead(cursor, 0, lexer.Identifier) && is_ahead(cursor, 1, lexer.Punct(lexer.Walrus)) {
-        return binding(cursor)
+    if is_at_colon_equals(cursor) {
+        return Err(colon_equals(cursor))
     }
     if is_at_keyword(cursor, lexer.Underscore) {
         return discard(cursor)
@@ -585,44 +585,63 @@ fn statement_kind(cursor: Cursor) -> Result<Parsed<ast.StatementKind>, ParseErro
     expression_statement(cursor)
 }
 
-/// `total := 0` binds a name never assigned to again; `var total = 0` binds one that may be.
+/// `let total = 0` binds a name never assigned to again; `var total = 0` binds one that may be.
 ///
-/// Which keyword opened the binding decides which token joins it, so `var total := 0` is as much
-/// an error as `total = 0` in this position.
-// example: failed(binding(over("var total := 0"))) == "10..12 expected `=`, found `:=`\n"
+/// The keyword alone says which of the two a name is, and `=` joins the name to its value.
+// example: failed(binding(over("let total == 0"))) == "10..12 expected `=`, found `==`\n"
 fn binding(from: Cursor) -> Result<Parsed<ast.StatementKind>, ParseError> {
-    var cursor = from
     var mutability = ast.Immutable
-    var joiner = lexer.Walrus
     if is_at_keyword(from, lexer.Var) {
-        cursor = advanced(from)
         mutability = ast.Mutable
-        joiner = lexer.Eq
     }
-    name := expect_name(cursor, NameWanted)?
-    past_joiner := expect_punct(name.cursor, joiner)?
-    bound := expression(past_joiner, Allowed)?
+    let name = expect_name(advanced(from), NameWanted)?
+    let past_joiner = expect_punct(name.cursor, lexer.Eq)?
+    let bound = expression(past_joiner, Allowed)?
     Ok(Parsed { value: ast.Binding { mutability: mutability, name: name.value, value: bound.value }, cursor: bound.cursor })
+}
+
+/// Whether the cursor is at `total :=`, which no statement starts with.
+///
+/// The `:` and the `=` touch, so `total : = 0` is not refused as `:=`, which it does not write.
+// example: is_at_colon_equals(over("total := 0"))
+// example: !is_at_colon_equals(over("total : = 0"))
+// example: !is_at_colon_equals(over("total = 0"))
+fn is_at_colon_equals(cursor: Cursor) -> Bool {
+    let colon = advanced(cursor)
+    let equals = advanced(colon)
+    let is_written = is_ahead(cursor, 0, lexer.Identifier) && is_at_punct(colon, lexer.Colon) && is_at_punct(equals, lexer.Eq)
+    is_written && offset(colon) + 1 == offset(equals)
+}
+
+/// The refusal of `total := 0`, which binds with `let`, over the text from the name to the `=`.
+// example: error_printed(colon_equals(over("total := 0"))) == "0..8 `:=` does not bind a name\nhelp: write `let total =`\n"
+fn colon_equals(cursor: Cursor) -> ParseError {
+    let past_equals = advanced(advanced(advanced(cursor)))
+    let span = span_since(past_equals, offset(cursor))
+    match token_at(cursor, 0) {
+        Some(token) => ParseError { kind: ColonEquals(token.text), span: span }
+        None => ParseError { kind: ColonEquals(""), span: span }
+    }
 }
 
 /// `return`, with the value it gives back where the statement goes on.
 // example: position_after(return_statement(over("return\n"))) == 1
 // example: position_after(return_statement(over("return 1"))) == 2
 fn return_statement(cursor: Cursor) -> Result<Parsed<ast.StatementKind>, ParseError> {
-    past_return := expect_keyword(cursor, lexer.Return)?
+    let past_return = expect_keyword(cursor, lexer.Return)?
     if is_at_statement_end(past_return) {
         return Ok(Parsed { value: ast.Return(None), cursor: past_return })
     }
-    returned := expression(past_return, Allowed)?
+    let returned = expression(past_return, Allowed)?
     Ok(Parsed { value: ast.Return(Some(returned.value)), cursor: returned.cursor })
 }
 
 /// A `for` loop: what it loops over, and its body.
 // example: position_after(for_statement(over("for {\n}"))) == 3
 fn for_statement(cursor: Cursor) -> Result<Parsed<ast.StatementKind>, ParseError> {
-    past_for := expect_keyword(cursor, lexer.For)?
-    header := for_header(past_for)?
-    body := block(cursor: header.cursor)?
+    let past_for = expect_keyword(cursor, lexer.For)?
+    let header = for_header(past_for)?
+    let body = block(cursor: header.cursor)?
     Ok(Parsed { value: ast.For(ast.ForLoop { header: header.value, body: body.value }), cursor: body.cursor })
 }
 
@@ -634,12 +653,12 @@ fn for_header(cursor: Cursor) -> Result<Parsed<ast.ForHeader>, ParseError> {
         return Ok(Parsed { value: ast.Forever, cursor: cursor })
     }
     if is_ahead(cursor, 0, lexer.Identifier) && is_ahead(cursor, 1, lexer.Keyword(lexer.In)) {
-        bound_name := expect_name(cursor, NameWanted)?
-        past_in := expect_keyword(bound_name.cursor, lexer.In)?
-        iterable := expression(past_in, Forbidden)?
+        let bound_name = expect_name(cursor, NameWanted)?
+        let past_in = expect_keyword(bound_name.cursor, lexer.In)?
+        let iterable = expression(past_in, Forbidden)?
         return Ok(Parsed { value: ast.Over { binding: bound_name.value, iterable: iterable.value }, cursor: iterable.cursor })
     }
-    condition := expression(cursor, Forbidden)?
+    let condition = expression(cursor, Forbidden)?
     Ok(Parsed { value: ast.While(condition.value), cursor: condition.cursor })
 }
 
@@ -648,9 +667,9 @@ fn for_header(cursor: Cursor) -> Result<Parsed<ast.ForHeader>, ParseError> {
 /// `_` is no name, so `=` is all that may follow it.
 // example: failed(discard(over("_ += 1"))) == "2..4 expected `=`, found `+=`\n"
 fn discard(cursor: Cursor) -> Result<Parsed<ast.StatementKind>, ParseError> {
-    past_discard := expect_keyword(cursor, lexer.Underscore)?
-    equals := expect_punct(past_discard, lexer.Eq)?
-    thrown := expression(equals, Allowed)?
+    let past_discard = expect_keyword(cursor, lexer.Underscore)?
+    let equals = expect_punct(past_discard, lexer.Eq)?
+    let thrown = expression(equals, Allowed)?
     Ok(Parsed { value: ast.Discard(thrown.value), cursor: thrown.cursor })
 }
 
@@ -658,7 +677,7 @@ fn discard(cursor: Cursor) -> Result<Parsed<ast.StatementKind>, ParseError> {
 // example: position_after(expression_statement(over("total += 1"))) == 3
 // example: failed(expression_statement(over("user.name = x"))) == "0..9 only a name is assigned to\nhelp: build the value it becomes: `user { name: \"Bob\" }`\n"
 fn expression_statement(cursor: Cursor) -> Result<Parsed<ast.StatementKind>, ParseError> {
-    written := expression(cursor, Allowed)?
+    let written = expression(cursor, Allowed)?
     if !is_at_punct(written.cursor, lexer.Eq) && !is_at_punct(written.cursor, lexer.PlusEq) {
         return Ok(Parsed { value: ast.Evaluated(written.value), cursor: written.cursor })
     }
@@ -666,8 +685,8 @@ fn expression_statement(cursor: Cursor) -> Result<Parsed<ast.StatementKind>, Par
     if is_at_punct(written.cursor, lexer.PlusEq) {
         operator = ast.AddTo
     }
-    target := assigned_to(written.value)?
-    assigned := expression(advanced(written.cursor), Allowed)?
+    let target = assigned_to(written.value)?
+    let assigned = expression(advanced(written.cursor), Allowed)?
     Ok(Parsed { value: ast.Assign { target: target, operator: operator, value: assigned.value }, cursor: assigned.cursor })
 }
 
@@ -694,12 +713,12 @@ fn binary(cursor: Cursor, records: RecordLiterals, level: Int) -> Result<Parsed<
     if level == 5 {
         return unary(cursor, records)
     }
-    start := offset(cursor)
-    first := binary(cursor, records, level + 1)?
+    let start = offset(cursor)
+    let first = binary(cursor, records, level + 1)?
     var left = first.value
     var after = first.cursor
     for level_at(after) == level {
-        right := binary(advanced(after), records, level + 1)?
+        let right = binary(advanced(after), records, level + 1)?
         left = joined(left: left, operator: operator_at(after), right: right.value, span: span_since(right.cursor, start))
         after = right.cursor
         if level == 2 && level_at(after) == level {
@@ -814,7 +833,7 @@ fn infix_operator(punctuation: lexer.Punct) -> Option<ast.BinaryOperator> {
 // example: expression_printed(unary(over("-5"), Allowed)) == "integer -5 0..2\n"
 // example: expression_printed(unary(over("!x"), Allowed)) == "unary Not 0..2\n  name x 1..2\n"
 fn unary(cursor: Cursor, records: RecordLiterals) -> Result<Parsed<ast.Expr>, ParseError> {
-    start := offset(cursor)
+    let start = offset(cursor)
     if is_at_punct(cursor, lexer.Bang) {
         return prefixed(advanced(cursor), records, ast.Not, start)
     }
@@ -833,9 +852,9 @@ fn unary(cursor: Cursor, records: RecordLiterals) -> Result<Parsed<ast.Expr>, Pa
 /// The operand after a prefix operator, which spends one level of the nesting budget.
 // example: expression_printed(prefixed(over("x"), Allowed, ast.Negate, 0)) == "unary Negate 0..1\n  name x 0..1\n"
 fn prefixed(cursor: Cursor, records: RecordLiterals, operator: ast.UnaryOperator, start: Int) -> Result<Parsed<ast.Expr>, ParseError> {
-    inside := deeper(cursor)?
-    operand := unary(cursor: inside, records: records)?
-    kind := ast.Unary { operator: operator, operand: operand.value }
+    let inside = deeper(cursor)?
+    let operand = unary(cursor: inside, records: records)?
+    let kind = ast.Unary { operator: operator, operand: operand.value }
     Ok(Parsed { value: ast.Expr { kind: kind, span: span_since(operand.cursor, start) }, cursor: shallower(operand.cursor) })
 }
 
@@ -844,26 +863,26 @@ fn prefixed(cursor: Cursor, records: RecordLiterals, operator: ast.UnaryOperator
 /// The parser takes any operand here, and the type phase refuses one that names no process.
 // example: expression_printed(spawned(over("Counter(0)"), Allowed, 0)) == "spawn 0..10\n  call 0..10\n    name Counter 0..7\n    integer 0 8..9\n"
 fn spawned(cursor: Cursor, records: RecordLiterals, start: Int) -> Result<Parsed<ast.Expr>, ParseError> {
-    inside := deeper(cursor)?
-    started := postfix(inside, records)?
-    kind := ast.Spawn(started.value)
+    let inside = deeper(cursor)?
+    let started = postfix(inside, records)?
+    let kind = ast.Spawn(started.value)
     Ok(Parsed { value: ast.Expr { kind: kind, span: span_since(started.cursor, start) }, cursor: shallower(started.cursor) })
 }
 
 /// The number after a `-`, which the `-` is part of, and whatever is applied to it after.
 // example: expression_printed(negative_number(over("9223372036854775808"), 0)) == "integer -9223372036854775808 0..19\n"
 fn negative_number(cursor: Cursor, start: Int) -> Result<Parsed<ast.Expr>, ParseError> {
-    token := expect(cursor, lexer.Integer, ExpressionWanted)?
-    span := span_since(token.cursor, start)
-    value := decode_integer("-" + token.value.text, span)?
+    let token = expect(cursor, lexer.Integer, ExpressionWanted)?
+    let span = span_since(token.cursor, start)
+    let value = decode_integer("-" + token.value.text, span)?
     postfix_chain(ast.Expr { kind: ast.Integer(value), span: span }, token.cursor, start)
 }
 
 /// One operand, and the calls, fields, and `?` applied to it.
 // example: expression_printed(postfix(over("f(x)?"), Allowed)) == "try 0..5\n  call 0..4\n    name f 0..1\n    name x 2..3\n"
 fn postfix(cursor: Cursor, records: RecordLiterals) -> Result<Parsed<ast.Expr>, ParseError> {
-    start := offset(cursor)
-    base := primary(cursor, records)?
+    let start = offset(cursor)
+    let base = primary(cursor, records)?
     postfix_chain(base.value, base.cursor, start)
 }
 
@@ -873,7 +892,7 @@ fn postfix_chain(base: ast.Expr, from: Cursor, start: Int) -> Result<Parsed<ast.
     var expr = base
     var cursor = from
     for is_at_punct(cursor, lexer.LParen) || is_at_punct(cursor, lexer.Dot) || is_at_punct(cursor, lexer.Question) {
-        applied := applied_to(expr, cursor)?
+        let applied = applied_to(expr, cursor)?
         expr = ast.Expr { kind: applied.value, span: span_since(applied.cursor, start) }
         cursor = applied.cursor
     }
@@ -884,11 +903,11 @@ fn postfix_chain(base: ast.Expr, from: Cursor, start: Int) -> Result<Parsed<ast.
 // example: position_after(applied_to(ast.Expr { kind: ast.Unit, span: lexer.Span { start: 0, length: 0 } }, over("?"))) == 1
 fn applied_to(expr: ast.Expr, cursor: Cursor) -> Result<Parsed<ast.ExprKind>, ParseError> {
     if is_at_punct(cursor, lexer.LParen) {
-        passed := call_arguments(advanced(cursor))?
+        let passed = call_arguments(advanced(cursor))?
         return Ok(Parsed { value: ast.Call { callee: expr, arguments: passed.value }, cursor: passed.cursor })
     }
     if is_at_punct(cursor, lexer.Dot) {
-        name := expect_name(advanced(cursor), NameWanted)?
+        let name = expect_name(advanced(cursor), NameWanted)?
         return Ok(Parsed { value: ast.Field { receiver: expr, name: name.value }, cursor: name.cursor })
     }
     Ok(Parsed { value: ast.Try(expr), cursor: advanced(cursor) })
@@ -906,7 +925,7 @@ fn call_arguments(cursor: Cursor) -> Result<Parsed<ast.Arguments>, ParseError> {
     var values = []
     var step = opening(cursor, lexer.RParen, MayBeEmpty)
     for is_open(step) {
-        value := positional_argument(cursor_of(step))?
+        let value = positional_argument(cursor_of(step))?
         values = list.push(values, value.value)
         step = after_element(value.cursor, lexer.RParen)?
     }
@@ -919,7 +938,7 @@ fn named_arguments(cursor: Cursor) -> Result<Parsed<ast.Arguments>, ParseError> 
     var arguments = []
     var step = opening(cursor, lexer.RParen, MayBeEmpty)
     for is_open(step) {
-        argument := named_argument(cursor_of(step))?
+        let argument = named_argument(cursor_of(step))?
         arguments = list.push(arguments, argument.value)
         step = after_element(argument.cursor, lexer.RParen)?
     }
@@ -932,9 +951,9 @@ fn named_argument(cursor: Cursor) -> Result<Parsed<ast.NamedArgument>, ParseErro
     if !is_naming(cursor) {
         return Err(failure(cursor, PartlyNamedCall))
     }
-    name := expect_name(cursor, NameWanted)?
-    colon := expect_punct(name.cursor, lexer.Colon)?
-    value := expression(cursor: colon, records: Allowed)?
+    let name = expect_name(cursor, NameWanted)?
+    let colon = expect_punct(name.cursor, lexer.Colon)?
+    let value = expression(cursor: colon, records: Allowed)?
     Ok(Parsed { value: ast.NamedArgument { name: name.value, value: value.value }, cursor: value.cursor })
 }
 
@@ -957,9 +976,9 @@ fn is_naming(cursor: Cursor) -> Bool {
 /// One value, which spends one level of the nesting budget.
 // example: expression_printed(primary(over("(x)"), Allowed)) == "name x 0..3\n"
 fn primary(cursor: Cursor, records: RecordLiterals) -> Result<Parsed<ast.Expr>, ParseError> {
-    start := offset(cursor)
-    inside := deeper(cursor)?
-    kind := primary_kind(inside, records)?
+    let start = offset(cursor)
+    let inside = deeper(cursor)?
+    let kind = primary_kind(inside, records)?
     Ok(Parsed { value: ast.Expr { kind: kind.value, span: span_since(kind.cursor, start) }, cursor: shallower(kind.cursor) })
 }
 
@@ -990,11 +1009,11 @@ fn literal_expression(literal: Literal, after: Cursor) -> Parsed<ast.ExprKind> {
 // example: position_after(non_literal(over("()"), Allowed)) == 2
 fn non_literal(cursor: Cursor, records: RecordLiterals) -> Result<Parsed<ast.ExprKind>, ParseError> {
     if is_at_keyword(cursor, lexer.If) {
-        chain := if_expression(cursor)?
+        let chain = if_expression(cursor)?
         return Ok(Parsed { value: ast.If(chain.value), cursor: chain.cursor })
     }
     if is_at_keyword(cursor, lexer.Match) {
-        matched := match_expression(cursor)?
+        let matched = match_expression(cursor)?
         return Ok(Parsed { value: ast.Match(matched.value), cursor: matched.cursor })
     }
     if is_at_punct(cursor, lexer.LParen) {
@@ -1012,23 +1031,23 @@ fn non_literal(cursor: Cursor, records: RecordLiterals) -> Result<Parsed<ast.Exp
 /// `()`, or an expression in parentheses, which takes the parentheses into its span.
 // example: position_after(parenthesised(over("(a + b)"))) == 5
 fn parenthesised(cursor: Cursor) -> Result<Parsed<ast.ExprKind>, ParseError> {
-    opened := expect_punct(cursor, lexer.LParen)?
+    let opened = expect_punct(cursor, lexer.LParen)?
     if is_at_punct(opened, lexer.RParen) {
         return Ok(Parsed { value: ast.Unit, cursor: advanced(opened) })
     }
-    inner := expression(cursor: opened, records: Allowed)?
-    closed := expect_punct(inner.cursor, lexer.RParen)?
+    let inner = expression(cursor: opened, records: Allowed)?
+    let closed = expect_punct(inner.cursor, lexer.RParen)?
     Ok(Parsed { value: inner.value.kind, cursor: closed })
 }
 
 /// `[first, second]`, or `[]`, which is the one way a list is written.
 // example: position_after(written_list(over("[1, 2]"))) == 5
 fn written_list(cursor: Cursor) -> Result<Parsed<ast.ExprKind>, ParseError> {
-    opened := expect_punct(cursor, lexer.LBracket)?
+    let opened = expect_punct(cursor, lexer.LBracket)?
     var elements = []
     var step = opening(opened, lexer.RBracket, MayBeEmpty)
     for is_open(step) {
-        element := expression(cursor: cursor_of(step), records: Allowed)?
+        let element = expression(cursor: cursor_of(step), records: Allowed)?
         elements = list.push(elements, element.value)
         step = after_element(element.cursor, lexer.RBracket)?
     }
@@ -1040,10 +1059,10 @@ fn written_list(cursor: Cursor) -> Result<Parsed<ast.ExprKind>, ParseError> {
 // example: position_after(name_or_record(over("user { id: 1 }"), Forbidden)) == 1
 fn name_or_record(cursor: Cursor, records: RecordLiterals) -> Result<Parsed<ast.ExprKind>, ParseError> {
     if records == Allowed && is_record_of_a_module(cursor) {
-        base := expect_path(cursor, ExpressionWanted)?
+        let base = expect_path(cursor, ExpressionWanted)?
         return record_literal(base.cursor, base.value)
     }
-    name := expect_name(cursor, ExpressionWanted)?
+    let name = expect_name(cursor, ExpressionWanted)?
     if records == Forbidden || !is_at_punct(name.cursor, lexer.LBrace) {
         return Ok(Parsed { value: ast.NameExpr(name.value), cursor: name.cursor })
     }
@@ -1060,11 +1079,11 @@ fn is_record_of_a_module(cursor: Cursor) -> Bool {
 /// The `{ … }` after a base name, which builds a record or updates one.
 // example: position_after(record_literal(over("{ id: 1 }"), ast.Path { module: None, name: ast.Name { text: "User", span: lexer.Span { start: 0, length: 4 } } })) == 5
 fn record_literal(cursor: Cursor, base: ast.Path) -> Result<Parsed<ast.ExprKind>, ParseError> {
-    opened := expect_punct(cursor, lexer.LBrace)?
+    let opened = expect_punct(cursor, lexer.LBrace)?
     var fields = []
     var step = opening(opened, lexer.RBrace, MayBeEmpty)
     for is_open(step) {
-        field := field_value(cursor_of(step))?
+        let field = field_value(cursor_of(step))?
         fields = list.push(fields, field.value)
         step = after_element(field.cursor, lexer.RBrace)?
     }
@@ -1074,29 +1093,29 @@ fn record_literal(cursor: Cursor, base: ast.Path) -> Result<Parsed<ast.ExprKind>
 /// `name: value`, one field of a record literal.
 // example: position_after(field_value(over("id: 1"))) == 3
 fn field_value(cursor: Cursor) -> Result<Parsed<ast.FieldValue>, ParseError> {
-    start := offset(cursor)
-    name := expect_name(cursor, NameWanted)?
-    colon := expect_punct(name.cursor, lexer.Colon)?
-    value := expression(cursor: colon, records: Allowed)?
+    let start = offset(cursor)
+    let name = expect_name(cursor, NameWanted)?
+    let colon = expect_punct(name.cursor, lexer.Colon)?
+    let value = expression(cursor: colon, records: Allowed)?
     Ok(Parsed { value: ast.FieldValue { name: name.value, value: value.value, span: span_since(value.cursor, start) }, cursor: value.cursor })
 }
 
 /// `if a { … } else if b { … } else { … }`, a flat chain of branches.
 // example: position_after(if_expression(over("if a {\n} else if b {\n} else {\n}"))) == 12
 fn if_expression(cursor: Cursor) -> Result<Parsed<ast.IfExpr>, ParseError> {
-    first := branch(cursor)?
+    let first = branch(cursor)?
     var branches = [first.value]
     var after = first.cursor
     var otherwise = None
     for is_at_keyword(after, lexer.Else) {
-        past_else := advanced(after)
+        let past_else = advanced(after)
         if is_at_keyword(past_else, lexer.If) {
-            next := branch(past_else)?
+            let next = branch(past_else)?
             branches = list.push(branches, next.value)
             after = next.cursor
             continue
         }
-        last := block(cursor: past_else)?
+        let last = block(cursor: past_else)?
         otherwise = Some(last.value)
         after = last.cursor
         break
@@ -1107,23 +1126,23 @@ fn if_expression(cursor: Cursor) -> Result<Parsed<ast.IfExpr>, ParseError> {
 /// One `if condition { … }`, whether it opens the chain or follows an `else`.
 // example: position_after(branch(over("if ok {\n}"))) == 4
 fn branch(cursor: Cursor) -> Result<Parsed<ast.Branch>, ParseError> {
-    start := offset(cursor)
-    past_if := expect_keyword(cursor, lexer.If)?
-    condition := expression(cursor: past_if, records: Forbidden)?
-    body := block(cursor: condition.cursor)?
+    let start = offset(cursor)
+    let past_if = expect_keyword(cursor, lexer.If)?
+    let condition = expression(cursor: past_if, records: Forbidden)?
+    let body = block(cursor: condition.cursor)?
     Ok(Parsed { value: ast.Branch { condition: condition.value, block: body.value, span: span_since(body.cursor, start) }, cursor: body.cursor })
 }
 
 /// `match scrutinee { pattern => body … }`, one arm per line.
 // example: position_after(match_expression(over("match x {\n    _ => 1\n}"))) == 8
 fn match_expression(cursor: Cursor) -> Result<Parsed<ast.MatchExpr>, ParseError> {
-    past_match := expect_keyword(cursor, lexer.Match)?
-    scrutinee := expression(cursor: past_match, records: Forbidden)?
-    opened := expect_punct(scrutinee.cursor, lexer.LBrace)?
+    let past_match = expect_keyword(cursor, lexer.Match)?
+    let scrutinee = expression(cursor: past_match, records: Forbidden)?
+    let opened = expect_punct(scrutinee.cursor, lexer.LBrace)?
     var arms = []
     var step = line_opening(opened, lexer.RBrace)?
     for is_open(step) {
-        arm := match_arm(cursor_of(step))?
+        let arm = match_arm(cursor_of(step))?
         arms = list.push(arms, arm.value)
         step = line_opening(after_line(arm.cursor, lexer.RBrace)?, lexer.RBrace)?
     }
@@ -1133,25 +1152,25 @@ fn match_expression(cursor: Cursor) -> Result<Parsed<ast.MatchExpr>, ParseError>
 /// `Failed(reason) => "Failed: " + reason`.
 // example: position_after(match_arm(over("Some(x) => x"))) == 6
 fn match_arm(cursor: Cursor) -> Result<Parsed<ast.MatchArm>, ParseError> {
-    start := offset(cursor)
-    matched := pattern(cursor)?
-    arrow := expect_punct(matched.cursor, lexer.FatArrow)?
-    body := expression(cursor: arrow, records: Allowed)?
+    let start = offset(cursor)
+    let matched = pattern(cursor)?
+    let arrow = expect_punct(matched.cursor, lexer.FatArrow)?
+    let body = expression(cursor: arrow, records: Allowed)?
     Ok(Parsed { value: ast.MatchArm { pattern: matched.value, body: body.value, span: span_since(body.cursor, start) }, cursor: body.cursor })
 }
 
 /// A pattern, which is one alternative or several written with a `|` between them.
 // example: pattern_printed(pattern(over("On | Off"))) == "pattern-or 0..8\n  pattern On 0..2\n  pattern Off 5..8\n"
 fn pattern(cursor: Cursor) -> Result<Parsed<ast.Pattern>, ParseError> {
-    start := offset(cursor)
-    first := alternative(cursor)?
+    let start = offset(cursor)
+    let first = alternative(cursor)?
     if !is_at_punct(first.cursor, lexer.Pipe) {
         return Ok(first)
     }
     var alternatives = [first.value]
     var after = first.cursor
     for is_at_punct(after, lexer.Pipe) {
-        next := alternative(advanced(after))?
+        let next = alternative(advanced(after))?
         alternatives = list.push(alternatives, next.value)
         after = next.cursor
     }
@@ -1161,8 +1180,8 @@ fn pattern(cursor: Cursor) -> Result<Parsed<ast.Pattern>, ParseError> {
 /// One alternative, which is every form of pattern but the `|` that joins them.
 // example: pattern_printed(alternative(over("_"))) == "pattern-wildcard 0..1\n"
 fn alternative(cursor: Cursor) -> Result<Parsed<ast.Pattern>, ParseError> {
-    start := offset(cursor)
-    kind := pattern_kind(cursor)?
+    let start = offset(cursor)
+    let kind = pattern_kind(cursor)?
     Ok(Parsed { value: ast.Pattern { kind: kind.value, span: span_since(kind.cursor, start) }, cursor: kind.cursor })
 }
 
@@ -1196,14 +1215,14 @@ fn named_pattern(cursor: Cursor) -> Result<Parsed<ast.PatternKind>, ParseError> 
     if !is_ahead(cursor, 0, lexer.Identifier) {
         return Err(error(cursor, PatternWanted))
     }
-    path := expect_path(cursor, PatternWanted)?
+    let path = expect_path(cursor, PatternWanted)?
     if is_at_punct(path.cursor, lexer.LParen) {
-        inside := deeper(advanced(path.cursor))?
-        elements := pattern_list(inside)?
+        let inside = deeper(advanced(path.cursor))?
+        let elements = pattern_list(inside)?
         return Ok(Parsed { value: ast.TuplePattern { path: path.value, elements: elements.value }, cursor: shallower(elements.cursor) })
     }
     if is_at_punct(path.cursor, lexer.LBrace) {
-        fields := name_list(advanced(path.cursor), lexer.RBrace)?
+        let fields = name_list(advanced(path.cursor), lexer.RBrace)?
         return Ok(Parsed { value: ast.RecordPattern { path: path.value, fields: fields.value }, cursor: fields.cursor })
     }
     Ok(Parsed { value: ast.NamePattern(path.value), cursor: path.cursor })
@@ -1215,7 +1234,7 @@ fn pattern_list(cursor: Cursor) -> Result<Parsed<List<ast.Pattern>>, ParseError>
     var patterns = []
     var step = opening(cursor, lexer.RParen, NeverEmpty)
     for is_open(step) {
-        element := pattern(cursor: cursor_of(step))?
+        let element = pattern(cursor: cursor_of(step))?
         patterns = list.push(patterns, element.value)
         step = after_element(element.cursor, lexer.RParen)?
     }
@@ -1229,8 +1248,8 @@ fn type_arguments(cursor: Cursor) -> Result<Parsed<List<ast.TypeRef>>, ParseErro
     if !is_at_punct(cursor, lexer.Lt) {
         return Ok(Parsed { value: [], cursor: cursor })
     }
-    inside := deeper(advanced(cursor))?
-    types := type_list(inside, lexer.Gt)?
+    let inside = deeper(advanced(cursor))?
+    let types = type_list(inside, lexer.Gt)?
     Ok(Parsed { value: types.value, cursor: shallower(types.cursor) })
 }
 
@@ -1240,7 +1259,7 @@ fn type_list(cursor: Cursor, close: lexer.Punct) -> Result<Parsed<List<ast.TypeR
     var types = []
     var step = opening(cursor, close, NeverEmpty)
     for is_open(step) {
-        written := type_ref(cursor: cursor_of(step))?
+        let written = type_ref(cursor: cursor_of(step))?
         types = list.push(types, written.value)
         step = after_element(written.cursor, close)?
     }
@@ -1262,7 +1281,7 @@ fn name_list(cursor: Cursor, close: lexer.Punct) -> Result<Parsed<List<ast.Name>
     var names = []
     var step = opening(cursor, close, NeverEmpty)
     for is_open(step) {
-        name := expect_name(cursor_of(step), NameWanted)?
+        let name = expect_name(cursor_of(step), NameWanted)?
         names = list.push(names, name.value)
         step = after_element(name.cursor, close)?
     }
@@ -1278,7 +1297,7 @@ fn constrained_parameters(cursor: Cursor) -> Result<Parsed<List<ast.TypeParamete
     var parameters = []
     var step = opening(advanced(cursor), lexer.Gt, NeverEmpty)
     for is_open(step) {
-        declared := constrained_parameter(cursor_of(step))?
+        let declared = constrained_parameter(cursor_of(step))?
         parameters = list.push(parameters, declared.value)
         step = after_element(declared.cursor, lexer.Gt)?
     }
@@ -1288,15 +1307,15 @@ fn constrained_parameters(cursor: Cursor) -> Result<Parsed<List<ast.TypeParamete
 /// One type parameter, with the traits it is constrained by, a `+` between two of them.
 // example: position_after(constrained_parameter(over("T: Eq<T>"))) == 6
 fn constrained_parameter(cursor: Cursor) -> Result<Parsed<ast.TypeParameter>, ParseError> {
-    name := expect_name(cursor, NameWanted)?
+    let name = expect_name(cursor, NameWanted)?
     if !is_at_punct(name.cursor, lexer.Colon) {
         return Ok(Parsed { value: ast.TypeParameter { name: name.value, constraints: [] }, cursor: name.cursor })
     }
-    first := constraint(advanced(name.cursor))?
+    let first = constraint(advanced(name.cursor))?
     var constraints = [first.value]
     var after = first.cursor
     for is_at_punct(after, lexer.Plus) {
-        next := constraint(advanced(after))?
+        let next = constraint(advanced(after))?
         constraints = list.push(constraints, next.value)
         after = next.cursor
     }
@@ -1306,12 +1325,12 @@ fn constrained_parameter(cursor: Cursor) -> Result<Parsed<ast.TypeParameter>, Pa
 /// `Eq<T>`: a trait, written over the one type it constrains.
 // example: failed(constraint(over("Eq"))) == "0..2 expected `<`, found the end of the file\n"
 fn constraint(cursor: Cursor) -> Result<Parsed<ast.Constraint>, ParseError> {
-    start := offset(cursor)
-    name := expect_name(cursor, TraitWanted)?
-    opened := expect_punct(name.cursor, lexer.Lt)?
-    inside := deeper(opened)?
-    argument := type_ref(cursor: inside)?
-    closed := expect_punct(shallower(argument.cursor), lexer.Gt)?
+    let start = offset(cursor)
+    let name = expect_name(cursor, TraitWanted)?
+    let opened = expect_punct(name.cursor, lexer.Lt)?
+    let inside = deeper(opened)?
+    let argument = type_ref(cursor: inside)?
+    let closed = expect_punct(shallower(argument.cursor), lexer.Gt)?
     Ok(Parsed { value: ast.Constraint { name: name.value, argument: argument.value, span: span_since(closed, start) }, cursor: closed })
 }
 
@@ -1319,14 +1338,14 @@ fn constraint(cursor: Cursor) -> Result<Parsed<ast.Constraint>, ParseError> {
 // example: type_printed(type_ref(over("List<demo.Id>"))) == "named-type List 0..13\n  named-type demo.Id 5..12\n"
 // example: failed(type_ref(over("List<>"))) == "5..6 expected a type, found `>`\n"
 fn type_ref(cursor: Cursor) -> Result<Parsed<ast.TypeRef>, ParseError> {
-    start := offset(cursor)
+    let start = offset(cursor)
     if is_at_punct(cursor, lexer.LParen) {
-        closed := expect_punct(advanced(cursor), lexer.RParen)?
+        let closed = expect_punct(advanced(cursor), lexer.RParen)?
         return Ok(Parsed { value: ast.TypeRef { kind: ast.UnitType, span: span_since(closed, start) }, cursor: closed })
     }
-    path := expect_path(cursor, TypeWanted)?
-    arguments := type_arguments(cursor: path.cursor)?
-    kind := ast.NamedType { path: path.value, arguments: arguments.value }
+    let path = expect_path(cursor, TypeWanted)?
+    let arguments = type_arguments(cursor: path.cursor)?
+    let kind = ast.NamedType { path: path.value, arguments: arguments.value }
     Ok(Parsed { value: ast.TypeRef { kind: kind, span: span_since(arguments.cursor, start) }, cursor: arguments.cursor })
 }
 
@@ -1377,7 +1396,7 @@ fn decode_integer(text: String, span: lexer.Span) -> Result<Int, ParseError> {
     }
     var value = 0
     for index < strings.length(text) {
-        digit := sign * (or(strings.at(text, index), 48) - 48)
+        let digit = sign * (or(strings.at(text, index), 48) - 48)
         if sign * value > 922337203685477580 || sign * value == 922337203685477580 && sign * digit > last_digit {
             return Err(ParseError { kind: IntegerTooLarge, span: span })
         }
@@ -1394,24 +1413,24 @@ fn decode_integer(text: String, span: lexer.Span) -> Result<Int, ParseError> {
 // example: ok_or(decode_string(lexer.Token { kind: lexer.String, span: lexer.Span { start: 0, length: 6 }, text: "\"a\\tb\"" }), "") == "a\tb"
 // example: failed_with(decode_string(lexer.Token { kind: lexer.String, span: lexer.Span { start: 4, length: 6 }, text: "\"é\\q\"" })) == "7..9 `\\q` is not an escape\nhelp: the escapes are `\\\"`, `\\\\`, `\\n`, `\\t`, and `\\r`\n"
 fn decode_string(token: lexer.Token) -> Result<String, ParseError> {
-    text := token.text
-    last := strings.length(text) - 1
+    let text = token.text
+    let last = strings.length(text) - 1
     var value = ""
     var index = 1
     var bytes = 1
     for index < last {
-        letter := or(strings.cut(text, index, index + 1), "")
+        let letter = or(strings.cut(text, index, index + 1), "")
         if letter != "\\" {
             value += letter
             bytes += lexer.unit_width(or(strings.at(text, index), 0))
             index += 1
             continue
         }
-        escaped := lexer.Rest { source: text, start: index + 1 }
-        units := lexer.character_length(escaped)
-        character := or(strings.cut(text, index + 1, index + 1 + units), "")
+        let escaped = lexer.Rest { source: text, start: index + 1 }
+        let units = lexer.character_length(escaped)
+        let character = or(strings.cut(text, index + 1, index + 1 + units), "")
         if !is_escape(character) {
-            span := lexer.Span { start: token.span.start + bytes, length: 1 + lexer.byte_length(escaped, units) }
+            let span = lexer.Span { start: token.span.start + bytes, length: 1 + lexer.byte_length(escaped, units) }
             return Err(ParseError { kind: UnknownEscape(character), span: span })
         }
         value += unescaped(character)
@@ -1450,7 +1469,7 @@ fn unescaped(character: String) -> String {
 // example: is_open(opening(over(")"), lexer.RParen, NeverEmpty))
 // example: !is_open(opening(over(")"), lexer.RParen, MayBeEmpty))
 fn opening(cursor: Cursor, close: lexer.Punct, emptiness: Emptiness) -> Step {
-    skipped := skip_newline(cursor)
+    let skipped = skip_newline(cursor)
     if emptiness == MayBeEmpty && is_at_punct(skipped, close) {
         return Closed(advanced(skipped))
     }
@@ -1463,11 +1482,11 @@ fn opening(cursor: Cursor, close: lexer.Punct, emptiness: Emptiness) -> Step {
 // example: is_open(or_closed(after_element(over(", b"), lexer.RParen)))
 // example: failed_step(after_element(over(",)"), lexer.RParen)) == ""
 fn after_element(cursor: Cursor, close: lexer.Punct) -> Result<Step, ParseError> {
-    skipped := skip_newline(cursor)
+    let skipped = skip_newline(cursor)
     if is_at_punct(skipped, close) {
         return Ok(Closed(advanced(skipped)))
     }
-    comma := expect_punct(skipped, lexer.Comma)?
+    let comma = expect_punct(skipped, lexer.Comma)?
     Ok(Open(skip_newline(comma)))
 }
 
@@ -1501,7 +1520,7 @@ fn after_line(cursor: Cursor, close: lexer.Punct) -> Result<Cursor, ParseError> 
 // example: is_open(body_opening(over("}"), 0))
 // example: !is_open(body_opening(over("\n}"), 1))
 fn body_opening(cursor: Cursor, declared: Int) -> Step {
-    skipped := skip_newline(cursor)
+    let skipped = skip_newline(cursor)
     if declared > 0 && is_at_punct(skipped, lexer.RBrace) {
         return Closed(advanced(skipped))
     }
@@ -1539,10 +1558,10 @@ fn or_closed(step: Result<Step, ParseError>) -> Step {
 // example: over("fn // note\n").count == 1
 // example: over("x\n\n\ny").count == 3
 fn over(source: String) -> Cursor {
-    tokens := significant_tokens(lexer.lex(source))
-    count := list.length(tokens)
-    whole := lexer.Span { start: 0, length: lexer.byte_length(lexer.Rest { source: source, start: 0 }, strings.length(source)) }
-    ending := match list.at(tokens, count - 1) {
+    let tokens = significant_tokens(lexer.lex(source))
+    let count = list.length(tokens)
+    let whole = lexer.Span { start: 0, length: lexer.byte_length(lexer.Rest { source: source, start: 0 }, strings.length(source)) }
+    let ending = match list.at(tokens, count - 1) {
         Some(token) => token.span
         None => whole
     }
@@ -1558,7 +1577,7 @@ fn significant_tokens(tokens: List<lexer.Token>) -> List<lexer.Token> {
     var kept = []
     var is_line_open = false
     for token in tokens {
-        is_kept := token.kind != lexer.LineComment && (token.kind != lexer.Newline || is_line_open)
+        let is_kept = token.kind != lexer.LineComment && (token.kind != lexer.Newline || is_line_open)
         if is_kept {
             kept = list.push(kept, token)
             is_line_open = can_end_a_line(token.kind)
@@ -1596,11 +1615,11 @@ fn failed_step(step: Result<Step, ParseError>) -> String {
 /// the module the name is reached inside of.
 // example: ast.path_text(or_path(expect_path(over("demo.User"), TypeWanted))) == "demo.User"
 fn expect_path(cursor: Cursor, expected: Expected) -> Result<Parsed<ast.Path>, ParseError> {
-    name := expect_name(cursor, expected)?
+    let name = expect_name(cursor, expected)?
     if !is_at_punct(name.cursor, lexer.Dot) {
         return Ok(Parsed { value: ast.Path { module: None, name: name.value }, cursor: name.cursor })
     }
-    reached := expect_name(advanced(name.cursor), expected)?
+    let reached = expect_name(advanced(name.cursor), expected)?
     Ok(Parsed { value: ast.Path { module: Some(name.value), name: reached.value }, cursor: reached.cursor })
 }
 
@@ -1617,7 +1636,7 @@ fn or_path(parsed: Result<Parsed<ast.Path>, ParseError>) -> ast.Path {
 // example: position_after(expect_name(over("total"), NameWanted)) == 1
 // example: failed(expect_name(over("fn"), NameWanted)) == "0..2 expected a name, found `fn`\n"
 fn expect_name(cursor: Cursor, expected: Expected) -> Result<Parsed<ast.Name>, ParseError> {
-    token := expect(cursor, lexer.Identifier, expected)?
+    let token = expect(cursor, lexer.Identifier, expected)?
     Ok(Parsed { value: ast.Name { text: token.value.text, span: token.value.span }, cursor: token.cursor })
 }
 
@@ -1741,7 +1760,7 @@ fn offset(cursor: Cursor) -> Int {
 /// The span from `start` to the end of the last token read.
 // example: span_since(advanced(advanced(over("ab cd"))), 0).length == 5
 fn span_since(cursor: Cursor, start: Int) -> lexer.Span {
-    length := previous_end(cursor) - start
+    let length = previous_end(cursor) - start
     if length < 0 {
         return lexer.Span { start: start, length: 0 }
     }
@@ -1863,8 +1882,8 @@ fn type_printed(parsed: Result<Parsed<ast.TypeRef>, ParseError>) -> String {
 /// An error as a fixture holds it: the span and the message, then the help where there is one.
 // example: error_printed(ParseError { kind: ChainedComparison, span: lexer.Span { start: 1, length: 1 } }) == "1..2 comparisons do not chain\nhelp: compare twice and join the two with `&&`\n"
 fn error_printed(refused: ParseError) -> String {
-    written := shown(refused.span) + " " + message(refused.kind) + "\n"
-    help := help_of(refused.kind)
+    let written = shown(refused.span) + " " + message(refused.kind) + "\n"
+    let help = help_of(refused.kind)
     if help == "" {
         return written
     }
@@ -1884,6 +1903,7 @@ fn help_of(kind: ErrorKind) -> String {
         NestingTooDeep => "brackets nest at most 32 deep; name a part of it"
         AssignedToValue => "build the value it becomes: `user { name: \"Bob\" }`"
         PartlyNamedCall => "a call names all of its arguments or none of them"
+        ColonEquals(name) => "write `let " + name + " =`"
     }
 }
 
@@ -1909,6 +1929,7 @@ fn code_of(kind: ErrorKind) -> String {
         NestingTooDeep => "L0106"
         AssignedToValue => "L0107"
         PartlyNamedCall => "L0108"
+        ColonEquals(name) => "L0109"
     }
 }
 
@@ -1925,6 +1946,7 @@ fn message(kind: ErrorKind) -> String {
         NestingTooDeep => "this nests too deeply to parse"
         AssignedToValue => "only a name is assigned to"
         PartlyNamedCall => "this call names some of its arguments and not others"
+        ColonEquals(name) => "`:=` does not bind a name"
     }
 }
 
@@ -1980,6 +2002,7 @@ type ErrorKind =
     | NestingTooDeep
     | AssignedToValue
     | PartlyNamedCall
+    | ColonEquals(String)
 
 /// What the parser was looking for.
 type Expected =

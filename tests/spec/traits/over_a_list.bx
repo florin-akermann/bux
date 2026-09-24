@@ -37,13 +37,13 @@ fn main(arguments: List<String>) -> Int {
         io.println("two equal lists hash alike")
     }
     io.println(shown([1, 2, 3]))
-    basket := Basket { of: "fruit", holding: [1, 2] }
-    also := Basket { of: "fruit", holding: [1, 2] }
+    let basket = Basket { of: "fruit", holding: [1, 2] }
+    let also = Basket { of: "fruit", holding: [1, 2] }
     if basket == also {
         io.println(shown(basket))
     }
-    numbers := [[1], [2]]
-    flags := [[true], [false]]
+    let numbers = [[1], [2]]
+    let flags = [[true], [false]]
     if list.has_value(numbers, [2]) && list.has_value(flags, [false]) {
         io.println("a library generic reaches the instance at each element type")
     }

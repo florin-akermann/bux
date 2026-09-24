@@ -1,9 +1,9 @@
 // expect-run
 fn main(arguments: List<String>) -> Int {
-    answer := doubled(21)
-    waiting := told(Pending)
-    declined := told(Failed("declined"))
-    idle := later(User { id: answer, active: true })
+    let answer = doubled(21)
+    let waiting = told(Pending)
+    let declined = told(Failed("declined"))
+    let idle = later(User { id: answer, active: true })
     0
 }
 

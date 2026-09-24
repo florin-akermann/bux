@@ -1,0 +1,2 @@
+140..148 `:=` does not bind a name
+help: write `let total =`

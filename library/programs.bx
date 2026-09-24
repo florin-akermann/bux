@@ -14,11 +14,11 @@ import list
 /// it from whoever started this one rather than from a pipe nobody ever writes on.
 // example: ok_or(run("", []), Finished { code: 9, output: "", errors: "" }).code == 9
 fn run(command: String, arguments: List<String>) -> Result<Finished, String> {
-    started_from := whole_command(command, arguments)
-    ran := started(reading_from(of_command(started_from), inherited()))?
-    output := whole(output_of(ran))
-    errors := whole(errors_of(ran))
-    code := waited_for(ran)?
+    let started_from = whole_command(command, arguments)
+    let ran = started(reading_from(of_command(started_from), inherited()))?
+    let output = whole(output_of(ran))
+    let errors = whole(errors_of(ran))
+    let code = waited_for(ran)?
     Ok(Finished { code: code, output: output, errors: errors })
 }
 
@@ -39,8 +39,8 @@ fn whole_command(command: String, arguments: List<String>) -> List<String> {
 /// that token waits for whoever writes on the stream to close it.
 // example: whole(nothing_at_all()) == ""
 fn whole(stream: InputStream) -> String {
-    scanner := delimited(over(stream), "\\A")
-    text := ok_or(token(scanner), "")
+    let scanner = delimited(over(stream), "\\A")
+    let text = ok_or(token(scanner), "")
     closed(scanner)
     text
 }

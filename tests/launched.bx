@@ -16,7 +16,7 @@ import walk
 /// the last check holds that a program that never ends is stopped at its limit.
 // example: every_start_held(root: "no-such-directory", limit: 1).cases == 5
 fn every_start_held(root: String, limit: Int) -> held.Held {
-    launcher := modules.joined(modules.joined(root, "bin"), "bux")
+    let launcher = modules.joined(modules.joined(root, "bin"), "bux")
     var found = start_held(["sh", launcher, "--version"], limit, Expected { status: 0, output: "bux 0.1.0\n", errors: "" })
     found = held.added(found, start_held(["env", "-u", "JAVA_HOME", "sh", launcher, "--version"], limit, Expected { status: 2, output: "", errors: "error: JAVA_HOME is not set, and the bux compiler runs on the JDK it names\n" }))
     found = held.added(found, start_held(["env", "JAVA_HOME=/no/such/jdk", "sh", launcher, "--version"], limit, Expected { status: 2, output: "", errors: "error: /no/such/jdk/bin/java: JAVA_HOME names no JDK\n" }))
@@ -38,9 +38,9 @@ fn stopped_held() -> held.Held {
 // example: stopped_in("no-such-directory").cases == 1
 fn stopped_in(directory: String) -> held.Held {
     _ = files.write(modules.joined(directory, "forever.sh"), forever_text())
-    from := command.nanoseconds()
-    completion := walk.completed(["sh", "forever.sh"], directory, 1)
-    seconds := or((command.nanoseconds() - from) / 1000000000, 0)
+    let from = command.nanoseconds()
+    let completion = walk.completed(["sh", "forever.sh"], directory, 1)
+    let seconds = or((command.nanoseconds() - from) / 1000000000, 0)
     command.removed_whole(directory)
     stopped_compared(completion, seconds)
 }
@@ -52,8 +52,8 @@ fn stopped_in(directory: String) -> held.Held {
 // example: stopped_compared(Err(walk.NotStarted), 0).failures == ["a program that never ends: expected \"the program did not end within 1 s, and was stopped\", found \"the program could not be started\""]
 fn stopped_compared(completion: Result<walk.Ended, walk.Unended>, seconds: Int) -> held.Held {
     var found = held.nothing_failed(1)
-    said := ended_said(completion)
-    expected := walk.unended_said(walk.PastLimit(1, ""), "the program")
+    let said = ended_said(completion)
+    let expected = walk.unended_said(walk.PastLimit(1, ""), "the program")
     if said != expected {
         found = held.with_failure(found, held.failure("a program that never ends", expected, said))
     }
@@ -90,13 +90,13 @@ fn unbuilt_held(launcher: String, limit: Int) -> held.Held {
 /// The launcher copied into `directory`, started there, and `directory` taken away again.
 // example: unbuilt_in(launcher: "no-such-directory/bux", directory: "no-such-directory", limit: 1).cases == 1
 fn unbuilt_in(launcher: String, directory: String, limit: Int) -> held.Held {
-    bin := modules.joined(directory, "bin")
-    copy := modules.joined(bin, "bux")
+    let bin = modules.joined(directory, "bin")
+    let copy = modules.joined(bin, "bux")
     _ = files.made(bin)
     _ = files.write(copy, ok_or(files.read(launcher), ""))
-    expected := Expected { status: 2, output: "", errors: "the compiler is not built; bin/bootstrap builds it\n" }
-    line := ["sh", copy, "--version"]
-    found := ended_held(line, walk.completed(line, directory, limit), expected)
+    let expected = Expected { status: 2, output: "", errors: "the compiler is not built; bin/bootstrap builds it\n" }
+    let line = ["sh", copy, "--version"]
+    let found = ended_held(line, walk.completed(line, directory, limit), expected)
     command.removed_whole(directory)
     found
 }
@@ -113,7 +113,7 @@ fn start_held(line: List<String>, limit: Int, expected: Expected) -> held.Held {
 /// The launcher started with `line` in `directory`, which is taken away again once it has ended.
 // example: started_in(["no-such-program-at-all"], "no-such-directory", 1, Expected { status: 0, output: "", errors: "" }).cases == 1
 fn started_in(line: List<String>, directory: String, limit: Int, expected: Expected) -> held.Held {
-    completion := walk.completed(line, directory, limit)
+    let completion = walk.completed(line, directory, limit)
     command.removed_whole(directory)
     ended_held(line, completion, expected)
 }
@@ -122,7 +122,7 @@ fn started_in(line: List<String>, directory: String, limit: Int, expected: Expec
 // example: ended_held(["x"], Err(walk.NotStarted), Expected { status: 0, output: "", errors: "" }).failures == ["x: the launcher could not be started"]
 // example: ended_held(["x"], Err(walk.PastLimit(9, "")), Expected { status: 0, output: "", errors: "" }).failures == ["x: the launcher did not end within 9 s, and was stopped"]
 fn ended_held(line: List<String>, completion: Result<walk.Ended, walk.Unended>, expected: Expected) -> held.Held {
-    name := strings.join(line, " ")
+    let name = strings.join(line, " ")
     match completion {
         Ok(done) => compared(name, done, expected)
         Err(unended) => held.with_failure(held.nothing_failed(1), name + ": " + walk.unended_said(unended, "the launcher"))

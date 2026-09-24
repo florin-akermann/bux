@@ -1,7 +1,7 @@
 // expect-error: L0305
-// Mutation is explicit, so `:=` binds a name that is never assigned to again.
+// Mutation is explicit, so `let` binds a name that is never assigned to again.
 fn count() -> Int {
-    total := 0
+    let total = 0
     total = 2
     total
 }

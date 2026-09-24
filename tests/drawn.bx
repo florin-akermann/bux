@@ -59,7 +59,7 @@ fn picked<T>(draw: Draw, values: List<T>, fallback: T) -> T {
 // example: number(seeded(1), 10) < 10
 // example: number(seeded(1), 0) == 0
 fn number(draw: Draw, bound: Int) -> Int {
-    high := or(draw.state / 4294967296, 0) + 2147483648
+    let high = or(draw.state / 4294967296, 0) + 2147483648
     or(high % bound, 0)
 }
 

@@ -3,7 +3,7 @@
 // Two of them side by side are two tokens, and a letter outside ASCII is one whole character.
 // The longest punctuation wins, so `===` is `==` then `=`, and `- >` is two tokens.
 fn f() {
-    x := 1 @@ 2 # 3
-    café := $ ~ ^ ` \ ; &
-    y := a === b - > c)(
+    let x = 1 @@ 2 # 3
+    let café = $ ~ ^ ` \ ; &
+    let y = a === b - > c)(
 }

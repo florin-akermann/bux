@@ -86,7 +86,7 @@ fn beside(property: Property, cases: Int, library: ir.Library) -> held.Held {
 // example: list.length(held_beside(property: Specialised, cases: 1, place: Place { directory: "no-such-directory", library: ir.little_library() }).failures) == 1
 fn held_beside(property: Property, cases: Int, place: Place) -> held.Held {
     _ = files.write(modules.joined(place.directory, "holder.bx"), holder())
-    found := checked_beside(property: property, cases: cases, place: place)
+    let found = checked_beside(property: property, cases: cases, place: place)
     command.removed_whole(place.directory)
     found
 }
@@ -106,8 +106,8 @@ fn checked_beside(property: Property, cases: Int, place: Place) -> held.Held {
     var found = held.nothing_failed(cases)
     var case = 0
     for case < cases {
-        seed := drawn.seed_of(case)
-        one := drawing(property: property, draw: drawn.seeded(seed), place: place)
+        let seed = drawn.seed_of(case)
+        let one = drawing(property: property, draw: drawn.seeded(seed), place: place)
         found = compiled.noted(found, one.why, held.drawn_failure(name_of(property), seed, one.source, one.why))
         case += 1
     }
@@ -145,18 +145,18 @@ fn name_of(property: Property) -> String {
 /// A drawn operator over `Money`, which calls the one instance method it is written for.
 // example: operator(drawn.seeded(1), ir.little_library()).source != ""
 fn operator(draw: drawn.Draw, library: ir.Library) -> Drawing {
-    at := drawn.number(draw, 10)
-    written := or(list.at(["one + other", "one - other", "one * other", "one / other", "one % other", "-one", "one < other", "one <= other", "one > other", "one >= other"], at), "")
-    called := or(list.at(["Add$Money$add", "Sub$Money$subtract", "Mul$Money$multiply", "Div$Money$divide", "Rem$Money$remainder", "Neg$Money$negate", "Ord$Money$is_less", "Ord$Money$is_less", "Ord$Money$is_less", "Ord$Money$is_less"], at), "")
-    source := owning(written)
+    let at = drawn.number(draw, 10)
+    let written = or(list.at(["one + other", "one - other", "one * other", "one / other", "one % other", "-one", "one < other", "one <= other", "one > other", "one >= other"], at), "")
+    let called = or(list.at(["Add$Money$add", "Sub$Money$subtract", "Mul$Money$multiply", "Div$Money$divide", "Rem$Money$remainder", "Neg$Money$negate", "Ord$Money$is_less", "Ord$Money$is_less", "Ord$Money$is_less", "Ord$Money$is_less"], at), "")
+    let source = owning(written)
     Drawing { source: source, why: instances_why(found: instances_called(compiled.lowered_alone(source, library)), wanted: called) }
 }
 
 /// A drawn comparison over `Money`, which is one call of `is_less` whichever way round it is.
 // example: comparison(drawn.seeded(1), ir.little_library()).source != ""
 fn comparison(draw: drawn.Draw, library: ir.Library) -> Drawing {
-    written := drawn.picked(draw, ["one < other", "one <= other", "one > other", "one >= other"], "")
-    source := owning(written)
+    let written = drawn.picked(draw, ["one < other", "one <= other", "one > other", "one >= other"], "")
+    let source = owning(written)
     Drawing { source: source, why: instances_why(found: instances_called(compiled.lowered_alone(source, library)), wanted: "Ord$Money$is_less") }
 }
 
@@ -187,9 +187,9 @@ fn instances_called(lowered: List<ir.Lowered>) -> List<String> {
 /// A drawn literal at `Int32`, which is one call of the `from_literal` of its instance.
 // example: literal(drawn.seeded(1), ir.little_library()).source != ""
 fn literal(draw: drawn.Draw, library: ir.Library) -> Drawing {
-    written := drawn.picked(draw, ["42", "-1", "2147483647"], "")
-    source := "fn counted() -> Int32 {\n    " + written + "\n}\n" + int32()
-    calls := compiled.calls_named(compiled.instructions_of(compiled.lowered_alone(source, library), "counted"))
+    let written = drawn.picked(draw, ["42", "-1", "2147483647"], "")
+    let source = "fn counted() -> Int32 {\n    " + written + "\n}\n" + int32()
+    let calls = compiled.calls_named(compiled.instructions_of(compiled.lowered_alone(source, library), "counted"))
     Drawing { source: source, why: instances_why(found: calls, wanted: "IntegerLiteral$Int32$from_literal") }
 }
 
@@ -212,9 +212,9 @@ fn int32() -> String {
 /// A drawn whole number at `Int`, which is pushed as it is written and calls nothing.
 // example: whole_number(drawn.seeded(1), ir.little_library()).why == ""
 fn whole_number(draw: drawn.Draw, library: ir.Library) -> Drawing {
-    value := whole_drawn(draw)
-    source := "fn counted() -> Int {\n    " + shown(value) + "\n}\n"
-    body := compiled.instructions_of(compiled.lowered_alone(source, library), "counted")
+    let value = whole_drawn(draw)
+    let source = "fn counted() -> Int {\n    " + shown(value) + "\n}\n"
+    let body = compiled.instructions_of(compiled.lowered_alone(source, library), "counted")
     var why = ""
     if !has_long(body, value) {
         why = "it pushes no long " + shown(value)
@@ -228,10 +228,10 @@ fn whole_number(draw: drawn.Draw, library: ir.Library) -> Drawing {
 /// A whole number from 0 up to the largest `Int`, of a drawn number of digits.
 // example: whole_drawn(drawn.seeded(1)) >= 0
 fn whole_drawn(draw: drawn.Draw) -> Int {
-    digits := drawn.number(draw, 19)
-    high := drawn.number(drawn.next(draw), 2147483647)
-    low := drawn.number(drawn.next(drawn.next(draw)), 2147483647)
-    whole := high * 4294967296 + low
+    let digits = drawn.number(draw, 19)
+    let high = drawn.number(drawn.next(draw), 2147483647)
+    let low = drawn.number(drawn.next(drawn.next(draw)), 2147483647)
+    let whole = high * 4294967296 + low
     or(whole % power_of_ten(digits), 0)
 }
 
@@ -273,22 +273,22 @@ fn is_long_of(instruction: ir.Instruction, value: Int) -> Bool {
 /// A record of drawn fields deriving a drawn trait, whose method reads every field in order.
 // example: derived(drawn.seeded(1), ir.little_library()).source != ""
 fn derived(draw: drawn.Draw, library: ir.Library) -> Drawing {
-    at := drawn.number(draw, 4)
-    of := or(list.at(["Eq", "Ord", "Hash", "Show"], at), "")
-    many := drawn.number(drawn.next(draw), 5) + 1
-    kinds := drawn.numbers(drawn.next(drawn.next(draw)), many, 3)
+    let at = drawn.number(draw, 4)
+    let of = or(list.at(["Eq", "Ord", "Hash", "Show"], at), "")
+    let many = drawn.number(drawn.next(draw), 5) + 1
+    let kinds = drawn.numbers(drawn.next(drawn.next(draw)), many, 3)
     var lines = ""
     var wanted = []
     var position = 0
     for kind in kinds {
-        name := "value" + shown(position)
+        let name = "value" + shown(position)
         lines += "    " + name + ": " + or(list.at(["Int", "Bool", "String"], kind), "") + "\n"
         wanted = compiled.both(wanted, repeated(name: name, times: times_read(at)))
         position += 1
     }
-    source := "derive " + of + " for Point\n\ntype Point = {\n" + lines + "}\n"
-    method := of + "$Point$" + or(list.at(["is_equal", "is_less", "hashed", "shown"], at), "")
-    found := fields_read(compiled.instructions_of(compiled.lowered_alone(source, library), method))
+    let source = "derive " + of + " for Point\n\ntype Point = {\n" + lines + "}\n"
+    let method = of + "$Point$" + or(list.at(["is_equal", "is_less", "hashed", "shown"], at), "")
+    let found = fields_read(compiled.instructions_of(compiled.lowered_alone(source, library), method))
     var why = ""
     if found != wanted {
         why = method + " reads " + shown(found) + ", not " + shown(wanted)
@@ -335,19 +335,19 @@ fn field_named(instruction: ir.Instruction) -> List<String> {
 /// A drawn use of `holder.is_same`, whose method calls the instance of the type it settles.
 // example: constrained(drawn.seeded(1), Place { directory: "no-such-directory", library: ir.little_library() }).source != ""
 fn constrained(draw: drawn.Draw, place: Place) -> Drawing {
-    at := drawn.number(draw, 4)
-    written := or(list.at(["1, 2", "\"a\", \"b\"", "true, false", "Kept(\"a\"), Kept(\"b\")"], at), "")
-    named := or(list.at(["is_same$Int", "is_same$String", "is_same$Bool", "is_same$demo$Kept"], at), "")
+    let at = drawn.number(draw, 4)
+    let written = or(list.at(["1, 2", "\"a\", \"b\"", "true, false", "Kept(\"a\"), Kept(\"b\")"], at), "")
+    let named = or(list.at(["is_same$Int", "is_same$String", "is_same$Bool", "is_same$demo$Kept"], at), "")
     var wanted = []
     if at == 3 {
         wanted = ["demo.Eq$Kept$is_equal"]
     }
-    source := "import holder\n\nfn is_it() -> Bool {\n    holder.is_same(" + written + ")\n}\n\nderive Eq for Kept\n\ntype Kept = Kept(String)\n"
-    lowered := compiled.lowered_beside(source, place.directory, place.library)
-    body := compiled.method_in(compiled.module_classes(lowered, "holder"), "holder", named)
+    let source = "import holder\n\nfn is_it() -> Bool {\n    holder.is_same(" + written + ")\n}\n\nderive Eq for Kept\n\ntype Kept = Kept(String)\n"
+    let lowered = compiled.lowered_beside(source, place.directory, place.library)
+    let body = compiled.method_in(compiled.module_classes(lowered, "holder"), "holder", named)
     var why = "holder writes no " + named
     if !compiled.is_none(body) {
-        found := instances_reached(or(body, ir.Body { instructions: [], locals: 0, guards: [] }).instructions)
+        let found = instances_reached(or(body, ir.Body { instructions: [], locals: 0, guards: [] }).instructions)
         why = ""
         if found != wanted {
             why = "holder writes " + named + " calling " + shown(found) + ", not " + shown(wanted)
@@ -387,11 +387,11 @@ fn instance_named(reference: ir.MethodRef) -> List<String> {
 /// A drawn use of a generic of `holder`, which `holder` writes as the use reaches it.
 // example: specialised(drawn.seeded(1), Place { directory: "no-such-directory", library: ir.little_library() }).source != ""
 fn specialised(draw: drawn.Draw, place: Place) -> Drawing {
-    at := drawn.number(draw, 8)
-    use_of_it := or(list.at(["holder.held(1)", "holder.held(\"one\")", "holder.held(Kept(\"a\"))", "holder.held([2])", "holder.passed(1)", "holder.counted([1])", "holder.counted([\"one\"])", "holder.counted([Kept(\"a\")])"], at), "")
-    result := or(list.at(["Int", "String", "Kept", "List<Int>", "Int", "Int", "Int", "Int"], at), "")
-    source := "import holder\n\nfn go() -> " + result + " {\n    " + use_of_it + "\n}\n\ntype Kept = Kept(String)\n"
-    lowered := compiled.lowered_beside(source, place.directory, place.library)
+    let at = drawn.number(draw, 8)
+    let use_of_it = or(list.at(["holder.held(1)", "holder.held(\"one\")", "holder.held(Kept(\"a\"))", "holder.held([2])", "holder.passed(1)", "holder.counted([1])", "holder.counted([\"one\"])", "holder.counted([Kept(\"a\")])"], at), "")
+    let result = or(list.at(["Int", "String", "Kept", "List<Int>", "Int", "Int", "Int", "Int"], at), "")
+    let source = "import holder\n\nfn go() -> " + result + " {\n    " + use_of_it + "\n}\n\ntype Kept = Kept(String)\n"
+    let lowered = compiled.lowered_beside(source, place.directory, place.library)
     Drawing { source: source, why: asked_why(lowered) }
 }
 
@@ -399,7 +399,7 @@ fn specialised(draw: drawn.Draw, place: Place) -> Drawing {
 // example: asked_why([]) == "go calls nothing of holder"
 fn asked_why(lowered: List<ir.Lowered>) -> String {
     for instruction in compiled.instructions_of(lowered, "go") {
-        reference := or(compiled.called(instruction), no_call())
+        let reference = or(compiled.called(instruction), no_call())
         if reference.class == "holder" {
             return written_why(classes: compiled.module_classes(lowered, "holder"), reference: reference)
         }

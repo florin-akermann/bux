@@ -17,8 +17,8 @@
 import io
 
 fn main(arguments: List<String>) -> Int {
-    one := Money { cents: 3 }
-    other := Money { cents: 7 }
+    let one = Money { cents: 3 }
+    let other = Money { cents: 7 }
     if is_worth(one + other, 10) {
         io.println("3 cents and 7 cents is 10 cents")
     }

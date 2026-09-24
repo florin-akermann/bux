@@ -24,8 +24,8 @@ fn no_extern_declaration_writes_a_body(cases: Int) -> held.Held {
     var found = held.nothing_failed(cases)
     var case = 0
     for case < cases {
-        source := declaration(drawn.seed_of(case))
-        why := bodied_fault(source)
+        let source = declaration(drawn.seed_of(case))
+        let why = bodied_fault(source)
         if why != "" {
             found = held.with_failure(found, held.drawn_failure("no_extern_declaration_writes_a_body", drawn.seed_of(case), source, why))
         }
@@ -38,7 +38,7 @@ fn no_extern_declaration_writes_a_body(cases: Int) -> held.Held {
 // example: bodied_fault("extern new opened(path: String) -> Int\n") == ""
 // example: bodied_fault("fn f() {\n}\n") == "a declaration parses to a function"
 fn bodied_fault(source: String) -> String {
-    parsed := match parser.parse(source) {
+    let parsed = match parser.parse(source) {
         Ok(program) => program
         Err(_) => ast.Program { items: [] }
     }
@@ -58,7 +58,7 @@ fn bodied_fault(source: String) -> String {
 // example: !has_function(ast.Program { items: [] })
 fn has_function(program: ast.Program) -> Bool {
     for declared in program.items {
-        is_function := match declared {
+        let is_function = match declared {
             ast.Function(_) => true
             _ => false
         }
@@ -83,7 +83,7 @@ fn is_parsed(source: String) -> Bool {
 // example: without_the_last_line_break("a\n") == "a"
 // example: without_the_last_line_break("a") == "a"
 fn without_the_last_line_break(text: String) -> String {
-    last := strings.length(text) - 1
+    let last = strings.length(text) - 1
     if or(strings.at(text, last), 0) == 10 {
         return or(strings.cut(text, 0, last), text)
     }
@@ -94,17 +94,17 @@ fn without_the_last_line_break(text: String) -> String {
 /// carries, after the declaration of the type it reaches.
 // example: strings.length(declaration(1)) > 0
 fn declaration(seed: Int) -> String {
-    first := drawn.seeded(seed)
-    kind := drawn.number(first, 4)
-    second := drawn.next(first)
-    third := drawn.next(second)
-    fourth := drawn.next(third)
-    width := drawn.picked(second, ["", "int "], "")
-    name := drawn.picked(third, ["reached", "held_by", "opened", "int"], "")
-    result := drawn.picked(fourth, ["Bool", "Int", "String", "File", "()", "Option<File>", "Result<File, String>"], "")
-    class := drawn.picked(drawn.next(fourth), ["", "interface "], "")
-    member := or(list.at(["field ", "static ", "method ", "new "], kind), "") + width + name + or(list.at(["()", "(path: File)", "(file: File)", "(path: String)"], kind), "")
-    reached := or(list.at([" = \"java.lang.System.out\"", " = \"java.nio.file.Files.readString\"", " = \"toPath\"", ""], kind), "")
+    let first = drawn.seeded(seed)
+    let kind = drawn.number(first, 4)
+    let second = drawn.next(first)
+    let third = drawn.next(second)
+    let fourth = drawn.next(third)
+    let width = drawn.picked(second, ["", "int "], "")
+    let name = drawn.picked(third, ["reached", "held_by", "opened", "int"], "")
+    let result = drawn.picked(fourth, ["Bool", "Int", "String", "File", "()", "Option<File>", "Result<File, String>"], "")
+    let class = drawn.picked(drawn.next(fourth), ["", "interface "], "")
+    let member = or(list.at(["field ", "static ", "method ", "new "], kind), "") + width + name + or(list.at(["()", "(path: File)", "(file: File)", "(path: String)"], kind), "")
+    let reached = or(list.at([" = \"java.lang.System.out\"", " = \"java.nio.file.Files.readString\"", " = \"toPath\"", ""], kind), "")
     "extern type " + class + "File = \"java.io.File\"\n\nextern " + member + " -> " + result + reached + "\n"
 }
 
@@ -114,7 +114,7 @@ fn parsing_is_deterministic(cases: Int) -> held.Held {
     var found = held.nothing_failed(cases)
     var case = 0
     for case < cases {
-        source := drawn_text(drawn.seed_of(case))
+        let source = drawn_text(drawn.seed_of(case))
         if parser.printed(source) != parser.printed(source) {
             found = held.with_failure(found, held.drawn_failure("parsing_is_deterministic", drawn.seed_of(case), source, "two parses disagree"))
         }
@@ -130,8 +130,8 @@ fn an_error_span_is_not_empty_and_lies_within_the_source(cases: Int) -> held.Hel
     var found = held.nothing_failed(cases)
     var case = 0
     for case < cases {
-        source := drawn_text(drawn.seed_of(case))
-        why := error_span_fault(source)
+        let source = drawn_text(drawn.seed_of(case))
+        let why = error_span_fault(source)
         if why != "" {
             found = held.with_failure(found, held.drawn_failure("an_error_span_is_not_empty_and_lies_within_the_source", drawn.seed_of(case), source, why))
         }
@@ -153,7 +153,7 @@ fn error_span_fault(source: String) -> String {
 /// Why `span` is empty or does not lie on character boundaries of `source`, and `""` where not.
 // example: span_fault("é", lexer.Span { start: 1, length: 1 }) != ""
 fn span_fault(source: String, span: lexer.Span) -> String {
-    boundaries := lexing.character_boundaries(source)
+    let boundaries = lexing.character_boundaries(source)
     if span.length <= 0 {
         return "the error span " + shown(span) + " is empty"
     }
@@ -166,22 +166,22 @@ fn span_fault(source: String, span: lexer.Span) -> String {
 /// An opening and 8 to 48 pieces run together, drawn from `seed`.
 // example: strings.length(drawn_text(1)) > 0
 fn drawn_text(seed: Int) -> String {
-    draw := drawn.seeded(seed)
-    count := drawn.number(draw, 41) + 8
-    opening := drawn.picked(drawn.next(draw), openings(), "")
+    let draw = drawn.seeded(seed)
+    let count = drawn.number(draw, 41) + 8
+    let opening = drawn.picked(drawn.next(draw), openings(), "")
     opening + drawn.text_of(drawn.next(drawn.next(draw)), pieces(), count)
 }
 
 /// How a drawn text opens, so that most texts reach past the first item before they fail.
 // example: list.length(openings()) == 8
 fn openings() -> List<String> {
-    ["", "fn f(a: Int) -> Int {\n", "type T = ", "extern ", "trait T<A> {\n", "fn g() {\n    match x {\n", "fn k() -> Int {\n    9223372036854775807 + ", "fn h() {\n    x := \"é́​\"\n"]
+    ["", "fn f(a: Int) -> Int {\n", "type T = ", "extern ", "trait T<A> {\n", "fn g() {\n    match x {\n", "fn k() -> Int {\n    9223372036854775807 + ", "fn h() {\n    let x = \"é́​\"\n"]
 }
 
 /// What a drawn text is made of: a word, a literal, or a token of each part of the grammar.
 // example: list.length(pieces()) == 47
 fn pieces() -> List<String> {
-    ["fn", "f", "x", "Int", "demo", "(", ")", "{", "}", "[", "]", "<", ">", ",", ":", "=", ":=", "+=", "->", "=>", "|", ".", "?", "!", "-", "+", "*", "==", "&&", "match", "if", "else", "for", "in", "var", "return", "_", "static", "int", "1", "\"a\"", "\"\\q\"", "@", " ", "\n", "\n", "//\n"]
+    ["fn", "f", "x", "Int", "demo", "(", ")", "{", "}", "[", "]", "<", ">", ",", ":", "=", "let", "+=", "->", "=>", "|", ".", "?", "!", "-", "+", "*", "==", "&&", "match", "if", "else", "for", "in", "var", "return", "_", "static", "int", "1", "\"a\"", "\"\\q\"", "@", " ", "\n", "\n", "//\n"]
 }
 
 /// A program of well-formed items parses, to as many items as it is written with.
@@ -190,9 +190,9 @@ fn a_well_formed_program_parses(cases: Int) -> held.Held {
     var found = held.nothing_failed(cases)
     var case = 0
     for case < cases {
-        chosen := chosen_items(drawn.seed_of(case))
-        source := strings.join(chosen, "\n\n")
-        count := list.length(or_nothing(parser.parse(source)).items)
+        let chosen = chosen_items(drawn.seed_of(case))
+        let source = strings.join(chosen, "\n\n")
+        let count = list.length(or_nothing(parser.parse(source)).items)
         if count != list.length(chosen) {
             found = held.with_failure(found, held.drawn_failure("a_well_formed_program_parses", drawn.seed_of(case), source, "it parses to " + shown(count) + " items: " + held.quoted(parser.printed(source))))
         }
@@ -208,8 +208,8 @@ fn item_spans_are_ordered_and_within_the_source(cases: Int) -> held.Held {
     var found = held.nothing_failed(cases)
     var case = 0
     for case < cases {
-        source := strings.join(chosen_items(drawn.seed_of(case)), "\n\n")
-        why := item_spans_fault(source)
+        let source = strings.join(chosen_items(drawn.seed_of(case)), "\n\n")
+        let why = item_spans_fault(source)
         if why != "" {
             found = held.with_failure(found, held.drawn_failure("item_spans_are_ordered_and_within_the_source", drawn.seed_of(case), source, why))
         }
@@ -221,11 +221,11 @@ fn item_spans_are_ordered_and_within_the_source(cases: Int) -> held.Held {
 /// Why the item spans of `source` overlap, are empty, or run past it, and `""` where not.
 // example: item_spans_fault("import io\n\nimport list") == ""
 fn item_spans_fault(source: String) -> String {
-    length := lexing.byte_length(source)
+    let length = lexing.byte_length(source)
     var previous_end = 0
     for declared in or_nothing(parser.parse(source)).items {
-        span := item_span(declared)
-        end := span.start + span.length
+        let span = item_span(declared)
+        let end = span.start + span.length
         if span.start < previous_end || span.length <= 0 || end > length {
             return "the item span " + shown(span) + " does not follow " + shown(previous_end) + " inside " + shown(length) + " bytes"
         }
@@ -261,7 +261,7 @@ fn item_span(declared: ast.Item) -> lexer.Span {
 /// Up to 8 well-formed items, drawn from `seed`.
 // example: list.length(chosen_items(1)) < 9
 fn chosen_items(seed: Int) -> List<String> {
-    draw := drawn.seeded(seed)
+    let draw = drawn.seeded(seed)
     var chosen = []
     for index in drawn.numbers(drawn.next(draw), drawn.number(draw, 9), list.length(items())) {
         chosen = list.push(chosen, or(list.at(items(), index), ""))

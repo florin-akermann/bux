@@ -13,7 +13,7 @@ import strings
 /// Every class file of the program at `path`, in the order a build writes them, or `skipped`.
 // example: list.length(ok_or(classes_of("no-such-directory/main.bx", ir.little_library()), [])) == 0
 fn classes_of(path: String, library: ir.Library) -> Result<List<ClassFile>, String> {
-    lowered := ir.program_lowered(path, library)?
+    let lowered = ir.program_lowered(path, library)?
     match program_written(lowered) {
         Ok(files) => Ok(files)
         Err(unwritten) => Err(message(unwritten))
@@ -36,12 +36,12 @@ fn program_written(program: List<ir.Lowered>) -> Result<List<ClassFile>, Unwritt
             every = list.push(every, class)
         }
     }
-    hierarchy := hierarchy_of(every)
+    let hierarchy = hierarchy_of(every)
     var files = []
     var written = map.empty()
     for class in every {
-        file := ClassFile { path: class.name + ".class", bytes: class_written(class, hierarchy)? }
-        earlier := map.get(written, file.path)
+        let file = ClassFile { path: class.name + ".class", bytes: class_written(class, hierarchy)? }
+        let earlier = map.get(written, file.path)
         if is_other_than(earlier, file.bytes) {
             return Err(Unwritten { class: class.name, method: None, why: NamedTwice })
         }
@@ -69,13 +69,13 @@ fn is_other_than(earlier: Option<List<Int>>, written: List<Int>) -> Bool {
 /// clear. A class that waits on the layout of no other class carries no attribute for it.
 // example: list.length(ok_or(class_written(record_class(), hierarchy_of([record_class()])), [])) > 10
 fn class_written(class: ir.Class, hierarchy: Hierarchy) -> Result<List<Int>, Unwritten> {
-    named := pooled_class(no_pool(), class.name)
-    extends := pooled_class(named.pool, class.extends)
-    implemented := interfaces_written(extends.pool, class.implements)
-    fields := fields_written(implemented.pool, class)
-    methods := methods_written(Writer { pool: fields.pool, hierarchy: hierarchy }, class)?
-    wanted := loadable_written(methods.pool, class, hierarchy)
-    pool := wanted.pool
+    let named = pooled_class(no_pool(), class.name)
+    let extends = pooled_class(named.pool, class.extends)
+    let implemented = interfaces_written(extends.pool, class.implements)
+    let fields = fields_written(implemented.pool, class)
+    let methods = methods_written(Writer { pool: fields.pool, hierarchy: hierarchy }, class)?
+    let wanted = loadable_written(methods.pool, class, hierarchy)
+    let pool = wanted.pool
     _ = texts_held(pool: pool, from: 0, class: class.name, method: None)?
     var written = bytes.u4([], 3405691582)
     written = bytes.u2(bytes.u2(written, 65535), 72)
@@ -95,7 +95,7 @@ fn class_written(class: ir.Class, hierarchy: Hierarchy) -> Result<List<Int>, Unw
 fn interfaces_written(pool: Pool, implements: List<String>) -> Written {
     var writing = Written { pool: pool, bytes: bytes.u2([], list.length(implements)) }
     for interface in implements {
-        entry := pooled_class(writing.pool, interface)
+        let entry = pooled_class(writing.pool, interface)
         writing = Written { pool: entry.pool, bytes: bytes.u2(writing.bytes, entry.index) }
     }
     writing
@@ -115,9 +115,9 @@ fn extending_access(extending: ir.Extending) -> Int {
 fn fields_written(pool: Pool, class: ir.Class) -> Written {
     var writing = Written { pool: pool, bytes: bytes.u2([], list.length(class.fields)) }
     for field in class.fields {
-        name := pooled_utf8(writing.pool, field.name)
-        descriptor := pooled_utf8(name.pool, ir.descriptor_text(field.of))
-        written := bytes.u2(bytes.u2(bytes.u2(writing.bytes, 2065), name.index), descriptor.index)
+        let name = pooled_utf8(writing.pool, field.name)
+        let descriptor = pooled_utf8(name.pool, ir.descriptor_text(field.of))
+        let written = bytes.u2(bytes.u2(bytes.u2(writing.bytes, 2065), name.index), descriptor.index)
         writing = Written { pool: descriptor.pool, bytes: bytes.u2(written, 0) }
     }
     writing
@@ -139,11 +139,11 @@ fn methods_written(writer: Writer, class: ir.Class) -> Result<Written, Unwritten
 /// refusal names the method whose text it is.
 // example: list.length(written_or_none(method_written(Writer { pool: no_pool(), hierarchy: hierarchy_of([]) }, returning_method(), record_class(), [])).bytes) > 10
 fn method_written(writer: Writer, method: ir.Method, class: ir.Class, into: List<Int>) -> Result<Written, Unwritten> {
-    name := pooled_utf8(writer.pool, method.name)
-    descriptor := pooled_utf8(name.pool, ir.method_descriptor_text(method.descriptor))
-    code := code_written(Writer { pool: descriptor.pool, hierarchy: writer.hierarchy }, method, class)?
+    let name = pooled_utf8(writer.pool, method.name)
+    let descriptor = pooled_utf8(name.pool, ir.method_descriptor_text(method.descriptor))
+    let code = code_written(Writer { pool: descriptor.pool, hierarchy: writer.hierarchy }, method, class)?
     _ = texts_held(pool: code.pool, from: list.length(writer.pool.entries), class: class.name, method: Some(method.name))?
-    written := bytes.u2(bytes.u2(into, 1 + static_access(method.reached)), name.index)
+    let written = bytes.u2(bytes.u2(into, 1 + static_access(method.reached)), name.index)
     Ok(Written { pool: code.pool, bytes: bytes.all(bytes.u2(bytes.u2(written, descriptor.index), 1), code.bytes) })
 }
 
@@ -194,14 +194,14 @@ fn static_access(reached: ir.Reached) -> Int {
 /// The `Code` attribute of one method, with the exception table and the stack map it needs.
 // example: list.length(written_or_none(code_written(Writer { pool: no_pool(), hierarchy: hierarchy_of([]) }, returning_method(), record_class())).bytes) == 22
 fn code_written(writer: Writer, method: ir.Method, class: ir.Class) -> Result<Written, Unwritten> {
-    receiver := match method.reached {
+    let receiver = match method.reached {
         ir.ThroughTheClass => None
         ir.ThroughAnInstance => Some(class.name)
     }
-    assembled := placed_in(answer: assembled_of(method.body, method.descriptor, receiver, writer), class: class.name, method: method.name)?
-    caught := handlers_written(assembled.pool, assembled.handlers)
-    mapped := map_written(caught.pool, assembled.frames)
-    named := pooled_utf8(mapped.pool, "Code")
+    let assembled = placed_in(answer: assembled_of(method.body, method.descriptor, receiver, writer), class: class.name, method: method.name)?
+    let caught = handlers_written(assembled.pool, assembled.handlers)
+    let mapped = map_written(caught.pool, assembled.frames)
+    let named = pooled_utf8(mapped.pool, "Code")
     var body = bytes.u2(bytes.u2([], assembled.max_stack), assembled.max_locals)
     body = bytes.all(bytes.u4(body, list.length(assembled.code)), assembled.code)
     body = bytes.all(body, caught.bytes)
@@ -232,8 +232,8 @@ fn has_any(written: List<Int>) -> Int {
 fn handlers_written(pool: Pool, handlers: List<Caught>) -> Written {
     var writing = Written { pool: pool, bytes: bytes.u2([], list.length(handlers)) }
     for caught in handlers {
-        catching := pooled_class(writing.pool, caught.catching)
-        written := bytes.u2(bytes.u2(writing.bytes, caught.from), caught.to)
+        let catching = pooled_class(writing.pool, caught.catching)
+        let written = bytes.u2(bytes.u2(writing.bytes, caught.from), caught.to)
         writing = Written { pool: catching.pool, bytes: bytes.u2(bytes.u2(written, caught.handler), catching.index) }
     }
     writing
@@ -248,11 +248,11 @@ fn map_written(pool: Pool, frames: List<Landed>) -> Written {
     var writing = Written { pool: pool, bytes: bytes.u2([], list.length(frames)) }
     var previous = -1
     for landed in frames {
-        delta := landed.at - previous - 1
+        let delta = landed.at - previous - 1
         writing = frame_written(writing.pool, landed.frame, delta, writing.bytes)
         previous = landed.at
     }
-    named := pooled_utf8(writing.pool, "StackMapTable")
+    let named = pooled_utf8(writing.pool, "StackMapTable")
     Written { pool: named.pool, bytes: bytes.all(bytes.u4(bytes.u2([], named.index), list.length(writing.bytes)), writing.bytes) }
 }
 
@@ -265,7 +265,7 @@ fn loadable_written(pool: Pool, class: ir.Class, hierarchy: Hierarchy) -> Writte
     var pooling = pool
     for field in class.fields {
         if is_foldable(hierarchy, field.of) {
-            descriptor := pooled_utf8(pooling, ir.descriptor_text(field.of))
+            let descriptor = pooled_utf8(pooling, ir.descriptor_text(field.of))
             pooling = descriptor.pool
             if !list.has_value(wanted, descriptor.index) {
                 wanted = list.push(wanted, descriptor.index)
@@ -275,7 +275,7 @@ fn loadable_written(pool: Pool, class: ir.Class, hierarchy: Hierarchy) -> Writte
     if list.length(wanted) == 0 {
         return Written { pool: pooling, bytes: [] }
     }
-    named := pooled_utf8(pooling, "LoadableDescriptors")
+    let named = pooled_utf8(pooling, "LoadableDescriptors")
     var descriptors = bytes.u2([], list.length(wanted))
     for index in wanted {
         descriptors = bytes.u2(descriptors, index)
@@ -307,7 +307,7 @@ fn is_written_here(hierarchy: Hierarchy, class: String) -> Bool {
 /// `body` assembled into the bytes a method of `descriptor` runs, with its frames and handlers.
 // example: why_code(assembled_of(returning_method().body, returning_method().descriptor, None, Writer { pool: no_pool(), hierarchy: hierarchy_of([]) })) == ""
 fn assembled_of(body: ir.Body, descriptor: ir.MethodDescriptor, receiver: Option<String>, writer: Writer) -> Result<Assembled, Why> {
-    slots := ir.parameters_width(descriptor) + body.locals + receiver_width(receiver)
+    let slots = ir.parameters_width(descriptor) + body.locals + receiver_width(receiver)
     var assembling = Assembling { code: [], frame: entering(descriptor.parameters, receiver, slots), is_reachable: true, landings: map.empty(), landed: [], expected: map.empty(), pending: [], deepest: 0, next: 4294967295, guards: body.guards, pool: writer.pool, hierarchy: writer.hierarchy, defect: None }
     for instruction in body.instructions {
         assembling = one_written(assembling, instruction)
@@ -331,7 +331,7 @@ fn finished(assembling: Assembling, slots: Int) -> Result<Assembled, Why> {
     for patch in assembling.pending {
         patches = map.insert(patches, patch.at, reach_of(assembling, patch)?)
     }
-    handlers := caught_of(assembling)?
+    let handlers = caught_of(assembling)?
     Ok(Assembled { code: patched(assembling.code, patches), max_stack: capped(assembling.deepest), max_locals: slots, frames: frames_written(assembling), handlers: handlers, pool: assembling.pool })
 }
 
@@ -347,7 +347,7 @@ fn sound(defect: Option<String>) -> Result<(), Why> {
 /// The offset `patch` branches by, or why it has none that two bytes hold.
 // example: ok_or(reach_of(landed_with(assembling_of([]), 3, Frame { locals: [], stack: [] }), Patch { at: 0, label: 3, from: 0 }), 1) == 0
 fn reach_of(assembling: Assembling, patch: Patch) -> Result<Int, Why> {
-    away := landing_of(assembling, patch.label)? - patch.from
+    let away = landing_of(assembling, patch.label)? - patch.from
     if away > 32767 || away < -32768 {
         return Err(TooLarge)
     }
@@ -410,7 +410,7 @@ fn frames_written(assembling: Assembling) -> List<Landed> {
     var frames = []
     var seen = -1
     for label in landings_in_order(assembling) {
-        at := landed_at(assembling, label)
+        let at = landed_at(assembling, label)
         if at != seen {
             frames = match map.get(assembling.expected, label) {
                 Some(frame) => list.push(frames, Landed { at: at, frame: frame })
@@ -456,8 +456,8 @@ fn placed(assembling: Assembling, ordered: List<Int>, label: Int) -> List<Int> {
 /// Whether `label` lands before `other`, or at the same offset with a smaller number.
 // example: is_before(assembling: assembling_of([]), label: 1, other: 2)
 fn is_before(assembling: Assembling, label: Int, other: Int) -> Bool {
-    at := landed_at(assembling, label)
-    there := landed_at(assembling, other)
+    let at = landed_at(assembling, label)
+    let there = landed_at(assembling, other)
     at < there || at == there && label < other
 }
 
@@ -517,7 +517,7 @@ fn guarding(assembling: Assembling, label: Int) -> Assembling {
     var reached = assembling
     for guard in assembling.guards {
         if guard.from == label || guard.to == label {
-            caught := Frame { locals: reached.frame.locals, stack: [HeldObject(guard.catching)] }
+            let caught = Frame { locals: reached.frame.locals, stack: [HeldObject(guard.catching)] }
             reached = reaching(reached, guard.handler, caught)
         }
     }
@@ -585,8 +585,8 @@ fn instruction_written(assembling: Assembling, instruction: ir.Instruction) -> A
 /// `assembling` with a comparison written as the truth value it leaves behind.
 // example: truth(assembling: assembling_of([]), opcode: 153, consumes: 1).code == [153, 0, 0, 3, 167, 0, 0, 4]
 fn truth(assembling: Assembling, opcode: Int, consumes: Int) -> Assembling {
-    yes := own_label(assembling)
-    done := own_label(yes)
+    let yes = own_label(assembling)
+    let done = own_label(yes)
     var writing = branched(assembling: popped_times(done, consumes), opcode: opcode, label: yes.next)
     writing = pushed(byte(writing, 3), HeldInteger)
     writing = unreachable(branched(assembling: writing, opcode: 167, label: done.next))
@@ -600,7 +600,7 @@ fn truth(assembling: Assembling, opcode: Int, consumes: Int) -> Assembling {
 /// stack goes is read here as well as where a value is put on it.
 // example: landed_at(landing(assembling_of([]), 3), 3) == 0
 fn landing(assembling: Assembling, label: Int) -> Assembling {
-    expecting := if assembling.is_reachable {
+    let expecting = if assembling.is_reachable {
         reaching(assembling, label, assembling.frame)
     } else {
         assembling
@@ -614,11 +614,11 @@ fn landing(assembling: Assembling, label: Int) -> Assembling {
 /// `assembling`, where `label` lands here with `frame`.
 // example: list.length(landed_with(assembling_of([]), 3, Frame { locals: [], stack: [] }).landed) == 1
 fn landed_with(assembling: Assembling, label: Int, frame: Frame) -> Assembling {
-    landed := match map.get(assembling.landings, label) {
+    let landed = match map.get(assembling.landings, label) {
         Some(_) => assembling.landed
         None => list.push(assembling.landed, label)
     }
-    deepest := greater(one: assembling.deepest, other: depth(frame))
+    let deepest = greater(one: assembling.deepest, other: depth(frame))
     assembling { frame: frame, deepest: deepest, is_reachable: true, landings: map.insert(assembling.landings, label, offset(assembling)), landed: landed }
 }
 
@@ -631,9 +631,9 @@ fn unreachable(assembling: Assembling) -> Assembling {
 /// `assembling` with a branch to `label`, whose offset is patched once the label lands.
 // example: branched(assembling: assembling_of([]), opcode: 167, label: 3).code == [167, 0, 0]
 fn branched(assembling: Assembling, opcode: Int, label: Int) -> Assembling {
-    expecting := reaching(assembling, label, assembling.frame)
-    from := offset(expecting)
-    written := byte(expecting, opcode)
+    let expecting = reaching(assembling, label, assembling.frame)
+    let from = offset(expecting)
+    let written = byte(expecting, opcode)
     short(written { pending: list.push(written.pending, Patch { at: list.length(written.code), label: label, from: from }) }, 0)
 }
 
@@ -641,7 +641,7 @@ fn branched(assembling: Assembling, opcode: Int, label: Int) -> Assembling {
 // example: is_expecting(reaching(assembling_of([]), 3, Frame { locals: [], stack: [] }), 3)
 // example: is_held(reaching(reaching(assembling_of([]), 3, Frame { locals: [], stack: [] }), 3, Frame { locals: [], stack: [HeldLong] }).defect)
 fn reaching(assembling: Assembling, label: Int, frame: Frame) -> Assembling {
-    merged := match map.get(assembling.expected, label) {
+    let merged = match map.get(assembling.expected, label) {
         Some(known) => merged_with(frame: known, other: frame, hierarchy: assembling.hierarchy)
         None => Ok(frame)
     }
@@ -669,7 +669,7 @@ fn own_label(assembling: Assembling) -> Assembling {
 /// `assembling` with a whole number put on the stack, out of the constant pool.
 // example: long_written(assembling_of([]), 7).code == [20, 0, 1]
 fn long_written(assembling: Assembling, value: Int) -> Assembling {
-    held := pooled(assembling.pool, LongEntry(value))
+    let held = pooled(assembling.pool, LongEntry(value))
     pushed(short(byte(assembling { pool: held.pool }, 20), held.index), HeldLong)
 }
 
@@ -677,7 +677,7 @@ fn long_written(assembling: Assembling, value: Int) -> Assembling {
 // example: integer_written(assembling_of([]), -1).code == [16, 255]
 // example: integer_written(assembling_of([]), 1000).code == [17, 3, 232]
 fn integer_written(assembling: Assembling, value: Int) -> Assembling {
-    written := if value == 0 {
+    let written = if value == 0 {
         byte(assembling, 3)
     } else if value == 1 {
         byte(assembling, 4)
@@ -694,14 +694,14 @@ fn integer_written(assembling: Assembling, value: Int) -> Assembling {
 /// `assembling` with a small whole number put on the stack out of the constant pool.
 // example: pooled_integer(assembling_of([]), 100000).code == [18, 1]
 fn pooled_integer(assembling: Assembling, value: Int) -> Assembling {
-    held := pooled(assembling.pool, IntegerEntry(value))
+    let held = pooled(assembling.pool, IntegerEntry(value))
     constant(assembling { pool: held.pool }, held.index)
 }
 
 /// `assembling` with text put on the stack, out of the constant pool.
 // example: text_written(assembling_of([]), "a").code == [18, 2]
 fn text_written(assembling: Assembling, value: String) -> Assembling {
-    held := pooled_text(assembling.pool, value)
+    let held = pooled_text(assembling.pool, value)
     pushed(constant(assembling { pool: held.pool }, held.index), HeldObject("java/lang/String"))
 }
 
@@ -728,13 +728,13 @@ fn load_opcode(of: ir.Descriptor) -> Int {
 /// `assembling` with a value stored in `slot`, which holds it from here on.
 // example: stored(assembling_of([]), 0, ir.Long).code == [55, 0]
 fn stored(assembling: Assembling, slot: Int, of: ir.Descriptor) -> Assembling {
-    opcode := match of {
+    let opcode = match of {
         ir.Long => 55
         ir.Reference(_) => 58
         ir.Array(_) => 58
         _ => 54
     }
-    written := popped(indexed(assembling: assembling, opcode: opcode, slot: slot))
+    let written = popped(indexed(assembling: assembling, opcode: opcode, slot: slot))
     written { frame: held_in(written.frame, slot, of) }
 }
 
@@ -809,8 +809,8 @@ fn step(how: ir.Comparison) -> Int {
 /// `assembling` with an instance of `class` made, which is not built until its constructor runs.
 // example: made(assembling_of([]), "a/B").code == [187, 0, 2]
 fn made(assembling: Assembling, class: String) -> Assembling {
-    named := pooled_class(assembling.pool, class)
-    at := offset(assembling)
+    let named = pooled_class(assembling.pool, class)
+    let at = offset(assembling)
     pushed(short(byte(assembling { pool: named.pool }, 187), named.index), Uninitialised(at))
 }
 
@@ -823,31 +823,31 @@ fn offset(assembling: Assembling) -> Int {
 /// `assembling` with an array of `class` as long as the number on the stack, which it replaces.
 // example: array_made(assembling_of([]), "java/lang/Object").code == [189, 0, 2]
 fn array_made(assembling: Assembling, class: String) -> Assembling {
-    written := popped(class_named(assembling, 189, class))
+    let written = popped(class_named(assembling, 189, class))
     pushed(written, held_of(ir.Array(ir.Reference(class))))
 }
 
 /// `assembling` with an instruction that names `class` out of the pool.
 // example: class_named(assembling_of([]), 192, "a/B").code == [192, 0, 2]
 fn class_named(assembling: Assembling, opcode: Int, class: String) -> Assembling {
-    named := pooled_class(assembling.pool, class)
+    let named = pooled_class(assembling.pool, class)
     short(byte(assembling { pool: named.pool }, opcode), named.index)
 }
 
 /// `assembling` with an instruction that names `field` out of the pool.
 // example: field_written(assembling_of([]), 180, boxed_at()).code == [180, 0, 6]
 fn field_written(assembling: Assembling, opcode: Int, field: ir.FieldRef) -> Assembling {
-    named := pooled_field(assembling.pool, field)
+    let named = pooled_field(assembling.pool, field)
     short(byte(assembling { pool: named.pool }, opcode), named.index)
 }
 
 /// `assembling` with a constructor run, which builds each copy of the instance it is handed.
 // example: list.length(constructed(assembling_of([]), box_made()).code) == 3
 fn constructed(assembling: Assembling, method: ir.MethodRef) -> Assembling {
-    named := pooled_method(assembling.pool, method)
-    written := popped_times(short(byte(assembling { pool: named.pool }, 183), named.index), list.length(method.descriptor.parameters))
-    top := list.at(written.frame.stack, list.length(written.frame.stack) - 1)
-    taken := popped(written)
+    let named = pooled_method(assembling.pool, method)
+    let written = popped_times(short(byte(assembling { pool: named.pool }, 183), named.index), list.length(method.descriptor.parameters))
+    let top = list.at(written.frame.stack, list.length(written.frame.stack) - 1)
+    let taken = popped(written)
     match top {
         Some(Uninitialised(at)) => taken { frame: initialised(taken.frame, at, method.class) }
         _ => taken
@@ -857,16 +857,16 @@ fn constructed(assembling: Assembling, method: ir.MethodRef) -> Assembling {
 /// `assembling` with a method called: its arguments and receiver taken, and its result left.
 // example: list.length(invoked(assembling: assembling_of([]), opcode: 184, method: box_made(), receivers: 0).frame.stack) == 0
 fn invoked(assembling: Assembling, opcode: Int, method: ir.MethodRef, receivers: Int) -> Assembling {
-    named := pooled_method(assembling.pool, method)
+    let named = pooled_method(assembling.pool, method)
     called(short(byte(assembling { pool: named.pool }, opcode), named.index), method, receivers)
 }
 
 /// `assembling` with a method of an interface called on the receiver below its arguments.
 // example: list.length(interface_invoked(assembling_of([]), box_made()).code) == 5
 fn interface_invoked(assembling: Assembling, method: ir.MethodRef) -> Assembling {
-    named := pooled_interface_method(assembling.pool, method)
-    taken := ir.parameters_width(method.descriptor) + 1
-    counted := if taken > 255 {
+    let named = pooled_interface_method(assembling.pool, method)
+    let taken = ir.parameters_width(method.descriptor) + 1
+    let counted = if taken > 255 {
         255
     } else {
         taken
@@ -877,7 +877,7 @@ fn interface_invoked(assembling: Assembling, method: ir.MethodRef) -> Assembling
 /// `assembling` with a static method of an interface called, which the pool names as such.
 // example: list.length(static_of_interface_invoked(assembling_of([]), box_made()).code) == 3
 fn static_of_interface_invoked(assembling: Assembling, method: ir.MethodRef) -> Assembling {
-    named := pooled_interface_method(assembling.pool, method)
+    let named = pooled_interface_method(assembling.pool, method)
     called(short(byte(assembling { pool: named.pool }, 184), named.index), method, 0)
 }
 
@@ -890,7 +890,7 @@ fn byte(assembling: Assembling, value: Int) -> Assembling {
 /// What a call leaves: its arguments gone, the receiver too, and its result on top.
 // example: list.length(called(assembling_of([]), box_made(), 0).frame.stack) == 0
 fn called(assembling: Assembling, method: ir.MethodRef, receivers: Int) -> Assembling {
-    taken := popped_times(assembling, list.length(method.descriptor.parameters) + receivers)
+    let taken = popped_times(assembling, list.length(method.descriptor.parameters) + receivers)
     match method.descriptor.result {
         Some(result) => pushed(taken, held_of(result))
         None => taken
@@ -900,8 +900,8 @@ fn called(assembling: Assembling, method: ir.MethodRef, receivers: Int) -> Assem
 /// `assembling` with `held` put on the stack, and the deepest the stack goes kept.
 // example: pushed(assembling_of([]), HeldLong).deepest == 2
 fn pushed(assembling: Assembling, held: Held) -> Assembling {
-    frame := assembling.frame
-    grown := frame { stack: list.push(frame.stack, held) }
+    let frame = assembling.frame
+    let grown = frame { stack: list.push(frame.stack, held) }
     assembling { frame: grown, deepest: greater(one: assembling.deepest, other: depth(grown)) }
 }
 
@@ -929,7 +929,7 @@ fn popped_times(assembling: Assembling, count: Int) -> Assembling {
 /// `assembling` with the top of the stack taken off, where there is one.
 // example: list.length(popped(pushed(assembling_of([]), HeldLong)).frame.stack) == 0
 fn popped(assembling: Assembling) -> Assembling {
-    frame := assembling.frame
+    let frame = assembling.frame
     assembling { frame: frame { stack: without_last(frame.stack) } }
 }
 
@@ -1015,7 +1015,7 @@ fn receiver_width(receiver: Option<String>) -> Int {
 /// `frame`, with `slot` holding a value `of` holds, and the slot after it where that is two wide.
 // example: held_in(Frame { locals: [Nothing, Nothing], stack: [] }, 0, ir.Long).locals == [Holding(HeldLong), Second]
 fn held_in(frame: Frame, slot: Int, of: ir.Descriptor) -> Frame {
-    holding := replaced(frame.locals, slot, Holding(held_of(of)))
+    let holding = replaced(frame.locals, slot, Holding(held_of(of)))
     if ir.width(of) == 2 {
         return frame { locals: replaced(holding, slot + 1, Second) }
     }
@@ -1137,8 +1137,8 @@ fn class_shared(hierarchy: Hierarchy, one: String, other: String) -> String {
     if one == other {
         return one
     }
-    above_one := or(map.get(hierarchy.extends, one), "java/lang/Object")
-    above_other := or(map.get(hierarchy.extends, other), "java/lang/Object")
+    let above_one = or(map.get(hierarchy.extends, one), "java/lang/Object")
+    let above_other = or(map.get(hierarchy.extends, other), "java/lang/Object")
     if above_one == other {
         return other
     }
@@ -1154,7 +1154,7 @@ fn class_shared(hierarchy: Hierarchy, one: String, other: String) -> String {
 /// `into`, with `frame` after it as a full frame, which is the one form that says everything.
 // example: frame_written(no_pool(), Frame { locals: [Holding(HeldInteger)], stack: [] }, 3, []).bytes == [255, 0, 3, 0, 1, 1, 0, 0]
 fn frame_written(pool: Pool, frame: Frame, delta: Int, into: List<Int>) -> Written {
-    named := named_locals(frame)
+    let named = named_locals(frame)
     var writing = Written { pool: pool, bytes: bytes.u2(bytes.u2(bytes.u1(into, 255), delta), capped(list.length(named))) }
     for slot in named {
         writing = match slot {
@@ -1212,7 +1212,7 @@ fn held_written(writing: Written, held: Held) -> Written {
 /// `writing`, with an object of `class` after it, which the pool names.
 // example: object_written(Written { pool: no_pool(), bytes: [] }, "a/B").bytes == [7, 0, 2]
 fn object_written(writing: Written, class: String) -> Written {
-    named := pooled_class(writing.pool, class)
+    let named = pooled_class(writing.pool, class)
     Written { pool: named.pool, bytes: bytes.u2(bytes.u1(writing.bytes, 7), named.index) }
 }
 
@@ -1236,46 +1236,46 @@ fn no_pool() -> Pool {
 /// `pool` with `text` held as text, and its index.
 // example: pooled_text(no_pool(), "a").index == 2
 fn pooled_text(pool: Pool, text: String) -> Pooled {
-    held := pooled_utf8(pool, text)
+    let held = pooled_utf8(pool, text)
     pooled(held.pool, TextEntry(held.index))
 }
 
 /// `pool` with `field` held, and its index.
 // example: pooled_field(no_pool(), boxed_at()).index == 6
 fn pooled_field(pool: Pool, field: ir.FieldRef) -> Pooled {
-    class := pooled_class(pool, field.class)
-    member := name_and_type(pool: class.pool, name: field.name, descriptor: ir.descriptor_text(field.of))
+    let class = pooled_class(pool, field.class)
+    let member = name_and_type(pool: class.pool, name: field.name, descriptor: ir.descriptor_text(field.of))
     pooled(member.pool, FieldEntry { class: class.index, member: member.index })
 }
 
 /// `pool` with `method` held as a method of a class, and its index.
 // example: pooled_method(no_pool(), box_made()).index == 6
 fn pooled_method(pool: Pool, method: ir.MethodRef) -> Pooled {
-    class := pooled_class(pool, method.class)
-    member := name_and_type(pool: class.pool, name: method.name, descriptor: ir.method_descriptor_text(method.descriptor))
+    let class = pooled_class(pool, method.class)
+    let member = name_and_type(pool: class.pool, name: method.name, descriptor: ir.method_descriptor_text(method.descriptor))
     pooled(member.pool, MethodEntry { class: class.index, member: member.index })
 }
 
 /// `pool` with `method` held as a method of an interface, and its index.
 // example: pooled_interface_method(no_pool(), box_made()).index == 6
 fn pooled_interface_method(pool: Pool, method: ir.MethodRef) -> Pooled {
-    class := pooled_class(pool, method.class)
-    member := name_and_type(pool: class.pool, name: method.name, descriptor: ir.method_descriptor_text(method.descriptor))
+    let class = pooled_class(pool, method.class)
+    let member = name_and_type(pool: class.pool, name: method.name, descriptor: ir.method_descriptor_text(method.descriptor))
     pooled(member.pool, InterfaceMethodEntry { class: class.index, member: member.index })
 }
 
 /// `pool` with a name and a descriptor held as one member, and its index.
 // example: name_and_type(pool: no_pool(), name: "of", descriptor: "()V").index == 3
 fn name_and_type(pool: Pool, name: String, descriptor: String) -> Pooled {
-    named := pooled_utf8(pool, name)
-    described := pooled_utf8(named.pool, descriptor)
+    let named = pooled_utf8(pool, name)
+    let described = pooled_utf8(named.pool, descriptor)
     pooled(described.pool, NameAndTypeEntry { name: named.index, descriptor: described.index })
 }
 
 /// `pool` with the class `class` held, and its index.
 // example: pooled_class(no_pool(), "a/B").index == 2
 fn pooled_class(pool: Pool, class: String) -> Pooled {
-    written := pooled_utf8(pool, class)
+    let written = pooled_utf8(pool, class)
     pooled(written.pool, ClassEntry(written.index))
 }
 
@@ -1290,7 +1290,7 @@ fn pooled_utf8(pool: Pool, text: String) -> Pooled {
 /// A whole number takes two indices, the second of which a class file leaves unusable.
 // example: pooled(pooled(no_pool(), LongEntry(1)).pool, Utf8Entry("a")).index == 3
 fn pooled(pool: Pool, entry: Entry) -> Pooled {
-    key := entry_key(entry)
+    let key = entry_key(entry)
     match map.get(pool.known, key) {
         Some(index) => Pooled { pool: pool, index: index }
         None => Pooled { pool: Pool { entries: list.push(pool.entries, entry), known: map.insert(pool.known, key, pool.next), next: pool.next + entry_width(entry) }, index: pool.next }
@@ -1351,7 +1351,7 @@ fn entry_written(into: List<Int>, entry: Entry) -> List<Int> {
 /// `into`, with a text entry after it, whose length `texts_held` has held to two bytes already.
 // example: utf8_written([], "a") == [1, 0, 1, 97]
 fn utf8_written(into: List<Int>, text: String) -> List<Int> {
-    encoded := bytes.modified_utf8(text)
+    let encoded = bytes.modified_utf8(text)
     bytes.all(bytes.u2(bytes.u1(into, 1), list.length(encoded)), encoded)
 }
 
@@ -1413,7 +1413,7 @@ fn code_of(why: Why) -> String {
 // example: message(Unwritten { class: "demo", method: Some("total$Int"), why: TooLarge }) == "`total` is too large to compile as one function"
 // example: message(Unwritten { class: "demo/Box", method: None, why: TooLong(65536) }) == "a text or a name in `demo/Box` takes 65536 bytes, and one takes 65535 at most"
 fn message(unwritten: Unwritten) -> String {
-    named := named_in(unwritten)
+    let named = named_in(unwritten)
     match unwritten.why {
         TooLarge => "`" + named + "` is too large to compile as one function"
         TooLong(length) => "a text or a name in `" + named + "` takes " + shown(length) + " bytes, and one takes 65535 at most"
@@ -1498,7 +1498,7 @@ fn variant_class() -> ir.Class {
 /// A static method `of` that gives back the whole number one.
 // example: returning_method().name == "of"
 fn returning_method() -> ir.Method {
-    body := ir.Body { instructions: [ir.LongOf(1), ir.Return(Some(ir.Long))], locals: 0, guards: [] }
+    let body = ir.Body { instructions: [ir.LongOf(1), ir.Return(Some(ir.Long))], locals: 0, guards: [] }
     ir.Method { name: "of", descriptor: ir.MethodDescriptor { parameters: [], result: Some(ir.Long) }, reached: ir.ThroughTheClass, body: body }
 }
 

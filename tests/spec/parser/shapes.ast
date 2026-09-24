@@ -1,5 +1,5 @@
 import list 261..272
-function grouped 329..739
+function grouped 329..754
   parameter total 340..350
     named-type Int 347..350
   parameter part 352..361
@@ -8,285 +8,285 @@ function grouped 329..739
     named-type Int 370..373
   result
     named-type Int 378..381
-  block 382..739
-    binding Immutable left 388..416
-      binary Subtract 396..416
-        binary Subtract 396..408
-          name total 396..401
-          name part 404..408
-        name share 411..416
-    binding Immutable divided 421..459
-      call 432..459
-        name or 432..434
-        binary Divide 435..455
-          binary Multiply 435..447
-            name total 435..440
-            name part 443..447
-          name share 450..455
-        integer 0 457..458
-    binding Immutable added 464..493
-      binary Add 473..493
-        name total 473..478
-        binary Multiply 481..493
-          name part 481..485
-          name share 488..493
-    binding Immutable bracketed 498..533
-      binary Multiply 511..533
-        binary Add 511..525
-          name total 512..517
-          name part 520..524
-        name share 528..533
-    binding Immutable negated 538..562
-      binary Add 549..562
-        unary Negate 549..555
-          name total 550..555
-        name part 558..562
-    if 567..731
-      branch 567..731
-        binary Or 570..658
-          binary Or 570..624
-            binary Equal 570..591
-              name total 570..575
-              binary Add 579..591
-                name part 579..583
-                name share 586..591
-            binary And 595..624
-              binary Greater 595..607
-                name total 595..600
-                name part 603..607
-              binary Equal 611..624
-                name part 611..615
-                name share 619..624
-          binary And 628..658
-            unary Not 628..644
-              binary Less 629..644
-                name total 630..635
-                name share 638..643
-            binary Less 648..658
-              unary Negate 648..654
-                name share 649..654
-              integer 0 657..658
-        block 659..731
-          return 669..725
-            binary Subtract 676..725
-              binary Add 676..720
-                binary Add 676..710
-                  binary Add 676..698
-                    binary Add 676..690
-                      name left 676..680
-                      name divided 683..690
-                    name added 693..698
-                  name bracketed 701..710
-                name negated 713..720
-              integer 10 723..725
-    integer 0 736..737
-function decoded 769..971
+  block 382..754
+    binding Immutable left 388..419
+      binary Subtract 399..419
+        binary Subtract 399..411
+          name total 399..404
+          name part 407..411
+        name share 414..419
+    binding Immutable divided 424..465
+      call 438..465
+        name or 438..440
+        binary Divide 441..461
+          binary Multiply 441..453
+            name total 441..446
+            name part 449..453
+          name share 456..461
+        integer 0 463..464
+    binding Immutable added 470..502
+      binary Add 482..502
+        name total 482..487
+        binary Multiply 490..502
+          name part 490..494
+          name share 497..502
+    binding Immutable bracketed 507..545
+      binary Multiply 523..545
+        binary Add 523..537
+          name total 524..529
+          name part 532..536
+        name share 540..545
+    binding Immutable negated 550..577
+      binary Add 564..577
+        unary Negate 564..570
+          name total 565..570
+        name part 573..577
+    if 582..746
+      branch 582..746
+        binary Or 585..673
+          binary Or 585..639
+            binary Equal 585..606
+              name total 585..590
+              binary Add 594..606
+                name part 594..598
+                name share 601..606
+            binary And 610..639
+              binary Greater 610..622
+                name total 610..615
+                name part 618..622
+              binary Equal 626..639
+                name part 626..630
+                name share 634..639
+          binary And 643..673
+            unary Not 643..659
+              binary Less 644..659
+                name total 645..650
+                name share 653..658
+            binary Less 663..673
+              unary Negate 663..669
+                name share 664..669
+              integer 0 672..673
+        block 674..746
+          return 684..740
+            binary Subtract 691..740
+              binary Add 691..735
+                binary Add 691..725
+                  binary Add 691..713
+                    binary Add 691..705
+                      name left 691..695
+                      name divided 698..705
+                    name added 708..713
+                  name bracketed 716..725
+                name negated 728..735
+              integer 10 738..740
+    integer 0 751..752
+function decoded 784..992
   result
-    named-type Int 785..788
-  block 789..971
-    binding Immutable words 795..862
-      list 804..862
-        string "hello" 805..812
-        string "a\"b" 814..820
-        string "a\nb" 822..828
-        string "a\\b" 830..836
-        string "tab\there" 838..849
-        string "return\r" 851..861
-    binding Immutable empty 867..878
-      list 876..878
-    binary Add 883..969
-      binary Add 883..965
-        binary Add 883..922
-          call 883..901
-            field length 883..894
-              name list 883..887
-            name words 895..900
+    named-type Int 800..803
+  block 804..992
+    binding Immutable words 810..880
+      list 822..880
+        string "hello" 823..830
+        string "a\"b" 832..838
+        string "a\nb" 840..846
+        string "a\\b" 848..854
+        string "tab\there" 856..867
+        string "return\r" 869..879
+    binding Immutable empty 885..899
+      list 897..899
+    binary Add 904..990
+      binary Add 904..986
+        binary Add 904..943
           call 904..922
             field length 904..915
               name list 904..908
-            name empty 916..921
-        call 925..965
-          field length 925..936
-            name list 925..929
-          list 937..964
-            binary Add 938..960
-              call 938..956
-                field length 938..949
-                  name list 938..942
-                name words 950..955
-              integer 1 959..960
-            integer 2 962..963
-      integer 2 968..969
-function is_active 1028..1304
-  parameter account 1041..1057
-    named-type Account 1050..1057
+            name words 916..921
+          call 925..943
+            field length 925..936
+              name list 925..929
+            name empty 937..942
+        call 946..986
+          field length 946..957
+            name list 946..950
+          list 958..985
+            binary Add 959..981
+              call 959..977
+                field length 959..970
+                  name list 959..963
+                name words 971..976
+              integer 1 980..981
+            integer 2 983..984
+      integer 2 989..990
+function is_active 1049..1325
+  parameter account 1062..1078
+    named-type Account 1071..1078
   result
-    named-type Bool 1062..1066
-  block 1067..1304
-    if 1073..1139
-      branch 1073..1139
-        field active 1076..1110
-          record account 1076..1103
-            field-value active 1087..1100
-              bool false 1095..1100
-        block 1111..1139
-          return 1121..1133
-            bool false 1128..1133
-    for-while 1144..1202
-      field active 1148..1174
-        record account 1148..1167
-          field-value id 1159..1164
-            integer 2 1163..1164
-      block 1175..1202
-        return 1185..1196
-          bool true 1192..1196
-    binding Mutable seen 1207..1219
-      integer 0 1218..1219
-    for-in n 1224..1288
-      list 1233..1242
-        name account 1234..1241
-      block 1243..1288
-        assign Set 1253..1264
-          name seen 1253..1257
-          field id 1260..1264
-            name n 1260..1261
-        assign Add 1273..1282
-          name seen 1273..1277
-          integer 1 1281..1282
-    binary Equal 1293..1302
-      name seen 1293..1297
-      integer 2 1301..1302
-function kept 1363..1553
-  parameter payment 1371..1395
-    named-type Option 1380..1395
-      named-type Payment 1387..1394
+    named-type Bool 1083..1087
+  block 1088..1325
+    if 1094..1160
+      branch 1094..1160
+        field active 1097..1131
+          record account 1097..1124
+            field-value active 1108..1121
+              bool false 1116..1121
+        block 1132..1160
+          return 1142..1154
+            bool false 1149..1154
+    for-while 1165..1223
+      field active 1169..1195
+        record account 1169..1188
+          field-value id 1180..1185
+            integer 2 1184..1185
+      block 1196..1223
+        return 1206..1217
+          bool true 1213..1217
+    binding Mutable seen 1228..1240
+      integer 0 1239..1240
+    for-in n 1245..1309
+      list 1254..1263
+        name account 1255..1262
+      block 1264..1309
+        assign Set 1274..1285
+          name seen 1274..1278
+          field id 1281..1285
+            name n 1281..1282
+        assign Add 1294..1303
+          name seen 1294..1298
+          integer 1 1302..1303
+    binary Equal 1314..1323
+      name seen 1314..1318
+      integer 2 1322..1323
+function kept 1384..1574
+  parameter payment 1392..1416
+    named-type Option 1401..1416
+      named-type Payment 1408..1415
   result
-    named-type String 1400..1406
-  block 1407..1553
-    match 1413..1551
-      name payment 1419..1426
-      arm 1437..1483
-        pattern-tuple Some 1437..1471
-          pattern-or 1442..1470
-            pattern Pending 1442..1449
-            pattern Captured 1452..1460
-            pattern Settled 1463..1470
-        string "moving" 1475..1483
-      arm 1492..1526
-        pattern-tuple Some 1492..1518
-          pattern-tuple Failed 1497..1517
-            pattern-tuple Reason 1504..1516
-              pattern text 1511..1515
-        name text 1522..1526
-      arm 1535..1545
-        pattern None 1535..1539
-        string "" 1543..1545
-function stopped 1600..1649
+    named-type String 1421..1427
+  block 1428..1574
+    match 1434..1572
+      name payment 1440..1447
+      arm 1458..1504
+        pattern-tuple Some 1458..1492
+          pattern-or 1463..1491
+            pattern Pending 1463..1470
+            pattern Captured 1473..1481
+            pattern Settled 1484..1491
+        string "moving" 1496..1504
+      arm 1513..1547
+        pattern-tuple Some 1513..1539
+          pattern-tuple Failed 1518..1538
+            pattern-tuple Reason 1525..1537
+              pattern text 1532..1536
+        name text 1543..1547
+      arm 1556..1566
+        pattern None 1556..1560
+        string "" 1564..1566
+function stopped 1621..1670
   result
-    named-type Result 1616..1634
-      unit-type 1623..1625
-      named-type String 1627..1633
-  block 1635..1649
-    call 1641..1647
-      name Ok 1641..1643
-      unit 1644..1646
-function nothing 1651..1704
+    named-type Result 1637..1655
+      unit-type 1644..1646
+      named-type String 1648..1654
+  block 1656..1670
+    call 1662..1668
+      name Ok 1662..1664
+      unit 1665..1667
+function nothing 1672..1725
   result
-    unit-type 1667..1669
-  block 1670..1704
-    for 1676..1702
-      block 1680..1702
-        return 1690..1696
-trait Weighed 1706..1789
-  type-parameter T 1720..1721
-  signature weight 1729..1754
-    parameter item 1739..1746
-      named-type T 1745..1746
+    unit-type 1688..1690
+  block 1691..1725
+    for 1697..1723
+      block 1701..1723
+        return 1711..1717
+trait Weighed 1727..1810
+  type-parameter T 1741..1742
+  signature weight 1750..1775
+    parameter item 1760..1767
+      named-type T 1766..1767
     result
-      named-type Int 1751..1754
-  signature is_heavy 1759..1787
-    parameter item 1771..1778
-      named-type T 1777..1778
+      named-type Int 1772..1775
+  signature is_heavy 1780..1808
+    parameter item 1792..1799
+      named-type T 1798..1799
     result
-      named-type Bool 1783..1787
-derive Eq for Account 1791..1812
-type Account 1814..1861
-  field id 1835..1842
-    named-type Int 1839..1842
-  field active 1847..1859
-    named-type Bool 1855..1859
-type Payment 1863..1941
-  variant Pending 1884..1891
-  variant Captured 1898..1906
-  variant Settled 1913..1920
-  variant Failed 1927..1941
-    named-type Reason 1934..1940
-type Reason 1943..1971
-  variant Reason 1957..1971
-    named-type String 1964..1970
-function identity 2002..2034
-  parameter value 2014..2019
-  block 2021..2034
-    name value 2027..2032
-extern method char held 2036..2113
-  java charAt 2105..2113
-  parameter text 2060..2072
-    named-type String 2066..2072
-  parameter int int 2078..2086
-    named-type Int 2083..2086
+      named-type Bool 1804..1808
+derive Eq for Account 1812..1833
+type Account 1835..1882
+  field id 1856..1863
+    named-type Int 1860..1863
+  field active 1868..1880
+    named-type Bool 1876..1880
+type Payment 1884..1962
+  variant Pending 1905..1912
+  variant Captured 1919..1927
+  variant Settled 1934..1941
+  variant Failed 1948..1962
+    named-type Reason 1955..1961
+type Reason 1964..1992
+  variant Reason 1978..1992
+    named-type String 1985..1991
+function identity 2023..2055
+  parameter value 2035..2040
+  block 2042..2055
+    name value 2048..2053
+extern method char held 2057..2134
+  java charAt 2126..2134
+  parameter text 2081..2093
+    named-type String 2087..2093
+  parameter int int 2099..2107
+    named-type Int 2104..2107
   result
-    named-type Option 2091..2102
-      named-type Int 2098..2101
-function rows_counted 2153..2394
-  parameter stored 2169..2203
-    named-type Result 2177..2203
-      named-type List 2184..2194
-        named-type Rows 2189..2193
-      named-type String 2196..2202
+    named-type Option 2112..2123
+      named-type Int 2119..2122
+function rows_counted 2174..2421
+  parameter stored 2190..2224
+    named-type Result 2198..2224
+      named-type List 2205..2215
+        named-type Rows 2210..2214
+      named-type String 2217..2223
   result
-    named-type Int 2208..2211
-  block 2212..2394
-    binding Immutable rows 2218..2257
-      record Rows 2226..2257
-        field-value cells 2233..2245
-          list 2240..2245
-            list 2241..2244
-              integer 1 2242..2243
-        field-value count 2247..2255
-          integer 1 2254..2255
-    binding Immutable shelf 2262..2288
-      call 2271..2288
-        name Stocked 2271..2278
-        list 2279..2287
-          list 2280..2286
-            name rows 2281..2285
-    match 2293..2392
-      name shelf 2299..2304
-      arm 2315..2339
-        pattern-tuple Stocked 2315..2325
-          pattern-wildcard 2323..2324
-        field count 2329..2339
-          name rows 2329..2333
-      arm 2348..2386
-        pattern Bare 2348..2352
-        call 2356..2386
-          field length 2356..2367
-            name list 2356..2360
-          call 2368..2385
-            name ok_or 2368..2373
-            name stored 2374..2380
-            list 2382..2384
-type Rows 2396..2453
-  field cells 2414..2436
-    named-type List 2421..2436
-      named-type List 2426..2435
-        named-type Int 2431..2434
-  field count 2441..2451
-    named-type Int 2448..2451
-type Shelf 2455..2510
-  type-parameter T 2466..2467
-  variant Stocked 2477..2499
-    named-type List 2485..2498
-      named-type List 2490..2497
-        named-type T 2495..2496
-  variant Bare 2506..2510
+    named-type Int 2229..2232
+  block 2233..2421
+    binding Immutable rows 2239..2281
+      record Rows 2250..2281
+        field-value cells 2257..2269
+          list 2264..2269
+            list 2265..2268
+              integer 1 2266..2267
+        field-value count 2271..2279
+          integer 1 2278..2279
+    binding Immutable shelf 2286..2315
+      call 2298..2315
+        name Stocked 2298..2305
+        list 2306..2314
+          list 2307..2313
+            name rows 2308..2312
+    match 2320..2419
+      name shelf 2326..2331
+      arm 2342..2366
+        pattern-tuple Stocked 2342..2352
+          pattern-wildcard 2350..2351
+        field count 2356..2366
+          name rows 2356..2360
+      arm 2375..2413
+        pattern Bare 2375..2379
+        call 2383..2413
+          field length 2383..2394
+            name list 2383..2387
+          call 2395..2412
+            name ok_or 2395..2400
+            name stored 2401..2407
+            list 2409..2411
+type Rows 2423..2480
+  field cells 2441..2463
+    named-type List 2448..2463
+      named-type List 2453..2462
+        named-type Int 2458..2461
+  field count 2468..2478
+    named-type Int 2475..2478
+type Shelf 2482..2537
+  type-parameter T 2493..2494
+  variant Stocked 2504..2526
+    named-type List 2512..2525
+      named-type List 2517..2524
+        named-type T 2522..2523
+  variant Bare 2533..2537

@@ -57,9 +57,9 @@ fn can_carry(boundary: Boundary, held: unify.Type) -> Bool {
 /// Whether the boundary carries the named type `held`.
 // example: can_carry_named(Boundary { crossing: refusal.Held, foreign: map.empty() }, unify.text_type())
 fn can_carry_named(boundary: Boundary, held: unify.Type) -> Bool {
-    name := name_of(held)
-    arguments := arguments_of(held)
-    count := list.length(arguments)
+    let name = name_of(held)
+    let arguments = arguments_of(held)
+    let count = list.length(arguments)
     if count == 0 && list.has_value(["Bool", "Int", "String"], name) {
         return true
     }
@@ -78,8 +78,8 @@ fn is_an_answer(boundary: Boundary, held: unify.Type) -> Bool {
     if is_taken(boundary.crossing) {
         return false
     }
-    arguments := arguments_of(held)
-    first := or(list.at(arguments, 0), unify.Unit)
+    let arguments = arguments_of(held)
+    let first = or(list.at(arguments, 0), unify.Unit)
     if name_of(held) == "Option" && list.length(arguments) == 1 {
         return is_a_reference(held: first, foreign: boundary.foreign) || boundary.crossing == refusal.Narrowed && is_a_number(first)
     }
@@ -171,7 +171,7 @@ fn receiver_of(declaration: ast.ExternDeclaration) -> lexer.Span {
 /// A `new` builds a class, so one that gives back an interface is refused.
 // example: refusal.code_given(builds_a_class(extern_of("extern new now() -> Int"), unify.int(), map.empty())) == ""
 fn builds_a_class(declaration: ast.ExternDeclaration, result: unify.Type, foreign: map.Map<String, ast.Called>) -> Result<(), refusal.TypeError> {
-    built := given_back(result)
+    let built = given_back(result)
     if !is_constructor(declaration.reaches) || !is_an_interface(built, foreign) {
         return Ok(())
     }
@@ -208,8 +208,8 @@ fn is_an_interface_called(called: ast.Called) -> Bool {
 /// An `extern` that states a width, refused where what it gives back is no `Int`.
 // example: refusal.code_given(widens(extern_of("extern static f() -> Int = \"a.B.c\""), unify.text_type())) == ""
 fn widens(declaration: ast.ExternDeclaration, result: unify.Type) -> Result<(), refusal.TypeError> {
-    width := ast.gives_word(declaration.gives)
-    given := given_back(result)
+    let width = ast.gives_word(declaration.gives)
+    let given = given_back(result)
     if width == "" || is_an_int(given) {
         return Ok(())
     }
@@ -226,7 +226,7 @@ fn is_an_int(held: unify.Type) -> Bool {
 /// An `extern` that narrows a parameter, refused where it gives back no `Option` to say `None`.
 // example: refusal.code_given(narrows(extern_of("extern static f(int at: Int) -> Int = \"a.B.c\""), unify.int())) == "L0431 32..35"
 fn narrows(declaration: ast.ExternDeclaration, result: unify.Type) -> Result<(), refusal.TypeError> {
-    given := inside("Result", result)
+    let given = inside("Result", result)
     if !is_narrowing(declaration) || name_of(given) == "Option" && list.length(arguments_of(given)) == 1 {
         return Ok(())
     }
@@ -290,7 +290,7 @@ fn class(named: ast.JavaName) -> Result<(), refusal.TypeError> {
 /// `named`, refused where it is not as many segments as `wanted` says, each a name.
 // example: refusal.code_given(java_name(ast.JavaName { text: "a..b", span: lexer.Span { start: 0, length: 6 } }, AtLeast(1))) == "L0426 0..6"
 fn java_name(named: ast.JavaName, wanted: Segments) -> Result<(), refusal.TypeError> {
-    segments := segments_of(named.text)
+    let segments = segments_of(named.text)
     if is_enough(wanted, list.length(segments)) && is_each_a_segment(segments) {
         return Ok(())
     }
@@ -368,7 +368,7 @@ fn arguments_of(held: unify.Type) -> List<unify.Type> {
 // example: !is_a_segment("1a")
 // example: !is_a_segment("")
 fn is_a_segment(segment: String) -> Bool {
-    points := code_points(segment)
+    let points = code_points(segment)
     if list.length(points) == 0 {
         return false
     }
@@ -389,8 +389,8 @@ fn code_points(text: String) -> List<Int> {
     var points = []
     var index = 0
     for index < strings.length(text) {
-        unit := or(strings.at(text, index), 0)
-        low := or(strings.at(text, index + 1), 0)
+        let unit = or(strings.at(text, index), 0)
+        let low = or(strings.at(text, index + 1), 0)
         if is_a_pair(high: unit, low: low) {
             points = list.push(points, 65536 + (unit - 55296) * 1024 + (low - 56320))
             index += 2
@@ -429,7 +429,7 @@ fn is_opening(point: Int) -> Bool {
 // example: is_numeric(1637)
 // example: !is_numeric(97)
 fn is_numeric(point: Int) -> Bool {
-    category := or(general_category(point), 0)
+    let category = or(general_category(point), 0)
     category == 9 || category == 10 || category == 11
 }
 
@@ -445,7 +445,7 @@ fn extern_of(source: String) -> ast.ExternDeclaration {
 /// The last `extern` of `program`, or an empty one where it has none.
 // example: first_extern(ast.Program { items: [] }).name.text == ""
 fn first_extern(program: ast.Program) -> ast.ExternDeclaration {
-    nowhere := lexer.Span { start: 0, length: 0 }
+    let nowhere = lexer.Span { start: 0, length: 0 }
     var found = ast.ExternDeclaration { name: ast.Name { text: "", span: nowhere }, reaches: ast.Constructor, gives: ast.GivesAsDeclared, parameters: [], result: ast.TypeRef { kind: ast.UnitType, span: nowhere }, span: nowhere }
     for item in program.items {
         found = extern_or(item, found)
@@ -465,7 +465,7 @@ fn extern_or(item: ast.Item, fallback: ast.ExternDeclaration) -> ast.ExternDecla
 /// A parameter called `name` that takes an `Int`, which the examples narrow.
 // example: parameter_of("at").name.text == "at"
 fn parameter_of(name: String) -> ast.Parameter {
-    nowhere := lexer.Span { start: 0, length: 0 }
+    let nowhere = lexer.Span { start: 0, length: 0 }
     ast.Parameter { name: ast.Name { text: name, span: nowhere }, type_ref: Some(ast.TypeRef { kind: ast.UnitType, span: nowhere }), span: nowhere }
 }
 

@@ -1,4 +1,4 @@
 // expect-error: L0104
 fn f() {
-    a := "a\qb"
+    let a = "a\qb"
 }

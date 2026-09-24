@@ -13,8 +13,8 @@ import walk
 // example: expectation_of("// expect-error: L9999\n") == Misstated("there is no diagnostic L9999")
 // example: expectation_of("// > one\nimport io\n") == Misstated("only an example that is run states what it writes")
 fn expectation_of(source: String) -> Expectation {
-    lines := walk.lines_of(source)
-    first := command.trimmed_end(or(list.at(lines, 0), ""))
+    let lines = walk.lines_of(source)
+    let first = command.trimmed_end(or(list.at(lines, 0), ""))
     match run_with(first) {
         Some(arguments) => ran(lines: lines, arguments: arguments)
         None => not_run(lines, first)
@@ -33,7 +33,7 @@ fn not_run(lines: List<String>, first: String) -> Expectation {
     if !command.has_prefix(first, "// expect-error:") {
         return Compiles
     }
-    code := command.trimmed_start(or(strings.cut(first, 16, strings.length(first)), ""))
+    let code = command.trimmed_start(or(strings.cut(first, 16, strings.length(first)), ""))
     match command.explanation_of(code) {
         Some(_) => Refused(code)
         None => Misstated("there is no diagnostic " + code)
@@ -47,7 +47,7 @@ fn run_with(first: String) -> Option<List<String>> {
     if !command.has_prefix(first, "// expect-run") {
         return None
     }
-    rest := or(strings.cut(first, 13, strings.length(first)), "")
+    let rest = or(strings.cut(first, 13, strings.length(first)), "")
     if rest != "" && !command.has_prefix(rest, " ") {
         return None
     }
@@ -61,7 +61,7 @@ fn words_of(text: String) -> List<String> {
     var word = ""
     var index = 0
     for index < strings.length(text) {
-        unit := or(strings.cut(text, index, index + 1), "")
+        let unit = or(strings.cut(text, index, index + 1), "")
         if command.is_white(or(strings.at(text, index), 0)) {
             words = with_word(words, word)
             word = ""
@@ -93,8 +93,8 @@ fn ran(lines: List<String>, arguments: List<String>) -> Expectation {
     var index = 1
     var stating = true
     for index < list.length(lines) {
-        line := or(list.at(lines, index), "")
-        found := states(line)
+        let line = or(list.at(lines, index), "")
+        let found = states(line)
         stating = stating && is_stating(found)
         if stating {
             stated = added(stated, or(found, Status(0)))
@@ -194,7 +194,7 @@ fn after_the_marker(line: String, marker: String) -> Option<String> {
     if !command.has_prefix(line, marker) {
         return None
     }
-    rest := or(strings.cut(line, strings.length(marker), strings.length(line)), "")
+    let rest = or(strings.cut(line, strings.length(marker), strings.length(line)), "")
     if rest == "" {
         return Some(rest)
     }

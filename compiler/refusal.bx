@@ -212,12 +212,12 @@ fn crossing_word(crossing: Crossing) -> String {
 /// `` `f` takes 2 arguments but 1 was given ``, with `what` as the word for what is counted.
 // example: count_text(Count { name: "Box", takes: 1, given: 0 }, "type argument") == "`Box` takes 1 type argument but 0 were given"
 fn count_text(count: Count, what: String) -> String {
-    plural := if count.takes == 1 {
+    let plural = if count.takes == 1 {
         ""
     } else {
         "s"
     }
-    was_or_were := if count.given == 1 {
+    let was_or_were = if count.given == 1 {
         "was"
     } else {
         "were"
@@ -229,7 +229,7 @@ fn count_text(count: Count, what: String) -> String {
 // example: ring_text(["A", "B"]) == "`A` holds `B`, which holds `A`"
 // example: ring_text(["A"]) == "`A` holds `A`"
 fn ring_text(ring: List<String>) -> String {
-    first := or(list.at(ring, 0), "")
+    let first = or(list.at(ring, 0), "")
     var written = "`" + first + "` holds "
     var position = 0
     for held in ring {
@@ -258,7 +258,7 @@ fn help_of(kind: TypeErrorKind) -> String {
 // example: operator_help("Add", unify.Named { name: "Point", arguments: [] }) == "an operator is a trait method, so a type gets one by writing that trait's instance"
 fn operator_help(of: String, at: unify.Type) -> String {
     if list.has_value(["Eq", "Ord", "Hash", "Show"], of) && is_derivable_here(at) {
-        written := unify.text_of(at)
+        let written = unify.text_of(at)
         return "`" + written + "` gets one by deriving it: write `derive " + of + " for " + written + "`"
     }
     "an operator is a trait method, so a type gets one by writing that trait's instance"

@@ -11,7 +11,7 @@ fn format(fnord: List<Int>) -> Int {
 
 // example: shape_of(x1: 1, y_2: 2) == "the same"
 fn shape_of(x1: Int, y_2: Int) -> String {
-    derived := x1 + 1 == y_2
+    let derived = x1 + 1 == y_2
     match derived {
         true => "the same"
         false => "other"

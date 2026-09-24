@@ -28,10 +28,10 @@ fn a_record_whose_every_field_has_the_trait_derives_it(cases: Int, library: ir.L
 /// A drawn standard trait, derived for a record of one to four drawn fields that have it.
 // example: derived_tried(drawn.seeded(1), ir.little_library()).input != ""
 fn derived_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
-    standard := drawn.picked(draw, standards(), eq())
-    fields := drawn_fields(draw: drawn.next(draw), count: drawn.number(checking.after(draw, 2), 4) + 1)
-    source := deriving(standard: standard, declared: record(fields))
-    typed := checking.type_written(source, called(standard: standard, one: "one", other: "other"), 1, library)
+    let standard = drawn.picked(draw, standards(), eq())
+    let fields = drawn_fields(draw: drawn.next(draw), count: drawn.number(checking.after(draw, 2), 4) + 1)
+    let source = deriving(standard: standard, declared: record(fields))
+    let typed = checking.type_written(source, called(standard: standard, one: "one", other: "other"), 1, library)
     if typed != standard.gives {
         return checking.Tried { input: source, why: standard.of + " gives " + typed }
     }
@@ -51,12 +51,12 @@ fn a_field_without_the_trait_is_refused_naming_both(cases: Int, library: ir.Libr
 /// A drawn standard trait, derived for a record with one field without it at a drawn place.
 // example: underived_tried(drawn.seeded(1), ir.little_library()).input != ""
 fn underived_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
-    standard := drawn.picked(draw, standards(), eq())
-    fields := drawn_fields(draw: drawn.next(draw), count: drawn.number(checking.after(draw, 2), 4))
-    without := drawn.picked(checking.after(draw, 3), ["List<Option<Int>>", "()", "Option<Int>"], "()")
-    at := drawn.number(checking.after(draw, 4), list.length(fields) + 1)
-    source := deriving(standard: standard, declared: record(inserted(fields: fields, at: at, field: without)))
-    message := checking.message_of(checking.checked(source, library))
+    let standard = drawn.picked(draw, standards(), eq())
+    let fields = drawn_fields(draw: drawn.next(draw), count: drawn.number(checking.after(draw, 2), 4))
+    let without = drawn.picked(checking.after(draw, 3), ["List<Option<Int>>", "()", "Option<Int>"], "()")
+    let at = drawn.number(checking.after(draw, 4), list.length(fields) + 1)
+    let source = deriving(standard: standard, declared: record(inserted(fields: fields, at: at, field: without)))
+    let message = checking.message_of(checking.checked(source, library))
     if message != "`Held` derives `" + standard.of + "`, and the `" + without + "` it holds as `value" + shown(at) + "` has none" {
         return checking.Tried { input: source, why: "the refusal says " + held.quoted(message) }
     }
@@ -76,9 +76,9 @@ fn a_trait_method_reaches_the_instance_of_its_type(cases: Int, library: ir.Libra
 /// A comparison of two values of a drawn type through `Eq`.
 // example: reached_tried(drawn.seeded(1), ir.little_library()).input != ""
 fn reached_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
-    of := drawn.picked(draw, ["Bool", "Int", "String", "Point"], "Int")
-    source := comparing(of)
-    answered := checking.instance_in(checking.checked(source, library), checking.occurrence(source, "is_equal", 1))
+    let of = drawn.picked(draw, ["Bool", "Int", "String", "Point"], "Int")
+    let source = comparing(of)
+    let answered = checking.instance_in(checking.checked(source, library), checking.occurrence(source, "is_equal", 1))
     if answered != of {
         return checking.Tried { input: source, why: "is_equal reaches the instance for " + answered }
     }
@@ -98,9 +98,9 @@ fn a_type_with_no_instance_is_refused_where_the_trait_is_asked(cases: Int, libra
 /// A comparison of two circles, beside a comparison of two values of a drawn type.
 // example: circle_tried(drawn.seeded(1), ir.little_library()).input != ""
 fn circle_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
-    of := drawn.picked(draw, ["Bool", "Int", "String", "Point"], "Int")
-    source := "fn is_matching() -> Bool {\n    is_equal(Circle { radius: 1 }, Circle { radius: 1 })\n}\n\n" + comparing(of) + "\ntype Circle = {\n    radius: Int\n}\n"
-    message := checking.message_of(checking.checked(source, library))
+    let of = drawn.picked(draw, ["Bool", "Int", "String", "Point"], "Int")
+    let source = "fn is_matching() -> Bool {\n    is_equal(Circle { radius: 1 }, Circle { radius: 1 })\n}\n\n" + comparing(of) + "\ntype Circle = {\n    radius: Int\n}\n"
+    let message = checking.message_of(checking.checked(source, library))
     if message != "`Circle` has no instance of `Eq`" {
         return checking.Tried { input: source, why: "the refusal says " + held.quoted(message) }
     }
@@ -120,11 +120,11 @@ fn each_standard_method_is_accepted_over_every_supplied_type(cases: Int, library
 /// A drawn standard method, asked of two values of a drawn type the prelude supplies.
 // example: supplied_tried(drawn.seeded(1), ir.little_library()).input != ""
 fn supplied_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
-    standard := drawn.picked(draw, standards(), eq())
-    values := drawn.picked(drawn.next(draw), supplied(), Supplied { one: "1", other: "2" })
-    written := called(standard: standard, one: values.one, other: values.other)
-    source := asking(standard: standard, written: written)
-    typed := checking.type_written(source, written, 1, library)
+    let standard = drawn.picked(draw, standards(), eq())
+    let values = drawn.picked(drawn.next(draw), supplied(), Supplied { one: "1", other: "2" })
+    let written = called(standard: standard, one: values.one, other: values.other)
+    let source = asking(standard: standard, written: written)
+    let typed = checking.type_written(source, written, 1, library)
     if typed != standard.gives {
         return checking.Tried { input: source, why: written + " is " + typed }
     }
@@ -144,10 +144,10 @@ fn each_standard_method_is_refused_over_a_type_with_no_instance(cases: Int, libr
 /// A drawn standard method, asked of two circles.
 // example: unsupplied_tried(drawn.seeded(1), ir.little_library()).input != ""
 fn unsupplied_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
-    standard := drawn.picked(draw, standards(), eq())
-    circle := "Circle { radius: 1 }"
-    source := asking(standard: standard, written: called(standard: standard, one: circle, other: circle)) + "\ntype Circle = {\n    radius: Int\n}\n"
-    message := checking.message_of(checking.checked(source, library))
+    let standard = drawn.picked(draw, standards(), eq())
+    let circle = "Circle { radius: 1 }"
+    let source = asking(standard: standard, written: called(standard: standard, one: circle, other: circle)) + "\ntype Circle = {\n    radius: Int\n}\n"
+    let message = checking.message_of(checking.checked(source, library))
     if message != "`Circle` has no instance of `" + standard.of + "`" {
         return checking.Tried { input: source, why: "the refusal says " + held.quoted(message) }
     }
@@ -159,7 +159,7 @@ fn unsupplied_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
 /// The methods are read once, and each case draws one of them.
 // example: every_instance_body_of_the_prelude_has_the_type_its_trait_gives(2, ir.little_library()).cases == 2
 fn every_instance_body_of_the_prelude_has_the_type_its_trait_gives(cases: Int, library: ir.Library) -> held.Held {
-    methods := instance_methods(library)
+    let methods = instance_methods(library)
     var found = held.nothing_failed(cases)
     for seed in checking.seeds(cases) {
         found = checking.noted(found, "every_instance_body_of_the_prelude_has_the_type_its_trait_gives", seed, method_tried(draw: drawn.seeded(seed), methods: methods, library: library))
@@ -173,9 +173,9 @@ fn method_tried(draw: drawn.Draw, methods: List<Method>, library: ir.Library) ->
     if list.length(methods) == 0 {
         return checking.Tried { input: "", why: "" }
     }
-    method := or(list.at(methods, drawn.number(draw, list.length(methods))), Method { written: nowhere(), leaves: nowhere(), declared: "", reads_as: "" })
-    signature := checking.type_in(Ok(library.typed), method.written)
-    value := checking.type_in(Ok(library.typed), method.leaves)
+    let method = or(list.at(methods, drawn.number(draw, list.length(methods))), Method { written: nowhere(), leaves: nowhere(), declared: "", reads_as: "" })
+    let signature = checking.type_in(Ok(library.typed), method.written)
+    let value = checking.type_in(Ok(library.typed), method.leaves)
     if signature != method.declared || value != gives(method.declared) {
         return checking.Tried { input: method.reads_as, why: "the signature is " + signature + " and the value is " + value + ", not " + method.declared }
     }
@@ -204,10 +204,10 @@ fn item_methods(item: ast.Item, traits: List<ast.TraitDeclaration>) -> List<Meth
 /// Each method one instance writes: where it is, what its trait gives it, and what it reads as.
 // example: list.length(methods_of(of: ast.InstanceDeclaration { trait_name: named("Eq"), type_parameters: [], for_type: named("Int"), arguments: [], methods: [], span: nowhere() }, traits: [])) == 0
 fn methods_of(of: ast.InstanceDeclaration, traits: List<ast.TraitDeclaration>) -> List<Method> {
-    standing := Standing { parameter: trait_parameter(of: of, traits: traits), settled: written_over(of) }
+    let standing = Standing { parameter: trait_parameter(of: of, traits: traits), settled: written_over(of) }
     var found = []
     for method in of.methods {
-        declared := signature_text(signature: signature_of(of: of, traits: traits, method: method.name.text), standing: standing)
+        let declared = signature_text(signature: signature_of(of: of, traits: traits, method: method.name.text), standing: standing)
         found = list.push(found, Method { written: method.name.span, leaves: leaves(method), declared: declared, reads_as: of.trait_name.text + "<" + standing.settled + ">." + method.name.text })
     }
     found
@@ -327,7 +327,7 @@ fn applied(name: String, arguments: List<ast.TypeRef>, standing: Standing) -> St
 /// the method's name, which has the signature's type and not the value's.
 // example: leaves(ast.FunctionDeclaration { name: named("f"), type_parameters: [], parameters: [], result: None, body: ast.Block { statements: [], span: nowhere() }, span: nowhere() }).start == -1
 fn leaves(method: ast.FunctionDeclaration) -> lexer.Span {
-    last := list.at(method.body.statements, list.length(method.body.statements) - 1)
+    let last = list.at(method.body.statements, list.length(method.body.statements) - 1)
     match last {
         Some(statement) => left_by(statement: statement, fallback: method.name.span)
         None => method.name.span
@@ -346,7 +346,7 @@ fn left_by(statement: ast.Statement, fallback: lexer.Span) -> lexer.Span {
 /// What a signature written as text gives back, which is the text after its first arrow.
 // example: gives("(Bool) -> Int") == "Int"
 fn gives(signature: String) -> String {
-    arrow := checking.occurrence(signature, "-> ", 1)
+    let arrow = checking.occurrence(signature, "-> ", 1)
     or(strings.cut(signature, arrow.start + 3, strings.length(signature)), "")
 }
 

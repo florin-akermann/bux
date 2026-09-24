@@ -4,16 +4,16 @@ import   list
 // example: spaced(first: 1, second: 2) == 8
 fn spaced(first:Int,second:Int)->Int{
 
-    flag:=first>0
-    listed := [ 1 , 2 ]
-    empty := [ ]
+    let flag=first>0
+    let listed = [ 1 , 2 ]
+    let empty = [ ]
 
-    joined := first+(second*3)
-    grouped := (first + second) * 3
-    kept := first - (second - 3)
-    left := (first - second) - 3
-    negated := -  first
-    written := - 7
+    let joined = first+(second*3)
+    let grouped = (first + second) * 3
+    let kept = first - (second - 3)
+    let left = (first - second) - 3
+    let negated = -  first
+    let written = - 7
     if !(flag&&first<second)||(!flag)&&flag {
       return   0
     }
@@ -31,7 +31,7 @@ fn escaped() -> Int {
 }
 // example: built(Point { across: 1, down: 2 }).across == 3
 fn built(point: Point) -> Point {
-    moved := point{across:or(first_of([point.across, point.down]), 0) + point.down}
+    let moved = point{across:or(first_of([point.across, point.down]), 0) + point.down}
     _  =   sized( moved , 0 )
     for  other  in  [Point{across:1,down:1}]  {
         if other.across > 1 {

@@ -5,7 +5,7 @@
 fn fullest(baskets: List<Basket>) -> Int {
     var most = 0
     for basket in baskets {
-        held := picked(Placed(basket))
+        let held = picked(Placed(basket))
         if held > most {
             most = held
         }

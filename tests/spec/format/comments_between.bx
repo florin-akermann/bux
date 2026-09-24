@@ -5,7 +5,7 @@ import list
 
 // example: counted(Pending) == 2
 fn counted(payment: Payment) -> Int {
-    listed := list.length([1, 2])
+    let listed = list.length([1, 2])
     // the length of what is listed
     match payment {
         Pending => listed

@@ -60,8 +60,8 @@ fn type_written(source: String, written: String, count: Int, library: ir.Library
 // example: code_of(checked("fn one() -> Int {\n    1\n}\n", ir.little_library())) == ""
 // example: code_of(checked("fn one() -> Int {\n    \"one\"\n}\n", ir.little_library())) == "L0400"
 fn checked(source: String, library: ir.Library) -> Result<infer.Inference, command.Diagnostic> {
-    program := parsed(source)?
-    resolved := command.resolved_of(resolver.resolve(program, "demo", library.prelude.names))?
+    let program = parsed(source)?
+    let resolved = command.resolved_of(resolver.resolve(program, "demo", library.prelude.names))?
     command.inferred_of(types.check(resolved, surface.nothing_imported(), library.prelude))
 }
 
@@ -160,7 +160,7 @@ fn type_text(found: Option<unify.Type>) -> String {
 // example: occurrence(source: "a b a", written: "a", count: 2).start == 4
 // example: occurrence(source: "a b a", written: "a", count: 3).start == -1
 fn occurrence(source: String, written: String, count: Int) -> lexer.Span {
-    length := strings.length(written)
+    let length = strings.length(written)
     var seen = 0
     var index = 0
     for index + length <= strings.length(source) {
@@ -188,11 +188,11 @@ fn outside(at: lexer.Span, source: String) -> String {
 /// A module of the distinct pieces drawn from `among`; a piece drawn twice is written once.
 // example: list.has_value(["a", ""], module_of(drawn.seeded(1), ["a"]))
 fn module_of(draw: drawn.Draw, among: List<String>) -> String {
-    count := drawn.number(draw, list.length(among) + 2)
+    let count = drawn.number(draw, list.length(among) + 2)
     var at = drawn.next(draw)
     var chosen = []
     for index in numbers_below(count) {
-        piece := drawn.picked(at, among, "")
+        let piece = drawn.picked(at, among, "")
         if !list.has_value(chosen, piece) {
             chosen = list.push(chosen, piece)
         }

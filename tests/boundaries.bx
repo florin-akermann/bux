@@ -16,7 +16,7 @@ import strings
 /// Where no directory of its own can be made, the two properties that need one are skipped.
 // example: list.length(every_property(0, ir.little_library())) == 4
 fn every_property(cases: Int, library: ir.Library) -> List<held.Held> {
-    library_ones := library_reached(cases, library)
+    let library_ones = library_reached(cases, library)
     [or(list.at(library_ones, 0), held.nothing_failed(0)), or(list.at(library_ones, 1), held.nothing_failed(0)), a_type_that_does_not_cross_is_refused_in_every_position(cases, library), a_list_crosses_only_where_a_member_takes_one(cases, library)]
 }
 
@@ -33,7 +33,7 @@ fn library_reached(cases: Int, library: ir.Library) -> List<held.Held> {
 /// The two properties of the names a library module declares, run in `directory`.
 // example: list.length(reached_in(cases: 0, library: ir.little_library(), directory: "no-such-directory")) == 2
 fn reached_in(cases: Int, library: ir.Library, directory: String) -> List<held.Held> {
-    found := [a_declared_name_has_one_type_wherever_it_is_written(cases: cases, library: library, directory: directory), an_undeclared_name_is_refused_naming_the_module(cases: cases, library: library, directory: directory)]
+    let found = [a_declared_name_has_one_type_wherever_it_is_written(cases: cases, library: library, directory: directory), an_undeclared_name_is_refused_naming_the_module(cases: cases, library: library, directory: directory)]
     command.removed_whole(directory)
     found
 }
@@ -51,11 +51,11 @@ fn a_declared_name_has_one_type_wherever_it_is_written(cases: Int, library: ir.L
 /// A drawn call of a declared name, written in a drawn place.
 // example: declared_tried(drawn.seeded(1), Reaching { library: ir.little_library(), directory: "no-such-directory" }).why != ""
 fn declared_tried(draw: drawn.Draw, reaching: Reaching) -> checking.Tried {
-    row := drawn.picked(draw, reached(), Reached { module: "io", name: "print", arguments: "\"text\"", result: "()" })
-    call := row.module + "." + row.name + "(" + row.arguments + ")"
-    place := drawn.picked(drawn.next(draw), places(), "")
-    source := "import " + row.module + "\n\nfn go() -> () {\n" + place_of(place: place, call: call) + "}\n"
-    found := checking.type_in(checking.reaching(source, reaching.directory, reaching.library), checking.occurrence(source, call, 1))
+    let row = drawn.picked(draw, reached(), Reached { module: "io", name: "print", arguments: "\"text\"", result: "()" })
+    let call = row.module + "." + row.name + "(" + row.arguments + ")"
+    let place = drawn.picked(drawn.next(draw), places(), "")
+    let source = "import " + row.module + "\n\nfn go() -> () {\n" + place_of(place: place, call: call) + "}\n"
+    let found = checking.type_in(checking.reaching(source, reaching.directory, reaching.library), checking.occurrence(source, call, 1))
     if found != row.result {
         return checking.Tried { input: source, why: call + " gives back " + found + ", not " + row.result }
     }
@@ -77,13 +77,13 @@ fn an_undeclared_name_is_refused_naming_the_module(cases: Int, library: ir.Libra
 /// A drawn name that one of the rows declares holds, because it says nothing of the rule.
 // example: undeclared_tried(drawn.seeded(1), Reaching { library: ir.little_library(), directory: "no-such-directory" }).why != ""
 fn undeclared_tried(draw: drawn.Draw, reaching: Reaching) -> checking.Tried {
-    module := drawn.picked(draw, reached(), Reached { module: "io", name: "print", arguments: "", result: "" }).module
-    name := drawn.picked(drawn.next(draw), ["a", "w", "r"], "a") + drawn.text_of(checking.after(draw, 3), ["a", "d", "e", "n", "o", "p", "r", "s", "t", "u", "w"], drawn.number(checking.after(draw, 2), 7))
-    source := "import " + module + "\n\nfn go() -> () {\n    _ = " + module + "." + name + "()\n}\n"
+    let module = drawn.picked(draw, reached(), Reached { module: "io", name: "print", arguments: "", result: "" }).module
+    let name = drawn.picked(drawn.next(draw), ["a", "w", "r"], "a") + drawn.text_of(checking.after(draw, 3), ["a", "d", "e", "n", "o", "p", "r", "s", "t", "u", "w"], drawn.number(checking.after(draw, 2), 7))
+    let source = "import " + module + "\n\nfn go() -> () {\n    _ = " + module + "." + name + "()\n}\n"
     if is_declared(name) {
         return checking.Tried { input: source, why: "" }
     }
-    message := checking.message_of(checking.reaching(source, reaching.directory, reaching.library))
+    let message = checking.message_of(checking.reaching(source, reaching.directory, reaching.library))
     if message != "`" + module + "` declares no `" + name + "`" {
         return checking.Tried { input: source, why: "the refusal says " + held.quoted(message) }
     }
@@ -103,11 +103,11 @@ fn a_type_that_does_not_cross_is_refused_in_every_position(cases: Int, library: 
 /// A drawn type that does not cross, written in a drawn position.
 // example: crossing_tried(drawn.seeded(1), ir.little_library()).input != ""
 fn crossing_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
-    written := drawn.picked(draw, ["User", "Paid", "Option<Int>", "List<Option<Int>>"], "User")
-    position := drawn.picked(drawn.next(draw), positions(), Position { written: "", is_taken: IsGiven })
-    source := "extern " + place_of(place: position.written, call: written) + "\n\nextern type File = \"java.io.File\"\n\ntype User = {\n    paid: Paid\n}\n\ntype Paid = Paid(Int)\n"
-    answer := checking.checked(source, library)
-    message := checking.message_of(answer)
+    let written = drawn.picked(draw, ["User", "Paid", "Option<Int>", "List<Option<Int>>"], "User")
+    let position = drawn.picked(drawn.next(draw), positions(), Position { written: "", is_taken: IsGiven })
+    let source = "extern " + place_of(place: position.written, call: written) + "\n\nextern type File = \"java.io.File\"\n\ntype User = {\n    paid: Paid\n}\n\ntype Paid = Paid(Int)\n"
+    let answer = checking.checked(source, library)
+    let message = checking.message_of(answer)
     if checking.code_of(answer) != "L0425" || checking.occurrence(message, "`" + written + "` is no type", 1).start != 0 {
         return checking.Tried { input: source, why: "the refusal is " + checking.code_of(answer) + " " + held.quoted(message) }
     }
@@ -127,10 +127,10 @@ fn a_list_crosses_only_where_a_member_takes_one(cases: Int, library: ir.Library)
 /// A list of a drawn element type, written in a drawn position.
 // example: list_tried(drawn.seeded(1), ir.little_library()).input != ""
 fn list_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
-    element := drawn.picked(draw, ["Bool", "Int", "String", "File"], "Int")
-    position := drawn.picked(drawn.next(draw), positions(), Position { written: "", is_taken: IsGiven })
-    source := "extern " + place_of(place: position.written, call: "List<" + element + ">") + "\n\nextern type File = \"java.io.File\"\n"
-    is_accepted := checking.is_accepted(source, library)
+    let element = drawn.picked(draw, ["Bool", "Int", "String", "File"], "Int")
+    let position = drawn.picked(drawn.next(draw), positions(), Position { written: "", is_taken: IsGiven })
+    let source = "extern " + place_of(place: position.written, call: "List<" + element + ">") + "\n\nextern type File = \"java.io.File\"\n"
+    let is_accepted = checking.is_accepted(source, library)
     if is_accepted != (position.is_taken == IsTaken) {
         return checking.Tried { input: source, why: "accepted is " + shown(is_accepted) + ": " + checking.message_of(checking.checked(source, library)) }
     }
@@ -152,7 +152,7 @@ fn is_declared(name: String) -> Bool {
 /// `place` with `call` written where it writes `CALL`.
 // example: place_of(place: "    _ = CALL\n", call: "f()") == "    _ = f()\n"
 fn place_of(place: String, call: String) -> String {
-    at := checking.occurrence(place, "CALL", 1)
+    let at = checking.occurrence(place, "CALL", 1)
     or(strings.cut(place, 0, at.start), "") + call + or(strings.cut(place, at.start + at.length, strings.length(place)), "")
 }
 
@@ -165,7 +165,7 @@ fn reached() -> List<Reached> {
 /// Every place a call is written, which is every place an expression of its type may go.
 // example: list.length(places()) == 3
 fn places() -> List<String> {
-    ["    held := CALL\n    _ = held\n", "    _ = CALL\n", "    if true {\n        _ = CALL\n    }\n"]
+    ["    let held = CALL\n    _ = held\n", "    _ = CALL\n", "    if true {\n        _ = CALL\n    }\n"]
 }
 
 /// Every place a Java member's signature writes a type, and whether the member takes it there.

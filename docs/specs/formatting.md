@@ -54,7 +54,7 @@ second way to write the same program.
 
 ## Spacing
 
-One space goes around every binary operator, and around `=`, `:=`, `+=`, `->`, `=>`, and `|`.
+One space goes around every binary operator, and around `=`, `+=`, `->`, `=>`, and `|`.
 A prefix `!` or `-` is written against what it negates, as is a `?`, a `.`, and a call's `(`.
 A `-` before something whose first character is a digit keeps its parentheses, as `-(7.size)`.
 The grammar reads a `-` before a number as part of it, so `-7.size` is a different program.
@@ -104,7 +104,7 @@ Its text is written as the author wrote it, with any trailing blank taken off.
 The printer writes a comment above the line it was written on.
 A comment that already sits on its own line therefore stays where it is, and a comment written at
 the end of a line moves to its own line directly above that one.
-`total := 0 // start at nothing` becomes those two lines, in that order, and formatting it again
+`let total = 0 // start at nothing` becomes those two lines, in that order, and formatting it again
 changes nothing.
 
 A comment that follows the last entry of a block, a record body, a variant list, or a `match` is

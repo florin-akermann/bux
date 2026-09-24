@@ -15,8 +15,8 @@ import map
 import money
 
 fn main(arguments: List<String>) -> Int {
-    one := money.cents(1)
-    two := money.cents(2)
+    let one = money.cents(1)
+    let two = money.cents(2)
     if one == money.cents(1) {
         io.println("== reaches the instance the module of the type derived")
     }

@@ -16,7 +16,7 @@ fn u8(bytes: List<Int>, value: Int) -> List<Int> {
     if value >= 0 {
         return u4(bytes: u4(bytes: bytes, value: or(value / 4294967296, 0)), value: value)
     }
-    lifted := value + 9223372036854775807 + 1
+    let lifted = value + 9223372036854775807 + 1
     u4(bytes: u4(bytes: bytes, value: or(lifted / 4294967296, 0) + 2147483648), value: lifted)
 }
 
@@ -24,7 +24,7 @@ fn u8(bytes: List<Int>, value: Int) -> List<Int> {
 // example: u4(bytes: [], value: 3405691582) == [202, 254, 186, 190]
 // example: u4(bytes: [], value: -2) == [255, 255, 255, 254]
 fn u4(bytes: List<Int>, value: Int) -> List<Int> {
-    held := wrapped(value: value, range: 4294967296)
+    let held = wrapped(value: value, range: 4294967296)
     u2(bytes: u2(bytes: bytes, value: or(held / 65536, 0)), value: held)
 }
 
@@ -32,7 +32,7 @@ fn u4(bytes: List<Int>, value: Int) -> List<Int> {
 // example: u2(bytes: [], value: 258) == [1, 2]
 // example: u2(bytes: [], value: -1) == [255, 255]
 fn u2(bytes: List<Int>, value: Int) -> List<Int> {
-    held := wrapped(value: value, range: 65536)
+    let held = wrapped(value: value, range: 65536)
     u1(bytes: u1(bytes: bytes, value: or(held / 256, 0)), value: held)
 }
 
@@ -45,7 +45,7 @@ fn u1(bytes: List<Int>, value: Int) -> List<Int> {
 /// `value` modulo `range`, which is never negative.
 // example: wrapped(value: -1, range: 256) == 255
 fn wrapped(value: Int, range: Int) -> Int {
-    left := or(value % range, 0)
+    let left = or(value % range, 0)
     if left < 0 {
         return left + range
     }

@@ -28,8 +28,8 @@ fn held_over(property: Property, cases: Int, prelude: types.Prelude) -> held.Hel
     var found = held.nothing_failed(cases)
     var index = 0
     for index < cases {
-        seed := drawn.seed_of(index)
-        tried := tried_by(property: property, draw: drawn.seeded(seed), prelude: prelude)
+        let seed = drawn.seed_of(index)
+        let tried = tried_by(property: property, draw: drawn.seeded(seed), prelude: prelude)
         if tried.why != "" {
             found = held.with_failure(found, held.drawn_failure(name_of(property), seed, tried.case, tried.why))
         }
@@ -63,8 +63,8 @@ fn name_of(property: Property) -> String {
 /// A hole written as the body of a function is found, and its span covers the whole call.
 // example: a_hole_is_a_hole_whatever_type_it_is_written_in(drawn.seeded(1), types.little_prelude()).case != ""
 fn a_hole_is_a_hole_whatever_type_it_is_written_in(draw: drawn.Draw, prelude: types.Prelude) -> Tried {
-    source := placed(place: 0, result: result_of(draw))
-    written := written_of(source, prelude)
+    let source = placed(place: 0, result: result_of(draw))
+    let written = written_of(source, prelude)
     var why = ""
     if written != ["todo(\"why\")"] {
         why = "the holes are written " + shown(written)
@@ -75,9 +75,9 @@ fn a_hole_is_a_hole_whatever_type_it_is_written_in(draw: drawn.Draw, prelude: ty
 /// Every hole a module holds is found, wherever in a function it is written.
 // example: every_hole_a_module_holds_is_found_wherever_it_is_written(drawn.seeded(1), types.little_prelude()).case != ""
 fn every_hole_a_module_holds_is_found_wherever_it_is_written(draw: drawn.Draw, prelude: types.Prelude) -> Tried {
-    place := drawn.number(drawn.next(draw), 4)
-    source := placed(place: place, result: result_of(draw))
-    written := written_of(source, prelude)
+    let place = drawn.number(drawn.next(draw), 4)
+    let source = placed(place: place, result: result_of(draw))
+    let written = written_of(source, prelude)
     var why = ""
     if list.length(written) != or(list.at([1, 1, 2, 2], place), 0) {
         why = "the holes are written " + shown(written)
@@ -97,10 +97,10 @@ fn result_of(draw: drawn.Draw) -> String {
 /// name that asks one, and `result` is sometimes `Bool`.
 // example: placed(place: 0, result: "Int") == "fn is_reached() -> Int {\n    todo(\"why\")\n}\n"
 fn placed(place: Int, result: String) -> String {
-    hole := "todo(\"why\")"
+    let hole = "todo(\"why\")"
     match place {
         0 => "fn is_reached() -> " + result + " {\n    " + hole + "\n}\n"
-        1 => "fn is_reached() -> " + result + " {\n    held := " + hole + "\n    held\n}\n"
+        1 => "fn is_reached() -> " + result + " {\n    let held = " + hole + "\n    held\n}\n"
         2 => "fn is_reached(count: Int) -> " + result + " {\n    if count > 1 {\n        return " + hole + "\n    }\n    " + hole + "\n}\n"
         _ => "fn is_reached(count: Int) -> " + result + " {\n    match count > 1 {\n        true => " + hole + "\n        false => " + hole + "\n    }\n}\n"
     }
@@ -109,9 +109,9 @@ fn placed(place: Int, result: String) -> String {
 /// A module holding no hole, which a property finds none in.
 // example: a_module_with_nothing_unfinished_holds_no_hole_to_refuse(drawn.seeded(1), types.little_prelude()).why == ""
 fn a_module_with_nothing_unfinished_holds_no_hole_to_refuse(draw: drawn.Draw, prelude: types.Prelude) -> Tried {
-    finished := ["fn answer() -> Int {\n    7\n}\n", "fn told(word: String) -> String {\n    word + \"!\"\n}\n", "fn walked(counts: List<Int>) -> Int {\n    var total = 0\n    for count in counts {\n        total += count\n    }\n    total\n}\n", "fn held(maybe: Option<Int>) -> Int {\n    or(maybe, 0)\n}\n"]
-    source := drawn.picked(draw, finished, "")
-    written := written_of(source, prelude)
+    let finished = ["fn answer() -> Int {\n    7\n}\n", "fn told(word: String) -> String {\n    word + \"!\"\n}\n", "fn walked(counts: List<Int>) -> Int {\n    var total = 0\n    for count in counts {\n        total += count\n    }\n    total\n}\n", "fn held(maybe: Option<Int>) -> Int {\n    or(maybe, 0)\n}\n"]
+    let source = drawn.picked(draw, finished, "")
+    let written = written_of(source, prelude)
     var why = ""
     if written != [] {
         why = "the holes are written " + shown(written)
@@ -125,9 +125,9 @@ fn a_module_with_nothing_unfinished_holds_no_hole_to_refuse(draw: drawn.Draw, pr
 /// span covers one call, and none starts before the one found before it.
 // example: every_hole_of_a_drawn_body_is_found_in_the_order_it_is_written(drawn.seeded(1), types.little_prelude()).case != ""
 fn every_hole_of_a_drawn_body_is_found_in_the_order_it_is_written(draw: drawn.Draw, prelude: types.Prelude) -> Tried {
-    source := drawn_holes(draw)
-    written := written_of(source, prelude)
-    starts := starts_of(source, prelude)
+    let source = drawn_holes(draw)
+    let written = written_of(source, prelude)
+    let starts = starts_of(source, prelude)
     var why = ""
     if list.length(written) != calls_of_todo(source) || !is_each_a_call(written) || !is_ascending(starts) {
         why = "the holes are written " + shown(written) + " at " + shown(starts)
@@ -140,8 +140,8 @@ fn every_hole_of_a_drawn_body_is_found_in_the_order_it_is_written(draw: drawn.Dr
 /// The truth is a field of a record, because a `Bool` parameter is refused before the holes.
 // example: calls_of_todo(drawn_holes(drawn.seeded(1))) > 0
 fn drawn_holes(draw: drawn.Draw) -> String {
-    statements := ["_ = todo(\"a\")", "_ = count + todo(\"b\")", "_ = [todo(\"c\"), count]", "_ = todo(todo(\"d\"))", "for todo(\"e\") {\n        break\n    }", "_ = pick(first: count, second: todo(\"f\"))"]
-    last := ["todo(\"z\")", "count", "pick(first: todo(\"x\"), second: todo(\"y\"))", "if given.flag {\n        todo(\"i\")\n    } else {\n        count\n    }", "match count {\n        1 => todo(\"m\")\n        _ => count\n    }", "Box { held: todo(\"r\") }.held"]
+    let statements = ["_ = todo(\"a\")", "_ = count + todo(\"b\")", "_ = [todo(\"c\"), count]", "_ = todo(todo(\"d\"))", "for todo(\"e\") {\n        break\n    }", "_ = pick(first: count, second: todo(\"f\"))"]
+    let last = ["todo(\"z\")", "count", "pick(first: todo(\"x\"), second: todo(\"y\"))", "if given.flag {\n        todo(\"i\")\n    } else {\n        count\n    }", "match count {\n        1 => todo(\"m\")\n        _ => count\n    }", "Box { held: todo(\"r\") }.held"]
     var body = ""
     var at = drawn.next(draw)
     var written = 0
@@ -173,7 +173,7 @@ fn calls_of_todo(source: String) -> Int {
 // example: !is_each_a_call(["todo(\"a\""])
 fn is_each_a_call(written: List<String>) -> Bool {
     for text in written {
-        closes := or(strings.cut(text, strings.length(text) - 1, strings.length(text)), "")
+        let closes = or(strings.cut(text, strings.length(text) - 1, strings.length(text)), "")
         if or(strings.cut(text, 0, 5), "") != "todo(" || closes != ")" {
             return false
         }

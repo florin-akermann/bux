@@ -54,7 +54,7 @@ The value is worked out and dropped, and the line says that is what was meant.
 A reader looking for what a function ignores greps for `_ =` and finds every one.
 
 `_` is not a name.
-It is written on the left of a single `=` and nowhere else, so `_`, `_ := 1`, `var _ = 1`,
+It is written on the left of a single `=` and nowhere else, so `_`, `let _ = 1`, `var _ = 1`,
 `_ += 1`, and `for _ in users` are each refused by the grammar.
 Nothing reads `_` back, because `_ =` binds nothing.
 

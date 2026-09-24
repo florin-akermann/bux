@@ -29,7 +29,7 @@ fn chosen(count: Int) -> holder.Payment {
 // example: said(payment: picked(count: 1)) == "sent by hand"
 // example: said(payment: picked(count: 2)) == "pending"
 fn picked(count: Int) -> holder.Payment {
-    payment := if count == 1 {
+    let payment = if count == 1 {
         holder.Sent("hand")
     } else {
         holder.Pending

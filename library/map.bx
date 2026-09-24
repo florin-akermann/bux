@@ -31,7 +31,7 @@ fn insert<K: Eq<K> + Hash<K>, V>(into: Map<K, V>, key: K, value: V) -> Map<K, V>
     var built = merged(node, rest, key, value)
     var above = list.length(walked) - 1
     for above >= 0 {
-        step := or(list.at(walked, above), Step(0, Empty))
+        let step = or(list.at(walked, above), Step(0, Empty))
         built = Branch(with_child(children_of(branch_of(step)), slot_of(step), built))
         above = above - 1
     }
@@ -77,9 +77,9 @@ fn pushed<K, V>(node: Map<K, V>, rest: Int, key: K, value: V) -> Map<K, V> {
         ours = without_digit(ours)
         theirs = without_digit(theirs)
     }
-    held := Leaf(without_digit(theirs), entries_of(node))
-    apart := with_child(no_children(), digit_of(theirs), held)
-    mine := Leaf(without_digit(ours), [Entry(key, value)])
+    let held = Leaf(without_digit(theirs), entries_of(node))
+    let apart = with_child(no_children(), digit_of(theirs), held)
+    let mine = Leaf(without_digit(ours), [Entry(key, value)])
     var built = Branch(with_child(apart, digit_of(ours), mine))
     var above = list.length(shared) - 1
     for above >= 0 {
@@ -208,7 +208,7 @@ fn child_at<K, V>(within: Map<K, V>, slot: Int) -> Map<K, V> {
 /// `code` with its lowest five bits taken off, rounded down so that the sign is kept.
 // example: without_digit(-1) == -1
 fn without_digit(code: Int) -> Int {
-    whole := or(code / 32, 0)
+    let whole = or(code / 32, 0)
     if or(code % 32, 0) < 0 {
         return whole - 1
     }
@@ -218,7 +218,7 @@ fn without_digit(code: Int) -> Int {
 /// The lowest five bits of `code`, counted up from zero however the sign of `code` runs.
 // example: digit_of(-1) == 31
 fn digit_of(code: Int) -> Int {
-    left := or(code % 32, 0)
+    let left = or(code % 32, 0)
     if left < 0 {
         return left + 32
     }

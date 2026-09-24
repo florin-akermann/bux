@@ -14,7 +14,7 @@
 import io
 
 fn main(arguments: List<String>) -> Int {
-    kept := Point { down: said(word: "down", count: 2), across: said(word: "across", count: 1) }
+    let kept = Point { down: said(word: "down", count: 2), across: said(word: "across", count: 1) }
     io.println(shown(kept.across + kept.down))
     io.println("passed " + shown(summed(Point { across: 3, down: 4 })))
     io.println("given back " + shown(summed(built(count: 4))))
@@ -43,15 +43,15 @@ fn built(count: Int) -> Point {
 
 // example: rebound(count: 1) == 3
 fn rebound(count: Int) -> Int {
-    point := Point { across: count, down: count + 1 }
-    other := point
+    let point = Point { across: count, down: count + 1 }
+    let other = point
     other.across + point.down
 }
 
 // example: moved(count: 1) == 3
 fn moved(count: Int) -> Int {
-    point := Point { across: 0, down: count + 1 }
-    shifted := point { across: count }
+    let point = Point { across: 0, down: count + 1 }
+    let shifted = point { across: count }
     shifted.across + shifted.down
 }
 
@@ -64,7 +64,7 @@ fn replaced(count: Int) -> Int {
 
 // example: carried(count: 1) == 3
 fn carried(count: Int) -> Int {
-    placed := Placed(Point { across: count, down: count + 1 })
+    let placed = Placed(Point { across: count, down: count + 1 })
     match placed {
         Placed(point) => point.across + point.down
         Nowhere => 0

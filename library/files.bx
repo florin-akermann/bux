@@ -87,7 +87,7 @@ fn names_within(found: Path) -> Result<List<String>, String> {
 /// The directory goes back to the file system here, whether the reading worked or did not.
 // example: list.length(ok_or(listed("no-such-directory"), [])) == 0
 fn every_name(stream: Entries) -> Result<List<String>, String> {
-    held := all_of(in_order(stream))
+    let held = all_of(in_order(stream))
     released(stream)
     match held {
         Ok(names) => Ok(each_bare_name(names))
@@ -98,7 +98,7 @@ fn every_name(stream: Entries) -> Result<List<String>, String> {
 /// The name of every entry `names` holds, each pushed onto the list the walk fills.
 // example: list.length(ok_or(listed("no-such-directory"), [])) == 0
 fn each_bare_name(names: Held) -> List<String> {
-    walk := one_by_one(names)
+    let walk = one_by_one(names)
     var found = []
     for has_another(walk) {
         found = list.push(found, bare_name(named(as_text(next_value(walk)))))

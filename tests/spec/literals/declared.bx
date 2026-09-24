@@ -21,7 +21,7 @@ fn main(arguments: List<String>) -> Int {
     if is_worth(lowest_of(), -2147483648) {
         io.println("the lowest whole number the instance states fits")
     }
-    total := 20 + 22
+    let total = 20 + 22
     if total == 42 {
         io.println("a whole number nothing settles is still an Int")
     }
@@ -62,7 +62,7 @@ fn lowest_of() -> Int32 {
 // A binding says nothing about its type, so the use of it settles the whole number it holds.
 // example: is_worth(bound(), 42)
 fn bound() -> Int32 {
-    count := 42
+    let count = 42
     count
 }
 

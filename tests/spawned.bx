@@ -29,7 +29,7 @@ fn every_property(cases: Int, library: ir.Library) -> List<held.Held> {
 fn each_well_formed_process_is_accepted(cases: Int, library: ir.Library) -> held.Held {
     var found = held.nothing_failed(cases)
     for seed in checking.seeds(cases) {
-        source := written(drawn_process(drawn.seeded(seed)), Whole)
+        let source = written(drawn_process(drawn.seeded(seed)), Whole)
         found = checking.noted(found, "each_well_formed_process_is_accepted", seed, refused_as(source: source, code: "", library: library))
     }
     found
@@ -40,9 +40,9 @@ fn each_well_formed_process_is_accepted(cases: Int, library: ir.Library) -> held
 fn each_break_of_the_shape_is_refused(cases: Int, library: ir.Library) -> held.Held {
     var found = held.nothing_failed(cases)
     for seed in checking.seeds(cases) {
-        draw := drawn.seeded(seed)
-        broken := drawn.picked(checking.after(draw, 5), every_break(), Whole)
-        source := written(drawn_process(draw), broken)
+        let draw = drawn.seeded(seed)
+        let broken = drawn.picked(checking.after(draw, 5), every_break(), Whole)
+        let source = written(drawn_process(draw), broken)
         found = checking.noted(found, "each_break_of_the_shape_is_refused", seed, refused_as(source: source, code: code_of_break(broken), library: library))
     }
     found
@@ -51,8 +51,8 @@ fn each_break_of_the_shape_is_refused(cases: Int, library: ir.Library) -> held.H
 /// Why `source` is not refused with `code`, which is `""` for a source that is accepted.
 // example: refused_as(source: "fn one() -> Int {\n    1\n}\n", code: "", library: ir.little_library()).why == ""
 fn refused_as(source: String, code: String, library: ir.Library) -> checking.Tried {
-    answer := checking.checked(source, library)
-    found := checking.code_of(answer)
+    let answer = checking.checked(source, library)
+    let found = checking.code_of(answer)
     if found == code {
         return checking.Tried { input: source, why: "" }
     }
@@ -98,29 +98,29 @@ fn code_of_break(broken: Break) -> String {
 /// A process drawn from `draw`: its name, the type of its state, and the kinds of its messages.
 // example: list.length(drawn_process(drawn.seeded(1)).kinds) > 0
 fn drawn_process(draw: drawn.Draw) -> Drawing {
-    state := drawn.picked(checking.after(draw, 1), ["Int", "String", "List<Int>"], "Int")
-    count := drawn.number(checking.after(draw, 2), 3) + 1
+    let state = drawn.picked(checking.after(draw, 1), ["Int", "String", "List<Int>"], "Int")
+    let count = drawn.number(checking.after(draw, 2), 3) + 1
     var kinds = []
     for index in checking.numbers_below(count) {
         kinds = list.push(kinds, Kind { name: or(list.at(["Add", "Keep", "Take"], index), "Add"), carries: drawn.number(checking.after(draw, 3 + index), 2) == 1 })
     }
-    named := drawn.picked(checking.after(draw, 6), ["Counter", "Keeper", "Tally"], "Counter")
+    let named = drawn.picked(checking.after(draw, 6), ["Counter", "Keeper", "Tally"], "Counter")
     Drawing { named: named, state: state, kinds: kinds }
 }
 
 /// The module that declares the process `drawing`, written with `broken`.
 // example: strings.length(written(drawn_process(drawn.seeded(1)), Whole)) > 0
 fn written(drawing: Drawing, broken: Break) -> String {
-    entry := main_written(drawing, broken)
-    functions := start_written(drawing, broken) + "\n" + receive_written(drawing, broken) + extra_written(broken)
-    helper := "fn kept(state: " + drawing.state + ", amount: Int) -> Next<" + drawing.state + "> {\n    Continue(state)\n}\n"
+    let entry = main_written(drawing, broken)
+    let functions = start_written(drawing, broken) + "\n" + receive_written(drawing, broken) + extra_written(broken)
+    let helper = "fn kept(state: " + drawing.state + ", amount: Int) -> Next<" + drawing.state + "> {\n    Continue(state)\n}\n"
     entry + "\nprocess " + drawing.named + " {\n" + functions + "}\n\n" + helper + "\n" + message_type(drawing)
 }
 
 /// `main`, which spawns the process, or breaks the shape where `broken` is a break of `spawn`.
 // example: main_written(Drawing { named: "Counter", state: "Int", kinds: [] }, Whole) == "fn main(arguments: List<String>) -> Int {\n    _ = spawn Counter(0)\n    0\n}\n"
 fn main_written(drawing: Drawing, broken: Break) -> String {
-    started_as := match broken {
+    let started_as = match broken {
         SpawnOfAFunction => "spawn kept(" + first_state(drawing.state) + ", 1)"
         CallOfAProcess => drawing.named + "(" + first_state(drawing.state) + ")"
         _ => "spawn " + drawing.named + "(" + first_state(drawing.state) + ")"
@@ -143,7 +143,7 @@ fn first_state(state: String) -> String {
 /// `start`, which gives back what it takes, written with `broken`.
 // example: start_written(Drawing { named: "Counter", state: "Int", kinds: [] }, UnwrittenParameter) == "    fn start(initial) -> Int {\n        initial\n    }\n"
 fn start_written(drawing: Drawing, broken: Break) -> String {
-    head := match broken {
+    let head = match broken {
         StartNotFirst => "begin(initial: " + drawing.state + ")"
         GenericStart => "start<Held>(initial: " + drawing.state + ")"
         UnwrittenParameter => "start(initial)"
@@ -155,15 +155,15 @@ fn start_written(drawing: Drawing, broken: Break) -> String {
 /// `receive`, which matches the message, written with `broken`.
 // example: strings.length(receive_written(Drawing { named: "Counter", state: "Int", kinds: [] }, ReceiveNotAMatch)) > 0
 fn receive_written(drawing: Drawing, broken: Break) -> String {
-    state := match broken {
+    let state = match broken {
         ReceiveOfAnotherState => other_state(drawing.state)
         _ => drawing.state
     }
-    name := match broken {
+    let name = match broken {
         ReceiveNotSecond => "handle"
         _ => "receive"
     }
-    extra := match broken {
+    let extra = match broken {
         ReceiveOfThreeValues => ", extra: Int"
         _ => ""
     }
@@ -271,8 +271,8 @@ fn run_held(property: String, source: String, cases: Int, library: ir.Library) -
     if !exemplified.is_a_jdk_named() {
         return held.with_skip(held.nothing_failed(0), "tests/spawned.bx: " + property + ": JAVA_HOME names no JDK")
     }
-    scene := enacted.scene_of([enacted.Written { at: "main.bx", text: source }, enacted.Written { at: "drawn.bx", text: ok_or(files.read("tests/drawn.bx"), "") }])
-    said := started.ended_said(command.answered_within(["run", modules.joined(scene, "main.bx")], library), scene, 60)
+    let scene = enacted.scene_of([enacted.Written { at: "main.bx", text: source }, enacted.Written { at: "drawn.bx", text: ok_or(files.read("tests/drawn.bx"), "") }])
+    let said = started.ended_said(command.answered_within(["run", modules.joined(scene, "main.bx")], library), scene, 60)
     command.removed_whole(scene)
     lines_held(property: property, said: said, cases: cases)
 }
@@ -282,7 +282,7 @@ fn run_held(property: String, source: String, cases: Int, library: ir.Library) -
 // example: !held.is_held(lines_held(property: "p", said: command.Said { output: "1 gave 2\n", errors: "", status: 0 }, cases: 1))
 fn lines_held(property: String, said: command.Said, cases: Int) -> held.Held {
     var found = held.nothing_failed(cases)
-    lines := command.lines_of(said.output)
+    let lines = command.lines_of(said.output)
     var count = 0
     for line in lines {
         if line != "" {
@@ -301,9 +301,9 @@ fn lines_held(property: String, said: command.Said, cases: Int) -> held.Held {
 /// The program that sends each case its drawn messages, ends it, and compares what `ended` gives.
 // example: strings.length(ordered_program(1)) > 0
 fn ordered_program(cases: Int) -> String {
-    entry := "fn main(arguments: List<String>) -> Int {\n    var case = 0\n    for case < " + shown(cases) + " {\n        io.println(recorded(drawn.seed_of(case)))\n        case += 1\n    }\n    0\n}\n"
-    recorded := "// example: recorded(1) == \"1 held\"\nfn recorded(seed: Int) -> String {\n    draw := drawn.seeded(seed)\n    sent := drawn.numbers(draw, drawn.number(drawn.next(draw), 150), 1000)\n    recording := spawn Recorder()\n    for value in sent {\n        _ = send(recording, Record(value), NoLimit)\n    }\n    _ = send(recording, Stop, NoLimit)\n    for value in sent {\n        _ = send(recording, Record(value), NoWait)\n    }\n    found := ended(recording)\n    if found == sent {\n        return shown(seed) + \" held\"\n    }\n    shown(seed) + \" gave \" + shown(found)\n}\n"
-    recorder := "process Recorder {\n    fn start() -> List<Int> {\n        []\n    }\n\n    fn receive(values: List<Int>, message: Recorded) -> Next<List<Int>> {\n        match message {\n            Record(value) => Continue(list.push(values, value))\n            Stop => Done\n        }\n    }\n}\n"
+    let entry = "fn main(arguments: List<String>) -> Int {\n    var case = 0\n    for case < " + shown(cases) + " {\n        io.println(recorded(drawn.seed_of(case)))\n        case += 1\n    }\n    0\n}\n"
+    let recorded = "// example: recorded(1) == \"1 held\"\nfn recorded(seed: Int) -> String {\n    let draw = drawn.seeded(seed)\n    let sent = drawn.numbers(draw, drawn.number(drawn.next(draw), 150), 1000)\n    let recording = spawn Recorder()\n    for value in sent {\n        _ = send(recording, Record(value), NoLimit)\n    }\n    _ = send(recording, Stop, NoLimit)\n    for value in sent {\n        _ = send(recording, Record(value), NoWait)\n    }\n    let found = ended(recording)\n    if found == sent {\n        return shown(seed) + \" held\"\n    }\n    shown(seed) + \" gave \" + shown(found)\n}\n"
+    let recorder = "process Recorder {\n    fn start() -> List<Int> {\n        []\n    }\n\n    fn receive(values: List<Int>, message: Recorded) -> Next<List<Int>> {\n        match message {\n            Record(value) => Continue(list.push(values, value))\n            Stop => Done\n        }\n    }\n}\n"
     "import drawn\nimport io\nimport list\n\n" + entry + "\n" + recorded + "\n" + recorder + "\ntype Recorded =\n    | Record(Int)\n    | Stop\n"
 }
 
@@ -312,11 +312,11 @@ fn ordered_program(cases: Int) -> String {
 /// `start` of the holder waits for a process that never ends, so the holder never takes one.
 // example: strings.length(bounded_program(1)) > 0
 fn bounded_program(cases: Int) -> String {
-    entry := "fn main(arguments: List<String>) -> Int {\n    var case = 0\n    for case < " + shown(cases) + " {\n        io.println(bounded(drawn.seed_of(case)))\n        case += 1\n    }\n    0\n}\n"
-    bounded := "// example: strings.length(bounded(1)) > 0\nfn bounded(seed: Int) -> String {\n    count := drawn.number(drawn.seeded(seed), 200)\n    holding := spawn Holder(spawn Idle())\n    var delivered = 0\n    var sent = 0\n    for sent < count {\n        delivered += taken(send(holding, Wake, NoWait))\n        sent += 1\n    }\n    if delivered == expected(count) {\n        return shown(seed) + \" held\"\n    }\n    shown(seed) + \" took \" + shown(delivered) + \" of \" + shown(count)\n}\n"
-    helpers := "// example: expected(70) == 64\nfn expected(count: Int) -> Int {\n    if count < 64 {\n        return count\n    }\n    64\n}\n\n// example: taken(Delivered) == 1\nfn taken(sent: Sent) -> Int {\n    match sent {\n        Delivered => 1\n        MailboxFull => 0\n        ProcessEnded => 0\n    }\n}\n"
-    holder := "process Holder {\n    fn start(idle: Process<Stopped, Int>) -> Int {\n        ended(idle)\n    }\n\n    fn receive(held: Int, message: Woken) -> Next<Int> {\n        match message {\n            Wake => Done\n        }\n    }\n}\n"
-    idle := "process Idle {\n    fn start() -> Int {\n        0\n    }\n\n    fn receive(held: Int, message: Stopped) -> Next<Int> {\n        match message {\n            Stop => Done\n        }\n    }\n}\n"
+    let entry = "fn main(arguments: List<String>) -> Int {\n    var case = 0\n    for case < " + shown(cases) + " {\n        io.println(bounded(drawn.seed_of(case)))\n        case += 1\n    }\n    0\n}\n"
+    let bounded = "// example: strings.length(bounded(1)) > 0\nfn bounded(seed: Int) -> String {\n    let count = drawn.number(drawn.seeded(seed), 200)\n    let holding = spawn Holder(spawn Idle())\n    var delivered = 0\n    var sent = 0\n    for sent < count {\n        delivered += taken(send(holding, Wake, NoWait))\n        sent += 1\n    }\n    if delivered == expected(count) {\n        return shown(seed) + \" held\"\n    }\n    shown(seed) + \" took \" + shown(delivered) + \" of \" + shown(count)\n}\n"
+    let helpers = "// example: expected(70) == 64\nfn expected(count: Int) -> Int {\n    if count < 64 {\n        return count\n    }\n    64\n}\n\n// example: taken(Delivered) == 1\nfn taken(sent: Sent) -> Int {\n    match sent {\n        Delivered => 1\n        MailboxFull => 0\n        ProcessEnded => 0\n    }\n}\n"
+    let holder = "process Holder {\n    fn start(idle: Process<Stopped, Int>) -> Int {\n        ended(idle)\n    }\n\n    fn receive(held: Int, message: Woken) -> Next<Int> {\n        match message {\n            Wake => Done\n        }\n    }\n}\n"
+    let idle = "process Idle {\n    fn start() -> Int {\n        0\n    }\n\n    fn receive(held: Int, message: Stopped) -> Next<Int> {\n        match message {\n            Stop => Done\n        }\n    }\n}\n"
     "import drawn\nimport io\nimport strings\n\n" + entry + "\n" + bounded + "\n" + helpers + "\n" + holder + "\n" + idle + "\ntype Woken = Wake\n\ntype Stopped = Stop\n"
 }
 

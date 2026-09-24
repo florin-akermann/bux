@@ -31,8 +31,8 @@ fn every_line_held(paths: List<String>, library: ir.Library, memo: command.Memo,
 /// directory `setting` names, which is removed after the runs.
 // example: with_failures(held.nothing_failed(1), ["a.bx: error: gone"]).failures == ["a.bx: error: gone"]
 fn held_within(paths: List<String>, setting: Setting, memo: command.Memo) -> held.Held {
-    staging := every_run_staged(paths, setting, memo)
-    found := held.added(staging.found, runs_held(staging, setting))
+    let staging = every_run_staged(paths, setting, memo)
+    let found = held.added(staging.found, runs_held(staging, setting))
     command.removed_whole(setting.directory)
     found
 }
@@ -57,7 +57,7 @@ fn every_run_staged(paths: List<String>, setting: Setting, memo: command.Memo) -
     var staging = Staging { found: held.nothing_failed(0), runs: [], memo: memo }
     var number = 0
     for path in paths {
-        beside := modules.joined(setting.directory, shown(number))
+        let beside = modules.joined(setting.directory, shown(number))
         staging = staged_one(staging, Place { path: path, beside: beside }, setting.library)
         number += 1
     }
@@ -67,16 +67,16 @@ fn every_run_staged(paths: List<String>, setting: Setting, memo: command.Memo) -
 /// `staging` with the module `place.path` names: its lines counted, and its run or its failures.
 // example: staged_one(Staging { found: held.nothing_failed(0), runs: [], memo: command.no_memo() }, Place { path: "no-such-directory/a.bx", beside: "no-such-directory/0" }, ir.little_library()).found.cases == 0
 fn staged_one(staging: Staging, place: Place, library: ir.Library) -> Staging {
-    source := ok_or(files.read(place.path), "")
-    count := lines_stated(source)
+    let source = ok_or(files.read(place.path), "")
+    let count = lines_stated(source)
     if count == 0 || is_refused(header.expectation_of(source)) {
         return staging
     }
-    why := why_skipped(place.path)
+    let why = why_skipped(place.path)
     if why != "" {
         return staging { found: held.added(staging.found, held.with_skip(held.nothing_failed(0), place.path + ": " + why)) }
     }
-    readied := module_readied(place, Typing { library: library, memo: staging.memo })
+    let readied = module_readied(place, Typing { library: library, memo: staging.memo })
     match readied.found {
         Ok(staged) => Staging { found: held.added(staging.found, held.nothing_failed(count)), runs: list.push(staging.runs, staged), memo: readied.memo }
         Err(failures) => Staging { found: held.added(staging.found, with_failures(held.nothing_failed(count), failures)), runs: staging.runs, memo: readied.memo }
@@ -98,7 +98,7 @@ fn why_skipped(path: String) -> String {
 /// `bux test` would report of it.
 // example: failed_as(command.not_compiled_said(command.Unusable("error: gone\n"), command.AsPage), "a.bx") == ["a.bx: error: gone"]
 fn module_readied(place: Place, typing: Typing) -> Readied {
-    checked := command.checked_once(place.path, typing.library, typing.memo)
+    let checked = command.checked_once(place.path, typing.library, typing.memo)
     match checked.found {
         Ok(program) => run_readied(program.root, place.beside, typing { memo: checked.memo })
         Err(not) => Readied { found: Err(reported(errors: command.not_compiled_said(not, command.AsPage).errors, path: place.path)), memo: checked.memo }
@@ -108,7 +108,7 @@ fn module_readied(place: Place, typing: Typing) -> Readied {
 /// The run of the examples `root` states, its classes written into `beside`, or why there is none.
 // example: failed_as(command.Said { output: "", errors: "error: gone\n", status: 2 }, "a.bx") == ["a.bx: error: gone"]
 fn run_readied(root: command.Typed, beside: String, typing: Typing) -> Readied {
-    path := root.module.path
+    let path = root.module.path
     match command.stated_in(root) {
         Ok(Some(run)) => class_readied(Staged { path: path, run: run, root: root, beside: beside, class: "" }, typing)
         Ok(None) => Readied { found: Err([]), memo: typing.memo }
@@ -128,7 +128,7 @@ fn class_readied(staged: Staged, typing: Typing) -> Readied {
 /// The run `staged` holds, lowered with the modules `typing.memo` holds, and its classes written.
 // example: failed_as(command.Said { output: "", errors: "error: a\nerror: b\n", status: 1 }, "a.bx") == ["a.bx: error: a", "a.bx: error: b"]
 fn lowered_readied(staged: Staged, typing: Typing) -> Readied {
-    classes := command.run_classes_once(staged.run, staged.root, typing.library, typing.memo)
+    let classes = command.run_classes_once(staged.run, staged.root, typing.library, typing.memo)
     Readied { found: written_staged(classes.found, staged), memo: classes.memo }
 }
 
@@ -167,11 +167,11 @@ fn runs_held(staging: Staging, setting: Setting) -> held.Held {
 /// Its classes go into a directory of their own, so none of them is on the path of any run.
 // example: entry_path() == "tests/examined.bx"
 fn entry_line(memo: command.Memo, setting: Setting) -> Result<List<String>, List<String>> {
-    java := failing(command.java_found(), entry_path())?
-    beside := modules.joined(setting.directory, "entry")
-    checked := command.checked_once(entry_path(), setting.library, memo)
-    program := refused_as(checked.found, entry_path())?
-    classes := refused_as(command.classes_once(program, setting.library, checked.memo).found, entry_path())?
+    let java = failing(command.java_found(), entry_path())?
+    let beside = modules.joined(setting.directory, "entry")
+    let checked = command.checked_once(entry_path(), setting.library, memo)
+    let program = refused_as(checked.found, entry_path())?
+    let classes = refused_as(command.classes_once(program, setting.library, checked.memo).found, entry_path())?
     _ = failing(command.classes_written(classes, beside), entry_path())?
     Ok([java, "--enable-preview", "-cp", beside, "examined"])
 }
@@ -185,7 +185,7 @@ fn every_run_held(runs: List<Staged>, line: List<String>, setting: Setting) -> h
     var found = held.nothing_failed(0)
     var rest = runs
     for list.length(rest) > 0 {
-        ran := entry_ran(rest, line, setting)
+        let ran = entry_ran(rest, line, setting)
         found = with_failures(found, ran.failures)
         rest = ran.rest
     }
@@ -227,8 +227,8 @@ fn why_ended(status: Int) -> String {
 /// The last run it opened is the one `outcome.why` names, where the entry program was stopped.
 // example: segments_of("bux: run 0\na\nbux: run 1\n") == ["a\n", ""]
 fn ended_read(runs: List<Staged>, outcome: Outcome) -> Ran {
-    segments := segments_of(outcome.output)
-    opened := list.length(segments)
+    let segments = segments_of(outcome.output)
+    let opened = list.length(segments)
     if opened == 0 {
         return Ran { failures: each_failed(runs, never_opened(outcome.why)), rest: [] }
     }
@@ -271,7 +271,7 @@ fn each_failed(runs: List<Staged>, why: String) -> List<String> {
 /// What one run wrote, read as `bux test` reads it, with a line for each example that failed.
 // example: stopped_in("bux: stopped java.lang.StackOverflowError\n") == "java.lang.StackOverflowError"
 fn segment_read(segment: String, staged: Staged) -> List<String> {
-    stopped := stopped_in(segment)
+    let stopped = stopped_in(segment)
     var finished = programs.Finished { code: 0, output: segment, errors: "" }
     if stopped != "" {
         finished = programs.Finished { code: 1, output: "", errors: "error: the run of its examples stopped: " + stopped + "\n" }
@@ -306,7 +306,7 @@ fn segments_of(output: String) -> List<String> {
 /// What stopped a run, as the entry program wrote it after the run, and `""` where nothing did.
 // example: stopped_in("bux: example 1\n") == ""
 fn stopped_in(segment: String) -> String {
-    marker := "bux: stopped "
+    let marker = "bux: stopped "
     for line in walk.lines_of(segment) {
         if command.has_prefix(line, marker) {
             return or(strings.cut(line, strings.length(marker), strings.length(line)), "")
@@ -399,7 +399,7 @@ fn reported(errors: String, path: String) -> List<String> {
     var lines = []
     var message = ""
     for line in walk.lines_of(errors) {
-        pointed := command.trimmed_start(line)
+        let pointed = command.trimmed_start(line)
         if command.has_prefix(line, "error") {
             lines = with_message(lines: lines, at: path, message: message)
             message = line

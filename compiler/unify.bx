@@ -14,8 +14,8 @@ import strings
 // example: is_unified(unify(table: empty_table(), expected: Var(0), found: int()))
 // example: !is_unified(unify(table: empty_table(), expected: int(), found: text_type()))
 fn unify(table: Table, expected: Type, found: Type) -> Result<Table, Clash> {
-    one := shallow(table, expected)
-    other := shallow(table, found)
+    let one = shallow(table, expected)
+    let other = shallow(table, found)
     match one {
         Var(variable) => settled_or_same(table: table, variable: variable, other: other)
         _ => against(table: table, one: one, other: other)
@@ -72,11 +72,11 @@ fn function_against(table: Table, taken: List<Type>, given: Type, other: Type) -
 /// Two function types, which meet where they take as many parameters and every part meets.
 // example: !is_unified(functions_alike(table: empty_table(), theirs: Function { parameters: [], result: Unit }, ours: [int()], result: Unit))
 fn functions_alike(table: Table, theirs: Type, ours: List<Type>, result: Type) -> Result<Table, Clash> {
-    taken := parameters_of(theirs)
+    let taken = parameters_of(theirs)
     if list.length(taken) != list.length(ours) {
         return Err(Mismatch(table))
     }
-    each := each_unified(table: table, theirs: taken, ours: ours)?
+    let each = each_unified(table: table, theirs: taken, ours: ours)?
     unify(table: each, expected: result_of(theirs), found: result)
 }
 
@@ -164,7 +164,7 @@ fn empty_table() -> Table {
 /// A variable that stands for a whole number, which settles only where one may be written.
 // example: set.has_value(whole_number(empty_table()).table.whole_numbers, 0)
 fn whole_number(table: Table) -> Made {
-    counted := table { made: table.made + 1, whole_numbers: set.insert(table.whole_numbers, table.made) }
+    let counted = table { made: table.made + 1, whole_numbers: set.insert(table.whole_numbers, table.made) }
     Made { table: counted, made: Var(table.made) }
 }
 
@@ -185,7 +185,7 @@ fn read(table: Table, of: Type) -> Type {
 /// `of` followed to whatever it stands for, where `standing` says what a whole number is.
 // example: followed(empty_table(), Var(0), AsTheIntItDefaultsTo) == Var(0)
 fn followed(table: Table, of: Type, standing: Standing) -> Type {
-    found := shallow(table, of)
+    let found = shallow(table, of)
     match found {
         Var(variable) => whole_number_as(table, variable, standing)
         Named { name, arguments } => Named { name: name, arguments: each_followed(table, arguments, standing) }
@@ -216,7 +216,7 @@ fn whole_number_as(table: Table, variable: Int, standing: Standing) -> Type {
 /// `into`, then every variable `of` still holds once it is solved, each named once.
 // example: unsettled(empty_table(), Function { parameters: [Var(1), Var(2)], result: Var(1) }, []) == [1, 2]
 fn unsettled(table: Table, of: Type, into: List<Int>) -> List<Int> {
-    found := shallow(table, of)
+    let found = shallow(table, of)
     match found {
         Var(variable) => with_var(into, variable)
         Named { name, arguments } => each_unsettled(table, arguments, into)
@@ -436,7 +436,7 @@ fn at_one_use(table: Table, scheme: Scheme) -> UseOf {
     var made = table
     var given = []
     for one in scheme.quantified {
-        next := fresh(made)
+        let next = fresh(made)
         given = list.push(given, Given { one: one, at: next.made })
         made = next.table
     }
