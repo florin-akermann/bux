@@ -6,20 +6,6 @@
 
 ## Open
 
-## 🔴 Item 113: The compiler finds its library, help, and explanations beside its classes
-`modules.resource_text` reads a file under each entry of the class path.
-So `bin/bux`, `bin/bootstrap`, and `bin/runner` add `compiler/` and the root to the class path.
-A run that `bux test` starts has only its own directory on the class path.
-So a test of `tests/` that calls the compiler for `bux help` or `bux explain` finds nothing.
-That is why the runner has a class path of its own, and why it cannot be `bux test tests`.
-A build writes the three resource directories into `target/` beside the classes it writes.
-Then every class path that holds the classes holds the resources, and no script adds an entry.
-[113][a] - `docs/specs/run.md` section "Where a build writes" states what a build writes too.
-[113][b] - `bux build` copies `library/`, `help/`, and `explanations/` into `target/`.
-`bux test` does the same for each run.
-[113][c] - `bin/bux`, `bin/bootstrap`, and `bin/runner` put one directory on the class path.
-[113][d] - `docs/implementation.md` section 6 states the class path, and section 7 the runner's.
-
 ## 🔴 Item 114: The runner's checks become `test` blocks, and `bin/runner` goes
 **Depends on:** Item 112, Item 113 — the pool and the resources must be in `bux test` first.
 `tests/runner.bx` calls six parts, and each part is a function of a module under `tests/`.
@@ -50,21 +36,6 @@ Item 091 measured the writer at 0.31 s, so it stays on one thread unless the pro
 [116][c] - A drawn property holds that a program lowered in a pool gives the classes of one thread.
 [116][d] - Section 7 records `bux build compiler/main.bx` and `bin/bootstrap` before and after.
 
-## 🔴 Item 119: `bux fmt` repairs every order the compiler can compute
-`docs/specs/formatting.md` says that order is checked and never rewritten.
-Import order, the place of a test, and declaration order each have one answer the compiler knows.
-Each refusal costs an agent one round trip: write, build, read the refusal, edit, build again.
-That round trip costs more than the rule saves, so `bux fmt` writes the answer it already knows.
-Naming stays a refusal, because the compiler cannot choose a name.
-Arm order stays a refusal until a case shows that the formatter needs the types.
-[119][a] - `docs/design.md` section 13 and `docs/specs/formatting.md` name each order `fmt` repairs.
-[119][b] - `compiler/format.bx` sorts the imports and moves a declaration written after a test.
-[119][c] - `bux fmt` runs the resolver and moves a declaration below what uses it.
-Two declarations that use each other keep the order the author wrote.
-[119][d] - `L0201` and `L0303` stay for `bux build`, and their help names `bux fmt`.
-[119][e] - `tests/spec/format/` shows each repair.
-A property holds that a repaired file builds, and that `fmt` of a repaired file changes nothing.
-
 ## 🔴 Item 120: A `private` declaration exists, and only a public function carries an example
 Every name a module declares is public, so every helper is API, and every helper pays an example.
 `compiler/exhaustiveness.bx` shows the cost.
@@ -82,18 +53,6 @@ An import that reaches a private name is refused with a code and a help that nam
 [120][e] - `tests/spec/modules/` and `tests/spec/examples/` show the refusal and the exemption.
 [120][f] - The helpers of `compiler/exhaustiveness.bx` named above become `private` or tests.
 
-
-## 🔴 Item 125: `send` says `Delivered` for a message that the process reads
-`tests/spec/concurrency/mailbox_full.bx` sends `Stop` to an `Idle` process and expects `delivered`.
-One runner pass of Item 112 printed `the process has ended` for that line; five printed `delivered`.
-`send` offers the message to the mailbox, and then it tests whether the process has ended.
-`offer_within` and `ended_test` in `compiler/ir.bx` write the two steps.
-`Idle` takes `Stop` and ends between the two steps, so a message it read is reported as never read.
-`docs/specs/concurrency.md` says a message the mailbox takes after the end gives `ProcessEnded`.
-The answer must follow what happens to the message, not the time of the test.
-[125][a] - `docs/specs/concurrency.md` states that `ProcessEnded` means no `receive` reads it.
-[125][b] - A process that ends leaves its mailbox in a state `send` can tell from a taken message.
-[125][c] - `tests/spec/concurrency/mailbox_full.bx` holds on every pass of the runner.
 
 ## 🔴 Item 126: The lowering names no JVM shape, and `compiler/jvm.bx` spells every one
 `compiler/ir.bx` names a class, a descriptor, a slot, or a `java/` member on about 160 lines.
@@ -138,32 +97,6 @@ The compiler is a program, and it is the first one the rule holds to.
 [128][b] - Each `extern` of `compiler/` moves to its library module, or one there replaces it.
 [128][c] - A project check refuses an `extern` outside `library/`, and its message names section 3.
 [128][d] - Section 4 records the count of `extern` declarations before and after.
-
-## 🔴 Item 129: `files` reads a part of a file, and says how long the file is
-`files.read` reads a file whole into one `String`, and a JVM `String` holds 2^31 chars at most.
-A file of one billion rows holds 13 GB, so no program can read it at all.
-A file that fits is held whole, so a program that reads a large file holds it, not its work.
-Item 130 is the program that needs this, and it reads one part of the file in each process.
-No `for` loop reads a byte of a file, so each function here passes question 12 of the principles.
-The read gives ISO-8859-1 text, one char for each byte, as `files.read_bytes` already reads.
-So the length of the text is the count of bytes, and a caller finds a line end by its offset.
-A part cut at any byte can split a UTF-8 sequence, so a decoded read could not say where it ends.
-A name read out of a part is written as the UTF-8 it was, so `strings` gets the one decoding.
-[129][a] - `docs/specs/io.md` states `files.size(path) -> Result<Int, String>`.
-It gives the bytes the file holds.
-[129][b] - It states `files.read_between(path, from, to) -> Result<String, String>`.
-It gives the bytes from `from` up to `to` as ISO-8859-1 text.
-A `to` past the end gives what is there.
-A part longer than one JVM buffer holds is an `Err` that names the length, before the file opens.
-[129][c] - `files` reads the part with a `FileChannel` read at a position into a `ByteBuffer`.
-A `Charset` decodes the buffer, so no array crosses.
-Each step that throws is an `extern` with a `Result`, as `files.listed` walks a stream.
-[129][d] - `docs/specs/library.md` states `strings.from_utf_8(text: String) -> String`.
-It gives the text that the chars of `text` spell as UTF-8 bytes, decoded by a `Charset` of the JVM.
-A malformed sequence becomes the replacement char, as `Charset.decode` gives it, so it is total.
-[129][e] - `tests/spec/io/part_read.bx` writes a file, reads it in parts, and shows the parts.
-A drawn property holds that the parts of a drawn file, joined, are what `files.read_bytes` gives.
-A second holds that `from_utf_8` of the joined parts is `files.read`, for a drawn UTF-8 file.
 
 ## 🔴 Item 130: `1brc/src/main.bx` answers the One Billion Row Challenge
 **Depends on:** Item 129, Item 134 — a worker reads part of the file, and 1brc keeps the layout.
@@ -284,3 +217,11 @@ The pre-commit hook runs `bin/bux test` at the root.
 The README and `tests/started.bx` run `example/src/main.bx`.
 [134][g] - `tests/spec/packages/` shows each refusal, and a drawn package in the layout loads.
 `tests/commands/fixtures.txt` holds the goldens of each command on a package in the layout.
+
+## 🔴 Item 135: A module that imports itself crashes the compiler
+`import list` inside `library/list.bx` ends `bux build` with a `StackOverflowError`.
+`modules.walk` follows the import into the module it walks, and it never ends.
+The compiler never crashes, so an import of the module itself is a refusal with a code.
+[135][a] - `docs/specs/modules.md` states the refusal, its code, and its message.
+[135][b] - `modules.walk` refuses a self-import before it follows any import.
+[135][c] - `tests/spec/modules/imports_itself.bx` is the example, and the runner holds it.
