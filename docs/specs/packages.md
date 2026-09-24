@@ -1,6 +1,6 @@
 # Packages
 
-A package is a directory of modules with a name and a version, and a dependency is another one.
+A package is a manifest with `src/`, `tests/`, and `target/` under it, and a dependency is another.
 
 ## Intent
 
@@ -19,13 +19,55 @@ offline-first does not have.
 
 ## What a package is
 
-A package is a directory holding a manifest called `bux.package`.
-Its modules are the `.bx` files in that directory, each named by its file as every module is.
-A package has no subdirectories of modules: one directory holds one package's modules.
+A package is a directory that holds a manifest called `bux.package`.
+Its modules are in `src/`, its test modules are in `tests/`, and a build writes into `target/`.
+Each module is named by its file, as every module is.
 
-A file in no package is a module still, and reaches what sits beside it exactly as before.
-A manifest adds dependencies and archives and nothing else.
-So a package with neither reaches what a bare directory reaches.
+A file in no package is a bare module, and it reaches what sits beside it.
+A bare module writes `target/` beside itself.
+A manifest adds the layout, dependencies, and archives, and nothing else.
+
+## The layout
+
+Every package has one layout, and the compiler holds each package to it.
+One layout is one thing to learn, and a reader finds each part of each package in the same place.
+A Go or a Cargo reader expects it.
+
+```text
+shapes/
+    bux.package
+    src/
+        circle.bx
+    tests/
+        rounded.bx
+    target/
+```
+
+- A module of the package is a `.bx` file at the top of `src/`.
+- A test module is a `.bx` file at the top of `tests/`.
+- `target/` holds the classes that `bux build` and `bux run` write.
+- A `.bx` file deeper than the top of `src/` or of `tests/` is data, as a file of `tests/spec/` is.
+- The compiler reads nothing else, so another directory, as `docs/`, is a convention only.
+
+A command that names such a deeper file reads it as a bare module, in no package.
+No command refuses it, because the compiler holds nothing about a directory that it does not read.
+
+A test module reaches a module of `src/` by its name, as it reaches a module beside it.
+A module of `src/` never reaches a test module, so no program depends on a test.
+A `depends` reaches the `src/` of the dependency, and never its `tests/`.
+
+`L0323` refuses a `.bx` file beside the manifest, at that file.
+Its help names `src/` and `tests/`, where a module goes.
+`L0323` also refuses a manifest inside `src/` or `tests/`, at that manifest.
+Each of the two is a part of the package above it, and a `tests/` is no package of its own.
+A module and a test module of one stem are `L0317`, because one name has one definition.
+Both would also build one class file of `target/`, and the second class would replace the first.
+So the check of the layout refuses the stem at the test module, before any module is read.
+
+In `src/modules.bx`, `layout_held` checks the root of a package, and `placed` finds its files.
+A load holds the layout and the dependencies of each package that it reaches, by the root.
+So it reads them once, however many modules of the package it reaches.
+The root of the repository is the package of the compiler, so the compiler keeps the layout too.
 
 ## The manifest
 
@@ -116,7 +158,8 @@ It is written in Bux because no array crosses the boundary, which `docs/specs/in
 
 1. What the library carries, which `docs/specs/library.md` lists.
 2. `demo.bx` beside the file that wrote the import.
-3. `demo.bx` in a package the manifest beside that file depends on.
+3. `demo.bx` in `src/` of the package, where the file that wrote the import is a test module.
+4. `demo.bx` in `src/` of a package that the manifest of the package depends on.
 
 Nothing else is looked in, and an import that reaches none of them is `L0306`.
 
@@ -132,8 +175,8 @@ reaches never depends on which module the walk happened to reach first.
 Two routes to one file are one file: a package that two packages both depend on is reached
 through each of them and is read once.
 
-The manifest that is read is the one beside the file that wrote the import, never the one beside
-the file a command named.
+The manifest that is read is the one of the package of the file that wrote the import.
+It is never the manifest of the package of the file that a command named.
 A module of a dependency reaches that dependency's own dependencies and none of this package's,
 because a module is read without knowing which module imported it.
 
@@ -154,10 +197,13 @@ compiled after everything it imports wherever that came from.
 ## What a command takes
 
 `bux check` and `bux build` take a package as well as a file.
-A directory is a package, and either command run over one runs over every module the package
-holds, in the order their names sort, stopping at the first refusal.
-Each of them is compiled as the module a command named, so a module several of them import is
-compiled once for each, and a package is as many compilations as it has modules.
+A directory is a package, and either command runs over every module that the package holds.
+It takes the modules of `src/` first, then the test modules of `tests/`.
+In each part, the modules go in the order that their names sort.
+The command stops at the first refusal.
+Each of them is compiled as the module a command named.
+So a module that several of them import is compiled once for each.
+A package is as many compilations as it has modules.
 That is what a package costs until a measurement says the sharing is worth building.
 
 `bux test` takes a package as well as a file, and `docs/specs/testing.md` states the run.
@@ -165,12 +211,18 @@ It runs the examples and the tests of every module the package holds, in the sam
 It does not stop at the first module that fails, so one report names every module that fails.
 `bux test` with no path runs the package in the current directory.
 
+`bux build` and `bux run` write into `target/` beside the manifest of the package.
+A module of `src/` and a test module both write there, so one package has one `target/`.
+`bux test` writes into a directory of its own, which `docs/specs/run.md` states.
+
 `bux fmt`, `bux run`, and `bux api` each take a file.
 A package has no canonical text of its own, no `main` to run, and no surface beyond its modules'.
 Each of those is a module's and is asked of the module.
 
-A directory holding no manifest is no package, and a command handed one says so and stops with
-exit code 2, as it does for a directory it cannot list.
+A directory that holds no manifest is no package.
+A command that gets one says so and stops with exit code 2.
+It does the same for a `src/` or a `tests/` that it cannot list.
+A package out of the layout is `L0323`, before any module of it is compiled.
 
 ## The errors
 
@@ -180,7 +232,10 @@ exit code 2, as it does for a directory it cannot list.
 | word is not one word  | `L0315` | `package` states one word, and this line does not      |
 | depended on twice     | `L0315` | `../geometry` is depended on twice                     |
 | no package there      | `L0316` | there is no package in `../geometry`                   |
-| module is two files   | `L0317` | `demo` is both `../shapes/demo.bx` and `demo.bx`       |
+| module is two files   | `L0317` | `demo` is both `../shapes/src/demo.bx` and `src/demo.bx` |
+| stem in both parts    | `L0317` | `demo` is both `tests/demo.bx` and `src/demo.bx`       |
+| module beside manifest | `L0323` | `demo.bx` sits beside `bux.package`, where no module of a package is |
+| manifest in a part    | `L0323` | `tests/` holds a manifest, and it is a part of the package above it |
 | not an archive line   | `L0315` | `jar` states a path and a hash, and this line does not |
 | archive stated twice  | `L0315` | `lib/x.jar` is stated twice                            |
 | path holds `:`        | `L0315` | `lib:x.jar` holds `:`                                  |
@@ -196,8 +251,10 @@ A directory depended on twice helps with ``a manifest states one `depends` for e
 reaches``.
 `L0316` helps with ``a package is a directory holding `bux.package```.
 `L0317` helps with `one name has one definition; rename one of the two modules`.
+`L0323` helps with ``a module of a package is in `src/`, and a test module is in `tests/``.
 A malformed `jar` line, a repeated archive, a path with `:`, and `L0606` to `L0609` help as below.
 The texts are in that order, after the first text.
+`L0323` at a manifest and `L0306` help with the last two texts.
 
 ```text
 a manifest is `package`, then `version`, then a `depends` for each dependency, then a `jar` for each archive
@@ -208,6 +265,8 @@ a `jar` line names a file on disk already, and nothing is fetched
 a hash pins the bytes of an archive; state the hash of the archive the package uses
 a run reaches only the archives a manifest states; use an archive with no `Class-Path`
 a `jar` line names a zip file of classes, as the `jar` tool of the JDK writes one
+a package is one manifest with `src/` and `tests/` under it; remove this manifest
+a module is beside this file, or in `src/` of this package or a dependency
 ```
 
 `L0606` to `L0609` each point at the `jar` line, and a build stops at the first archive refused.
@@ -227,11 +286,14 @@ directory the way a file that cannot be read is said about.
 
 `L0317` points at the import, in the file that wrote it, and names both files, each as the route
 the imports reached it along spells it.
-Two modules of one package never clash, because one directory holds one file of a name.
+A module of `src/` and a test module of one name clash, because a test module reaches `src/`.
 
-`L0306` and `L0307` are unchanged.
-An import that reaches nothing and a ring of imports are refused wherever the module would have
-come from.
+`L0306` refuses an import that reaches nothing, wherever the module would have come from.
+`L0307` refuses a ring of imports in the same way.
+
+`L0323` points at the start of the file that is out of the layout.
+The place of the file is wrong, and not its text.
+A command that gets a package out of the layout stops at `L0323` before it compiles a module.
 
 ## Properties
 
@@ -245,7 +307,9 @@ These hold and are checked by drawn properties, each a test of `tests/`:
 5. Each malformed shape of a `jar` line is refused as `L0315`, at the line itself.
 6. A `depends` or a `jar` path with a `:` at a drawn place is refused as `L0315`, at that line.
 7. The SHA-256 of `src/digest.bx` is the one that `shasum -a 256` gives for a drawn file.
+8. A drawn package in the layout loads from a test module, and a module of `src/` never reaches one.
 
+`tests/loading.bx` holds properties 1 to 3 and 8.
 `tests/pinned.bx` holds properties 4 to 7.
 The runner skips property 7 with the reason when `shasum` cannot be run.
 `tests/archived.bx` packs a class with the `jar` tool of the JDK, and holds each refusal.

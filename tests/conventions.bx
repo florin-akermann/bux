@@ -71,7 +71,7 @@ fn listing_of(directory: String) -> String {
 // example: is_walked(path: "src", name: "src")
 // example: !is_walked(path: "library", name: "library")
 // example: !is_walked(path: "tests/spec", name: "spec")
-// example: !is_walked(path: "src/target", name: "target")
+// example: !is_walked(path: "target", name: "target")
 // example: !is_walked(path: ".git", name: ".git")
 fn is_walked(path: String, name: String) -> Bool {
     !list.has_value(["library", "tests/spec"], path) && name != "target" && !lexer.has_prefix(lexer.Rest { source: name, start: 0 }, ".")

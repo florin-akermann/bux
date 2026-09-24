@@ -1,5 +1,0 @@
-// expect-error: L0315
-// `package` states one word, and the manifest here states none after it.
-fn held() -> Int {
-    1
-}

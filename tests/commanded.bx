@@ -12,12 +12,12 @@
 // - A blank line, which comes between two command lines and says nothing.
 //
 // Each golden file is answered in a stage: a directory of its own that holds a copy of every file
-// of `tests/spec`, the files of `library`, `echo.bx`, and a small package in `src`. It also
-// holds `echo.lm`, the text of `echo.bx` in a file that no Bux source is named as. A word whose
-// first part names an entry of the stage is read there, so no command writes into the tree,
-// and the path of the stage is taken out of each answer again. A program that `run` starts is
-// started in the stage. A command line that opens with `run` or `test` needs a JVM, and it is
-// skipped where `JAVA_HOME` names no JDK.
+// of `tests/spec`, the files of `library`, `echo.bx`, and a small package in `demo`, whose
+// manifest has `src/` and `tests/` under it. It also holds `echo.lm`, the text of `echo.bx` in a
+// file that no Bux source is named as. A word whose first part names an entry of the stage is
+// read there, so no command writes into the tree, and the path of the stage is taken out of each
+// answer again. A program that `run` starts is started in the stage. A command line that opens
+// with `run` or `test` needs a JVM, and it is skipped where `JAVA_HOME` names no JDK.
 //
 // Each command line sees the sources as they are in the tree. `fmt` is the one command that
 // writes a source, so the sources are copied into the stage again after each `fmt`.
@@ -233,9 +233,11 @@ fn ended_in(answer: command.Answer, stage: Stage) -> command.Said {
 fn staged() -> String {
     let stage = ok_or(command.somewhere_of_its_own(), "/no-such-directory-for-a-stage")
     sources_copied(stage)
-    _ = files.has_made_all(files.named(modules.joined(stage, "src")))
-    _ = files.write(modules.joined(stage, "src/bux.package"), "package compiler\nversion 0.1.0\n")
-    _ = files.write(modules.joined(stage, "src/main.bx"), "fn main(arguments: List<String>) -> Int {\n    0\n}\n")
+    _ = files.has_made_all(files.named(modules.joined(stage, "demo/src")))
+    _ = files.has_made_all(files.named(modules.joined(stage, "demo/tests")))
+    _ = files.write(modules.joined(stage, "demo/bux.package"), "package demo\nversion 0.1.0\n")
+    _ = files.write(modules.joined(stage, "demo/tests/held.bx"), "test \"a test module of the package runs\" {\n    true\n}\n")
+    _ = files.write(modules.joined(stage, "demo/src/main.bx"), "fn main(arguments: List<String>) -> Int {\n    0\n}\n")
     _ = files.write(modules.joined(stage, "echo.bx"), echo_text())
     _ = files.write(modules.joined(stage, "echo.lm"), echo_text())
     stage

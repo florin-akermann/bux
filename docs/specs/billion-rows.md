@@ -4,7 +4,7 @@
 
 ## Intent
 
-`example/main.bx` is the program a newcomer reads, and `1brc/src/main.bx` is the program measured.
+`example/src/main.bx` is the program a newcomer reads, and `1brc/src/main.bx` is the one measured.
 The challenge reads one file of one billion lines, and writes one line of output.
 So it measures what a program of everyday Bux costs: a loop over text, a map, and processes.
 It is written in Bux over `library/` alone, and it declares no `extern` of its own.
@@ -133,7 +133,7 @@ Its exit codes are these:
 - `uneven-rows`: 97 lines, which no count of processors from 2 to 96 divides.
   Its last line has no line end.
 
-`tests/started.bx` runs `1brc/src/main.bx` over each sample, as it runs `example/main.bx`.
+`tests/started.bx` runs `1brc/src/main.bx` over each sample, as it runs `example/src/main.bx`.
 It holds the status to `0` and the output to the `.out` file of the sample.
 It also runs the program with no argument, and holds the status to `2`.
 It runs `bux test` over the module, so every `// example:` line of it holds.

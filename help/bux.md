@@ -14,8 +14,8 @@ Commands:
 
 Run `bux help <command>` for the long form of any of them.
 
-A package is a directory of modules with a `bux.package` manifest beside them; `check` and
-`build` each take one. `bux help check` says what the manifest states and where an import
+A package is a `bux.package` manifest with `src/` and `tests/` under it; `check`, `build`, and
+`test` each take one. `bux help check` says what the manifest states and where an import
 looks.
 
 Every error carries a code on its first line; `bux explain <code>` says more about it.

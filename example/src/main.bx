@@ -1,0 +1,18 @@
+// The first Bux program, and the one the README points at.
+// It is everyday Bux: a record, an algebraic data type, a `match`, and a loop over a list.
+// It writes every answer it works out, because a program that shows nobody anything is not one.
+// `io.println` writes a line and `shown` gives a number its text; `docs/specs/io.md` says how.
+// No module imports `main`, so what `main` works with is in `orders`, where a test reaches it.
+import io
+import orders
+
+fn main(arguments: List<String>) -> Int {
+    let ordered = orders.Placed(orders.Basket { apples: 3, pears: 4 })
+    let held = orders.picked(ordered) + orders.picked(orders.Unplaced)
+    let each = orders.shared(held, 2)
+    let most = orders.fullest([orders.Basket { apples: 1, pears: 1 }, orders.Basket { apples: each, pears: each }])
+    io.println("held: " + shown(held))
+    io.println("each: " + shown(each))
+    io.println("most: " + shown(most))
+    0
+}

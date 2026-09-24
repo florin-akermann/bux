@@ -1,0 +1,5 @@
+// expect-error: L0323
+// `tests/` is a part of the package above it and no package of its own, so its manifest is refused.
+fn held() -> Int {
+    1
+}

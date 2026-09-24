@@ -1,0 +1,11 @@
+// A test module reaches `circle` of `src/` by its name, as a module beside it is reached.
+import circle
+
+// example: is_round()
+fn is_round() -> Bool {
+    circle.around(1) == 6
+}
+
+test "a circle of radius three is eighteen around" {
+    circle.around(3) == 18
+}

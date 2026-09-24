@@ -79,7 +79,10 @@ A hole in a test does not stop `bux build`, because the build leaves the test ou
 ## What `bux test` runs
 
 `bux test <file>` runs the examples and the tests of that module.
-`bux test <dir>` runs every module of the package in that directory, in sorted name order.
+`bux test <dir>` runs every module of the package in that directory.
+It runs the modules of `src/` first, then those of `tests/`, each part in sorted name order.
+A `.bx` file deeper than the top of `tests/` is data, and the run reads it as no module.
+`docs/specs/packages.md` states the layout of a package.
 `bux test` with no path runs the package in the current directory.
 A directory with no `bux.package` is no package, and the run stops with exit code 2.
 
@@ -92,7 +95,7 @@ Thus one run names every module that fails.
 The modules of a package run at the same time, on one worker for each two processors of the JVM.
 A JVM with one processor gets one worker.
 A pool, which is a `process`, gives each module to the next worker that is free.
-The pool keeps each answer by the number of its module in the sorted order.
+The pool keeps each answer by the number of its module in that order.
 So the report is in file order, and it is the report of the modules run one after another.
 The exit code and each line are the same as in a run of one module after another.
 A worker keeps a memo of the modules it typed, and it uses the memo for its next module.
@@ -137,16 +140,17 @@ A module that the compiler refuses is reported as `bux check` reports it.
 
 ## The tests of the compiler
 
-The compiler's tests are the tests of `tests/`, and `bin/bux test tests` runs them all.
+The root of the repository is the package of the compiler, and its tests are the tests of `tests/`.
+`bin/bux test` runs the package: the examples and the tests of `src/`, then the tests of `tests/`.
 `.githooks/pre-commit` runs it after `bin/bootstrap`, and a commit needs status 0 from it.
 A test there calls a check of its module, which gives back what it tried and what failed.
 The test writes a line for each failure and a line `skipped: <why>` for each check it skipped.
 A test that skips a check holds, so the reason is on standard output and the run goes on.
 A check that starts a JVM stops it after 60 s, and a JVM stopped so is a failure of the check.
 
-`tests/documented.bx` runs the examples and the tests of `library/`, `src/`, and `tests/spec/`.
+`tests/documented.bx` runs the examples and the tests of `library/` and `tests/spec/`.
 It leaves out the tests under `tests/spec/`, because each of those files states its own answer.
-It leaves out `tests/` itself, because `bin/bux test tests` runs those modules directly.
+It leaves out `src/` and `tests/`, because `bin/bux test` runs those modules directly.
 It skips `library/prelude.bx`, because the run of its examples declares `or` a second time.
 The golden answers in `tests/commands/fixtures.txt` hold `bux test` on `tests/spec/testing/`.
 `bin/bux run tests/golden.bx` writes each golden file under `tests/commands/` again.

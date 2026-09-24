@@ -109,7 +109,7 @@ fn is_a_file_as_a_directory(path: String) -> Bool {
 // example: !is_misnamed("")
 fn is_misnamed(path: String) -> Bool {
     let place = files.named(path)
-    files.is_there(place) && !files.is_directory(place) && !is_a_module_name(modules.last_part(path))
+    files.is_there(place) && !files.is_directory(place) && !modules.is_a_module_name(modules.last_part(path))
 }
 
 /// The refusal of the file at `path`, whose name is not that of a Bux source, shown in `form`.
@@ -242,27 +242,31 @@ fn built_said(path: String, library: ir.Library) -> Said {
     }
 }
 
-/// Runs `over` on every module of the package in `directory`, stopping at the first refusal.
-///
-/// A directory holding no manifest is no package. The modules are the entries whose name ends
-/// in `.bx`, in the order their names sort. A package whose directory cannot be listed is refused.
+// A refusal of the layout of the package is shown in the form the command asks for, as a
+// refusal of one of its modules is.
 // example: across("no-such-directory", Building, ir.little_library()).errors == "error: no-such-directory: there is no package here, which is a directory holding `bux.package`\n"
 fn across(directory: String, over: Over, library: ir.Library) -> Said {
     match package_found(directory) {
-        Ok(package) => every_module_said(package, over, library)
-        Err(said) => said
+        Ok(paths) => every_module_said(paths, over, library)
+        Err(not) => not_compiled_said(not, form_over(over))
     }
 }
 
-/// Runs `over` on every module among the entries of `package`, stopping at the first refusal.
-// example: every_module_said(Package { directory: "no-such-directory", names: ["a.txt"] }, Building, ir.little_library()).status == 0
-fn every_module_said(package: Package, over: Over, library: ir.Library) -> Said {
-    for name in package.names {
-        if is_a_module_name(name) {
-            let said = module_said(modules.joined(package.directory, name), over, library)
-            if said.status != 0 {
-                return said
-            }
+// example: form_over(CheckingAs(AsData)) == AsData
+// example: form_over(Building) == AsPage
+fn form_over(over: Over) -> Form {
+    match over {
+        CheckingAs(form) => form
+        Building => AsPage
+    }
+}
+
+// example: every_module_said([], Building, ir.little_library()).status == 0
+fn every_module_said(paths: List<String>, over: Over, library: ir.Library) -> Said {
+    for path in paths {
+        let said = module_said(path, over, library)
+        if said.status != 0 {
+            return said
         }
     }
     nothing_said()
@@ -400,13 +404,11 @@ fn has_a_split_archive(path: String) -> Bool {
     false
 }
 
-/// Whether the directory of the module at `path` holds a `:`, where the module is there.
-///
-/// `run` puts the `target/` of that directory on a class path, which reads a `:` as the end of
-/// one path. A path that names nothing is refused when it is read.
+// `run` puts the `target/` of the package of the module on a class path, which reads a `:` as the
+// end of one path. A path that names nothing is refused when it is read.
 // example: !has_a_split_directory("no-such-directory:a/main.bx")
 fn has_a_split_directory(path: String) -> Bool {
-    files.is_there(files.named(path)) && modules.can_split_the_class_path(modules.directory_of(path))
+    files.is_there(files.named(path)) && modules.can_split_the_class_path(modules.package_directory(path))
 }
 
 /// The refusal of the module or the package at `path`, whose directory holds a `:`.
@@ -418,13 +420,12 @@ fn split_said(path: String) -> Said {
     refused_each([diagnostic], Page { source: ok_or(files.read(path), ""), path: path })
 }
 
-/// The directory of the module at `path`, or `path` itself where it names a package.
 // example: package_directory_of("no-such-directory/main.bx") == "no-such-directory"
 fn package_directory_of(path: String) -> String {
     if files.is_directory(files.named(path)) {
         return path
     }
-    modules.directory_of(path)
+    modules.package_directory(path)
 }
 
 /// Runs the examples and the tests of every module of the package in `directory`, on one worker
@@ -434,8 +435,8 @@ fn package_directory_of(path: String) -> String {
 // example: package_tested("no-such-directory", ir.little_library()).status == 2
 fn package_tested(directory: String, library: ir.Library) -> Said {
     match package_found(directory) {
-        Ok(package) => reported(every_module_tested(package, library, pool_size()))
-        Err(said) => said
+        Ok(paths) => reported(every_module_tested(paths, library, pool_size()))
+        Err(not) => not_compiled_said(not, AsPage)
     }
 }
 
@@ -446,26 +447,48 @@ fn pool_size() -> Int {
     or((environment.processors() + 1) / 2, 1)
 }
 
-/// The package in `directory` and the entries of that directory, or why there is none to read.
-// example: is_refused(package_found("no-such-directory"))
-fn package_found(directory: String) -> Result<Package, Said> {
-    if !files.is_file(files.named(modules.joined(directory, "bux.package"))) {
-        return Err(unusable(directory + ": there is no package here, which is a directory holding `bux.package`"))
+// The layout is held before any module is, so a stray file is refused where no module reaches it.
+// example: is_refused(page_said(package_found("no-such-directory")))
+fn package_found(directory: String) -> Result<List<String>, NotCompiled> {
+    if !modules.has_manifest(directory) {
+        return Err(Unusable("error: " + directory + ": there is no package here, which is a directory holding `bux.package`\n"))
     }
-    match files.listed(directory) {
-        Ok(names) => Ok(Package { directory: directory, names: names })
-        Err(_) => Err(unusable(directory + ": Permission denied (os error 13)"))
+    match modules.layout_held(directory) {
+        Ok(_) => in_both_parts(directory)
+        Err(not) => Err(not_loaded(not))
     }
 }
 
-/// What the run of every module among the entries of `package` found, in the order of the entries,
-/// as a run of one module after another finds it.
-///
-/// A pool of `workers` workers hands each module to the next free worker. Each worker is waited
-/// for before the pool, so a JVM error that stops a worker stops the command with it.
-// example: every_module_tested(Package { directory: "no-such-directory", names: ["a.txt"] }, ir.little_library(), 2).said.status == 0
-fn every_module_tested(package: Package, library: ir.Library, workers: Int) -> Tried {
-    let paths = module_paths(package)
+// example: list.length(ok_or(in_both_parts("no-such-directory"), ["x"])) == 0
+fn in_both_parts(directory: String) -> Result<List<String>, NotCompiled> {
+    let sources = modules_of(modules.joined(directory, "src"))?
+    let tests = modules_of(modules.joined(directory, "tests"))?
+    Ok(all_of(values: sources, more: tests))
+}
+
+// example: list.length(ok_or(modules_of("no-such-directory/src"), ["x"])) == 0
+fn modules_of(part: String) -> Result<List<String>, NotCompiled> {
+    match modules.listing(part) {
+        Ok(names) => Ok(module_paths(directory: part, names: names))
+        Err(not) => Err(not_loaded(not))
+    }
+}
+
+// example: module_paths(directory: "a", names: ["b.bx", "c.txt"]) == ["a/b.bx"]
+fn module_paths(directory: String, names: List<String>) -> List<String> {
+    var paths = []
+    for name in names {
+        if modules.is_a_module_name(name) {
+            paths = list.push(paths, modules.joined(directory, name))
+        }
+    }
+    paths
+}
+
+// A pool of `workers` workers hands each module to the next free worker. Each worker is waited
+// for before the pool, so a JVM error that stops a worker stops the command with it.
+// example: every_module_tested([], ir.little_library(), 2).said.status == 0
+fn every_module_tested(paths: List<String>, library: ir.Library, workers: Int) -> Tried {
     let pooling = spawn Pool(paths, workers)
     var working = []
     for list.length(working) < workers {
@@ -477,18 +500,6 @@ fn every_module_tested(package: Package, library: ir.Library, workers: Int) -> T
         _ = ended(worker)
     }
     in_file_order(paths, ended(pooling).answers)
-}
-
-/// The path of each module among the entries of `package`, in the order of the entries.
-// example: module_paths(Package { directory: "a", names: ["b.bx", "c.txt"] }) == ["a/b.bx"]
-fn module_paths(package: Package) -> List<String> {
-    var paths = []
-    for name in package.names {
-        if is_a_module_name(name) {
-            paths = list.push(paths, modules.joined(package.directory, name))
-        }
-    }
-    paths
 }
 
 /// What the runs of `paths` found together, each answer taken by the number of its module.
@@ -523,13 +534,13 @@ process Pool {
 }
 
 /// `pooling` with `answer` held by the number of its module, and `worker` handed the next module.
-// example: every_module_tested(Package { directory: "no-such-directory", names: ["a.bx", "b.bx"] }, ir.little_library(), 2).said.errors == "error: no-such-directory/a.bx: No such file or directory (os error 2)\n\nerror: no-such-directory/b.bx: No such file or directory (os error 2)\n"
+// example: every_module_tested(["no-such-directory/a.bx", "no-such-directory/b.bx"], ir.little_library(), 2).said.errors == "error: no-such-directory/a.bx: No such file or directory (os error 2)\n\nerror: no-such-directory/b.bx: No such file or directory (os error 2)\n"
 fn answer_kept(pooling: Pooling, answer: Answered, worker: Process<Work, Working>) -> Pooling {
     handed_to(pooling { answers: map.insert(pooling.answers, answer.number, answer.tried) }, worker)
 }
 
 /// `pooling` after `worker` is sent the next module, or told to stop where no module is left.
-// example: every_module_tested(Package { directory: "no-such-directory", names: ["a.bx"] }, ir.little_library(), 2).said.status == 2
+// example: every_module_tested(["no-such-directory/a.bx"], ir.little_library(), 2).said.status == 2
 fn handed_to(pooling: Pooling, worker: Process<Work, Working>) -> Pooling {
     match list.at(pooling.paths, pooling.handed) {
         Some(path) => handed_module(pooling, Handed { number: pooling.handed, path: path, worker: worker })
@@ -538,21 +549,21 @@ fn handed_to(pooling: Pooling, worker: Process<Work, Working>) -> Pooling {
 }
 
 /// `pooling` once the module of `handed` is sent to its worker, with one more module handed.
-// example: every_module_tested(Package { directory: "no-such-directory", names: ["a.bx", "b.bx"] }, ir.little_library(), 2).said.status == 2
+// example: every_module_tested(["no-such-directory/a.bx", "no-such-directory/b.bx"], ir.little_library(), 2).said.status == 2
 fn handed_module(pooling: Pooling, handed: Handed) -> Pooling {
     _ = send(handed.worker, Give(handed), NoLimit)
     pooling { handed: pooling.handed + 1 }
 }
 
 /// `pooling` once `worker` is told to stop.
-// example: every_module_tested(Package { directory: "no-such-directory", names: [] }, ir.little_library(), 2).said.status == 0
+// example: every_module_tested([], ir.little_library(), 2).said.status == 0
 fn stopped(pooling: Pooling, worker: Process<Work, Working>) -> Pooling {
     _ = send(worker, Stop, NoLimit)
     pooling
 }
 
 /// The pool with one worker fewer, which has ended where that worker was the last.
-// example: every_module_tested(Package { directory: "no-such-directory", names: [] }, ir.little_library(), 2).said.output == ""
+// example: every_module_tested([], ir.little_library(), 2).said.output == ""
 fn worker_left(pooling: Pooling) -> Next<Pooling> {
     if pooling.workers == 1 {
         return Done
@@ -577,7 +588,7 @@ process Worker {
 }
 
 /// `working`, with the memo the run of the module of `handed` left, once its answer is sent.
-// example: every_module_tested(Package { directory: "no-such-directory", names: ["a.bx"] }, ir.little_library(), 2).said.errors == "error: no-such-directory/a.bx: No such file or directory (os error 2)\n"
+// example: every_module_tested(["no-such-directory/a.bx"], ir.little_library(), 2).said.errors == "error: no-such-directory/a.bx: No such file or directory (os error 2)\n"
 fn worked(working: Working, handed: Handed) -> Working {
     let ran = module_tested(handed.path, working.typing)
     _ = send(working.pool, Finished(Answered { number: handed.number, tried: ran.tried }, handed.worker), NoLimit)
@@ -586,18 +597,10 @@ fn worked(working: Working, handed: Handed) -> Working {
 }
 
 /// The end of a worker, once it tells the pool that it has left.
-// example: every_module_tested(Package { directory: "no-such-directory", names: [] }, ir.little_library(), 2).said.errors == ""
+// example: every_module_tested([], ir.little_library(), 2).said.errors == ""
 fn quit(working: Working) -> Next<Working> {
     _ = send(working.pool, Left, NoLimit)
     Done
-}
-
-/// Whether a file called `name` is a module: its extension is `bx`, after a dot that opens no name.
-// example: is_a_module_name("a.bx")
-// example: !is_a_module_name(".bx")
-fn is_a_module_name(name: String) -> Bool {
-    let dot = last_dot(name)
-    dot > 0 && or(strings.cut(name, dot + 1, strings.length(name)), "") == "bx"
 }
 
 /// What the run of the module in `path` found, or the refusal of the module, with each module
@@ -733,17 +736,15 @@ fn classes_held(named: Named, run: Run, root: Typed) -> Result<Tried, Said> {
 /// `docs/specs/packages.md` states the `jar` line, and `docs/specs/run.md` the class path.
 // example: list.length(ok_or(page_said(archives_of("no-such-directory/a.bx")), ["x"])) == 0
 fn archives_of(path: String) -> Result<List<String>, NotCompiled> {
-    archive_said(archives.reached(modules.directory_of(path)))
+    archive_said(archives.reached(modules.package_directory(path)))
 }
 
-/// The one directory a build of `path` writes every class into: `target/` beside the module.
-///
-/// A module of a package sits in the package's directory, so this is the package's `target/`.
-/// No class lands beside a source, and deleting this directory is a clean build.
-// example: target_of("src/main.bx") == "src/target"
-// example: target_of("main.bx") == "target"
+// A module of a package writes into the `target/` beside the manifest, and a module in no
+// package into the `target/` beside itself. No class lands beside a source, and deleting this
+// directory is a clean build.
+// example: target_of("no-such-directory/src/main.bx") == "no-such-directory/src/target"
 fn target_of(path: String) -> String {
-    modules.joined(modules.directory_of(path), "target")
+    modules.joined(modules.package_directory(path), "target")
 }
 
 /// The `java` of the JDK `JAVA_HOME` names, which is the only JVM a run ever reaches for.
@@ -878,7 +879,7 @@ fn examples_line(java: String, classes: List<String>, module: String) -> List<St
     line_of(java: java, flags: short_run_flags(), classes: classes, module: module, arguments: [])
 }
 
-// `bux test tests` starts hundreds of these JVMs, several at once, so each must take little.
+// `bin/bux test` starts hundreds of these JVMs, several at once, so each must take little.
 // `docs/specs/run.md` states each flag, and `docs/implementation.md` section 7 its measurement.
 // example: list.length(short_run_flags()) == 3
 private fn short_run_flags() -> List<String> {
@@ -977,23 +978,9 @@ fn file_copied(from: String, into: String) -> Result<(), Said> {
 // example: !is_resource_name(".DS_Store")
 // example: !is_resource_name("mycs.toml")
 fn is_resource_name(name: String) -> Bool {
-    let dot = last_dot(name)
+    let dot = modules.last_unit(name, 46)
     let extension = or(strings.cut(name, dot + 1, strings.length(name)), "")
     dot > 0 && (extension == "bx" || extension == "md")
-}
-
-/// Where the last dot of `name` is, and `-1` where it holds none.
-// example: last_dot("a.b.bx") == 3
-fn last_dot(name: String) -> Int {
-    var found = -1
-    var index = 0
-    for index < strings.length(name) {
-        if or(strings.at(name, index), 0) == 46 {
-            found = index
-        }
-        index += 1
-    }
-    found
 }
 
 /// Whether the paths `one` and `other` name the same place, however each is spelled.
@@ -1346,7 +1333,7 @@ fn archived_of(path: String, loaded: List<modules.Module>) -> Result<set.Set<Str
             named = list.push(named, class)
         }
     }
-    archive_said(archives.classes_held(modules.directory_of(path), named))
+    archive_said(archives.classes_held(modules.package_directory(path), named))
 }
 
 /// What the archives of a package gave, or the refusal of the first that is not held to its line,
@@ -3488,11 +3475,11 @@ fn transpositions(compared: Compared, matched: Matched) -> Int {
 // example: read_refusal("no-such-directory/a.bx") == "No such file or directory (os error 2)"
 fn read_refusal(path: String) -> String {
     let place = files.named(path)
-    if files.is_directory(place) {
-        return "Is a directory (os error 21)"
-    }
     if files.is_there(place) && !files.is_readable(place) {
         return "Permission denied (os error 13)"
+    }
+    if files.is_directory(place) {
+        return "Is a directory (os error 21)"
     }
     if files.is_there(place) {
         return "stream did not contain valid UTF-8"
@@ -3658,12 +3645,6 @@ type Command =
 type Checking = {
     path: String
     form: Form
-}
-
-/// A package directory, with the names of every entry it holds.
-type Package = {
-    directory: String
-    names: List<String>
 }
 
 /// The command a package is given: `check` in one form, or `build`.

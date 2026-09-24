@@ -1,0 +1,5 @@
+// expect-error: L0315
+// The manifest of this package depends on `../shapes` twice, which states one dependency two times.
+fn held() -> Int {
+    1
+}

@@ -110,11 +110,11 @@ An example of the second half: `17 / 0` is `None`, because a panic is simpler an
 - No Gherkin and no red/green micro-cycle; a behaviour, its tests, and its code land together.
 - Every phase gets drawn properties (`tests/drawn.bx`) for its invariants; examples are not enough.
 - Round trips are the first properties: print-then-parse, format idempotence, spans covering input.
-- Every check is a `test` block of a module under `tests/`, and `bin/bux test tests` runs them all.
+- Every check is a `test` block of a module under `tests/`, and `bin/bux test` runs them all.
 - Shared checks go in `tests/held.bx` and `tests/walk.bx`, reached with `import`.
 - **Tests never run git**, even in a temp dir; a subprocess git can corrupt the repo state.
 - A check that starts a second JVM is skipped with a named reason when `JAVA_HOME` names none.
-- `bin/bootstrap`, `bin/bux test tests`, and the built-in `/code-review` pass before every commit.
+- `bin/bootstrap`, `bin/bux test`, and the built-in `/code-review` pass before every commit.
 - `TODOS.md` is the sole task tracker; there is no `gh` and no GitHub integration.
 - A user-facing feature is documented under `bux --help` in the todo that adds it.
 - Help text lives in `help/*.md`, read as a class-path resource: one source, no drift.

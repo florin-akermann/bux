@@ -1,0 +1,36 @@
+// A division by nobody is `None`, so nobody to give to gets nothing.
+// example: shared(total: 7, people: 2) == 3
+// example: shared(total: 7, people: 0) == 0
+fn shared(total: Int, people: Int) -> Int {
+    or(total / people, 0)
+}
+
+// example: fullest([Basket { apples: 1, pears: 1 }, Basket { apples: 3, pears: 3 }]) == 6
+fn fullest(baskets: List<Basket>) -> Int {
+    var most = 0
+    for basket in baskets {
+        let held = picked(Placed(basket))
+        if held > most {
+            most = held
+        }
+    }
+    most
+}
+
+// example: picked(Placed(Basket { apples: 3, pears: 4 })) == 7
+// example: picked(Unplaced) == 0
+fn picked(order: Order) -> Int {
+    match order {
+        Unplaced => 0
+        Placed(basket) => basket.apples + basket.pears
+    }
+}
+
+type Order =
+    | Unplaced
+    | Placed(Basket)
+
+type Basket = {
+    apples: Int
+    pears: Int
+}

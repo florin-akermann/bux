@@ -162,25 +162,28 @@ GraalVM native-image waits until GraalVM tracks JDK 28 and Valhalla, and section
 
 The compiler lives in `src/`, one module for each phase, and the lexer is the first.
 `src/main.bx` is its command line, and `src/command.bx` holds every command.
-A build writes every class under `target/`, in the directory of the module it builds.
-So a build of the compiler writes `src/target/`, and no class lands beside a source.
+The root of the repository is a package: `bux.package`, with `src/` and `tests/` under it.
+A build writes every class under `target/` beside the manifest, as `docs/specs/packages.md` says.
+So a build of the compiler writes `target/` at the root, and no class lands beside a source.
 `help/` and `explanations/` at the root hold the help text and the long form of each code.
 `library/` beside them holds the library, and the compiler reads all three as resources.
 A module there has a `.bx` name, and the module loader reads no other extension.
 A build copies the three from its own class path into `target/`, beside the classes it writes.
-The launcher `bin/bux` starts the compiler with `src/target/` alone on the class path.
+The launcher `bin/bux` starts the compiler with `target/` alone on the class path.
 Run `bin/bootstrap` after a change to a resource, because only it copies those of the checkout.
 
 What remains of the repository is small, and a JDK is the one tool it needs:
 
 ```text
+bux.package    the manifest of the compiler, which makes the root a package
 bin/           bootstrap, bux, and the seed seed.jar
 src/           the compiler
 library/       the standard library, read by the compiler as a resource
 help/          the help text, read by the compiler as a resource
 explanations/  the long form of each code, read by the compiler as a resource
 tests/         the tests of the compiler, and tests/spec, the executable examples
-example/       the example program
+target/        the classes that bin/bootstrap builds, which git ignores
+example/       the example program, a package of its own
 docs/          the specification, this document, and the behaviour specs
 ```
 
@@ -189,8 +192,8 @@ docs/          the specification, this document, and the behaviour specs
 The bootstrap has a seed and two stages, and `bin/bootstrap` runs them.
 The seed `bin/seed.jar` holds the classes of a compiler that an earlier compiler built.
 The seed runs from one temporary directory: the seed unpacked, with the resources of the checkout.
-The seed builds stage 1, the classes in `src/target/`.
-Stage 1 builds stage 2 from a copy of `src/` outside the repository.
+The seed builds stage 1 from `src/main.bx` into `target/` at the root, where `bin/bux` starts it.
+Stage 1 builds stage 2 from a copy of `bux.package` and `src/` outside the repository.
 Stage 2 must be stage 1 byte for byte, and `docs/specs/run.md` states the script.
 No class file other than the seed is kept in the repository, so a checkout bootstraps first.
 
@@ -212,6 +215,7 @@ The item builds stage 1 with the old seed, stage 2 with stage 1, and stage 3 wit
 Stage 3 must equal stage 2, and the item packs stage 2 as the new seed.
 Item 096 did this when a build moved every class from beside its source to `target/`.
 Item 113 did this when a build first copied the resources into `target/`.
+Item 134 did this when a module of a package first wrote into `target/` beside the manifest.
 The fourth reason is that canonical form changed, so the old seed refuses the sources.
 The item changes the printer, and the old seed builds stage 1 from the sources in the old form.
 The `bux fmt` of stage 1 then writes every source in the new form.
@@ -233,7 +237,7 @@ The item packs stage 3 as the new seed.
 Item 082 did this when a name that never changes was first bound with `let`.
 In each case, `bin/bootstrap` must then hold stage 2 equal to stage 1 with the new seed.
 The item says so, and it replaces the seed in its own commit.
-The seed packs `src/target/` whole, and `bin/bootstrap` replaces its copies of the resources.
+The seed packs `target/` whole, and `bin/bootstrap` replaces its copies of the resources.
 
 The compiler should itself use strong typed representations for compiler phases.
 
@@ -274,17 +278,18 @@ An example is a `.bx` file under `tests/spec/<area>/`, and an area exists when a
 
 ### The tests
 
-The compiler's tests are the tests of `tests/`, and `bin/bux test tests` runs them all.
-`tests/` is a package, and `docs/specs/testing.md` states a test and a run of a package.
+The compiler's tests are the tests of `tests/`, and `bin/bux test` runs them all.
+It runs the root package: the examples and the tests of `src/`, then the tests of `tests/`.
+`docs/specs/testing.md` states a test and a run of a package.
 The run starts from the root of the repository, so each path of a test reads from there.
-Each module of `tests/` runs in a JVM of its own, which calls the functions of the compiler.
+Each module of the package runs in a JVM of its own, which calls the functions of the compiler.
 So a test starts no compiler process for each file that it checks.
 Each check is a `test` block of the module that holds it:
 
 - `exemplified.bx`: every example under `tests/spec`, to its header and to canonical form.
 - `siblings.bx`: every sibling file, to the view of its phase: tokens, tree, surface, format.
-- `documented.bx`, `compiler_lines.bx`, and `spec_lines.bx`: every `// example:` line.
-  They hold `library/`, `src/`, and `tests/spec`, one place each.
+- `documented.bx` and `spec_lines.bx`: every `// example:` line of `library/` and `tests/spec`.
+  The run of the package holds those of `src/`, one module on each worker.
   They also run every `test` block of those modules, except the tests under `tests/spec/`.
 - One module for each phase, with a test for each drawn property of that phase.
 - `commanded.bx` and `fixtures.bx`: the command line, held to the golden answers.
@@ -348,7 +353,8 @@ On 2026-09-24 `bin/runner` took 262 s, 211 s, and 147 s, and the median was 211 
 After Item 114, `bin/bux test tests` took 176 s, 118 s, and 118 s, and the median was 118 s.
 The runs of before and after took turns, under a load of 40 to 65 on 12 cores from other work.
 One module held every example line of `tests/spec`, `library/`, and `src/` at first.
-It took 91 s alone, so `compiler_lines.bx` and `spec_lines.bx` now hold two of those places.
+It took 91 s alone, so `spec_lines.bx` held `tests/spec` and `compiler_lines.bx` held `src/`.
+Item 134 made `src/` a part of the package that `bin/bux test` runs, and `compiler_lines.bx` went.
 `fixtures.bx` holds the longest golden file, so it runs beside `commanded.bx` too.
 On 2026-09-23 `bin/runner` took 182 s before Item 093 and 97 s after it.
 On 2026-09-23 `bin/runner` took 98 s before Item 094 and 53 s after it.
@@ -592,7 +598,7 @@ Item 087 moved every Rust test to the runner, which Item 114 made the tests of `
 - A test runs each `expect-run` example on stage 1, and `bin/bootstrap` compares stage 2.
 - A check that each code a phase raises has an explanation file.
 
-The pre-commit hook runs `bin/bootstrap`, then `bin/bux test tests`, then `mycs check`.
+The pre-commit hook runs `bin/bootstrap`, then `bin/bux test`, then `mycs check`.
 It stops at the first that fails, and each must end with status 0.
 
 ---

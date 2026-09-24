@@ -28,8 +28,9 @@ standard error, the runner passes through unchanged, and the status it ends with
 
 ## Where a build writes
 
-A build writes every class into one `target/`, in the directory of the module the command names.
-A module of a package sits in the package's directory, so that is the package's `target/`.
+A build writes every class into one `target/`.
+For a module of a package, that is the `target/` beside the manifest of the package.
+For a bare module, in no package, that is the `target/` beside the module.
 That `target/` holds the module, each module it reaches, the library, and the prelude.
 A module of another package is written there too, and not in the `target/` of that package.
 So a build never writes into a directory of another package.
@@ -47,7 +48,7 @@ A program that calls the compiler then finds the resources on its own class path
 An example is a test of `tests/` that calls `bux help` or `bux explain`.
 
 That one `target/` is the whole class path, for a run and for the script below.
-`bin/bux` starts `src/target/`, with that one directory on the class path and no other entry.
+`bin/bux` starts `target/` at the root, with that one directory on the class path and no other.
 
 `bux test` is the one exception, and it writes nothing into `target/`.
 It writes the classes and the resources of its run into a directory made for that run alone.
@@ -192,7 +193,7 @@ They come after `-Djdk.serialFilter=!*` and before `-cp`, and `bux run` does not
 -Xmx256m -XX:+UseSerialGC -XX:TieredStopAtLevel=1
 ```
 
-Most runs end in a second or less, and `bux test tests` starts hundreds of them.
+Most runs end in a second or less, and `bin/bux test` starts hundreds of them.
 Several start at the same time, one for each worker, beside the JVM of `bux test` itself.
 Without the flags, the JDK gives each JVM a quarter of the memory and a collector thread per core.
 So each flag makes a short JVM take less of the machine:
@@ -215,13 +216,13 @@ The help text is read as a class-path resource: a file in `help/`.
 `bin/bux` is the launcher, a POSIX `sh` script.
 It starts `java --enable-preview -Xmx3g` on the class `main`, with every word it was given.
 The heap bound keeps the compiler from the quarter of the memory that the JDK gives it by default.
-The class path is `src/target/` alone, which holds the classes and the resources.
-A link to the launcher, as on `PATH`, works: the launcher follows the link to find `src/`.
+The class path is `target/` alone, which holds the classes and the resources.
+A link to the launcher, as on `PATH`, works: the launcher follows the link to find the root.
 It finds the JDK as this page says: `JAVA_HOME` names it, and nothing else is searched.
 It refuses with status `2` when the compiler is not built, and when `JAVA_HOME` names no JDK.
 
 ```text
-error: <root>/src/target/main.class: the compiler is not built; bin/bootstrap builds it
+error: <root>/target/main.class: the compiler is not built; bin/bootstrap builds it
 error: JAVA_HOME is not set, and the bux compiler runs on the JDK it names
 error: /opt/nothing/bin/java: JAVA_HOME names no JDK
 ```
@@ -251,14 +252,14 @@ The seed `bin/seed.jar` holds the classes of a Bux compiler that an earlier comp
 It is the one archive that the repository keeps, and `docs/implementation.md` section 6 says why.
 
 `bin/bootstrap` is a POSIX `sh` script, and it needs only `JAVA_HOME` and the checkout.
-It deletes `src/target/`, so no class of an old build is left.
+It deletes `target/`, so no class of an old build is left.
 It unpacks the seed into a temporary directory, with the `jar` tool of the JDK.
 It then replaces the three directories of resources there with those of the checkout.
 These are `library/`, `help/`, and `explanations/`.
 The seed runs with that one directory as its class path.
-The seed then builds stage 1, the classes in `src/target/`, which `bin/bux` starts.
+The seed then builds stage 1 from `src/main.bx` into `target/`, where `bin/bux` starts it.
 So stage 1 holds the resources of the checkout, and not the old copies that the seed holds.
-Stage 1 then builds stage 2 from a copy of `src/` in a temporary directory.
+Stage 1 then builds stage 2 from a copy of `bux.package` and `src/` in a temporary directory.
 Stage 2 is in the `target/` of that copy.
 That directory is outside the repository, and the script deletes it when it ends.
 
@@ -272,10 +273,12 @@ A difference is a defect in the compiler under `src/`, and the fix goes there.
 The script refuses with status `2` when `JAVA_HOME` names no JDK and when the seed is missing.
 
 The script is the check of the bootstrap, because it compares the two stages itself.
-`bin/bux test tests` runs on stage 1, so each test of `tests/` is a check of stage 1.
+`bin/bux test` runs on stage 1, so each example of `src/` and each test of `tests/` checks it.
 
 A build copies the resources of its compiler, not those of the checkout.
-So `bin/bux build src/main.bx` copies the resources that `src/target/` holds already.
+So `bin/bux build src/main.bx` copies the resources that `target/` holds already.
+That build also writes into `target/`, which is the class path of `bin/bux` itself.
+So it replaces the running compiler with a build of `src/`, and `bin/bootstrap` is the safe way.
 Run `bin/bootstrap` after a change to `library/`, `help/`, or `explanations/`.
 The bootstrap is the one step that reads the resources of the checkout into stage 1.
 

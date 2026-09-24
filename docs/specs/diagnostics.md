@@ -122,11 +122,12 @@ Name resolution raises these, in `src/resolver.bx`:
 
 Loading raises these, in `src/modules.bx`, before any module is resolved:
 
-- `L0306` — an import names a module neither a file beside it nor a package it reaches holds.
+- `L0306` — an import names a module that no file beside it, and no `src/` it reaches, holds.
 - `L0307` — a ring of imports, which leaves the modules in it no order to be compiled in.
 - `L0315` — a manifest states something other than `package`, `version`, a `depends`, and a `jar`.
 - `L0316` — a directory named as a package holds no manifest, so there is no package there.
 - `L0317` — two files claim the module name an import writes, so one build would hold both.
+- `L0323` — a module sits beside a manifest, or a manifest sits in `src/` or `tests/`.
 
 Type inference raises these, and `src/refusal.bx` words them:
 

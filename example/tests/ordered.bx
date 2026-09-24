@@ -1,0 +1,12 @@
+// A test module of the package reaches a module of `src/` by its name.
+// Its own name is not `orders`, because one name has one definition in a package.
+import list
+import orders
+
+test "the fullest basket is the one that holds the most" {
+    var baskets = []
+    for count in [2, 5, 3] {
+        baskets = list.push(baskets, orders.Basket { apples: count, pears: 1 })
+    }
+    orders.fullest(baskets) == 6
+}

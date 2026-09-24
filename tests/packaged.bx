@@ -40,7 +40,7 @@ fn package_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
     var number = 0
     for outcome in outcomes {
         let module = Module { number: number, outcome: or(list.at(every_outcome(), outcome), Holds), reach: reach }
-        written = list.push(written, enacted.Written { at: "m" + shown(number) + ".bx", text: module_text(module) })
+        written = list.push(written, enacted.Written { at: "src/m" + shown(number) + ".bx", text: module_text(module) })
         number += 1
     }
     let scene = enacted.scene_of(written)
@@ -63,8 +63,8 @@ fn reach_name(reach: Reach) -> String {
 // example: on_a_pool("no-such-directory", ir.little_library(), 1).status == 2
 fn on_a_pool(scene: String, library: ir.Library, workers: Int) -> command.Said {
     match command.package_found(scene) {
-        Ok(package) => command.reported(command.every_module_tested(package, library, workers))
-        Err(said) => said
+        Ok(paths) => command.reported(command.every_module_tested(paths, library, workers))
+        Err(not) => command.not_compiled_said(not, command.AsPage)
     }
 }
 
@@ -72,16 +72,15 @@ fn on_a_pool(scene: String, library: ir.Library, workers: Int) -> command.Said {
 // example: in_turn("no-such-directory", ir.little_library()).status == 2
 fn in_turn(scene: String, library: ir.Library) -> command.Said {
     match command.package_found(scene) {
-        Ok(package) => command.reported(each_in_turn(package, library))
-        Err(said) => said
+        Ok(paths) => command.reported(each_in_turn(paths, library))
+        Err(not) => command.not_compiled_said(not, command.AsPage)
     }
 }
 
-/// What each module of `package` found, one after another, as the entries of `package` list them.
-// example: each_in_turn(command.Package { directory: "no-such-directory", names: ["a.bx"] }, ir.little_library()).said.status == 2
-fn each_in_turn(package: command.Package, library: ir.Library) -> command.Tried {
+// example: each_in_turn(["no-such-directory/a.bx"], ir.little_library()).said.status == 2
+fn each_in_turn(paths: List<String>, library: ir.Library) -> command.Tried {
     var found = command.only_said(command.nothing_said())
-    for path in command.module_paths(package) {
+    for path in paths {
         let ran = command.module_tested(path, command.Typing { library: library, memo: command.no_memo() })
         found = command.tried_both(found, ran.tried)
     }

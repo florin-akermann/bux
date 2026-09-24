@@ -1,0 +1,7 @@
+// expect-error: L0306
+// A module of `src/` never reaches a test module, so `rounded` of `tests/` is no module here.
+import rounded
+
+fn held() -> Bool {
+    rounded.is_round()
+}

@@ -133,21 +133,23 @@ No Cargo and no other build tool is needed.
 
 ```sh
 bin/bootstrap
-bin/bux test tests
+bin/bux test
 git config core.hooksPath .githooks
 ```
 
 `bin/bootstrap` builds the compiler from the seed, and then the compiler builds itself again.
 The two builds must be the same, byte for byte.
-`bin/bux test tests` holds the compiler to every example, example line, and drawn property.
+`bin/bux test` holds the compiler to every example, example line, and drawn property.
+The root is a package, so it runs the examples of `src/` and then the tests of `tests/`.
 `bin/bux` starts the compiler; a link to it on the `PATH` works like any other installed compiler.
 
 ## The example program
 
-`example/main.bx` is everyday Bux in one screen: a record, an ADT, a `match`, and a list walked.
+`example/` is everyday Bux: a record, an ADT, a `match`, and a list walked.
+It is a package, so it also shows the layout: `bux.package`, `src/`, and `tests/`.
 
 ```sh
-bin/bux run example/main.bx
+bin/bux run example/src/main.bx
 ```
 
 It writes each answer it works out and exits `0`:
@@ -160,10 +162,12 @@ most: 6
 
 `docs/specs/example-program.md` says what the directory holds and why that is enough.
 
-Its public surface is one page, which is what a reader consults to learn a signature:
+The public surface of a module is one page, which is what a reader consults to learn a signature:
 
 ```sh
-bin/bux api example/main.bx
+bin/bux api example/src/orders.bx
 ```
+
+`bin/bux test example` runs the examples of `src/` and the test of `tests/`.
 
 `bin/bux --help` lists every command: `fmt`, `check`, `build`, `run`, `test`, `api`, and `explain`.

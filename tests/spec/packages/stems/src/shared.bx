@@ -1,0 +1,5 @@
+// expect-error: L0317
+// `tests/shared.bx` has the stem of this module, and both would build `target/shared.class`.
+fn held() -> Int {
+    1
+}

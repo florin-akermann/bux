@@ -146,25 +146,40 @@ fn imported_examples_tested(library: ir.Library) -> held.Held {
     enacted.facts_held("test runs the examples of a module that imports another", [enacted.status_fact(said, 0)])
 }
 
-/// `example/main.bx` runs to the end and writes every answer it works out, which
-/// `docs/specs/example-program.md` states.
+// `example/src/main.bx` runs to the end and writes every answer it works out, which
+// `docs/specs/example-program.md` states.
 // example: strings.length(java()) >= 0
 fn example_program_run(library: ir.Library, limit: Int) -> held.Held {
-    let scene = enacted.scene_of([enacted.Written { at: "main.bx", text: ok_or(files.read("example/main.bx"), "") }])
-    let answer = command.answered_within(["run", modules.joined(scene, "main.bx")], library)
+    let scene = example_scene()
+    let answer = command.answered_within(["run", modules.joined(scene, "src/main.bx")], library)
     let said = ended_said(answer, scene, limit)
     command.removed_whole(scene)
     let facts = [enacted.status_fact(said, 0), enacted.Fact { what: "output", expected: "held: 7\neach: 3\nmost: 6\n", found: said.output }]
-    enacted.facts_held("example/main.bx writes every answer it works out", facts)
+    enacted.facts_held("example/src/main.bx writes every answer it works out", facts)
 }
 
-/// Every example of `example/main.bx` holds.
+// Every example and every test of the package `example/` holds.
 // example: ended_said(command.Spoken(command.nothing_said()), "no-such-directory", 1).status == 0
 fn example_program_tested(library: ir.Library) -> held.Held {
-    let scene = enacted.scene_of([enacted.Written { at: "main.bx", text: ok_or(files.read("example/main.bx"), "") }])
-    let said = enacted.said_to(["test", modules.joined(scene, "main.bx")], library)
+    let scene = example_scene()
+    let said = enacted.said_to(["test", scene], library)
     command.removed_whole(scene)
-    enacted.facts_held("every example of example/main.bx holds", enacted.said_facts("test", said))
+    enacted.facts_held("every example and test of the package example/ holds", enacted.said_facts("test", said))
+}
+
+// A copy of the package `example/`, because a run or a test writes `target/` under its manifest.
+// example: or(list.at(example_files(), 0), "") == "bux.package"
+fn example_scene() -> String {
+    var written = []
+    for at in example_files() {
+        written = list.push(written, enacted.Written { at: at, text: ok_or(files.read(modules.joined("example", at)), "") })
+    }
+    enacted.scene_of(written)
+}
+
+// example: list.length(example_files()) == 4
+fn example_files() -> List<String> {
+    ["bux.package", "src/main.bx", "src/orders.bx", "tests/ordered.bx"]
 }
 
 /// The checks of `1brc/src/main.bx`, which `docs/specs/billion-rows.md` states: each sample,
@@ -388,12 +403,12 @@ fn program_said(completion: Result<walk.Ended, walk.Unended>) -> command.Said {
 
 /// The line that starts the command line in a JVM of its own, given `words`.
 ///
-/// The class path is `src/target` alone, named by its whole path, as `bin/bux` names it: it
+/// The class path is `target` alone, named by its whole path, as `bin/bux` names it: it
 /// holds the classes, and beside them the help, the explanations, and the library.
 // example: or(list.at(command_line(["a"]), 5), "") == "a"
 fn command_line(words: List<String>) -> List<String> {
     let root = or(environment.property("user.dir"), ".")
-    command.all_of([java(), "--enable-preview", "-cp", modules.joined(root, "src/target"), "main"], words)
+    command.all_of([java(), "--enable-preview", "-cp", modules.joined(root, "target"), "main"], words)
 }
 
 /// The line every refusal of a run where `JAVA_HOME` is not set reads.

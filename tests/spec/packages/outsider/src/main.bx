@@ -1,0 +1,7 @@
+// expect-error: L0306
+// A `depends` reaches the `src/` of `checked`, and never its `tests/`, so `rounded` is no module.
+import rounded
+
+fn held() -> Bool {
+    rounded.is_round()
+}

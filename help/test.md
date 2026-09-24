@@ -74,9 +74,10 @@ did not hold is reported rather than the first. A module that states no example 
 nothing to run, and a module of types alone is such a module.
 
 Handed a directory, `bux test` runs every module of the package, one module on each two
-processors at a time. It reports them in the order their names sort, as a run of one module after
-another would. It does not stop at a module that fails, so one run reports every module that
-fails. With no path, it runs the package in the current directory.
+processors at a time. It runs the modules of `src/` first, then those of `tests/`, and reports
+each part in the order the names sort, as a run of one module after another would. It does not
+stop at a module that fails, so one run reports every module that fails. With no path, it runs
+the package in the current directory.
 
 Running needs a JDK, which comes from `JAVA_HOME` and from nowhere else, exactly as `bux run`
 takes it.

@@ -1,0 +1,5 @@
+// A module of `src/`, which the test modules of its package reach by its name.
+// example: around(2) == 12
+fn around(radius: Int) -> Int {
+    radius * 6
+}

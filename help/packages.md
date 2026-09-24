@@ -2,12 +2,28 @@
 Packages
 --------
 
-A package is a directory of modules with a manifest called `bux.package` beside them. Handed a
-directory rather than a file, `bux check` and `bux build` run over every module the package
-holds, in the order their names sort, and stop at the first refusal. `bux test` runs the examples
-and the tests of every module, reports them in the same order, and does not stop at the first
-module that fails; with no path, it runs the package in the current directory. A directory
-holding no manifest is no package, and a command handed one says so and stops with exit code 2.
+A package is a directory that holds a manifest called `bux.package`, and every package has one
+layout. Its modules are the `.bx` files at the top of `src/`, its test modules are those at the
+top of `tests/`, and a build writes its classes into `target/`, beside the manifest.
+
+    shapes/
+        bux.package
+        src/circle.bx
+        tests/rounded.bx
+        target/
+
+A `.bx` file beside the manifest is refused as `L0323`, and so is a manifest inside `src/` or
+`tests/`. A test module reaches a module of `src/` by its name, and a module of `src/` never
+reaches a test module. A module and a test module of one stem are refused as `L0317`, because
+both would build one class. A file in no package, or deeper than the top of `src/` or `tests/`,
+is a bare module, and it writes `target/` beside itself.
+
+Handed a directory rather than a file, `bux check` and `bux build` run over every module the
+package holds: those of `src/` first, then those of `tests/`, each part in the order the names
+sort. They stop at the first refusal. `bux test` runs the examples and the tests of every module,
+reports them in the same order, and does not stop at the first module that fails; with no path, it
+runs the package in the current directory. A directory holding no manifest is no package, and a
+command handed one says so and stops with exit code 2.
 
     package shapes
     version 0.2.0
@@ -19,10 +35,10 @@ first and `version` second, a `depends` line for each dependency comes after bot
 line for each Java archive comes last. A path is read against the directory the manifest sits
 in, so `../geometry` is that directory's sibling.
 
-An import that names no module beside the file that wrote it names a module of a package the
-manifest depends on. Nothing is fetched: the directory is already there, or the compiler says
-there is no package in it. A module the library carries is reached before either, and a module
-beside the importing file before a dependency's.
+An import that names no module beside the file that wrote it names a module in `src/` of a
+package the manifest depends on, and never one of its `tests/`. Nothing is fetched: the directory
+is already there, or the compiler says there is no package in it. A module the library carries is
+reached before either, and a module beside the importing file before a dependency's.
 
 Two files claiming a module of one name are refused rather than picked between, whether they are
 two dependencies' or one this package holds beside a dependency's that something already reached:
