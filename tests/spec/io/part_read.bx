@@ -1,0 +1,32 @@
+// expect-run
+// > 22
+// > Zürich
+// > 12.5
+// > Oslo;-3.0
+// > the part from 9 to 4 is refused
+// A file is read one part at a time, and each part is its bytes, one char for each byte.
+// A part cut out of a line reads as the UTF-8 it was once `strings.from_utf_8` decodes it.
+// The last part asks for more than the file holds, and it gives what is there.
+import files
+import io
+import strings
+
+fn main(arguments: List<String>) -> Int {
+    let path = ok_or(files.write("part.txt", "Zürich;12.5\nOslo;-3.0"), "part.txt")
+    io.println(shown(ok_or(files.size(path), -1)))
+    io.println(strings.from_utf_8(ok_or(files.read_between(path, 0, 7), "")))
+    io.println(ok_or(files.read_between(path, 8, 12), ""))
+    io.println(ok_or(files.read_between(path, 13, 99), ""))
+    io.println(refused(files.read_between(path, 9, 4)))
+    0
+}
+
+/// What a read that should be refused says, in words of this program rather than of the library.
+// example: refused(Ok("part")) == "the part is read"
+// example: refused(Err("no part")) == "the part from 9 to 4 is refused"
+fn refused(answer: Result<String, String>) -> String {
+    match answer {
+        Ok(_) => "the part is read"
+        Err(_) => "the part from 9 to 4 is refused"
+    }
+}

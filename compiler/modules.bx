@@ -752,6 +752,22 @@ fn resource_text(path: String) -> Option<String> {
     found
 }
 
+/// The directory `name` in the first entry of the class path that holds one, and `None` where no
+/// entry does.
+///
+/// `resource_text` reads each resource under `name` from there, where no earlier entry holds the
+/// file itself. A build copies the directory beside its classes, which `docs/specs/run.md` states.
+// example: or(resource_directory("no/such/directory"), "none") == "none"
+fn resource_directory(name: String) -> Option<String> {
+    for entry in class_path_entries() {
+        let directory = joined(directory: entry, name: name)
+        if is_directory(file_at(directory)) {
+            return Some(directory)
+        }
+    }
+    None
+}
+
 /// `found` where it holds a text already, and the text of `file` otherwise.
 // example: or(found_or_read(found: Some("a"), file: "no-such-directory/a.md"), "none") == "a"
 fn found_or_read(found: Option<String>, file: String) -> Option<String> {
@@ -931,6 +947,9 @@ extern new file_at(path: String) -> File
 
 /// Whether `file` is a file that is there, rather than a directory or nothing at all.
 extern method is_file(file: File) -> Bool = "isFile"
+
+/// Whether `file` is a directory that is there.
+extern method is_directory(file: File) -> Bool = "isDirectory"
 
 /// The one path the JVM gives `file` however it is spelled, which is what compares two routes.
 extern method canonical_path(file: File) -> Result<String, String> = "getCanonicalPath"

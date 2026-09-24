@@ -5,8 +5,13 @@
 # stage 1, the classes in compiler/target/, which bin/bux starts. Stage 1 then builds stage 2 from
 # a copy of the sources in a temporary directory outside the repository. Stage 2 must be stage 1
 # byte for byte. If it is not, the compiler does not build itself as it says, and this script
-# names the first class that differs and ends with status 1. A build writes classes only under
-# target/, so deleting target/ is a clean build.
+# names the first class that differs and ends with status 1. A build writes only under target/,
+# so deleting target/ is a clean build.
+#
+# A build copies the resources of its compiler beside the classes: the library, the help topics,
+# and the explanations. The seed holds the copies it was packed with, and those are old. So the
+# seed runs from one directory: the seed unpacked, with the three directories of this checkout in
+# place of its own. Stage 1 then carries the resources of the checkout.
 # A link to this script is followed to the script itself, which sits in bin/.
 set -e
 self=$0
@@ -33,13 +38,17 @@ if [ ! -f "$root/bin/seed.jar" ]; then
 fi
 cd "$root"
 rm -rf compiler/target
-"$java" --enable-preview -cp "$root/bin/seed.jar:$root" main build compiler/main.bx
-
+seed=$(mktemp -d "${TMPDIR:-/tmp}/bux-seed.XXXXXX")
 copy=$(mktemp -d "${TMPDIR:-/tmp}/bux-bootstrap.XXXXXX")
-trap 'rm -rf "$copy"' EXIT
+trap 'rm -rf "$seed" "$copy"' EXIT
+(cd "$seed" && "$JAVA_HOME/bin/jar" xf "$root/bin/seed.jar")
+rm -rf "$seed/library" "$seed/help" "$seed/explanations"
+cp -R library compiler/help compiler/explanations "$seed"
+"$java" --enable-preview -cp "$seed" main build compiler/main.bx
+
 cp -R compiler "$copy/compiler"
 rm -rf "$copy/compiler/target"
-"$java" --enable-preview -cp "$root/compiler/target:$root/compiler:$root" main build "$copy/compiler/main.bx"
+"$java" --enable-preview -cp "$root/compiler/target" main build "$copy/compiler/main.bx"
 
 # One diff compares the stages. Its first line names the first class that differs, as
 # "Files A and B differ", or the first class or directory that only one stage holds, as

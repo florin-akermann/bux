@@ -31,9 +31,9 @@ That is also what makes every build and every test work with no network and no f
 
 ## How the Bux compiler carries it
 
-The Bux compiler carries the files, in the one copy `library/` holds, as class-path resources.
+The Bux compiler carries the files of `library/` as class-path resources.
 A resource is a file in a directory of the class path the compiler was started with.
-`library/<name>.bx` sits in such a directory, which is the root of the repository now.
+`library/<name>.bx` sits in such a directory: the `target/` that holds the compiler classes.
 Nothing is generated from the files, and nothing is copied into Bux source.
 
 `compiler/modules.bx` reads a library module without a class loader.
@@ -54,8 +54,9 @@ A name the class path holds no resource for is no library module, and the import
 There is no list of library names in Bux, so one more file in `library/` is one more module.
 A refusal about a library module names the resource, `library/list.bx`.
 
-`bin/bux` and `bin/runner` put the repository on the class path, after the `target/` of classes.
-That is the directory that holds `library/`, so the resource names above reach the one copy.
+A build copies `library/` into the `target/` it writes, beside the classes.
+`docs/specs/run.md` states the copy, and how `bin/bootstrap` puts the copy of the checkout there.
+So `bin/bux` and `bin/runner` put only that `target/` on the class path, and it holds `library/`.
 
 ## How it is found
 
@@ -209,7 +210,8 @@ are called.
 `io`, `files`, `programs`, and `environment` hold what no `for` loop writes at all.
 `strings` holds each of them: `join` is the loop, `length` is what no loop reads, and `at` and
 `cut` are a check written over two more `extern` declarations.
-`from_utf_8` is what no loop reads either, because no loop builds a char out of its value.
+`from_utf_8` reaches the decoder of the JVM, so no loop over `files.one_char` writes a second one.
+A second decoder would need rules of its own for a malformed sequence, and the JVM has them.
 `list` holds three more: `length`, `push`, and `at`, which the section above gives the compiler.
 
 ```text
@@ -277,6 +279,7 @@ So `from_utf_8` is total, and a name cut out of a part of a file reads as the UT
 `Charset.decode` reads that buffer as UTF-8 into a `java.nio.CharBuffer`, whose text is the answer.
 So no array crosses the boundary, and `strings` adds `from_utf_8`, `encoded`, `decoded`,
 `spelled`, `as_utf_8`, `as_latin_1`, `Encoding`, `Bytes`, and `Chars` for this.
+`files` reads and writes with these `as_utf_8`, `as_latin_1`, and `Encoding`, so each has one name.
 
 `join` runs the parts of a `List<String>` together, with a separator between each pair.
 
@@ -341,7 +344,7 @@ These hold and are checked by drawn properties in the runner:
 5. `list.at` gives `Some` of the element at every index a list holds, and `None` at every other.
 6. `list.push` gives back what the list held, with the value after it, and leaves the list alone.
 7. `list.length` gives the number of pushes that built a list, and a later push changes no length.
-8. The bytes of a drawn UTF-8 file, one char for each, spell under `from_utf_8` what a read gives.
+8. The parts of a drawn UTF-8 file, joined, spell under `from_utf_8` what `files.read` gives.
 
 The prelude is not among the modules of property 1 that compile on their own.
 Its own names are in scope in every module, so a compiler reading it as a module would refuse

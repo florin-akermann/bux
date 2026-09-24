@@ -419,3 +419,13 @@ type Case = {
     words: List<String>
     said: command.Said
 }
+
+test "bux help process prints the topic from the copy beside the classes" {
+    let said = command.said_by(command.answered(["help", "process"]))
+    said.status == 0 && said.output == ok_or(files.read("compiler/help/process.md"), "")
+}
+
+test "bux explain prints the long form of a code from the copy beside the classes" {
+    let said = command.said_by(command.answered(["explain", "L0100"]))
+    said.status == 0 && said.output == ok_or(files.read("compiler/explanations/L0100.md"), "")
+}

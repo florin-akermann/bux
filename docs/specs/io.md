@@ -192,11 +192,12 @@ An `Ok` needs something to carry, so no `extern` can give back `()` for that mem
 So `files.write_bytes` writes on the `java.io.PrintWriter` that `files.write` opens too.
 It opens that writer with the ISO-8859-1 encoding.
 That encoding writes each char from 0 to 255 as the one byte of the same value.
-`files.as_latin_1` names that encoding, beside `files.as_utf_8`.
+`strings.as_latin_1` names that encoding, beside `strings.as_utf_8`.
+`strings` declares both and their type `strings.Encoding`, and `files` uses those three.
 Each byte is a string of one char, which `java.lang.Character.toString(int)` gives.
 That member takes an `int`, so its declaration `files.one_char` narrows and gives an `Option`.
 The writer is closed and asked `checkError`, as `files.write` asks it.
-`files` adds `write_bytes`, `bytes_sent`, `as_latin_1`, and `one_char` for this.
+`files` adds `write_bytes`, `bytes_sent`, and `one_char` for this.
 So `files` reaches two more JVM classes: `java.lang.Character`, and `java.lang.Long`.
 The refusal of a value shows that value, and `java.lang.Long.toString` shows a number.
 
@@ -249,7 +250,7 @@ A `to` past the end of the file gives the bytes up to the end, and a `from` past
 A negative `from`, or a `to` below `from`, is an `Err` whose message names the two offsets.
 A part longer than 2147483647 bytes is an `Err` that names the length, before the file opens.
 That count is the most that one JVM buffer holds, because a buffer counts in an `int`.
-Nothing panics, and every failure is a `Result`.
+Every failure of the read is a `Result`, and the close below is the one step outside that.
 
 `files.read_between` asks `files.size` first, and it reads no further than the end.
 So a `to` far past the end asks for no buffer larger than what the file holds.
@@ -264,6 +265,8 @@ Each step that throws is an `extern` with a `Result`, as the steps of `files.lis
 The stream is closed after the read, whether the read worked or did not.
 A close gives nothing back, so its `extern` holds no `Result`, which `docs/specs/interop.md` states.
 A close of a file opened only to be read loses no byte, because the part was read before it.
+A close that fails still throws through the program, and no `extern` can guard it today.
+Such a failure is the operating system failing to let a descriptor go, which a read seldom meets.
 
 `files` adds `size`, `read_between`, and the steps and declarations that each is written over.
 So `files` reaches four more JVM classes: `java.io.FileInputStream`,
@@ -391,3 +394,4 @@ These hold and are checked by drawn properties in the runner:
 3. A call of a name of one is a static call of that module's class and of nothing else.
 4. Every JVM class a module here reaches is one this spec names.
 5. Every method of one that guards a span is an `extern` whose result is a `Result`.
+6. The parts of a drawn file, read one after another and joined, are what `files.read_bytes` gives.

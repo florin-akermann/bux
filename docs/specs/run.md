@@ -37,14 +37,22 @@ No class lands beside a source, and no option chooses another directory.
 A clean build is `rm -rf target/`, because no other directory holds what a build writes.
 `docs/specs/codegen.md` states the path of each class under `target/`.
 
-That one `target/` is the whole class path for classes, for a run and for each script below.
-`bin/bux` starts the classes of `compiler/target/`, and `bin/runner` those of `tests/target/`.
-`bin/bux` and `bin/runner` both put `compiler/` and the repository root on the class path.
-They are there only for resources: the help text, the explanations, and the library sources.
-Neither holds a class beside a source, so no class there can hide a class of `target/`.
+A build also writes the resources of its compiler into `target/`, beside the classes.
+The resources are the three directories the compiler reads: `library/`, `help/`, `explanations/`.
+The build copies each directory from the first entry of its own class path that holds it.
+It first deletes the old copy, so a resource that the compiler no longer holds is not left there.
+It copies only the files that end in `.bx` or `.md`, which are the files the compiler reads.
+So a build writes the resources that its compiler read.
+A program that calls the compiler then finds the resources on its own class path.
+An example is a test of `tests/` that calls `bux help` or `bux explain`.
+
+That one `target/` is the whole class path, for a run and for each script below.
+`bin/bux` starts `compiler/target/`, and `bin/runner` starts `tests/target/`.
+Each script puts that one directory on the class path, and no other entry.
 
 `bux test` is the one exception, and it writes nothing into `target/`.
-It writes the classes of its run into a directory made for that run alone, and then deletes it.
+It writes the classes and the resources of its run into a directory made for that run alone.
+It then deletes that directory.
 `docs/specs/doc-examples.md` states why.
 
 ## The archives on the class path
@@ -183,8 +191,7 @@ The help text is read as a class-path resource: a file in `compiler/help/`.
 
 `bin/bux` is the launcher, a POSIX `sh` script.
 It starts `java --enable-preview` on the class `main`, with every word it was given.
-The class path is `compiler/target/`, which holds the classes, then `compiler/` and the root.
-`compiler/` holds the help text and the explanations, and the root holds the library sources.
+The class path is `compiler/target/` alone, which holds the classes and the resources.
 A link to the launcher, as on `PATH`, works: the launcher follows the link to find `compiler/`.
 It finds the JDK as this page says: `JAVA_HOME` names it, and nothing else is searched.
 It refuses with status `2` when the compiler is not built, and when `JAVA_HOME` names no JDK.
@@ -221,7 +228,12 @@ It is the one archive that the repository keeps, and `docs/implementation.md` se
 
 `bin/bootstrap` is a POSIX `sh` script, and it needs only `JAVA_HOME` and the checkout.
 It deletes `compiler/target/`, so no class of an old build is left.
+It unpacks the seed into a temporary directory, with the `jar` tool of the JDK.
+It then replaces the three directories of resources there with those of the checkout.
+These are `library/`, `compiler/help/`, and `compiler/explanations/`.
+The seed runs with that one directory as its class path.
 The seed then builds stage 1, the classes in `compiler/target/`, which `bin/bux` starts.
+So stage 1 holds the resources of the checkout, and not the old copies that the seed holds.
 Stage 1 then builds stage 2 from a copy of `compiler/` in a temporary directory.
 Stage 2 is in the `target/` of that copy.
 That directory is outside the repository, and the script deletes it when it ends.
@@ -237,6 +249,11 @@ The script refuses with status `2` when `JAVA_HOME` names no JDK and when the se
 
 The script is the check of the bootstrap, because it compares the two stages itself.
 The runner runs on stage 1, so each check of the runner is a check of stage 1.
+
+A build copies the resources of its compiler, not those of the checkout.
+So `bin/bux build compiler/main.bx` copies the resources that `compiler/target/` holds already.
+Run `bin/bootstrap` after a change to `library/`, `compiler/help/`, or `compiler/explanations/`.
+The bootstrap is the one step that reads the resources of the checkout into stage 1.
 
 ## Properties
 

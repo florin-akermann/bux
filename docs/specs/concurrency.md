@@ -146,14 +146,18 @@ The prelude declares both types.
 
 - `Delivered`: the mailbox took the message before the process ended.
 - `MailboxFull`: the mailbox was still full when the wait ended.
-- `ProcessEnded`: the process had ended, so no mailbox takes the message.
+- `ProcessEnded`: the process ended before it took the message, so no `receive` reads it.
 
 A `send` to a process that has ended never waits, whatever `waiting` says.
 A `send` with `NoLimit` to a full mailbox waits until there is room or until the process ends.
 A process can end while a message waits in its mailbox, and that message is not read.
 `Delivered` says that the mailbox took the message, and not that `receive` read it.
-`send` looks for the end again after the mailbox takes the message.
-So a message that the mailbox takes after the end gives `ProcessEnded`, and never `Delivered`.
+The answer follows what happens to the message, and not the time at which `send` looks.
+After the mailbox takes the message, `send` looks for the end once more.
+If the process has ended and the message still waits in its mailbox, `send` takes it out.
+Then no `receive` reads the message, and `send` gives `ProcessEnded`.
+If the process took the message before it ended, `send` gives `Delivered`.
+So a process that ends on the very message that `send` gave it has read it, and it is `Delivered`.
 
 A `send` gives a `Sent`, and a program that does not read it writes `_ =`.
 That is the rule of `docs/specs/discarding.md`, and it applies here as it does everywhere.
@@ -181,9 +185,11 @@ A process that must act at a time is sent a message at that time by another proc
 
 Each process runs on a JVM virtual thread, and a blocked process costs no platform thread.
 The mailbox is a `java.util.concurrent.ArrayBlockingQueue` of capacity 64.
+Each message waits in it in an envelope of its own, a `java.util.concurrent.atomic.AtomicReference`.
+`send` finds its envelope by identity, because a message is a value and two can be equal.
 The end of a process is a `java.util.concurrent.CompletableFuture`, which `ended` joins.
 Every class used is in `java.base`.
-No program can see a thread, a queue, or a future, and a program names none of them.
+No program can see a thread, a queue, an envelope, or a future, and a program names none of them.
 
 The class of a process is `<module>/process$<Name>`, which no type of a program can be named.
 `start` and `receive` are the static methods `<Name>$start` and `<Name>$receive` of the module.

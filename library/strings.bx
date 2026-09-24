@@ -8,7 +8,7 @@
 // `at` and `cut` are the bounds check each such call needs, written once here rather than at
 // every reading of a string. Every name here is public, so each of the two declarations they
 // call guards its member: nothing this module offers is partial.
-// `from_utf_8` meets neither test either, because no loop builds a char out of its value.
+// `from_utf_8` reaches the decoder of the JVM, so no loop over `files.one_char` writes another.
 // A `Charset` of the JVM decodes the text, and a `ByteBuffer` holds the bytes, so no array crosses.
 /// The UTF-16 code unit at `index`, and `None` where `index` is past either end of the text.
 ///
