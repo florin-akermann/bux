@@ -19,11 +19,16 @@
 // started in the stage. A command line that opens with `run` or `test` needs a JVM, and it is
 // skipped where `JAVA_HOME` names no JDK.
 //
+// Each command line sees the sources as they are in the tree. `fmt` is the one command that
+// writes a source, so the sources are copied into the stage again after each `fmt`.
+//
 // `lines.txt` holds the command lines the argument parser is held to. `fixtures.txt` holds each
 // command on each example of `tests/spec` and each module of `library`, each command that reads
-// a path on each directory of `tests/spec`, and each command on paths it cannot read.
+// a path on each directory of `tests/spec`, and each command on paths it cannot read. An example
+// that misses one of its command lines there fails, and so does a word that names no file there.
 // `golden_written` gives the text of a golden file for a list of command lines. `bin/runner golden`
 // writes each golden file again with it, which is how an answer changed on purpose is written down.
+// It adds each command line that an example misses, and it removes none.
 import command
 import enacted
 import exemplified
@@ -33,6 +38,7 @@ import held
 import ir
 import list
 import modules
+import set
 import started
 import strings
 import walk
@@ -45,6 +51,9 @@ fn every_golden_written(library: ir.Library, limit: Int) -> () {
         var lines = []
         for written in cases_read(ok_or(files.read(path), "")) {
             lines = list.push(lines, written.words)
+        }
+        for words in lines_missing(path: path, lines: lines) {
+            lines = list.push(lines, words)
         }
         _ = files.write(path, golden_written(lines, library, limit))
     }
@@ -77,24 +86,90 @@ fn golden_written(lines: List<List<String>>, library: ir.Library, limit: Int) ->
 fn golden_held(path: String, library: ir.Library, limit: Int) -> held.Held {
     let golden = Golden { path: path, stage: Stage { directory: staged(), limit: limit } }
     var found = held.nothing_failed(0)
+    var lines = []
     for written in cases_read(ok_or(files.read(path), "")) {
         found = held.added(found, case_held(golden, written, library))
+        lines = list.push(lines, written.words)
     }
     command.removed_whole(golden.stage.directory)
+    for words in lines_missing(path: path, lines: lines) {
+        found = held.with_failure(found, path + ": " + words_line(words) + ": missing, and `bin/runner golden` adds it")
+    }
     if found.cases == 0 && list.length(found.skipped) == 0 {
         return held.with_failure(found, path + ": holds no command line")
     }
     found
 }
 
+/// The command lines on an example of `tests/spec` that the golden file at `path` should hold
+/// and does not, of those in `lines`, example by example in the order names sort.
+///
+/// Only `fixtures.txt` holds each example, so no other golden file misses a command line.
+// example: list.length(lines_missing(path: "tests/commands/lines.txt", lines: [])) == 0
+fn lines_missing(path: String, lines: List<List<String>>) -> List<List<String>> {
+    if path != fixtures() {
+        return []
+    }
+    var written = set.empty()
+    for words in lines {
+        written = set.insert(written, words_line(words))
+    }
+    var missing = []
+    for example in walk.every_file("tests/spec", ".bx") {
+        for opening in example_commands() {
+            let words = list.push(opening, example)
+            if !set.has_value(written, words_line(words)) {
+                missing = list.push(missing, words)
+            }
+        }
+    }
+    missing
+}
+
+/// The golden file that holds each command on each example of `tests/spec`.
+// example: list.has_value(golden_files(), fixtures())
+fn fixtures() -> String {
+    "tests/commands/fixtures.txt"
+}
+
+/// The commands `fixtures.txt` holds each example of `tests/spec` to, each before the path of
+/// the example, in the order the file holds them.
+// example: list.length(example_commands()) == 6
+fn example_commands() -> List<List<String>> {
+    [["check"], ["check", "--json"], ["api"], ["test"], ["fmt"], ["build"]]
+}
+
+/// One command line of `golden`, held to the answer written under it, where each example it names
+/// is there.
+// example: case_held(Golden { path: "a.txt", stage: Stage { directory: "no-such-directory", limit: 1 } }, Case { words: ["check", "tests/spec/no-such-example.bx"], said: command.nothing_said() }, ir.little_library()).failures == ["a.txt: $ check tests/spec/no-such-example.bx: tests/spec/no-such-example.bx is not there, so the command line is to be taken out"]
+fn case_held(golden: Golden, written: Case, library: ir.Library) -> held.Held {
+    let at = golden.path + ": " + words_line(written.words)
+    match absent_example(written.words) {
+        Some(absent) => held.with_failure(held.nothing_failed(1), at + ": " + absent + " is not there, so the command line is to be taken out")
+        None => answer_held(golden, written, library)
+    }
+}
+
 /// One command line of `golden`, held to the answer written under it.
 // example: is_jvm_needed(["run", "a.bx"])
-fn case_held(golden: Golden, written: Case, library: ir.Library) -> held.Held {
+fn answer_held(golden: Golden, written: Case, library: ir.Library) -> held.Held {
     let at = golden.path + ": " + words_line(written.words)
     if is_jvm_needed(written.words) && !exemplified.is_a_jdk_named() {
         return held.with_skip(held.nothing_failed(0), at + ": JAVA_HOME names no JDK, and the command line starts a JVM")
     }
     enacted.said_held(at, written.said, answered_in(words: written.words, stage: golden.stage, library: library))
+}
+
+/// The first word of `words` that names a path under `tests/spec` where there is none.
+// example: or(absent_example(["check", "tests/spec/no-such-example.bx"]), "") == "tests/spec/no-such-example.bx"
+// example: or(absent_example(["check", "no/such.bx"]), "none") == "none"
+fn absent_example(words: List<String>) -> Option<String> {
+    for word in words {
+        if command.has_prefix(word, "tests/spec") && !command.is_there(command.place_at(word)) {
+            return Some(word)
+        }
+    }
+    None
 }
 
 /// Whether the command line `words` starts a JVM, which only `run` and `test` do.
@@ -106,6 +181,9 @@ fn is_jvm_needed(words: List<String>) -> Bool {
 }
 
 /// What the command line says to `words` in `stage`, with the path of the stage taken out.
+///
+/// A source that `fmt` wrote is copied from the tree again, so the next command line sees it as
+/// the tree holds it.
 // example: placed_in(word: "-h", stage: "no-such-directory") == "-h"
 fn answered_in(words: List<String>, stage: Stage, library: ir.Library) -> command.Said {
     var placed = []
@@ -113,6 +191,9 @@ fn answered_in(words: List<String>, stage: Stage, library: ir.Library) -> comman
         placed = list.push(placed, placed_in(word: word, stage: stage.directory))
     }
     let said = ended_in(command.answered_within(placed, library), stage)
+    if or(list.at(words, 0), "") == "fmt" {
+        sources_copied(stage.directory)
+    }
     command.Said { output: enacted.unstaged(said.output, stage.directory), errors: enacted.unstaged(said.errors, stage.directory), status: said.status }
 }
 
@@ -150,14 +231,19 @@ fn ended_in(answer: command.Answer, stage: Stage) -> command.Said {
 // example: strings.length(echo_text()) > 0
 fn staged() -> String {
     let stage = ok_or(command.somewhere_of_its_own(), "/no-such-directory-for-a-stage")
-    copied(from: "tests/spec", to: modules.joined(stage, "tests/spec"))
-    copied(from: "library", to: modules.joined(stage, "library"))
+    sources_copied(stage)
     _ = command.has_made_all(command.place_at(modules.joined(stage, "compiler")))
     _ = files.write(modules.joined(stage, "compiler/bux.package"), "package compiler\nversion 0.1.0\n")
     _ = files.write(modules.joined(stage, "compiler/main.bx"), "fn main(arguments: List<String>) -> Int {\n    0\n}\n")
     _ = files.write(modules.joined(stage, "echo.bx"), echo_text())
     _ = files.write(modules.joined(stage, "echo.lm"), echo_text())
     stage
+}
+
+/// Copies every source of `tests/spec` and of `library` into `stage`, over any copy there.
+fn sources_copied(stage: String) -> () {
+    copied(from: "tests/spec", to: modules.joined(stage, "tests/spec"))
+    copied(from: "library", to: modules.joined(stage, "library"))
 }
 
 /// Copies every file under `from` to the same place under `to`, but a class file or a hidden one.

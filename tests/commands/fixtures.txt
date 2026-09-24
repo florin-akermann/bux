@@ -14353,7 +14353,14 @@ $ build tests/spec/format/import_block.bx
 status 0
 
 $ build tests/spec/format/import_block_with_a_blank.bx
-status 0
+status 1
+! error[L0200]: canonical form does not write this line
+!   --> tests/spec/format/import_block_with_a_blank.bx:4:1
+!
+!   4 | 
+!     | ^
+!
+! help: run `bux fmt` to take this line out
 
 $ build tests/spec/format/import_order.bx
 status 1
@@ -16735,3 +16742,144 @@ status 0
 
 $ build library/strings.bx
 status 0
+
+$ check tests/spec/interop/class_for_name.bx
+status 1
+! error[L0434]: `java.lang.Class` is a class this build cannot account for
+!   --> tests/spec/interop/class_for_name.bx:12:69
+!
+!   12 | extern static class_named(name: String) -> Result<Loaded, String> = "java.lang.Class.forName"
+!      |                                                                     ^^^^^^^^^^^^^^^^^^^^^^^^^
+!
+! help: a class is in an archive a `jar` line states, or on the list of `java.base` in `docs/specs/interop.md`, and this one is in neither
+
+$ check --json tests/spec/interop/class_for_name.bx
+status 1
+> {"file":"tests/spec/interop/class_for_name.bx","code":"L0434","message":"`java.lang.Class` is a class this build cannot account for","span":{"start":475,"len":25},"help":"a class is in an archive a `jar` line states, or on the list of `java.base` in `docs/specs/interop.md`, and this one is in neither"}
+
+$ api tests/spec/interop/class_for_name.bx
+status 1
+! error[L0434]: `java.lang.Class` is a class this build cannot account for
+!   --> tests/spec/interop/class_for_name.bx:12:69
+!
+!   12 | extern static class_named(name: String) -> Result<Loaded, String> = "java.lang.Class.forName"
+!      |                                                                     ^^^^^^^^^^^^^^^^^^^^^^^^^
+!
+! help: a class is in an archive a `jar` line states, or on the list of `java.base` in `docs/specs/interop.md`, and this one is in neither
+
+$ test tests/spec/interop/class_for_name.bx
+status 1
+! error[L0434]: `java.lang.Class` is a class this build cannot account for
+!   --> tests/spec/interop/class_for_name.bx:12:69
+!
+!   12 | extern static class_named(name: String) -> Result<Loaded, String> = "java.lang.Class.forName"
+!      |                                                                     ^^^^^^^^^^^^^^^^^^^^^^^^^
+!
+! help: a class is in an archive a `jar` line states, or on the list of `java.base` in `docs/specs/interop.md`, and this one is in neither
+
+$ fmt tests/spec/interop/class_for_name.bx
+status 0
+
+$ build tests/spec/interop/class_for_name.bx
+status 1
+! error[L0434]: `java.lang.Class` is a class this build cannot account for
+!   --> tests/spec/interop/class_for_name.bx:12:69
+!
+!   12 | extern static class_named(name: String) -> Result<Loaded, String> = "java.lang.Class.forName"
+!      |                                                                     ^^^^^^^^^^^^^^^^^^^^^^^^^
+!
+! help: a class is in an archive a `jar` line states, or on the list of `java.base` in `docs/specs/interop.md`, and this one is in neither
+
+$ check tests/spec/interop/outside_java_base.bx
+status 1
+! error[L0434]: `javax.naming.InitialContext` is a class this build cannot account for
+!   --> tests/spec/interop/outside_java_base.bx:17:23
+!
+!   17 | extern type Context = "javax.naming.InitialContext"
+!      |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+!
+! help: a class is in an archive a `jar` line states, or on the list of `java.base` in `docs/specs/interop.md`, and this one is in neither
+
+$ check --json tests/spec/interop/outside_java_base.bx
+status 1
+> {"file":"tests/spec/interop/outside_java_base.bx","code":"L0434","message":"`javax.naming.InitialContext` is a class this build cannot account for","span":{"start":545,"len":29},"help":"a class is in an archive a `jar` line states, or on the list of `java.base` in `docs/specs/interop.md`, and this one is in neither"}
+
+$ api tests/spec/interop/outside_java_base.bx
+status 1
+! error[L0434]: `javax.naming.InitialContext` is a class this build cannot account for
+!   --> tests/spec/interop/outside_java_base.bx:17:23
+!
+!   17 | extern type Context = "javax.naming.InitialContext"
+!      |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+!
+! help: a class is in an archive a `jar` line states, or on the list of `java.base` in `docs/specs/interop.md`, and this one is in neither
+
+$ test tests/spec/interop/outside_java_base.bx
+status 1
+! error[L0434]: `javax.naming.InitialContext` is a class this build cannot account for
+!   --> tests/spec/interop/outside_java_base.bx:17:23
+!
+!   17 | extern type Context = "javax.naming.InitialContext"
+!      |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+!
+! help: a class is in an archive a `jar` line states, or on the list of `java.base` in `docs/specs/interop.md`, and this one is in neither
+
+$ fmt tests/spec/interop/outside_java_base.bx
+status 0
+
+$ build tests/spec/interop/outside_java_base.bx
+status 1
+! error[L0434]: `javax.naming.InitialContext` is a class this build cannot account for
+!   --> tests/spec/interop/outside_java_base.bx:17:23
+!
+!   17 | extern type Context = "javax.naming.InitialContext"
+!      |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+!
+! help: a class is in an archive a `jar` line states, or on the list of `java.base` in `docs/specs/interop.md`, and this one is in neither
+
+$ check tests/spec/packages/unhashed/main.bx
+status 1
+! error[L0315]: `jar` states a path and a hash, and this line does not
+!   --> tests/spec/packages/unhashed/bux.package:3:1
+!
+!   3 | jar lib/geometry.jar sha256:4f2c9a1e
+!     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+!
+! help: a `jar` line is `jar`, a path, and `sha256:` with 64 lowercase hexadecimal digits
+
+$ check --json tests/spec/packages/unhashed/main.bx
+status 1
+> {"file":"tests/spec/packages/unhashed/bux.package","code":"L0315","message":"`jar` states a path and a hash, and this line does not","span":{"start":31,"len":36},"help":"a `jar` line is `jar`, a path, and `sha256:` with 64 lowercase hexadecimal digits"}
+
+$ api tests/spec/packages/unhashed/main.bx
+status 1
+! error[L0315]: `jar` states a path and a hash, and this line does not
+!   --> tests/spec/packages/unhashed/bux.package:3:1
+!
+!   3 | jar lib/geometry.jar sha256:4f2c9a1e
+!     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+!
+! help: a `jar` line is `jar`, a path, and `sha256:` with 64 lowercase hexadecimal digits
+
+$ test tests/spec/packages/unhashed/main.bx
+status 1
+! error[L0315]: `jar` states a path and a hash, and this line does not
+!   --> tests/spec/packages/unhashed/bux.package:3:1
+!
+!   3 | jar lib/geometry.jar sha256:4f2c9a1e
+!     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+!
+! help: a `jar` line is `jar`, a path, and `sha256:` with 64 lowercase hexadecimal digits
+
+$ fmt tests/spec/packages/unhashed/main.bx
+status 0
+
+$ build tests/spec/packages/unhashed/main.bx
+status 1
+! error[L0315]: `jar` states a path and a hash, and this line does not
+!   --> tests/spec/packages/unhashed/bux.package:3:1
+!
+!   3 | jar lib/geometry.jar sha256:4f2c9a1e
+!     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+!
+! help: a `jar` line is `jar`, a path, and `sha256:` with 64 lowercase hexadecimal digits

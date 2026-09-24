@@ -147,3 +147,25 @@ It walks in a stable order so two runs report the same first failure.
 A failure names the example's path, so the file to open is never in doubt.
 An empty `tests/spec/` is itself a failure: the specification is never allowed to be nothing.
 It runs an example headed `// expect-run` from the line that `bux run` starts it with.
+
+## The golden answers
+
+`tests/commands/fixtures.txt` holds the answer of each command on each example.
+The commands are `check`, `check --json`, `api`, `test`, `fmt`, and `build`, in that order.
+`tests/commanded.bx` holds each command line of the file to the answer written under it.
+
+Each command line sees the example as it is written in `tests/spec/`.
+The command lines of a golden file share one stage, which is a copy of the examples.
+`fmt` is the one command that writes a source, so the runner copies the sources again after it.
+`build` writes only into a `target/`, and `test` writes only into a directory that it deletes.
+`check`, `api`, and `explain` write nothing, and `run` starts only `echo.bx`, which writes nothing.
+So a `build` after a `fmt` of a refused example is refused, as the example itself is.
+
+An example that does not have all six command lines in `fixtures.txt` fails the run.
+The failure names each command line that is missing.
+A command line that names a path under `tests/spec` where there is none fails the run too.
+Each failure names the golden file and the command line, so the line to add or remove is clear.
+
+`bin/runner golden` adds the missing command lines of each example at the end of `fixtures.txt`.
+It adds them example by example, in the order names sort, and then writes each answer again.
+It never removes a command line, because a person decides what the file holds.
