@@ -1,0 +1,15 @@
+// A module of `src/` with a test that does not hold. `bux test` on the package runs `src/` before
+// `tests/`, so it reports this module first, and counts the tests and the examples of both modules.
+// Three times `number`.
+// example: tripled(2) == 6
+fn tripled(number: Int) -> Int {
+    number * 3
+}
+
+test "triples zero" {
+    tripled(0) == 0
+}
+
+test "triples one" {
+    tripled(1) == 4
+}

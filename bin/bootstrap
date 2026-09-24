@@ -2,8 +2,8 @@
 # The bootstrap: the seed builds the Bux compiler, and that compiler builds itself once more.
 #
 # bin/seed.jar holds the classes of a Bux compiler that an earlier compiler built. It writes
-# stage 1, the classes in src/target/, which bin/bux starts. Stage 1 then builds stage 2 from
-# a copy of the sources in a temporary directory outside the repository. Stage 2 must be stage 1
+# stage 1, the classes in target/, which bin/bux starts. Stage 1 then builds stage 2 from a copy
+# of the root package in a temporary directory outside the repository. Stage 2 must be stage 1
 # byte for byte. If it is not, the compiler does not build itself as it says, and this script
 # names the first class that differs and ends with status 1. A build writes only under target/,
 # so deleting target/ is a clean build.
@@ -40,7 +40,7 @@ fi
 # the machine", records why it is 256 MB.
 heap=-Xmx256m
 cd "$root"
-rm -rf src/target
+rm -rf target src/target
 seed=$(mktemp -d "${TMPDIR:-/tmp}/bux-seed.XXXXXX")
 copy=$(mktemp -d "${TMPDIR:-/tmp}/bux-bootstrap.XXXXXX")
 trap 'rm -rf "$seed" "$copy"' EXIT
@@ -48,16 +48,21 @@ trap 'rm -rf "$seed" "$copy"' EXIT
 rm -rf "$seed/library" "$seed/help" "$seed/explanations"
 cp -R library help explanations "$seed"
 "$java" --enable-preview "$heap" -cp "$seed" main build src/main.bx
+# A seed older than the layout of a package writes its classes beside the module it builds, in
+# src/target/, and stage 1 belongs in target/ at the root, where bin/bux starts it.
+if [ -d src/target ]; then
+    mv src/target target
+fi
 
+cp bux.package "$copy/bux.package"
 cp -R src "$copy/src"
-rm -rf "$copy/src/target"
-"$java" --enable-preview "$heap" -cp "$root/src/target" main build "$copy/src/main.bx"
+"$java" --enable-preview "$heap" -cp "$root/target" main build "$copy/src/main.bx"
 
 # One diff compares the stages. Its first line names the first class that differs, as
 # "Files A and B differ", or the first class or directory that only one stage holds, as
 # "Only in D: C". A status of 2 from diff is a comparison that failed, and diff names why.
 status=0
-answer=$(diff -rq src/target "$copy/src/target") || status=$?
+answer=$(diff -rq target "$copy/target") || status=$?
 if [ "$status" -ne 1 ]; then
     exit "$status"
 fi

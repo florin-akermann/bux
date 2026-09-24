@@ -1,0 +1,6 @@
+// A package that depends on nothing reaches the library and the modules of its `src/`.
+import lonely
+
+fn edge() -> Int {
+    lonely.held()
+}

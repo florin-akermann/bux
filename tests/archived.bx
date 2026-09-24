@@ -37,10 +37,10 @@ fn every_archive_held(library: ir.Library, limit: Int) -> held.Held {
 /// `run` reaches a class in an archive the manifest states.
 // example: strings_joined([program_text()]) != ""
 fn stated_reached(library: ir.Library, limit: Int) -> held.Held {
-    let scene = enacted.scene_of([enacted.Written { at: "main.bx", text: program_text() }])
+    let scene = enacted.scene_of([enacted.Written { at: "src/main.bx", text: program_text() }])
     let jar = packed(scene: scene, library: library, limit: limit, manifest: "")
     _ = files.write(modules.joined(scene, "bux.package"), manifest_text([archive_line(jar)]))
-    let said = ran(["run", modules.joined(scene, "main.bx")], scene, library, limit)
+    let said = ran(["run", modules.joined(scene, "src/main.bx")], scene, library, limit)
     command.removed_whole(scene)
     let facts = [enacted.status_fact(said, 0), enacted.Fact { what: "output", expected: "hello!\n", found: said.output }]
     enacted.facts_held("run reaches a class in an archive the manifest states", facts)
@@ -50,10 +50,10 @@ fn stated_reached(library: ir.Library, limit: Int) -> held.Held {
 /// holds the class, and runs nothing.
 // example: strings_joined([manifest_text([])]) != ""
 fn unstated_unreached(library: ir.Library, limit: Int) -> held.Held {
-    let scene = enacted.scene_of([enacted.Written { at: "main.bx", text: program_text() }])
+    let scene = enacted.scene_of([enacted.Written { at: "src/main.bx", text: program_text() }])
     _ = packed(scene: scene, library: library, limit: limit, manifest: "")
     _ = files.write(modules.joined(scene, "bux.package"), manifest_text([]))
-    let said = ran(["run", modules.joined(scene, "main.bx")], scene, library, limit)
+    let said = ran(["run", modules.joined(scene, "src/main.bx")], scene, library, limit)
     let facts = refused_facts(said: said, scene: scene, opening: "error[L0434]: `shouting` is a class this build cannot account for")
     command.removed_whole(scene)
     enacted.facts_held("run refuses a class in no archive the manifest states", facts)
@@ -62,8 +62,8 @@ fn unstated_unreached(library: ir.Library, limit: Int) -> held.Held {
 /// `build` refuses an archive that is not there.
 // example: strings_joined([zero_line("lib/gone.jar")]) != ""
 fn missing_refused(library: ir.Library) -> held.Held {
-    let scene = enacted.scene_of([enacted.Written { at: "main.bx", text: program_text() }, enacted.Written { at: "bux.package", text: manifest_text([zero_line("lib/gone.jar")]) }])
-    let said = enacted.said_to(["build", modules.joined(scene, "main.bx")], library)
+    let scene = enacted.scene_of([enacted.Written { at: "src/main.bx", text: program_text() }, enacted.Written { at: "bux.package", text: manifest_text([zero_line("lib/gone.jar")]) }])
+    let said = enacted.said_to(["build", modules.joined(scene, "src/main.bx")], library)
     let facts = refused_facts(said: said, scene: scene, opening: "error[L0606]: `lib/gone.jar` is not there")
     command.removed_whole(scene)
     enacted.facts_held("build refuses an archive that is not there", facts)
@@ -72,9 +72,9 @@ fn missing_refused(library: ir.Library) -> held.Held {
 /// `run` refuses an archive whose hash is not the one its line states, and runs nothing.
 // example: strings_joined([zero_line("lib/shouting.jar")]) != ""
 fn other_hash_refused(library: ir.Library, limit: Int) -> held.Held {
-    let scene = enacted.scene_of([enacted.Written { at: "main.bx", text: program_text() }, enacted.Written { at: "bux.package", text: manifest_text([zero_line("lib/shouting.jar")]) }])
+    let scene = enacted.scene_of([enacted.Written { at: "src/main.bx", text: program_text() }, enacted.Written { at: "bux.package", text: manifest_text([zero_line("lib/shouting.jar")]) }])
     _ = packed(scene: scene, library: library, limit: limit, manifest: "")
-    let said = ran(["run", modules.joined(scene, "main.bx")], scene, library, limit)
+    let said = ran(["run", modules.joined(scene, "src/main.bx")], scene, library, limit)
     let facts = refused_facts(said: said, scene: scene, opening: "error[L0607]: `lib/shouting.jar` has the hash `sha256:")
     command.removed_whole(scene)
     enacted.facts_held("run refuses an archive whose hash is not the one its line states", facts)
@@ -83,10 +83,10 @@ fn other_hash_refused(library: ir.Library, limit: Int) -> held.Held {
 /// `build` refuses an archive whose manifest names more archives in its `Class-Path`.
 // example: strings_joined(["Class-Path: other.jar"]) == "Class-Path: other.jar\n"
 fn class_path_refused(library: ir.Library, limit: Int) -> held.Held {
-    let scene = enacted.scene_of([enacted.Written { at: "main.bx", text: program_text() }, enacted.Written { at: "manifest.txt", text: strings_joined(["Class-Path: other.jar"]) }])
+    let scene = enacted.scene_of([enacted.Written { at: "src/main.bx", text: program_text() }, enacted.Written { at: "manifest.txt", text: strings_joined(["Class-Path: other.jar"]) }])
     let jar = packed(scene: scene, library: library, limit: limit, manifest: modules.joined(scene, "manifest.txt"))
     _ = files.write(modules.joined(scene, "bux.package"), manifest_text([archive_line(jar)]))
-    let said = enacted.said_to(["build", modules.joined(scene, "main.bx")], library)
+    let said = enacted.said_to(["build", modules.joined(scene, "src/main.bx")], library)
     let facts = refused_facts(said: said, scene: scene, opening: "error[L0608]: `lib/shouting.jar` names more archives in its `Class-Path`")
     command.removed_whole(scene)
     enacted.facts_held("build refuses an archive whose manifest names more archives", facts)
@@ -95,9 +95,9 @@ fn class_path_refused(library: ir.Library, limit: Int) -> held.Held {
 /// `build` refuses a file that has the hash its line states and is no Java archive.
 // example: strings_joined([]) == ""
 fn plain_file_refused(library: ir.Library) -> held.Held {
-    let scene = enacted.scene_of([enacted.Written { at: "main.bx", text: program_text() }, enacted.Written { at: "lib/shouting.jar", text: "plain" }])
+    let scene = enacted.scene_of([enacted.Written { at: "src/main.bx", text: program_text() }, enacted.Written { at: "lib/shouting.jar", text: "plain" }])
     _ = files.write(modules.joined(scene, "bux.package"), manifest_text([archive_line(modules.joined(scene, "lib/shouting.jar"))]))
-    let said = enacted.said_to(["build", modules.joined(scene, "main.bx")], library)
+    let said = enacted.said_to(["build", modules.joined(scene, "src/main.bx")], library)
     let facts = refused_facts(said: said, scene: scene, opening: "error[L0609]: `lib/shouting.jar` is no Java archive")
     command.removed_whole(scene)
     enacted.facts_held("build refuses a file that is no Java archive", facts)
@@ -106,10 +106,10 @@ fn plain_file_refused(library: ir.Library) -> held.Held {
 /// `test` runs examples that reach a class in an archive the manifest states.
 // example: strings_joined([examples_text()]) != ""
 fn examples_reach_it(library: ir.Library, limit: Int) -> held.Held {
-    let scene = enacted.scene_of([enacted.Written { at: "loud.bx", text: examples_text() }])
+    let scene = enacted.scene_of([enacted.Written { at: "src/loud.bx", text: examples_text() }])
     let jar = packed(scene: scene, library: library, limit: limit, manifest: "")
     _ = files.write(modules.joined(scene, "bux.package"), manifest_text([archive_line(jar)]))
-    let said = enacted.said_to(["test", modules.joined(scene, "loud.bx")], library)
+    let said = enacted.said_to(["test", modules.joined(scene, "src/loud.bx")], library)
     command.removed_whole(scene)
     enacted.facts_held("test runs examples that reach a class in a stated archive", enacted.said_facts("test", said))
 }
@@ -117,11 +117,11 @@ fn examples_reach_it(library: ir.Library, limit: Int) -> held.Held {
 /// `run` reaches an archive that a package it depends on states, because that package needs it.
 // example: strings_joined([depending_text()]) != ""
 fn dependency_archive_reached(library: ir.Library, limit: Int) -> held.Held {
-    let scene = enacted.scene_of([enacted.Written { at: "app/main.bx", text: depending_text() }, enacted.Written { at: "app/bux.package", text: "package app\nversion 0.1.0\ndepends ../lender\n" }, enacted.Written { at: "lender/loud.bx", text: examples_text() }])
+    let scene = enacted.scene_of([enacted.Written { at: "app/src/main.bx", text: depending_text() }, enacted.Written { at: "app/bux.package", text: "package app\nversion 0.1.0\ndepends ../lender\n" }, enacted.Written { at: "lender/src/loud.bx", text: examples_text() }])
     let lender = modules.joined(scene, "lender")
     let jar = packed(scene: lender, library: library, limit: limit, manifest: "")
     _ = files.write(modules.joined(lender, "bux.package"), "package lender\nversion 0.1.0\n" + archive_line(jar) + "\n")
-    let said = ran(["run", modules.joined(scene, "app/main.bx")], scene, library, limit)
+    let said = ran(["run", modules.joined(scene, "app/src/main.bx")], scene, library, limit)
     command.removed_whole(scene)
     let facts = [enacted.status_fact(said, 0), enacted.Fact { what: "output", expected: "hello!\n", found: said.output }]
     enacted.facts_held("run reaches an archive a package it depends on states", facts)

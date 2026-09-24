@@ -1,4 +1,4 @@
-// A module of the package whose one test holds.
+// A test module of the package whose one test holds, which runs after every module of `src/`.
 // Twice `number`.
 // example: doubled(2) == 4
 fn doubled(number: Int) -> Int {

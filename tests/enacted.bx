@@ -208,11 +208,11 @@ fn refusal_as_page(library: ir.Library) -> held.Held {
     found
 }
 
-/// `example/main.bx`, the one program a newcomer is pointed at, compiles and is in canonical form.
+/// `example/src/main.bx`, the one program a newcomer is pointed at, compiles and is in canonical form.
 // example: said_facts(what: "a", said: command.nothing_said()) == [Fact { what: "a: status", expected: "0", found: "0" }, Fact { what: "a: output", expected: "", found: "" }, Fact { what: "a: errors", expected: "", found: "" }]
 fn example_program_checked(library: ir.Library) -> held.Held {
-    let said = said_to(["check", "example/main.bx"], library)
-    facts_held("example/main.bx compiles and is in canonical form", said_facts(what: "check", said: said))
+    let said = said_to(["check", "example/src/main.bx"], library)
+    facts_held("example/src/main.bx compiles and is in canonical form", said_facts(what: "check", said: said))
 }
 
 /// The checks of `fmt`, and of the canonical-form gate of `check`.
@@ -339,17 +339,17 @@ fn refused_package_built(library: ir.Library) -> held.Held {
     found
 }
 
-/// A package whose directory cannot be listed is refused, and never passes as a package that holds
-/// no module. The mode `311` lets the manifest be found but the directory not be listed.
+/// A package whose `src/` cannot be listed is refused, and never passes as a package that holds
+/// no module. The mode `311` on `src/` lets it be found but not be listed.
 // example: unstaged(text: "/s/a.bx", stage: "/s") == "a.bx"
 fn unlisted_package(library: ir.Library, limit: Int) -> held.Held {
-    let scene = scene_of([Written { at: "unlisted/bux.package", text: "" }, Written { at: "unlisted/a.bx", text: "fn main(arguments: List<String>) -> Int {\n    0\n}\n" }])
+    let scene = scene_of([Written { at: "unlisted/bux.package", text: "" }, Written { at: "unlisted/src/a.bx", text: "fn main(arguments: List<String>) -> Int {\n    0\n}\n" }])
     let package = modules.joined(scene, "unlisted")
-    _ = walk.completed(["chmod", "311", package], scene, limit)
+    _ = walk.completed(["chmod", "311", modules.joined(package, "src")], scene, limit)
     let checked = said_to(["check", package], library)
     let built = said_to(["build", package], library)
-    _ = walk.completed(["chmod", "755", package], scene, limit)
-    let refusal = "error: unlisted: Permission denied (os error 13)\n"
+    _ = walk.completed(["chmod", "755", modules.joined(package, "src")], scene, limit)
+    let refusal = "error: unlisted/src: Permission denied (os error 13)\n"
     let facts = [status_fact(checked, 2), Fact { what: "check: errors", expected: refusal, found: unstaged(text: checked.errors, stage: scene) }, status_fact(built, 2), Fact { what: "build: errors", expected: refusal, found: unstaged(text: built.errors, stage: scene) }]
     let found = facts_held("a package that cannot be listed is refused", facts)
     command.removed_whole(scene)
@@ -460,8 +460,8 @@ fn refused_program_run(library: ir.Library) -> held.Held {
 /// `test`. The archive is not there, and the refusal comes before an archive is looked for.
 // example: strings.length(split_manifest_text()) > 0
 fn split_refused(word: String, library: ir.Library) -> held.Held {
-    let scene = scene_of([Written { at: "a:b/example.bx", text: counting_program_text() }, Written { at: "a:b/bux.package", text: split_manifest_text() }])
-    let said = said_to([word, modules.joined(scene, "a:b/example.bx")], library)
+    let scene = scene_of([Written { at: "a:b/src/example.bx", text: counting_program_text() }, Written { at: "a:b/bux.package", text: split_manifest_text() }])
+    let said = said_to([word, modules.joined(scene, "a:b/src/example.bx")], library)
     let facts = [status_fact(said, 1), within_fact(what: "errors", text: said.errors, part: "error[L0610]"), absence(scene: scene, at: "a:b/target")]
     let found = facts_held(word + " refuses a module in a directory whose path holds `:`", facts)
     command.removed_whole(scene)
@@ -601,7 +601,7 @@ fn unparsed_text() -> String {
 /// A package: its manifest, `example.bx`, and `helper.bx` beside it.
 // example: or(list.at(package_files(example: "a", helper: "b"), 0), Written { at: "", text: "" }).at == "bux.package"
 fn package_files(example: String, helper: String) -> List<Written> {
-    [Written { at: "bux.package", text: "package app\nversion 0.2.0\n" }, Written { at: "example.bx", text: example }, Written { at: "helper.bx", text: helper }]
+    [Written { at: "bux.package", text: "package app\nversion 0.2.0\n" }, Written { at: "src/example.bx", text: example }, Written { at: "src/helper.bx", text: helper }]
 }
 
 /// A program that imports `greeting`, and `greeting` beside it.

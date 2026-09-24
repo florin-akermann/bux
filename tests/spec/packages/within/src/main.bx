@@ -1,0 +1,5 @@
+// expect-error: L0323
+// `src/` is a part of the package above it, so a manifest inside it is refused.
+fn held() -> Int {
+    1
+}

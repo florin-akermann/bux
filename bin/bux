@@ -1,8 +1,8 @@
 #!/bin/sh
 # The `bux` command line written in Bux, started on the JDK that JAVA_HOME names.
 #
-# src/target/ is the one directory on the class path. bin/bootstrap writes it: the classes of
-# the compiler, and beside them the library, the help topics, and the explanations it reads.
+# target/ is the one directory on the class path. bin/bootstrap writes it: the classes of the
+# compiler, and beside them the library, the help topics, and the explanations it reads.
 # A link to this script, as on PATH, is followed to the script itself, which sits in bin/.
 self=$0
 while [ -L "$self" ]; do
@@ -13,8 +13,8 @@ while [ -L "$self" ]; do
     esac
 done
 root=$(cd "$(dirname "$self")/.." && pwd)
-if [ ! -f "$root/src/target/main.class" ]; then
-    echo "error: $root/src/target/main.class: the compiler is not built; bin/bootstrap builds it" >&2
+if [ ! -f "$root/target/main.class" ]; then
+    echo "error: $root/target/main.class: the compiler is not built; bin/bootstrap builds it" >&2
     exit 2
 fi
 if [ -z "$JAVA_HOME" ]; then
@@ -29,4 +29,4 @@ fi
 # docs/implementation.md section 7, "The share of the machine", records why it is 3 GB.
 heap=-Xmx3g
 exec "$JAVA_HOME/bin/java" --enable-preview "$heap" -Dstdout.encoding=UTF-8 -Dstderr.encoding=UTF-8 \
-    -cp "$root/src/target" main "$@"
+    -cp "$root/target" main "$@"

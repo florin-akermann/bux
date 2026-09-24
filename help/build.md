@@ -1,11 +1,12 @@
 Compile a source file to the class files a JVM loads.
 
-`bux build` runs the whole compiler over a file and writes the result under `target/`, in the
-directory of that file. Everything `bux check` reports is reported here too, in the same layout,
-and nothing is written when the compiler refuses the program.
+`bux build` runs the whole compiler over a file and writes the result under `target/`: beside the
+manifest of its package, or beside the file where it is in no package. Everything `bux check`
+reports is reported here too, in the same layout, and nothing is written when the compiler
+refuses the program.
 
 Every class of a build lands in that one `target/` directory, and no class lands beside a source.
-A file of a package sits in the package's directory, so the package's `target/` holds its classes.
+Every module of a package, in `src/` or in `tests/`, writes into the one `target/` of the package.
 A clean build is `rm -rf target/`, because no other directory holds what a build writes.
 
 A module is one source file, so `demo.bx` becomes `target/demo.class`, holding one `public static`

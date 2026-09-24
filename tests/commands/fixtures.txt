@@ -131,10 +131,10 @@ status 1
 $ check tests/spec/concurrency/counter.bx
 status 0
 
-$ check tests/spec/concurrency/elsewhere/main.bx
+$ check tests/spec/concurrency/elsewhere/src/main.bx
 status 0
 
-$ check tests/spec/concurrency/elsewhere/tally.bx
+$ check tests/spec/concurrency/elsewhere/src/tally.bx
 status 0
 
 $ check tests/spec/concurrency/function_after_receive.bx
@@ -1043,7 +1043,7 @@ status 1
 !   3 | import nowhere
 !     |        ^^^^^^^
 !
-! help: a module is a file beside this one, or one of a package it depends on
+! help: a module is beside this file, or in `src/` of this package or a dependency
 
 $ check tests/spec/modules/money.bx
 status 0
@@ -1076,7 +1076,7 @@ status 1
 !   3 | import prelude
 !     |        ^^^^^^^
 !
-! help: a module is a file beside this one, or one of a package it depends on
+! help: a module is beside this file, or in `src/` of this package or a dependency
 
 $ check tests/spec/modules/reached.bx
 status 0
@@ -1125,7 +1125,7 @@ status 1
 !   3 | import nowhere
 !     |        ^^^^^^^
 !
-! help: a module is a file beside this one, or one of a package it depends on
+! help: a module is beside this file, or in `src/` of this package or a dependency
 
 $ check tests/spec/modules/through_unparsed.bx
 status 1
@@ -1621,16 +1621,16 @@ status 1
 !
 ! help: an operator is a trait method, so a type gets one by writing that trait's instance
 
-$ check tests/spec/packages/alone/lonely.bx
+$ check tests/spec/packages/alone/src/lonely.bx
 status 0
 
-$ check tests/spec/packages/alone/main.bx
+$ check tests/spec/packages/alone/src/main.bx
 status 0
 
-$ check tests/spec/packages/app/main.bx
+$ check tests/spec/packages/app/src/main.bx
 status 0
 
-$ check tests/spec/packages/blank/main.bx
+$ check tests/spec/packages/blank/src/main.bx
 status 1
 ! error[L0315]: `package` states one word, and this line does not
 !   --> tests/spec/packages/blank/bux.package:1:1
@@ -1640,48 +1640,48 @@ status 1
 !
 ! help: a manifest line is a keyword, one space, and one word
 
-$ check tests/spec/packages/borrower/circle.bx
+$ check tests/spec/packages/borrower/src/circle.bx
 status 0
 
-$ check tests/spec/packages/borrower/main.bx
+$ check tests/spec/packages/borrower/src/main.bx
 status 1
-! error[L0317]: `circle` is both `tests/spec/packages/borrower/circle.bx` and `tests/spec/packages/borrower/../lender/circle.bx`
-!   --> tests/spec/packages/borrower/../lender/helper.bx:2:8
+! error[L0317]: `circle` is both `tests/spec/packages/borrower/src/circle.bx` and `tests/spec/packages/borrower/../lender/src/circle.bx`
+!   --> tests/spec/packages/borrower/../lender/src/helper.bx:2:8
 !
 !   2 | import circle
 !     |        ^^^^^^
 !
 ! help: one name has one definition; rename one of the two modules
 
-$ check tests/spec/packages/both/main.bx
+$ check tests/spec/packages/both/src/main.bx
 status 0
 
-$ check tests/spec/packages/carried/helper.bx
+$ check tests/spec/packages/carried/src/helper.bx
 status 0
 
-$ check tests/spec/packages/carried/main.bx
+$ check tests/spec/packages/carried/src/main.bx
 status 0
 
-$ check tests/spec/packages/carried/prelude.bx
+$ check tests/spec/packages/carried/src/prelude.bx
 status 0
 
-$ check tests/spec/packages/carried/prelude_imported.bx
+$ check tests/spec/packages/carried/src/prelude_imported.bx
 status 1
 ! error[L0306]: there is no module named `prelude`
-!   --> tests/spec/packages/carried/prelude_imported.bx:3:8
+!   --> tests/spec/packages/carried/src/prelude_imported.bx:3:8
 !
 !   3 | import prelude
 !     |        ^^^^^^^
 !
-! help: a module is a file beside this one, or one of a package it depends on
+! help: a module is beside this file, or in `src/` of this package or a dependency
 
-$ check tests/spec/packages/carried/strings.bx
+$ check tests/spec/packages/carried/src/strings.bx
 status 0
 
-$ check tests/spec/packages/colours/circle.bx
+$ check tests/spec/packages/colours/src/circle.bx
 status 0
 
-$ check tests/spec/packages/doubled/main.bx
+$ check tests/spec/packages/doubled/src/main.bx
 status 1
 ! error[L0315]: `../shapes` is depended on twice
 !   --> tests/spec/packages/doubled/bux.package:4:1
@@ -1691,29 +1691,29 @@ status 1
 !
 ! help: a manifest states one `depends` for each package it reaches
 
-$ check tests/spec/packages/east/sunrise.bx
+$ check tests/spec/packages/east/src/sunrise.bx
 status 1
 ! error[L0307]: `sunrise` imports `sunset`, which imports `sunrise`
-!   --> tests/spec/packages/east/../west/sunset.bx:3:8
+!   --> tests/spec/packages/east/../west/src/sunset.bx:3:8
 !
 !   3 | import sunrise
 !     |        ^^^^^^^
 !
 ! help: a module is compiled after what it imports, and a ring has no such order
 
-$ check tests/spec/packages/geometry/point.bx
+$ check tests/spec/packages/geometry/src/point.bx
 status 0
 
-$ check tests/spec/packages/layered/square.bx
+$ check tests/spec/packages/layered/src/square.bx
 status 0
 
-$ check tests/spec/packages/lender/circle.bx
+$ check tests/spec/packages/lender/src/circle.bx
 status 0
 
-$ check tests/spec/packages/lender/helper.bx
+$ check tests/spec/packages/lender/src/helper.bx
 status 0
 
-$ check tests/spec/packages/nameless/main.bx
+$ check tests/spec/packages/nameless/src/main.bx
 status 1
 ! error[L0315]: `package` is what a manifest states here
 !   --> tests/spec/packages/nameless/bux.package:1:1
@@ -1723,29 +1723,29 @@ status 1
 !
 ! help: a manifest is `package`, then `version`, then a `depends` for each dependency, then a `jar` for each archive
 
-$ check tests/spec/packages/nearer/circle.bx
+$ check tests/spec/packages/nearer/src/circle.bx
 status 0
 
-$ check tests/spec/packages/nearer/main.bx
+$ check tests/spec/packages/nearer/src/main.bx
 status 0
 
-$ check tests/spec/packages/outer/main.bx
+$ check tests/spec/packages/outer/src/main.bx
 status 0
 
-$ check tests/spec/packages/outer/unreached.bx
+$ check tests/spec/packages/outer/src/unreached.bx
 status 1
 ! error[L0306]: there is no module named `point`
-!   --> tests/spec/packages/outer/unreached.bx:3:8
+!   --> tests/spec/packages/outer/src/unreached.bx:3:8
 !
 !   3 | import point
 !     |        ^^^^^
 !
-! help: a module is a file beside this one, or one of a package it depends on
+! help: a module is beside this file, or in `src/` of this package or a dependency
 
-$ check tests/spec/packages/shapes/circle.bx
+$ check tests/spec/packages/shapes/src/circle.bx
 status 0
 
-$ check tests/spec/packages/spaced/main.bx
+$ check tests/spec/packages/spaced/src/main.bx
 status 1
 ! error[L0315]: `package` states one word, and this line does not
 !   --> tests/spec/packages/spaced/bux.package:1:1
@@ -1755,7 +1755,7 @@ status 1
 !
 ! help: a manifest line is a keyword, one space, and one word
 
-$ check tests/spec/packages/stated/main.bx
+$ check tests/spec/packages/stated/src/main.bx
 status 1
 ! error[L0315]: `version` is what a manifest states here
 !   --> tests/spec/packages/stated/bux.package:2:1
@@ -1765,17 +1765,17 @@ status 1
 !
 ! help: a manifest is `package`, then `version`, then a `depends` for each dependency, then a `jar` for each archive
 
-$ check tests/spec/packages/twice/main.bx
+$ check tests/spec/packages/twice/src/main.bx
 status 1
-! error[L0317]: `circle` is both `tests/spec/packages/twice/../colours/circle.bx` and `tests/spec/packages/twice/../shapes/circle.bx`
-!   --> tests/spec/packages/twice/main.bx:4:8
+! error[L0317]: `circle` is both `tests/spec/packages/twice/../colours/src/circle.bx` and `tests/spec/packages/twice/../shapes/src/circle.bx`
+!   --> tests/spec/packages/twice/src/main.bx:4:8
 !
 !   4 | import circle
 !     |        ^^^^^^
 !
 ! help: one name has one definition; rename one of the two modules
 
-$ check tests/spec/packages/unfounded/main.bx
+$ check tests/spec/packages/unfounded/src/main.bx
 status 1
 ! error[L0316]: there is no package in `../nowhere`
 !   --> tests/spec/packages/unfounded/bux.package:3:1
@@ -1785,7 +1785,7 @@ status 1
 !
 ! help: a package is a directory holding `bux.package`
 
-$ check tests/spec/packages/versionless/main.bx
+$ check tests/spec/packages/versionless/src/main.bx
 status 1
 ! error[L0315]: `version` is what a manifest states here
 !   --> tests/spec/packages/versionless/bux.package:1:1
@@ -1795,10 +1795,10 @@ status 1
 !
 ! help: a manifest is `package`, then `version`, then a `depends` for each dependency, then a `jar` for each archive
 
-$ check tests/spec/packages/west/sunset.bx
+$ check tests/spec/packages/west/src/sunset.bx
 status 1
 ! error[L0307]: `sunset` imports `sunrise`, which imports `sunset`
-!   --> tests/spec/packages/west/../east/sunrise.bx:3:8
+!   --> tests/spec/packages/west/../east/src/sunrise.bx:3:8
 !
 !   3 | import sunset
 !     |        ^^^^^^
@@ -2234,10 +2234,10 @@ status 1
 !
 ! help: one type is not another, however alike they are held
 
-$ check tests/spec/testing/package/doubled.bx
+$ check tests/spec/testing/package/tests/doubled.bx
 status 0
 
-$ check tests/spec/testing/package/tripled.bx
+$ check tests/spec/testing/package/src/tripled.bx
 status 0
 
 $ check tests/spec/traits/declared.bx
@@ -2594,10 +2594,10 @@ status 1
 $ check --json tests/spec/concurrency/counter.bx
 status 0
 
-$ check --json tests/spec/concurrency/elsewhere/main.bx
+$ check --json tests/spec/concurrency/elsewhere/src/main.bx
 status 0
 
-$ check --json tests/spec/concurrency/elsewhere/tally.bx
+$ check --json tests/spec/concurrency/elsewhere/src/tally.bx
 status 0
 
 $ check --json tests/spec/concurrency/function_after_receive.bx
@@ -3086,7 +3086,7 @@ status 0
 
 $ check --json tests/spec/modules/missing.bx
 status 1
-> {"file":"tests/spec/modules/missing.bx","code":"L0306","message":"there is no module named `nowhere`","span":{"start":118,"len":7},"help":"a module is a file beside this one, or one of a package it depends on"}
+> {"file":"tests/spec/modules/missing.bx","code":"L0306","message":"there is no module named `nowhere`","span":{"start":118,"len":7},"help":"a module is beside this file, or in `src/` of this package or a dependency"}
 
 $ check --json tests/spec/modules/money.bx
 status 0
@@ -3101,7 +3101,7 @@ status 1
 
 $ check --json tests/spec/modules/prelude_imported.bx
 status 1
-> {"file":"tests/spec/modules/prelude_imported.bx","code":"L0306","message":"there is no module named `prelude`","span":{"start":117,"len":7},"help":"a module is a file beside this one, or one of a package it depends on"}
+> {"file":"tests/spec/modules/prelude_imported.bx","code":"L0306","message":"there is no module named `prelude`","span":{"start":117,"len":7},"help":"a module is beside this file, or in `src/` of this package or a dependency"}
 
 $ check --json tests/spec/modules/reached.bx
 status 0
@@ -3126,7 +3126,7 @@ status 1
 
 $ check --json tests/spec/modules/through_missing.bx
 status 1
-> {"file":"tests/spec/modules/missing.bx","code":"L0306","message":"there is no module named `nowhere`","span":{"start":118,"len":7},"help":"a module is a file beside this one, or one of a package it depends on"}
+> {"file":"tests/spec/modules/missing.bx","code":"L0306","message":"there is no module named `nowhere`","span":{"start":118,"len":7},"help":"a module is beside this file, or in `src/` of this package or a dependency"}
 
 $ check --json tests/spec/modules/through_unparsed.bx
 status 1
@@ -3338,111 +3338,111 @@ $ check --json tests/spec/operators/no_instance.bx
 status 1
 > {"file":"tests/spec/operators/no_instance.bx","code":"L0406","message":"`Point` has no `Add`, so `+` is not written over it","span":{"start":263,"len":11},"help":"an operator is a trait method, so a type gets one by writing that trait's instance"}
 
-$ check --json tests/spec/packages/alone/lonely.bx
+$ check --json tests/spec/packages/alone/src/lonely.bx
 status 0
 
-$ check --json tests/spec/packages/alone/main.bx
+$ check --json tests/spec/packages/alone/src/main.bx
 status 0
 
-$ check --json tests/spec/packages/app/main.bx
+$ check --json tests/spec/packages/app/src/main.bx
 status 0
 
-$ check --json tests/spec/packages/blank/main.bx
+$ check --json tests/spec/packages/blank/src/main.bx
 status 1
 > {"file":"tests/spec/packages/blank/bux.package","code":"L0315","message":"`package` states one word, and this line does not","span":{"start":0,"len":8},"help":"a manifest line is a keyword, one space, and one word"}
 
-$ check --json tests/spec/packages/borrower/circle.bx
+$ check --json tests/spec/packages/borrower/src/circle.bx
 status 0
 
-$ check --json tests/spec/packages/borrower/main.bx
+$ check --json tests/spec/packages/borrower/src/main.bx
 status 1
-> {"file":"tests/spec/packages/borrower/../lender/helper.bx","code":"L0317","message":"`circle` is both `tests/spec/packages/borrower/circle.bx` and `tests/spec/packages/borrower/../lender/circle.bx`","span":{"start":76,"len":6},"help":"one name has one definition; rename one of the two modules"}
+> {"file":"tests/spec/packages/borrower/../lender/src/helper.bx","code":"L0317","message":"`circle` is both `tests/spec/packages/borrower/src/circle.bx` and `tests/spec/packages/borrower/../lender/src/circle.bx`","span":{"start":76,"len":6},"help":"one name has one definition; rename one of the two modules"}
 
-$ check --json tests/spec/packages/both/main.bx
+$ check --json tests/spec/packages/both/src/main.bx
 status 0
 
-$ check --json tests/spec/packages/carried/helper.bx
+$ check --json tests/spec/packages/carried/src/helper.bx
 status 0
 
-$ check --json tests/spec/packages/carried/main.bx
+$ check --json tests/spec/packages/carried/src/main.bx
 status 0
 
-$ check --json tests/spec/packages/carried/prelude.bx
+$ check --json tests/spec/packages/carried/src/prelude.bx
 status 0
 
-$ check --json tests/spec/packages/carried/prelude_imported.bx
+$ check --json tests/spec/packages/carried/src/prelude_imported.bx
 status 1
-> {"file":"tests/spec/packages/carried/prelude_imported.bx","code":"L0306","message":"there is no module named `prelude`","span":{"start":119,"len":7},"help":"a module is a file beside this one, or one of a package it depends on"}
+> {"file":"tests/spec/packages/carried/src/prelude_imported.bx","code":"L0306","message":"there is no module named `prelude`","span":{"start":119,"len":7},"help":"a module is beside this file, or in `src/` of this package or a dependency"}
 
-$ check --json tests/spec/packages/carried/strings.bx
+$ check --json tests/spec/packages/carried/src/strings.bx
 status 0
 
-$ check --json tests/spec/packages/colours/circle.bx
+$ check --json tests/spec/packages/colours/src/circle.bx
 status 0
 
-$ check --json tests/spec/packages/doubled/main.bx
+$ check --json tests/spec/packages/doubled/src/main.bx
 status 1
 > {"file":"tests/spec/packages/doubled/bux.package","code":"L0315","message":"`../shapes` is depended on twice","span":{"start":48,"len":17},"help":"a manifest states one `depends` for each package it reaches"}
 
-$ check --json tests/spec/packages/east/sunrise.bx
+$ check --json tests/spec/packages/east/src/sunrise.bx
 status 1
-> {"file":"tests/spec/packages/east/../west/sunset.bx","code":"L0307","message":"`sunrise` imports `sunset`, which imports `sunrise`","span":{"start":81,"len":7},"help":"a module is compiled after what it imports, and a ring has no such order"}
+> {"file":"tests/spec/packages/east/../west/src/sunset.bx","code":"L0307","message":"`sunrise` imports `sunset`, which imports `sunrise`","span":{"start":81,"len":7},"help":"a module is compiled after what it imports, and a ring has no such order"}
 
-$ check --json tests/spec/packages/geometry/point.bx
+$ check --json tests/spec/packages/geometry/src/point.bx
 status 0
 
-$ check --json tests/spec/packages/layered/square.bx
+$ check --json tests/spec/packages/layered/src/square.bx
 status 0
 
-$ check --json tests/spec/packages/lender/circle.bx
+$ check --json tests/spec/packages/lender/src/circle.bx
 status 0
 
-$ check --json tests/spec/packages/lender/helper.bx
+$ check --json tests/spec/packages/lender/src/helper.bx
 status 0
 
-$ check --json tests/spec/packages/nameless/main.bx
+$ check --json tests/spec/packages/nameless/src/main.bx
 status 1
 > {"file":"tests/spec/packages/nameless/bux.package","code":"L0315","message":"`package` is what a manifest states here","span":{"start":0,"len":13},"help":"a manifest is `package`, then `version`, then a `depends` for each dependency, then a `jar` for each archive"}
 
-$ check --json tests/spec/packages/nearer/circle.bx
+$ check --json tests/spec/packages/nearer/src/circle.bx
 status 0
 
-$ check --json tests/spec/packages/nearer/main.bx
+$ check --json tests/spec/packages/nearer/src/main.bx
 status 0
 
-$ check --json tests/spec/packages/outer/main.bx
+$ check --json tests/spec/packages/outer/src/main.bx
 status 0
 
-$ check --json tests/spec/packages/outer/unreached.bx
+$ check --json tests/spec/packages/outer/src/unreached.bx
 status 1
-> {"file":"tests/spec/packages/outer/unreached.bx","code":"L0306","message":"there is no module named `point`","span":{"start":111,"len":5},"help":"a module is a file beside this one, or one of a package it depends on"}
+> {"file":"tests/spec/packages/outer/src/unreached.bx","code":"L0306","message":"there is no module named `point`","span":{"start":111,"len":5},"help":"a module is beside this file, or in `src/` of this package or a dependency"}
 
-$ check --json tests/spec/packages/shapes/circle.bx
+$ check --json tests/spec/packages/shapes/src/circle.bx
 status 0
 
-$ check --json tests/spec/packages/spaced/main.bx
+$ check --json tests/spec/packages/spaced/src/main.bx
 status 1
 > {"file":"tests/spec/packages/spaced/bux.package","code":"L0315","message":"`package` states one word, and this line does not","span":{"start":0,"len":15},"help":"a manifest line is a keyword, one space, and one word"}
 
-$ check --json tests/spec/packages/stated/main.bx
+$ check --json tests/spec/packages/stated/src/main.bx
 status 1
 > {"file":"tests/spec/packages/stated/bux.package","code":"L0315","message":"`version` is what a manifest states here","span":{"start":15,"len":13},"help":"a manifest is `package`, then `version`, then a `depends` for each dependency, then a `jar` for each archive"}
 
-$ check --json tests/spec/packages/twice/main.bx
+$ check --json tests/spec/packages/twice/src/main.bx
 status 1
-> {"file":"tests/spec/packages/twice/main.bx","code":"L0317","message":"`circle` is both `tests/spec/packages/twice/../colours/circle.bx` and `tests/spec/packages/twice/../shapes/circle.bx`","span":{"start":138,"len":6},"help":"one name has one definition; rename one of the two modules"}
+> {"file":"tests/spec/packages/twice/src/main.bx","code":"L0317","message":"`circle` is both `tests/spec/packages/twice/../colours/src/circle.bx` and `tests/spec/packages/twice/../shapes/src/circle.bx`","span":{"start":138,"len":6},"help":"one name has one definition; rename one of the two modules"}
 
-$ check --json tests/spec/packages/unfounded/main.bx
+$ check --json tests/spec/packages/unfounded/src/main.bx
 status 1
 > {"file":"tests/spec/packages/unfounded/bux.package","code":"L0316","message":"there is no package in `../nowhere`","span":{"start":32,"len":18},"help":"a package is a directory holding `bux.package`"}
 
-$ check --json tests/spec/packages/versionless/main.bx
+$ check --json tests/spec/packages/versionless/src/main.bx
 status 1
 > {"file":"tests/spec/packages/versionless/bux.package","code":"L0315","message":"`version` is what a manifest states here","span":{"start":0,"len":20},"help":"a manifest is `package`, then `version`, then a `depends` for each dependency, then a `jar` for each archive"}
 
-$ check --json tests/spec/packages/west/sunset.bx
+$ check --json tests/spec/packages/west/src/sunset.bx
 status 1
-> {"file":"tests/spec/packages/west/../east/sunrise.bx","code":"L0307","message":"`sunset` imports `sunrise`, which imports `sunset`","span":{"start":103,"len":6},"help":"a module is compiled after what it imports, and a ring has no such order"}
+> {"file":"tests/spec/packages/west/../east/src/sunrise.bx","code":"L0307","message":"`sunset` imports `sunrise`, which imports `sunset`","span":{"start":103,"len":6},"help":"a module is compiled after what it imports, and a ring has no such order"}
 
 $ check --json tests/spec/parser/alternative_left_open.bx
 status 1
@@ -3679,10 +3679,10 @@ $ check --json tests/spec/testing/not_bool.bx
 status 1
 > {"file":"tests/spec/testing/not_bool.bx","code":"L0400","message":"expected `Bool`, found `Int`","span":{"start":123,"len":13},"help":"one type is not another, however alike they are held"}
 
-$ check --json tests/spec/testing/package/doubled.bx
+$ check --json tests/spec/testing/package/tests/doubled.bx
 status 0
 
-$ check --json tests/spec/testing/package/tripled.bx
+$ check --json tests/spec/testing/package/src/tripled.bx
 status 0
 
 $ check --json tests/spec/traits/declared.bx
@@ -4051,11 +4051,11 @@ status 0
 >     | Add(Int)
 >     | Stop
 
-$ api tests/spec/concurrency/elsewhere/main.bx
+$ api tests/spec/concurrency/elsewhere/src/main.bx
 status 0
 > fn main(arguments: List<String>) -> Int
 
-$ api tests/spec/concurrency/elsewhere/tally.bx
+$ api tests/spec/concurrency/elsewhere/src/tally.bx
 status 0
 > process Tally
 >
@@ -5522,7 +5522,7 @@ status 1
 !   3 | import nowhere
 !     |        ^^^^^^^
 !
-! help: a module is a file beside this one, or one of a package it depends on
+! help: a module is beside this file, or in `src/` of this package or a dependency
 
 $ api tests/spec/modules/money.bx
 status 0
@@ -5569,7 +5569,7 @@ status 1
 !   3 | import prelude
 !     |        ^^^^^^^
 !
-! help: a module is a file beside this one, or one of a package it depends on
+! help: a module is beside this file, or in `src/` of this package or a dependency
 
 $ api tests/spec/modules/reached.bx
 status 0
@@ -5625,7 +5625,7 @@ status 1
 !   3 | import nowhere
 !     |        ^^^^^^^
 !
-! help: a module is a file beside this one, or one of a package it depends on
+! help: a module is beside this file, or in `src/` of this package or a dependency
 
 $ api tests/spec/modules/through_unparsed.bx
 status 1
@@ -6211,19 +6211,19 @@ status 1
 !
 ! help: an operator is a trait method, so a type gets one by writing that trait's instance
 
-$ api tests/spec/packages/alone/lonely.bx
+$ api tests/spec/packages/alone/src/lonely.bx
 status 0
 > fn held() -> Int
 
-$ api tests/spec/packages/alone/main.bx
+$ api tests/spec/packages/alone/src/main.bx
 status 0
 > fn edge() -> Int
 
-$ api tests/spec/packages/app/main.bx
+$ api tests/spec/packages/app/src/main.bx
 status 0
 > fn edge() -> Int
 
-$ api tests/spec/packages/blank/main.bx
+$ api tests/spec/packages/blank/src/main.bx
 status 1
 ! error[L0315]: `package` states one word, and this line does not
 !   --> tests/spec/packages/blank/bux.package:1:1
@@ -6233,55 +6233,55 @@ status 1
 !
 ! help: a manifest line is a keyword, one space, and one word
 
-$ api tests/spec/packages/borrower/circle.bx
+$ api tests/spec/packages/borrower/src/circle.bx
 status 0
 > fn kept() -> Int
 
-$ api tests/spec/packages/borrower/main.bx
+$ api tests/spec/packages/borrower/src/main.bx
 status 1
-! error[L0317]: `circle` is both `tests/spec/packages/borrower/circle.bx` and `tests/spec/packages/borrower/../lender/circle.bx`
-!   --> tests/spec/packages/borrower/../lender/helper.bx:2:8
+! error[L0317]: `circle` is both `tests/spec/packages/borrower/src/circle.bx` and `tests/spec/packages/borrower/../lender/src/circle.bx`
+!   --> tests/spec/packages/borrower/../lender/src/helper.bx:2:8
 !
 !   2 | import circle
 !     |        ^^^^^^
 !
 ! help: one name has one definition; rename one of the two modules
 
-$ api tests/spec/packages/both/main.bx
+$ api tests/spec/packages/both/src/main.bx
 status 0
 > fn edge() -> Int
 
-$ api tests/spec/packages/carried/helper.bx
+$ api tests/spec/packages/carried/src/helper.bx
 status 0
 > fn measured() -> Int
 
-$ api tests/spec/packages/carried/main.bx
+$ api tests/spec/packages/carried/src/main.bx
 status 0
 > fn measured() -> Int
 
-$ api tests/spec/packages/carried/prelude.bx
+$ api tests/spec/packages/carried/src/prelude.bx
 status 0
 > fn mine() -> Int
 
-$ api tests/spec/packages/carried/prelude_imported.bx
+$ api tests/spec/packages/carried/src/prelude_imported.bx
 status 1
 ! error[L0306]: there is no module named `prelude`
-!   --> tests/spec/packages/carried/prelude_imported.bx:3:8
+!   --> tests/spec/packages/carried/src/prelude_imported.bx:3:8
 !
 !   3 | import prelude
 !     |        ^^^^^^^
 !
-! help: a module is a file beside this one, or one of a package it depends on
+! help: a module is beside this file, or in `src/` of this package or a dependency
 
-$ api tests/spec/packages/carried/strings.bx
+$ api tests/spec/packages/carried/src/strings.bx
 status 0
 > fn counted() -> Int
 
-$ api tests/spec/packages/colours/circle.bx
+$ api tests/spec/packages/colours/src/circle.bx
 status 0
 > fn shade() -> String
 
-$ api tests/spec/packages/doubled/main.bx
+$ api tests/spec/packages/doubled/src/main.bx
 status 1
 ! error[L0315]: `../shapes` is depended on twice
 !   --> tests/spec/packages/doubled/bux.package:4:1
@@ -6291,33 +6291,33 @@ status 1
 !
 ! help: a manifest states one `depends` for each package it reaches
 
-$ api tests/spec/packages/east/sunrise.bx
+$ api tests/spec/packages/east/src/sunrise.bx
 status 1
 ! error[L0307]: `sunrise` imports `sunset`, which imports `sunrise`
-!   --> tests/spec/packages/east/../west/sunset.bx:3:8
+!   --> tests/spec/packages/east/../west/src/sunset.bx:3:8
 !
 !   3 | import sunrise
 !     |        ^^^^^^^
 !
 ! help: a module is compiled after what it imports, and a ring has no such order
 
-$ api tests/spec/packages/geometry/point.bx
+$ api tests/spec/packages/geometry/src/point.bx
 status 0
 > fn origin() -> Int
 
-$ api tests/spec/packages/layered/square.bx
+$ api tests/spec/packages/layered/src/square.bx
 status 0
 > fn corner() -> Int
 
-$ api tests/spec/packages/lender/circle.bx
+$ api tests/spec/packages/lender/src/circle.bx
 status 0
 > fn lent() -> Int
 
-$ api tests/spec/packages/lender/helper.bx
+$ api tests/spec/packages/lender/src/helper.bx
 status 0
 > fn helped() -> Int
 
-$ api tests/spec/packages/nameless/main.bx
+$ api tests/spec/packages/nameless/src/main.bx
 status 1
 ! error[L0315]: `package` is what a manifest states here
 !   --> tests/spec/packages/nameless/bux.package:1:1
@@ -6327,33 +6327,33 @@ status 1
 !
 ! help: a manifest is `package`, then `version`, then a `depends` for each dependency, then a `jar` for each archive
 
-$ api tests/spec/packages/nearer/circle.bx
+$ api tests/spec/packages/nearer/src/circle.bx
 status 0
 > fn nearest() -> Int
 
-$ api tests/spec/packages/nearer/main.bx
+$ api tests/spec/packages/nearer/src/main.bx
 status 0
 > fn edge() -> Int
 
-$ api tests/spec/packages/outer/main.bx
+$ api tests/spec/packages/outer/src/main.bx
 status 0
 > fn edge() -> Int
 
-$ api tests/spec/packages/outer/unreached.bx
+$ api tests/spec/packages/outer/src/unreached.bx
 status 1
 ! error[L0306]: there is no module named `point`
-!   --> tests/spec/packages/outer/unreached.bx:3:8
+!   --> tests/spec/packages/outer/src/unreached.bx:3:8
 !
 !   3 | import point
 !     |        ^^^^^
 !
-! help: a module is a file beside this one, or one of a package it depends on
+! help: a module is beside this file, or in `src/` of this package or a dependency
 
-$ api tests/spec/packages/shapes/circle.bx
+$ api tests/spec/packages/shapes/src/circle.bx
 status 0
 > fn around(radius: Int) -> Int
 
-$ api tests/spec/packages/spaced/main.bx
+$ api tests/spec/packages/spaced/src/main.bx
 status 1
 ! error[L0315]: `package` states one word, and this line does not
 !   --> tests/spec/packages/spaced/bux.package:1:1
@@ -6363,7 +6363,7 @@ status 1
 !
 ! help: a manifest line is a keyword, one space, and one word
 
-$ api tests/spec/packages/stated/main.bx
+$ api tests/spec/packages/stated/src/main.bx
 status 1
 ! error[L0315]: `version` is what a manifest states here
 !   --> tests/spec/packages/stated/bux.package:2:1
@@ -6373,17 +6373,17 @@ status 1
 !
 ! help: a manifest is `package`, then `version`, then a `depends` for each dependency, then a `jar` for each archive
 
-$ api tests/spec/packages/twice/main.bx
+$ api tests/spec/packages/twice/src/main.bx
 status 1
-! error[L0317]: `circle` is both `tests/spec/packages/twice/../colours/circle.bx` and `tests/spec/packages/twice/../shapes/circle.bx`
-!   --> tests/spec/packages/twice/main.bx:4:8
+! error[L0317]: `circle` is both `tests/spec/packages/twice/../colours/src/circle.bx` and `tests/spec/packages/twice/../shapes/src/circle.bx`
+!   --> tests/spec/packages/twice/src/main.bx:4:8
 !
 !   4 | import circle
 !     |        ^^^^^^
 !
 ! help: one name has one definition; rename one of the two modules
 
-$ api tests/spec/packages/unfounded/main.bx
+$ api tests/spec/packages/unfounded/src/main.bx
 status 1
 ! error[L0316]: there is no package in `../nowhere`
 !   --> tests/spec/packages/unfounded/bux.package:3:1
@@ -6393,7 +6393,7 @@ status 1
 !
 ! help: a package is a directory holding `bux.package`
 
-$ api tests/spec/packages/versionless/main.bx
+$ api tests/spec/packages/versionless/src/main.bx
 status 1
 ! error[L0315]: `version` is what a manifest states here
 !   --> tests/spec/packages/versionless/bux.package:1:1
@@ -6403,10 +6403,10 @@ status 1
 !
 ! help: a manifest is `package`, then `version`, then a `depends` for each dependency, then a `jar` for each archive
 
-$ api tests/spec/packages/west/sunset.bx
+$ api tests/spec/packages/west/src/sunset.bx
 status 1
 ! error[L0307]: `sunset` imports `sunrise`, which imports `sunset`
-!   --> tests/spec/packages/west/../east/sunrise.bx:3:8
+!   --> tests/spec/packages/west/../east/src/sunrise.bx:3:8
 !
 !   3 | import sunset
 !     |        ^^^^^^
@@ -7079,11 +7079,11 @@ status 1
 !
 ! help: one type is not another, however alike they are held
 
-$ api tests/spec/testing/package/doubled.bx
+$ api tests/spec/testing/package/tests/doubled.bx
 status 0
 > fn doubled(number: Int) -> Int
 
-$ api tests/spec/testing/package/tripled.bx
+$ api tests/spec/testing/package/src/tripled.bx
 status 0
 > fn tripled(number: Int) -> Int
 
@@ -8314,10 +8314,10 @@ status 1
 $ test tests/spec/concurrency/counter.bx
 status 0
 
-$ test tests/spec/concurrency/elsewhere/main.bx
+$ test tests/spec/concurrency/elsewhere/src/main.bx
 status 0
 
-$ test tests/spec/concurrency/elsewhere/tally.bx
+$ test tests/spec/concurrency/elsewhere/src/tally.bx
 status 0
 
 $ test tests/spec/concurrency/function_after_receive.bx
@@ -9513,7 +9513,7 @@ status 1
 !   3 | import nowhere
 !     |        ^^^^^^^
 !
-! help: a module is a file beside this one, or one of a package it depends on
+! help: a module is beside this file, or in `src/` of this package or a dependency
 
 $ test tests/spec/modules/money.bx
 status 0
@@ -9546,7 +9546,7 @@ status 1
 !   3 | import prelude
 !     |        ^^^^^^^
 !
-! help: a module is a file beside this one, or one of a package it depends on
+! help: a module is beside this file, or in `src/` of this package or a dependency
 
 $ test tests/spec/modules/reached.bx
 status 0
@@ -9595,7 +9595,7 @@ status 1
 !   3 | import nowhere
 !     |        ^^^^^^^
 !
-! help: a module is a file beside this one, or one of a package it depends on
+! help: a module is beside this file, or in `src/` of this package or a dependency
 
 $ test tests/spec/modules/through_unparsed.bx
 status 1
@@ -10122,30 +10122,30 @@ status 1
 !
 ! help: an operator is a trait method, so a type gets one by writing that trait's instance
 
-$ test tests/spec/packages/alone/lonely.bx
+$ test tests/spec/packages/alone/src/lonely.bx
 status 0
 
-$ test tests/spec/packages/alone/main.bx
+$ test tests/spec/packages/alone/src/main.bx
 status 1
 ! error[L0601]: `edge` states no example
-!   --> tests/spec/packages/alone/main.bx:4:4
+!   --> tests/spec/packages/alone/src/main.bx:4:4
 !
 !   4 | fn edge() -> Int {
 !     |    ^^^^
 !
 ! help: write `// example: <an expression that is true>` in the comment above it
 
-$ test tests/spec/packages/app/main.bx
+$ test tests/spec/packages/app/src/main.bx
 status 1
 ! error[L0601]: `edge` states no example
-!   --> tests/spec/packages/app/main.bx:4:4
+!   --> tests/spec/packages/app/src/main.bx:4:4
 !
 !   4 | fn edge() -> Int {
 !     |    ^^^^
 !
 ! help: write `// example: <an expression that is true>` in the comment above it
 
-$ test tests/spec/packages/blank/main.bx
+$ test tests/spec/packages/blank/src/main.bx
 status 1
 ! error[L0315]: `package` states one word, and this line does not
 !   --> tests/spec/packages/blank/bux.package:1:1
@@ -10155,62 +10155,62 @@ status 1
 !
 ! help: a manifest line is a keyword, one space, and one word
 
-$ test tests/spec/packages/borrower/circle.bx
+$ test tests/spec/packages/borrower/src/circle.bx
 status 0
 
-$ test tests/spec/packages/borrower/main.bx
+$ test tests/spec/packages/borrower/src/main.bx
 status 1
-! error[L0317]: `circle` is both `tests/spec/packages/borrower/circle.bx` and `tests/spec/packages/borrower/../lender/circle.bx`
-!   --> tests/spec/packages/borrower/../lender/helper.bx:2:8
+! error[L0317]: `circle` is both `tests/spec/packages/borrower/src/circle.bx` and `tests/spec/packages/borrower/../lender/src/circle.bx`
+!   --> tests/spec/packages/borrower/../lender/src/helper.bx:2:8
 !
 !   2 | import circle
 !     |        ^^^^^^
 !
 ! help: one name has one definition; rename one of the two modules
 
-$ test tests/spec/packages/both/main.bx
+$ test tests/spec/packages/both/src/main.bx
 status 1
 ! error[L0601]: `edge` states no example
-!   --> tests/spec/packages/both/main.bx:5:4
+!   --> tests/spec/packages/both/src/main.bx:5:4
 !
 !   5 | fn edge() -> Int {
 !     |    ^^^^
 !
 ! help: write `// example: <an expression that is true>` in the comment above it
 
-$ test tests/spec/packages/carried/helper.bx
+$ test tests/spec/packages/carried/src/helper.bx
 status 0
 
-$ test tests/spec/packages/carried/main.bx
+$ test tests/spec/packages/carried/src/main.bx
 status 1
 ! error[L0601]: `measured` states no example
-!   --> tests/spec/packages/carried/main.bx:5:4
+!   --> tests/spec/packages/carried/src/main.bx:5:4
 !
 !   5 | fn measured() -> Int {
 !     |    ^^^^^^^^
 !
 ! help: write `// example: <an expression that is true>` in the comment above it
 
-$ test tests/spec/packages/carried/prelude.bx
+$ test tests/spec/packages/carried/src/prelude.bx
 status 0
 
-$ test tests/spec/packages/carried/prelude_imported.bx
+$ test tests/spec/packages/carried/src/prelude_imported.bx
 status 1
 ! error[L0306]: there is no module named `prelude`
-!   --> tests/spec/packages/carried/prelude_imported.bx:3:8
+!   --> tests/spec/packages/carried/src/prelude_imported.bx:3:8
 !
 !   3 | import prelude
 !     |        ^^^^^^^
 !
-! help: a module is a file beside this one, or one of a package it depends on
+! help: a module is beside this file, or in `src/` of this package or a dependency
 
-$ test tests/spec/packages/carried/strings.bx
+$ test tests/spec/packages/carried/src/strings.bx
 status 0
 
-$ test tests/spec/packages/colours/circle.bx
+$ test tests/spec/packages/colours/src/circle.bx
 status 0
 
-$ test tests/spec/packages/doubled/main.bx
+$ test tests/spec/packages/doubled/src/main.bx
 status 1
 ! error[L0315]: `../shapes` is depended on twice
 !   --> tests/spec/packages/doubled/bux.package:4:1
@@ -10220,29 +10220,29 @@ status 1
 !
 ! help: a manifest states one `depends` for each package it reaches
 
-$ test tests/spec/packages/east/sunrise.bx
+$ test tests/spec/packages/east/src/sunrise.bx
 status 1
 ! error[L0307]: `sunrise` imports `sunset`, which imports `sunrise`
-!   --> tests/spec/packages/east/../west/sunset.bx:3:8
+!   --> tests/spec/packages/east/../west/src/sunset.bx:3:8
 !
 !   3 | import sunrise
 !     |        ^^^^^^^
 !
 ! help: a module is compiled after what it imports, and a ring has no such order
 
-$ test tests/spec/packages/geometry/point.bx
+$ test tests/spec/packages/geometry/src/point.bx
 status 0
 
-$ test tests/spec/packages/layered/square.bx
+$ test tests/spec/packages/layered/src/square.bx
 status 0
 
-$ test tests/spec/packages/lender/circle.bx
+$ test tests/spec/packages/lender/src/circle.bx
 status 0
 
-$ test tests/spec/packages/lender/helper.bx
+$ test tests/spec/packages/lender/src/helper.bx
 status 0
 
-$ test tests/spec/packages/nameless/main.bx
+$ test tests/spec/packages/nameless/src/main.bx
 status 1
 ! error[L0315]: `package` is what a manifest states here
 !   --> tests/spec/packages/nameless/bux.package:1:1
@@ -10252,43 +10252,43 @@ status 1
 !
 ! help: a manifest is `package`, then `version`, then a `depends` for each dependency, then a `jar` for each archive
 
-$ test tests/spec/packages/nearer/circle.bx
+$ test tests/spec/packages/nearer/src/circle.bx
 status 0
 
-$ test tests/spec/packages/nearer/main.bx
+$ test tests/spec/packages/nearer/src/main.bx
 status 1
 ! error[L0601]: `edge` states no example
-!   --> tests/spec/packages/nearer/main.bx:5:4
+!   --> tests/spec/packages/nearer/src/main.bx:5:4
 !
 !   5 | fn edge() -> Int {
 !     |    ^^^^
 !
 ! help: write `// example: <an expression that is true>` in the comment above it
 
-$ test tests/spec/packages/outer/main.bx
+$ test tests/spec/packages/outer/src/main.bx
 status 1
 ! error[L0601]: `edge` states no example
-!   --> tests/spec/packages/outer/main.bx:4:4
+!   --> tests/spec/packages/outer/src/main.bx:4:4
 !
 !   4 | fn edge() -> Int {
 !     |    ^^^^
 !
 ! help: write `// example: <an expression that is true>` in the comment above it
 
-$ test tests/spec/packages/outer/unreached.bx
+$ test tests/spec/packages/outer/src/unreached.bx
 status 1
 ! error[L0306]: there is no module named `point`
-!   --> tests/spec/packages/outer/unreached.bx:3:8
+!   --> tests/spec/packages/outer/src/unreached.bx:3:8
 !
 !   3 | import point
 !     |        ^^^^^
 !
-! help: a module is a file beside this one, or one of a package it depends on
+! help: a module is beside this file, or in `src/` of this package or a dependency
 
-$ test tests/spec/packages/shapes/circle.bx
+$ test tests/spec/packages/shapes/src/circle.bx
 status 0
 
-$ test tests/spec/packages/spaced/main.bx
+$ test tests/spec/packages/spaced/src/main.bx
 status 1
 ! error[L0315]: `package` states one word, and this line does not
 !   --> tests/spec/packages/spaced/bux.package:1:1
@@ -10298,7 +10298,7 @@ status 1
 !
 ! help: a manifest line is a keyword, one space, and one word
 
-$ test tests/spec/packages/stated/main.bx
+$ test tests/spec/packages/stated/src/main.bx
 status 1
 ! error[L0315]: `version` is what a manifest states here
 !   --> tests/spec/packages/stated/bux.package:2:1
@@ -10308,17 +10308,17 @@ status 1
 !
 ! help: a manifest is `package`, then `version`, then a `depends` for each dependency, then a `jar` for each archive
 
-$ test tests/spec/packages/twice/main.bx
+$ test tests/spec/packages/twice/src/main.bx
 status 1
-! error[L0317]: `circle` is both `tests/spec/packages/twice/../colours/circle.bx` and `tests/spec/packages/twice/../shapes/circle.bx`
-!   --> tests/spec/packages/twice/main.bx:4:8
+! error[L0317]: `circle` is both `tests/spec/packages/twice/../colours/src/circle.bx` and `tests/spec/packages/twice/../shapes/src/circle.bx`
+!   --> tests/spec/packages/twice/src/main.bx:4:8
 !
 !   4 | import circle
 !     |        ^^^^^^
 !
 ! help: one name has one definition; rename one of the two modules
 
-$ test tests/spec/packages/unfounded/main.bx
+$ test tests/spec/packages/unfounded/src/main.bx
 status 1
 ! error[L0316]: there is no package in `../nowhere`
 !   --> tests/spec/packages/unfounded/bux.package:3:1
@@ -10328,7 +10328,7 @@ status 1
 !
 ! help: a package is a directory holding `bux.package`
 
-$ test tests/spec/packages/versionless/main.bx
+$ test tests/spec/packages/versionless/src/main.bx
 status 1
 ! error[L0315]: `version` is what a manifest states here
 !   --> tests/spec/packages/versionless/bux.package:1:1
@@ -10338,10 +10338,10 @@ status 1
 !
 ! help: a manifest is `package`, then `version`, then a `depends` for each dependency, then a `jar` for each archive
 
-$ test tests/spec/packages/west/sunset.bx
+$ test tests/spec/packages/west/src/sunset.bx
 status 1
 ! error[L0307]: `sunset` imports `sunrise`, which imports `sunset`
-!   --> tests/spec/packages/west/../east/sunrise.bx:3:8
+!   --> tests/spec/packages/west/../east/src/sunrise.bx:3:8
 !
 !   3 | import sunset
 !     |        ^^^^^^
@@ -10818,12 +10818,12 @@ status 1
 !
 ! help: one type is not another, however alike they are held
 
-$ test tests/spec/testing/package/doubled.bx
+$ test tests/spec/testing/package/tests/doubled.bx
 status 0
 
-$ test tests/spec/testing/package/tripled.bx
+$ test tests/spec/testing/package/src/tripled.bx
 status 1
-! tests/spec/testing/package/tripled.bx:13: test "triples one" did not hold
+! tests/spec/testing/package/src/tripled.bx:13: test "triples one" did not hold
 ! test: 2 tests, 1 examples; 1 failed
 
 $ test tests/spec/traits/declared.bx
@@ -11246,8 +11246,8 @@ status 1
 
 $ check tests/spec/packages/borrower
 status 1
-! error[L0317]: `circle` is both `tests/spec/packages/borrower/circle.bx` and `tests/spec/packages/borrower/../lender/circle.bx`
-!   --> tests/spec/packages/borrower/../lender/helper.bx:2:8
+! error[L0317]: `circle` is both `tests/spec/packages/borrower/src/circle.bx` and `tests/spec/packages/borrower/../lender/src/circle.bx`
+!   --> tests/spec/packages/borrower/../lender/src/helper.bx:2:8
 !
 !   2 | import circle
 !     |        ^^^^^^
@@ -11260,12 +11260,12 @@ status 0
 $ check tests/spec/packages/carried
 status 1
 ! error[L0306]: there is no module named `prelude`
-!   --> tests/spec/packages/carried/prelude_imported.bx:3:8
+!   --> tests/spec/packages/carried/src/prelude_imported.bx:3:8
 !
 !   3 | import prelude
 !     |        ^^^^^^^
 !
-! help: a module is a file beside this one, or one of a package it depends on
+! help: a module is beside this file, or in `src/` of this package or a dependency
 
 $ check tests/spec/packages/colours
 status 0
@@ -11283,7 +11283,7 @@ status 1
 $ check tests/spec/packages/east
 status 1
 ! error[L0307]: `sunrise` imports `sunset`, which imports `sunrise`
-!   --> tests/spec/packages/east/../west/sunset.bx:3:8
+!   --> tests/spec/packages/east/../west/src/sunset.bx:3:8
 !
 !   3 | import sunrise
 !     |        ^^^^^^^
@@ -11315,12 +11315,12 @@ status 0
 $ check tests/spec/packages/outer
 status 1
 ! error[L0306]: there is no module named `point`
-!   --> tests/spec/packages/outer/unreached.bx:3:8
+!   --> tests/spec/packages/outer/src/unreached.bx:3:8
 !
 !   3 | import point
 !     |        ^^^^^
 !
-! help: a module is a file beside this one, or one of a package it depends on
+! help: a module is beside this file, or in `src/` of this package or a dependency
 
 $ check tests/spec/packages/shapes
 status 0
@@ -11347,8 +11347,8 @@ status 1
 
 $ check tests/spec/packages/twice
 status 1
-! error[L0317]: `circle` is both `tests/spec/packages/twice/../colours/circle.bx` and `tests/spec/packages/twice/../shapes/circle.bx`
-!   --> tests/spec/packages/twice/main.bx:4:8
+! error[L0317]: `circle` is both `tests/spec/packages/twice/../colours/src/circle.bx` and `tests/spec/packages/twice/../shapes/src/circle.bx`
+!   --> tests/spec/packages/twice/src/main.bx:4:8
 !
 !   4 | import circle
 !     |        ^^^^^^
@@ -11378,7 +11378,7 @@ status 1
 $ check tests/spec/packages/west
 status 1
 ! error[L0307]: `sunset` imports `sunrise`, which imports `sunset`
-!   --> tests/spec/packages/west/../east/sunrise.bx:3:8
+!   --> tests/spec/packages/west/../east/src/sunrise.bx:3:8
 !
 !   3 | import sunset
 !     |        ^^^^^^
@@ -11515,14 +11515,14 @@ status 1
 
 $ check --json tests/spec/packages/borrower
 status 1
-> {"file":"tests/spec/packages/borrower/../lender/helper.bx","code":"L0317","message":"`circle` is both `tests/spec/packages/borrower/circle.bx` and `tests/spec/packages/borrower/../lender/circle.bx`","span":{"start":76,"len":6},"help":"one name has one definition; rename one of the two modules"}
+> {"file":"tests/spec/packages/borrower/../lender/src/helper.bx","code":"L0317","message":"`circle` is both `tests/spec/packages/borrower/src/circle.bx` and `tests/spec/packages/borrower/../lender/src/circle.bx`","span":{"start":76,"len":6},"help":"one name has one definition; rename one of the two modules"}
 
 $ check --json tests/spec/packages/both
 status 0
 
 $ check --json tests/spec/packages/carried
 status 1
-> {"file":"tests/spec/packages/carried/prelude_imported.bx","code":"L0306","message":"there is no module named `prelude`","span":{"start":119,"len":7},"help":"a module is a file beside this one, or one of a package it depends on"}
+> {"file":"tests/spec/packages/carried/src/prelude_imported.bx","code":"L0306","message":"there is no module named `prelude`","span":{"start":119,"len":7},"help":"a module is beside this file, or in `src/` of this package or a dependency"}
 
 $ check --json tests/spec/packages/colours
 status 0
@@ -11533,7 +11533,7 @@ status 1
 
 $ check --json tests/spec/packages/east
 status 1
-> {"file":"tests/spec/packages/east/../west/sunset.bx","code":"L0307","message":"`sunrise` imports `sunset`, which imports `sunrise`","span":{"start":81,"len":7},"help":"a module is compiled after what it imports, and a ring has no such order"}
+> {"file":"tests/spec/packages/east/../west/src/sunset.bx","code":"L0307","message":"`sunrise` imports `sunset`, which imports `sunrise`","span":{"start":81,"len":7},"help":"a module is compiled after what it imports, and a ring has no such order"}
 
 $ check --json tests/spec/packages/geometry
 status 0
@@ -11553,7 +11553,7 @@ status 0
 
 $ check --json tests/spec/packages/outer
 status 1
-> {"file":"tests/spec/packages/outer/unreached.bx","code":"L0306","message":"there is no module named `point`","span":{"start":111,"len":5},"help":"a module is a file beside this one, or one of a package it depends on"}
+> {"file":"tests/spec/packages/outer/src/unreached.bx","code":"L0306","message":"there is no module named `point`","span":{"start":111,"len":5},"help":"a module is beside this file, or in `src/` of this package or a dependency"}
 
 $ check --json tests/spec/packages/shapes
 status 0
@@ -11568,7 +11568,7 @@ status 1
 
 $ check --json tests/spec/packages/twice
 status 1
-> {"file":"tests/spec/packages/twice/main.bx","code":"L0317","message":"`circle` is both `tests/spec/packages/twice/../colours/circle.bx` and `tests/spec/packages/twice/../shapes/circle.bx`","span":{"start":138,"len":6},"help":"one name has one definition; rename one of the two modules"}
+> {"file":"tests/spec/packages/twice/src/main.bx","code":"L0317","message":"`circle` is both `tests/spec/packages/twice/../colours/src/circle.bx` and `tests/spec/packages/twice/../shapes/src/circle.bx`","span":{"start":138,"len":6},"help":"one name has one definition; rename one of the two modules"}
 
 $ check --json tests/spec/packages/unfounded
 status 1
@@ -11580,7 +11580,7 @@ status 1
 
 $ check --json tests/spec/packages/west
 status 1
-> {"file":"tests/spec/packages/west/../east/sunrise.bx","code":"L0307","message":"`sunset` imports `sunrise`, which imports `sunset`","span":{"start":103,"len":6},"help":"a module is compiled after what it imports, and a ring has no such order"}
+> {"file":"tests/spec/packages/west/../east/src/sunrise.bx","code":"L0307","message":"`sunset` imports `sunrise`, which imports `sunset`","span":{"start":103,"len":6},"help":"a module is compiled after what it imports, and a ring has no such order"}
 
 $ check --json tests/spec/parser
 status 2
@@ -12119,7 +12119,7 @@ status 2
 $ build tests/spec/packages/alone
 status 1
 ! error[L0601]: `edge` states no example
-!   --> tests/spec/packages/alone/main.bx:4:4
+!   --> tests/spec/packages/alone/src/main.bx:4:4
 !
 !   4 | fn edge() -> Int {
 !     |    ^^^^
@@ -12129,7 +12129,7 @@ status 1
 $ build tests/spec/packages/app
 status 1
 ! error[L0601]: `edge` states no example
-!   --> tests/spec/packages/app/main.bx:4:4
+!   --> tests/spec/packages/app/src/main.bx:4:4
 !
 !   4 | fn edge() -> Int {
 !     |    ^^^^
@@ -12148,8 +12148,8 @@ status 1
 
 $ build tests/spec/packages/borrower
 status 1
-! error[L0317]: `circle` is both `tests/spec/packages/borrower/circle.bx` and `tests/spec/packages/borrower/../lender/circle.bx`
-!   --> tests/spec/packages/borrower/../lender/helper.bx:2:8
+! error[L0317]: `circle` is both `tests/spec/packages/borrower/src/circle.bx` and `tests/spec/packages/borrower/../lender/src/circle.bx`
+!   --> tests/spec/packages/borrower/../lender/src/helper.bx:2:8
 !
 !   2 | import circle
 !     |        ^^^^^^
@@ -12159,7 +12159,7 @@ status 1
 $ build tests/spec/packages/both
 status 1
 ! error[L0601]: `edge` states no example
-!   --> tests/spec/packages/both/main.bx:5:4
+!   --> tests/spec/packages/both/src/main.bx:5:4
 !
 !   5 | fn edge() -> Int {
 !     |    ^^^^
@@ -12169,7 +12169,7 @@ status 1
 $ build tests/spec/packages/carried
 status 1
 ! error[L0601]: `measured` states no example
-!   --> tests/spec/packages/carried/main.bx:5:4
+!   --> tests/spec/packages/carried/src/main.bx:5:4
 !
 !   5 | fn measured() -> Int {
 !     |    ^^^^^^^^
@@ -12192,7 +12192,7 @@ status 1
 $ build tests/spec/packages/east
 status 1
 ! error[L0307]: `sunrise` imports `sunset`, which imports `sunrise`
-!   --> tests/spec/packages/east/../west/sunset.bx:3:8
+!   --> tests/spec/packages/east/../west/src/sunset.bx:3:8
 !
 !   3 | import sunrise
 !     |        ^^^^^^^
@@ -12221,7 +12221,7 @@ status 1
 $ build tests/spec/packages/nearer
 status 1
 ! error[L0601]: `edge` states no example
-!   --> tests/spec/packages/nearer/main.bx:5:4
+!   --> tests/spec/packages/nearer/src/main.bx:5:4
 !
 !   5 | fn edge() -> Int {
 !     |    ^^^^
@@ -12231,7 +12231,7 @@ status 1
 $ build tests/spec/packages/outer
 status 1
 ! error[L0601]: `edge` states no example
-!   --> tests/spec/packages/outer/main.bx:4:4
+!   --> tests/spec/packages/outer/src/main.bx:4:4
 !
 !   4 | fn edge() -> Int {
 !     |    ^^^^
@@ -12263,8 +12263,8 @@ status 1
 
 $ build tests/spec/packages/twice
 status 1
-! error[L0317]: `circle` is both `tests/spec/packages/twice/../colours/circle.bx` and `tests/spec/packages/twice/../shapes/circle.bx`
-!   --> tests/spec/packages/twice/main.bx:4:8
+! error[L0317]: `circle` is both `tests/spec/packages/twice/../colours/src/circle.bx` and `tests/spec/packages/twice/../shapes/src/circle.bx`
+!   --> tests/spec/packages/twice/src/main.bx:4:8
 !
 !   4 | import circle
 !     |        ^^^^^^
@@ -12294,7 +12294,7 @@ status 1
 $ build tests/spec/packages/west
 status 1
 ! error[L0307]: `sunset` imports `sunrise`, which imports `sunset`
-!   --> tests/spec/packages/west/../east/sunrise.bx:3:8
+!   --> tests/spec/packages/west/../east/src/sunrise.bx:3:8
 !
 !   3 | import sunset
 !     |        ^^^^^^
@@ -12336,16 +12336,16 @@ $ check no/such.bx
 status 2
 ! error: no/such.bx: No such file or directory (os error 2)
 
-$ check src/
+$ check demo/
 status 0
 
-$ check src/main.bx/
+$ check demo/src/main.bx/
 status 2
-! error: src/main.bx/: Not a directory (os error 20)
+! error: demo/src/main.bx/: Not a directory (os error 20)
 
-$ check src/main.bx/x
+$ check demo/src/main.bx/x
 status 2
-! error: src/main.bx/x: Not a directory (os error 20)
+! error: demo/src/main.bx/x: Not a directory (os error 20)
 
 $ check tests
 status 2
@@ -12355,16 +12355,16 @@ $ check --json no/such.bx
 status 2
 ! error: no/such.bx: No such file or directory (os error 2)
 
-$ check --json src/
+$ check --json demo/
 status 0
 
-$ check --json src/main.bx/
+$ check --json demo/src/main.bx/
 status 2
-! error: src/main.bx/: Not a directory (os error 20)
+! error: demo/src/main.bx/: Not a directory (os error 20)
 
-$ check --json src/main.bx/x
+$ check --json demo/src/main.bx/x
 status 2
-! error: src/main.bx/x: Not a directory (os error 20)
+! error: demo/src/main.bx/x: Not a directory (os error 20)
 
 $ check --json tests
 status 2
@@ -12374,17 +12374,17 @@ $ api no/such.bx
 status 2
 ! error: no/such.bx: No such file or directory (os error 2)
 
-$ api src/
+$ api demo/
 status 2
-! error: src/: Is a directory (os error 21)
+! error: demo/: Is a directory (os error 21)
 
-$ api src/main.bx/
+$ api demo/src/main.bx/
 status 2
-! error: src/main.bx/: Not a directory (os error 20)
+! error: demo/src/main.bx/: Not a directory (os error 20)
 
-$ api src/main.bx/x
+$ api demo/src/main.bx/x
 status 2
-! error: src/main.bx/x: Not a directory (os error 20)
+! error: demo/src/main.bx/x: Not a directory (os error 20)
 
 $ api tests
 status 2
@@ -12394,17 +12394,17 @@ $ fmt no/such.bx
 status 2
 ! error: no/such.bx: No such file or directory (os error 2)
 
-$ fmt src/
+$ fmt demo/
 status 2
-! error: src/: Is a directory (os error 21)
+! error: demo/: Is a directory (os error 21)
 
-$ fmt src/main.bx/
+$ fmt demo/src/main.bx/
 status 2
-! error: src/main.bx/: Not a directory (os error 20)
+! error: demo/src/main.bx/: Not a directory (os error 20)
 
-$ fmt src/main.bx/x
+$ fmt demo/src/main.bx/x
 status 2
-! error: src/main.bx/x: Not a directory (os error 20)
+! error: demo/src/main.bx/x: Not a directory (os error 20)
 
 $ fmt tests
 status 2
@@ -12414,16 +12414,16 @@ $ build no/such.bx
 status 2
 ! error: no/such.bx: No such file or directory (os error 2)
 
-$ build src/
+$ build demo/
 status 0
 
-$ build src/main.bx/
+$ build demo/src/main.bx/
 status 2
-! error: src/main.bx/: Not a directory (os error 20)
+! error: demo/src/main.bx/: Not a directory (os error 20)
 
-$ build src/main.bx/x
+$ build demo/src/main.bx/x
 status 2
-! error: src/main.bx/x: Not a directory (os error 20)
+! error: demo/src/main.bx/x: Not a directory (os error 20)
 
 $ build tests
 status 2
@@ -12433,16 +12433,16 @@ $ test no/such.bx
 status 2
 ! error: no/such.bx: No such file or directory (os error 2)
 
-$ test src/
+$ test demo/
 status 0
 
-$ test src/main.bx/
+$ test demo/src/main.bx/
 status 2
-! error: src/main.bx/: Not a directory (os error 20)
+! error: demo/src/main.bx/: Not a directory (os error 20)
 
-$ test src/main.bx/x
+$ test demo/src/main.bx/x
 status 2
-! error: src/main.bx/x: Not a directory (os error 20)
+! error: demo/src/main.bx/x: Not a directory (os error 20)
 
 $ test tests
 status 2
@@ -12454,24 +12454,24 @@ status 2
 
 $ test tests/spec/testing/package
 status 1
-! tests/spec/testing/package/tripled.bx:13: test "triples one" did not hold
+! tests/spec/testing/package/src/tripled.bx:13: test "triples one" did not hold
 ! test: 3 tests, 2 examples; 1 failed
 
 $ run no/such.bx
 status 2
 ! error: no/such.bx: No such file or directory (os error 2)
 
-$ run src/
+$ run demo/
 status 2
-! error: src/: Is a directory (os error 21)
+! error: demo/: Is a directory (os error 21)
 
-$ run src/main.bx/
+$ run demo/src/main.bx/
 status 2
-! error: src/main.bx/: Not a directory (os error 20)
+! error: demo/src/main.bx/: Not a directory (os error 20)
 
-$ run src/main.bx/x
+$ run demo/src/main.bx/x
 status 2
-! error: src/main.bx/x: Not a directory (os error 20)
+! error: demo/src/main.bx/x: Not a directory (os error 20)
 
 $ run tests
 status 2
@@ -12611,10 +12611,10 @@ status 0
 $ fmt tests/spec/concurrency/counter.bx
 status 0
 
-$ fmt tests/spec/concurrency/elsewhere/main.bx
+$ fmt tests/spec/concurrency/elsewhere/src/main.bx
 status 0
 
-$ fmt tests/spec/concurrency/elsewhere/tally.bx
+$ fmt tests/spec/concurrency/elsewhere/src/tally.bx
 status 0
 
 $ fmt tests/spec/concurrency/function_after_receive.bx
@@ -13270,97 +13270,97 @@ status 0
 $ fmt tests/spec/operators/no_instance.bx
 status 0
 
-$ fmt tests/spec/packages/alone/lonely.bx
+$ fmt tests/spec/packages/alone/src/lonely.bx
 status 0
 
-$ fmt tests/spec/packages/alone/main.bx
+$ fmt tests/spec/packages/alone/src/main.bx
 status 0
 
-$ fmt tests/spec/packages/app/main.bx
+$ fmt tests/spec/packages/app/src/main.bx
 status 0
 
-$ fmt tests/spec/packages/blank/main.bx
+$ fmt tests/spec/packages/blank/src/main.bx
 status 0
 
-$ fmt tests/spec/packages/borrower/circle.bx
+$ fmt tests/spec/packages/borrower/src/circle.bx
 status 0
 
-$ fmt tests/spec/packages/borrower/main.bx
+$ fmt tests/spec/packages/borrower/src/main.bx
 status 0
 
-$ fmt tests/spec/packages/both/main.bx
+$ fmt tests/spec/packages/both/src/main.bx
 status 0
 
-$ fmt tests/spec/packages/carried/helper.bx
+$ fmt tests/spec/packages/carried/src/helper.bx
 status 0
 
-$ fmt tests/spec/packages/carried/main.bx
+$ fmt tests/spec/packages/carried/src/main.bx
 status 0
 
-$ fmt tests/spec/packages/carried/prelude.bx
+$ fmt tests/spec/packages/carried/src/prelude.bx
 status 0
 
-$ fmt tests/spec/packages/carried/prelude_imported.bx
+$ fmt tests/spec/packages/carried/src/prelude_imported.bx
 status 0
 
-$ fmt tests/spec/packages/carried/strings.bx
+$ fmt tests/spec/packages/carried/src/strings.bx
 status 0
 
-$ fmt tests/spec/packages/colours/circle.bx
+$ fmt tests/spec/packages/colours/src/circle.bx
 status 0
 
-$ fmt tests/spec/packages/doubled/main.bx
+$ fmt tests/spec/packages/doubled/src/main.bx
 status 0
 
-$ fmt tests/spec/packages/east/sunrise.bx
+$ fmt tests/spec/packages/east/src/sunrise.bx
 status 0
 
-$ fmt tests/spec/packages/geometry/point.bx
+$ fmt tests/spec/packages/geometry/src/point.bx
 status 0
 
-$ fmt tests/spec/packages/layered/square.bx
+$ fmt tests/spec/packages/layered/src/square.bx
 status 0
 
-$ fmt tests/spec/packages/lender/circle.bx
+$ fmt tests/spec/packages/lender/src/circle.bx
 status 0
 
-$ fmt tests/spec/packages/lender/helper.bx
+$ fmt tests/spec/packages/lender/src/helper.bx
 status 0
 
-$ fmt tests/spec/packages/nameless/main.bx
+$ fmt tests/spec/packages/nameless/src/main.bx
 status 0
 
-$ fmt tests/spec/packages/nearer/circle.bx
+$ fmt tests/spec/packages/nearer/src/circle.bx
 status 0
 
-$ fmt tests/spec/packages/nearer/main.bx
+$ fmt tests/spec/packages/nearer/src/main.bx
 status 0
 
-$ fmt tests/spec/packages/outer/main.bx
+$ fmt tests/spec/packages/outer/src/main.bx
 status 0
 
-$ fmt tests/spec/packages/outer/unreached.bx
+$ fmt tests/spec/packages/outer/src/unreached.bx
 status 0
 
-$ fmt tests/spec/packages/shapes/circle.bx
+$ fmt tests/spec/packages/shapes/src/circle.bx
 status 0
 
-$ fmt tests/spec/packages/spaced/main.bx
+$ fmt tests/spec/packages/spaced/src/main.bx
 status 0
 
-$ fmt tests/spec/packages/stated/main.bx
+$ fmt tests/spec/packages/stated/src/main.bx
 status 0
 
-$ fmt tests/spec/packages/twice/main.bx
+$ fmt tests/spec/packages/twice/src/main.bx
 status 0
 
-$ fmt tests/spec/packages/unfounded/main.bx
+$ fmt tests/spec/packages/unfounded/src/main.bx
 status 0
 
-$ fmt tests/spec/packages/versionless/main.bx
+$ fmt tests/spec/packages/versionless/src/main.bx
 status 0
 
-$ fmt tests/spec/packages/west/sunset.bx
+$ fmt tests/spec/packages/west/src/sunset.bx
 status 0
 
 $ fmt tests/spec/parser/alternative_left_open.bx
@@ -13743,10 +13743,10 @@ status 0
 $ fmt tests/spec/testing/not_bool.bx
 status 0
 
-$ fmt tests/spec/testing/package/doubled.bx
+$ fmt tests/spec/testing/package/tests/doubled.bx
 status 0
 
-$ fmt tests/spec/testing/package/tripled.bx
+$ fmt tests/spec/testing/package/src/tripled.bx
 status 0
 
 $ fmt tests/spec/traits/declared.bx
@@ -14060,10 +14060,10 @@ status 1
 $ build tests/spec/concurrency/counter.bx
 status 0
 
-$ build tests/spec/concurrency/elsewhere/main.bx
+$ build tests/spec/concurrency/elsewhere/src/main.bx
 status 0
 
-$ build tests/spec/concurrency/elsewhere/tally.bx
+$ build tests/spec/concurrency/elsewhere/src/tally.bx
 status 0
 
 $ build tests/spec/concurrency/function_after_receive.bx
@@ -15259,7 +15259,7 @@ status 1
 !   3 | import nowhere
 !     |        ^^^^^^^
 !
-! help: a module is a file beside this one, or one of a package it depends on
+! help: a module is beside this file, or in `src/` of this package or a dependency
 
 $ build tests/spec/modules/money.bx
 status 0
@@ -15292,7 +15292,7 @@ status 1
 !   3 | import prelude
 !     |        ^^^^^^^
 !
-! help: a module is a file beside this one, or one of a package it depends on
+! help: a module is beside this file, or in `src/` of this package or a dependency
 
 $ build tests/spec/modules/reached.bx
 status 0
@@ -15341,7 +15341,7 @@ status 1
 !   3 | import nowhere
 !     |        ^^^^^^^
 !
-! help: a module is a file beside this one, or one of a package it depends on
+! help: a module is beside this file, or in `src/` of this package or a dependency
 
 $ build tests/spec/modules/through_unparsed.bx
 status 1
@@ -15875,30 +15875,30 @@ status 1
 !
 ! help: an operator is a trait method, so a type gets one by writing that trait's instance
 
-$ build tests/spec/packages/alone/lonely.bx
+$ build tests/spec/packages/alone/src/lonely.bx
 status 0
 
-$ build tests/spec/packages/alone/main.bx
+$ build tests/spec/packages/alone/src/main.bx
 status 1
 ! error[L0601]: `edge` states no example
-!   --> tests/spec/packages/alone/main.bx:4:4
+!   --> tests/spec/packages/alone/src/main.bx:4:4
 !
 !   4 | fn edge() -> Int {
 !     |    ^^^^
 !
 ! help: write `// example: <an expression that is true>` in the comment above it
 
-$ build tests/spec/packages/app/main.bx
+$ build tests/spec/packages/app/src/main.bx
 status 1
 ! error[L0601]: `edge` states no example
-!   --> tests/spec/packages/app/main.bx:4:4
+!   --> tests/spec/packages/app/src/main.bx:4:4
 !
 !   4 | fn edge() -> Int {
 !     |    ^^^^
 !
 ! help: write `// example: <an expression that is true>` in the comment above it
 
-$ build tests/spec/packages/blank/main.bx
+$ build tests/spec/packages/blank/src/main.bx
 status 1
 ! error[L0315]: `package` states one word, and this line does not
 !   --> tests/spec/packages/blank/bux.package:1:1
@@ -15908,62 +15908,62 @@ status 1
 !
 ! help: a manifest line is a keyword, one space, and one word
 
-$ build tests/spec/packages/borrower/circle.bx
+$ build tests/spec/packages/borrower/src/circle.bx
 status 0
 
-$ build tests/spec/packages/borrower/main.bx
+$ build tests/spec/packages/borrower/src/main.bx
 status 1
-! error[L0317]: `circle` is both `tests/spec/packages/borrower/circle.bx` and `tests/spec/packages/borrower/../lender/circle.bx`
-!   --> tests/spec/packages/borrower/../lender/helper.bx:2:8
+! error[L0317]: `circle` is both `tests/spec/packages/borrower/src/circle.bx` and `tests/spec/packages/borrower/../lender/src/circle.bx`
+!   --> tests/spec/packages/borrower/../lender/src/helper.bx:2:8
 !
 !   2 | import circle
 !     |        ^^^^^^
 !
 ! help: one name has one definition; rename one of the two modules
 
-$ build tests/spec/packages/both/main.bx
+$ build tests/spec/packages/both/src/main.bx
 status 1
 ! error[L0601]: `edge` states no example
-!   --> tests/spec/packages/both/main.bx:5:4
+!   --> tests/spec/packages/both/src/main.bx:5:4
 !
 !   5 | fn edge() -> Int {
 !     |    ^^^^
 !
 ! help: write `// example: <an expression that is true>` in the comment above it
 
-$ build tests/spec/packages/carried/helper.bx
+$ build tests/spec/packages/carried/src/helper.bx
 status 0
 
-$ build tests/spec/packages/carried/main.bx
+$ build tests/spec/packages/carried/src/main.bx
 status 1
 ! error[L0601]: `measured` states no example
-!   --> tests/spec/packages/carried/main.bx:5:4
+!   --> tests/spec/packages/carried/src/main.bx:5:4
 !
 !   5 | fn measured() -> Int {
 !     |    ^^^^^^^^
 !
 ! help: write `// example: <an expression that is true>` in the comment above it
 
-$ build tests/spec/packages/carried/prelude.bx
+$ build tests/spec/packages/carried/src/prelude.bx
 status 0
 
-$ build tests/spec/packages/carried/prelude_imported.bx
+$ build tests/spec/packages/carried/src/prelude_imported.bx
 status 1
 ! error[L0306]: there is no module named `prelude`
-!   --> tests/spec/packages/carried/prelude_imported.bx:3:8
+!   --> tests/spec/packages/carried/src/prelude_imported.bx:3:8
 !
 !   3 | import prelude
 !     |        ^^^^^^^
 !
-! help: a module is a file beside this one, or one of a package it depends on
+! help: a module is beside this file, or in `src/` of this package or a dependency
 
-$ build tests/spec/packages/carried/strings.bx
+$ build tests/spec/packages/carried/src/strings.bx
 status 0
 
-$ build tests/spec/packages/colours/circle.bx
+$ build tests/spec/packages/colours/src/circle.bx
 status 0
 
-$ build tests/spec/packages/doubled/main.bx
+$ build tests/spec/packages/doubled/src/main.bx
 status 1
 ! error[L0315]: `../shapes` is depended on twice
 !   --> tests/spec/packages/doubled/bux.package:4:1
@@ -15973,29 +15973,29 @@ status 1
 !
 ! help: a manifest states one `depends` for each package it reaches
 
-$ build tests/spec/packages/east/sunrise.bx
+$ build tests/spec/packages/east/src/sunrise.bx
 status 1
 ! error[L0307]: `sunrise` imports `sunset`, which imports `sunrise`
-!   --> tests/spec/packages/east/../west/sunset.bx:3:8
+!   --> tests/spec/packages/east/../west/src/sunset.bx:3:8
 !
 !   3 | import sunrise
 !     |        ^^^^^^^
 !
 ! help: a module is compiled after what it imports, and a ring has no such order
 
-$ build tests/spec/packages/geometry/point.bx
+$ build tests/spec/packages/geometry/src/point.bx
 status 0
 
-$ build tests/spec/packages/layered/square.bx
+$ build tests/spec/packages/layered/src/square.bx
 status 0
 
-$ build tests/spec/packages/lender/circle.bx
+$ build tests/spec/packages/lender/src/circle.bx
 status 0
 
-$ build tests/spec/packages/lender/helper.bx
+$ build tests/spec/packages/lender/src/helper.bx
 status 0
 
-$ build tests/spec/packages/nameless/main.bx
+$ build tests/spec/packages/nameless/src/main.bx
 status 1
 ! error[L0315]: `package` is what a manifest states here
 !   --> tests/spec/packages/nameless/bux.package:1:1
@@ -16005,43 +16005,43 @@ status 1
 !
 ! help: a manifest is `package`, then `version`, then a `depends` for each dependency, then a `jar` for each archive
 
-$ build tests/spec/packages/nearer/circle.bx
+$ build tests/spec/packages/nearer/src/circle.bx
 status 0
 
-$ build tests/spec/packages/nearer/main.bx
+$ build tests/spec/packages/nearer/src/main.bx
 status 1
 ! error[L0601]: `edge` states no example
-!   --> tests/spec/packages/nearer/main.bx:5:4
+!   --> tests/spec/packages/nearer/src/main.bx:5:4
 !
 !   5 | fn edge() -> Int {
 !     |    ^^^^
 !
 ! help: write `// example: <an expression that is true>` in the comment above it
 
-$ build tests/spec/packages/outer/main.bx
+$ build tests/spec/packages/outer/src/main.bx
 status 1
 ! error[L0601]: `edge` states no example
-!   --> tests/spec/packages/outer/main.bx:4:4
+!   --> tests/spec/packages/outer/src/main.bx:4:4
 !
 !   4 | fn edge() -> Int {
 !     |    ^^^^
 !
 ! help: write `// example: <an expression that is true>` in the comment above it
 
-$ build tests/spec/packages/outer/unreached.bx
+$ build tests/spec/packages/outer/src/unreached.bx
 status 1
 ! error[L0306]: there is no module named `point`
-!   --> tests/spec/packages/outer/unreached.bx:3:8
+!   --> tests/spec/packages/outer/src/unreached.bx:3:8
 !
 !   3 | import point
 !     |        ^^^^^
 !
-! help: a module is a file beside this one, or one of a package it depends on
+! help: a module is beside this file, or in `src/` of this package or a dependency
 
-$ build tests/spec/packages/shapes/circle.bx
+$ build tests/spec/packages/shapes/src/circle.bx
 status 0
 
-$ build tests/spec/packages/spaced/main.bx
+$ build tests/spec/packages/spaced/src/main.bx
 status 1
 ! error[L0315]: `package` states one word, and this line does not
 !   --> tests/spec/packages/spaced/bux.package:1:1
@@ -16051,7 +16051,7 @@ status 1
 !
 ! help: a manifest line is a keyword, one space, and one word
 
-$ build tests/spec/packages/stated/main.bx
+$ build tests/spec/packages/stated/src/main.bx
 status 1
 ! error[L0315]: `version` is what a manifest states here
 !   --> tests/spec/packages/stated/bux.package:2:1
@@ -16061,17 +16061,17 @@ status 1
 !
 ! help: a manifest is `package`, then `version`, then a `depends` for each dependency, then a `jar` for each archive
 
-$ build tests/spec/packages/twice/main.bx
+$ build tests/spec/packages/twice/src/main.bx
 status 1
-! error[L0317]: `circle` is both `tests/spec/packages/twice/../colours/circle.bx` and `tests/spec/packages/twice/../shapes/circle.bx`
-!   --> tests/spec/packages/twice/main.bx:4:8
+! error[L0317]: `circle` is both `tests/spec/packages/twice/../colours/src/circle.bx` and `tests/spec/packages/twice/../shapes/src/circle.bx`
+!   --> tests/spec/packages/twice/src/main.bx:4:8
 !
 !   4 | import circle
 !     |        ^^^^^^
 !
 ! help: one name has one definition; rename one of the two modules
 
-$ build tests/spec/packages/unfounded/main.bx
+$ build tests/spec/packages/unfounded/src/main.bx
 status 1
 ! error[L0316]: there is no package in `../nowhere`
 !   --> tests/spec/packages/unfounded/bux.package:3:1
@@ -16081,7 +16081,7 @@ status 1
 !
 ! help: a package is a directory holding `bux.package`
 
-$ build tests/spec/packages/versionless/main.bx
+$ build tests/spec/packages/versionless/src/main.bx
 status 1
 ! error[L0315]: `version` is what a manifest states here
 !   --> tests/spec/packages/versionless/bux.package:1:1
@@ -16091,10 +16091,10 @@ status 1
 !
 ! help: a manifest is `package`, then `version`, then a `depends` for each dependency, then a `jar` for each archive
 
-$ build tests/spec/packages/west/sunset.bx
+$ build tests/spec/packages/west/src/sunset.bx
 status 1
 ! error[L0307]: `sunset` imports `sunrise`, which imports `sunset`
-!   --> tests/spec/packages/west/../east/sunrise.bx:3:8
+!   --> tests/spec/packages/west/../east/src/sunrise.bx:3:8
 !
 !   3 | import sunset
 !     |        ^^^^^^
@@ -16568,10 +16568,10 @@ status 1
 !
 ! help: one type is not another, however alike they are held
 
-$ build tests/spec/testing/package/doubled.bx
+$ build tests/spec/testing/package/tests/doubled.bx
 status 0
 
-$ build tests/spec/testing/package/tripled.bx
+$ build tests/spec/testing/package/src/tripled.bx
 status 0
 
 $ build tests/spec/traits/declared.bx
@@ -17001,7 +17001,7 @@ status 1
 !
 ! help: a class is in an archive a `jar` line states, or on the list of `java.base` in `docs/specs/interop.md`, and this one is in neither
 
-$ check tests/spec/packages/unhashed/main.bx
+$ check tests/spec/packages/unhashed/src/main.bx
 status 1
 ! error[L0315]: `jar` states a path and a hash, and this line does not
 !   --> tests/spec/packages/unhashed/bux.package:3:1
@@ -17011,11 +17011,11 @@ status 1
 !
 ! help: a `jar` line is `jar`, a path, and `sha256:` with 64 lowercase hexadecimal digits
 
-$ check --json tests/spec/packages/unhashed/main.bx
+$ check --json tests/spec/packages/unhashed/src/main.bx
 status 1
 > {"file":"tests/spec/packages/unhashed/bux.package","code":"L0315","message":"`jar` states a path and a hash, and this line does not","span":{"start":31,"len":36},"help":"a `jar` line is `jar`, a path, and `sha256:` with 64 lowercase hexadecimal digits"}
 
-$ api tests/spec/packages/unhashed/main.bx
+$ api tests/spec/packages/unhashed/src/main.bx
 status 1
 ! error[L0315]: `jar` states a path and a hash, and this line does not
 !   --> tests/spec/packages/unhashed/bux.package:3:1
@@ -17025,7 +17025,7 @@ status 1
 !
 ! help: a `jar` line is `jar`, a path, and `sha256:` with 64 lowercase hexadecimal digits
 
-$ test tests/spec/packages/unhashed/main.bx
+$ test tests/spec/packages/unhashed/src/main.bx
 status 1
 ! error[L0315]: `jar` states a path and a hash, and this line does not
 !   --> tests/spec/packages/unhashed/bux.package:3:1
@@ -17035,10 +17035,10 @@ status 1
 !
 ! help: a `jar` line is `jar`, a path, and `sha256:` with 64 lowercase hexadecimal digits
 
-$ fmt tests/spec/packages/unhashed/main.bx
+$ fmt tests/spec/packages/unhashed/src/main.bx
 status 0
 
-$ build tests/spec/packages/unhashed/main.bx
+$ build tests/spec/packages/unhashed/src/main.bx
 status 1
 ! error[L0315]: `jar` states a path and a hash, and this line does not
 !   --> tests/spec/packages/unhashed/bux.package:3:1
@@ -18714,3 +18714,276 @@ status 0
 
 $ build tests/spec/io/file_appended.bx
 status 0
+
+$ check tests/spec/packages/beside/stray.bx
+status 1
+! error[L0323]: `stray.bx` sits beside `bux.package`, where no module of a package is
+!   --> tests/spec/packages/beside/stray.bx:1:1
+!
+!   1 | // expect-error: L0323
+!     | ^
+!
+! help: a module of a package is in `src/`, and a test module is in `tests/`
+
+$ check --json tests/spec/packages/beside/stray.bx
+status 1
+> {"file":"tests/spec/packages/beside/stray.bx","code":"L0323","message":"`stray.bx` sits beside `bux.package`, where no module of a package is","span":{"start":0,"len":0},"help":"a module of a package is in `src/`, and a test module is in `tests/`"}
+
+$ api tests/spec/packages/beside/stray.bx
+status 1
+! error[L0323]: `stray.bx` sits beside `bux.package`, where no module of a package is
+!   --> tests/spec/packages/beside/stray.bx:1:1
+!
+!   1 | // expect-error: L0323
+!     | ^
+!
+! help: a module of a package is in `src/`, and a test module is in `tests/`
+
+$ test tests/spec/packages/beside/stray.bx
+status 1
+! error[L0323]: `stray.bx` sits beside `bux.package`, where no module of a package is
+!   --> tests/spec/packages/beside/stray.bx:1:1
+!
+!   1 | // expect-error: L0323
+!     | ^
+!
+! help: a module of a package is in `src/`, and a test module is in `tests/`
+
+$ fmt tests/spec/packages/beside/stray.bx
+status 0
+
+$ build tests/spec/packages/beside/stray.bx
+status 1
+! error[L0323]: `stray.bx` sits beside `bux.package`, where no module of a package is
+!   --> tests/spec/packages/beside/stray.bx:1:1
+!
+!   1 | // expect-error: L0323
+!     | ^
+!
+! help: a module of a package is in `src/`, and a test module is in `tests/`
+
+$ check tests/spec/packages/checked/src/circle.bx
+status 0
+
+$ check --json tests/spec/packages/checked/src/circle.bx
+status 0
+
+$ api tests/spec/packages/checked/src/circle.bx
+status 0
+> fn around(radius: Int) -> Int
+
+$ test tests/spec/packages/checked/src/circle.bx
+status 0
+
+$ fmt tests/spec/packages/checked/src/circle.bx
+status 0
+
+$ build tests/spec/packages/checked/src/circle.bx
+status 0
+
+$ check tests/spec/packages/checked/src/unseen.bx
+status 1
+! error[L0306]: there is no module named `rounded`
+!   --> tests/spec/packages/checked/src/unseen.bx:3:8
+!
+!   3 | import rounded
+!     |        ^^^^^^^
+!
+! help: a module is beside this file, or in `src/` of this package or a dependency
+
+$ check --json tests/spec/packages/checked/src/unseen.bx
+status 1
+> {"file":"tests/spec/packages/checked/src/unseen.bx","code":"L0306","message":"there is no module named `rounded`","span":{"start":125,"len":7},"help":"a module is beside this file, or in `src/` of this package or a dependency"}
+
+$ api tests/spec/packages/checked/src/unseen.bx
+status 1
+! error[L0306]: there is no module named `rounded`
+!   --> tests/spec/packages/checked/src/unseen.bx:3:8
+!
+!   3 | import rounded
+!     |        ^^^^^^^
+!
+! help: a module is beside this file, or in `src/` of this package or a dependency
+
+$ test tests/spec/packages/checked/src/unseen.bx
+status 1
+! error[L0306]: there is no module named `rounded`
+!   --> tests/spec/packages/checked/src/unseen.bx:3:8
+!
+!   3 | import rounded
+!     |        ^^^^^^^
+!
+! help: a module is beside this file, or in `src/` of this package or a dependency
+
+$ fmt tests/spec/packages/checked/src/unseen.bx
+status 0
+
+$ build tests/spec/packages/checked/src/unseen.bx
+status 1
+! error[L0306]: there is no module named `rounded`
+!   --> tests/spec/packages/checked/src/unseen.bx:3:8
+!
+!   3 | import rounded
+!     |        ^^^^^^^
+!
+! help: a module is beside this file, or in `src/` of this package or a dependency
+
+$ check tests/spec/packages/checked/tests/rounded.bx
+status 0
+
+$ check --json tests/spec/packages/checked/tests/rounded.bx
+status 0
+
+$ api tests/spec/packages/checked/tests/rounded.bx
+status 0
+> fn is_round() -> Bool
+
+$ test tests/spec/packages/checked/tests/rounded.bx
+status 0
+
+$ fmt tests/spec/packages/checked/tests/rounded.bx
+status 0
+
+$ build tests/spec/packages/checked/tests/rounded.bx
+status 0
+
+$ check tests/spec/packages/nested/tests/main.bx
+status 1
+! error[L0323]: `tests/` holds a manifest, and it is a part of the package above it
+!   --> tests/spec/packages/nested/tests/bux.package:1:1
+!
+!   1 | package inner
+!     | ^
+!
+! help: a package is one manifest with `src/` and `tests/` under it; remove this manifest
+
+$ check --json tests/spec/packages/nested/tests/main.bx
+status 1
+> {"file":"tests/spec/packages/nested/tests/bux.package","code":"L0323","message":"`tests/` holds a manifest, and it is a part of the package above it","span":{"start":0,"len":0},"help":"a package is one manifest with `src/` and `tests/` under it; remove this manifest"}
+
+$ api tests/spec/packages/nested/tests/main.bx
+status 1
+! error[L0323]: `tests/` holds a manifest, and it is a part of the package above it
+!   --> tests/spec/packages/nested/tests/bux.package:1:1
+!
+!   1 | package inner
+!     | ^
+!
+! help: a package is one manifest with `src/` and `tests/` under it; remove this manifest
+
+$ test tests/spec/packages/nested/tests/main.bx
+status 1
+! error[L0323]: `tests/` holds a manifest, and it is a part of the package above it
+!   --> tests/spec/packages/nested/tests/bux.package:1:1
+!
+!   1 | package inner
+!     | ^
+!
+! help: a package is one manifest with `src/` and `tests/` under it; remove this manifest
+
+$ fmt tests/spec/packages/nested/tests/main.bx
+status 0
+
+$ build tests/spec/packages/nested/tests/main.bx
+status 1
+! error[L0323]: `tests/` holds a manifest, and it is a part of the package above it
+!   --> tests/spec/packages/nested/tests/bux.package:1:1
+!
+!   1 | package inner
+!     | ^
+!
+! help: a package is one manifest with `src/` and `tests/` under it; remove this manifest
+
+$ check tests/spec/packages/outsider/src/main.bx
+status 1
+! error[L0306]: there is no module named `rounded`
+!   --> tests/spec/packages/outsider/src/main.bx:3:8
+!
+!   3 | import rounded
+!     |        ^^^^^^^
+!
+! help: a module is beside this file, or in `src/` of this package or a dependency
+
+$ check --json tests/spec/packages/outsider/src/main.bx
+status 1
+> {"file":"tests/spec/packages/outsider/src/main.bx","code":"L0306","message":"there is no module named `rounded`","span":{"start":129,"len":7},"help":"a module is beside this file, or in `src/` of this package or a dependency"}
+
+$ api tests/spec/packages/outsider/src/main.bx
+status 1
+! error[L0306]: there is no module named `rounded`
+!   --> tests/spec/packages/outsider/src/main.bx:3:8
+!
+!   3 | import rounded
+!     |        ^^^^^^^
+!
+! help: a module is beside this file, or in `src/` of this package or a dependency
+
+$ test tests/spec/packages/outsider/src/main.bx
+status 1
+! error[L0306]: there is no module named `rounded`
+!   --> tests/spec/packages/outsider/src/main.bx:3:8
+!
+!   3 | import rounded
+!     |        ^^^^^^^
+!
+! help: a module is beside this file, or in `src/` of this package or a dependency
+
+$ fmt tests/spec/packages/outsider/src/main.bx
+status 0
+
+$ build tests/spec/packages/outsider/src/main.bx
+status 1
+! error[L0306]: there is no module named `rounded`
+!   --> tests/spec/packages/outsider/src/main.bx:3:8
+!
+!   3 | import rounded
+!     |        ^^^^^^^
+!
+! help: a module is beside this file, or in `src/` of this package or a dependency
+
+$ check tests/spec/packages/within/src/main.bx
+status 1
+! error[L0323]: `src/` holds a manifest, and it is a part of the package above it
+!   --> tests/spec/packages/within/src/bux.package:1:1
+!
+!   1 | package inner
+!     | ^
+!
+! help: a package is one manifest with `src/` and `tests/` under it; remove this manifest
+
+$ check --json tests/spec/packages/within/src/main.bx
+status 1
+> {"file":"tests/spec/packages/within/src/bux.package","code":"L0323","message":"`src/` holds a manifest, and it is a part of the package above it","span":{"start":0,"len":0},"help":"a package is one manifest with `src/` and `tests/` under it; remove this manifest"}
+
+$ api tests/spec/packages/within/src/main.bx
+status 1
+! error[L0323]: `src/` holds a manifest, and it is a part of the package above it
+!   --> tests/spec/packages/within/src/bux.package:1:1
+!
+!   1 | package inner
+!     | ^
+!
+! help: a package is one manifest with `src/` and `tests/` under it; remove this manifest
+
+$ test tests/spec/packages/within/src/main.bx
+status 1
+! error[L0323]: `src/` holds a manifest, and it is a part of the package above it
+!   --> tests/spec/packages/within/src/bux.package:1:1
+!
+!   1 | package inner
+!     | ^
+!
+! help: a package is one manifest with `src/` and `tests/` under it; remove this manifest
+
+$ fmt tests/spec/packages/within/src/main.bx
+status 0
+
+$ build tests/spec/packages/within/src/main.bx
+status 1
+! error[L0323]: `src/` holds a manifest, and it is a part of the package above it
+!   --> tests/spec/packages/within/src/bux.package:1:1
+!
+!   1 | package inner
+!     | ^
+!
+! help: a package is one manifest with `src/` and `tests/` under it; remove this manifest

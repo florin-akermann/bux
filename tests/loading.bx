@@ -18,7 +18,7 @@ import walk
 /// One `Held` for each property of loading, in a fixed order.
 ///
 /// Where no directory of its own can be made, each property is skipped with the reason.
-// example: list.length(every_property(1)) == 8
+// example: list.length(every_property(1)) == 9
 fn every_property(cases: Int) -> List<held.Held> {
     match command.somewhere_of_its_own() {
         Ok(directory) => every_property_in(cases, directory)
@@ -27,9 +27,9 @@ fn every_property(cases: Int) -> List<held.Held> {
 }
 
 /// Every property, each case written under `directory`, which is removed whole afterwards.
-// example: list.length(every_skipped("no directory")) == 8
+// example: list.length(every_skipped("no directory")) == 9
 fn every_property_in(cases: Int, directory: String) -> List<held.Held> {
-    let found = [a_downward_set_loads(cases, directory), each_module_is_below_its_imports(cases, directory), no_module_is_loaded_twice(cases, directory), loading_is_deterministic(cases, directory), a_refusal_points_inside_its_file(cases, directory), two_packages_load_dependencies_first(cases, directory), a_module_beside_the_file_wins(cases, directory), a_manifest_is_read_or_refused_against_its_text(cases, directory)]
+    let found = [a_downward_set_loads(cases, directory), each_module_is_below_its_imports(cases, directory), no_module_is_loaded_twice(cases, directory), loading_is_deterministic(cases, directory), a_refusal_points_inside_its_file(cases, directory), two_packages_load_dependencies_first(cases, directory), a_module_beside_the_file_wins(cases, directory), a_manifest_is_read_or_refused_against_its_text(cases, directory), a_package_in_the_layout_loads(cases, directory)]
     command.removed_whole(directory)
     found
 }
@@ -38,7 +38,7 @@ fn every_property_in(cases: Int, directory: String) -> List<held.Held> {
 // example: list.length(or(list.at(every_skipped("no directory"), 0), held.nothing_failed(0)).skipped) == 1
 fn every_skipped(why: String) -> List<held.Held> {
     var found = []
-    for list.length(found) < 8 {
+    for list.length(found) < 9 {
         found = list.push(found, held.with_skip(held.nothing_failed(0), "loading: " + why))
     }
     found
@@ -92,6 +92,13 @@ fn a_manifest_is_read_or_refused_against_its_text(cases: Int, directory: String)
     held_over(cases, ManifestRead, directory)
 }
 
+// A test module of a drawn package reaches the modules of its `src/`, and each module of `src/`
+// reaches no test module.
+// example: held.is_held(a_package_in_the_layout_loads(0, "no-such-directory"))
+fn a_package_in_the_layout_loads(cases: Int, directory: String) -> held.Held {
+    held_over(cases, LayoutLoads, directory)
+}
+
 /// `property` tried on `cases` drawn cases, each written into a directory of its own.
 // example: held_over(0, DownwardLoads, "no-such-directory").cases == 0
 fn held_over(cases: Int, property: Property, directory: String) -> held.Held {
@@ -121,6 +128,7 @@ fn tried_in(property: Property, draw: drawn.Draw, directory: String) -> Tried {
         TwoPackages => packages_tried(draw, directory)
         BesideWins => beside_tried(draw, directory)
         ManifestRead => manifest_tried(draw, directory)
+        LayoutLoads => layout_tried(draw, directory)
     }
 }
 
@@ -136,6 +144,7 @@ fn name_of(property: Property) -> String {
         TwoPackages => "two_packages_load_dependencies_first"
         BesideWins => "a_module_beside_the_file_wins"
         ManifestRead => "a_manifest_is_read_or_refused_against_its_text"
+        LayoutLoads => "a_package_in_the_layout_loads"
     }
 }
 
@@ -239,11 +248,40 @@ fn packages_tried(draw: drawn.Draw, directory: String) -> Tried {
     let set = layered(draw)
     let app = made_at(modules.joined(directory, "app"))
     let below = made_at(modules.joined(directory, "below"))
-    written_into(app, first_of(set))
-    written_into(below, rest_of(set))
+    written_into(sources_of(app), first_of(set))
+    written_into(sources_of(below), rest_of(set))
     stated(directory: app, manifest: "package app\nversion 0.2.0\ndepends ../below\n")
     stated(directory: below, manifest: "package below\nversion 0.2.0\n")
-    Tried { input: set_text(set), why: misordered(modules.load(file_of(directory: app, name: "alpha"))) }
+    Tried { input: set_text(set), why: misordered(modules.load(file_of(directory: modules.joined(app, "src"), name: "alpha"))) }
+}
+
+// The first module of a drawn downward set is a test module, and the rest are modules of `src/`.
+// The test module loads, each module after what it imports. Where the set has a second module,
+// that module of `src/` imports the test module too, and the import is refused as `L0306`.
+// example: layout_tried(drawn.seeded(1), "no-such-directory").why != ""
+fn layout_tried(draw: drawn.Draw, directory: String) -> Tried {
+    let set = layered(draw)
+    let package = made_at(modules.joined(directory, "package"))
+    written_into(tests_of(package), first_of(set))
+    written_into(sources_of(package), rest_of(set))
+    stated(directory: package, manifest: "package drawn\nversion 0.1.0\n")
+    let loaded = misordered(modules.load(file_of(directory: modules.joined(package, "tests"), name: "alpha")))
+    if loaded != "" || list.length(set) < 2 {
+        return Tried { input: set_text(set), why: loaded }
+    }
+    let beta = file_of(directory: modules.joined(package, "src"), name: "beta")
+    _ = files.write(beta, importing(["alpha"]))
+    Tried { input: set_text(set), why: unless_missing(printed: modules.printed(beta), path: beta) }
+}
+
+// example: unless_missing(printed: "refused a.bx\nL0306 7..12 there is no module named `alpha`\nhelp: x\n", path: "a.bx") == ""
+// example: unless_missing(printed: "loaded\n", path: "a.bx") == "the module of src/ that imports alpha gave \"loaded\\n\""
+fn unless_missing(printed: String, path: String) -> String {
+    let refusal = "refused " + path + "\nL0306 7..12 there is no module named `alpha`\n"
+    if or(strings.cut(printed, 0, strings.length(refusal)), "") == refusal {
+        return ""
+    }
+    "the module of src/ that imports alpha gave " + held.quoted(printed)
 }
 
 /// A module beside the importing file, and one to three dependencies that each hold one too.
@@ -254,15 +292,16 @@ fn beside_tried(draw: drawn.Draw, directory: String) -> Tried {
     var index = 0
     for index < count {
         let holder = made_at(modules.joined(directory, "holder" + shown(index)))
-        written_into(holder, [Written { name: "alpha", source: importing([]) }])
+        written_into(sources_of(holder), [Written { name: "alpha", source: importing([]) }])
         stated(directory: holder, manifest: "package holder" + shown(index) + "\nversion 0.2.0\n")
         depends += "depends ../holder" + shown(index) + "\n"
         index += 1
     }
     let app = made_at(modules.joined(directory, "app"))
-    written_into(app, [Written { name: "main", source: importing(["alpha"]) }, Written { name: "alpha", source: importing([]) }])
+    let sources = sources_of(app)
+    written_into(sources, [Written { name: "main", source: importing(["alpha"]) }, Written { name: "alpha", source: importing([]) }])
     stated(directory: app, manifest: "package app\nversion 0.2.0\n" + depends)
-    Tried { input: shown(count) + " dependencies holding alpha", why: first_not_at(modules.load(file_of(directory: app, name: "main")), file_of(directory: app, name: "alpha")) }
+    Tried { input: shown(count) + " dependencies holding alpha", why: first_not_at(modules.load(file_of(directory: sources, name: "main")), file_of(directory: sources, name: "alpha")) }
 }
 
 /// Why the first module loaded is not the one at `path`, and `""` where it is.
@@ -289,10 +328,10 @@ fn same_path(found: String, path: String) -> String {
 // example: manifest_tried(drawn.seeded(1), "no-such-directory").why == ""
 fn manifest_tried(draw: drawn.Draw, directory: String) -> Tried {
     let manifest = drawn.text_of(drawn.next(draw), manifest_lines(), drawn.number(draw, 6))
-    written_into(directory, [Written { name: "main", source: importing([]) }])
+    written_into(sources_of(directory), [Written { name: "main", source: importing([]) }])
     stated(directory: directory, manifest: manifest)
     let at = modules.joined(directory, "bux.package")
-    Tried { input: manifest, why: manifest_outside(modules.load(file_of(directory: directory, name: "main")), Manifest { path: at, source: manifest }) }
+    Tried { input: manifest, why: manifest_outside(modules.load(file_of(directory: modules.joined(directory, "src"), name: "main")), Manifest { path: at, source: manifest }) }
 }
 
 /// Why a refusal of the manifest does not point into its text, and `""` where it does.
@@ -493,6 +532,16 @@ fn set_text(set: List<Written>) -> String {
     text
 }
 
+// example: sources_of("no-such-directory") == "no-such-directory/src"
+fn sources_of(directory: String) -> String {
+    made_at(modules.joined(directory, "src"))
+}
+
+// example: tests_of("no-such-directory") == "no-such-directory/tests"
+fn tests_of(directory: String) -> String {
+    made_at(modules.joined(directory, "tests"))
+}
+
 /// The directory at `path`, made where it is not there yet.
 // example: made_at("") == ""
 fn made_at(path: String) -> String {
@@ -554,6 +603,7 @@ type Property =
     | TwoPackages
     | BesideWins
     | ManifestRead
+    | LayoutLoads
 
 test "every property of loading holds" {
     held.is_held_reported(held.together(every_property(held.drawn_cases())))

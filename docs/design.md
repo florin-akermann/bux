@@ -1126,12 +1126,12 @@ A dot after anything else reads a field, so `maybe.or(0)` is refused and `or(may
 Section 11 states that a function is called one way.
 
 An import names the file the module is written in, beside the file that writes the import.
-`import greeting` reads `greeting.bx` from the same directory, or from a package depended on.
+`import greeting` reads `greeting.bx` from the same directory, or from `src/` of a package.
 A ring of imports is refused: a module is compiled after what it imports, and a ring has no order.
 
 `docs/specs/modules.md` states the scopes, the prelude every module has, and the errors.
 
-A package is a directory of modules, named by a manifest written beside them.
+A package is a manifest, `bux.package`, with `src/`, `tests/`, and `target/` under it.
 
 ```text
 package shapes
@@ -1139,10 +1139,17 @@ version 0.2.0
 depends ../geometry
 ```
 
+Every package has this one layout, so a reader learns it once and finds each part in one place.
+A module of the package is in `src/`, a test module is in `tests/`, and a build writes `target/`.
+A test module reaches a module of `src/`, and a module of `src/` never reaches a test module.
+A `.bx` file beside the manifest and a manifest in `src/` or `tests/` are each refused as `L0323`.
+A file in no package is a bare module, and it writes `target/` beside itself.
+
 An import that reaches nothing beside the file that wrote it reaches a module of a dependency.
+It reaches the `src/` of the dependency, and never its `tests/`.
 Nothing is fetched: a dependency is a directory that is already there, and the manifest names it.
 Two dependencies holding a module of one name are refused, because one name has one definition.
-`docs/specs/packages.md` states the manifest, the order an import is answered in, and the errors.
+`docs/specs/packages.md` states the layout, the manifest, the order of an import, and the errors.
 
 ---
 

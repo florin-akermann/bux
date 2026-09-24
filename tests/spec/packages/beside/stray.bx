@@ -1,0 +1,5 @@
+// expect-error: L0323
+// A module of a package is in `src/` or in `tests/`, and this one sits beside the manifest.
+fn held() -> Int {
+    1
+}

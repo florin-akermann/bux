@@ -22,8 +22,8 @@ CLAUDE.md
 # Python bytecode from `uv run` dev tooling.
 __pycache__/
 
-# Compiler output: a build writes every class only under `target/` in the directory of the module
-# it builds, so `target/` is the one output directory, and deleting it is a clean build.
+# Compiler output: a build writes every class only under `target/`, under the manifest of a package
+# or beside a bare module. So `target/` is the one output directory, and a clean build deletes it.
 # The repository keeps the source; no class file is part of a test, and none is published.
 target/
 *.jar
