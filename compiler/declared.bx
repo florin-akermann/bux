@@ -920,15 +920,21 @@ fn instance_noted(declaring: Declaring, resolved: resolver.Resolved, declaration
     Ok(declaring { environment: noted })
 }
 
-/// `push` and `at`, which the compiler holds, filed where the prelude's own source writes them.
+/// `push` and `at`, which the compiler holds, filed where the prelude's own source writes them,
+/// and `length` too where the module `list` writes all three.
 // example: has_value(held_by_the_compiler(empty_environment(ByName), "prelude"), "push")
+// example: has_value(held_by_the_compiler(empty_environment(ByName), "list"), "length")
 // example: !has_value(held_by_the_compiler(empty_environment(ByName), "main"), "push")
 fn held_by_the_compiler(environment: Environment, module: String) -> Environment {
-    if module != "prelude" {
+    if module != "prelude" && module != "list" {
         return environment
     }
     let pushed = bound(environment, "push", surface.push_scheme())
-    bound(pushed, "at", surface.at_scheme())
+    let held = bound(pushed, "at", surface.at_scheme())
+    if module == "list" {
+        return bound(held, "length", surface.length_scheme())
+    }
+    held
 }
 
 /// How many arguments each declared type takes, and how a method of each Java class is called.

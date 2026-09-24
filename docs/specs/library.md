@@ -142,6 +142,10 @@ Everything else a module's body is held to, an instance body is held to.
 
 `list.length`, `list.push`, and `list.at` are the compiler's.
 No `extern` declaration names one of them.
+The module `list` itself writes the three bare, as `push(values, value)`.
+A module cannot import itself, so `list.push` names nothing inside `library/list.bx`.
+So the resolver and the typing give the three bare names to the module `list`, and to no other.
+The prelude writes `push` and `at` bare in the same way, which the section below states.
 
 `List` is the compiler's, which the section above states, so what a list does is the compiler's
 too.
