@@ -95,7 +95,7 @@ The asks of one module reach the next module of the same pass.
 A pass that gives every module the asks known when the pass starts lowers each module alone.
 The passes repeat until no module asks for more, as they do now, and the result is the same.
 `bin/bootstrap` holds the classes byte for byte, so it is the check that the order changed nothing.
-Item 091 measured the writer at 0.31 s, so the writer stays on one thread unless the profile says so.
+Item 091 measured the writer at 0.31 s, so it stays on one thread unless the profile says otherwise.
 [114][a] - `docs/implementation.md` section 6 states that a pass lowers each module alone.
 [114][b] - `pass_over` hands each module of a pass to the pool of Item 113.
 [114][c] - A drawn property holds that a program lowered in a pool gives the classes of one thread.
