@@ -1124,14 +1124,17 @@ fn record_literal(cursor: Cursor, base: ast.Path) -> Result<Parsed<ast.ExprKind>
     Ok(Parsed { value: ast.Record { base: base, fields: fields }, cursor: cursor_of(step) })
 }
 
-/// `name: value`, one field of a record literal.
+/// `name: value`, or a bare `name` that reads its binding, one field of a record literal.
 // example: position_after(field_value(over("id: 1"))) == 3
+// example: position_after(field_value(over("id }"))) == 1
 fn field_value(cursor: Cursor) -> Result<Parsed<ast.FieldValue>, ParseError> {
     let start = offset(cursor)
     let name = expect_name(cursor, NameWanted)?
-    let colon = expect_punct(name.cursor, lexer.Colon)?
-    let value = expression(cursor: colon, records: Allowed)?
-    Ok(Parsed { value: ast.FieldValue { name: name.value, value: value.value, span: span_since(value.cursor, start) }, cursor: value.cursor })
+    if !is_at_punct(name.cursor, lexer.Colon) {
+        return Ok(Parsed { value: ast.FieldValue { name: name.value, given: ast.Bare, span: name.value.span }, cursor: name.cursor })
+    }
+    let value = expression(cursor: advanced(name.cursor), records: Allowed)?
+    Ok(Parsed { value: ast.FieldValue { name: name.value, given: ast.Given(value.value), span: span_since(value.cursor, start) }, cursor: value.cursor })
 }
 
 /// `if a { … } else if b { … } else { … }`, a flat chain of branches.

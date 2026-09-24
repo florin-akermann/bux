@@ -20,22 +20,6 @@ It settles a `main` that reads no arguments the same way.
 [109][d] - `tests/spec/name_resolution/` shows each refusal.
 A drawn property holds that every name the compiler accepts is read at least once.
 
-## 🔴 Item 112: `bux test` runs the modules of a package on a pool of workers
-**Depends on:** Item 111 — the profile says what a module run spends on typing before it starts.
-Attacks: typing, 2.4 s of the 11.2 s that one job over `compiler/` compiles (section 7).
-`every_module_tested` in `compiler/command.bx` runs the modules of a package one after another.
-`tests/runner.bx` owns a pool of one worker per processor, and only the compiler's tests use it.
-The pool moves into `bux test`, where every package gets it, and the runner keeps working meanwhile.
-A worker is a process, and its state is where a memo lives across the modules it runs.
-A module of `tests/` imports most of the compiler, so a memo saves about 40 000 lines of typing.
-[112][a] - `docs/specs/testing.md` states that the modules of a package run at the same time.
-It states one worker for each processor, and a report in file order.
-[112][b] - A `process` in `compiler/command.bx` hands each module to a worker.
-It holds each answer by the number of its module, as the pool of `tests/runner.bx` does.
-[112][c] - `Working` holds the memo, and a worker keeps it from one module to the next.
-[112][d] - A drawn property holds that a report on a pool is the report of modules run in turn.
-[112][e] - Section 7 records `bux test compiler` and `bux test tests` before and after.
-
 ## 🔴 Item 113: The compiler finds its library, help, and explanations beside its classes
 `modules.resource_text` reads a file under each entry of the class path.
 So `bin/bux`, `bin/bootstrap`, and `bin/runner` add `compiler/` and the root to the class path.
@@ -65,22 +49,10 @@ A part that started JVMs still does, from inside its test, and the limit of 60 s
 [114][f] - Where one test of every spec example is slower than the chunks were, one module per area.
 [114][g] - Section 7 records the wall time of the suite before and after.
 
-## 🔴 Item 115: The compiler types independent modules at the same time
-**Depends on:** Item 111, Item 112 — the profile prices inference, and 112 holds the pool.
-Attacks: typing, 1.3 s of the 3.5 s of `bux build compiler/main.bx`, 37% (section 7).
-`each_accepted` in `compiler/command.bx` types the modules one after another in load order.
-A module needs only the surface of each module it imports, so modules of one wave are independent.
-The pool of Item 112 types every module whose imports are typed.
-The refusal a build reports stays the first one in load order, whatever process ends first.
-[115][a] - `docs/specs/types.md` states that the reported refusal does not depend on the order.
-[115][b] - The pool hands a module to a worker once its imports are typed.
-[115][c] - A drawn property holds that a program typed in waves is typed as it is in load order.
-[115][d] - Section 7 records `bux check` and `bux build` on `compiler/main.bx` before and after.
-It records `bin/bootstrap` with them.
-
 ## 🔴 Item 116: The lowering lowers the modules of one pass at the same time
 **Depends on:** Item 111, Item 115 — the profile prices lowering, and 115 pools the phases.
 Attacks: lowering, 0.46 s of the 3.5 s of `bux build compiler/main.bx`, 13% (section 7).
+Item 123: one pass lowers a build now; a module lowered alone sends its asks to a second pass.
 `pass_over` in `compiler/ir.bx` lowers each module in turn.
 The asks of one module reach the next module of the same pass.
 A pass that gives every module the asks known when the pass starts lowers each module alone.
@@ -124,25 +96,151 @@ An import that reaches a private name is refused with a code and a help that nam
 [120][e] - `tests/spec/modules/` and `tests/spec/examples/` show the refusal and the exemption.
 [120][f] - The helpers of `compiler/exhaustiveness.bx` named above become `private` or tests.
 
-## 🔴 Item 122: Record construction puns a field as a pattern does
-A pattern writes `Authorized { authorization_id }`, and construction writes `User { id: id }`.
-That is two rules for one shape, and one of them costs a token per field.
-`docs/specs/patterns.md` says none of the pattern forms is a shorthand for another.
-Construction gets the same rule: `User { id }` and `User { id: id }` are two forms, not one.
-[122][a] - `docs/design.md` section 9 and `docs/specs/grammar.md` make `: expression` optional.
-A bare name reads the binding of that name, and a name not in scope is refused as it is now.
-[122][b] - `docs/specs/formatting.md` states that the formatter keeps the form the author wrote.
-[122][c] - The parser, formatter, resolver, and inference accept a bare field name.
-[122][d] - `tests/spec/parser/` and `tests/spec/format/` show both forms.
-A property holds that `User { id }` and `User { id: id }` type and lower alike.
 
-## 🔴 Item 123: The profile prices specialization and counts the JVM starts of one suite
-**Depends on:** Item 111 — this item adds two numbers to the profile that item records.
-A generic is compiled once for each set of types, so one body is written several times.
-`bux check compiler/main.bx` spends 2.0 s to 2.8 s on work, and none of it is priced per body.
-A run of `bux test` starts one JVM for each module, and a start costs 0.12 s before any work.
-[123][a] - Section 7 records how many specialized bodies one build of `compiler/main.bx` writes.
-It records the seconds spent on the second and later copies of one body.
-[123][b] - Section 7 records the JVM starts of one `bux test tests`, and the seconds they cost.
-[123][c] - Items 112, 115, 116, and 117 each cite the number of this item they attack, or go.
+## 🔴 Item 125: `send` says `Delivered` for a message that the process reads
+`tests/spec/concurrency/mailbox_full.bx` sends `Stop` to an `Idle` process and expects `delivered`.
+One runner pass of Item 112 printed `the process has ended` for that line; five printed `delivered`.
+`send` offers the message to the mailbox, and then it tests whether the process has ended.
+`offer_within` and `ended_test` in `compiler/ir.bx` write the two steps.
+`Idle` takes `Stop` and ends between the two steps, so a message it read is reported as never read.
+`docs/specs/concurrency.md` says a message the mailbox takes after the end gives `ProcessEnded`.
+The answer must follow what happens to the message, not the time of the test.
+[125][a] - `docs/specs/concurrency.md` states that `ProcessEnded` means no `receive` reads it.
+[125][b] - A process that ends leaves its mailbox in a state `send` can tell from a taken message.
+[125][c] - `tests/spec/concurrency/mailbox_full.bx` holds on every pass of the runner.
 
+## 🔴 Item 126: The lowering names no JVM shape, and `compiler/jvm.bx` spells every one
+`compiler/ir.bx` names a class, a descriptor, a slot, or a `java/` member on about 160 lines.
+It builds the instructions of the JVM, and `compiler/jvm.bx` only writes them as a class file.
+So what a construct means and how the JVM spells it are one text, and each reads harder for it.
+`spawned` in `compiler/ir.bx` writes `startVirtualThread` beside numbered slots and descriptors.
+Item 125 fixes a bug in `offer_within` and `ended_test`, and a named local shows such a bug.
+A lowering that names a local and a call reads as what a `process` means.
+A JVM phase that gives each local a slot and each call a descriptor reads as how the JVM spells it.
+A tree whose types have no field for a JVM name makes a `java/` string in the lowering unwriteable.
+[126][a] - `docs/implementation.md` section 6 states the two phases, and what each one may name.
+[126][b] - `compiler/ir.bx` lowers to a tree whose types have no field for a JVM name or a slot.
+[126][c] - `compiler/jvm.bx` gives a local its slot and a call its descriptor, and writes the class.
+[126][d] - `bin/bootstrap` holds stage 2 equal to stage 1 byte for byte across the change.
+[126][e] - Section 7 records `bux build compiler/main.bx` before and after.
+
+## 🔴 Item 127: `String` is a Bux value over bytes, and `Eq<String>` runs Bux code
+`docs/implementation.md` section 12 states the change and asks for the cost first.
+`java.lang.String` carries a `String`, and it is the one Java class under a Bux value.
+The prelude writes `Eq<String>` as Bux code, but the lowering puts `String.equals` under it.
+So one prelude type has a power a declared type lacks, against `docs/design.md` section 3.
+A `String` over its bytes moves that logic into `library/strings.bx`, written once in Bux.
+`compiler/bytes.bx` already holds a run of bytes as a `List<Int>`, so the bytes need no new type.
+[127][a] - Section 7 prices `==`, `length`, `cut_out`, and `+` over `java.lang.String` and bytes.
+The price is the build of the compiler before and after.
+[127][b] - The item stops at [a], and section 12 records the numbers, when the build is slower.
+[127][c] - `library/strings.bx` declares `String` as a record over bytes, and `Eq<String>` as Bux.
+[127][d] - The lowering puts nothing under `Eq<String>`, and an `extern` with text converts it.
+[127][e] - `bin/bootstrap` gets a new seed, as section 6 reason two states.
+[127][f] - `tests/spec/library/` holds, and a drawn property round trips bytes through `String`.
+
+## 🔴 Item 128: The library declares every `extern`, and the compiler declares none
+98 `extern` declarations exist: 59 in `library/` and 39 in `compiler/`.
+`compiler/command.bx` declares 17, `compiler/archives.bx` 10, and `compiler/modules.bx` 6.
+Three more files declare the six others.
+`java.io.File` is declared three times.
+It is `File` in `library/files.bx` and `compiler/modules.bx`, and `Entry` in `compiler/command.bx`.
+`docs/design.md` section 2 gives one thing one spelling, and three for one class break it.
+`docs/implementation.md` section 3 says a program reaches the platform through the library.
+The compiler is a program, and it is the first one the rule holds to.
+[128][a] - Section 4 lists what the library stands on: files, processes, the clock, and streams.
+[128][b] - Each `extern` of `compiler/` moves to its library module, or one there replaces it.
+[128][c] - A project check refuses an `extern` outside `library/`, and its message names section 3.
+[128][d] - Section 4 records the count of `extern` declarations before and after.
+
+## 🔴 Item 129: `files` reads a part of a file, and says how long the file is
+`files.read` reads a file whole into one `String`, and a JVM `String` holds 2^31 chars at most.
+A file of one billion rows holds 13 GB, so no program can read it at all.
+A file that fits is held whole, so a program that reads a large file holds it, not its work.
+Item 130 is the program that needs this, and it reads one part of the file in each process.
+No `for` loop reads a byte of a file, so each function here passes question 12 of the principles.
+The read gives ISO-8859-1 text, one char for each byte, as `files.read_bytes` already reads.
+So the length of the text is the count of bytes, and a caller finds a line end by its offset.
+A part cut at any byte can split a UTF-8 sequence, so a decoded read could not say where it ends.
+A name read out of a part is written as the UTF-8 it was, so `strings` gets the one decoding.
+[129][a] - `docs/specs/io.md` states `files.size(path) -> Result<Int, String>`.
+It gives the bytes the file holds.
+[129][b] - It states `files.read_between(path, from, to) -> Result<String, String>`.
+It gives the bytes from `from` up to `to` as ISO-8859-1 text.
+A `to` past the end gives what is there.
+A part longer than one JVM buffer holds is an `Err` that names the length, before the file opens.
+[129][c] - `files` reads the part with a `FileChannel` read at a position into a `ByteBuffer`.
+A `Charset` decodes the buffer, so no array crosses.
+Each step that throws is an `extern` with a `Result`, as `files.listed` walks a stream.
+[129][d] - `docs/specs/library.md` states `strings.from_utf_8(text: String) -> String`.
+It gives the text that the chars of `text` spell as UTF-8 bytes, decoded by a `Charset` of the JVM.
+A malformed sequence becomes the replacement char, as `Charset.decode` gives it, so it is total.
+[129][e] - `tests/spec/io/part_read.bx` writes a file, reads it in parts, and shows the parts.
+A drawn property holds that the parts of a drawn file, joined, are what `files.read_bytes` gives.
+A second holds that `from_utf_8` of the joined parts is `files.read`, for a drawn UTF-8 file.
+
+## 🔴 Item 130: `1brc/main.bx` answers the One Billion Row Challenge
+**Depends on:** Item 129 — a worker reads its part of the file, and a name comes back as UTF-8.
+The challenge is a file of one billion `<station>;<temperature>` lines, and one line of output.
+The output is `{Abha=-23.0/18.0/59.2, Abidjan=-16.2/26.3/67.3, ...}`, sorted by station name.
+Each station shows its lowest, mean, and highest reading, each with one decimal.
+A half rounds toward positive infinity, as `Math.round` rounds, which the challenge states.
+A name is UTF-8 of at most 100 bytes, and a reading is `-99.9` to `99.9` with one decimal.
+There are at most 10 000 stations.
+`example/main.bx` is the program a newcomer reads, and `1brc/main.bx` is the program measured.
+It is the second dogfood program, written in Bux over `library/` alone, with no `extern` of its own.
+`main` reads the path from its arguments, and spawns one worker process for each processor.
+Each worker takes one contiguous part of the file, and reads it in slices with `read_between`.
+It starts after the first line end past its start, and ends after the first past its end.
+A reading is held in tenths as an `Int`, so no floating type is needed.
+The mean, and its rounding, are whole-number arithmetic.
+A worker holds a `map.Map<String, Summary>` and the list of the names it has seen.
+`main` takes each summary with `ended`, merges them by the names, sorts the names, and writes.
+Dogfooding found four gaps, and question 12 of `docs/principles.md` judges each one.
+A whole number read off text is a `for` loop over `strings.at`, so the program writes it.
+An iterator over a map is the list of names the program holds, so nothing lands.
+A sort is the loop `sorted` in `compiler/command.bx` writes, and the program would write it twice.
+`docs/specs/library.md` lands a function on that test, so `list.sorted` lands, at the cost asked.
+The count of processors is what `tests/runner.bx` reaches with an `extern` of its own.
+So that count moves to the library.
+[130][a] - `docs/specs/billion-rows.md` states the program: input, output, exit codes, and `1brc/`.
+[130][b] - `list.sorted<T: Ord<T>>(values: List<T>) -> List<T>` lands, a merge sort with loops.
+`sorted` and `inserted` in `compiler/command.bx` go, and `command.bx` calls `list.sorted`.
+[130][c] - `environment.processors() -> Int` lands, and `tests/runner.bx` calls it.
+[130][d] - `1brc/main.bx` is the program, and `1brc/samples/` holds small files and their outputs.
+One sample holds UTF-8 names, one holds a mean that is a negative half, and one holds one station.
+[130][e] - `tests/started.bx` runs `1brc/main.bx` over each sample, as it runs `example/main.bx`.
+It holds the output to the expected one, and it runs the examples and tests of the module.
+[130][f] - `docs/implementation.md` section 12 names the program as the second dogfood.
+Section 7 records the wall time over one billion rows, on the machine and the JDK it names.
+
+## 🔴 Item 131: The profile of `1brc/main.bx` says what the next item attacks
+**Depends on:** Item 130 — the program must run over one billion rows before it is profiled.
+Section 7 profiled the compiler, and each item after Item 111 attacked a share the profile priced.
+The program gets the same, and no library change lands before the profile prices it.
+`docs/specs/collections.md` refuses a tuned node until a measurement on a real program asks.
+`map.insert` copies one node of thirty-two children at each level.
+One row is one `get` and one `insert`, so one row copies about a hundred children.
+`strings.at` guards two bounds and one `extern` for each byte.
+`strings.cut` makes one `String` for each line, and `Hash<String>` hashes it once for each row.
+Those are the candidates the reading suggests, and the profile says which one is a cost.
+[131][a] - Section 7 records the profile with JFR over one billion rows, by module and by class.
+It records the wall time, the processor time, and the time the collector paused.
+[131][b] - The item files one item for the largest share, with the requirement and the alternatives.
+It files no item for a share below ten percent, and it changes no library code.
+
+## 🔴 Item 132: `1brc/create_measurements.bx` writes the file of one billion rows
+**Depends on:** Item 130 — the program is what reads what this writes.
+The challenge gives a Java generator, and a JDK runs it, so the file exists before this item.
+Dogfooding says Bux writes it, and the generator finds one more gap.
+`files.write` writes a file whole, and 13 GB is no `String`, so a file is written in parts.
+No `for` loop appends to a file, so `files.append` passes question 12 of the principles.
+A draw is a linear congruential generator, as `tests/drawn.bx` writes one.
+The program writes its own, because no program imports a module of `tests/`.
+The generator holds the stations of the challenge and the mean of each in one list literal.
+[132][a] - `docs/specs/io.md` states `files.append(path, text) -> Result<String, String>`.
+It writes `text` after what the file holds, makes the file where there is none, and gives `path`.
+[132][b] - `docs/specs/billion-rows.md` states `bux run 1brc/create_measurements.bx <rows> <path>`.
+[132][c] - `1brc/create_measurements.bx` writes `rows` lines, in parts of one million lines each.
+[132][d] - A test of the module writes a small file, and `1brc/main.bx` reads it to its output.
+[132][e] - Section 7 records the wall time of one billion rows written, beside their read time.

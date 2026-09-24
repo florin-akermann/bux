@@ -223,6 +223,53 @@ That encoding reads each byte as the one char of the same value, and every byte 
 So `files` imports `strings`, and it reaches no JVM class that it did not reach already.
 `compiler/archives.bx` is the one caller, and `docs/specs/packages.md` states it.
 
+## Reading a part of a file
+
+`files.read` reads a file whole into one `String`, and a JVM `String` holds 2^31 chars at most.
+A file of one billion rows holds about 13 GB, so no read of it whole can work.
+A program that reads a large file reads it one part at a time, so `files` gives two more.
+
+```text
+files.size(path: String) -> Result<Int, String>
+files.read_between(path: String, from: Int, to: Int) -> Result<String, String>
+```
+
+`files.size` gives the count of bytes that the file at `path` holds.
+It is `java.nio.file.Files.size`, which gives a `long`, and the file is not opened.
+A file that is not there, or that the file system cannot measure, is an `Err`.
+
+`files.read_between` gives the bytes from `from` up to `to`, not including `to`.
+Each byte is the one char of the same value, as `files.read_bytes` reads it in ISO-8859-1.
+So the length of the text is the count of bytes, and a caller finds a line end by its offset.
+A part cut at any byte can split a UTF-8 sequence, so a decoded read could not say where it ends.
+`strings.from_utf_8` decodes a name that a caller cuts out of a part, which
+`docs/specs/library.md` states.
+
+A `to` past the end of the file gives the bytes up to the end, and a `from` past it gives `""`.
+A negative `from`, or a `to` below `from`, is an `Err` whose message names the two offsets.
+A part longer than 2147483647 bytes is an `Err` that names the length, before the file opens.
+That count is the most that one JVM buffer holds, because a buffer counts in an `int`.
+Nothing panics, and every failure is a `Result`.
+
+`files.read_between` asks `files.size` first, and it reads no further than the end.
+So a `to` far past the end asks for no buffer larger than what the file holds.
+It opens a `java.io.FileInputStream` and asks it for its `java.nio.channels.FileChannel`.
+The channel reads into a `java.nio.ByteBuffer` at a position, and a read reads no byte before it.
+A read can give fewer bytes than the buffer has room for, so `files` reads until the buffer is full.
+A read at the end gives `-1`, which also ends the reads.
+`java.nio.charset.Charset.decode` then reads the buffer as ISO-8859-1 into a `java.nio.CharBuffer`.
+Its text is the part, so no array crosses the boundary in either direction.
+Each step that throws is an `extern` with a `Result`, as the steps of `files.listed` are.
+
+The stream is closed after the read, whether the read worked or did not.
+A close gives nothing back, so its `extern` holds no `Result`, which `docs/specs/interop.md` states.
+A close of a file opened only to be read loses no byte, because the part was read before it.
+
+`files` adds `size`, `read_between`, and the steps and declarations that each is written over.
+So `files` reaches four more JVM classes: `java.io.FileInputStream`,
+`java.nio.channels.FileChannel`, `java.nio.ByteBuffer`, and `java.nio.CharBuffer`.
+`tests/spec/io/part_read.bx` writes a file, reads it in parts, and shows the parts.
+
 ## The errors
 
 ```text

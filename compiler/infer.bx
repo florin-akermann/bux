@@ -608,7 +608,7 @@ fn record_walked(inference: Inference, base: ast.Path, fields: List<ast.FieldVal
     let updated = value_of_name(inference, base.name)
     var walking = updated.inference
     for field in fields {
-        let found = walked_expr(walking, field.value)?
+        let found = walked_expr(walking, ast.field_expression(field))?
         walking = looking(found.inference, Lookup { through: updated.found, field: field.name, found: found.found, how: AsAValue })
     }
     Ok(Typed { inference: walking, found: updated.found })
@@ -629,9 +629,10 @@ fn build(inference: Inference, base: ast.Path, fields: List<ast.FieldValue>, at:
     }
     var walking = built.inference
     for field in fields {
-        let found = walked_expr(walking, field.value)?
+        let value = ast.field_expression(field)
+        let found = walked_expr(walking, value)?
         let index = labelled(labels, field.name, made)?
-        walking = expect(inference: found.inference, expected: or(list.at(taken, index), unify.Unit), found: found.found, at: field.value.span)?
+        walking = expect(inference: found.inference, expected: or(list.at(taken, index), unify.Unit), found: found.found, at: value.span)?
     }
     _ = every_field_given(base, fields, labels, at)?
     Ok(Typed { inference: walking, found: made })

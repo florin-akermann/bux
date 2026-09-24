@@ -949,7 +949,7 @@ fn each_walked(lowering: Lowering, walk: Escape, values: List<ast.Expr>) -> Esca
 fn fields_walked(lowering: Lowering, walk: Escape, fields: List<ast.FieldValue>) -> Escape {
     var walking = walk
     for field in fields {
-        walking = expr_walked(lowering, walking, field.value)
+        walking = expr_walked(lowering, walking, ast.field_expression(field))
     }
     walking
 }
@@ -2449,7 +2449,7 @@ fn built_with(builder: Builder, base: ast.Path, fields: List<ast.FieldValue>) ->
 fn given_fields(builder: Builder, fields: List<ast.FieldValue>, carried: Carried) -> Builder {
     for written in fields {
         if written.name.text == carried.name {
-            return handed(builder, written.value, carried.of)
+            return handed(builder, ast.field_expression(written), carried.of)
         }
     }
     builder

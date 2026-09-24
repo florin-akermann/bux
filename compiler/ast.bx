@@ -392,9 +392,21 @@ fn field_value_lines(fields: List<FieldValue>, depth: Int) -> String {
     var written = ""
     for field in fields {
         written += node(depth, "field-value " + field.name.text, field.span)
-        written += expression_lines(expr: field.value, depth: depth + 1)
+        written += match field.given {
+            Bare => ""
+            Given(value) => expression_lines(expr: value, depth: depth + 1)
+        }
     }
     written
+}
+
+/// The value a field of a record literal is given, where a bare name reads the binding it names.
+// example: expression_lines(field_expression(FieldValue { name: Name { text: "id", span: lexer.Span { start: 7, length: 2 } }, given: Bare, span: lexer.Span { start: 7, length: 2 } }), 0) == "name id 7..9\n"
+fn field_expression(field: FieldValue) -> Expr {
+    match field.given {
+        Bare => Expr { kind: NameExpr(field.name), span: field.name.span }
+        Given(value) => value
+    }
 }
 
 /// What a call passes, with each name written where the call writes one.
@@ -942,12 +954,17 @@ type NamedArgument = {
     value: Expr
 }
 
-/// `name: value`, one field of a record literal.
+/// `name: value` or a bare `name`, one field of a record literal.
 type FieldValue = {
     name: Name
-    value: Expr
+    given: FieldGiven
     span: lexer.Span
 }
+
+/// What a field of a record literal is given: the binding its bare name reads, or a value.
+type FieldGiven =
+    | Bare
+    | Given(Expr)
 
 /// The prefix operators.
 type UnaryOperator =

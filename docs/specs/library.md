@@ -209,15 +209,16 @@ are called.
 `io`, `files`, `programs`, and `environment` hold what no `for` loop writes at all.
 `strings` holds each of them: `join` is the loop, `length` is what no loop reads, and `at` and
 `cut` are a check written over two more `extern` declarations.
+`from_utf_8` is what no loop reads either, because no loop builds a char out of its value.
 `list` holds three more: `length`, `push`, and `at`, which the section above gives the compiler.
 
 ```text
 list:        length  has_value  index_of  push  at
-strings:     at  cut  join  length
+strings:     at  cut  join  length  from_utf_8
 map:         empty  insert  get
 set:         empty  insert  has_value
 io:          print  println  eprintln
-files:       read  read_bytes  write  write_bytes  listed  made  removed
+files:       read  read_bytes  read_between  size  write  write_bytes  listed  made  removed
 process:     run
 environment: read
 ```
@@ -238,8 +239,9 @@ declares those declarations beside its functions, and every top-level name is pu
 of those surfaces is wider than the names above; `docs/specs/io.md` names the rest.
 `io.println` writes to standard output and `io.eprintln` writes to standard error, and the two are
 the one `io.put_line` over two streams.
-`strings` is written over three of them, which is the same again: `length` is one declaration
-itself, and `at` and `cut` are a check over the two the section below states.
+`strings` is written over eight of them, which is the same again: `length` is one declaration
+itself, `at` and `cut` are a check over the two the section below states, and `from_utf_8` is a
+call of five more.
 `strings.length` reaches `String.length`, whose descriptor gives an `int` that the declaration
 widens to the `Int` it gives back.
 What it counts is what a JVM counts, which is UTF-16 code units: a character the JVM holds as a
@@ -265,6 +267,16 @@ Each of the two declarations gives back `Result<Option<T>, String>`: the `Option
 `docs/specs/interop.md` asks of a declaration that narrows an argument, and the `Result` is what
 keeps the declaration itself total, because every top-level name of a module is public.
 Every index counts UTF-16 code units, which is what `strings.length` counts.
+
+`strings.from_utf_8(text)` gives the text that the chars of `text` spell as UTF-8 bytes.
+Each char of `text` is one byte of the same value, which is what `files.read_between` gives.
+A char above 255 is no byte, and ISO-8859-1 writes it as `?`, which is the byte 63.
+A sequence that is not UTF-8 becomes the replacement char, as `Charset.decode` gives it.
+So `from_utf_8` is total, and a name cut out of a part of a file reads as the UTF-8 it was.
+`java.nio.charset.Charset.encode` writes the chars as bytes into a `java.nio.ByteBuffer`.
+`Charset.decode` reads that buffer as UTF-8 into a `java.nio.CharBuffer`, whose text is the answer.
+So no array crosses the boundary, and `strings` adds `from_utf_8`, `encoded`, `decoded`,
+`spelled`, `as_utf_8`, `as_latin_1`, `Encoding`, `Bytes`, and `Chars` for this.
 
 `join` runs the parts of a `List<String>` together, with a separator between each pair.
 
@@ -329,6 +341,7 @@ These hold and are checked by drawn properties in the runner:
 5. `list.at` gives `Some` of the element at every index a list holds, and `None` at every other.
 6. `list.push` gives back what the list held, with the value after it, and leaves the list alone.
 7. `list.length` gives the number of pushes that built a list, and a later push changes no length.
+8. The bytes of a drawn UTF-8 file, one char for each, spell under `from_utf_8` what a read gives.
 
 The prelude is not among the modules of property 1 that compile on their own.
 Its own names are in scope in every module, so a compiler reading it as a module would refuse

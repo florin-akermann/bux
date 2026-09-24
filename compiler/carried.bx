@@ -163,7 +163,7 @@ fn each_read(reading: Reading, values: List<ast.Expr>) -> Result<(), refusal.Typ
 // example: refusal.code_given(fields_read(reading_of(infer.nothing_inferred()), [])) == ""
 fn fields_read(reading: Reading, fields: List<ast.FieldValue>) -> Result<(), refusal.TypeError> {
     for field in fields {
-        _ = expression_read(reading, field.value)?
+        _ = expression_read(reading, ast.field_expression(field))?
     }
     Ok(())
 }

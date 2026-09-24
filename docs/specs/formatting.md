@@ -63,6 +63,8 @@ A `,` and a `:` are written against what precedes them and followed by one space
 Nothing is written inside `(`, `[`, or `<` and their closing partners.
 A record literal with fields is spaced inside its braces, as `User { id: id }`; an empty one is
 `User {}`.
+The formatter keeps the form of each field that the author wrote, a bare `id` or `id: id`.
+The two are two forms, not one, so `bux fmt` rewrites neither into the other.
 
 ## The constructs
 

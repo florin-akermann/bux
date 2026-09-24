@@ -164,7 +164,7 @@ fn each_holes(resolved: resolver.Resolved, found: List<Hole>, values: List<ast.E
 fn fields_holes(resolved: resolver.Resolved, found: List<Hole>, fields: List<ast.FieldValue>) -> List<Hole> {
     var gathered = found
     for field in fields {
-        gathered = expression_holes(resolved, gathered, field.value)
+        gathered = expression_holes(resolved, gathered, ast.field_expression(field))
     }
     gathered
 }
