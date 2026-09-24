@@ -413,6 +413,26 @@ Other work ran beside it: the load was 10 when the run started and 50 when it en
 The line of output matched the one a Python reference script wrote from the same file.
 Item 131 profiles the run, and the program is not tuned before it.
 
+### The share of the machine
+
+Item 136 bounds the heap of each JVM, because the JDK gives each one a quarter of the memory.
+On 2026-09-24 two runners at once held 8 GB, and each worktree agent starts runners of its own.
+The numbers are peaks of `ps -o rss`, on 12 processors and 24 GB, under a load of 30 to 140.
+
+| JVM | Heap before | RSS before | Heap after | RSS after |
+|-----|-------------|------------|------------|-----------|
+| The runner | 6 GB | 6.7 GB | 4 GB | 4.6 GB |
+| `bux test tests` | 6 GB | 6.7 GB | 4 GB | 4.6 GB |
+| One compile of `bin/bootstrap` | 6 GB | 1.5 GB | 1 GB | 0.7 GB to 0.9 GB |
+| The largest JVM the runner starts | 6 GB | 0.9 GB | 256 MB for a run | 0.1 GB |
+
+With no bound, the runner held 5.5 GB after a collection, and 3.5 GB after a remark.
+It ran out of heap at 2 GB and passed at 3 GB, and `bux test tests` ran out at 1 GB.
+So `bin/runner` and `bin/bux` get 4 GB, and each compile of `bin/bootstrap` gets 1 GB.
+`bin/runner` took 183 s at a load of 115 and 110 s after, at a load of 41; the load makes both vague.
+A short run gets `-Xmx256m`, `-XX:+UseSerialGC`, and `-XX:TieredStopAtLevel=1`.
+`-Xshare:auto` is refused, because the JVM turns class-data sharing off beside `--limit-modules`.
+
 ### Drawn properties
 
 A property is a Bux function that tries one invariant on drawn input.
