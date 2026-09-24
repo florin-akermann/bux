@@ -8,9 +8,9 @@
 
 ## 🔴 Item 116: The lowering lowers the modules of one pass at the same time
 **Depends on:** Item 111, Item 115 — the profile prices lowering, and 115 pools the phases.
-Attacks: lowering, 0.46 s of the 3.5 s of `bux build compiler/main.bx`, 13% (section 7).
+Attacks: lowering, 0.46 s of the 3.5 s of `bux build src/main.bx`, 13% (section 7).
 Item 123: one pass lowers a build now; a module lowered alone sends its asks to a second pass.
-`pass_over` in `compiler/ir.bx` lowers each module in turn.
+`pass_over` in `src/ir.bx` lowers each module in turn.
 The asks of one module reach the next module of the same pass.
 A pass that gives every module the asks known when the pass starts lowers each module alone.
 The passes repeat until no module asks for more, as they do now, and the result is the same.
@@ -19,38 +19,7 @@ Item 091 measured the writer at 0.31 s, so it stays on one thread unless the pro
 [116][a] - `docs/implementation.md` section 6 states that a pass lowers each module alone.
 [116][b] - `pass_over` hands each module of a pass to the pool.
 [116][c] - A drawn property holds that a program lowered in a pool gives the classes of one thread.
-[116][d] - Section 7 records `bux build compiler/main.bx` and `bin/bootstrap` before and after.
-
-## 🔴 Item 127: `String` is a Bux value over bytes, and `Eq<String>` runs Bux code
-`docs/implementation.md` section 12 states the change and asks for the cost first.
-`java.lang.String` carries a `String`, and it is the one Java class under a Bux value.
-The prelude writes `Eq<String>` as Bux code, but the lowering puts `String.equals` under it.
-So one prelude type has a power a declared type lacks, against `docs/design.md` section 3.
-A `String` over its bytes moves that logic into `library/strings.bx`, written once in Bux.
-`compiler/bytes.bx` already holds a run of bytes as a `List<Int>`, so the bytes need no new type.
-[127][a] - Section 7 prices `==`, `length`, `cut_out`, and `+` over `java.lang.String` and bytes.
-The price is the build of the compiler before and after.
-[127][b] - The item stops at [a], and section 12 records the numbers, when the build is slower.
-[127][c] - `library/strings.bx` declares `String` as a record over bytes, and `Eq<String>` as Bux.
-[127][d] - The lowering puts nothing under `Eq<String>`, and an `extern` with text converts it.
-[127][e] - `bin/bootstrap` gets a new seed, as section 6 reason two states.
-[127][f] - `tests/spec/library/` holds, and a drawn property round trips bytes through `String`.
-
-## 🔴 Item 133: The compiler's sources move to `src/`, and its resources sit beside `library/`
-**Depends on:** Item 113, Item 114 — both rewrite the class path in `bin/`, which this item moves.
-Item 134 holds every package to one layout: `src/` modules, `tests/` tests, and `target/` classes.
-The compiler is a package, so that rule refuses the compiler until the compiler keeps the layout.
-So the move lands first, whole, with no new rule, and the rule lands on a tree that keeps it.
-`compiler/` holds the modules of the compiler, its manifest, `help/`, and `explanations/`.
-The help text, the explanations, and `library/` are resources of the toolchain, in no package.
-They sit at the root, beside each other, and a build copies the three as Item 113 states.
-A moved source changes no class, so the seed stays, and `bin/bootstrap` shows that nothing changed.
-[133][a] - `compiler/*.bx` and `compiler/bux.package` move to `src/`; the compiler is `src/main.bx`.
-[133][b] - `compiler/help/` and `compiler/explanations/` move to `help/` and `explanations/`.
-[133][c] - `tests/bux.package` depends on `../src`.
-[133][d] - `bin/bux` starts the classes of `src/target/`, and `bin/bootstrap` builds `src/main.bx`.
-[133][e] - Each doc comment, spec, golden, and `docs/implementation.md` names the new path.
-[133][f] - `bin/bootstrap` holds stage 2 equal to stage 1 byte for byte across the move.
+[116][d] - Section 7 records `bux build src/main.bx` and `bin/bootstrap` before and after.
 
 ## 🔴 Item 134: A package is `src/`, `tests/`, and `target/` under its manifest
 **Depends on:** Item 133 — the compiler is a package, and it moves before the rule can refuse it.
@@ -91,7 +60,7 @@ The README and `tests/started.bx` run `example/src/main.bx`.
 
 ## 🔴 Item 137: A comment above a declaration says why, or it is not there
 Nearly every declaration in the Bux sources carries a `///` comment that says what it gives back.
-2372 of the 2460 functions of `compiler/`, `library/`, and `1brc/` carry one, and `tests/` alike.
+2372 of the 2460 functions of `src/`, `library/`, and `1brc/` carry one, and `tests/` alike.
 Such a comment restates the signature, and it drifts when the body changes.
 The code and its `// example:` lines carry the what, and a comment is kept only for a why.
 A why is a constraint the types cannot state, a trade-off, a platform fact, or a decision.
@@ -102,26 +71,9 @@ The file header stays, and a comment inside a body stays.
 The `.tokens`, `.ast`, `.error`, and `.api` goldens hold byte offsets, so their `.bx` files stay.
 `tests/spec/format/` shows the formatter moving a `///` line, so that directory stays.
 [137][a] - `AGENTS.md` states the rule: a comment above a declaration says why, or it is not there.
-[137][b] - Every `///` line above a declaration in `compiler/`, `library/`, and `1brc/` goes.
+[137][b] - Every `///` line above a declaration in `src/`, `library/`, and `1brc/` goes.
 A kept why is rewritten as `//` lines, and `bin/bux check` accepts each file.
 [137][c] - Every `///` line above a declaration in `tests/*.bx` goes the same way.
 [137][d] - Every `///` line above a declaration in `tests/spec/` goes, except where a golden stays.
-[137][e] - `bin/bootstrap` and `bin/runner` pass, and `mycs check` reports no finding.
+[137][e] - `bin/bootstrap` and `bin/bux test tests` pass, and `mycs check` reports no finding.
 
-## 🔴 Item 138: `map.with_child` copies a node without a fresh row of empty children
-**Depends on:** Item 131 — its profile priced `map.insert` at 82% of the billion-row run.
-Section 7 profiled `1brc/src/main.bx`, and `map.insert` is 82% of its samples in two runs.
-Of it, `map.with_child` is 69%: each level of the walk copies a node of 32 children.
-Its `for` loop runs over `no_children()`, a fresh row of 32 empty maps, only to count to 32.
-That row is 26% of the run, and `Map.Empty` is 25% of the allocation pressure.
-The requirement is the processor time of the run, 874 s to 915 s, which the node copy prices.
-The alternatives weighed:
-- `with_child` loops over the `children` it copies, which removes the row and adds nothing.
-- The compressed node of a bitmap, which `docs/specs/collections.md` weighed and refused.
-  It narrows a node to the children it holds, but it adds a bit operation and a population count.
-- A `list` function that puts one element in place of another; a `for` loop writes it.
-- One walk for `get` and `insert` together, which adds a second spelling of an update.
-The first is the smallest and asks for no new concept; the profile after it says if more is needed.
-[138][a] - `map.with_child` copies a node with no call to `no_children`.
-[138][b] - Section 7 records the processor time of the run before and after, at a load below 12.
-[138][c] - The examples of `library/map.bx` and `tests/spec/library/` hold.
