@@ -6,7 +6,6 @@
 // and `formatting.md` each state the form of theirs.
 import command
 import files
-import format
 import held
 import ir
 import lexer
@@ -125,7 +124,7 @@ fn seen_by(file: Made, phase: Phase, library: ir.Library) -> String {
         Tokens => tokens_listed(file.source)
         Tree => parser.printed(file.source)
         Surface => command.said_by(command.answered_within(["api", file.path], library)).output
-        Unformatted => formatted(file.source)
+        Unformatted => formatted(file.source, library)
     }
 }
 
@@ -139,10 +138,10 @@ fn tokens_listed(source: String) -> String {
     written
 }
 
-/// The canonical text of `source`, or the error it is refused with, as the parser prints one.
-// example: formatted("fn f() {\n  1\n}\n") == "fn f() {\n    1\n}\n"
-fn formatted(source: String) -> String {
-    match format.format(source) {
+/// The text `bux fmt` writes for `source`, or the error it is refused with, as the parser prints one.
+// example: formatted("fn f() {\n  1\n}\n", ir.little_library()) == "fn f() {\n    1\n}\n"
+fn formatted(source: String, library: ir.Library) -> String {
+    match command.repaired(source, library.prelude.names) {
         Ok(canonical) => canonical
         Err(refused) => parser.error_printed(refused)
     }

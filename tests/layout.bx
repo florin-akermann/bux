@@ -3,6 +3,7 @@
 // Three kinds of input are drawn: a program of canonical items and one drawn expression, a file
 // of items a person wrote out of canonical form, and one `extern` declaration. A tree is compared
 // as `ast.printed` writes it, with each span taken out, because formatting moves every offset.
+import ast
 import drawn
 import format
 import held
@@ -97,7 +98,7 @@ fn idempotence_fault(source: String) -> String {
     ""
 }
 
-/// The canonical text of a drawn program parses to the tree the program parses to.
+/// The canonical text of a drawn program parses to the items the program parses to.
 // example: held.is_held(formatting_keeps_the_tree(3))
 fn formatting_keeps_the_tree(cases: Int) -> held.Held {
     var found = held.nothing_failed(cases)
@@ -114,20 +115,77 @@ fn formatting_keeps_the_tree(cases: Int) -> held.Held {
     found
 }
 
-/// Why the canonical text of `source` parses to another tree, and `""` where it parses to the same.
+/// Why the canonical text of `source` parses to other items, and `""` where it parses to the same.
+///
+/// The items are compared in canonical order, because formatting puts each import and test there.
 // example: tree_fault("fn main( )  {  -(7.abs())\n}") == ""
 // example: tree_fault("fn (") == ""
+// example: tree_fault("import list\nimport io\n") == ""
 fn tree_fault(source: String) -> String {
     let canonical = ok_or(format.format(source), "")
     if !parsing.is_parsed(source) {
         return ""
     }
-    let before = tree(source)
-    let after = tree(canonical)
+    let before = items_of(tree(source))
+    let after = items_of(tree(canonical))
     if before != after {
-        return "the tree " + held.quoted(before) + " becomes " + held.quoted(after)
+        return "the items " + shown(before) + " become " + shown(after)
     }
     ""
+}
+
+/// Each item of a printed tree in canonical order: the imports sorted, the declarations, the tests.
+// example: items_of("test a\n  x\nfunction f\nimport list\nimport io\n") == ["import io\n", "import list\n", "function f\n", "test a\n  x\n"]
+fn items_of(printed: String) -> List<String> {
+    var items = []
+    var item = ""
+    for line in walk.lines_of(printed) {
+        if item != "" && or(strings.at(line, 0), 0) != 32 {
+            items = list.push(items, item)
+            item = ""
+        }
+        item += line + "\n"
+    }
+    if item != "" {
+        items = list.push(items, item)
+    }
+    in_canonical_order(items)
+}
+
+/// Printed items in canonical order: the imports sorted, then the declarations, then the tests.
+// example: in_canonical_order(["test a\n", "import list\n", "import io\n"]) == ["import io\n", "import list\n", "test a\n"]
+fn in_canonical_order(items: List<String>) -> List<String> {
+    var imports = []
+    var declarations = []
+    var tests = []
+    for written in items {
+        if is_opened_by(text: written, opening: "import ") {
+            imports = list.push(imports, written)
+        } else if is_opened_by(text: written, opening: "test ") {
+            tests = list.push(tests, written)
+        } else {
+            declarations = list.push(declarations, written)
+        }
+    }
+    parts_joined([sorted(imports), declarations, tests])
+}
+
+/// Whether `text` opens with `opening`.
+// example: is_opened_by(text: "import io", opening: "import ")
+fn is_opened_by(text: String, opening: String) -> Bool {
+    or(strings.cut(text, 0, strings.length(opening)), "") == opening
+}
+
+/// The texts of each part of `parts`, one part after the other.
+// example: parts_joined([["a"], [], ["b"]]) == ["a", "b"]
+fn parts_joined(parts: List<List<String>>) -> List<String> {
+    var joined = []
+    for part in parts {
+        for text in part {
+            joined = list.push(joined, text)
+        }
+    }
+    joined
 }
 
 /// The tree `source` parses to, as `ast.printed` writes it, with each span taken out.
@@ -178,7 +236,8 @@ fn is_span_text(text: String) -> Bool {
     dots == 2 && digits >= 2
 }
 
-/// Every comment of a drawn program is in its canonical text, in the same order.
+/// Every comment of a drawn program is in its canonical text once, in the same order where no item
+/// moves.
 // example: held.is_held(every_comment_survives_in_source_order(3))
 fn every_comment_survives_in_source_order(cases: Int) -> held.Held {
     var found = held.nothing_failed(cases)
@@ -195,7 +254,8 @@ fn every_comment_survives_in_source_order(cases: Int) -> held.Held {
     found
 }
 
-/// Why the canonical text of `source` holds other comments, and `""` where it holds the same.
+/// Why the canonical text of `source` holds other comments, or holds them in another order where
+/// no item moves, and `""` where it holds the same.
 // example: comment_fault("fn main( )  {  // why\n1 // one   \n}") == ""
 // example: comment_fault("fn (") == ""
 fn comment_fault(source: String) -> String {
@@ -205,10 +265,39 @@ fn comment_fault(source: String) -> String {
     }
     let before = comments(source)
     let after = comments(canonical)
-    if before != after {
+    if sorted(before) != sorted(after) || is_in_place(source) && before != after {
         return "the comments " + shown(before) + " become " + shown(after)
     }
     ""
+}
+
+/// `texts` in sorted order.
+// example: sorted(["b", "a", "b"]) == ["a", "b", "b"]
+fn sorted(texts: List<String>) -> List<String> {
+    var ordered = []
+    for text in texts {
+        var placed = []
+        var is_in = false
+        for held_text in ordered {
+            if !is_in && held_text > text {
+                placed = list.push(placed, text)
+                is_in = true
+            }
+            placed = list.push(placed, held_text)
+        }
+        if !is_in {
+            placed = list.push(placed, text)
+        }
+        ordered = placed
+    }
+    ordered
+}
+
+/// Whether each import and each test of `source` is in place, so formatting moves no item.
+// example: is_in_place("import io\n\nfn f() {\n}\n")
+// example: !is_in_place("import list\nimport io\n")
+fn is_in_place(source: String) -> Bool {
+    !format.is_misplaced(format.out_of_order(ok_or(parser.parse(source), ast.Program { items: [] })))
 }
 
 /// The text of each comment of `source`, in order, without the blanks it ends with.
@@ -267,12 +356,16 @@ fn refusal_fault(written: String) -> String {
     }
 }
 
-/// Why `text` is not in canonical form, and `""` where it is.
+/// Why `text` departs from canonical form in its layout, and `""` where it does not.
+///
+/// A refusal of the layout comes before a refusal of the order, so the text it carries keeps each
+/// item where the author wrote it, and the check says next where an item belongs.
 // example: canonical_fault("fn main() {\n}\n") == ""
+// example: canonical_fault("fn main() {\n\n}\n") != ""
 fn canonical_fault(text: String) -> String {
-    let again = ok_or(format.format(text), "refused")
-    if again != text {
-        return "the canonical text " + held.quoted(text) + " formats to " + held.quoted(again)
+    let code = format.check_code(format.check(text))
+    if code == "L0200" || code == "L0100" {
+        return "the canonical text " + held.quoted(text) + " is refused as " + code
     }
     ""
 }

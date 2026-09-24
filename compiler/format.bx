@@ -7,15 +7,244 @@
 import ast
 import lexer
 import list
+import map
 import parser
+import set
 import strings
 
 /// The canonical text of `source`, or the error the parser refuses it with.
+///
+/// Canonical form has one place for an import and one for a test, so the text puts each there:
+/// the imports first, sorted by the module they name, and the tests last, in the order written.
 // example: ok_or(format("fn main( )  {}"), "") == "fn main() {\n}\n"
 // example: ok_or(format("fn ("), "refused") == "refused"
+// example: ok_or(format("import list\nimport io\n"), "") == "import io\nimport list\n"
+// example: ok_or(format("test \"a\" {\n    true\n}\n\nfn f() {\n}\n"), "") == "fn f() {\n}\n\ntest \"a\" {\n    true\n}\n"
 fn format(source: String) -> Result<String, parser.ParseError> {
     let parsed = parser.parse(source)?
-    Ok(program(printer_of(source), parsed).text)
+    let printed = program(printer_of(source), parsed).text
+    let reparsed = parser.parse(printed)?
+    if !is_misplaced(out_of_order(reparsed)) {
+        return Ok(printed)
+    }
+    Ok(reordered(printed, ast.Program { items: in_place(reparsed.items) }))
+}
+
+/// `canonical` with its items in the order `wanted` holds them, each with the comments above it.
+///
+/// `wanted` holds each item that `canonical` parses to once, and `canonical` is the answer where
+/// it does not. The comments above the first item are the header of the file and stay at the top,
+/// up to the first `///` comment, which begins the comments that move with the item. A comment
+/// after the last item stays last.
+// example: reordered("import list\nimport io\n", ast.Program { items: [] }) == "import list\nimport io\n"
+// example: reordered("// top\nimport list\nimport io\n", ast.Program { items: in_place(ok_or(parser.parse("// top\nimport list\nimport io\n"), ast.Program { items: [] }).items) }) == "// top\nimport io\nimport list\n"
+fn reordered(canonical: String, wanted: ast.Program) -> String {
+    let parts = parts_of(canonical)
+    match pieces_in(parts, wanted) {
+        Some(pieces) => reprinted(text: parts.header + strings.join(pieces, "\n") + tail_written(parts.tail), fallback: canonical)
+        None => canonical
+    }
+}
+
+/// `items` in canonical order: the imports sorted by the module they name, the declarations, and
+/// the tests, each kind in the order written otherwise.
+// example: list.length(in_place([])) == 0
+fn in_place(items: List<ast.Item>) -> List<ast.Item> {
+    var imports = []
+    var declarations = []
+    var tests = []
+    for declared in items {
+        if is_import(declared) {
+            imports = with_import(imports, declared)
+        } else if is_test(declared) {
+            tests = list.push(tests, declared)
+        } else {
+            declarations = list.push(declarations, declared)
+        }
+    }
+    for declared in declarations {
+        imports = list.push(imports, declared)
+    }
+    for declared in tests {
+        imports = list.push(imports, declared)
+    }
+    imports
+}
+
+/// `sorted` with `imported` after each import that sorts before it or with it.
+// example: list.length(with_import([], ast.Import(ast.ImportDeclaration { module: ast.Name { text: "io", span: lexer.Span { start: 7, length: 2 } }, span: lexer.Span { start: 0, length: 9 } }))) == 1
+fn with_import(sorted: List<ast.Item>, imported: ast.Item) -> List<ast.Item> {
+    var placed = []
+    var is_placed = false
+    for held in sorted {
+        if !is_placed && module_named(held) > module_named(imported) {
+            placed = list.push(placed, imported)
+            is_placed = true
+        }
+        placed = list.push(placed, held)
+    }
+    if !is_placed {
+        placed = list.push(placed, imported)
+    }
+    placed
+}
+
+/// The module an import names, and `""` for any other item.
+// example: module_named(ast.Import(ast.ImportDeclaration { module: ast.Name { text: "io", span: lexer.Span { start: 7, length: 2 } }, span: lexer.Span { start: 0, length: 9 } })) == "io"
+fn module_named(declared: ast.Item) -> String {
+    match declared {
+        ast.Import(imported) => imported.module.text
+        _ => ""
+    }
+}
+
+/// Whether `declared` is a test, which canonical form writes after every declaration.
+// example: !is_test(ast.Import(ast.ImportDeclaration { module: ast.Name { text: "io", span: lexer.Span { start: 7, length: 2 } }, span: lexer.Span { start: 0, length: 9 } }))
+fn is_test(declared: ast.Item) -> Bool {
+    match declared {
+        ast.Test(_) => true
+        _ => false
+    }
+}
+
+/// The piece of each item of `wanted` in its order, where `wanted` holds each item of `parts` once.
+// example: or(pieces_in(parts_of(""), ast.Program { items: [] }), ["none"]) == []
+fn pieces_in(parts: Parts, wanted: ast.Program) -> Option<List<String>> {
+    if list.length(wanted.items) != parts.count {
+        return None
+    }
+    var pieces = []
+    var taken = set.empty()
+    for declared in wanted.items {
+        let start = ast.extent_of(declared).start
+        if set.has_value(taken, start) {
+            return None
+        }
+        taken = set.insert(taken, start)
+        pieces = list.push(pieces, map.get(parts.pieces, start)?)
+    }
+    Some(pieces)
+}
+
+/// The canonical text of `text`, and `fallback` where `text` does not parse.
+// example: reprinted(text: "fn f( ) {}", fallback: "") == "fn f() {\n}\n"
+// example: reprinted(text: "fn (", fallback: "kept") == "kept"
+fn reprinted(text: String, fallback: String) -> String {
+    match parser.parse(text) {
+        Ok(parsed) => program(printer_of(text), parsed).text
+        Err(_) => fallback
+    }
+}
+
+/// The comments after the last item, below the one blank line that comes before them.
+// example: tail_written("") == ""
+// example: tail_written("// end\n") == "\n// end\n"
+fn tail_written(tail: String) -> String {
+    if tail == "" {
+        return ""
+    }
+    "\n" + tail
+}
+
+/// The lines of `canonical`, each in the part of the file it belongs to.
+///
+/// A line belongs to the first item that does not end above it, and a line after the last item to
+/// the tail. A blank line outside an item belongs to nothing, because the printer writes it again.
+// example: parts_of("import io\n// end\n").tail == "// end\n"
+// example: parts_of("// top\n// example: f()\nfn f() {\n}\n").header == "// top\n"
+fn parts_of(canonical: String) -> Parts {
+    let extents = extents_of(canonical)
+    var parts = Parts { header: "", pieces: map.empty(), count: list.length(extents), tail: "", is_first_claimed: false }
+    var at = 0
+    for written in lines_written(canonical) {
+        at = owner_at(extents: extents, at: at, offset: written.span.start)
+        parts = with_line(parts, written, owner_of(extents, at))
+    }
+    parts
+}
+
+/// Where each item that `canonical` parses to is written, in source order.
+// example: list.length(extents_of("import io\n\nfn f() {\n}\n")) == 2
+// example: list.length(extents_of("fn (")) == 0
+fn extents_of(canonical: String) -> List<lexer.Span> {
+    var extents = []
+    for declared in ok_or(parser.parse(canonical), ast.Program { items: [] }).items {
+        extents = list.push(extents, ast.extent_of(declared))
+    }
+    extents
+}
+
+/// The first item from `at` on that does not end before `offset`, or the count where none is.
+// example: owner_at(extents: [lexer.Span { start: 0, length: 4 }], at: 0, offset: 5) == 1
+// example: owner_at(extents: [lexer.Span { start: 0, length: 4 }], at: 0, offset: 3) == 0
+fn owner_at(extents: List<lexer.Span>, at: Int, offset: Int) -> Int {
+    var owner = at
+    for owner < list.length(extents) && end_of(or(list.at(extents, owner), lexer.Span { start: 0, length: 0 })) <= offset {
+        owner += 1
+    }
+    owner
+}
+
+/// The item at `at`, and whether it is the first, where there is one.
+// example: or(owner_of([lexer.Span { start: 0, length: 1 }], 0), Owner { extent: lexer.Span { start: 0, length: 0 }, is_first: false }).is_first
+fn owner_of(extents: List<lexer.Span>, at: Int) -> Option<Owner> {
+    match list.at(extents, at) {
+        Some(extent) => Some(Owner { extent: extent, is_first: at == 0 })
+        None => None
+    }
+}
+
+/// `parts` with `written` in the part it belongs to, which `owner` is where there is one.
+// example: with_line(parts_of(""), WrittenLine { text: "// end", span: lexer.Span { start: 0, length: 6 } }, None).tail == "// end\n"
+fn with_line(parts: Parts, written: WrittenLine, owner: Option<Owner>) -> Parts {
+    match owner {
+        Some(found) => item_line(parts, written, found)
+        None => parts { tail: parts.tail + line_kept(written.text) }
+    }
+}
+
+/// `parts` with `written`, which is in `owner` or above it, in the header or in the piece of `owner`.
+///
+/// The comments above the first item are the header of the file, which stays at the top, up to the
+/// first `///` or `// example:` line: that line and the lines below it move with the item.
+// example: item_line(parts_of(""), WrittenLine { text: "// top", span: lexer.Span { start: 0, length: 6 } }, Owner { extent: lexer.Span { start: 7, length: 9 }, is_first: true }).header == "// top\n"
+// example: item_line(parts_of(""), WrittenLine { text: "// example: f()", span: lexer.Span { start: 0, length: 15 } }, Owner { extent: lexer.Span { start: 16, length: 9 }, is_first: true }).header == ""
+fn item_line(parts: Parts, written: WrittenLine, owner: Owner) -> Parts {
+    let is_above = written.span.start < owner.extent.start
+    if is_above && written.text == "" {
+        return parts
+    }
+    let is_header = is_above && owner.is_first && !parts.is_first_claimed && !is_claimed_by_item(written.text)
+    if is_header {
+        return parts { header: parts.header + written.text + "\n" }
+    }
+    let piece = or(map.get(parts.pieces, owner.extent.start), "") + written.text + "\n"
+    parts { pieces: map.insert(parts.pieces, owner.extent.start, piece), is_first_claimed: parts.is_first_claimed || is_above }
+}
+
+/// Whether the comment `text` belongs to the item below it rather than to the file.
+// example: is_claimed_by_item("/// a")
+// example: is_claimed_by_item("// example: f()")
+// example: !is_claimed_by_item("// a")
+fn is_claimed_by_item(text: String) -> Bool {
+    is_opened_by(text: text, opening: "///") || is_opened_by(text: text, opening: "// example:")
+}
+
+/// Whether `text` begins with `opening`.
+// example: is_opened_by(text: "/// a", opening: "///")
+// example: !is_opened_by(text: "// a", opening: "///")
+fn is_opened_by(text: String, opening: String) -> Bool {
+    or(strings.cut(text, 0, strings.length(opening)), "") == opening
+}
+
+/// `text` as a line of its own, and nothing where it is blank.
+// example: line_kept("") == ""
+// example: line_kept("// a") == "// a\n"
+fn line_kept(text: String) -> String {
+    if text == "" {
+        return ""
+    }
+    text + "\n"
 }
 
 /// Nothing where `source` is in canonical form, and the first thing about it that is not otherwise.
@@ -108,7 +337,7 @@ fn deviation_message(deviation: Deviation) -> String {
 }
 
 /// The `help:` line of a refusal of the check, and `""` where a parse error has none.
-// example: help_of(OutOfPlace(OutOfOrder { against: ImportAfterADeclaration("io"), span: lexer.Span { start: 0, length: 9 } })) == "imports come first, before every declaration"
+// example: help_of(OutOfPlace(OutOfOrder { against: ImportAfterADeclaration("io"), span: lexer.Span { start: 0, length: 9 } })) == "imports come first, before every declaration: `bux fmt` moves it there"
 fn help_of(refused: CheckError) -> String {
     match refused {
         Unparsed(error) => parser.help_of(error.kind)
@@ -225,8 +454,7 @@ fn line_from(text: String, start: Int, end: Int, at: Int) -> WrittenLine {
 /// The first item of `parsed` that is out of place, where one is.
 ///
 /// Imports come first, sorted by the module they name, and tests come last, after every
-/// declaration. The rule is checked and never rewritten: the compiler says where an item belongs,
-/// and the author moves it.
+/// declaration. `bux check` and `bux build` refuse an item out of place, and `format` moves it.
 // example: !is_misplaced(out_of_order(ok_or(parser.parse("import files\n\nimport io\n"), ast.Program { items: [] })))
 // example: is_misplaced(out_of_order(ok_or(parser.parse("fn f() {\n}\n\nimport io\n"), ast.Program { items: [] })))
 // example: is_misplaced(out_of_order(ok_or(parser.parse("test \"a\" {\n    true\n}\n\nfn f() {\n}\n"), ast.Program { items: [] })))
@@ -308,13 +536,13 @@ fn order_message(out: OutOfOrder) -> String {
 }
 
 /// The `help:` line of an item out of place, which says where it belongs.
-// example: order_help(OutOfOrder { against: ImportAfterAnImport { module: "io", before: "list" }, span: lexer.Span { start: 0, length: 9 } }) == "`io` sorts before `list`"
-// example: order_help(OutOfOrder { against: DeclarationAfterATest, span: lexer.Span { start: 0, length: 9 } }) == "tests come last, after every declaration"
+// example: order_help(OutOfOrder { against: ImportAfterAnImport { module: "io", before: "list" }, span: lexer.Span { start: 0, length: 9 } }) == "`io` sorts before `list`: `bux fmt` sorts the imports"
+// example: order_help(OutOfOrder { against: DeclarationAfterATest, span: lexer.Span { start: 0, length: 9 } }) == "tests come last, after every declaration: `bux fmt` moves it above them"
 fn order_help(out: OutOfOrder) -> String {
     match out.against {
-        ImportAfterADeclaration(_) => "imports come first, before every declaration"
-        ImportAfterAnImport { module, before } => "`" + module + "` sorts before `" + before + "`"
-        DeclarationAfterATest => "tests come last, after every declaration"
+        ImportAfterADeclaration(_) => "imports come first, before every declaration: `bux fmt` moves it there"
+        ImportAfterAnImport { module, before } => "`" + module + "` sorts before `" + before + "`: `bux fmt` sorts the imports"
+        DeclarationAfterATest => "tests come last, after every declaration: `bux fmt` moves it above them"
     }
 }
 
@@ -1694,6 +1922,25 @@ type Deviation =
 type WrittenLine = {
     text: String
     span: lexer.Span
+}
+
+/// A canonical text cut at its items: the header, the text of each item by where it starts, and
+/// the tail.
+///
+/// The text of an item holds the comments above it. `is_first_claimed` says whether a comment
+/// above the first item has begun what moves with it.
+type Parts = {
+    header: String
+    pieces: map.Map<Int, String>
+    count: Int
+    tail: String
+    is_first_claimed: Bool
+}
+
+/// The item a line belongs to: where it is written, and whether it is the first of the file.
+type Owner = {
+    extent: lexer.Span
+    is_first: Bool
 }
 
 /// What is written above an item: how far down the file it is, and the module the last import names.
