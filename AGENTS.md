@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Bux is a small ML-inspired language with Go-like syntax and tooling, compiled to the JVM in Bux.
+Bux is a small ML-inspired language with Go's philosophy and tooling, compiled to the JVM in Bux.
 `docs/design.md` is the language specification; a language change is a change there first.
 `docs/implementation.md` says how the compiler is built and what ships when.
 `docs/principles.md` holds the questions every proposed feature must answer.
