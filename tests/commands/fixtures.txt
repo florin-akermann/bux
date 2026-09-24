@@ -7755,6 +7755,22 @@ status 0
 >
 > fn read_bytes(path: String) -> Result<List<Int>, String>
 >
+> fn read_between(path: String, from: Int, to: Int) -> Result<String, String>
+>
+> fn part_before(path: String, from: Int, to: Int, end: Int) -> Result<String, String>
+>
+> fn too_long(path: String, length: Int) -> String
+>
+> fn read_into(path: String, buffer: Bytes, from: Int) -> Result<String, String>
+>
+> fn read_and_let_go(stream: Source, buffer: Bytes, from: Int) -> Result<String, String>
+>
+> fn filled(channel: Channel, buffer: Bytes, from: Int) -> Result<String, String>
+>
+> fn text_or_why(answer: Result<Int, String>, buffer: Bytes) -> Result<String, String>
+>
+> fn text_of(buffer: Bytes) -> String
+>
 > fn size(path: String) -> Result<Int, String>
 >
 > fn each_byte(answer: Result<String, String>) -> Result<List<Int>, String>
@@ -7783,15 +7799,29 @@ status 0
 >
 > extern static read_whole(path: Path) -> Result<String, String> = "java.nio.file.Files.readString"
 >
-> extern static read_whole_as(path: Path, encoding: Encoding) -> Result<String, String> = "java.nio.file.Files.readString"
+> extern static read_whole_as(path: Path, encoding: strings.Encoding) -> Result<String, String> = "java.nio.file.Files.readString"
 >
 > extern static byte_count(path: Path) -> Result<Int, String> = "java.nio.file.Files.size"
 >
-> extern new opened(path: String, written_as: Encoding) -> Result<Writer, String>
+> extern new opened_to_read(path: String) -> Result<Source, String>
 >
-> extern field as_utf_8() -> Encoding = "java.nio.charset.StandardCharsets.UTF_8"
+> extern method channel_of(stream: Source) -> Channel = "getChannel"
 >
-> extern field as_latin_1() -> Encoding = "java.nio.charset.StandardCharsets.ISO_8859_1"
+> extern method int read_at(channel: Channel, buffer: Bytes, position: Int) -> Result<Int, String> = "read"
+>
+> extern static allotted(int capacity: Int) -> Result<Option<Bytes>, String> = "java.nio.ByteBuffer.allocate"
+>
+> extern method has_room(buffer: Bytes) -> Bool = "hasRemaining"
+>
+> extern method flipped(buffer: Bytes) -> Bytes = "flip"
+>
+> extern method decoded_as(encoding: strings.Encoding, bytes: Bytes) -> Chars = "decode"
+>
+> extern method text_in(chars: Chars) -> String = "toString"
+>
+> extern method let_go(stream: Source) -> () = "close"
+>
+> extern new opened(path: String, written_as: strings.Encoding) -> Result<Writer, String>
 >
 > extern static one_char(int code: Int) -> Option<String> = "java.lang.Character.toString"
 >
@@ -7831,8 +7861,6 @@ status 0
 >
 > extern type Writer = "java.io.PrintWriter"
 >
-> extern type Encoding = "java.nio.charset.Charset"
->
 > extern type interface Entries = "java.util.stream.Stream"
 >
 > extern type interface Held = "java.util.List"
@@ -7842,6 +7870,14 @@ status 0
 > extern type Anything = "java.lang.Object"
 >
 > extern type interface Path = "java.nio.file.Path"
+>
+> extern type Source = "java.io.FileInputStream"
+>
+> extern type Channel = "java.nio.channels.FileChannel"
+>
+> extern type Bytes = "java.nio.ByteBuffer"
+>
+> extern type Chars = "java.nio.CharBuffer"
 
 $ api library/io.bx
 status 0
@@ -17965,4 +18001,25 @@ $ fmt tests/spec/parser/record_fields.bx
 status 0
 
 $ build tests/spec/parser/record_fields.bx
+status 0
+
+$ check tests/spec/io/part_read.bx
+status 0
+
+$ check --json tests/spec/io/part_read.bx
+status 0
+
+$ api tests/spec/io/part_read.bx
+status 0
+> fn main(arguments: List<String>) -> Int
+>
+> fn refused(answer: Result<String, String>) -> String
+
+$ test tests/spec/io/part_read.bx
+status 0
+
+$ fmt tests/spec/io/part_read.bx
+status 0
+
+$ build tests/spec/io/part_read.bx
 status 0

@@ -209,7 +209,8 @@ are called.
 `io`, `files`, `programs`, and `environment` hold what no `for` loop writes at all.
 `strings` holds each of them: `join` is the loop, `length` is what no loop reads, and `at` and
 `cut` are a check written over two more `extern` declarations.
-`from_utf_8` is what no loop reads either, because no loop builds a char out of its value.
+`from_utf_8` reaches the decoder of the JVM, so no loop over `files.one_char` writes a second one.
+A second decoder would need rules of its own for a malformed sequence, and the JVM has them.
 `list` holds three more: `length`, `push`, and `at`, which the section above gives the compiler.
 
 ```text
@@ -277,6 +278,7 @@ So `from_utf_8` is total, and a name cut out of a part of a file reads as the UT
 `Charset.decode` reads that buffer as UTF-8 into a `java.nio.CharBuffer`, whose text is the answer.
 So no array crosses the boundary, and `strings` adds `from_utf_8`, `encoded`, `decoded`,
 `spelled`, `as_utf_8`, `as_latin_1`, `Encoding`, `Bytes`, and `Chars` for this.
+`files` reads and writes with these `as_utf_8`, `as_latin_1`, and `Encoding`, so each has one name.
 
 `join` runs the parts of a `List<String>` together, with a separator between each pair.
 
@@ -341,7 +343,7 @@ These hold and are checked by drawn properties in the runner:
 5. `list.at` gives `Some` of the element at every index a list holds, and `None` at every other.
 6. `list.push` gives back what the list held, with the value after it, and leaves the list alone.
 7. `list.length` gives the number of pushes that built a list, and a later push changes no length.
-8. The bytes of a drawn UTF-8 file, one char for each, spell under `from_utf_8` what a read gives.
+8. The parts of a drawn UTF-8 file, joined, spell under `from_utf_8` what `files.read` gives.
 
 The prelude is not among the modules of property 1 that compile on their own.
 Its own names are in scope in every module, so a compiler reading it as a module would refuse
