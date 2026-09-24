@@ -541,7 +541,7 @@ The writer patches nothing and cuts nothing, and these are its rules:
 - A call takes one value off the stack for each parameter, and a `long` counts as two words.
 - A method holds 65535 bytes of code, and a branch reaches 32767 bytes; past either is `L0700`.
 - A text in the constant pool holds 65535 bytes, because two bytes write its length, or is `L0701`.
-- A branch to no label, or two paths into one place with two lengths, is a writer defect, `L0703`.
+- A jump to no label, two stack lengths at one place, or a local no slot fits is a defect, `L0703`.
 
 An operand of `>`, `<=`, and each operator that swaps its operands is adapted as a call adapts it.
 So a `()` that a type parameter stands for is put aside as a new `Object`.

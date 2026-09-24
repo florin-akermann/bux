@@ -361,7 +361,7 @@ fn has_main(classes: List<ir.Class>) -> Bool {
 // example: !has_starting_method([])
 fn has_starting_method(methods: List<ir.Method>) -> Bool {
     for method in methods {
-        if method.name == "main" && has_prefix(text: ir.method_descriptor_text(method.descriptor), opening: "([Ljava/lang/String;)") {
+        if ir.is_started_at(method) {
             return true
         }
     }

@@ -36,21 +36,6 @@ Item 091 measured the writer at 0.31 s, so it stays on one thread unless the pro
 [116][c] - A drawn property holds that a program lowered in a pool gives the classes of one thread.
 [116][d] - Section 7 records `bux build compiler/main.bx` and `bin/bootstrap` before and after.
 
-## 🔴 Item 126: The lowering names no JVM shape, and `compiler/jvm.bx` spells every one
-`compiler/ir.bx` names a class, a descriptor, a slot, or a `java/` member on about 160 lines.
-It builds the instructions of the JVM, and `compiler/jvm.bx` only writes them as a class file.
-So what a construct means and how the JVM spells it are one text, and each reads harder for it.
-`spawned` in `compiler/ir.bx` writes `startVirtualThread` beside numbered slots and descriptors.
-Item 125 fixes a bug in `offer_within` and `ended_test`, and a named local shows such a bug.
-A lowering that names a local and a call reads as what a `process` means.
-A JVM phase that gives each local a slot and each call a descriptor reads as how the JVM spells it.
-A tree whose types have no field for a JVM name makes a `java/` string in the lowering unwriteable.
-[126][a] - `docs/implementation.md` section 6 states the two phases, and what each one may name.
-[126][b] - `compiler/ir.bx` lowers to a tree whose types have no field for a JVM name or a slot.
-[126][c] - `compiler/jvm.bx` gives a local its slot and a call its descriptor, and writes the class.
-[126][d] - `bin/bootstrap` holds stage 2 equal to stage 1 byte for byte across the change.
-[126][e] - Section 7 records `bux build compiler/main.bx` before and after.
-
 ## 🔴 Item 127: `String` is a Bux value over bytes, and `Eq<String>` runs Bux code
 `docs/implementation.md` section 12 states the change and asks for the cost first.
 `java.lang.String` carries a `String`, and it is the one Java class under a Bux value.

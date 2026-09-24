@@ -10,6 +10,7 @@ import drawn
 import files
 import held
 import ir
+import jvm
 import list
 import modules
 
@@ -243,9 +244,9 @@ fn power_of_ten(digits: Int) -> Int {
 }
 
 /// Whether `body` pushes the `long` `value`.
-// example: has_long([ir.LongOf(3)], 3)
-// example: !has_long([ir.IntegerOf(3)], 3)
-fn has_long(body: List<ir.Instruction>, value: Int) -> Bool {
+// example: has_long([jvm.LongOf(3)], 3)
+// example: !has_long([jvm.IntegerOf(3)], 3)
+fn has_long(body: List<jvm.Instruction>, value: Int) -> Bool {
     for instruction in body {
         if is_long_of(instruction, value) {
             return true
@@ -255,11 +256,11 @@ fn has_long(body: List<ir.Instruction>, value: Int) -> Bool {
 }
 
 /// Whether `instruction` pushes the `long` `value`.
-// example: is_long_of(ir.LongOf(3), 3)
-// example: !is_long_of(ir.LongOf(4), 3)
-fn is_long_of(instruction: ir.Instruction, value: Int) -> Bool {
+// example: is_long_of(jvm.LongOf(3), 3)
+// example: !is_long_of(jvm.LongOf(4), 3)
+fn is_long_of(instruction: jvm.Instruction, value: Int) -> Bool {
     match instruction {
-        ir.LongOf(pushed) => pushed == value
+        jvm.LongOf(pushed) => pushed == value
         _ => false
     }
 }
@@ -308,8 +309,8 @@ fn repeated(name: String, times: Int) -> List<String> {
 }
 
 /// The names of the fields `body` reads, in the order it reads them.
-// example: fields_read([ir.GetField(ir.FieldRef { class: "a", name: "b", of: ir.Long })]) == ["b"]
-fn fields_read(body: List<ir.Instruction>) -> List<String> {
+// example: fields_read([jvm.GetField(jvm.FieldRef { class: "a", name: "b", of: jvm.Long })]) == ["b"]
+fn fields_read(body: List<jvm.Instruction>) -> List<String> {
     var names = []
     for instruction in body {
         names = compiled.both(names, field_named(instruction))
@@ -318,10 +319,10 @@ fn fields_read(body: List<ir.Instruction>) -> List<String> {
 }
 
 /// The field `instruction` reads off an instance, where it reads one.
-// example: field_named(ir.Copy) == []
-fn field_named(instruction: ir.Instruction) -> List<String> {
+// example: field_named(jvm.Copy) == []
+fn field_named(instruction: jvm.Instruction) -> List<String> {
     match instruction {
-        ir.GetField(field) => [field.name]
+        jvm.GetField(field) => [field.name]
         _ => []
     }
 }
@@ -341,7 +342,7 @@ fn constrained(draw: drawn.Draw, place: Place) -> Drawing {
     let body = compiled.method_in(compiled.module_classes(lowered, "holder"), "holder", named)
     var why = "holder writes no " + named
     if !compiled.is_none(body) {
-        let found = instances_reached(or(body, ir.Body { instructions: [], locals: 0, guards: [] }).instructions)
+        let found = instances_reached(or(body, compiled.no_spelled()).instructions)
         why = ""
         if found != wanted {
             why = "holder writes " + named + " calling " + shown(found) + ", not " + shown(wanted)
@@ -351,8 +352,8 @@ fn constrained(draw: drawn.Draw, place: Place) -> Drawing {
 }
 
 /// Every instance method `body` calls as a static method, as its class and name, in order.
-// example: instances_reached([ir.Copy]) == []
-fn instances_reached(body: List<ir.Instruction>) -> List<String> {
+// example: instances_reached([jvm.Copy]) == []
+fn instances_reached(body: List<jvm.Instruction>) -> List<String> {
     var reached = []
     for instruction in body {
         reached = compiled.both(reached, instance_reached(instruction))
@@ -361,17 +362,17 @@ fn instances_reached(body: List<ir.Instruction>) -> List<String> {
 }
 
 /// The class and name of the instance method `instruction` calls as a static method, where it does.
-// example: instance_reached(ir.Copy) == []
-fn instance_reached(instruction: ir.Instruction) -> List<String> {
+// example: instance_reached(jvm.Copy) == []
+fn instance_reached(instruction: jvm.Instruction) -> List<String> {
     match instruction {
-        ir.InvokeStatic(reference) => instance_named(reference)
+        jvm.InvokeStatic(reference) => instance_named(reference)
         _ => []
     }
 }
 
 /// The class and name of `reference` where its name says it is an instance method, else nothing.
-// example: instance_named(ir.MethodRef { class: "a", name: "Eq$A$is_equal", descriptor: ir.MethodDescriptor { parameters: [], result: None } }) == ["a.Eq$A$is_equal"]
-fn instance_named(reference: ir.MethodRef) -> List<String> {
+// example: instance_named(jvm.MethodRef { class: "a", name: "Eq$A$is_equal", descriptor: jvm.MethodDescriptor { parameters: [], result: None } }) == ["a.Eq$A$is_equal"]
+fn instance_named(reference: jvm.MethodRef) -> List<String> {
     if compiled.is_holding(reference.name, "$") {
         return [reference.class + "." + reference.name]
     }
@@ -403,17 +404,17 @@ fn asked_why(lowered: List<ir.Lowered>) -> String {
 
 /// A call of nothing, which stands where an instruction calls no method.
 // example: no_call().name == ""
-fn no_call() -> ir.MethodRef {
-    ir.MethodRef { class: "", name: "", descriptor: ir.MethodDescriptor { parameters: [], result: None } }
+fn no_call() -> jvm.MethodRef {
+    jvm.MethodRef { class: "", name: "", descriptor: jvm.MethodDescriptor { parameters: [], result: None } }
 }
 
 /// What is wrong where `classes` write no method as `reference` reaches it, or nothing.
 // example: written_why(classes: [], reference: no_call()) == "holder writes no "
-fn written_why(classes: List<ir.Class>, reference: ir.MethodRef) -> String {
+fn written_why(classes: List<ir.Class>, reference: jvm.MethodRef) -> String {
     for class in classes {
         for method in class.methods {
-            if class.name == "holder" && method.name == reference.name {
-                return descriptor_why(written: method.descriptor, reached: reference.descriptor)
+            if jvm.class_of(class.of) == "holder" && method.name == reference.name {
+                return descriptor_why(written: compiled.spelled_of(method, class).descriptor, reached: reference.descriptor)
             }
         }
     }
@@ -422,7 +423,7 @@ fn written_why(classes: List<ir.Class>, reference: ir.MethodRef) -> String {
 
 /// What sets the descriptor `written` apart from the one `reached`, or nothing.
 // example: descriptor_why(written: no_call().descriptor, reached: no_call().descriptor) == ""
-fn descriptor_why(written: ir.MethodDescriptor, reached: ir.MethodDescriptor) -> String {
+fn descriptor_why(written: jvm.MethodDescriptor, reached: jvm.MethodDescriptor) -> String {
     if written.parameters != reached.parameters || !is_same_result(written: written.result, reached: reached.result) {
         return "holder writes the method apart from how the use reaches it"
     }
@@ -431,12 +432,12 @@ fn descriptor_why(written: ir.MethodDescriptor, reached: ir.MethodDescriptor) ->
 
 /// Whether `written` and `reached` give back the same, which may be nothing for both.
 // example: is_same_result(written: None, reached: None)
-// example: !is_same_result(written: Some(ir.Long), reached: None)
-fn is_same_result(written: Option<ir.Descriptor>, reached: Option<ir.Descriptor>) -> Bool {
+// example: !is_same_result(written: Some(jvm.Long), reached: None)
+fn is_same_result(written: Option<jvm.Descriptor>, reached: Option<jvm.Descriptor>) -> Bool {
     if compiled.is_none(written) || compiled.is_none(reached) {
         return compiled.is_none(written) && compiled.is_none(reached)
     }
-    or(written, ir.Long) == or(reached, ir.Long)
+    or(written, jvm.Long) == or(reached, jvm.Long)
 }
 
 /// Where a drawn module is checked: the directory it is written into, and the library it reaches.

@@ -8,6 +8,7 @@ import compiled
 import drawn
 import held
 import ir
+import jvm
 import list
 import map
 import strings
@@ -84,11 +85,11 @@ fn has_new(lowered: List<ir.Lowered>) -> Bool {
 }
 
 /// Whether `instruction` makes a new instance.
-// example: is_new(ir.New("a/B"))
-// example: !is_new(ir.Copy)
-fn is_new(instruction: ir.Instruction) -> Bool {
+// example: is_new(jvm.New("a/B"))
+// example: !is_new(jvm.Copy)
+fn is_new(instruction: jvm.Instruction) -> Bool {
     match instruction {
-        ir.New(_) => true
+        jvm.New(_) => true
         _ => false
     }
 }
@@ -121,11 +122,11 @@ fn computed(lowered: List<ir.Lowered>, count: Int) -> Result<Int, String> {
 }
 
 /// Whether `instruction` gives back from the method.
-// example: is_return(ir.Return(None))
-// example: !is_return(ir.Copy)
-fn is_return(instruction: ir.Instruction) -> Bool {
+// example: is_return(jvm.Return(None))
+// example: !is_return(jvm.Copy)
+fn is_return(instruction: jvm.Instruction) -> Bool {
     match instruction {
-        ir.Return(_) => true
+        jvm.Return(_) => true
         _ => false
     }
 }
@@ -140,17 +141,17 @@ fn answer_of(machine: Machine) -> Result<Int, String> {
 }
 
 /// `machine` after it runs `instruction`, with the fields each of `classes` holds known.
-// example: stepped(machine: Machine { stack: [], locals: map.empty(), broken: "" }, instruction: ir.LongOf(4), classes: []).stack == [Number(4)]
-fn stepped(machine: Machine, instruction: ir.Instruction, classes: List<ir.Class>) -> Machine {
+// example: stepped(machine: Machine { stack: [], locals: map.empty(), broken: "" }, instruction: jvm.LongOf(4), classes: []).stack == [Number(4)]
+fn stepped(machine: Machine, instruction: jvm.Instruction, classes: List<ir.Class>) -> Machine {
     match instruction {
-        ir.LongOf(value) => pushed(machine, Number(value))
-        ir.Load { slot } => loaded(machine, slot)
-        ir.Store { slot } => stored(machine, slot)
-        ir.Copy => pushed(machine, top(machine))
-        ir.Arithmetic(how) => worked_out(machine, how)
-        ir.New(_) => pushed(machine, Fresh)
-        ir.Construct(reference) => constructed(machine, list.length(fields_of(classes, reference.class)))
-        ir.GetField(field) => read(machine, or(list.index_of(fields_of(classes, field.class), field.name), -1))
+        jvm.LongOf(value) => pushed(machine, Number(value))
+        jvm.Load { slot } => loaded(machine, slot)
+        jvm.Store { slot } => stored(machine, slot)
+        jvm.Copy => pushed(machine, top(machine))
+        jvm.Arithmetic(how) => worked_out(machine, how)
+        jvm.New(_) => pushed(machine, Fresh)
+        jvm.Construct(reference) => constructed(machine, list.length(fields_of(classes, reference.class)))
+        jvm.GetField(field) => read(machine, or(list.index_of(fields_of(classes, field.class), field.name), -1))
         _ => machine { broken: "a drawn body holds an instruction the machine does not know" }
     }
 }
@@ -242,7 +243,7 @@ fn popped(machine: Machine) -> Machine {
 fn fields_of(classes: List<ir.Class>, class: String) -> List<String> {
     var names = []
     for one in classes {
-        if one.name == class {
+        if jvm.class_of(one.of) == class {
             for field in one.fields {
                 names = list.push(names, field.name)
             }
