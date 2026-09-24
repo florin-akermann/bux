@@ -49,7 +49,7 @@ fn crosses(held: unify.Type, crossing: refusal.Crossing, foreign: map.Map<String
 // example: !can_carry(Boundary { crossing: refusal.GivenBack, foreign: map.empty() }, unify.list_of(unify.int()))
 fn can_carry(boundary: Boundary, held: unify.Type) -> Bool {
     match held {
-        unify.Named { name, arguments } => can_carry_named(boundary, held)
+        unify.Named {} => can_carry_named(boundary, held)
         unify.Unit => is_of_a_call(boundary.crossing)
         _ => false
     }
@@ -375,7 +375,7 @@ fn class_named(item: ast.Item) -> String {
 // example: class_named(item_of("type Box = Box\n")) == ""
 fn foreign_class(definition: ast.TypeDefinition) -> String {
     match definition {
-        ast.Foreign { class, called } => class.text
+        ast.Foreign { class } => class.text
         _ => ""
     }
 }
@@ -560,7 +560,7 @@ fn is_a_number(held: unify.Type) -> Bool {
 // example: name_of(unify.int()) == "Int"
 fn name_of(held: unify.Type) -> String {
     match held {
-        unify.Named { name, arguments } => name
+        unify.Named { name } => name
         _ => ""
     }
 }
@@ -569,7 +569,7 @@ fn name_of(held: unify.Type) -> String {
 // example: arguments_of(unify.list_of(unify.int())) == [unify.int()]
 fn arguments_of(held: unify.Type) -> List<unify.Type> {
     match held {
-        unify.Named { name, arguments } => arguments
+        unify.Named { arguments } => arguments
         _ => []
     }
 }

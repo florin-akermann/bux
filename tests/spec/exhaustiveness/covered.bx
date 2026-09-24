@@ -16,10 +16,10 @@ fn described(payment: Payment) -> String {
 }
 
 // A name that binds is placed by nothing, so it may follow any arm.
-fn is_authorized(payment: Payment) -> Bool {
+fn without_authorization(payment: Payment) -> Payment {
     match payment {
-        Authorized { authorization_id } => true
-        other => false
+        Authorized {} => Pending
+        other => other
     }
 }
 
@@ -66,17 +66,17 @@ fn or_else(value: Option<Int>, fallback: Int) -> Int {
 
 fn settled(result: Result<Int, String>) -> String {
     match result {
-        Ok(value) => "ok"
+        Ok(_) => "ok"
         Err(problem) => problem
     }
 }
 
 // A name that binds inside a variant stops the arm being placed any deeper.
-fn unwrapped(outcome: Option<Result<Int, String>>) -> String {
+fn unwrapped(outcome: Option<Result<Int, String>>) -> Result<Int, String> {
     match outcome {
-        Some(Err(problem)) => problem
-        Some(inner) => "something"
-        None => "nothing"
+        Some(Err(problem)) => Err("failed: " + problem)
+        Some(inner) => inner
+        None => Err("nothing")
     }
 }
 

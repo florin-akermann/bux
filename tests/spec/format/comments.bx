@@ -6,6 +6,7 @@ fn go() -> Int {
     let total = 0
     // around again
     for {
+        io.println("once")
         break
         // nothing more
     }

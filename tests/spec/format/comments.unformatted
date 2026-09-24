@@ -4,6 +4,7 @@ fn go() -> Int {
     let total = 0 // start at nothing
     // around again
     for {
+          io.println( "once" )
         break
         // nothing more
     }

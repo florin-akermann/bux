@@ -8,7 +8,6 @@ import infer
 import lexer
 import list
 import map
-import modules
 import resolver
 import types
 
@@ -52,8 +51,8 @@ fn block_holes(resolved: resolver.Resolved, found: List<Hole>, walked: ast.Block
 // example: holes_of("fn f() -> Int {\n    return todo(\"x\")\n}\n") == "27..36 "
 fn statement_holes(resolved: resolver.Resolved, found: List<Hole>, statement: ast.Statement) -> List<Hole> {
     match statement.kind {
-        ast.Binding { mutability, name, value } => expression_holes(resolved, found, value)
-        ast.Assign { target, operator, value } => expression_holes(resolved, found, value)
+        ast.Binding { value } => expression_holes(resolved, found, value)
+        ast.Assign { value } => expression_holes(resolved, found, value)
         ast.Return(given) => given_holes(resolved, found, given)
         ast.For(looped) => loop_holes(resolved, found, looped)
         ast.Discard(value) => expression_holes(resolved, found, value)
@@ -83,7 +82,7 @@ fn header_holes(resolved: resolver.Resolved, found: List<Hole>, header: ast.ForH
     match header {
         ast.Forever => found
         ast.While(condition) => expression_holes(resolved, found, condition)
-        ast.Over { binding, iterable } => expression_holes(resolved, found, iterable)
+        ast.Over { iterable } => expression_holes(resolved, found, iterable)
     }
 }
 
@@ -91,13 +90,13 @@ fn header_holes(resolved: resolver.Resolved, found: List<Hole>, header: ast.ForH
 // example: holes_of("fn f() -> Int {\n    todo(\"x\") + todo(\"y\")\n}\n") == "20..29 32..41 "
 fn expression_holes(resolved: resolver.Resolved, found: List<Hole>, walked: ast.Expr) -> List<Hole> {
     match walked.kind {
-        ast.Unary { operator, operand } => expression_holes(resolved, found, operand)
-        ast.Binary { operator, left, right } => each_holes(resolved, found, [left, right])
+        ast.Unary { operand } => expression_holes(resolved, found, operand)
+        ast.Binary { left, right } => each_holes(resolved, found, [left, right])
         ast.Call { callee, arguments } => call_holes(resolved, callee_holes(resolved, found, callee, walked.span), arguments)
-        ast.Field { receiver, name } => expression_holes(resolved, found, receiver)
+        ast.Field { receiver } => expression_holes(resolved, found, receiver)
         ast.Try(inner) => expression_holes(resolved, found, inner)
         ast.Written(values) => each_holes(resolved, found, values)
-        ast.Record { base, fields } => fields_holes(resolved, found, fields)
+        ast.Record { fields } => fields_holes(resolved, found, fields)
         ast.If(chain) => if_holes(resolved, found, chain)
         ast.Match(matched) => match_holes(resolved, found, matched)
         ast.Spawn(started) => expression_holes(resolved, found, started)

@@ -33,6 +33,9 @@ fn count_active<T>(users: List<User>, limit: Int) -> Result<Int, String> {
         return Err("bad id")
     }
     let renamed = first { active: false }
+    if renamed.active {
+        io.println("still active")
+    }
     Ok(or(total / 1, 0) - 0)
 }
 

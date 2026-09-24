@@ -225,10 +225,10 @@ fn formatting_rewrites(library: ir.Library) -> held.Held {
 /// `fmt` leaves a canonical file exactly as it is, and `check` accepts it.
 // example: status_fact(command.nothing_said(), 1).expected == "1"
 fn canonical_left(library: ir.Library) -> held.Held {
-    let scene = scene_of([Written { at: "example.bx", text: "import io\n" }])
+    let scene = scene_of([Written { at: "example.bx", text: canonical_text() }])
     let path = modules.joined(scene, "example.bx")
     let formatted = said_to(["fmt", path], library)
-    let left = Fact { what: "example.bx", expected: "import io\n", found: content_of(scene: scene, at: "example.bx") }
+    let left = Fact { what: "example.bx", expected: canonical_text(), found: content_of(scene: scene, at: "example.bx") }
     let checked = said_to(["check", path], library)
     let found = facts_held("fmt leaves a canonical file as it is, and check accepts it", command.all_of([status_fact(formatted, 0), left], said_facts(what: "check", said: checked)))
     command.removed_whole(scene)
@@ -552,6 +552,12 @@ fn module_text() -> String {
 // example: occurrences(text: unfinished_text(), part: "todo(") == 2
 fn unfinished_text() -> String {
     "fn total(users: List<User>) -> Int {\n    todo(\"count them once the walk is written\")\n}\n\nfn named(user: User) -> String {\n    todo(\"read the name off the record\")\n}\n\ntype User = {\n    id: Int\n}\n"
+}
+
+/// A module in canonical form that imports a module and reads it.
+// example: first_line_of(canonical_text()) == "import io"
+fn canonical_text() -> String {
+    "import io\n\nfn greet() -> () {\n    io.println(\"hi\")\n}\n"
 }
 
 /// A module whose second line is not what canonical form writes there.

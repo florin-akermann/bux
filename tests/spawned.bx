@@ -114,7 +114,7 @@ fn drawn_process(draw: drawn.Draw) -> Drawing {
 fn written(drawing: Drawing, broken: Break) -> String {
     let entry = main_written(drawing, broken)
     let functions = start_written(drawing, broken) + "\n" + receive_written(drawing, broken) + extra_written(broken)
-    let helper = "fn kept(state: " + drawing.state + ", amount: Int) -> Next<" + drawing.state + "> {\n    Continue(state)\n}\n"
+    let helper = "fn kept(state: " + drawing.state + ", amount: Int) -> Next<" + drawing.state + "> {\n    _ = amount\n    Continue(state)\n}\n"
     entry + "\nprocess " + drawing.named + " {\n" + functions + "}\n\n" + helper + "\n" + message_type(drawing, broken) + file_written(broken)
 }
 
@@ -204,12 +204,12 @@ fn receive_body(drawing: Drawing, broken: Break) -> String {
 // example: arm_written(kind: Kind { name: "Keep", carries: false }, broken: Whole, place: 0) == "Keep => Continue(state)"
 fn arm_written(kind: Kind, broken: Break, place: Int) -> String {
     if broken == ArmDoesWork && place == 0 {
-        return pattern_of(kind) + " => if true {\n                Continue(state)\n            } else {\n                Done\n            }"
+        return ignored(kind) + " => if true {\n                Continue(state)\n            } else {\n                Done\n            }"
     }
     if kind.carries && broken != ReceiveOfAnotherState {
         return pattern_of(kind) + " => kept(state: state, amount: amount)"
     }
-    pattern_of(kind) + " => Continue(state)"
+    ignored(kind) + " => Continue(state)"
 }
 
 /// The pattern of `kind`, which binds `amount` where it carries a number.
@@ -217,6 +217,15 @@ fn arm_written(kind: Kind, broken: Break, place: Int) -> String {
 fn pattern_of(kind: Kind) -> String {
     if kind.carries {
         return kind.name + "(amount)"
+    }
+    kind.name
+}
+
+/// The pattern of `kind`, which binds nothing, for an arm that reads no number.
+// example: ignored(Kind { name: "Add", carries: true }) == "Add(_)"
+fn ignored(kind: Kind) -> String {
+    if kind.carries {
+        return kind.name + "(_)"
     }
     kind.name
 }

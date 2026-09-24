@@ -1,5 +1,7 @@
 // expect-run
 // A named call passes its arguments in order like any other, and says what that order is.
+import list
+
 fn main(arguments: List<String>) -> Int {
     let shorter = rename(from: "old", to: "new")
     let wider = repeat(word: "ha", times: 3)
@@ -27,13 +29,13 @@ fn repeat(word: String, times: Int) -> String {
 }
 
 /// The parameter types differ, so this call is written either way and is written in order here.
-// example: label("done", 1) == "done"
+// example: label("done", 1) == "done 1"
 fn label(text: String, count: Int) -> String {
-    text
+    text + " " + shown(count)
 }
 
 /// A type parameter counts as a type, so `pair` repeats one and every call of it names them.
-// example: pair(first: 1, second: 2) == 1
-fn pair<T>(first: T, second: T) -> T {
-    first
+// example: list.length(pair(first: 1, second: 2)) == 2
+fn pair<T>(first: T, second: T) -> List<T> {
+    [first, second]
 }

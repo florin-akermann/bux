@@ -28,6 +28,12 @@ A binding the arm never reads is a name the reader looks for a use of and does n
 It is the same `_` that `docs/specs/discarding.md` writes on the left of `=`, and it says the same
 thing in both places: what is here is deliberately not used.
 
+A binding that nothing reads is `L0321`, which `docs/specs/unused.md` states.
+`Box {}` matches a record of type `Box` and binds no field, so an arm that needs no field writes it.
+It binds nothing, so it can be one alternative of an or-pattern.
+A variant that carries its values in order has no field, so `Some {}` is `L0401`, as in a build.
+A variant that carries nothing is matched by `Dot {}` as by `Dot`, as an expression builds it.
+
 ## A literal matches one value
 
 ```text

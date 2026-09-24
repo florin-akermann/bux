@@ -116,6 +116,8 @@ Name resolution raises these, in `compiler/resolver.bx`:
 - `L0314` — a name that binds is written inside an or-pattern, which binds nothing.
 - `L0318` — an instance writes an argument of its type that is no type parameter it declares.
 - `L0319` — two tests of one module have the same name.
+- `L0320` — an import is read by nothing.
+- `L0321` — a binding or a parameter is read by nothing.
 
 Loading raises these, in `compiler/modules.bx`, before any module is resolved:
 

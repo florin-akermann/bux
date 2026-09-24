@@ -6,7 +6,6 @@
 import drawn
 import format
 import held
-import ir
 import lexer
 import list
 import parser
@@ -15,8 +14,8 @@ import strings
 import walk
 
 /// Every property of the formatter, each tried on `cases` drawn cases, in a fixed order.
-// example: list.length(every_property(1, ir.little_library())) == 7
-fn every_property(cases: Int, library: ir.Library) -> List<held.Held> {
+// example: list.length(every_property(1)) == 7
+fn every_property(cases: Int) -> List<held.Held> {
     [every_extern_declaration_round_trips(cases), formatting_is_deterministic_and_idempotent(cases), formatting_keeps_the_tree(cases), every_comment_survives_in_source_order(cases), the_canonical_text_of_a_refusal_is_canonical(cases), every_spelling_canonical_form_advises_is_one_it_accepts(cases), a_declaration_below_a_test_is_out_of_place(cases)]
 }
 
@@ -263,7 +262,7 @@ fn the_canonical_text_of_a_refusal_is_canonical(cases: Int) -> held.Held {
 // example: refusal_fault("fn main() {\n}\n") == "it is not refused as not canonical: \"\""
 fn refusal_fault(written: String) -> String {
     match format.check(written) {
-        Err(format.NotCanonical { deviation, canonical }) => canonical_fault(canonical)
+        Err(format.NotCanonical { canonical }) => canonical_fault(canonical)
         answer => "it is not refused as not canonical: " + held.quoted(format.check_code(answer))
     }
 }
@@ -334,7 +333,7 @@ fn every_spelling_canonical_form_advises_is_one_it_accepts(cases: Int) -> held.H
 fn spelling(name: String) -> String {
     match format.check(declaring(name)) {
         Ok(_) => name
-        Err(format.Misspelled(format.Miscased { written, kind, canonical })) => canonical
+        Err(format.Misspelled(format.Miscased { canonical })) => canonical
         Err(_) => ""
     }
 }

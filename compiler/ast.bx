@@ -72,9 +72,9 @@ fn reached_lines(reaches: Reaches) -> String {
 // example: reaches_word(Constructor) == "new"
 fn reaches_word(reaches: Reaches) -> String {
     match reaches {
-        StaticField(named) => "field"
-        StaticMethod(named) => "static"
-        InstanceMethod(named) => "method"
+        StaticField(_) => "field"
+        StaticMethod(_) => "static"
+        InstanceMethod(_) => "method"
         Constructor => "new"
     }
 }

@@ -250,7 +250,7 @@ fn unlisted_class(draw: drawn.Draw) -> String {
 // example: checking.code_of(checked_with(source: "extern type Drawn = \"a.B\"\n", archived: set.insert(set.empty(), "a.B"), library: ir.little_library())) == ""
 fn checked_with(source: String, archived: set.Set<String>, library: ir.Library) -> Result<infer.Inference, command.Diagnostic> {
     let program = checking.parsed(source)?
-    let resolved = command.resolved_of(resolver.resolve(program, "demo", library.prelude.names))?
+    let resolved = command.resolved_of(resolver.resolve(program, "demo", library.prelude.names, set.empty()))?
     command.inferred_of(types.check(resolved, surface.nothing_imported(), types.with_archived(library.prelude, archived)))
 }
 

@@ -1,0 +1,9 @@
+// expect-error: L0401
+// A variant that carries its values in order has no field, so `Some {}` is refused as a pattern.
+// example: described(Some(2)) == "some"
+fn described(held: Option<Int>) -> String {
+    match held {
+        Some {} => "some"
+        None => "none"
+    }
+}

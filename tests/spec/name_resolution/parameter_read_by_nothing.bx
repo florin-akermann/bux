@@ -1,0 +1,6 @@
+// expect-error: L0321
+// A function chooses its own parameters, so one that its body never reads is refused.
+// example: greeting("Ada", 3) == "hello, Ada"
+fn greeting(name: String, times: Int) -> String {
+    "hello, " + name
+}

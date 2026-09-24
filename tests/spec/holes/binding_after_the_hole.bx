@@ -1,0 +1,11 @@
+// expect-error: L0321
+// A hole reads only the names in scope where it is written, so a binding below it is not read.
+fn shipped(order: Order) -> Int {
+    _ = todo("check the order")
+    let weight = order.items * 2
+    order.items
+}
+
+type Order = {
+    items: Int
+}

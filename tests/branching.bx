@@ -198,7 +198,7 @@ fn dividing(draw: drawn.Draw) -> String {
 /// The ways a division is written, each holding it where `{}` is.
 // example: list.length(contexts()) == 4
 fn contexts() -> List<String> {
-    ["fn go(a: Int, b: Int) -> Option<Int> {\n    {}\n}\n", "fn go(a: Int, b: Int) -> Int {\n    or({}, 0)\n}\n", "fn go(a: Int, b: Int) -> Option<Int> {\n    let held = {}\n    held\n}\n", "fn is_same(a: Int, b: Int) -> Bool {\n    or({}, 0) == a\n}\n"]
+    ["fn go(a: Int, b: Int) -> Option<Int> {\n    _ = a + b\n    {}\n}\n", "fn go(a: Int, b: Int) -> Int {\n    _ = a + b\n    or({}, 0)\n}\n", "fn go(a: Int, b: Int) -> Option<Int> {\n    _ = a + b\n    let held = {}\n    held\n}\n", "fn is_same(a: Int, b: Int) -> Bool {\n    _ = a + b\n    or({}, 0) == a\n}\n"]
 }
 
 /// An `or` over a division, with a drawn fallback, written out in place.
@@ -331,7 +331,7 @@ fn refused(lowered: List<ir.Lowered>) -> String {
 /// The ways a `?` on an `Option` is written, each holding a division where `{}` is.
 // example: list.length(propagating()) == 5
 fn propagating() -> List<String> {
-    ["fn go(a: Int, b: Int) -> Option<Int> {\n    Some(({})?)\n}\n", "fn go(a: Int, b: Int) -> Option<Int> {\n    let held = ({})?\n    Some(held)\n}\n", "fn go(a: Int, b: Int) -> Option<Int> {\n    Some((({})? / 2)? + 2 * 5)\n}\n", "fn is_same(a: Int, b: Int) -> Option<Bool> {\n    Some(({})? == a)\n}\n", "fn go(a: Int, b: Int) -> Option<Int> {\n    if a == b {\n        return Some(({})?)\n    }\n    Some(0)\n}\n"]
+    ["fn go(a: Int, b: Int) -> Option<Int> {\n    _ = a + b\n    Some(({})?)\n}\n", "fn go(a: Int, b: Int) -> Option<Int> {\n    _ = a + b\n    let held = ({})?\n    Some(held)\n}\n", "fn go(a: Int, b: Int) -> Option<Int> {\n    _ = a + b\n    Some((({})? / 2)? + 2 * 5)\n}\n", "fn is_same(a: Int, b: Int) -> Option<Bool> {\n    _ = a + b\n    Some(({})? == a)\n}\n", "fn go(a: Int, b: Int) -> Option<Int> {\n    _ = a + b\n    if a == b {\n        return Some(({})?)\n    }\n    Some(0)\n}\n"]
 }
 
 /// Where each test of `body` for the `None` a `?` hands back begins.
@@ -412,7 +412,7 @@ fn propagation_why(body: List<ir.Instruction>, at: Int, why: String) -> String {
 // example: slot_loaded(ir.Copy) == -1
 fn slot_loaded(instruction: ir.Instruction) -> Int {
     match instruction {
-        ir.Load { slot, of } => slot
+        ir.Load { slot } => slot
         _ => -1
     }
 }

@@ -25,10 +25,10 @@ fn every_archive_held(library: ir.Library, limit: Int) -> held.Held {
     }
     var found = stated_reached(library, limit)
     found = held.added(found, unstated_unreached(library, limit))
-    found = held.added(found, missing_refused(library, limit))
+    found = held.added(found, missing_refused(library))
     found = held.added(found, other_hash_refused(library, limit))
     found = held.added(found, class_path_refused(library, limit))
-    found = held.added(found, plain_file_refused(library, limit))
+    found = held.added(found, plain_file_refused(library))
     found = held.added(found, examples_reach_it(library, limit))
     held.added(found, dependency_archive_reached(library, limit))
 }
@@ -60,7 +60,7 @@ fn unstated_unreached(library: ir.Library, limit: Int) -> held.Held {
 
 /// `build` refuses an archive that is not there.
 // example: strings_joined([zero_line("lib/gone.jar")]) != ""
-fn missing_refused(library: ir.Library, limit: Int) -> held.Held {
+fn missing_refused(library: ir.Library) -> held.Held {
     let scene = enacted.scene_of([enacted.Written { at: "main.bx", text: program_text() }, enacted.Written { at: "bux.package", text: manifest_text([zero_line("lib/gone.jar")]) }])
     let said = enacted.said_to(["build", modules.joined(scene, "main.bx")], library)
     let facts = refused_facts(said: said, scene: scene, opening: "error[L0606]: `lib/gone.jar` is not there")
@@ -93,7 +93,7 @@ fn class_path_refused(library: ir.Library, limit: Int) -> held.Held {
 
 /// `build` refuses a file that has the hash its line states and is no Java archive.
 // example: strings_joined([]) == ""
-fn plain_file_refused(library: ir.Library, limit: Int) -> held.Held {
+fn plain_file_refused(library: ir.Library) -> held.Held {
     let scene = enacted.scene_of([enacted.Written { at: "main.bx", text: program_text() }, enacted.Written { at: "lib/shouting.jar", text: "plain" }])
     _ = files.write(modules.joined(scene, "bux.package"), manifest_text([archive_line(modules.joined(scene, "lib/shouting.jar"))]))
     let said = enacted.said_to(["build", modules.joined(scene, "main.bx")], library)

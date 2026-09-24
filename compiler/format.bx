@@ -71,8 +71,8 @@ fn check_code(answer: Result<(), CheckError>) -> String {
 fn code_of(refused: CheckError) -> String {
     match refused {
         Unparsed(error) => parser.code_of(error.kind)
-        NotCanonical { deviation, canonical } => "L0200"
-        OutOfPlace(out) => "L0201"
+        NotCanonical {} => "L0200"
+        OutOfPlace(_) => "L0201"
         Misspelled(misspelled) => misspelling_code(misspelled)
     }
 }
@@ -81,8 +81,8 @@ fn code_of(refused: CheckError) -> String {
 // example: misspelling_code(Initial(ast.Name { text: "x", span: lexer.Span { start: 0, length: 1 } })) == "L0203"
 fn misspelling_code(misspelled: Misspelling) -> String {
     match misspelled {
-        Miscased { written, kind, canonical } => "L0202"
-        Initial(written) => "L0203"
+        Miscased {} => "L0202"
+        Initial(_) => "L0203"
     }
 }
 
@@ -91,7 +91,7 @@ fn misspelling_code(misspelled: Misspelling) -> String {
 fn message_of(refused: CheckError) -> String {
     match refused {
         Unparsed(error) => parser.message(error.kind)
-        NotCanonical { deviation, canonical } => deviation_message(deviation)
+        NotCanonical { deviation } => deviation_message(deviation)
         OutOfPlace(out) => order_message(out)
         Misspelled(misspelled) => name_message(misspelled)
     }
@@ -101,7 +101,7 @@ fn message_of(refused: CheckError) -> String {
 // example: deviation_message(Ending(lexer.Span { start: 0, length: 0 })) == "this file does not end the way canonical form ends it"
 fn deviation_message(deviation: Deviation) -> String {
     match deviation {
-        LineDiffers { span, canonical } => "this line is not in canonical form"
+        LineDiffers {} => "this line is not in canonical form"
         ExtraLine(_) => "canonical form does not write this line"
         Ending(_) => "this file does not end the way canonical form ends it"
     }
@@ -112,7 +112,7 @@ fn deviation_message(deviation: Deviation) -> String {
 fn help_of(refused: CheckError) -> String {
     match refused {
         Unparsed(error) => parser.help_of(error.kind)
-        NotCanonical { deviation, canonical } => deviation_help(deviation)
+        NotCanonical { deviation } => deviation_help(deviation)
         OutOfPlace(out) => order_help(out)
         Misspelled(misspelled) => name_help(misspelled)
     }
@@ -122,7 +122,7 @@ fn help_of(refused: CheckError) -> String {
 // example: deviation_help(LineDiffers { span: lexer.Span { start: 0, length: 1 }, canonical: "}" }) == "canonical form writes `}`"
 fn deviation_help(deviation: Deviation) -> String {
     match deviation {
-        LineDiffers { span, canonical } => "canonical form writes `" + canonical + "`"
+        LineDiffers { canonical } => "canonical form writes `" + canonical + "`"
         ExtraLine(_) => "run `bux fmt` to take this line out"
         Ending(_) => "end the file with a newline"
     }
@@ -133,7 +133,7 @@ fn deviation_help(deviation: Deviation) -> String {
 fn span_of(refused: CheckError) -> lexer.Span {
     match refused {
         Unparsed(error) => error.span
-        NotCanonical { deviation, canonical } => deviation_span(deviation)
+        NotCanonical { deviation } => deviation_span(deviation)
         OutOfPlace(out) => out.span
         Misspelled(misspelled) => name_span(misspelled)
     }
@@ -143,7 +143,7 @@ fn span_of(refused: CheckError) -> lexer.Span {
 // example: shown(deviation_span(ExtraLine(lexer.Span { start: 1, length: 0 }))) == "1..1"
 fn deviation_span(deviation: Deviation) -> lexer.Span {
     match deviation {
-        LineDiffers { span, canonical } => span
+        LineDiffers { span } => span
         ExtraLine(span) => span
         Ending(span) => span
     }
@@ -312,7 +312,7 @@ fn order_message(out: OutOfOrder) -> String {
 // example: order_help(OutOfOrder { against: DeclarationAfterATest, span: lexer.Span { start: 0, length: 9 } }) == "tests come last, after every declaration"
 fn order_help(out: OutOfOrder) -> String {
     match out.against {
-        ImportAfterADeclaration(module) => "imports come first, before every declaration"
+        ImportAfterADeclaration(_) => "imports come first, before every declaration"
         ImportAfterAnImport { module, before } => "`" + module + "` sorts before `" + before + "`"
         DeclarationAfterATest => "tests come last, after every declaration"
     }
@@ -362,7 +362,7 @@ fn misspelling_of(named: Declared) -> Misspelling {
 // example: name_message(Miscased { written: ast.Name { text: "countAll", span: lexer.Span { start: 3, length: 8 } }, kind: FunctionName, canonical: "count_all" }) == "`countAll` is a function, so canonical form writes it in `snake_case`"
 fn name_message(misspelled: Misspelling) -> String {
     match misspelled {
-        Miscased { written, kind, canonical } => "`" + written.text + "` is " + label_of(kind) + ", so canonical form writes it in `" + convention_of(kind) + "`"
+        Miscased { written, kind } => "`" + written.text + "` is " + label_of(kind) + ", so canonical form writes it in `" + convention_of(kind) + "`"
         Initial(written) => "`" + written.text + "` is an initial, which names nothing a reader can look for"
     }
 }
@@ -371,8 +371,8 @@ fn name_message(misspelled: Misspelling) -> String {
 // example: name_help(Initial(ast.Name { text: "x", span: lexer.Span { start: 0, length: 1 } })) == "a declared name is a word, so write the one this names"
 fn name_help(misspelled: Misspelling) -> String {
     match misspelled {
-        Miscased { written, kind, canonical } => "canonical form spells this name `" + canonical + "`"
-        Initial(written) => "a declared name is a word, so write the one this names"
+        Miscased { canonical } => "canonical form spells this name `" + canonical + "`"
+        Initial(_) => "a declared name is a word, so write the one this names"
     }
 }
 
@@ -380,7 +380,7 @@ fn name_help(misspelled: Misspelling) -> String {
 // example: shown(name_span(Initial(ast.Name { text: "x", span: lexer.Span { start: 4, length: 1 } }))) == "4..5"
 fn name_span(misspelled: Misspelling) -> lexer.Span {
     match misspelled {
-        Miscased { written, kind, canonical } => written.span
+        Miscased { written } => written.span
         Initial(written) => written.span
     }
 }
@@ -606,7 +606,7 @@ fn definition_names(names: List<Declared>, definition: ast.TypeDefinition) -> Li
     match definition {
         ast.RecordType(fields) => fields_named(names, fields)
         ast.Variants(variants) => variants_named(names, variants)
-        ast.Foreign { class, called } => names
+        ast.Foreign {} => names
     }
 }
 
@@ -973,7 +973,7 @@ fn is_parenthesised(written: ast.Expr, least: Int, records: Records) -> Bool {
 // example: !is_record(expression_of("user").kind)
 fn is_record(kind: ast.ExprKind) -> Bool {
     match kind {
-        ast.Record { base, fields } => true
+        ast.Record {} => true
         _ => false
     }
 }
@@ -1033,8 +1033,8 @@ fn power_after_minus(operand: ast.Expr) -> Int {
 fn is_opened_by_a_number(written: ast.Expr) -> Bool {
     match written.kind {
         ast.Integer(value) => value >= 0
-        ast.Call { callee, arguments } => is_opened_by_a_number(written: callee)
-        ast.Field { receiver, name } => is_opened_by_a_number(written: receiver)
+        ast.Call { callee } => is_opened_by_a_number(written: callee)
+        ast.Field { receiver } => is_opened_by_a_number(written: receiver)
         ast.Try(inner) => is_opened_by_a_number(written: inner)
         _ => false
     }
@@ -1124,7 +1124,7 @@ fn record(printer: Printer, base: ast.Path, fields: List<ast.FieldValue>) -> Pri
 fn if_expression(printer: Printer, chain: ast.IfExpr) -> Printer {
     let count = list.length(chain.branches)
     let last = match chain.otherwise {
-        Some(otherwise) => LeftOpen
+        Some(_) => LeftOpen
         None => Closed
     }
     var printed = printer
@@ -1331,12 +1331,12 @@ fn escaped(letter: String) -> String {
 // example: binding_power(expression_of("a").kind) == 7
 fn binding_power(kind: ast.ExprKind) -> Int {
     match kind {
-        ast.Unary { operator, operand } => unary_power()
-        ast.Binary { operator, left, right } => operator_power(operator)
-        ast.Call { callee, arguments } => postfix_power()
-        ast.Field { receiver, name } => postfix_power()
-        ast.Try(inner) => postfix_power()
-        ast.Spawn(started) => unary_power()
+        ast.Unary {} => unary_power()
+        ast.Binary { operator } => operator_power(operator)
+        ast.Call {} => postfix_power()
+        ast.Field {} => postfix_power()
+        ast.Try(_) => postfix_power()
+        ast.Spawn(_) => unary_power()
         _ => 7
     }
 }
@@ -1587,7 +1587,7 @@ fn expression_of(source: String) -> ast.Expr {
     let unit = ast.Expr { kind: ast.Unit, span: lexer.Span { start: 0, length: 0 } }
     match parser.expression(parser.over(source), parser.Allowed) {
         Ok(parsed) => parsed.value
-        Err(refused) => unit
+        Err(_) => unit
     }
 }
 
@@ -1597,7 +1597,7 @@ fn pattern_of(source: String) -> ast.Pattern {
     let wildcard = ast.Pattern { kind: ast.Wildcard, span: lexer.Span { start: 0, length: 0 } }
     match parser.pattern(parser.over(source)) {
         Ok(parsed) => parsed.value
-        Err(refused) => wildcard
+        Err(_) => wildcard
     }
 }
 
@@ -1607,7 +1607,7 @@ fn type_of(source: String) -> ast.TypeRef {
     let unit = ast.TypeRef { kind: ast.UnitType, span: lexer.Span { start: 0, length: 0 } }
     match parser.type_ref(parser.over(source)) {
         Ok(parsed) => parsed.value
-        Err(refused) => unit
+        Err(_) => unit
     }
 }
 

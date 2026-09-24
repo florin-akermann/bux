@@ -178,7 +178,7 @@ fn refused(one: modules.Reached, kind: ArchiveErrorKind) -> Unreached {
 fn code_of(kind: ArchiveErrorKind) -> String {
     match kind {
         Missing(_) => "L0606"
-        HashDiffers { path, found } => "L0607"
+        HashDiffers {} => "L0607"
         NamesMore(_) => "L0608"
         NotAnArchive(_) => "L0609"
     }
@@ -200,7 +200,7 @@ fn message(kind: ArchiveErrorKind) -> String {
 fn help_of(kind: ArchiveErrorKind) -> String {
     match kind {
         Missing(_) => "a `jar` line names a file on disk already, and nothing is fetched"
-        HashDiffers { path, found } => "a hash pins the bytes of an archive; state the hash of the archive the package uses"
+        HashDiffers {} => "a hash pins the bytes of an archive; state the hash of the archive the package uses"
         NamesMore(_) => "a run reaches only the archives a manifest states; use an archive with no `Class-Path`"
         NotAnArchive(_) => "a `jar` line names a zip file of classes, as the `jar` tool of the JDK writes one"
     }
@@ -210,7 +210,7 @@ fn help_of(kind: ArchiveErrorKind) -> String {
 // example: code_of(refused_kind(Ok("x.jar"))) == "L0606"
 fn refused_kind<T>(answer: Result<T, Unreached>) -> ArchiveErrorKind {
     match answer {
-        Err(Refused { manifest, error }) => error.kind
+        Err(Refused { error }) => error.kind
         _ => Missing("")
     }
 }

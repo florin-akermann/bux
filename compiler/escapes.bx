@@ -97,8 +97,8 @@ fn result_held(holding: Holding, inference: infer.Inference, function: ast.Funct
 // example: refusal.code_given(built_refused(holding_of(infer.nothing_inferred()), infer.nothing_inferred(), ast.Expr { kind: ast.Unit, span: lexer.Span { start: 0, length: 2 } }, unify.int())) == ""
 fn built_refused(holding: Holding, inference: infer.Inference, written: ast.Expr, found: unify.Type) -> Result<(), refusal.TypeError> {
     match written.kind {
-        ast.Call { callee, arguments } => called_refused(holding, inference, callee, Found { found: found, at: written.span })
-        ast.Record { base, fields } => refused_where_found(holding, found, refusal.BuiltAs(ast.path_text(base)), written.span)
+        ast.Call { callee } => called_refused(holding, inference, callee, Found { found: found, at: written.span })
+        ast.Record { base } => refused_where_found(holding, found, refusal.BuiltAs(ast.path_text(base)), written.span)
         _ => Ok(())
     }
 }

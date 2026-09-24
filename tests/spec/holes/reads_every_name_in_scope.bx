@@ -1,0 +1,14 @@
+// A hole stands for code not yet written, and that code may read any name in scope there.
+// So a hole reads every name in scope where it is written, and `bux check` accepts this module.
+fn shipped(order: Order, express: Delivery) -> Int {
+    let weight = order.items * 2
+    todo("price the parcel")
+}
+
+type Order = {
+    items: Int
+}
+
+type Delivery =
+    | Standard
+    | Express

@@ -243,6 +243,7 @@ Canonical form puts every import first and sorted, which settles where it goes w
 | ring of imports   | `L0307` | `demo` imports `main`, which imports `demo`       |
 | module is two files | `L0317` | `demo` is both `../shapes/demo.bx` and `demo.bx` |
 | reached through no module | `L0313` | `user` is a module in neither scope, and a type is reached through one |
+| import read by nothing | `L0320` | the import `strings` is read by nothing |
 
 `L0300` helps with `a name is declared in this file, imported, or supplied by the prelude`.
 `L0301` helps with `one name has one definition; rename one of the two`.
@@ -255,6 +256,12 @@ Canonical form puts every import first and sorted, which settles where it goes w
 `L0307` helps with `a module is compiled after what it imports, and a ring has no such order`.
 `L0317` helps with `one name has one definition; rename one of the two modules`.
 `L0313` helps with ``a type of another module is reached through the import: write `demo.User```.
+`L0320` helps with `read it, or remove it`.
+
+`L0320` is the import whose module name nothing writes before a dot, at the name in the import.
+A run compiles an example in the module scope, so a module name before a dot there is a read.
+`docs/specs/doc-examples.md` states that an example is a claim in Bux, and a run compiles it.
+`docs/specs/unused.md` states the same rule for a binding and for a parameter, which is `L0321`.
 
 `L0313` is the name on the left of the dot of a type or of a pattern, which is a module or
 nothing at all.

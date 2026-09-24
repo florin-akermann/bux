@@ -57,3 +57,7 @@ type User = {
 }
 
 type UserId = UserId(Int)
+
+fn greet() -> () {
+    io.println("hello")
+}

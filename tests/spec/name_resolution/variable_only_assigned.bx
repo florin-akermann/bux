@@ -1,0 +1,12 @@
+// expect-error: L0321
+// An assignment names a `var` and does not read it, so a `var` that is only assigned is refused.
+// example: counted([1, 2]) == 2
+fn counted(values: List<Int>) -> Int {
+    var last = 0
+    var count = 0
+    for value in values {
+        last = value
+        count += 1
+    }
+    count
+}

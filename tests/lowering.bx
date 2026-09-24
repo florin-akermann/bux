@@ -6,7 +6,6 @@ import compiled
 import drawn
 import held
 import ir
-import jvm
 import list
 import strings
 

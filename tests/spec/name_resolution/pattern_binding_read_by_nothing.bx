@@ -1,0 +1,13 @@
+// expect-error: L0321
+// A name a pattern binds and its arm never reads is refused; the pattern writes `_` there.
+// example: told(Failed("late")) == "failed"
+fn told(payment: Payment) -> String {
+    match payment {
+        Pending => "waiting"
+        Failed(reason) => "failed"
+    }
+}
+
+type Payment =
+    | Pending
+    | Failed(String)

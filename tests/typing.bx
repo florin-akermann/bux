@@ -90,7 +90,7 @@ fn help_given(answer: Result<infer.Inference, command.Diagnostic>) -> String {
 /// A module that binds what `call` gives back, with the functions it calls declared below.
 // example: strings.length(calling("held(1, said)")) > 0
 fn calling(call: String) -> String {
-    "fn go(count: Int, said: String) -> String {\n    let answer = " + call + "\n    answer\n}\n\nfn held(count: Int, said: String) -> String {\n    said\n}\n\nfn twice(count: Int) -> Int {\n    count + count\n}\n"
+    "fn go(count: Int, said: String) -> String {\n    let answer = " + call + "\n    _ = count\n    _ = said\n    answer\n}\n\nfn held(count: Int, said: String) -> String {\n    _ = count\n    said\n}\n\nfn twice(count: Int) -> Int {\n    count + count\n}\n"
 }
 
 /// A module of distinct pieces, each of which infers on its own, infers.
@@ -216,7 +216,7 @@ fn a_generic_is_general_enough_for_any_two_uses(cases: Int, library: ir.Library)
 fn generic_tried(draw: drawn.Draw, library: ir.Library) -> checking.Tried {
     let first = drawn.picked(draw, values(), Valued { written: "1", of: "Int" })
     let second = drawn.picked(drawn.next(draw), values(), Valued { written: "1", of: "Int" })
-    let source = "fn is_general() -> " + second.of + " {\n    let one = given(" + first.written + ")\n    let two = given(" + second.written + ")\n    two\n}\n\nfn given<T>(value: T) -> T {\n    value\n}\n"
+    let source = "fn is_general() -> " + second.of + " {\n    _ = given(" + first.written + ")\n    given(" + second.written + ")\n}\n\nfn given<T>(value: T) -> T {\n    value\n}\n"
     let once = checking.type_written(source, "given(" + first.written + ")", 1, library)
     let twice = checking.type_written(source, "given(" + second.written + ")", 1, library)
     if once != first.of || twice != second.of {
@@ -311,11 +311,11 @@ fn refused_span<T>(answer: Result<T, command.Diagnostic>) -> lexer.Span {
 /// meets it, and at a call of a generic over a `List<()>`.
 // example: list.length(carryings()) == 6
 fn carryings() -> List<Carrying> {
-    let given = "\n\nfn is_given(given: ()) -> Bool {\n    true\n}"
+    let given = "\n\nfn is_given(given: ()) -> Bool {\n    _ = given\n    true\n}"
     let given_flag = "\n\nfn is_given(given: Bool) -> Bool {\n    given\n}"
     let matched = " {\n        Some(inside) => is_given(inside)\n        None => false\n    }\n}"
     let first = "\n\nfn first<T>(items: List<T>) -> Option<T> {\n    for item in items {\n        return Some(item)\n    }\n    None\n}"
-    [Carrying { refused: "fn is_held(maybe: Option<()>) -> Bool {\n    true\n}", accepted: "fn is_held(maybe: Option<Bool>) -> Bool {\n    true\n}", at: "Option<()>" }, Carrying { refused: "type Held = {\n    maybe: Option<()>\n}", accepted: "type Held = {\n    maybe: Option<Bool>\n}", at: "Option<()>" }, Carrying { refused: "fn held() -> List<Option<()>> {\n    []\n}", accepted: "fn held() -> List<Option<Bool>> {\n    []\n}", at: "Option<()>" }, Carrying { refused: "fn is_there() -> Bool {\n    match Some(()) {\n        Some(_) => true\n        None => false\n    }\n}", accepted: "fn is_there() -> Bool {\n    match Some(true) {\n        Some(_) => true\n        None => false\n    }\n}", at: "Some(())" }, Carrying { refused: "fn is_there() -> Bool {\n    match None" + matched + given, accepted: "fn is_there() -> Bool {\n    match None" + matched + given_flag, at: "None" }, Carrying { refused: "fn is_first_given(all: List<()>) -> Bool {\n    match first(all)" + matched + first + given, accepted: "fn is_first_given(all: List<Bool>) -> Bool {\n    match first(all)" + matched + first + given_flag, at: "first(all)" }]
+    [Carrying { refused: "fn is_held(maybe: Option<()>) -> Bool {\n    match maybe {\n        Some(_) => true\n        None => false\n    }\n}", accepted: "fn is_held(maybe: Option<Bool>) -> Bool {\n    match maybe {\n        Some(_) => true\n        None => false\n    }\n}", at: "Option<()>" }, Carrying { refused: "type Held = {\n    maybe: Option<()>\n}", accepted: "type Held = {\n    maybe: Option<Bool>\n}", at: "Option<()>" }, Carrying { refused: "fn held() -> List<Option<()>> {\n    []\n}", accepted: "fn held() -> List<Option<Bool>> {\n    []\n}", at: "Option<()>" }, Carrying { refused: "fn is_there() -> Bool {\n    match Some(()) {\n        Some(_) => true\n        None => false\n    }\n}", accepted: "fn is_there() -> Bool {\n    match Some(true) {\n        Some(_) => true\n        None => false\n    }\n}", at: "Some(())" }, Carrying { refused: "fn is_there() -> Bool {\n    match None" + matched + given, accepted: "fn is_there() -> Bool {\n    match None" + matched + given_flag, at: "None" }, Carrying { refused: "fn is_first_given(all: List<()>) -> Bool {\n    match first(all)" + matched + first + given, accepted: "fn is_first_given(all: List<Bool>) -> Bool {\n    match first(all)" + matched + first + given_flag, at: "first(all)" }]
 }
 
 /// The code and the message of the refusal `answer` holds, and `""` where it holds none.
@@ -458,8 +458,8 @@ fn in_block(block: ast.Block) -> List<ast.Expr> {
 // example: list.length(in_statement(ast.Statement { kind: ast.Break, span: checking.occurrence("", "", 1) })) == 0
 fn in_statement(statement: ast.Statement) -> List<ast.Expr> {
     match statement.kind {
-        ast.Binding { mutability, name, value } => from_expr(value)
-        ast.Assign { target, operator, value } => from_expr(value)
+        ast.Binding { value } => from_expr(value)
+        ast.Assign { value } => from_expr(value)
         ast.Return(value) => from_option(value)
         ast.For(looped) => both(first: in_header(looped.header), second: in_block(looped.body))
         ast.Discard(value) => from_expr(value)
@@ -474,7 +474,7 @@ fn in_header(header: ast.ForHeader) -> List<ast.Expr> {
     match header {
         ast.Forever => []
         ast.While(condition) => from_expr(condition)
-        ast.Over { binding, iterable } => from_expr(iterable)
+        ast.Over { iterable } => from_expr(iterable)
     }
 }
 
@@ -497,13 +497,13 @@ fn from_expr(written: ast.Expr) -> List<ast.Expr> {
 // example: list.length(inside(ast.Expr { kind: ast.Unit, span: checking.occurrence("", "", 1) })) == 0
 fn inside(written: ast.Expr) -> List<ast.Expr> {
     match written.kind {
-        ast.Unary { operator, operand } => from_expr(operand)
-        ast.Binary { operator, left, right } => both(first: from_expr(left), second: from_expr(right))
+        ast.Unary { operand } => from_expr(operand)
+        ast.Binary { left, right } => both(first: from_expr(left), second: from_expr(right))
         ast.Call { callee, arguments } => both(first: from_expr(callee), second: from_all(passed(arguments)))
-        ast.Field { receiver, name } => from_expr(receiver)
+        ast.Field { receiver } => from_expr(receiver)
         ast.Try(inner) => from_expr(inner)
         ast.Written(elements) => from_all(elements)
-        ast.Record { base, fields } => from_all(field_values(fields))
+        ast.Record { fields } => from_all(field_values(fields))
         ast.If(chain) => in_if(chain)
         ast.Match(matched) => both(first: from_expr(matched.scrutinee), second: from_all(arm_bodies(matched.arms)))
         ast.Spawn(started) => from_expr(started)

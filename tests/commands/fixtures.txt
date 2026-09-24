@@ -363,8 +363,8 @@ status 1
 ! error[L0501]: this `match` writes `Ok` after `Err`
 !   --> tests/spec/exhaustiveness/nested_order.bx:6:9
 !
-!   6 |         Some(Ok(value)) => "ok"
-!     |         ^^^^^^^^^^^^^^^
+!   6 |         Some(Ok(_)) => "ok"
+!     |         ^^^^^^^^^^^
 !
 ! help: arms come in the order the type declares its variants: `Ok` before `Err`
 
@@ -624,10 +624,10 @@ status 0
 $ check tests/spec/generics/rigid_parameter.bx
 status 1
 ! error[L0400]: expected `T`, found `Int`
-!   --> tests/spec/generics/rigid_parameter.bx:3:31
+!   --> tests/spec/generics/rigid_parameter.bx:4:13
 !
-!   3 | fn identity<T>(value: T) -> T {
-!     |                               ^ this runs on to line 5
+!   4 |     [value, 1]
+!     |             ^
 !
 ! help: one type is not another, however alike they are held
 
@@ -2375,9 +2375,9 @@ status 0
 $ check tests/spec/type_inference/infinite_type.bx
 status 1
 ! error[L0403]: this would have a type that contains itself
-!   --> tests/spec/type_inference/infinite_type.bx:6:42
+!   --> tests/spec/type_inference/infinite_type.bx:8:42
 !
-!   6 |         return counted(one: item, other: items)
+!   8 |         return counted(one: item, other: items)
 !     |                                          ^^^^^
 !
 ! help: one of these two is being used where the other was meant
@@ -2709,11 +2709,11 @@ status 1
 
 $ check --json tests/spec/exhaustiveness/nested_gap.bx
 status 1
-> {"file":"tests/spec/exhaustiveness/nested_gap.bx","code":"L0500","message":"this `match` does not cover `Some(Err(_))`","span":{"start":190,"len":79},"help":"every value has an arm, or a name that binds whatever the arms before it did not"}
+> {"file":"tests/spec/exhaustiveness/nested_gap.bx","code":"L0500","message":"this `match` does not cover `Some(Err(_))`","span":{"start":190,"len":75},"help":"every value has an arm, or a name that binds whatever the arms before it did not"}
 
 $ check --json tests/spec/exhaustiveness/nested_order.bx
 status 1
-> {"file":"tests/spec/exhaustiveness/nested_order.bx","code":"L0501","message":"this `match` writes `Ok` after `Err`","span":{"start":241,"len":15},"help":"arms come in the order the type declares its variants: `Ok` before `Err`"}
+> {"file":"tests/spec/exhaustiveness/nested_order.bx","code":"L0501","message":"this `match` writes `Ok` after `Err`","span":{"start":241,"len":11},"help":"arms come in the order the type declares its variants: `Ok` before `Err`"}
 
 $ check --json tests/spec/exhaustiveness/option_order.bx
 status 1
@@ -2838,7 +2838,7 @@ status 0
 
 $ check --json tests/spec/generics/rigid_parameter.bx
 status 1
-> {"file":"tests/spec/generics/rigid_parameter.bx","code":"L0400","message":"expected `T`, found `Int`","span":{"start":127,"len":9},"help":"one type is not another, however alike they are held"}
+> {"file":"tests/spec/generics/rigid_parameter.bx","code":"L0400","message":"expected `T`, found `Int`","span":{"start":145,"len":1},"help":"one type is not another, however alike they are held"}
 
 $ check --json tests/spec/generics/specialized.bx
 status 0
@@ -3308,7 +3308,7 @@ status 1
 
 $ check --json tests/spec/name_resolution/record_bound_in_an_alternative.bx
 status 1
-> {"file":"tests/spec/name_resolution/record_bound_in_an_alternative.bx","code":"L0314","message":"`held` binds inside an or-pattern, which binds nothing","span":{"start":206,"len":4},"help":"write one arm for each alternative where one of them binds"}
+> {"file":"tests/spec/name_resolution/record_bound_in_an_alternative.bx","code":"L0314","message":"`held` binds inside an or-pattern, which binds nothing","span":{"start":208,"len":4},"help":"write one arm for each alternative where one of them binds"}
 
 $ check --json tests/spec/name_resolution/scopes.bx
 status 0
@@ -3775,7 +3775,7 @@ status 0
 
 $ check --json tests/spec/type_inference/infinite_type.bx
 status 1
-> {"file":"tests/spec/type_inference/infinite_type.bx","code":"L0403","message":"this would have a type that contains itself","span":{"start":198,"len":5},"help":"one of these two is being used where the other was meant"}
+> {"file":"tests/spec/type_inference/infinite_type.bx","code":"L0403","message":"this would have a type that contains itself","span":{"start":211,"len":5},"help":"one of these two is being used where the other was meant"}
 
 $ check --json tests/spec/type_inference/many_routes.bx
 status 0
@@ -3951,7 +3951,7 @@ status 0
 >
 > fn label(text: String, count: Int) -> String
 >
-> fn pair<T>(first: T, second: T) -> T
+> fn pair<T>(first: T, second: T) -> List<T>
 
 $ api tests/spec/arguments/partly_named.bx
 status 1
@@ -4271,7 +4271,7 @@ status 0
 >
 > fn described(payment: Payment) -> String
 >
-> fn is_authorized(payment: Payment) -> Bool
+> fn without_authorization(payment: Payment) -> Payment
 >
 > fn counted(count: Int) -> String
 >
@@ -4285,7 +4285,7 @@ status 0
 >
 > fn settled(result: Result<Int, String>) -> String
 >
-> fn unwrapped(outcome: Option<Result<Int, String>>) -> String
+> fn unwrapped(outcome: Option<Result<Int, String>>) -> Result<Int, String>
 >
 > type User = {
 >     name: String
@@ -4401,8 +4401,8 @@ status 1
 ! error[L0501]: this `match` writes `Ok` after `Err`
 !   --> tests/spec/exhaustiveness/nested_order.bx:6:9
 !
-!   6 |         Some(Ok(value)) => "ok"
-!     |         ^^^^^^^^^^^^^^^
+!   6 |         Some(Ok(_)) => "ok"
+!     |         ^^^^^^^^^^^
 !
 ! help: arms come in the order the type declares its variants: `Ok` before `Err`
 
@@ -4473,6 +4473,8 @@ status 0
 > fn is_active(user: User) -> Bool
 >
 > fn identity<T>(value: T) -> T
+>
+> fn greet() -> ()
 >
 > type User = {
 >     user_id: UserId
@@ -4587,6 +4589,8 @@ status 0
 > }
 >
 > type UserId = UserId(Int)
+>
+> fn saved(text: String) -> ()
 
 $ api tests/spec/format/module_names.bx
 status 1
@@ -4779,10 +4783,10 @@ status 0
 $ api tests/spec/generics/rigid_parameter.bx
 status 1
 ! error[L0400]: expected `T`, found `Int`
-!   --> tests/spec/generics/rigid_parameter.bx:3:31
+!   --> tests/spec/generics/rigid_parameter.bx:4:13
 !
-!   3 | fn identity<T>(value: T) -> T {
-!     |                               ^ this runs on to line 5
+!   4 |     [value, 1]
+!     |             ^
 !
 ! help: one type is not another, however alike they are held
 
@@ -4817,8 +4821,6 @@ status 0
 > fn down<T>(value: T) -> T
 >
 > fn counted_down<T>(value: T, left: Int) -> T
->
-> fn is_unit(value: ()) -> Bool
 >
 > fn joined<T: Add<T>>(one: T, other: T) -> T
 >
@@ -5174,6 +5176,8 @@ status 0
 > }
 >
 > type UserId = UserId(Int)
+>
+> fn greet() -> ()
 
 $ api tests/spec/lexer/unknown_character.bx
 status 1
@@ -6102,6 +6106,8 @@ status 0
 > type UserId = UserId(Int)
 >
 > fn identity<T>(value: T) -> T
+>
+> fn greet() -> ()
 
 $ api tests/spec/name_resolution/shadowed_name.bx
 status 1
@@ -7364,9 +7370,9 @@ $ api tests/spec/type_inference/discarding.bx
 status 0
 > fn main(values: List<Int>) -> ()
 >
-> fn save(value: Int) -> Result<(), String>
->
 > fn log(value: Int) -> ()
+>
+> fn save(value: Int) -> Result<(), String>
 
 $ api tests/spec/type_inference/field_written_twice.bx
 status 1
@@ -7439,9 +7445,9 @@ status 0
 $ api tests/spec/type_inference/infinite_type.bx
 status 1
 ! error[L0403]: this would have a type that contains itself
-!   --> tests/spec/type_inference/infinite_type.bx:6:42
+!   --> tests/spec/type_inference/infinite_type.bx:8:42
 !
-!   6 |         return counted(one: item, other: items)
+!   8 |         return counted(one: item, other: items)
 !     |                                          ^^^^^
 !
 ! help: one of these two is being used where the other was meant
@@ -8336,11 +8342,11 @@ status 1
 !
 ! help: write `// example: <an expression that is true>` in the comment above it
 !
-! error[L0601]: `is_authorized` states no example
+! error[L0601]: `without_authorization` states no example
 !   --> tests/spec/exhaustiveness/covered.bx:19:4
 !
-!   19 | fn is_authorized(payment: Payment) -> Bool {
-!      |    ^^^^^^^^^^^^^
+!   19 | fn without_authorization(payment: Payment) -> Payment {
+!      |    ^^^^^^^^^^^^^^^^^^^^^
 !
 ! help: write `// example: <an expression that is true>` in the comment above it
 !
@@ -8395,7 +8401,7 @@ status 1
 ! error[L0601]: `unwrapped` states no example
 !   --> tests/spec/exhaustiveness/covered.bx:75:4
 !
-!   75 | fn unwrapped(outcome: Option<Result<Int, String>>) -> String {
+!   75 | fn unwrapped(outcome: Option<Result<Int, String>>) -> Result<Int, String> {
 !      |    ^^^^^^^^^
 !
 ! help: write `// example: <an expression that is true>` in the comment above it
@@ -8520,8 +8526,8 @@ status 1
 ! error[L0501]: this `match` writes `Ok` after `Err`
 !   --> tests/spec/exhaustiveness/nested_order.bx:6:9
 !
-!   6 |         Some(Ok(value)) => "ok"
-!     |         ^^^^^^^^^^^^^^^
+!   6 |         Some(Ok(_)) => "ok"
+!     |         ^^^^^^^^^^^
 !
 ! help: arms come in the order the type declares its variants: `Ok` before `Err`
 
@@ -8896,10 +8902,10 @@ status 1
 $ test tests/spec/generics/rigid_parameter.bx
 status 1
 ! error[L0400]: expected `T`, found `Int`
-!   --> tests/spec/generics/rigid_parameter.bx:3:31
+!   --> tests/spec/generics/rigid_parameter.bx:4:13
 !
-!   3 | fn identity<T>(value: T) -> T {
-!     |                               ^ this runs on to line 5
+!   4 |     [value, 1]
+!     |             ^
 !
 ! help: one type is not another, however alike they are held
 
@@ -10437,17 +10443,17 @@ status 1
 ! help: write `// example: <an expression that is true>` in the comment above it
 !
 ! error[L0601]: `identifier` states no example
-!   --> tests/spec/parser/program.bx:39:4
+!   --> tests/spec/parser/program.bx:42:4
 !
-!   39 | fn identifier(user: User) -> Int {
+!   42 | fn identifier(user: User) -> Int {
 !      |    ^^^^^^^^^^
 !
 ! help: write `// example: <an expression that is true>` in the comment above it
 !
 ! error[L0601]: `first_user` states no example
-!   --> tests/spec/parser/program.bx:45:4
+!   --> tests/spec/parser/program.bx:48:4
 !
-!   45 | fn first_user(users: List<User>) -> Result<User, String> {
+!   48 | fn first_user(users: List<User>) -> Result<User, String> {
 !      |    ^^^^^^^^^^
 !
 ! help: write `// example: <an expression that is true>` in the comment above it
@@ -10787,9 +10793,9 @@ status 0
 $ test tests/spec/type_inference/discarding.bx
 status 1
 ! error[L0601]: `save` states no example
-!   --> tests/spec/type_inference/discarding.bx:10:4
+!   --> tests/spec/type_inference/discarding.bx:14:4
 !
-!   10 | fn save(value: Int) -> Result<(), String> {
+!   14 | fn save(value: Int) -> Result<(), String> {
 !      |    ^^^^
 !
 ! help: write `// example: <an expression that is true>` in the comment above it
@@ -10861,9 +10867,9 @@ status 1
 $ test tests/spec/type_inference/infinite_type.bx
 status 1
 ! error[L0403]: this would have a type that contains itself
-!   --> tests/spec/type_inference/infinite_type.bx:6:42
+!   --> tests/spec/type_inference/infinite_type.bx:8:42
 !
-!   6 |         return counted(one: item, other: items)
+!   8 |         return counted(one: item, other: items)
 !     |                                          ^^^^^
 !
 ! help: one of these two is being used where the other was meant
@@ -14094,11 +14100,11 @@ status 1
 !
 ! help: write `// example: <an expression that is true>` in the comment above it
 !
-! error[L0601]: `is_authorized` states no example
+! error[L0601]: `without_authorization` states no example
 !   --> tests/spec/exhaustiveness/covered.bx:19:4
 !
-!   19 | fn is_authorized(payment: Payment) -> Bool {
-!      |    ^^^^^^^^^^^^^
+!   19 | fn without_authorization(payment: Payment) -> Payment {
+!      |    ^^^^^^^^^^^^^^^^^^^^^
 !
 ! help: write `// example: <an expression that is true>` in the comment above it
 !
@@ -14153,7 +14159,7 @@ status 1
 ! error[L0601]: `unwrapped` states no example
 !   --> tests/spec/exhaustiveness/covered.bx:75:4
 !
-!   75 | fn unwrapped(outcome: Option<Result<Int, String>>) -> String {
+!   75 | fn unwrapped(outcome: Option<Result<Int, String>>) -> Result<Int, String> {
 !      |    ^^^^^^^^^
 !
 ! help: write `// example: <an expression that is true>` in the comment above it
@@ -14278,8 +14284,8 @@ status 1
 ! error[L0501]: this `match` writes `Ok` after `Err`
 !   --> tests/spec/exhaustiveness/nested_order.bx:6:9
 !
-!   6 |         Some(Ok(value)) => "ok"
-!     |         ^^^^^^^^^^^^^^^
+!   6 |         Some(Ok(_)) => "ok"
+!     |         ^^^^^^^^^^^
 !
 ! help: arms come in the order the type declares its variants: `Ok` before `Err`
 
@@ -14654,10 +14660,10 @@ status 1
 $ build tests/spec/generics/rigid_parameter.bx
 status 1
 ! error[L0400]: expected `T`, found `Int`
-!   --> tests/spec/generics/rigid_parameter.bx:3:31
+!   --> tests/spec/generics/rigid_parameter.bx:4:13
 !
-!   3 | fn identity<T>(value: T) -> T {
-!     |                               ^ this runs on to line 5
+!   4 |     [value, 1]
+!     |             ^
 !
 ! help: one type is not another, however alike they are held
 
@@ -16202,17 +16208,17 @@ status 1
 ! help: write `// example: <an expression that is true>` in the comment above it
 !
 ! error[L0601]: `identifier` states no example
-!   --> tests/spec/parser/program.bx:39:4
+!   --> tests/spec/parser/program.bx:42:4
 !
-!   39 | fn identifier(user: User) -> Int {
+!   42 | fn identifier(user: User) -> Int {
 !      |    ^^^^^^^^^^
 !
 ! help: write `// example: <an expression that is true>` in the comment above it
 !
 ! error[L0601]: `first_user` states no example
-!   --> tests/spec/parser/program.bx:45:4
+!   --> tests/spec/parser/program.bx:48:4
 !
-!   45 | fn first_user(users: List<User>) -> Result<User, String> {
+!   48 | fn first_user(users: List<User>) -> Result<User, String> {
 !      |    ^^^^^^^^^^
 !
 ! help: write `// example: <an expression that is true>` in the comment above it
@@ -16548,9 +16554,9 @@ status 0
 $ build tests/spec/type_inference/discarding.bx
 status 1
 ! error[L0601]: `save` states no example
-!   --> tests/spec/type_inference/discarding.bx:10:4
+!   --> tests/spec/type_inference/discarding.bx:14:4
 !
-!   10 | fn save(value: Int) -> Result<(), String> {
+!   14 | fn save(value: Int) -> Result<(), String> {
 !      |    ^^^^
 !
 ! help: write `// example: <an expression that is true>` in the comment above it
@@ -16622,9 +16628,9 @@ status 1
 $ build tests/spec/type_inference/infinite_type.bx
 status 1
 ! error[L0403]: this would have a type that contains itself
-!   --> tests/spec/type_inference/infinite_type.bx:6:42
+!   --> tests/spec/type_inference/infinite_type.bx:8:42
 !
-!   6 |         return counted(one: item, other: items)
+!   8 |         return counted(one: item, other: items)
 !     |                                          ^^^^^
 !
 ! help: one of these two is being used where the other was meant
@@ -16929,34 +16935,34 @@ status 1
 $ check tests/spec/interop/builds_a_record_around_a_foreign_reference.bx
 status 1
 ! error[L0435]: this `Box` is `Box<File>`, and the `extern` type `File` is a foreign reference
-!   --> tests/spec/interop/builds_a_record_around_a_foreign_reference.bx:5:17
+!   --> tests/spec/interop/builds_a_record_around_a_foreign_reference.bx:5:9
 !
-!   5 |     let boxed = Box { value: named("notes.txt") }
-!     |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+!   5 |     _ = Box { value: named("notes.txt") }
+!     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 !
 ! help: a foreign reference stays in the function that reaches it; bind it, and pass it as an argument
 
 $ check --json tests/spec/interop/builds_a_record_around_a_foreign_reference.bx
 status 1
-> {"file":"tests/spec/interop/builds_a_record_around_a_foreign_reference.bx","code":"L0435","message":"this `Box` is `Box<File>`, and the `extern` type `File` is a foreign reference","span":{"start":257,"len":33},"help":"a foreign reference stays in the function that reaches it; bind it, and pass it as an argument"}
+> {"file":"tests/spec/interop/builds_a_record_around_a_foreign_reference.bx","code":"L0435","message":"this `Box` is `Box<File>`, and the `extern` type `File` is a foreign reference","span":{"start":249,"len":33},"help":"a foreign reference stays in the function that reaches it; bind it, and pass it as an argument"}
 
 $ api tests/spec/interop/builds_a_record_around_a_foreign_reference.bx
 status 1
 ! error[L0435]: this `Box` is `Box<File>`, and the `extern` type `File` is a foreign reference
-!   --> tests/spec/interop/builds_a_record_around_a_foreign_reference.bx:5:17
+!   --> tests/spec/interop/builds_a_record_around_a_foreign_reference.bx:5:9
 !
-!   5 |     let boxed = Box { value: named("notes.txt") }
-!     |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+!   5 |     _ = Box { value: named("notes.txt") }
+!     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 !
 ! help: a foreign reference stays in the function that reaches it; bind it, and pass it as an argument
 
 $ test tests/spec/interop/builds_a_record_around_a_foreign_reference.bx
 status 1
 ! error[L0435]: this `Box` is `Box<File>`, and the `extern` type `File` is a foreign reference
-!   --> tests/spec/interop/builds_a_record_around_a_foreign_reference.bx:5:17
+!   --> tests/spec/interop/builds_a_record_around_a_foreign_reference.bx:5:9
 !
-!   5 |     let boxed = Box { value: named("notes.txt") }
-!     |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+!   5 |     _ = Box { value: named("notes.txt") }
+!     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 !
 ! help: a foreign reference stays in the function that reaches it; bind it, and pass it as an argument
 
@@ -16966,10 +16972,10 @@ status 0
 $ build tests/spec/interop/builds_a_record_around_a_foreign_reference.bx
 status 1
 ! error[L0435]: this `Box` is `Box<File>`, and the `extern` type `File` is a foreign reference
-!   --> tests/spec/interop/builds_a_record_around_a_foreign_reference.bx:5:17
+!   --> tests/spec/interop/builds_a_record_around_a_foreign_reference.bx:5:9
 !
-!   5 |     let boxed = Box { value: named("notes.txt") }
-!     |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+!   5 |     _ = Box { value: named("notes.txt") }
+!     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 !
 ! help: a foreign reference stays in the function that reaches it; bind it, and pass it as an argument
 
@@ -17023,34 +17029,34 @@ status 1
 $ check tests/spec/interop/gives_back_through_a_type_parameter.bx
 status 1
 ! error[L0435]: this call of `same` gives back `File`, and the `extern` type `File` is a foreign reference
-!   --> tests/spec/interop/gives_back_through_a_type_parameter.bx:5:16
+!   --> tests/spec/interop/gives_back_through_a_type_parameter.bx:5:9
 !
-!   5 |     let file = same(named("notes.txt"))
-!     |                ^^^^^^^^^^^^^^^^^^^^^^^^
+!   5 |     _ = same(named("notes.txt"))
+!     |         ^^^^^^^^^^^^^^^^^^^^^^^^
 !
 ! help: a foreign reference stays in the function that reaches it; bind it, and pass it as an argument
 
 $ check --json tests/spec/interop/gives_back_through_a_type_parameter.bx
 status 1
-> {"file":"tests/spec/interop/gives_back_through_a_type_parameter.bx","code":"L0435","message":"this call of `same` gives back `File`, and the `extern` type `File` is a foreign reference","span":{"start":270,"len":24},"help":"a foreign reference stays in the function that reaches it; bind it, and pass it as an argument"}
+> {"file":"tests/spec/interop/gives_back_through_a_type_parameter.bx","code":"L0435","message":"this call of `same` gives back `File`, and the `extern` type `File` is a foreign reference","span":{"start":263,"len":24},"help":"a foreign reference stays in the function that reaches it; bind it, and pass it as an argument"}
 
 $ api tests/spec/interop/gives_back_through_a_type_parameter.bx
 status 1
 ! error[L0435]: this call of `same` gives back `File`, and the `extern` type `File` is a foreign reference
-!   --> tests/spec/interop/gives_back_through_a_type_parameter.bx:5:16
+!   --> tests/spec/interop/gives_back_through_a_type_parameter.bx:5:9
 !
-!   5 |     let file = same(named("notes.txt"))
-!     |                ^^^^^^^^^^^^^^^^^^^^^^^^
+!   5 |     _ = same(named("notes.txt"))
+!     |         ^^^^^^^^^^^^^^^^^^^^^^^^
 !
 ! help: a foreign reference stays in the function that reaches it; bind it, and pass it as an argument
 
 $ test tests/spec/interop/gives_back_through_a_type_parameter.bx
 status 1
 ! error[L0435]: this call of `same` gives back `File`, and the `extern` type `File` is a foreign reference
-!   --> tests/spec/interop/gives_back_through_a_type_parameter.bx:5:16
+!   --> tests/spec/interop/gives_back_through_a_type_parameter.bx:5:9
 !
-!   5 |     let file = same(named("notes.txt"))
-!     |                ^^^^^^^^^^^^^^^^^^^^^^^^
+!   5 |     _ = same(named("notes.txt"))
+!     |         ^^^^^^^^^^^^^^^^^^^^^^^^
 !
 ! help: a foreign reference stays in the function that reaches it; bind it, and pass it as an argument
 
@@ -17060,10 +17066,10 @@ status 0
 $ build tests/spec/interop/gives_back_through_a_type_parameter.bx
 status 1
 ! error[L0435]: this call of `same` gives back `File`, and the `extern` type `File` is a foreign reference
-!   --> tests/spec/interop/gives_back_through_a_type_parameter.bx:5:16
+!   --> tests/spec/interop/gives_back_through_a_type_parameter.bx:5:9
 !
-!   5 |     let file = same(named("notes.txt"))
-!     |                ^^^^^^^^^^^^^^^^^^^^^^^^
+!   5 |     _ = same(named("notes.txt"))
+!     |         ^^^^^^^^^^^^^^^^^^^^^^^^
 !
 ! help: a foreign reference stays in the function that reaches it; bind it, and pass it as an argument
 
@@ -17427,3 +17433,466 @@ status 1
 !     |        ^^^^^^
 !
 ! help: write the signature `fn logged(value: T) -> ()`
+
+$ check tests/spec/holes/binding_after_the_hole.bx
+status 1
+! error[L0321]: the binding `weight` is read by nothing
+!   --> tests/spec/holes/binding_after_the_hole.bx:5:9
+!
+!   5 |     let weight = order.items * 2
+!     |         ^^^^^^
+!
+! help: read it, or write `_ =` for its value
+
+$ check --json tests/spec/holes/binding_after_the_hole.bx
+status 1
+> {"file":"tests/spec/holes/binding_after_the_hole.bx","code":"L0321","message":"the binding `weight` is read by nothing","span":{"start":193,"len":6},"help":"read it, or write `_ =` for its value"}
+
+$ api tests/spec/holes/binding_after_the_hole.bx
+status 1
+! error[L0321]: the binding `weight` is read by nothing
+!   --> tests/spec/holes/binding_after_the_hole.bx:5:9
+!
+!   5 |     let weight = order.items * 2
+!     |         ^^^^^^
+!
+! help: read it, or write `_ =` for its value
+
+$ test tests/spec/holes/binding_after_the_hole.bx
+status 1
+! error[L0321]: the binding `weight` is read by nothing
+!   --> tests/spec/holes/binding_after_the_hole.bx:5:9
+!
+!   5 |     let weight = order.items * 2
+!     |         ^^^^^^
+!
+! help: read it, or write `_ =` for its value
+
+$ fmt tests/spec/holes/binding_after_the_hole.bx
+status 0
+
+$ build tests/spec/holes/binding_after_the_hole.bx
+status 1
+! error[L0321]: the binding `weight` is read by nothing
+!   --> tests/spec/holes/binding_after_the_hole.bx:5:9
+!
+!   5 |     let weight = order.items * 2
+!     |         ^^^^^^
+!
+! help: read it, or write `_ =` for its value
+
+$ check tests/spec/holes/reads_every_name_in_scope.bx
+status 0
+
+$ check --json tests/spec/holes/reads_every_name_in_scope.bx
+status 0
+
+$ api tests/spec/holes/reads_every_name_in_scope.bx
+status 0
+> fn shipped(order: Order, express: Delivery) -> Int
+>
+> type Order = {
+>     items: Int
+> }
+>
+> type Delivery =
+>     | Standard
+>     | Express
+
+$ test tests/spec/holes/reads_every_name_in_scope.bx
+status 1
+! error[L0601]: `shipped` states no example
+!   --> tests/spec/holes/reads_every_name_in_scope.bx:3:4
+!
+!   3 | fn shipped(order: Order, express: Delivery) -> Int {
+!     |    ^^^^^^^
+!
+! help: write `// example: <an expression that is true>` in the comment above it
+
+$ fmt tests/spec/holes/reads_every_name_in_scope.bx
+status 0
+
+$ build tests/spec/holes/reads_every_name_in_scope.bx
+status 1
+! error[L0600]: this hole is not compiled
+!   --> tests/spec/holes/reads_every_name_in_scope.bx:5:5
+!
+!   5 |     todo("price the parcel")
+!     |     ^^^^^^^^^^^^^^^^^^^^^^^^
+!
+! help: `bux check` accepts a hole; fill it in, or build a module that holds none
+
+$ check tests/spec/modules/import_read_by_an_example.bx
+status 0
+
+$ check --json tests/spec/modules/import_read_by_an_example.bx
+status 0
+
+$ api tests/spec/modules/import_read_by_an_example.bx
+status 0
+> fn kept(values: List<Int>) -> List<Int>
+
+$ test tests/spec/modules/import_read_by_an_example.bx
+status 0
+
+$ fmt tests/spec/modules/import_read_by_an_example.bx
+status 0
+
+$ build tests/spec/modules/import_read_by_an_example.bx
+status 0
+
+$ check tests/spec/name_resolution/binding_read_by_nothing.bx
+status 1
+! error[L0321]: the binding `half` is read by nothing
+!   --> tests/spec/name_resolution/binding_read_by_nothing.bx:5:9
+!
+!   5 |     let half = count
+!     |         ^^^^
+!
+! help: read it, or write `_ =` for its value
+
+$ check --json tests/spec/name_resolution/binding_read_by_nothing.bx
+status 1
+> {"file":"tests/spec/name_resolution/binding_read_by_nothing.bx","code":"L0321","message":"the binding `half` is read by nothing","span":{"start":170,"len":4},"help":"read it, or write `_ =` for its value"}
+
+$ api tests/spec/name_resolution/binding_read_by_nothing.bx
+status 1
+! error[L0321]: the binding `half` is read by nothing
+!   --> tests/spec/name_resolution/binding_read_by_nothing.bx:5:9
+!
+!   5 |     let half = count
+!     |         ^^^^
+!
+! help: read it, or write `_ =` for its value
+
+$ test tests/spec/name_resolution/binding_read_by_nothing.bx
+status 1
+! error[L0321]: the binding `half` is read by nothing
+!   --> tests/spec/name_resolution/binding_read_by_nothing.bx:5:9
+!
+!   5 |     let half = count
+!     |         ^^^^
+!
+! help: read it, or write `_ =` for its value
+
+$ fmt tests/spec/name_resolution/binding_read_by_nothing.bx
+status 0
+
+$ build tests/spec/name_resolution/binding_read_by_nothing.bx
+status 1
+! error[L0321]: the binding `half` is read by nothing
+!   --> tests/spec/name_resolution/binding_read_by_nothing.bx:5:9
+!
+!   5 |     let half = count
+!     |         ^^^^
+!
+! help: read it, or write `_ =` for its value
+
+$ check tests/spec/name_resolution/fixed_parameters.bx
+status 0
+
+$ check --json tests/spec/name_resolution/fixed_parameters.bx
+status 0
+
+$ api tests/spec/name_resolution/fixed_parameters.bx
+status 0
+> fn main(arguments: List<String>) -> Int
+>
+> instance Eq<Coin>
+>
+> process Counter
+>
+> type Coin = Coin(Int)
+>
+> type Counted = Counted
+
+$ test tests/spec/name_resolution/fixed_parameters.bx
+status 0
+
+$ fmt tests/spec/name_resolution/fixed_parameters.bx
+status 0
+
+$ build tests/spec/name_resolution/fixed_parameters.bx
+status 0
+
+$ check tests/spec/name_resolution/import_read_by_nothing.bx
+status 1
+! error[L0320]: the import `io` is read by nothing
+!   --> tests/spec/name_resolution/import_read_by_nothing.bx:3:8
+!
+!   3 | import io
+!     |        ^^
+!
+! help: read it, or remove it
+
+$ check --json tests/spec/name_resolution/import_read_by_nothing.bx
+status 1
+> {"file":"tests/spec/name_resolution/import_read_by_nothing.bx","code":"L0320","message":"the import `io` is read by nothing","span":{"start":126,"len":2},"help":"read it, or remove it"}
+
+$ api tests/spec/name_resolution/import_read_by_nothing.bx
+status 1
+! error[L0320]: the import `io` is read by nothing
+!   --> tests/spec/name_resolution/import_read_by_nothing.bx:3:8
+!
+!   3 | import io
+!     |        ^^
+!
+! help: read it, or remove it
+
+$ test tests/spec/name_resolution/import_read_by_nothing.bx
+status 1
+! error[L0320]: the import `io` is read by nothing
+!   --> tests/spec/name_resolution/import_read_by_nothing.bx:3:8
+!
+!   3 | import io
+!     |        ^^
+!
+! help: read it, or remove it
+
+$ fmt tests/spec/name_resolution/import_read_by_nothing.bx
+status 0
+
+$ build tests/spec/name_resolution/import_read_by_nothing.bx
+status 1
+! error[L0320]: the import `io` is read by nothing
+!   --> tests/spec/name_resolution/import_read_by_nothing.bx:3:8
+!
+!   3 | import io
+!     |        ^^
+!
+! help: read it, or remove it
+
+$ check tests/spec/name_resolution/loop_binding_read_by_nothing.bx
+status 1
+! error[L0321]: the binding `value` is read by nothing
+!   --> tests/spec/name_resolution/loop_binding_read_by_nothing.bx:6:9
+!
+!   6 |     for value in values {
+!     |         ^^^^^
+!
+! help: read it, or write `_ =` for its value
+
+$ check --json tests/spec/name_resolution/loop_binding_read_by_nothing.bx
+status 1
+> {"file":"tests/spec/name_resolution/loop_binding_read_by_nothing.bx","code":"L0321","message":"the binding `value` is read by nothing","span":{"start":220,"len":5},"help":"read it, or write `_ =` for its value"}
+
+$ api tests/spec/name_resolution/loop_binding_read_by_nothing.bx
+status 1
+! error[L0321]: the binding `value` is read by nothing
+!   --> tests/spec/name_resolution/loop_binding_read_by_nothing.bx:6:9
+!
+!   6 |     for value in values {
+!     |         ^^^^^
+!
+! help: read it, or write `_ =` for its value
+
+$ test tests/spec/name_resolution/loop_binding_read_by_nothing.bx
+status 1
+! error[L0321]: the binding `value` is read by nothing
+!   --> tests/spec/name_resolution/loop_binding_read_by_nothing.bx:6:9
+!
+!   6 |     for value in values {
+!     |         ^^^^^
+!
+! help: read it, or write `_ =` for its value
+
+$ fmt tests/spec/name_resolution/loop_binding_read_by_nothing.bx
+status 0
+
+$ build tests/spec/name_resolution/loop_binding_read_by_nothing.bx
+status 1
+! error[L0321]: the binding `value` is read by nothing
+!   --> tests/spec/name_resolution/loop_binding_read_by_nothing.bx:6:9
+!
+!   6 |     for value in values {
+!     |         ^^^^^
+!
+! help: read it, or write `_ =` for its value
+
+$ check tests/spec/name_resolution/parameter_read_by_nothing.bx
+status 1
+! error[L0321]: the parameter `times` is read by nothing
+!   --> tests/spec/name_resolution/parameter_read_by_nothing.bx:4:27
+!
+!   4 | fn greeting(name: String, times: Int) -> String {
+!     |                           ^^^^^
+!
+! help: read it, or remove it
+
+$ check --json tests/spec/name_resolution/parameter_read_by_nothing.bx
+status 1
+> {"file":"tests/spec/name_resolution/parameter_read_by_nothing.bx","code":"L0321","message":"the parameter `times` is read by nothing","span":{"start":183,"len":5},"help":"read it, or remove it"}
+
+$ api tests/spec/name_resolution/parameter_read_by_nothing.bx
+status 1
+! error[L0321]: the parameter `times` is read by nothing
+!   --> tests/spec/name_resolution/parameter_read_by_nothing.bx:4:27
+!
+!   4 | fn greeting(name: String, times: Int) -> String {
+!     |                           ^^^^^
+!
+! help: read it, or remove it
+
+$ test tests/spec/name_resolution/parameter_read_by_nothing.bx
+status 1
+! error[L0321]: the parameter `times` is read by nothing
+!   --> tests/spec/name_resolution/parameter_read_by_nothing.bx:4:27
+!
+!   4 | fn greeting(name: String, times: Int) -> String {
+!     |                           ^^^^^
+!
+! help: read it, or remove it
+
+$ fmt tests/spec/name_resolution/parameter_read_by_nothing.bx
+status 0
+
+$ build tests/spec/name_resolution/parameter_read_by_nothing.bx
+status 1
+! error[L0321]: the parameter `times` is read by nothing
+!   --> tests/spec/name_resolution/parameter_read_by_nothing.bx:4:27
+!
+!   4 | fn greeting(name: String, times: Int) -> String {
+!     |                           ^^^^^
+!
+! help: read it, or remove it
+
+$ check tests/spec/name_resolution/pattern_binding_read_by_nothing.bx
+status 1
+! error[L0321]: the binding `reason` is read by nothing
+!   --> tests/spec/name_resolution/pattern_binding_read_by_nothing.bx:7:16
+!
+!   7 |         Failed(reason) => "failed"
+!     |                ^^^^^^
+!
+! help: read it, or write `_ =` for its value
+
+$ check --json tests/spec/name_resolution/pattern_binding_read_by_nothing.bx
+status 1
+> {"file":"tests/spec/name_resolution/pattern_binding_read_by_nothing.bx","code":"L0321","message":"the binding `reason` is read by nothing","span":{"start":262,"len":6},"help":"read it, or write `_ =` for its value"}
+
+$ api tests/spec/name_resolution/pattern_binding_read_by_nothing.bx
+status 1
+! error[L0321]: the binding `reason` is read by nothing
+!   --> tests/spec/name_resolution/pattern_binding_read_by_nothing.bx:7:16
+!
+!   7 |         Failed(reason) => "failed"
+!     |                ^^^^^^
+!
+! help: read it, or write `_ =` for its value
+
+$ test tests/spec/name_resolution/pattern_binding_read_by_nothing.bx
+status 1
+! error[L0321]: the binding `reason` is read by nothing
+!   --> tests/spec/name_resolution/pattern_binding_read_by_nothing.bx:7:16
+!
+!   7 |         Failed(reason) => "failed"
+!     |                ^^^^^^
+!
+! help: read it, or write `_ =` for its value
+
+$ fmt tests/spec/name_resolution/pattern_binding_read_by_nothing.bx
+status 0
+
+$ build tests/spec/name_resolution/pattern_binding_read_by_nothing.bx
+status 1
+! error[L0321]: the binding `reason` is read by nothing
+!   --> tests/spec/name_resolution/pattern_binding_read_by_nothing.bx:7:16
+!
+!   7 |         Failed(reason) => "failed"
+!     |                ^^^^^^
+!
+! help: read it, or write `_ =` for its value
+
+$ check tests/spec/name_resolution/variable_only_assigned.bx
+status 1
+! error[L0321]: the binding `last` is read by nothing
+!   --> tests/spec/name_resolution/variable_only_assigned.bx:5:9
+!
+!   5 |     var last = 0
+!     |         ^^^^
+!
+! help: read it, or write `_ =` for its value
+
+$ check --json tests/spec/name_resolution/variable_only_assigned.bx
+status 1
+> {"file":"tests/spec/name_resolution/variable_only_assigned.bx","code":"L0321","message":"the binding `last` is read by nothing","span":{"start":201,"len":4},"help":"read it, or write `_ =` for its value"}
+
+$ api tests/spec/name_resolution/variable_only_assigned.bx
+status 1
+! error[L0321]: the binding `last` is read by nothing
+!   --> tests/spec/name_resolution/variable_only_assigned.bx:5:9
+!
+!   5 |     var last = 0
+!     |         ^^^^
+!
+! help: read it, or write `_ =` for its value
+
+$ test tests/spec/name_resolution/variable_only_assigned.bx
+status 1
+! error[L0321]: the binding `last` is read by nothing
+!   --> tests/spec/name_resolution/variable_only_assigned.bx:5:9
+!
+!   5 |     var last = 0
+!     |         ^^^^
+!
+! help: read it, or write `_ =` for its value
+
+$ fmt tests/spec/name_resolution/variable_only_assigned.bx
+status 0
+
+$ build tests/spec/name_resolution/variable_only_assigned.bx
+status 1
+! error[L0321]: the binding `last` is read by nothing
+!   --> tests/spec/name_resolution/variable_only_assigned.bx:5:9
+!
+!   5 |     var last = 0
+!     |         ^^^^
+!
+! help: read it, or write `_ =` for its value
+
+$ check tests/spec/patterns/record_of_a_variant_in_order.bx
+status 1
+! error[L0401]: `Some` takes 1 argument but 0 were given
+!   --> tests/spec/patterns/record_of_a_variant_in_order.bx:6:9
+!
+!   6 |         Some {} => "some"
+!     |         ^^^^
+!
+! help: a call passes one argument for each the declaration lists
+
+$ check --json tests/spec/patterns/record_of_a_variant_in_order.bx
+status 1
+> {"file":"tests/spec/patterns/record_of_a_variant_in_order.bx","code":"L0401","message":"`Some` takes 1 argument but 0 were given","span":{"start":231,"len":4},"help":"a call passes one argument for each the declaration lists"}
+
+$ api tests/spec/patterns/record_of_a_variant_in_order.bx
+status 1
+! error[L0401]: `Some` takes 1 argument but 0 were given
+!   --> tests/spec/patterns/record_of_a_variant_in_order.bx:6:9
+!
+!   6 |         Some {} => "some"
+!     |         ^^^^
+!
+! help: a call passes one argument for each the declaration lists
+
+$ test tests/spec/patterns/record_of_a_variant_in_order.bx
+status 1
+! error[L0401]: `Some` takes 1 argument but 0 were given
+!   --> tests/spec/patterns/record_of_a_variant_in_order.bx:6:9
+!
+!   6 |         Some {} => "some"
+!     |         ^^^^
+!
+! help: a call passes one argument for each the declaration lists
+
+$ fmt tests/spec/patterns/record_of_a_variant_in_order.bx
+status 0
+
+$ build tests/spec/patterns/record_of_a_variant_in_order.bx
+status 1
+! error[L0401]: `Some` takes 1 argument but 0 were given
+!   --> tests/spec/patterns/record_of_a_variant_in_order.bx:6:9
+!
+!   6 |         Some {} => "some"
+!     |         ^^^^
+!
+! help: a call passes one argument for each the declaration lists

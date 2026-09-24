@@ -48,6 +48,7 @@ import spawned
 import started
 import typing
 import unfinished
+import unread
 import walk
 import written
 
@@ -425,18 +426,19 @@ fn progress_line(part: String, cases: Int, nanoseconds: Int) -> String {
 // example: list.length(command.all_of([held.nothing_failed(1)], [held.nothing_failed(2)])) == 2
 fn every_property_held(library: ir.Library) -> List<held.Held> {
     let cases = 100
-    var found = lexing.every_property(cases, library)
-    found = command.all_of(found, parsing.every_property(cases, library))
-    found = command.all_of(found, layout.every_property(cases, library))
-    found = command.all_of(found, collected.every_property(cases, library))
-    found = command.all_of(found, rendering.every_property(cases, library))
-    found = command.all_of(found, exampled.every_property(cases, library))
+    var found = lexing.every_property(cases)
+    found = command.all_of(found, parsing.every_property(cases))
+    found = command.all_of(found, layout.every_property(cases))
+    found = command.all_of(found, collected.every_property(cases))
+    found = command.all_of(found, rendering.every_property(cases))
+    found = command.all_of(found, exampled.every_property(cases))
     found = command.all_of(found, covered.every_property(cases, library))
     found = command.all_of(found, unfinished.every_property(cases, library))
     found = command.all_of(found, paged.every_property(cases, library))
     found = command.all_of(found, naming.every_property(cases, library))
-    found = command.all_of(found, loading.every_property(cases, library))
-    found = command.all_of(found, pinned.every_property(cases, library))
+    found = command.all_of(found, unread.every_property(cases, library))
+    found = command.all_of(found, loading.every_property(cases))
+    found = command.all_of(found, pinned.every_property(cases))
     found = command.all_of(found, typing.every_property(cases, library))
     found = command.all_of(found, conventions.every_property(cases, library))
     found = command.all_of(found, boundaries.every_property(cases, library))

@@ -377,7 +377,16 @@ fn nowhere() -> lexer.Span {
 /// A function that gives back a `Bool` is named as the question it answers.
 // example: strings.length(deriving(standard: eq(), declared: record(["Int"]))) > 0
 fn deriving(standard: Standard, declared: String) -> String {
-    "fn " + named_for(standard) + "(one: Held, other: Held) -> " + standard.gives + " {\n    " + called(standard: standard, one: "one", other: "other") + "\n}\n\nderive " + standard.of + " for Held\n\n" + declared + "\n"
+    "fn " + named_for(standard) + "(" + parameters_for(standard) + ") -> " + standard.gives + " {\n    " + called(standard: standard, one: "one", other: "other") + "\n}\n\nderive " + standard.of + " for Held\n\n" + declared + "\n"
+}
+
+/// The parameters of a function that calls `standard`'s method: two where it takes two values.
+// example: parameters_for(eq()) == "one: Held, other: Held"
+fn parameters_for(standard: Standard) -> String {
+    if standard.is_taking == TakesTwo {
+        return "one: Held, other: Held"
+    }
+    "one: Held"
 }
 
 /// A module whose one function asks `written` of its standard trait, named as its answer asks.

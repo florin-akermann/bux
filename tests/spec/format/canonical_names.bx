@@ -19,6 +19,10 @@ fn identity<T>(value: T) -> T {
     value
 }
 
+fn greet() -> () {
+    io.println("hello")
+}
+
 type User = {
     user_id: UserId
     active: Bool

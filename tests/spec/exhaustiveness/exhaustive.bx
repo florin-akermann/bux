@@ -10,7 +10,7 @@ fn describe(payment: Payment) -> String {
 fn is_settled(payment: Payment) -> Bool {
     match payment {
         Pending => false
-        other => true
+        _ => true
     }
 }
 
@@ -31,14 +31,14 @@ fn spoken(count: Int) -> String {
 fn counted(count: Int) -> String {
     match count {
         0 => "none"
-        other => "some"
+        _ => "some"
     }
 }
 
 fn unwrapped(outcome: Option<Result<Int, String>>) -> Int {
     match outcome {
         Some(Ok(value)) => value
-        Some(Err(problem)) => 0
+        Some(Err(_)) => 0
         None => 0
     }
 }

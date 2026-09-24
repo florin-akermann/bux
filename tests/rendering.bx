@@ -7,7 +7,6 @@ import command
 import drawn
 import files
 import held
-import ir
 import lexer
 import list
 import strings
@@ -16,8 +15,8 @@ import walk
 /// Every property of the rendering and the data form over `cases` drawn cases each, in order.
 ///
 /// A diagnostic is rendered without the prelude, so no property needs the one it is handed.
-// example: list.length(every_property(1, ir.little_library())) == 4
-fn every_property(cases: Int, library: ir.Library) -> List<held.Held> {
+// example: list.length(every_property(1)) == 4
+fn every_property(cases: Int) -> List<held.Held> {
     var found = []
     for property in [NamesAPlace, OpensAndEnds, DataIsOneLine, DataReadsBack] {
         found = list.push(found, held_over(property, cases))

@@ -62,8 +62,8 @@ fn block_read(reading: Reading, block: ast.Block) -> Result<(), refusal.TypeErro
 // example: refusal.code_given(statement_read(reading_of(infer.nothing_inferred()), ast.Statement { kind: ast.Break, span: nowhere() })) == ""
 fn statement_read(reading: Reading, statement: ast.Statement) -> Result<(), refusal.TypeError> {
     match statement.kind {
-        ast.Binding { mutability, name, value } => expression_read(reading, value)
-        ast.Assign { target, operator, value } => expression_read(reading, value)
+        ast.Binding { value } => expression_read(reading, value)
+        ast.Assign { value } => expression_read(reading, value)
         ast.Return(given) => given_read(reading, given)
         ast.For(looped) => loop_read(reading, looped)
         ast.Discard(value) => expression_read(reading, value)
@@ -82,7 +82,7 @@ fn given_read(reading: Reading, given: Option<ast.Expr>) -> Result<(), refusal.T
 }
 
 /// The header of a `for`, then its body.
-// example: carried_code("fn is_there() -> Bool {\n    for held in [Some(())] {\n        return true\n    }\n    false\n}\n") == "L0432 41..49"
+// example: carried_code("fn is_there() -> Bool {\n    for _ in [Some(())] {\n        return true\n    }\n    false\n}\n") == "L0432 38..46"
 fn loop_read(reading: Reading, looped: ast.ForLoop) -> Result<(), refusal.TypeError> {
     _ = header_read(reading, looped.header)?
     block_read(reading, looped.body)
@@ -94,7 +94,7 @@ fn header_read(reading: Reading, header: ast.ForHeader) -> Result<(), refusal.Ty
     match header {
         ast.Forever => Ok(())
         ast.While(condition) => expression_read(reading, condition)
-        ast.Over { binding, iterable } => expression_read(reading, iterable)
+        ast.Over { iterable } => expression_read(reading, iterable)
     }
 }
 
@@ -129,13 +129,13 @@ fn held_refused(found: unify.Type, at: lexer.Span) -> Result<(), refusal.TypeErr
 // example: carried_code("fn held() -> Option<Bool> {\n    _ = Some(())?\n    None\n}\n") == "L0432 36..44"
 fn inside_read(reading: Reading, written: ast.Expr) -> Result<(), refusal.TypeError> {
     match written.kind {
-        ast.Unary { operator, operand } => expression_read(reading, operand)
-        ast.Binary { operator, left, right } => each_read(reading, [left, right])
+        ast.Unary { operand } => expression_read(reading, operand)
+        ast.Binary { left, right } => each_read(reading, [left, right])
         ast.Call { callee, arguments } => call_read(reading, callee, arguments)
-        ast.Field { receiver, name } => expression_read(reading, receiver)
+        ast.Field { receiver } => expression_read(reading, receiver)
         ast.Try(inner) => expression_read(reading, inner)
         ast.Written(elements) => each_read(reading, elements)
-        ast.Record { base, fields } => fields_read(reading, fields)
+        ast.Record { fields } => fields_read(reading, fields)
         ast.If(chain) => if_read(reading, chain)
         ast.Match(matched) => match_read(reading, matched)
         ast.Spawn(started) => expression_read(reading, started)

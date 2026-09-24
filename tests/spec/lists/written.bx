@@ -23,7 +23,7 @@ fn picked() -> List<String> {
 // example: counted(["a", "b"]) == 2
 fn counted(fruit: List<String>) -> Int {
     var many = 0
-    for one in fruit {
+    for _ in fruit {
         many += 1
     }
     many

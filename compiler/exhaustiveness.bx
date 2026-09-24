@@ -11,6 +11,7 @@ import list
 import map
 import modules
 import resolver
+import set
 import strings
 import surface
 import types
@@ -32,7 +33,7 @@ fn modules_checked(loaded: List<modules.Module>, prelude: types.Prelude) -> Resu
 /// One module, resolved and typed, and `Skipped` where it is not.
 // example: list.length(ok_or(typed(modules.Module { name: "main", path: "main.bx", source: "", program: ast.Program { items: [] } }, surface.nothing_imported(), types.little_prelude()), types.checked_of("fn f() -> Int {\n    1\n}\n")).resolved.program.items) == 0
 fn typed(module: modules.Module, imported: surface.Imported, prelude: types.Prelude) -> Result<infer.Inference, Unchecked> {
-    match resolver.resolve(module.program, module.name, prelude.names) {
+    match resolver.resolve(module.program, module.name, prelude.names, set.empty()) {
         Ok(resolved) => typed_or_skipped(types.check(resolved, imported, prelude))
         Err(_) => Err(Skipped)
     }
@@ -150,8 +151,8 @@ fn block_checked(reading: Reading, walked: ast.Block) -> Result<(), MatchError> 
 // example: refusal_of("fn f(held: Option<Int>) -> Int {\n    return match held {\n        None => 1\n    }\n}\n") == "L0500 44..80 this `match` does not cover `Some(_)`"
 fn statement_checked(reading: Reading, statement: ast.Statement) -> Result<(), MatchError> {
     match statement.kind {
-        ast.Binding { mutability, name, value } => expression_checked(reading, value)
-        ast.Assign { target, operator, value } => expression_checked(reading, value)
+        ast.Binding { value } => expression_checked(reading, value)
+        ast.Assign { value } => expression_checked(reading, value)
         ast.Return(given) => given_checked(reading, given)
         ast.For(looped) => loop_checked(reading, looped)
         ast.Discard(value) => expression_checked(reading, value)
@@ -182,7 +183,7 @@ fn header_checked(reading: Reading, header: ast.ForHeader) -> Result<(), MatchEr
     match header {
         ast.Forever => Ok(())
         ast.While(condition) => expression_checked(reading, condition)
-        ast.Over { binding, iterable } => expression_checked(reading, iterable)
+        ast.Over { iterable } => expression_checked(reading, iterable)
     }
 }
 
@@ -190,13 +191,13 @@ fn header_checked(reading: Reading, header: ast.ForHeader) -> Result<(), MatchEr
 // example: refusal_of("fn f(held: Option<Int>) -> Int {\n    1 + match held {\n        None => 1\n    }\n}\n") == "L0500 41..77 this `match` does not cover `Some(_)`"
 fn expression_checked(reading: Reading, walked: ast.Expr) -> Result<(), MatchError> {
     match walked.kind {
-        ast.Unary { operator, operand } => expression_checked(reading, operand)
-        ast.Binary { operator, left, right } => each_checked(reading, [left, right])
+        ast.Unary { operand } => expression_checked(reading, operand)
+        ast.Binary { left, right } => each_checked(reading, [left, right])
         ast.Call { callee, arguments } => call_checked(reading, callee, arguments)
-        ast.Field { receiver, name } => expression_checked(reading, receiver)
+        ast.Field { receiver } => expression_checked(reading, receiver)
         ast.Try(inner) => expression_checked(reading, inner)
         ast.Written(values) => each_checked(reading, values)
-        ast.Record { base, fields } => fields_checked(reading, fields)
+        ast.Record { fields } => fields_checked(reading, fields)
         ast.If(chain) => if_checked(reading, chain)
         ast.Match(matched) => match_checked(reading, matched, walked.span)
         ast.Spawn(started) => expression_checked(reading, started)
@@ -317,7 +318,7 @@ fn first_among(reading: Reading, patterns: List<ast.Pattern>) -> Option<MatchErr
 // example: refusal_of(status_module("        Running(1 | 2) => 1\n        _ => 2\n")) == ""
 fn alternatives_of(reading: Reading, pattern: ast.Pattern) -> Option<MatchError> {
     match pattern.kind {
-        ast.TuplePattern { path, elements } => first_among(reading, elements)
+        ast.TuplePattern { elements } => first_among(reading, elements)
         ast.OrPattern(alternatives) => alternatives_placed(reading, alternatives)
         _ => None
     }
@@ -365,7 +366,7 @@ fn placed(reading: Reading, so_far: Placing, pattern: ast.Pattern) -> Placing {
     match pattern.kind {
         ast.NamePattern(path) => named_placed(reading, so_far, path)
         ast.TuplePattern { path, elements } => each_placed(reading, placed_at(reading, so_far, path), elements)
-        ast.RecordPattern { path, fields } => placed_at(reading, so_far, path)
+        ast.RecordPattern { path } => placed_at(reading, so_far, path)
         ast.OrPattern(alternatives) => first_placed(reading, so_far, list.at(alternatives, 0))
         _ => so_far { whole: false }
     }
@@ -453,7 +454,7 @@ fn every(reading: Reading, pattern: ast.Pattern) -> List<Pat> {
     match pattern.kind {
         ast.NamePattern(path) => named_pattern(reading, path)
         ast.TuplePattern { path, elements } => constructed(reading, ast.path_text(path), elements)
-        ast.RecordPattern { path, fields } => constructed(reading, ast.path_text(path), [])
+        ast.RecordPattern { path } => constructed(reading, ast.path_text(path), [])
         ast.IntegerPattern(_) => [Literal]
         ast.TextPattern(_) => [Literal]
         ast.TruthPattern(held) => [Constructed { name: shown(held), arguments: [] }]
@@ -598,7 +599,7 @@ fn first_constructor(rows: List<List<Pat>>) -> Option<String> {
 // example: leading_name(Literal) == ""
 fn leading_name(leading: Pat) -> String {
     match leading {
-        Constructed { name, arguments } => name
+        Constructed { name } => name
         _ => ""
     }
 }
@@ -657,7 +658,7 @@ fn specialised(rows: List<List<Pat>>, one: Signature) -> List<List<Pat>> {
 fn is_about(leading: Pat, one: Signature) -> Bool {
     match leading {
         Wildcard => true
-        Constructed { name, arguments } => name == one.name
+        Constructed { name } => name == one.name
         Literal => false
     }
 }
@@ -666,7 +667,7 @@ fn is_about(leading: Pat, one: Signature) -> Bool {
 // example: opened(Wildcard, Signature { name: "Ok", carries: 1 }) == [Wildcard]
 fn opened(leading: Pat, one: Signature) -> List<Pat> {
     match leading {
-        Constructed { name, arguments } => arguments
+        Constructed { arguments } => arguments
         _ => wildcards(one.carries)
     }
 }
@@ -764,7 +765,7 @@ fn defined(name: String, definition: ast.TypeDefinition) -> List<Signature> {
     match definition {
         ast.RecordType(fields) => [Signature { name: name, carries: list.length(fields) }]
         ast.Variants(variants) => variant_signatures(variants)
-        ast.Foreign { class, called } => []
+        ast.Foreign {} => []
     }
 }
 
@@ -872,8 +873,8 @@ fn refusal_printed(refused: MatchError) -> String {
 // example: code_of(NotCovered { missing: [], span: lexer.Span { start: 0, length: 1 } }) == "L0500"
 fn code_of(refused: MatchError) -> String {
     match refused {
-        NotCovered { missing, span } => "L0500"
-        OutOfOrder { arm, before, span } => "L0501"
+        NotCovered {} => "L0500"
+        OutOfOrder {} => "L0501"
     }
 }
 
@@ -881,8 +882,8 @@ fn code_of(refused: MatchError) -> String {
 // example: shown(span_of(NotCovered { missing: [], span: lexer.Span { start: 3, length: 1 } })) == "3..4"
 fn span_of(refused: MatchError) -> lexer.Span {
     match refused {
-        NotCovered { missing, span } => span
-        OutOfOrder { arm, before, span } => span
+        NotCovered { span } => span
+        OutOfOrder { span } => span
     }
 }
 
@@ -890,8 +891,8 @@ fn span_of(refused: MatchError) -> lexer.Span {
 // example: message_of(NotCovered { missing: ["A", "B(_)"], span: lexer.Span { start: 0, length: 1 } }) == "this `match` does not cover `A`, `B(_)`"
 fn message_of(refused: MatchError) -> String {
     match refused {
-        NotCovered { missing, span } => "this `match` does not cover " + quoted_each(missing)
-        OutOfOrder { arm, before, span } => "this `match` writes `" + arm + "` after `" + before + "`"
+        NotCovered { missing } => "this `match` does not cover " + quoted_each(missing)
+        OutOfOrder { arm, before } => "this `match` writes `" + arm + "` after `" + before + "`"
     }
 }
 
@@ -909,8 +910,8 @@ fn quoted_each(named: List<String>) -> String {
 // example: help_of(OutOfOrder { arm: "A", before: "B", span: lexer.Span { start: 0, length: 1 } }) == "arms come in the order the type declares its variants: `A` before `B`"
 fn help_of(refused: MatchError) -> String {
     match refused {
-        NotCovered { missing, span } => "every value has an arm, or a name that binds whatever the arms before it did not"
-        OutOfOrder { arm, before, span } => "arms come in the order the type declares its variants: `" + arm + "` before `" + before + "`"
+        NotCovered {} => "every value has an arm, or a name that binds whatever the arms before it did not"
+        OutOfOrder { arm, before } => "arms come in the order the type declares its variants: `" + arm + "` before `" + before + "`"
     }
 }
 

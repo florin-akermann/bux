@@ -15,5 +15,6 @@ fn first<T>(items: List<T>) -> Option<T> {
 }
 
 fn is_given(given: ()) -> Bool {
+    _ = given
     true
 }

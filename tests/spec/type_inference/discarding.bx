@@ -7,10 +7,13 @@ fn main(values: List<Int>) -> () {
     log(1)
 }
 
-fn save(value: Int) -> Result<(), String> {
-    Ok(())
+fn log(value: Int) -> () {
+    _ = save(value)
 }
 
-fn log(value: Int) -> () {
-    ()
+fn save(value: Int) -> Result<(), String> {
+    if value < 0 {
+        return Err("a count is never below zero")
+    }
+    Ok(())
 }

@@ -1581,8 +1581,8 @@ fn body_opening(cursor: Cursor, declared: Int) -> Step {
 // example: is_open(Open(over("")))
 fn is_open(step: Step) -> Bool {
     match step {
-        Open(cursor) => true
-        Closed(cursor) => false
+        Open(_) => true
+        Closed(_) => false
     }
 }
 
@@ -1600,7 +1600,7 @@ fn cursor_of(step: Step) -> Cursor {
 fn or_closed(step: Result<Step, ParseError>) -> Step {
     match step {
         Ok(next) => next
-        Err(why) => Closed(over(""))
+        Err(_) => Closed(over(""))
     }
 }
 
@@ -1654,7 +1654,7 @@ fn can_end_a_line(kind: lexer.TokenKind) -> Bool {
 // example: failed_step(Ok(Open(over("")))) == ""
 fn failed_step(step: Result<Step, ParseError>) -> String {
     match step {
-        Ok(next) => ""
+        Ok(_) => ""
         Err(why) => error_printed(why)
     }
 }
@@ -1678,7 +1678,7 @@ fn expect_path(cursor: Cursor, expected: Expected) -> Result<Parsed<ast.Path>, P
 fn or_path(parsed: Result<Parsed<ast.Path>, ParseError>) -> ast.Path {
     match parsed {
         Ok(done) => done.value
-        Err(why) => ast.Path { module: None, name: ast.Name { text: "", span: lexer.Span { start: 0, length: 0 } } }
+        Err(_) => ast.Path { module: None, name: ast.Name { text: "", span: lexer.Span { start: 0, length: 0 } } }
     }
 }
 
@@ -1871,7 +1871,7 @@ fn token_error(expected: Expected, token: lexer.Token) -> ErrorKind {
 fn position_after<T>(parsed: Result<Parsed<T>, ParseError>) -> Int {
     match parsed {
         Ok(done) => done.cursor.position
-        Err(why) => -1
+        Err(_) => -1
     }
 }
 
@@ -1879,7 +1879,7 @@ fn position_after<T>(parsed: Result<Parsed<T>, ParseError>) -> Int {
 // example: failed(expect_name(over("x"), NameWanted)) == ""
 fn failed<T>(parsed: Result<Parsed<T>, ParseError>) -> String {
     match parsed {
-        Ok(done) => ""
+        Ok(_) => ""
         Err(why) => error_printed(why)
     }
 }
@@ -1888,7 +1888,7 @@ fn failed<T>(parsed: Result<Parsed<T>, ParseError>) -> String {
 // example: failed_with(Ok(1)) == ""
 fn failed_with<T>(result: Result<T, ParseError>) -> String {
     match result {
-        Ok(done) => ""
+        Ok(_) => ""
         Err(why) => error_printed(why)
     }
 }
@@ -1944,11 +1944,11 @@ fn error_printed(refused: ParseError) -> String {
 // example: help_of(UnknownCharacter) == ""
 fn help_of(kind: ErrorKind) -> String {
     match kind {
-        Unexpected { expected, found } => expected_help(expected)
+        Unexpected { expected } => expected_help(expected)
         UnterminatedString => "add a closing `\"` before the end of the line"
         UnknownCharacter => ""
         IntegerTooLarge => "the largest whole number is 9223372036854775807"
-        UnknownEscape(escaped) => "the escapes are `\\\"`, `\\\\`, `\\n`, `\\t`, and `\\r`"
+        UnknownEscape(_) => "the escapes are `\\\"`, `\\\\`, `\\n`, `\\t`, and `\\r`"
         ChainedComparison => "compare twice and join the two with `&&`"
         NestingTooDeep => "brackets nest at most 32 deep; name a part of it"
         AssignedToValue => "build the value it becomes: `user { name: \"Bob\" }`"
@@ -1971,16 +1971,16 @@ fn expected_help(expected: Expected) -> String {
 // example: code_of(ChainedComparison) == "L0105"
 fn code_of(kind: ErrorKind) -> String {
     match kind {
-        Unexpected { expected, found } => "L0100"
+        Unexpected {} => "L0100"
         UnterminatedString => "L0101"
         UnknownCharacter => "L0102"
         IntegerTooLarge => "L0103"
-        UnknownEscape(escaped) => "L0104"
+        UnknownEscape(_) => "L0104"
         ChainedComparison => "L0105"
         NestingTooDeep => "L0106"
         AssignedToValue => "L0107"
         PartlyNamedCall => "L0108"
-        ColonEquals(name) => "L0109"
+        ColonEquals(_) => "L0109"
         TestInABody => "L0110"
     }
 }
@@ -1998,7 +1998,7 @@ fn message(kind: ErrorKind) -> String {
         NestingTooDeep => "this nests too deeply to parse"
         AssignedToValue => "only a name is assigned to"
         PartlyNamedCall => "this call names some of its arguments and not others"
-        ColonEquals(name) => "`:=` does not bind a name"
+        ColonEquals(_) => "`:=` does not bind a name"
         TestInABody => "a test is written at the top level of a module, and this one is inside a body"
     }
 }

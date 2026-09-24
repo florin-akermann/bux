@@ -36,3 +36,7 @@ type UserId = UserId(Int)
 fn identity<T>(value: T) -> T {
     value
 }
+
+fn greet() -> () {
+    io.println("hello")
+}
