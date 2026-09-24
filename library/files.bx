@@ -4,6 +4,7 @@
 // declarations, which `docs/specs/interop.md` states, and every step that can throw gives a
 // `Result`, so nothing here throws through a program.
 import list
+import strings
 
 /// The whole file at `path` as text, or what went wrong reading it.
 // example: ok_or(read(""), "nothing there") == "nothing there"
@@ -12,6 +13,36 @@ fn read(path: String) -> Result<String, String> {
         Ok(found) => read_whole(found)
         Err(why) => Err(why)
     }
+}
+
+/// The whole file at `path` as bytes, one value from 0 to 255 for each, or what went wrong.
+// example: ok_or(read_bytes(""), [1]) == [1]
+fn read_bytes(path: String) -> Result<List<Int>, String> {
+    match as_a_path(named(path)) {
+        Ok(found) => each_byte(read_whole_as(found, as_latin_1()))
+        Err(why) => Err(why)
+    }
+}
+
+/// The value of each char of `answer`, which ISO-8859-1 reads as the one byte of that value.
+// example: ok_or(each_byte(Ok("AB")), []) == [65, 66]
+fn each_byte(answer: Result<String, String>) -> Result<List<Int>, String> {
+    match answer {
+        Ok(text) => Ok(values_of(text))
+        Err(why) => Err(why)
+    }
+}
+
+/// The value of each char of `text`, in order.
+// example: values_of("é") == [233]
+fn values_of(text: String) -> List<Int> {
+    var values = []
+    var index = 0
+    for index < strings.length(text) {
+        values = list.push(values, or(strings.at(text, index), 0))
+        index += 1
+    }
+    values
 }
 
 /// `text` written as the whole of the file at `path`, with `path` back where that worked.
@@ -128,6 +159,9 @@ fn removed(path: String) -> Result<Bool, String> {
 
 /// The whole file at `path`, read as UTF-8.
 extern static read_whole(path: Path) -> Result<String, String> = "java.nio.file.Files.readString"
+
+/// The whole file at `path`, read in `encoding`.
+extern static read_whole_as(path: Path, encoding: Encoding) -> Result<String, String> = "java.nio.file.Files.readString"
 
 /// A file at `path` opened to be written whole, which is a file emptied of whatever it held.
 extern new opened(path: String, written_as: Encoding) -> Result<Writer, String>

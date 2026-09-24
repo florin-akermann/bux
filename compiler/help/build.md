@@ -33,6 +33,10 @@ to run what is written, not to write it.
 A module is named after its file, so the file's name has to be one a class may have: a name
 holding `.`, `;`, `[` or `/` is refused rather than written out as a class no JVM would load.
 
+A build reads the `jar` lines of the manifest too, which `bux help packages` states. Each archive
+is there, has the hash that its line states, is a Java archive, and has no `Class-Path`, or the
+build is refused against its line before a class is written. The archive is not copied.
+
 A hole is refused here. `todo("a reason")` is what an unfinished body is written as, and a hole
 has nothing to run, so there is nothing for a build to write. Every hole in the module is named
 rather than the first, because a build is how a reader learns what is left; nothing is written

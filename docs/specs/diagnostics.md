@@ -119,7 +119,7 @@ Loading raises these, in `compiler/modules.bx`, before any module is resolved:
 
 - `L0306` — an import names a module neither a file beside it nor a package it reaches holds.
 - `L0307` — a ring of imports, which leaves the modules in it no order to be compiled in.
-- `L0315` — a manifest states something other than `package`, `version`, and a `depends` for each.
+- `L0315` — a manifest states something other than `package`, `version`, a `depends`, and a `jar`.
 - `L0316` — a directory named as a package holds no manifest, so there is no package there.
 - `L0317` — two files claim the module name an import writes, so one build would hold both.
 
@@ -182,6 +182,14 @@ A reader answering them is answering a list, and a list of one would not be that
 Every command that takes a file raises this one, in `compiler/command.bx`, before it compiles:
 
 - `L0605` — the file named on the command line is no Bux source: its name does not end in `.bx`.
+
+`bux build`, `bux run`, and `bux test` raise these in `compiler/archives.bx`.
+Each is raised before a class is written:
+
+- `L0606` — an archive that a `jar` line names is not there.
+- `L0607` — an archive has a hash other than the hash that its `jar` line states.
+- `L0608` — the manifest of an archive has a `Class-Path`, which names more archives.
+- `L0609` — a file that a `jar` line names is no Java archive.
 
 `bux build`, `bux run`, and `bux test` raise these, in `compiler/jvm.bx`, for the first
 class that the writer cannot write:

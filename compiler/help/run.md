@@ -3,7 +3,9 @@ Compile a source file and run the program it holds.
 `bux run` does what `bux build` does and then hands the result to a JVM. The class files are
 written under `target/` exactly as a build writes them, so a run leaves the same files behind and
 nothing more. That includes the class of every module the program imports, because the program
-reaches them while it runs. That one `target/` directory is the whole class path of the program.
+reaches them while it runs. The class path of the program is that one `target/` directory, then
+each Java archive that a `jar` line of the manifest states, in line order, then the archives of
+each dependency. Nothing else is on it, and `bux help packages` states the `jar` line.
 
 A program starts at `main`, which takes the words it was run with and gives back the status the
 run ends with:
@@ -25,7 +27,8 @@ running one is refused rather than guessed at. The whole signature is read: the 
 module. The JVM gets `--enable-preview` because every class Bux writes is a value class, which
 JDK 28 holds in preview.
 
-A program reaches its library and the `java.base` module of the JDK, and nothing more of the JDK.
+A program reaches its library, its stated archives, and the `java.base` module of the JDK, and
+nothing more of the JDK.
 The JVM gets `--limit-modules java.base`, so no class of `java.naming`, `java.rmi`, or
 `java.scripting` loads. It also gets `-Djdk.serialFilter=!*`, so it makes no object from
 serialized bytes. `JAVA_TOOL_OPTIONS`, `JDK_JAVA_OPTIONS`, and `_JAVA_OPTIONS` are removed from

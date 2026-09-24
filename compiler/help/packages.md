@@ -10,10 +10,12 @@ manifest is no package, and a command handed one says so and stops with exit cod
     package shapes
     version 0.2.0
     depends ../geometry
+    jar lib/geometry.jar sha256:4f2c000000000000000000000000000000000000000000000000000000009a1e
 
-Every line is a keyword, one space, and one word. `package` is written first and `version`
-second, and a `depends` line for each dependency comes after both. A path is read against the
-directory the manifest sits in, so `../geometry` is that directory's sibling.
+Every line is a keyword, one space, and one word, except a `jar` line. `package` is written
+first and `version` second, a `depends` line for each dependency comes after both, and a `jar`
+line for each Java archive comes last. A path is read against the directory the manifest sits
+in, so `../geometry` is that directory's sibling.
 
 An import that names no module beside the file that wrote it names a module of a package the
 manifest depends on. Nothing is fetched: the directory is already there, or the compiler says
@@ -25,6 +27,14 @@ two dependencies' or one this package holds beside a dependency's that something
 one name has one definition, and an order would make which definition a name means depend on the
 order the files were reached in. A directory depended on twice is refused for the same reason
 there is one way to write a manifest.
+
+A `jar` line names a Java archive by its path and by the SHA-256 of its bytes: `sha256:` and 64
+lowercase hexadecimal digits, as `shasum -a 256` shows them. The path holds no blank, `:`, or `*`.
+Nothing is fetched: the archive is a file on disk already. `bux build`, `bux run`, and `bux test`
+refuse an archive that is not there, that has another hash, that is no Java archive, or whose
+manifest has a `Class-Path`, because a JVM reaches each archive a `Class-Path` names. A run puts
+the stated archives on the class path after `target/`, and a package with no `jar` line reaches
+no archive. A program reaches a class of an archive with an `extern`.
 
 The name and the version are stated and nothing reads either yet. A manifest that leaves one out
 is refused all the same, because a package says what it is before anything asks.

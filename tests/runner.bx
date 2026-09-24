@@ -7,6 +7,7 @@
 // line for each check it skipped and for each failure, then a line that counts what it held. It
 // ends with status 0 only where nothing failed. With the word `golden`, it writes the golden files
 // under `tests/commands` again and holds nothing.
+import archived
 import boundaries
 import branching
 import collected
@@ -37,6 +38,7 @@ import naming
 import operating
 import paged
 import parsing
+import pinned
 import rendering
 import siblings
 import spawned
@@ -234,7 +236,7 @@ fn job_held(job: Job, setting: Setting) -> List<held.Held> {
         GoldenOf(path) => [commanded.golden_held(path, setting.library, setting.limit)]
         Explanations => [commanded.every_explanation_held(setting.library)]
         Scenes => [enacted.every_scene_held(setting.library, setting.limit)]
-        StartedRuns => [started.every_run_held(setting.library, setting.limit)]
+        StartedRuns => [started.every_run_held(setting.library, setting.limit), archived.every_archive_held(setting.library, setting.limit)]
         LauncherOf(root) => [launched.every_start_held(root, setting.limit)]
         ExamplesOf(paths) => [exemplified.every_example_held("tests/spec", paths, setting.library, setting.limit)]
         PropertiesOf => every_property_held(setting.library)
@@ -336,6 +338,7 @@ fn every_property_held(library: ir.Library) -> List<held.Held> {
     found = command.all_of(found, paged.every_property(cases, library))
     found = command.all_of(found, naming.every_property(cases, library))
     found = command.all_of(found, loading.every_property(cases, library))
+    found = command.all_of(found, pinned.every_property(cases, library))
     found = command.all_of(found, typing.every_property(cases, library))
     found = command.all_of(found, conventions.every_property(cases, library))
     found = command.all_of(found, boundaries.every_property(cases, library))

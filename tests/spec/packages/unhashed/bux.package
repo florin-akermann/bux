@@ -1,0 +1,3 @@
+package unhashed
+version 0.1.0
+jar lib/geometry.jar sha256:4f2c9a1e

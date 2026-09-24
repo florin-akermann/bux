@@ -203,6 +203,26 @@ The refusal of a value shows that value, and `java.lang.Long.toString` shows a n
 `tests/spec/io/bytes_written.bx` writes bytes, reads them back as text, and shows them.
 `docs/specs/codegen.md` states the one caller in the compiler, which writes each class file.
 
+## Reading bytes
+
+A build hashes each Java archive that a manifest states, and a hash is over bytes, not text.
+So `files` reads bytes with one more function.
+
+```text
+files.read_bytes(path: String) -> Result<List<Int>, String>
+```
+
+`files.read_bytes` reads the whole file at `path`, and gives back one value for each byte.
+Each value is from 0 to 255, in the order of the file.
+A file that cannot be read is an `Err` that holds what went wrong, as `files.read` gives.
+
+A byte array crosses neither way, so the file is read as text in the ISO-8859-1 encoding.
+That encoding reads each byte as the one char of the same value, and every byte is a char.
+`files.read_whole_as` is `java.nio.file.Files.readString` with an encoding.
+`files.each_byte` and `files.values_of` turn each char into its value with `strings.at`.
+So `files` imports `strings`, and it reaches no JVM class that it did not reach already.
+`compiler/archives.bx` is the one caller, and `docs/specs/packages.md` states it.
+
 ## The errors
 
 ```text
@@ -288,12 +308,16 @@ Until then `run` is for a program that writes less than one such hold on its sta
 
 ### What `programs` declares
 
-`docs/specs/api-surface.md` makes every top-level name public, and `programs` is not exempt, so
-`programs.Finished`, `programs.whole_command`, `programs.whole`, `programs.of_command`,
-`programs.reading_from`, `programs.inherited`, `programs.started`, `programs.output_of`,
-`programs.errors_of`, `programs.waited_for`, `programs.over`, `programs.delimited`, `programs.token`,
-`programs.closed`, `programs.nothing_at_all`, `programs.ProcessBuilder`, `programs.Running`,
-`programs.InputStream`, `programs.Scanner`, and `programs.Redirect` are each reachable by name.
+`docs/specs/api-surface.md` makes every top-level name public, and `programs` is not exempt.
+So each of these names is reachable:
+
+- `programs.Finished`, `programs.whole_command`, `programs.whole`, and `programs.of_command`.
+- `programs.reading_from`, `programs.inherited`, `programs.started`, and `programs.output_of`.
+- `programs.errors_of`, `programs.waited_for`, `programs.over`, and `programs.delimited`.
+- `programs.token`, `programs.closed`, and `programs.nothing_at_all`.
+- `programs.ProcessBuilder`, `programs.Running`, `programs.InputStream`, and `programs.Scanner`.
+- `programs.Redirect`.
+
 That is what writing the module in Bux costs, as it is for `io` and `files`.
 A program that wants a program started writes `programs.run`, and the rest is how that is built.
 

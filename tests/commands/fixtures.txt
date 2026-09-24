@@ -1712,7 +1712,7 @@ status 1
 !   1 | version 0.2.0
 !     | ^^^^^^^^^^^^^
 !
-! help: a manifest is `package`, then `version`, then a `depends` for each dependency
+! help: a manifest is `package`, then `version`, then a `depends` for each dependency, then a `jar` for each archive
 
 $ check tests/spec/packages/nearer/circle.bx
 status 0
@@ -1754,7 +1754,7 @@ status 1
 !   2 | author nobody
 !     | ^^^^^^^^^^^^^
 !
-! help: a manifest is `package`, then `version`, then a `depends` for each dependency
+! help: a manifest is `package`, then `version`, then a `depends` for each dependency, then a `jar` for each archive
 
 $ check tests/spec/packages/twice/main.bx
 status 1
@@ -1784,7 +1784,7 @@ status 1
 !   1 | package versionless
 !     | ^^^^^^^^^^^^^^^^^^^
 !
-! help: a manifest is `package`, then `version`, then a `depends` for each dependency
+! help: a manifest is `package`, then `version`, then a `depends` for each dependency, then a `jar` for each archive
 
 $ check tests/spec/packages/west/sunset.bx
 status 1
@@ -3340,7 +3340,7 @@ status 0
 
 $ check --json tests/spec/packages/nameless/main.bx
 status 1
-> {"file":"tests/spec/packages/nameless/bux.package","code":"L0315","message":"`package` is what a manifest states here","span":{"start":0,"len":13},"help":"a manifest is `package`, then `version`, then a `depends` for each dependency"}
+> {"file":"tests/spec/packages/nameless/bux.package","code":"L0315","message":"`package` is what a manifest states here","span":{"start":0,"len":13},"help":"a manifest is `package`, then `version`, then a `depends` for each dependency, then a `jar` for each archive"}
 
 $ check --json tests/spec/packages/nearer/circle.bx
 status 0
@@ -3364,7 +3364,7 @@ status 1
 
 $ check --json tests/spec/packages/stated/main.bx
 status 1
-> {"file":"tests/spec/packages/stated/bux.package","code":"L0315","message":"`version` is what a manifest states here","span":{"start":15,"len":13},"help":"a manifest is `package`, then `version`, then a `depends` for each dependency"}
+> {"file":"tests/spec/packages/stated/bux.package","code":"L0315","message":"`version` is what a manifest states here","span":{"start":15,"len":13},"help":"a manifest is `package`, then `version`, then a `depends` for each dependency, then a `jar` for each archive"}
 
 $ check --json tests/spec/packages/twice/main.bx
 status 1
@@ -3376,7 +3376,7 @@ status 1
 
 $ check --json tests/spec/packages/versionless/main.bx
 status 1
-> {"file":"tests/spec/packages/versionless/bux.package","code":"L0315","message":"`version` is what a manifest states here","span":{"start":0,"len":20},"help":"a manifest is `package`, then `version`, then a `depends` for each dependency"}
+> {"file":"tests/spec/packages/versionless/bux.package","code":"L0315","message":"`version` is what a manifest states here","span":{"start":0,"len":20},"help":"a manifest is `package`, then `version`, then a `depends` for each dependency, then a `jar` for each archive"}
 
 $ check --json tests/spec/packages/west/sunset.bx
 status 1
@@ -6205,7 +6205,7 @@ status 1
 !   1 | version 0.2.0
 !     | ^^^^^^^^^^^^^
 !
-! help: a manifest is `package`, then `version`, then a `depends` for each dependency
+! help: a manifest is `package`, then `version`, then a `depends` for each dependency, then a `jar` for each archive
 
 $ api tests/spec/packages/nearer/circle.bx
 status 0
@@ -6251,7 +6251,7 @@ status 1
 !   2 | author nobody
 !     | ^^^^^^^^^^^^^
 !
-! help: a manifest is `package`, then `version`, then a `depends` for each dependency
+! help: a manifest is `package`, then `version`, then a `depends` for each dependency, then a `jar` for each archive
 
 $ api tests/spec/packages/twice/main.bx
 status 1
@@ -6281,7 +6281,7 @@ status 1
 !   1 | package versionless
 !     | ^^^^^^^^^^^^^^^^^^^
 !
-! help: a manifest is `package`, then `version`, then a `depends` for each dependency
+! help: a manifest is `package`, then `version`, then a `depends` for each dependency, then a `jar` for each archive
 
 $ api tests/spec/packages/west/sunset.bx
 status 1
@@ -7561,6 +7561,12 @@ $ api library/files.bx
 status 0
 > fn read(path: String) -> Result<String, String>
 >
+> fn read_bytes(path: String) -> Result<List<Int>, String>
+>
+> fn each_byte(answer: Result<String, String>) -> Result<List<Int>, String>
+>
+> fn values_of(text: String) -> List<Int>
+>
 > fn write(path: String, text: String) -> Result<String, String>
 >
 > fn sent(sink: Writer, text: String, to: String) -> Result<String, String>
@@ -7582,6 +7588,8 @@ status 0
 > fn removed(path: String) -> Result<Bool, String>
 >
 > extern static read_whole(path: Path) -> Result<String, String> = "java.nio.file.Files.readString"
+>
+> extern static read_whole_as(path: Path, encoding: Encoding) -> Result<String, String> = "java.nio.file.Files.readString"
 >
 > extern new opened(path: String, written_as: Encoding) -> Result<Writer, String>
 >
@@ -9919,7 +9927,7 @@ status 1
 !   1 | version 0.2.0
 !     | ^^^^^^^^^^^^^
 !
-! help: a manifest is `package`, then `version`, then a `depends` for each dependency
+! help: a manifest is `package`, then `version`, then a `depends` for each dependency, then a `jar` for each archive
 
 $ test tests/spec/packages/nearer/circle.bx
 status 0
@@ -9975,7 +9983,7 @@ status 1
 !   2 | author nobody
 !     | ^^^^^^^^^^^^^
 !
-! help: a manifest is `package`, then `version`, then a `depends` for each dependency
+! help: a manifest is `package`, then `version`, then a `depends` for each dependency, then a `jar` for each archive
 
 $ test tests/spec/packages/twice/main.bx
 status 1
@@ -10005,7 +10013,7 @@ status 1
 !   1 | package versionless
 !     | ^^^^^^^^^^^^^^^^^^^
 !
-! help: a manifest is `package`, then `version`, then a `depends` for each dependency
+! help: a manifest is `package`, then `version`, then a `depends` for each dependency, then a `jar` for each archive
 
 $ test tests/spec/packages/west/sunset.bx
 status 1
@@ -10924,7 +10932,7 @@ status 1
 !   1 | version 0.2.0
 !     | ^^^^^^^^^^^^^
 !
-! help: a manifest is `package`, then `version`, then a `depends` for each dependency
+! help: a manifest is `package`, then `version`, then a `depends` for each dependency, then a `jar` for each archive
 
 $ check tests/spec/packages/nearer
 status 0
@@ -10960,7 +10968,7 @@ status 1
 !   2 | author nobody
 !     | ^^^^^^^^^^^^^
 !
-! help: a manifest is `package`, then `version`, then a `depends` for each dependency
+! help: a manifest is `package`, then `version`, then a `depends` for each dependency, then a `jar` for each archive
 
 $ check tests/spec/packages/twice
 status 1
@@ -10990,7 +10998,7 @@ status 1
 !   1 | package versionless
 !     | ^^^^^^^^^^^^^^^^^^^
 !
-! help: a manifest is `package`, then `version`, then a `depends` for each dependency
+! help: a manifest is `package`, then `version`, then a `depends` for each dependency, then a `jar` for each archive
 
 $ check tests/spec/packages/west
 status 1
@@ -11153,7 +11161,7 @@ status 0
 
 $ check --json tests/spec/packages/nameless
 status 1
-> {"file":"tests/spec/packages/nameless/bux.package","code":"L0315","message":"`package` is what a manifest states here","span":{"start":0,"len":13},"help":"a manifest is `package`, then `version`, then a `depends` for each dependency"}
+> {"file":"tests/spec/packages/nameless/bux.package","code":"L0315","message":"`package` is what a manifest states here","span":{"start":0,"len":13},"help":"a manifest is `package`, then `version`, then a `depends` for each dependency, then a `jar` for each archive"}
 
 $ check --json tests/spec/packages/nearer
 status 0
@@ -11171,7 +11179,7 @@ status 1
 
 $ check --json tests/spec/packages/stated
 status 1
-> {"file":"tests/spec/packages/stated/bux.package","code":"L0315","message":"`version` is what a manifest states here","span":{"start":15,"len":13},"help":"a manifest is `package`, then `version`, then a `depends` for each dependency"}
+> {"file":"tests/spec/packages/stated/bux.package","code":"L0315","message":"`version` is what a manifest states here","span":{"start":15,"len":13},"help":"a manifest is `package`, then `version`, then a `depends` for each dependency, then a `jar` for each archive"}
 
 $ check --json tests/spec/packages/twice
 status 1
@@ -11183,7 +11191,7 @@ status 1
 
 $ check --json tests/spec/packages/versionless
 status 1
-> {"file":"tests/spec/packages/versionless/bux.package","code":"L0315","message":"`version` is what a manifest states here","span":{"start":0,"len":20},"help":"a manifest is `package`, then `version`, then a `depends` for each dependency"}
+> {"file":"tests/spec/packages/versionless/bux.package","code":"L0315","message":"`version` is what a manifest states here","span":{"start":0,"len":20},"help":"a manifest is `package`, then `version`, then a `depends` for each dependency, then a `jar` for each archive"}
 
 $ check --json tests/spec/packages/west
 status 1
@@ -11789,7 +11797,7 @@ status 1
 !   1 | version 0.2.0
 !     | ^^^^^^^^^^^^^
 !
-! help: a manifest is `package`, then `version`, then a `depends` for each dependency
+! help: a manifest is `package`, then `version`, then a `depends` for each dependency, then a `jar` for each archive
 
 $ build tests/spec/packages/nearer
 status 1
@@ -11832,7 +11840,7 @@ status 1
 !   2 | author nobody
 !     | ^^^^^^^^^^^^^
 !
-! help: a manifest is `package`, then `version`, then a `depends` for each dependency
+! help: a manifest is `package`, then `version`, then a `depends` for each dependency, then a `jar` for each archive
 
 $ build tests/spec/packages/twice
 status 1
@@ -11862,7 +11870,7 @@ status 1
 !   1 | package versionless
 !     | ^^^^^^^^^^^^^^^^^^^
 !
-! help: a manifest is `package`, then `version`, then a `depends` for each dependency
+! help: a manifest is `package`, then `version`, then a `depends` for each dependency, then a `jar` for each archive
 
 $ build tests/spec/packages/west
 status 1
@@ -15514,7 +15522,7 @@ status 1
 !   1 | version 0.2.0
 !     | ^^^^^^^^^^^^^
 !
-! help: a manifest is `package`, then `version`, then a `depends` for each dependency
+! help: a manifest is `package`, then `version`, then a `depends` for each dependency, then a `jar` for each archive
 
 $ build tests/spec/packages/nearer/circle.bx
 status 0
@@ -15570,7 +15578,7 @@ status 1
 !   2 | author nobody
 !     | ^^^^^^^^^^^^^
 !
-! help: a manifest is `package`, then `version`, then a `depends` for each dependency
+! help: a manifest is `package`, then `version`, then a `depends` for each dependency, then a `jar` for each archive
 
 $ build tests/spec/packages/twice/main.bx
 status 1
@@ -15600,7 +15608,7 @@ status 1
 !   1 | package versionless
 !     | ^^^^^^^^^^^^^^^^^^^
 !
-! help: a manifest is `package`, then `version`, then a `depends` for each dependency
+! help: a manifest is `package`, then `version`, then a `depends` for each dependency, then a `jar` for each archive
 
 $ build tests/spec/packages/west/sunset.bx
 status 1

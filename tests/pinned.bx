@@ -1,0 +1,222 @@
+// The drawn properties of the `jar` line of a manifest and of the hash it states.
+//
+// `docs/specs/packages.md` states the line, and `compiler/digest.bx` is the SHA-256 it is held to.
+// That digest is held here to `shasum`, which is the reference, run once over every drawn file.
+import checking
+import command
+import digest
+import drawn
+import files
+import held
+import ir
+import lexer
+import list
+import modules
+import strings
+import walk
+
+/// One `Held` for each property of the `jar` line and of its hash, in a fixed order.
+// example: list.length(every_property(0, ir.little_library())) == 3
+fn every_property(cases: Int, library: ir.Library) -> List<held.Held> {
+    [a_printed_jar_line_reads_back(cases), a_malformed_jar_line_is_refused(cases), every_digest_is_the_one_shasum_gives(cases)]
+}
+
+/// Each drawn `jar` line reads back as the path and the hash it was printed with, in line order.
+// example: a_printed_jar_line_reads_back(2).cases == 2
+fn a_printed_jar_line_reads_back(cases: Int) -> held.Held {
+    var found = held.nothing_failed(cases)
+    for seed in checking.seeds(cases) {
+        found = checking.noted(found, "a_printed_jar_line_reads_back", seed, printed_tried(drawn.seeded(seed)))
+    }
+    found
+}
+
+/// From one to four drawn archives, printed as `jar` lines and read back out of the manifest.
+// example: printed_tried(drawn.seeded(1)).why == ""
+fn printed_tried(draw: drawn.Draw) -> checking.Tried {
+    let printed = drawn_archives(draw)
+    var manifest = heading()
+    for archive in printed {
+        manifest += jar_line(archive) + "\n"
+    }
+    match modules.read_out_of(manifest) {
+        Ok(stated) => checking.Tried { input: manifest, why: read_back(printed: printed, stated: stated.archives) }
+        Err(error) => checking.Tried { input: manifest, why: "refused as " + modules.code_of(error.kind) }
+    }
+}
+
+/// `""` where `stated` holds the path and the hash of each of `printed`, in order, and why not.
+// example: read_back(printed: [], stated: []) == ""
+fn read_back(printed: List<Printed>, stated: List<modules.Archive>) -> String {
+    if list.length(printed) != list.length(stated) {
+        return shown(list.length(printed)) + " lines read back as " + shown(list.length(stated))
+    }
+    var index = 0
+    for archive in stated {
+        let expected = or(list.at(printed, index), Printed { path: "", hash: "" })
+        if archive.path != expected.path || archive.digest != modules.Digest(expected.hash) {
+            return "line " + shown(index + 1) + " read back as `" + archive.path + "`"
+        }
+        index += 1
+    }
+    ""
+}
+
+/// Each malformed `jar` line is refused as L0315, at the line itself.
+// example: a_malformed_jar_line_is_refused(2).cases == 2
+fn a_malformed_jar_line_is_refused(cases: Int) -> held.Held {
+    var found = held.nothing_failed(cases)
+    for seed in checking.seeds(cases) {
+        found = checking.noted(found, "a_malformed_jar_line_is_refused", seed, malformed_tried(drawn.seeded(seed)))
+    }
+    found
+}
+
+/// One drawn malformed shape, or a repeat of the well-formed `jar` line before it, refused there.
+// example: malformed_tried(drawn.seeded(1)).why == ""
+fn malformed_tried(draw: drawn.Draw) -> checking.Tried {
+    let first = drawn_archive(draw)
+    let well = jar_line(first) + "\n"
+    let bad = drawn.picked(checking.after(draw, 9), list.push(malformed_lines(drawn_archive(checking.after(draw, 5))), jar_line(first)), "jar")
+    let manifest = heading() + well + bad + "\n"
+    let start = lexer.byte_length(lexer.Rest { source: heading() + well, start: 0 }, strings.length(heading() + well))
+    match modules.read_out_of(manifest) {
+        Ok(_) => checking.Tried { input: manifest, why: "the line was read" }
+        Err(error) => checking.Tried { input: manifest, why: refused_at(error: error, start: start) }
+    }
+}
+
+/// `""` where `error` is L0315 and starts at byte `start`, and what it is otherwise.
+// example: refused_at(error: modules.LoadError { kind: modules.NotAnArchiveLine, span: span_at(3) }, start: 3) == ""
+fn refused_at(error: modules.LoadError, start: Int) -> String {
+    let code = modules.code_of(error.kind)
+    if code != "L0315" || error.span.start != start {
+        return "refused as " + code + " at " + shown(error.span.start) + ", not at " + shown(start)
+    }
+    ""
+}
+
+/// The digest of each drawn file is the one `shasum -a 256` gives for it.
+///
+/// Every file is written first, so `shasum` runs once; where it is not there, this is skipped.
+// example: every_digest_is_the_one_shasum_gives(0).cases == 0
+fn every_digest_is_the_one_shasum_gives(cases: Int) -> held.Held {
+    match command.somewhere_of_its_own() {
+        Ok(directory) => digests_held(cases: cases, directory: directory)
+        Err(said) => held.with_skip(held.nothing_failed(0), "pinned: " + said.errors)
+    }
+}
+
+/// The same, with every drawn file written into `directory`, which is removed whole afterwards.
+// example: digests_held(cases: 0, directory: "no-such-directory").cases == 0
+fn digests_held(cases: Int, directory: String) -> held.Held {
+    var names = []
+    for seed in checking.seeds(cases) {
+        let name = "drawn-" + shown(seed) + ".bin"
+        _ = files.write_bytes(modules.joined(directory, name), drawn_bytes(drawn.seeded(seed)))
+        names = list.push(names, name)
+    }
+    let found = against_shasum(names: names, directory: directory)
+    command.removed_whole(directory)
+    found
+}
+
+/// Each of `names` in `directory` hashed here and by `shasum`, one case for each name.
+// example: against_shasum(names: [], directory: "no-such-directory").cases == 0
+fn against_shasum(names: List<String>, directory: String) -> held.Held {
+    if list.length(names) == 0 {
+        return held.nothing_failed(0)
+    }
+    match walk.completed(command.all_of(["shasum", "-a", "256"], names), directory, 60) {
+        Ok(summed) => each_digest_held(names: names, directory: directory, reference: walk.lines_of(summed.output))
+        Err(_) => held.with_skip(held.nothing_failed(0), "pinned: `shasum` could not be run, and it is the reference each digest is held to")
+    }
+}
+
+/// One case for each of `names`, which holds where its digest opens its line of `reference`.
+// example: each_digest_held(names: [], directory: "", reference: []).cases == 0
+fn each_digest_held(names: List<String>, directory: String, reference: List<String>) -> held.Held {
+    var found = held.nothing_failed(list.length(names))
+    var index = 0
+    for name in names {
+        let bytes = ok_or(files.read_bytes(modules.joined(directory, name)), [])
+        let expected = or(strings.cut(or(list.at(reference, index), ""), 0, 64), "")
+        let computed = digest.sha256(bytes)
+        if computed != expected {
+            found = held.with_failure(found, held.drawn_failure("every_digest_is_the_one_shasum_gives", index + 1, shown(list.length(bytes)) + " bytes", "the digest is " + computed + ", and shasum gives " + expected))
+        }
+        index += 1
+    }
+    found
+}
+
+/// From none to 300 drawn bytes, which crosses the one-block and two-block edges of the padding.
+// example: list.length(drawn_bytes(drawn.seeded(1))) < 300
+fn drawn_bytes(draw: drawn.Draw) -> List<Int> {
+    drawn.numbers(drawn.next(draw), drawn.number(draw, 300), 256)
+}
+
+/// From one to four drawn archives, each after the one before it, and each at a path of its own.
+// example: list.length(drawn_archives(drawn.seeded(1))) > 0
+fn drawn_archives(draw: drawn.Draw) -> List<Printed> {
+    var printed = []
+    var at = draw
+    for list.length(printed) < drawn.number(draw, 4) + 1 {
+        at = checking.after(at, 3)
+        let one = drawn_archive(at)
+        printed = list.push(printed, one { path: "part" + shown(list.length(printed)) + "/" + one.path })
+    }
+    printed
+}
+
+/// One drawn archive: a path of up to eight pieces ending in `.jar`, and 64 hexadecimal digits.
+// example: strings.length(drawn_archive(drawn.seeded(1)).hash) == 64
+fn drawn_archive(draw: drawn.Draw) -> Printed {
+    let path = drawn.text_of(drawn.next(draw), path_pieces(), drawn.number(draw, 8)) + ".jar"
+    Printed { path: path, hash: drawn.text_of(checking.after(draw, 2), hex_digits(), 64) }
+}
+
+/// Each malformed shape of a line after a `jar` line, the path and hash taken from `archive`.
+// example: list.length(malformed_lines(Printed { path: "x.jar", hash: "0" })) == 15
+fn malformed_lines(archive: Printed) -> List<String> {
+    let hash = "sha256:" + archive.hash
+    let path = archive.path
+    let short = or(strings.cut(archive.hash, 1, 64), "")
+    ["jar", "jar " + path, "jar " + hash, "jar " + path + " " + archive.hash, "jar " + path + " sha256:" + short, "jar " + path + " " + hash + "0", "jar " + path + " sha256:A" + short, "jar " + path + " sha256:g" + short, "jar " + path + " sha512:" + archive.hash, "jar  " + path + " " + hash, "jar " + path + " " + hash + " ", "jar c:" + path + " " + hash, "jar lib/*" + " " + hash, "jar " + path + "*" + " " + hash, "depends ../lender"]
+}
+
+/// `archive` printed as the line of a manifest that states it, without the line break.
+// example: jar_line(Printed { path: "x.jar", hash: "0" }) == "jar x.jar sha256:0"
+fn jar_line(archive: Printed) -> String {
+    "jar " + archive.path + " sha256:" + archive.hash
+}
+
+/// The two lines every manifest opens with.
+// example: heading() == "package app\nversion 0.1.0\n"
+fn heading() -> String {
+    "package app\nversion 0.1.0\n"
+}
+
+/// The pieces a drawn path is made of, which hold no blank and no `:`.
+// example: list.length(path_pieces()) == 8
+fn path_pieces() -> List<String> {
+    ["lib/", "a", "Z", "0", "-", "_", ".", "é"]
+}
+
+/// The sixteen lowercase hexadecimal digits.
+// example: list.length(hex_digits()) == 16
+fn hex_digits() -> List<String> {
+    ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f"]
+}
+
+/// A span at `start`, one unit long, for an example.
+// example: span_at(3).start == 3
+fn span_at(start: Int) -> lexer.Span {
+    lexer.Span { start: start, length: 1 }
+}
+
+/// A drawn archive as its `jar` line prints it: the path and the 64 digits after `sha256:`.
+type Printed = {
+    path: String
+    hash: String
+}
