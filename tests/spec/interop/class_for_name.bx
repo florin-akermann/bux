@@ -1,0 +1,14 @@
+// expect-error: L0434
+// An `extern` names a class that the build can account for, and `java.lang.Class` is not one.
+// `Class.forName` loads a class whose name the program holds only at run time, so the list of
+// `java.base` in `docs/specs/interop.md` leaves the whole class out.
+fn main(arguments: List<String>) -> Int {
+    match class_named("Report") {
+        Ok(_) => 0
+        Err(_) => 1
+    }
+}
+
+extern static class_named(name: String) -> Result<Loaded, String> = "java.lang.Class.forName"
+
+extern type Loaded = "java.lang.Object"

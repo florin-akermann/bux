@@ -710,7 +710,7 @@ fn keyword_text(keyword: Keyword) -> String {
 /// The source of the library module called `name`, and `None` where the library holds none.
 ///
 /// The library is a resource on the class path the compiler was started with, which
-/// `docs/specs/library.md` states, so nothing on disk is looked at.
+/// `docs/specs/library.md` states, so nothing beside the module is looked at.
 // example: or(carried("no_such_module"), "none") == "none"
 fn carried(name: String) -> Option<String> {
     resource_text(resource_of(name))
@@ -720,38 +720,63 @@ fn carried(name: String) -> Option<String> {
 ///
 /// The compiler carries the library, the help topics, and the long form of each diagnostic code
 /// this way, each read out of the one file of the repository that holds it, so nothing drifts.
+/// Each directory of the class path is looked in, in order, and the first that holds `path` gives
+/// it, so no class loader is reached.
 // example: or(resource_text("no/such/resource.md"), "none") == "none"
 fn resource_text(path: String) -> Option<String> {
-    match resource(path) {
-        Some(stream) => Some(whole(stream))
-        None => None
+    var found = None
+    for entry in class_path_entries() {
+        found = found_or_read(found: found, file: joined(directory: entry, name: path))
     }
+    found
+}
+
+/// `found` where it holds a text already, and the text of `file` otherwise.
+// example: or(found_or_read(found: Some("a"), file: "no-such-directory/a.md"), "none") == "a"
+fn found_or_read(found: Option<String>, file: String) -> Option<String> {
+    match found {
+        Some(_) => found
+        None => text_read(file)
+    }
+}
+
+/// The text of the file at `path`, and `None` where there is no file there to read.
+// example: or(text_read("no-such-directory/a.md"), "none") == "none"
+fn text_read(path: String) -> Option<String> {
+    match files.read(path) {
+        Ok(text) => Some(text)
+        Err(_) => None
+    }
+}
+
+/// Each entry of the class path the compiler was started with, in the order the JVM reads them.
+// example: list.length(class_path_entries()) > 0
+fn class_path_entries() -> List<String> {
+    split_at(text: or(property("java.class.path"), ""), separator: path_separator())
+}
+
+/// The parts of `text` between each two `separator`s, in order.
+// example: split_at(text: "a:b", separator: ":") == ["a", "b"]
+// example: split_at(text: "", separator: ":") == [""]
+fn split_at(text: String, separator: String) -> List<String> {
+    var parts = []
+    var from = 0
+    var index = 0
+    let unit = or(strings.at(separator, 0), 0)
+    for index < strings.length(text) {
+        if or(strings.at(text, index), 0) == unit {
+            parts = list.push(parts, or(strings.cut(text, from, index), ""))
+            from = index + 1
+        }
+        index += 1
+    }
+    list.push(parts, or(strings.cut(text, from, strings.length(text)), ""))
 }
 
 /// What the library module called `name` is on the class path, and the path a refusal names.
 // example: resource_of("list") == "library/list.bx"
 fn resource_of(name: String) -> String {
     "library/" + name + ".bx"
-}
-
-/// Everything `stream` holds, read as UTF-8.
-// example: or(carried("no_such_module"), "none") == "none"
-fn whole(stream: Stream) -> String {
-    match scanner(stream, "UTF-8") {
-        Ok(reading) => all_of(reading)
-        Err(_) => ""
-    }
-}
-
-/// The whole of what `reading` has left, which is `""` where it holds nothing, then closed.
-///
-/// A scanner reads up to the next delimiter, and a delimiter that matches only at the start of
-/// the input is never met again, so the one part it gives is the whole.
-// example: or(carried("no_such_module"), "none") == "none"
-fn all_of(reading: Scanner) -> String {
-    let text = ok_or(next_part(delimited(reading, "\\A")), "")
-    closed(reading)
-    text
 }
 
 /// The file at `path` as text, or a file that cannot be read, with the reason the JVM gives.
@@ -874,20 +899,11 @@ fn last_unit(text: String, unit: Int) -> Int {
     found
 }
 
-/// The stream of the resource `name` on the class path, and `None` where there is no such one.
-extern static resource(name: String) -> Option<Stream> = "java.lang.ClassLoader.getSystemResourceAsStream"
+/// The value of the system property `name`, and `None` where it has none.
+extern static property(name: String) -> Option<String> = "java.lang.System.getProperty"
 
-/// A scanner that reads `stream` as text in `encoding`.
-extern new scanner(stream: Stream, encoding: String) -> Result<Scanner, String>
-
-/// The same scanner, splitting what it reads where `pattern` matches.
-extern method delimited(reading: Scanner, pattern: String) -> Scanner = "useDelimiter"
-
-/// The next part `reading` holds, which it throws for where it holds none.
-extern method next_part(reading: Scanner) -> Result<String, String> = "next"
-
-/// Closes `reading`, and the stream it reads with it.
-extern method closed(reading: Scanner) -> () = "close"
+/// What the JVM writes between two entries of a class path.
+extern field path_separator() -> String = "java.io.File.pathSeparator"
 
 /// The file at `path`, which is a name for it whether or not anything is there.
 extern new file_at(path: String) -> File
@@ -1025,9 +1041,5 @@ type Keyword =
     | Version
     | Depends
     | Jar
-
-extern type Scanner = "java.util.Scanner"
-
-extern type Stream = "java.io.InputStream"
 
 extern type File = "java.io.File"

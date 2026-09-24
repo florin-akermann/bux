@@ -9,6 +9,7 @@ import list
 import map
 import parser
 import refusal
+import set
 import strings
 import unify
 
@@ -281,10 +282,224 @@ fn stated_by(declaration: ast.ExternDeclaration) -> Result<(), refusal.TypeError
     }
 }
 
-/// The Java class an `extern type` names, which is one segment or more.
-// example: refusal.code_given(class(ast.JavaName { text: "java.io.File", span: lexer.Span { start: 0, length: 14 } })) == ""
-fn class(named: ast.JavaName) -> Result<(), refusal.TypeError> {
-    java_name(named, AtLeast(1))
+/// The Java class an `extern type` names, which is one segment or more and one the build can
+/// account for.
+// example: refusal.code_given(extern_class(ast.JavaName { text: "java.io.File", span: lexer.Span { start: 0, length: 14 } }, set.empty())) == ""
+// example: refusal.code_given(extern_class(ast.JavaName { text: "java.lang.Class", span: lexer.Span { start: 0, length: 17 } }, set.empty())) == "L0434 0..17"
+fn extern_class(named: ast.JavaName, archived: set.Set<String>) -> Result<(), refusal.TypeError> {
+    _ = java_name(named, AtLeast(1))?
+    accounted(class: named.text, span: named.span, archived: archived)
+}
+
+/// The class and the member an `extern` reaches, each held to what the build can account for.
+///
+/// A `field` and a `static` name their class, and a `method` reaches the class of its receiver,
+/// which the `extern type` of the receiver was held to already. A `new` names no member.
+// example: refusal.code_given(reached_member(extern_of("extern static f() -> Int = \"java.lang.Class.forName\""), [], no_accounting())) == "L0434 27..52"
+// example: refusal.code_given(reached_member(extern_of("extern static f() -> Int = \"java.lang.System.load\""), [], no_accounting())) == "L0434 27..50"
+fn reached_member(declaration: ast.ExternDeclaration, taken: List<unify.Type>, accounting: Accounting) -> Result<(), refusal.TypeError> {
+    match declaration.reaches {
+        ast.StaticField(named) => static_member(named, accounting.archived)
+        ast.StaticMethod(named) => static_member(named, accounting.archived)
+        ast.InstanceMethod(named) => kept_member(member: class_of_receiver(or(list.at(taken, 0), unify.Unit), accounting.classes) + "." + named.text, span: named.span)
+        ast.Constructor => Ok(())
+    }
+}
+
+/// A member a `field` or a `static` names with its class, where both are ones the list keeps.
+// example: refusal.code_given(static_member(ast.JavaName { text: "java.lang.System.nanoTime", span: lexer.Span { start: 0, length: 27 } }, set.empty())) == ""
+fn static_member(named: ast.JavaName, archived: set.Set<String>) -> Result<(), refusal.TypeError> {
+    _ = accounted(class: class_part(named.text), span: named.span, archived: archived)?
+    kept_member(member: named.text, span: named.span)
+}
+
+/// A member the list does not leave out, and refused where it does.
+// example: refusal.code_given(kept_member(member: "java.lang.Runtime.exec", span: lexer.Span { start: 0, length: 1 })) == "L0434 0..1"
+fn kept_member(member: String, span: lexer.Span) -> Result<(), refusal.TypeError> {
+    if list.has_value(left_out_members(), member) {
+        return Err(refusal.TypeError { kind: refusal.LeftOutMember(member), span: span })
+    }
+    Ok(())
+}
+
+/// The Java class of the receiver `held`: `java.lang.String`, or the class of an extern type.
+// example: class_of_receiver(unify.text_type(), map.empty()) == "java.lang.String"
+fn class_of_receiver(held: unify.Type, classes: map.Map<String, String>) -> String {
+    if held == unify.text_type() {
+        return "java.lang.String"
+    }
+    or(map.get(classes, name_of(held)), "")
+}
+
+/// `class`, refused where it is on no list and in no archive the build reaches.
+///
+/// An archive accounts for no class of a package the platform holds, because the JVM loads that
+/// class from the platform and not from the archive.
+// example: refusal.code_given(accounted(class: "com.example.Clock", span: lexer.Span { start: 0, length: 1 }, archived: set.insert(set.empty(), "com.example.Clock"))) == ""
+// example: refusal.code_given(accounted(class: "javax.naming.InitialContext", span: lexer.Span { start: 0, length: 1 }, archived: set.empty())) == "L0434 0..1"
+// example: refusal.code_given(accounted(class: "java.lang.Class", span: lexer.Span { start: 0, length: 1 }, archived: set.insert(set.empty(), "java.lang.Class"))) == "L0434 0..1"
+// example: refusal.code_given(accounted(class: "java.lang.reflect.Method", span: lexer.Span { start: 0, length: 1 }, archived: set.insert(set.empty(), "java.lang.reflect.Method"))) == "L0434 0..1"
+fn accounted(class: String, span: lexer.Span, archived: set.Set<String>) -> Result<(), refusal.TypeError> {
+    if is_listed(class) || !is_of_the_platform(class) && set.has_value(archived, class) {
+        return Ok(())
+    }
+    Err(refusal.TypeError { kind: refusal.Unaccounted(class), span: span })
+}
+
+/// Each class that `program` names in an `extern type`, a `field`, or a `static`, and that no
+/// list holds, which is each class an archive has to account for.
+// example: classes_outside(program_of("extern type Clock = \"com.example.Clock\"\n")) == ["com.example.Clock"]
+// example: classes_outside(program_of("extern static now() -> Int = \"java.lang.System.nanoTime\"\n")) == []
+fn classes_outside(program: ast.Program) -> List<String> {
+    var outside = []
+    for item in program.items {
+        let class = class_named(item)
+        if class != "" && !is_listed(class) && !is_left_out(class) {
+            outside = list.push(outside, class)
+        }
+    }
+    outside
+}
+
+/// The class `item` names where it is an `extern type`, a `field`, or a `static`, and `""` otherwise.
+// example: class_named(item_of("extern field out() -> Int = \"java.lang.System.out\"\n")) == "java.lang.System"
+fn class_named(item: ast.Item) -> String {
+    match item {
+        ast.Type(declaration) => foreign_class(declaration.definition)
+        ast.Extern(declaration) => static_class(declaration.reaches)
+        _ => ""
+    }
+}
+
+/// The class a type is defined as where it is an extern type, and `""` otherwise.
+// example: class_named(item_of("type Box = Box\n")) == ""
+fn foreign_class(definition: ast.TypeDefinition) -> String {
+    match definition {
+        ast.Foreign { class, called } => class.text
+        _ => ""
+    }
+}
+
+/// The class a `field` or a `static` names, and `""` for another kind.
+// example: static_class(ast.Constructor) == ""
+fn static_class(reaches: ast.Reaches) -> String {
+    match reaches {
+        ast.StaticField(named) => class_part(named.text)
+        ast.StaticMethod(named) => class_part(named.text)
+        _ => ""
+    }
+}
+
+/// Whether `class` is on the list of `java.base`: its package is listed, and the class is not
+/// left out. A nested class is left out with the class it is written in.
+// example: is_listed("java.util.List")
+// example: is_listed("java.lang.ProcessBuilder$Redirect")
+// example: !is_listed("java.lang.Class")
+// example: !is_listed("java.lang.invoke.MethodHandle")
+// example: !is_listed("java.io.ObjectInputStream$GetField")
+fn is_listed(class: String) -> Bool {
+    list.has_value(listed_packages(), class_part(class)) && !is_left_out(class)
+}
+
+/// Whether the list leaves `class` out, or the class it is nested in.
+// example: is_left_out("java.lang.Class")
+// example: !is_left_out("java.lang.String")
+fn is_left_out(class: String) -> Bool {
+    list.has_value(left_out_classes(), outermost(class))
+}
+
+/// Whether `class` is in a package that the JDK holds, which no archive can supply.
+// example: is_of_the_platform("java.lang.reflect.Method")
+// example: is_of_the_platform("sun.misc.Unsafe")
+// example: !is_of_the_platform("javax.naming.InitialContext")
+fn is_of_the_platform(class: String) -> Bool {
+    for prefix in platform_prefixes() {
+        if lexer.has_prefix(lexer.Rest { source: class, start: 0 }, prefix) {
+            return true
+        }
+    }
+    false
+}
+
+/// The start of the name of each package the JDK holds: `java.base` holds them, or the JDK does.
+// example: list.length(platform_prefixes()) == 7
+fn platform_prefixes() -> List<String> {
+    ["java.", "javax.crypto.", "javax.net.", "javax.security.", "jdk.", "sun.", "com.sun."]
+}
+
+/// Everything of a dotted name before its last dot: the class of a member, or the package of a class.
+// example: class_part("java.lang.System.out") == "java.lang.System"
+// example: class_part("Clock") == ""
+fn class_part(text: String) -> String {
+    or(strings.cut(text, 0, last_of(text: text, unit: 46)), "")
+}
+
+/// The class `class` is written in where it is nested, which is the part before its first `$`.
+// example: outermost("java.io.ObjectInputStream$GetField") == "java.io.ObjectInputStream"
+// example: outermost("java.io.File") == "java.io.File"
+fn outermost(class: String) -> String {
+    let dollar = first_of(text: class, unit: 36)
+    if dollar < 0 {
+        return class
+    }
+    or(strings.cut(class, 0, dollar), class)
+}
+
+/// Where `text` last holds `unit`, and `0` where it holds none.
+// example: last_of(text: "a.b.c", unit: 46) == 3
+// example: last_of(text: "abc", unit: 46) == 0
+fn last_of(text: String, unit: Int) -> Int {
+    var found = 0
+    var index = 0
+    for index < strings.length(text) {
+        if or(strings.at(text, index), 0) == unit {
+            found = index
+        }
+        index += 1
+    }
+    found
+}
+
+/// Where `text` first holds `unit`, and `-1` where it holds none.
+// example: first_of(text: "a$b$c", unit: 36) == 1
+// example: first_of(text: "abc", unit: 36) == -1
+fn first_of(text: String, unit: Int) -> Int {
+    var index = 0
+    for index < strings.length(text) {
+        if or(strings.at(text, index), 0) == unit {
+            return index
+        }
+        index += 1
+    }
+    -1
+}
+
+/// The packages of `java.base` an `extern` may name a class of without an archive.
+///
+/// `docs/specs/interop.md` states this list and the two below, and they are the same lists.
+// example: list.has_value(listed_packages(), "java.util")
+fn listed_packages() -> List<String> {
+    ["java.io", "java.lang", "java.nio", "java.nio.charset", "java.nio.file", "java.util", "java.util.concurrent", "java.util.jar", "java.util.stream", "java.util.zip"]
+}
+
+/// The classes of a listed package that the list leaves out: reflection, class loaders, and
+/// deserialization.
+// example: list.has_value(left_out_classes(), "java.lang.ClassLoader")
+fn left_out_classes() -> List<String> {
+    ["java.io.Externalizable", "java.io.ObjectInput", "java.io.ObjectInputFilter", "java.io.ObjectInputStream", "java.io.ObjectOutput", "java.io.ObjectOutputStream", "java.io.ObjectStreamClass", "java.io.Serializable", "java.lang.Class", "java.lang.ClassLoader", "java.lang.ClassValue", "java.lang.Module", "java.lang.ModuleLayer", "java.lang.StackWalker", "java.util.ResourceBundle", "java.util.ServiceLoader"]
+}
+
+/// The members of a listed class that the list leaves out, because each loads native code or
+/// starts or stops a process around the program.
+// example: list.has_value(left_out_members(), "java.lang.System.load")
+fn left_out_members() -> List<String> {
+    ["java.lang.Runtime.exec", "java.lang.Runtime.halt", "java.lang.Runtime.load", "java.lang.Runtime.loadLibrary", "java.lang.System.load", "java.lang.System.loadLibrary"]
+}
+
+/// Accounting that holds no archive and no extern type, which the examples check against.
+// example: set.has_value(no_accounting().archived, "a.B") == false
+fn no_accounting() -> Accounting {
+    Accounting { archived: set.empty(), classes: map.empty() }
 }
 
 /// `named`, refused where it is not as many segments as `wanted` says, each a name.
@@ -442,6 +657,19 @@ fn extern_of(source: String) -> ast.ExternDeclaration {
     }
 }
 
+/// The first item of `source`, and an `import` of nothing where it has none.
+// example: class_named(item_of("")) == ""
+fn item_of(source: String) -> ast.Item {
+    let nowhere = lexer.Span { start: 0, length: 0 }
+    or(list.at(program_of(source).items, 0), ast.Import(ast.ImportDeclaration { module: ast.Name { text: "", span: nowhere }, span: nowhere }))
+}
+
+/// The program `source` parses to, and an empty one where it parses to none.
+// example: list.length(program_of("fn (").items) == 0
+fn program_of(source: String) -> ast.Program {
+    ok_or(parser.parse(source), ast.Program { items: [] })
+}
+
 /// The last `extern` of `program`, or an empty one where it has none.
 // example: first_extern(ast.Program { items: [] }).name.text == ""
 fn first_extern(program: ast.Program) -> ast.ExternDeclaration {
@@ -467,6 +695,13 @@ fn extern_or(item: ast.Item, fallback: ast.ExternDeclaration) -> ast.ExternDecla
 fn parameter_of(name: String) -> ast.Parameter {
     let nowhere = lexer.Span { start: 0, length: 0 }
     ast.Parameter { name: ast.Name { text: name, span: nowhere }, type_ref: Some(ast.TypeRef { kind: ast.UnitType, span: nowhere }), span: nowhere }
+}
+
+/// What the check of an `extern` knows of the classes of a build: those its archives hold, and
+/// the class each extern type in scope names.
+type Accounting = {
+    archived: set.Set<String>
+    classes: map.Map<String, String>
 }
 
 /// The boundary a type crosses: where it sits, and the extern types that may cross it.

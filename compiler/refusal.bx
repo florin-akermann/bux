@@ -91,6 +91,8 @@ fn boundary_code(kind: TypeErrorKind) -> String {
         NarrowsNoInt(_) => "L0429"
         BuildsAnInterface(_) => "L0430"
         NarrowsWithoutOption(_) => "L0431"
+        Unaccounted(_) => "L0434"
+        LeftOutMember(_) => "L0434"
         _ => process_code(kind)
     }
 }
@@ -177,6 +179,8 @@ fn what_java_is_not(kind: TypeErrorKind) -> String {
         NarrowsNoInt(written) => "`int` narrows an `Int`, and this parameter takes `" + unify.text_of(written) + "`"
         BuildsAnInterface(built) => "a `new` builds a class, and `" + unify.text_of(built) + "` is an interface"
         NarrowsWithoutOption(written) => "an `int` parameter narrows an `Int`, and this signature gives back `" + unify.text_of(written) + "`"
+        Unaccounted(class) => "`" + class + "` is a class this build cannot account for"
+        LeftOutMember(member) => "the member `" + member + "` is one the list of `java.base` leaves out"
         _ => what_a_process_is_not(kind)
     }
 }
@@ -344,6 +348,8 @@ fn the_rule_of_java(kind: TypeErrorKind) -> String {
         NarrowsNoInt(_) => "an `int` narrows an `Int`; drop the word, or take an `Int`"
         BuildsAnInterface(_) => "a `new` builds a class; reach one through a member of a class instead"
         NarrowsWithoutOption(_) => "give back an `Option`, which is `None` where an argument does not fit"
+        Unaccounted(_) => "a class is in an archive a `jar` line states, or on the list of `java.base` in `docs/specs/interop.md`, and this one is in neither"
+        LeftOutMember(_) => "the list in `docs/specs/interop.md` leaves this member out; reach another member"
         _ => the_shape_of_a_process(kind)
     }
 }
@@ -465,6 +471,8 @@ type TypeErrorKind =
     | NarrowsNoInt(unify.Type)
     | BuildsAnInterface(unify.Type)
     | NarrowsWithoutOption(unify.Type)
+    | Unaccounted(String)
+    | LeftOutMember(String)
     | UnitInOption
     | StartsWithoutStart(String)
     | ReceivesNothing(String)

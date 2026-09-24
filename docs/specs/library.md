@@ -32,20 +32,19 @@ That is also what makes every build and every test work with no network and no f
 ## How the Bux compiler carries it
 
 The Bux compiler carries the files, in the one copy `library/` holds, as class-path resources.
-A resource is a file the JVM reads through its class loader, and the compiler's classes are read
-the same way.
-`library/<name>.bx` sits on the class path of the compiled compiler: in a directory now, and in
-the jar once the compiler ships as one.
+A resource is a file in a directory of the class path the compiler was started with.
+`library/<name>.bx` sits in such a directory, which is the root of the repository now.
 Nothing is generated from the files, and nothing is copied into Bux source.
 
-`compiler/modules.bx` reads a library module through one call to the class loader.
-That call is `java.lang.ClassLoader.getSystemResourceAsStream`, reached by an `extern static`
-whose result is an `Option`, which `docs/specs/interop.md` states.
-It gives `None` where the class path holds no such resource, and the stream of the file otherwise.
-Four more `extern` declarations read that stream whole as UTF-8 through a `java.util.Scanner`.
+`compiler/modules.bx` reads a library module without a class loader.
+It reads the property `java.class.path` and splits it at `java.io.File.pathSeparator`.
+Then it looks in each entry in order, with `files.read`, and the first file there is the resource.
+A class loader is a thing that `docs/specs/interop.md` refuses to every program, the compiler too.
+An entry that is a Java archive holds no resource that this finds.
+A compiler shipped as one archive needs another way to carry the library, which waits for it.
 
-The compiler does not look for the library on disk.
-It asks for the resource by name, and the class path it was started with answers or does not.
+The compiler does not look for the library beside the module it compiles.
+It asks each entry of its own class path for the resource, and one entry answers or none does.
 A file called `library/list.bx` in the directory a command runs in is therefore not the library,
 unless that directory is on the class path of the compiler itself.
 

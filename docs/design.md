@@ -1327,6 +1327,14 @@ This example is the JVM form, as that spec states it:
 extern static read_string(path: Path) -> Result<String, String> = "java.nio.file.Files.readString"
 ```
 
+A declaration names only a part of the platform that the build can account for.
+That part is in a library the package states and pins, or it is on a fixed list of the target.
+The list holds the parts of the standard library of the platform that load no code by a name.
+So it leaves out reflection, the loading of code, handles to members, and deserialization.
+Each of those reaches code that the program text does not name, which no reader can check.
+A program and a manifest cannot add to the list, and the spec of each target states it.
+Everything else is refused where the declaration names it, before any code runs.
+
 Every parameter and every result is a Bux type.
 There is no subtyping and no implicit conversion.
 So a member that takes a wider type than the caller holds is not reachable.

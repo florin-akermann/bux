@@ -1,14 +1,82 @@
 // The Java archives a package states, each held to its line before a run can reach it.
 //
 // `docs/specs/packages.md` states the `jar` line and each refusal, and `docs/specs/run.md` states
-// the class path the archives go on. The manifest is read by `modules`, which also reads it for
-// the dependencies. An archive is read with `files`, hashed with `digest`, and opened with the
-// `extern` declarations below, which `docs/specs/interop.md` states.
+// the class path the archives go on. `docs/specs/interop.md` states the classes an `extern` may
+// name, which are the classes these archives hold and the classes on its list. The manifest is
+// read by `modules`, which also reads it for the dependencies. An archive is read with `files`,
+// hashed with `digest`, and opened with the `extern` declarations below.
 import digest
 import files
 import lexer
 import list
 import modules
+import set
+import strings
+
+/// Each of `named` that an archive the package in `directory` reaches holds, which is each class
+/// an `extern` may name there beside the list that `docs/specs/interop.md` states.
+///
+/// Each archive is held to its line first, then opened once and asked for the entry of each class,
+/// in the order of the lines. Where `named` is empty, no archive is opened at all.
+// example: set.has_value(ok_or(classes_held("no-such-directory", ["a.B"]), set.insert(set.empty(), "a.B")), "a.B") == false
+fn classes_held(directory: String, named: List<String>) -> Result<set.Set<String>, Unreached> {
+    if list.length(named) == 0 {
+        return Ok(set.empty())
+    }
+    let files_held = reached(directory)?
+    var found = set.empty()
+    for file in files_held {
+        found = held_in(file: file, named: named, known: found)
+    }
+    Ok(found)
+}
+
+/// `known`, with each of `named` that the archive at `file` has an entry for.
+// example: set.has_value(held_in(file: "no-such-directory/x.jar", named: ["a.B"], known: set.empty()), "a.B") == false
+fn held_in(file: String, named: List<String>, known: set.Set<String>) -> set.Set<String> {
+    match opened(file) {
+        Ok(archive) => entries_held(archive: archive, named: named, known: known)
+        Err(_) => known
+    }
+}
+
+/// `known`, with each of `named` that `archive` has an entry for, and `archive` closed after.
+// example: set.has_value(held_in(file: "no-such-directory/x.jar", named: [], known: set.insert(set.empty(), "a.B")), "a.B")
+fn entries_held(archive: JarFile, named: List<String>, known: set.Set<String>) -> set.Set<String> {
+    var found = known
+    for class in named {
+        if has_entry(archive, entry_name(class)) {
+            found = set.insert(found, class)
+        }
+    }
+    closed(archive)
+    found
+}
+
+/// Whether `archive` has an entry called `name`.
+// example: set.has_value(held_in(file: "no-such-directory/x.jar", named: ["a.B"], known: set.empty()), "a.B") == false
+fn has_entry(archive: JarFile, name: String) -> Bool {
+    match entry_of(archive, name) {
+        Some(_) => true
+        None => false
+    }
+}
+
+/// The name of the entry that holds `class` in a Java archive: each dot a `/`, then `.class`.
+// example: entry_name("com.example.Clock$Tick") == "com/example/Clock$Tick.class"
+fn entry_name(class: String) -> String {
+    var name = ""
+    var from = 0
+    var index = 0
+    for index < strings.length(class) {
+        if or(strings.at(class, index), 0) == 46 {
+            name += or(strings.cut(class, from, index), "") + "/"
+            from = index + 1
+        }
+        index += 1
+    }
+    name + or(strings.cut(class, from, strings.length(class)), "") + ".class"
+}
 
 /// The file of each archive the package in `directory` reaches, in the order a class path takes.
 ///
@@ -175,6 +243,9 @@ extern method main_attributes(manifest: JarManifest) -> Attributes = "getMainAtt
 /// The value of the attribute `name`, and `None` where there is no such attribute.
 extern method value_of(attributes: Attributes, name: String) -> Option<String> = "getValue"
 
+/// The entry of `archive` called `name`, and `None` where it has no such entry.
+extern method entry_of(archive: JarFile, name: String) -> Option<Entry> = "getEntry"
+
 /// Closes `archive`, which gives its file back to the file system.
 extern method closed(archive: JarFile) -> () = "close"
 
@@ -207,6 +278,9 @@ extern type JarFile = "java.util.jar.JarFile"
 
 /// The manifest of a Java archive, which is its `META-INF/MANIFEST.MF`.
 extern type JarManifest = "java.util.jar.Manifest"
+
+/// One entry of a Java archive, which is one file the archive holds.
+extern type Entry = "java.util.zip.ZipEntry"
 
 /// The attributes of one section of a manifest.
 extern type Attributes = "java.util.jar.Attributes"

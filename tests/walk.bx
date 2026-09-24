@@ -82,8 +82,17 @@ fn lines_of(text: String) -> List<String> {
 /// started is stopped, so one program that never ends cannot stop the runner.
 // example: ok_or(completed(line: ["no-such-program-at-all"], directory: "no-such-directory", limit: 1), Ended { output: "", errors: "", status: 7 }).status == 7
 fn completed(line: List<String>, directory: String, limit: Int) -> Result<Ended, Unended> {
-    let output = modules.joined(directory, ".output")
-    let errors = modules.joined(directory, ".errors")
+    completed_from(line: line, directory: directory, written: directory, limit: limit)
+}
+
+/// Starts `line` in `directory` with no input, its two streams written into the directory
+/// `written`, and gives back what it wrote and its status.
+///
+/// Programs that start in one directory at the same time each write into a directory of their own.
+// example: ok_or(completed_from(line: ["no-such-program-at-all"], directory: ".", written: "no-such-directory", limit: 1), Ended { output: "", errors: "", status: 7 }).status == 7
+fn completed_from(line: List<String>, directory: String, written: String, limit: Int) -> Result<Ended, Unended> {
+    let output = modules.joined(written, ".output")
+    let errors = modules.joined(written, ".errors")
     let starting = errors_to(output_to(input_from(within(starter(line), place(directory)), place("/dev/null")), place(output)), place(errors))
     match started(starting) {
         Ok(running) => ended_or_stopped(running, limit, Streams { output: output, errors: errors })

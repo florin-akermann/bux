@@ -16,6 +16,7 @@ import parser
 import processes
 import refusal
 import resolver
+import set
 import strings
 import surface
 import unify
@@ -133,6 +134,14 @@ fn check(resolved: resolver.Resolved, imported: surface.Imported, prelude: Prelu
     _ = processes.every_process_shaped(resolved.program)?
     let declaring = declared.environment_of(prelude.declared, resolved, surface.every_type(imported), surface.every_instance(imported), unify.empty_table())?
     carried.nothing_carried(infer.module_inferred(resolved, imported, declaring)?)
+}
+
+/// `prelude`, with the classes the archives of a build hold, which an `extern` may name.
+///
+/// `docs/specs/interop.md` states the rule, and `archives.classes_held` finds the classes.
+// example: page_code("extern type Clock = \"com.example.Clock\"\n") == "L0434 20..39"
+fn with_archived(prelude: Prelude, archived: set.Set<String>) -> Prelude {
+    prelude { declared: declared.with_archived(prelude.declared, archived) }
 }
 
 /// The small prelude of the examples of the type inference.

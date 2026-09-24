@@ -65,6 +65,7 @@ not, and there is one way to write a manifest.
 
 A `jar` line names a Java archive by its path and its hash.
 A program reaches a class of the archive with an `extern`, which `docs/specs/interop.md` states.
+An `extern` reaches a class outside the list of `java.base` only where a stated archive holds it.
 
 ```text
 package shapes
@@ -96,7 +97,10 @@ The archives of a dependency are reached too, and `docs/specs/run.md` states the
 A package reaches its own archives first, then those of each `depends`, in line order.
 A package that two routes reach adds its archives once, at the first place.
 
-The compiler does not read a class out of an archive, copy an archive, or write a manifest.
+A `check` holds each archive to its line too, where a module names a class outside the list.
+It then looks up the entry of each such class in each archive, and `L0434` refuses the rest.
+
+The compiler does not read the bytes of a class, copy an archive, or write a manifest.
 The line is for the JVM target alone, and `docs/implementation.md` section 1 says so.
 
 The package reader in `compiler/modules.bx` reads the line.
@@ -240,6 +244,6 @@ These hold and are checked by drawn properties in the runner:
 `tests/pinned.bx` holds properties 4 to 6.
 The runner skips property 6 with the reason when `shasum` cannot be run.
 `tests/archived.bx` packs a class with the `jar` tool of the JDK, and holds each refusal.
-It shows that `run` and `test` reach the class, and that they reach no unstated archive.
+It shows that `run` and `test` reach the class, and that `L0434` refuses it with no stated archive.
 It shows that a dependency's archive is reached too.
 The runner skips it with the reason when `JAVA_HOME` names no JDK.

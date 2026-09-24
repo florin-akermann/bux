@@ -57,6 +57,81 @@ Everything else about an `extern` function is an ordinary function of the module
 It is reached through that module's name, it is part of the module's surface, and a call of it is
 a call like any other.
 
+## Which classes a declaration may name
+
+`docs/design.md` section 17 says that a declaration names only what the build can account for.
+On the JVM, that is a class in an archive the package states, or a class on the list below.
+A `type`, a `field`, and a `static` each name a class, and each such class is held to this rule.
+A `method` reaches the class of its receiver, and a `new` the class it gives back.
+Each of those is `String` or an extern type, and its own declaration is held to the rule already.
+A class that is neither in a stated archive nor on the list is `L0434`.
+
+### A class in a stated archive
+
+The archives are the ones a `jar` line states, which `docs/specs/packages.md` states.
+They are the archives of the package that is built and of each package it depends on.
+That is the class path a run reaches, which `docs/specs/run.md` states, and nothing more.
+The build holds each archive to its line, then opens it once and asks it for each class.
+The class `com.example.Clock` is there if the archive has the entry `com/example/Clock.class`.
+A nested class `a.B$C` is the entry `a/B$C.class`, as the JVM writes it.
+A build whose modules name no class outside the list opens no archive for this check.
+
+An archive accounts for no class in a package that the JDK holds.
+Such a package starts with `java.`, `javax.crypto.`, `javax.net.`, `javax.security.`, or `jdk.`.
+It can also start with `sun.` or `com.sun.`.
+The JVM loads such a class from the JDK and not from the archive, so the archive cannot supply it.
+So an archive with the entry `java/lang/reflect/Method.class` does not account for that class.
+
+### The list of `java.base`
+
+A class of `java.base` is on the list when its package is on the list and the class is not out.
+The packages on the list are these:
+
+- `java.io`
+- `java.lang`
+- `java.nio`
+- `java.nio.charset`
+- `java.nio.file`
+- `java.util`
+- `java.util.concurrent`
+- `java.util.jar`
+- `java.util.stream`
+- `java.util.zip`
+
+A package is on the list only by its whole name.
+So `java.lang.invoke` and `java.lang.reflect` are not on it, and `java.net` is not on it.
+A class of a module other than `java.base`, such as `javax.naming.InitialContext`, is on no list.
+
+These classes of a listed package are out, each with every class nested in it:
+
+- `java.io.Externalizable`, `java.io.ObjectInput`, `java.io.ObjectInputFilter`
+- `java.io.ObjectInputStream`, `java.io.ObjectOutput`, `java.io.ObjectOutputStream`
+- `java.io.ObjectStreamClass`, `java.io.Serializable`
+- `java.lang.Class`, `java.lang.ClassLoader`, `java.lang.ClassValue`
+- `java.lang.Module`, `java.lang.ModuleLayer`, `java.lang.StackWalker`
+- `java.util.ResourceBundle`, `java.util.ServiceLoader`
+
+Each of them does one of three things that the list keeps out of a program.
+It loads a class by a name that the program holds only at run time.
+Or it reaches the members of a class by reflection.
+Or it makes an object out of serialized bytes.
+
+These members of a listed class are out, and every other member of their class is on the list:
+
+- `java.lang.Runtime.exec`, `java.lang.Runtime.halt`
+- `java.lang.Runtime.load`, `java.lang.Runtime.loadLibrary`
+- `java.lang.System.load`, `java.lang.System.loadLibrary`
+
+A `field` and a `static` name their member with its class.
+A `method` names its member, and the class of its receiver is known from the extern type.
+So each of the three kinds is held to this second list, and a member that is out is `L0434` too.
+
+The list is a table in `compiler/boundary.bx`, and the lists above are that table.
+A program cannot add to it, and a manifest cannot add to it.
+A class that a program needs and that is not on the list comes from an archive the package states.
+The compiler and the runner are Bux programs, so they obey the same list.
+The compiler reads its resources without a class loader, which `docs/specs/library.md` states.
+
 ## What crosses
 
 A parameter and a result are Bux types, and each compiles to exactly the JVM type the member's
@@ -290,6 +365,7 @@ says the wrong one is the author's claim failing the way naming a member the JVM
 | no `int` to widen     | `L0429` | `int` widens to an `Int`, and this signature gives back `File` |
 | builds an interface   | `L0430` | a `new` builds a class, and `Path` is an interface          |
 | narrows, no `Option`  | `L0431` | an `int` parameter narrows an `Int`, and this gives back `Int` |
+| no account of a class | `L0434` | `java.lang.Class` is a class this build cannot account for |
 
 `L0425` helps with ``a boundary carries `Bool`, `Int`, `String`, a `List`, and a type an `extern`
 names``.
@@ -332,8 +408,14 @@ say otherwise.
 A result of `()` is refused by it too, and has no answer: the help asks for an `Option`, and
 `Option<()>` is then `L0432`.
 
-A Java class or member that is not there is not refused, because nothing is loaded to refuse it
-against: `docs/specs/library.md` states that the library is read with no classpath and no JDK.
+`L0434` helps with ``a class is in an archive a `jar` line states, or on the list of `java.base`
+in `docs/specs/interop.md`, and this one is in neither``.
+It points at the Java name, and its message names the class.
+A member that the list leaves out is `L0434` with another message and help.
+The message is ``the member `java.lang.System.load` is one the list of `java.base` leaves out``.
+The help is ``the list in `docs/specs/interop.md` leaves this member out; reach another member``.
+
+A class on the list that the JDK does not have is not refused, because no JDK is read.
 An `extern` naming a member the JVM does not have is a class file the JVM refuses to link, which
 is the author's claim failing rather than a program's.
 
@@ -352,3 +434,5 @@ These hold and are checked by drawn properties in the runner:
 9. A declaration written `char` reaches the member for a `char` and leaves a `long` behind it.
 10. A declaration that narrows a parameter answers `None` for every argument outside the `int`
     range, and reaches its member for none of them.
+11. Every class that the tree names in an `extern` is accepted.
+12. A drawn class on no list is `L0434`, and an archive accounts for it outside the JDK packages.
