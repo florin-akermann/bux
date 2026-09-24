@@ -2,18 +2,13 @@
 //
 // Each property draws a module out of a fixed set of constructs, lowers it as a build lowers it,
 // and holds what the lowering gives back to one invariant.
+import checking
 import compiled
 import drawn
 import held
 import ir
 import list
 import strings
-
-/// Every property of the lowering, each checked over `cases` drawn modules, in a fixed order.
-// example: list.length(every_property(0, ir.little_library())) == 9
-fn every_property(cases: Int, library: ir.Library) -> List<held.Held> {
-    [lowering_one_module_twice_gives_the_same_classes(cases, library), every_class_a_module_writes_is_named_once(cases, library), every_method_ends_by_leaving_it(cases, library), a_module_has_an_entry_point_exactly_when_it_declares_main(cases, library), no_class_declares_a_method_the_object_model_gives_it(cases, library), the_one_equality_a_module_calls_is_the_one_string_declares(cases, library), a_written_list_stores_each_element_and_builds_one_list(cases, library), as_many_values_stand_for_nothing_as_a_list_writes_units(cases, library), a_bare_field_lowers_as_the_field_written_whole(cases, library)]
-}
 
 /// The same module, lowered twice, gives the same classes, which are written as the same bytes.
 // example: held.is_held(lowering_one_module_twice_gives_the_same_classes(0, ir.little_library()))
@@ -423,3 +418,39 @@ type Property =
     | ListWritten
     | Units
     | BareField
+
+test "lowering one module twice gives the same classes" {
+    held.is_held_reported(lowering_one_module_twice_gives_the_same_classes(held.drawn_cases(), checking.carried_library()))
+}
+
+test "every class a module writes is named once" {
+    held.is_held_reported(every_class_a_module_writes_is_named_once(held.drawn_cases(), checking.carried_library()))
+}
+
+test "every method ends by leaving it" {
+    held.is_held_reported(every_method_ends_by_leaving_it(held.drawn_cases(), checking.carried_library()))
+}
+
+test "a module has an entry point exactly when it declares main" {
+    held.is_held_reported(a_module_has_an_entry_point_exactly_when_it_declares_main(held.drawn_cases(), checking.carried_library()))
+}
+
+test "no class declares a method the object model gives it" {
+    held.is_held_reported(no_class_declares_a_method_the_object_model_gives_it(held.drawn_cases(), checking.carried_library()))
+}
+
+test "the one equality a module calls is the one string declares" {
+    held.is_held_reported(the_one_equality_a_module_calls_is_the_one_string_declares(held.drawn_cases(), checking.carried_library()))
+}
+
+test "a written list stores each element and builds one list" {
+    held.is_held_reported(a_written_list_stores_each_element_and_builds_one_list(held.drawn_cases(), checking.carried_library()))
+}
+
+test "as many values stand for nothing as a list writes units" {
+    held.is_held_reported(as_many_values_stand_for_nothing_as_a_list_writes_units(held.drawn_cases(), checking.carried_library()))
+}
+
+test "a bare field lowers as the field written whole" {
+    held.is_held_reported(a_bare_field_lowers_as_the_field_written_whole(held.drawn_cases(), checking.carried_library()))
+}

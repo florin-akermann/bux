@@ -295,7 +295,7 @@ The parser stops at the first error, and the error has a span, a message, and a 
 
 ## Properties
 
-These hold and are checked by drawn properties in the runner:
+These hold and are checked by drawn properties, each a test of `tests/`:
 
 1. Parsing never panics, on any input.
 2. Parsing is deterministic.

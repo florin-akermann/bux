@@ -1,26 +1,14 @@
 // The map, the set, and the list of the library, each given back exactly what went into it.
 //
 // `docs/specs/collections.md` and `docs/specs/library.md` state the properties. Each case draws
-// what goes in, puts it into the map, the set, or the list of the library in the runner's JVM, and
-// reads it all back out. What a read must give is worked out again from the draw, not from a map.
+// what goes in, puts it into the map, the set, or the list of the library in the JVM of its test,
+// and reads it all back out. What a read must give is worked out again from the draw, not from a map.
 import drawn
 import held
 import list
 import map
 import set
 import strings
-
-/// Every property of the collections over `cases` drawn cases each, in a fixed order.
-///
-/// The collections are read in the runner's JVM, so no property needs the prelude it is handed.
-// example: list.length(every_property(1)) == 6
-fn every_property(cases: Int) -> List<held.Held> {
-    var found = []
-    for property in [MapReadsBack, SetHoldsWhatWentIn, WideKeysReadBack, ListReadsBack, PushLeavesTheList, LengthCountsPushes] {
-        found = list.push(found, held_over(property, cases))
-    }
-    found
-}
 
 /// `property` tried on `cases` cases, each drawn from a seed of its own.
 // example: held.is_held(held_over(MapReadsBack, 2))
@@ -347,3 +335,27 @@ type Property =
     | ListReadsBack
     | PushLeavesTheList
     | LengthCountsPushes
+
+test "a map gives back the value last put in at each key" {
+    held.is_held_reported(held_over(MapReadsBack, held.drawn_cases()))
+}
+
+test "a set holds every value put into it and no other" {
+    held.is_held_reported(held_over(SetHoldsWhatWentIn, held.drawn_cases()))
+}
+
+test "hundreds of keys read back out of a map and a set" {
+    held.is_held_reported(held_over(WideKeysReadBack, held.drawn_cases()))
+}
+
+test "a list grown by push reads back at every index it holds" {
+    held.is_held_reported(held_over(ListReadsBack, held.drawn_cases()))
+}
+
+test "a push leaves the list it was handed holding what it held" {
+    held.is_held_reported(held_over(PushLeavesTheList, held.drawn_cases()))
+}
+
+test "the length of a list is the number of pushes that built it" {
+    held.is_held_reported(held_over(LengthCountsPushes, held.drawn_cases()))
+}

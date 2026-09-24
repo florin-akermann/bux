@@ -91,7 +91,7 @@ refusing one to `bux build`.
 
 ## Properties
 
-These hold and are checked by drawn properties in the runner:
+These hold and are checked by drawn properties, each a test of `tests/`:
 
 1. A module of types alone, holding no comment, is its own page, character for character.
 2. Every public name a module declares at the top level is on its page, and no private one is.

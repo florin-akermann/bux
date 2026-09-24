@@ -3,6 +3,7 @@
 // An operator over a type with an instance calls that instance, a literal at a declared type calls
 // its `from_literal`, a derive reads every field, and a generic asked for by another module is
 // written as it was asked for. `docs/specs/operators.md` and `docs/specs/codegen.md` state these.
+import checking
 import command
 import compiled
 import drawn
@@ -11,12 +12,6 @@ import held
 import ir
 import list
 import modules
-
-/// Every property of what an instance becomes, each over `cases` drawn modules, in a fixed order.
-// example: list.length(every_property(0, ir.little_library())) == 7
-fn every_property(cases: Int, library: ir.Library) -> List<held.Held> {
-    [an_operator_over_a_type_with_an_instance_calls_that_instance_and_no_other(cases, library), a_comparison_is_one_call_of_is_less_whichever_way_round_it_is_written(cases, library), a_literal_at_a_declared_type_is_one_call_of_its_from_literal(cases, library), a_whole_number_where_an_int_is_expected_is_that_number_and_nothing_more(cases, library), a_record_of_any_shape_derives_a_body_that_reads_every_field_in_order(cases, library), a_method_written_for_a_set_calls_the_instance_each_type_in_that_set_has(cases, library), every_method_a_use_asks_for_is_one_the_module_asked_writes(cases, library)]
-}
 
 /// An operator over a type with an instance calls that instance's method, and no other.
 // example: held.is_held(an_operator_over_a_type_with_an_instance_calls_that_instance_and_no_other(0, ir.little_library()))
@@ -465,3 +460,31 @@ type Property =
     | Derived
     | Constrained
     | Specialised
+
+test "an operator over a type with an instance calls that instance and no other" {
+    held.is_held_reported(an_operator_over_a_type_with_an_instance_calls_that_instance_and_no_other(held.drawn_cases(), checking.carried_library()))
+}
+
+test "a comparison is one call of is less whichever way round it is written" {
+    held.is_held_reported(a_comparison_is_one_call_of_is_less_whichever_way_round_it_is_written(held.drawn_cases(), checking.carried_library()))
+}
+
+test "a literal at a declared type is one call of its from literal" {
+    held.is_held_reported(a_literal_at_a_declared_type_is_one_call_of_its_from_literal(held.drawn_cases(), checking.carried_library()))
+}
+
+test "a whole number where an int is expected is that number and nothing more" {
+    held.is_held_reported(a_whole_number_where_an_int_is_expected_is_that_number_and_nothing_more(held.drawn_cases(), checking.carried_library()))
+}
+
+test "a record of any shape derives a body that reads every field in order" {
+    held.is_held_reported(a_record_of_any_shape_derives_a_body_that_reads_every_field_in_order(held.drawn_cases(), checking.carried_library()))
+}
+
+test "a method written for a set calls the instance each type in that set has" {
+    held.is_held_reported(a_method_written_for_a_set_calls_the_instance_each_type_in_that_set_has(held.drawn_cases(), checking.carried_library()))
+}
+
+test "every method a use asks for is one the module asked writes" {
+    held.is_held_reported(every_method_a_use_asks_for_is_one_the_module_asked_writes(held.drawn_cases(), checking.carried_library()))
+}

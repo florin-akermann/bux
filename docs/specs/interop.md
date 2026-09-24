@@ -132,7 +132,7 @@ So each of the three kinds is held to this second list, and a member that is out
 The list is a table in `compiler/boundary.bx`, and the lists above are that table.
 A program cannot add to it, and a manifest cannot add to it.
 A class that a program needs and that is not on the list comes from an archive the package states.
-The compiler and the runner are Bux programs, so they obey the same list.
+The compiler and its tests are Bux programs, so they obey the same list.
 The compiler reads its resources without a class loader, which `docs/specs/library.md` states.
 
 ## What crosses
@@ -467,7 +467,7 @@ is the author's claim failing rather than a program's.
 
 ## Properties
 
-These hold and are checked by drawn properties in the runner:
+These hold and are checked by drawn properties, each a test of `tests/`:
 
 1. Every `extern` declaration round trips: printed and parsed again, it is the same declaration.
 2. A signature holding a type that does not cross is `L0425`, whichever position it is in.

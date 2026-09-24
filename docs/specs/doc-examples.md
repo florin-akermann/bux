@@ -141,8 +141,8 @@ help: an example states what a function works out, and this one states what it d
 ```
 
 Every example that does not hold is reported, and not only the first.
-A run in which every example held prints nothing, as every command that found nothing to report
-prints nothing.
+A line that a function writes while an example runs is passed on to standard output.
+A run in which every example held, and no function wrote a line, prints nothing.
 
 A module that states no example has nothing to run and is a run that held.
 A module of types alone is such a module, and so is one that declares `main` and nothing else.
@@ -230,7 +230,7 @@ It writes and starts each run as `bux test` does, each in a JVM of its own.
 
 ## Properties
 
-These hold and are checked by drawn properties in the runner:
+These hold and are checked by drawn properties, each a test of `tests/`:
 
 1. Every example a module states is found, wherever in the module it is written.
 2. A module whose every public function states an example is accepted, however many they state.

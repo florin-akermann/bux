@@ -1,7 +1,7 @@
 // The drawn properties of processes: the shape check over drawn processes, and two programs that
 // spawn processes on a JVM and hold what the mailboxes and the ends of them do.
 //
-// `docs/specs/concurrency.md` states processes. The shape check is tried in the runner's own JVM,
+// `docs/specs/concurrency.md` states processes. The shape check is tried in the JVM of its test,
 // as `bux check` tries it. The two programs draw their cases themselves, with `tests/drawn.bx`
 // beside them, so one JVM tries every case, and each line the program writes is one case.
 import checking
@@ -17,12 +17,6 @@ import modules
 import started
 import strings
 import walk
-
-/// The properties of processes, each tried on `cases` drawn cases.
-// example: list.length(every_property(0, ir.little_library())) == 5
-fn every_property(cases: Int, library: ir.Library) -> List<held.Held> {
-    [each_well_formed_process_is_accepted(cases, library), each_break_of_the_shape_is_refused(cases, library), messages_arrive_in_order_and_ended_gives_the_last_state(cases, library), a_mailbox_never_holds_more_than_its_bound(cases, library), no_send_after_the_end_is_delivered(cases, library)]
-}
 
 /// A drawn process of the one shape passes every phase up to inference.
 // example: held.is_held(each_well_formed_process_is_accepted(0, ir.little_library()))
@@ -393,3 +387,23 @@ type Break =
     | ArmDoesWork
     | ReceiveOfAnotherState
     | MessageHoldsAFile
+
+test "each well formed process is accepted" {
+    held.is_held_reported(each_well_formed_process_is_accepted(held.drawn_cases(), checking.carried_library()))
+}
+
+test "each break of the shape is refused" {
+    held.is_held_reported(each_break_of_the_shape_is_refused(held.drawn_cases(), checking.carried_library()))
+}
+
+test "messages arrive in order and ended gives the last state" {
+    held.is_held_reported(messages_arrive_in_order_and_ended_gives_the_last_state(held.drawn_cases(), checking.carried_library()))
+}
+
+test "a mailbox never holds more than its bound" {
+    held.is_held_reported(a_mailbox_never_holds_more_than_its_bound(held.drawn_cases(), checking.carried_library()))
+}
+
+test "no send after the end is delivered" {
+    held.is_held_reported(no_send_after_the_end_is_delivered(held.drawn_cases(), checking.carried_library()))
+}

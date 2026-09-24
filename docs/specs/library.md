@@ -56,7 +56,7 @@ A refusal about a library module names the resource, `library/list.bx`.
 
 A build copies `library/` into the `target/` it writes, beside the classes.
 `docs/specs/run.md` states the copy, and how `bin/bootstrap` puts the copy of the checkout there.
-So `bin/bux` and `bin/runner` put only that `target/` on the class path, and it holds `library/`.
+So `bin/bux` puts only that `target/` on the class path, and it holds `library/`.
 
 ## How it is found
 
@@ -230,7 +230,7 @@ environment: read  processors
 ```
 
 `clock`, `jars`, and `bits` hold `extern` declarations and no function.
-The compiler and the runner call them, and `docs/specs/io.md` names each of them.
+The compiler and the tests of `tests/` call them, and `docs/specs/io.md` names each of them.
 
 A library module may import another, and `map`, `set`, `files`, and `programs` are the four
 that do.
@@ -343,7 +343,7 @@ compile fails the compiler's own tests before it reaches anyone.
 
 ## Properties
 
-These hold and are checked by drawn properties in the runner:
+These hold and are checked by drawn properties, each a test of `tests/`:
 
 1. Every library module is in canonical form, and every one a program may import compiles.
 2. A program that writes no import sees every prelude name and no library module's name.

@@ -137,7 +137,7 @@ A `Result` function refusing `(total / count)?` is `L0400` too, because `Option`
 
 ## Properties
 
-These hold over any module that divides, and are checked by drawn properties in the runner:
+These hold over any module that divides, and drawn properties, each a test of `tests/`, check them:
 
 1. Every `/` and `%` tests its divisor before it divides, whatever it is written over.
 2. Every `/` and `%` builds both answers a divisor can have: a `Some` and a `None`.

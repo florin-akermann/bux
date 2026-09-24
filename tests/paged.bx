@@ -2,27 +2,17 @@
 //
 // `docs/specs/api-surface.md` states the properties. Each case writes a module of drawn type and
 // function declarations, types it against the prelude, and prints its page with the compiler's own
-// `types.page_of`, which is what `bux surface` prints, in the runner's JVM.
+// `types.page_of`, which is what `bux surface` prints, in the JVM of its test.
 import ast
+import checking
 import drawn
 import held
-import ir
 import lexer
 import list
 import parser
 import strings
 import typed
 import types
-
-/// Every property of the page over `cases` drawn cases each, in a fixed order.
-// example: list.length(every_property(0, ir.little_library())) == 3
-fn every_property(cases: Int, library: ir.Library) -> List<held.Held> {
-    var found = []
-    for property in [TypesAreTheirPage, EveryNameOnThePage, PrintedAlike] {
-        found = list.push(found, held_over(property: property, cases: cases, prelude: library.prelude))
-    }
-    found
-}
 
 /// `property` tried on `cases` cases, each drawn from a seed of its own.
 // example: held.is_held(held_over(property: PrintedAlike, cases: 2, prelude: types.little_prelude()))
@@ -252,3 +242,15 @@ type Property =
     | TypesAreTheirPage
     | EveryNameOnThePage
     | PrintedAlike
+
+test "a module of types alone holding no comment is its own page" {
+    held.is_held_reported(held_over(property: TypesAreTheirPage, cases: held.drawn_cases(), prelude: checking.carried_library().prelude))
+}
+
+test "every name a module declares is on its page" {
+    held.is_held_reported(held_over(property: EveryNameOnThePage, cases: held.drawn_cases(), prelude: checking.carried_library().prelude))
+}
+
+test "printing a page is deterministic" {
+    held.is_held_reported(held_over(property: PrintedAlike, cases: held.drawn_cases(), prelude: checking.carried_library().prelude))
+}

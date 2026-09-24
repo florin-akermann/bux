@@ -2,18 +2,13 @@
 //
 // `docs/specs/interop.md` states what an `extern` may say and what each spelling reaches,
 // and `docs/specs/io.md` names every class the library modules reach.
+import checking
 import compiled
 import drawn
 import held
 import ir
 import list
 import strings
-
-/// Every property of a declaration that reaches the JVM, each over `cases` drawn modules, in order.
-// example: list.length(every_property(0, ir.little_library())) == 7
-fn every_property(cases: Int, library: ir.Library) -> List<held.Held> {
-    [a_call_into_a_library_module_reaches_that_module_s_class_and_nothing_else(cases, library), every_class_a_library_module_reaches_is_one_the_spec_names(cases, library), a_declaration_guards_a_span_exactly_where_it_gives_back_a_result(cases, library), a_result_leaves_an_ok_down_the_path_taken_and_an_err_down_the_one_thrown(cases, library), a_declaration_written_with_a_width_reaches_its_member_for_one_and_leaves_a_long(cases, library), a_narrowed_argument_outside_the_int_range_answers_none_and_reaches_no_member(cases, library), a_method_on_a_type_written_interface_is_called_the_way_the_jvm_calls_an_interface_s(cases, library)]
-}
 
 /// A call into a library module reaches the class of that module, and no other class.
 // example: held.is_held(a_call_into_a_library_module_reaches_that_module_s_class_and_nothing_else(0, ir.little_library()))
@@ -532,3 +527,31 @@ type Property =
     | Widened
     | Narrowed
     | Interface
+
+test "a call into a library module reaches that module's class and nothing else" {
+    held.is_held_reported(a_call_into_a_library_module_reaches_that_module_s_class_and_nothing_else(held.drawn_cases(), checking.carried_library()))
+}
+
+test "every class a library module reaches is one the spec names" {
+    held.is_held_reported(every_class_a_library_module_reaches_is_one_the_spec_names(held.drawn_cases(), checking.carried_library()))
+}
+
+test "a declaration guards a span exactly where it gives back a result" {
+    held.is_held_reported(a_declaration_guards_a_span_exactly_where_it_gives_back_a_result(held.drawn_cases(), checking.carried_library()))
+}
+
+test "a result leaves an ok down the path taken and an err down the one thrown" {
+    held.is_held_reported(a_result_leaves_an_ok_down_the_path_taken_and_an_err_down_the_one_thrown(held.drawn_cases(), checking.carried_library()))
+}
+
+test "a declaration written with a width reaches its member for one and leaves a long" {
+    held.is_held_reported(a_declaration_written_with_a_width_reaches_its_member_for_one_and_leaves_a_long(held.drawn_cases(), checking.carried_library()))
+}
+
+test "a narrowed argument outside the int range answers none and reaches no member" {
+    held.is_held_reported(a_narrowed_argument_outside_the_int_range_answers_none_and_reaches_no_member(held.drawn_cases(), checking.carried_library()))
+}
+
+test "a method on a type written interface is called the way the jvm calls an interface s" {
+    held.is_held_reported(a_method_on_a_type_written_interface_is_called_the_way_the_jvm_calls_an_interface_s(held.drawn_cases(), checking.carried_library()))
+}

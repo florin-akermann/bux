@@ -1,8 +1,8 @@
 // The drawn properties of the rule that every name a module introduces is read.
 //
 // `docs/specs/unused.md` states the rule. Each property draws a shape and a name to put in it,
-// and resolves the module with `compiler/resolver.bx` against the prelude the runner reads, with
-// the imports its examples read. A failure names the seed and the module it drew.
+// and resolves the module with `compiler/resolver.bx` against the prelude the compiler carries,
+// with the imports its examples read. A failure names the seed and the module it drew.
 import checking
 import command
 import compiled
@@ -13,13 +13,6 @@ import list
 import parser
 import resolver
 import strings
-
-/// One `Held` for each property of the rule, in a fixed order.
-// example: list.length(every_property(1, ir.little_library())) == 2
-fn every_property(cases: Int, library: ir.Library) -> List<held.Held> {
-    let names = library.prelude.names
-    [a_name_read_by_nothing_is_refused_naming_its_kind(cases, names), a_module_whose_every_name_is_read_is_accepted(cases, names)]
-}
 
 /// A module with one name that nothing reads is refused, and the refusal names the kind of the
 /// name and the name, where the module introduces it.
@@ -105,4 +98,12 @@ type Shape = {
     read: String
     kind: String
     code: String
+}
+
+test "a name read by nothing is refused naming its kind" {
+    held.is_held_reported(a_name_read_by_nothing_is_refused_naming_its_kind(held.drawn_cases(), checking.carried_library().prelude.names))
+}
+
+test "a module whose every name is read is accepted" {
+    held.is_held_reported(a_module_whose_every_name_is_read_is_accepted(held.drawn_cases(), checking.carried_library().prelude.names))
 }

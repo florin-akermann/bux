@@ -14,12 +14,6 @@ import parsing
 import strings
 import walk
 
-/// Every property of the formatter, each tried on `cases` drawn cases, in a fixed order.
-// example: list.length(every_property(1)) == 7
-fn every_property(cases: Int) -> List<held.Held> {
-    [every_extern_declaration_round_trips(cases), formatting_is_deterministic_and_idempotent(cases), formatting_keeps_the_tree(cases), every_comment_survives_in_source_order(cases), the_canonical_text_of_a_refusal_is_canonical(cases), every_spelling_canonical_form_advises_is_one_it_accepts(cases), a_declaration_below_a_test_is_out_of_place(cases)]
-}
-
 /// A drawn `extern` declaration is in canonical form: formatting writes it as it is written.
 // example: held.is_held(every_extern_declaration_round_trips(3))
 fn every_extern_declaration_round_trips(cases: Int) -> held.Held {
@@ -598,4 +592,32 @@ fn unparsed(source: String) -> String {
 type Placed = {
     source: String
     is_last: Bool
+}
+
+test "every extern declaration round trips" {
+    held.is_held_reported(every_extern_declaration_round_trips(held.drawn_cases()))
+}
+
+test "formatting is deterministic and idempotent" {
+    held.is_held_reported(formatting_is_deterministic_and_idempotent(held.drawn_cases()))
+}
+
+test "formatting keeps the tree" {
+    held.is_held_reported(formatting_keeps_the_tree(held.drawn_cases()))
+}
+
+test "every comment survives in source order" {
+    held.is_held_reported(every_comment_survives_in_source_order(held.drawn_cases()))
+}
+
+test "the canonical text of a refusal is canonical" {
+    held.is_held_reported(the_canonical_text_of_a_refusal_is_canonical(held.drawn_cases()))
+}
+
+test "every spelling canonical form advises is one it accepts" {
+    held.is_held_reported(every_spelling_canonical_form_advises_is_one_it_accepts(held.drawn_cases()))
+}
+
+test "a declaration below a test is out of place" {
+    held.is_held_reported(a_declaration_below_a_test_is_out_of_place(held.drawn_cases()))
 }

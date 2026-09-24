@@ -566,7 +566,7 @@ The message of `L0703` names the defect and the method, which a report of the de
 
 ## Properties
 
-These hold and are checked by drawn properties in the runner:
+These hold and are checked by drawn properties, each a test of `tests/`:
 
 1. Lowering and writing a checked module never panics and is deterministic.
 2. Compiling one source twice gives byte-identical class files.

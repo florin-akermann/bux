@@ -9,12 +9,6 @@ import lexer
 import list
 import strings
 
-/// One `Held` for each property of traits and derives, in a fixed order.
-// example: list.length(every_property(0, ir.little_library())) == 7
-fn every_property(cases: Int, library: ir.Library) -> List<held.Held> {
-    [a_record_whose_every_field_has_the_trait_derives_it(cases, library), a_field_without_the_trait_is_refused_naming_both(cases, library), a_trait_method_reaches_the_instance_of_its_type(cases, library), a_type_with_no_instance_is_refused_where_the_trait_is_asked(cases, library), each_standard_method_is_accepted_over_every_supplied_type(cases, library), each_standard_method_is_refused_over_a_type_with_no_instance(cases, library), every_instance_body_of_the_prelude_has_the_type_its_trait_gives(cases, library)]
-}
-
 /// Whichever trait is derived, a record of fields that all have it derives it too.
 // example: a_record_whose_every_field_has_the_trait_derives_it(2, ir.little_library()).cases == 2
 fn a_record_whose_every_field_has_the_trait_derives_it(cases: Int, library: ir.Library) -> held.Held {
@@ -515,4 +509,32 @@ type Method = {
 type Standing = {
     parameter: String
     settled: String
+}
+
+test "a record whose every field has the trait derives it" {
+    held.is_held_reported(a_record_whose_every_field_has_the_trait_derives_it(held.drawn_cases(), checking.carried_library()))
+}
+
+test "a field without the trait is refused naming both" {
+    held.is_held_reported(a_field_without_the_trait_is_refused_naming_both(held.drawn_cases(), checking.carried_library()))
+}
+
+test "a trait method reaches the instance of its type" {
+    held.is_held_reported(a_trait_method_reaches_the_instance_of_its_type(held.drawn_cases(), checking.carried_library()))
+}
+
+test "a type with no instance is refused where the trait is asked" {
+    held.is_held_reported(a_type_with_no_instance_is_refused_where_the_trait_is_asked(held.drawn_cases(), checking.carried_library()))
+}
+
+test "each standard method is accepted over every supplied type" {
+    held.is_held_reported(each_standard_method_is_accepted_over_every_supplied_type(held.drawn_cases(), checking.carried_library()))
+}
+
+test "each standard method is refused over a type with no instance" {
+    held.is_held_reported(each_standard_method_is_refused_over_a_type_with_no_instance(held.drawn_cases(), checking.carried_library()))
+}
+
+test "every instance body of the prelude has the type its trait gives" {
+    held.is_held_reported(every_instance_body_of_the_prelude_has_the_type_its_trait_gives(held.drawn_cases(), checking.carried_library()))
 }

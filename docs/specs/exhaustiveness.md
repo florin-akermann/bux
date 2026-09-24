@@ -120,7 +120,7 @@ It stops at the first refusal, which has a code, a span, a message, and a help l
 
 ## Properties
 
-These hold and are checked by drawn properties in the runner:
+These hold and are checked by drawn properties, each a test of `tests/`:
 
 1. Checking a typed program never panics and is deterministic.
 2. A match whose arms cover every constructor of its scrutinee, in order, is accepted.

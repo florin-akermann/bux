@@ -382,7 +382,7 @@ words.
 
 ## Properties
 
-These hold and are checked by drawn properties in the runner:
+These hold and are checked by drawn properties, each a test of `tests/`:
 
 1. A trait, an instance over a plain type, an instance over type parameters, and a constraint
    each survive printing and parsing unchanged.

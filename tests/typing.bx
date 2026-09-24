@@ -2,7 +2,7 @@
 // `docs/specs/arguments.md` state.
 //
 // Each case draws a module from a fixed seed and checks it in-process with `compiler/types.bx`
-// against the prelude the runner reads. A failure names the seed and the module it drew.
+// against the prelude the compiler carries. A failure names the seed and the module it drew.
 import ast
 import checking
 import command
@@ -14,12 +14,6 @@ import lexer
 import list
 import strings
 import types
-
-/// One `Held` for each property of the inference over whole modules, in a fixed order.
-// example: list.length(every_property(0, ir.little_library())) == 10
-fn every_property(cases: Int, library: ir.Library) -> List<held.Held> {
-    [inference_is_deterministic(cases, library), a_call_in_front_is_refused_for_the_plain_call(cases, library), a_module_of_pieces_infers(cases, library), a_refusal_points_inside_the_source(cases, library), every_expression_has_a_type(cases, library), no_expression_is_left_unsettled(cases, library), a_generic_is_general_enough_for_any_two_uses(cases, library), a_ring_of_records_is_refused_whatever_its_length(cases, library), a_chain_of_records_is_accepted(cases, library), an_option_of_unit_is_refused_where_it_is_reached(cases, library)]
-}
 
 /// A drawn module is checked to one answer, however many times it is checked.
 // example: held.is_held(inference_is_deterministic(2, ir.little_library()))
@@ -595,4 +589,44 @@ type Carrying = {
     refused: String
     accepted: String
     at: String
+}
+
+test "inference is deterministic" {
+    held.is_held_reported(inference_is_deterministic(held.drawn_cases(), checking.carried_library()))
+}
+
+test "a call in front is refused for the plain call" {
+    held.is_held_reported(a_call_in_front_is_refused_for_the_plain_call(held.drawn_cases(), checking.carried_library()))
+}
+
+test "a module of pieces infers" {
+    held.is_held_reported(a_module_of_pieces_infers(held.drawn_cases(), checking.carried_library()))
+}
+
+test "a refusal points inside the source" {
+    held.is_held_reported(a_refusal_points_inside_the_source(held.drawn_cases(), checking.carried_library()))
+}
+
+test "every expression has a type" {
+    held.is_held_reported(every_expression_has_a_type(held.drawn_cases(), checking.carried_library()))
+}
+
+test "no expression is left unsettled" {
+    held.is_held_reported(no_expression_is_left_unsettled(held.drawn_cases(), checking.carried_library()))
+}
+
+test "a generic is general enough for any two uses" {
+    held.is_held_reported(a_generic_is_general_enough_for_any_two_uses(held.drawn_cases(), checking.carried_library()))
+}
+
+test "a ring of records is refused whatever its length" {
+    held.is_held_reported(a_ring_of_records_is_refused_whatever_its_length(held.drawn_cases(), checking.carried_library()))
+}
+
+test "a chain of records is accepted" {
+    held.is_held_reported(a_chain_of_records_is_accepted(held.drawn_cases(), checking.carried_library()))
+}
+
+test "an option of unit is refused where it is reached" {
+    held.is_held_reported(an_option_of_unit_is_refused_where_it_is_reached(held.drawn_cases(), checking.carried_library()))
 }

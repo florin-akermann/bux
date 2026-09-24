@@ -2,27 +2,17 @@
 //
 // `docs/specs/exhaustiveness.md` states the properties. Each case writes a module of one `match`
 // out of drawn arms, types it against the prelude, and checks it with the compiler's own check in
-// the runner's JVM. The drawn `match` of many patterns is the one the Rust comparison drew.
+// the JVM of its test. The drawn `match` of many patterns is the one the Rust comparison drew.
+import checking
 import command
 import drawn
 import exhaustiveness
 import held
-import ir
 import lexer
 import list
 import strings
 import typed
 import types
-
-/// Every property of the exhaustiveness check over `cases` drawn cases each, in a fixed order.
-// example: list.length(every_property(0, ir.little_library())) == 7
-fn every_property(cases: Int, library: ir.Library) -> List<held.Held> {
-    var found = []
-    for property in [Deterministic, RotatedRefused, LeftOutRefused, BindingCovers, RefusalInside, AlternativesCoverAlike, DrawnMatchAlike] {
-        found = list.push(found, held_over(property: property, cases: cases, prelude: library.prelude))
-    }
-    found
-}
 
 /// `property` tried on `cases` cases, each drawn from a seed of its own.
 // example: held.is_held(held_over(property: Deterministic, cases: 2, prelude: types.little_prelude()))
@@ -363,3 +353,31 @@ type Property =
     | RefusalInside
     | AlternativesCoverAlike
     | DrawnMatchAlike
+
+test "checking never panics and is deterministic" {
+    held.is_held_reported(held_over(property: Deterministic, cases: held.drawn_cases(), prelude: checking.carried_library().prelude))
+}
+
+test "a match whose arms are rotated out of the declared order is refused" {
+    held.is_held_reported(held_over(property: RotatedRefused, cases: held.drawn_cases(), prelude: checking.carried_library().prelude))
+}
+
+test "a match with one of its variants left out is refused" {
+    held.is_held_reported(held_over(property: LeftOutRefused, cases: held.drawn_cases(), prelude: checking.carried_library().prelude))
+}
+
+test "a name that binds covers whatever else is written" {
+    held.is_held_reported(held_over(property: BindingCovers, cases: held.drawn_cases(), prelude: checking.carried_library().prelude))
+}
+
+test "a refusal points inside the source" {
+    held.is_held_reported(held_over(property: RefusalInside, cases: held.drawn_cases(), prelude: checking.carried_library().prelude))
+}
+
+test "one arm of alternatives covers what the same arms cover separately" {
+    held.is_held_reported(held_over(property: AlternativesCoverAlike, cases: held.drawn_cases(), prelude: checking.carried_library().prelude))
+}
+
+test "a drawn match is checked alike twice and a refusal points inside it" {
+    held.is_held_reported(held_over(property: DrawnMatchAlike, cases: held.drawn_cases(), prelude: checking.carried_library().prelude))
+}

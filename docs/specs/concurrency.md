@@ -6,7 +6,7 @@ This spec states `process`, `spawn`, the handle, the mailbox, `send`, and `ended
 
 ## Intent
 
-The compiler and `bin/runner` do a lot of independent work, and a machine has many processors.
+The compiler and `bux test` do a lot of independent work, and a machine has many processors.
 A program uses them through processes and messages, and never through a lock or a shared value.
 One process has one shape, so a reader who has seen one process can read every process.
 A message that cannot arrive is a typed answer, and a full mailbox makes the sender wait.

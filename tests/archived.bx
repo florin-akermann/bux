@@ -4,6 +4,7 @@
 // the class path. The repository keeps no archive, so each check builds the class `shouting` with
 // the command line, and the `jar` tool of the JDK packs it into a directory of the check's own.
 // Every check is skipped where `JAVA_HOME` names no JDK, because the tool and the run both need one.
+import checking
 import command
 import digest
 import enacted
@@ -219,4 +220,8 @@ fn examples_text() -> String {
 // example: list.length(walk.lines_of(depending_text())) == 7
 fn depending_text() -> String {
     "import io\nimport loud\n\nfn main(arguments: List<String>) -> Int {\n    io.println(loud.loud(\"hello\"))\n    0\n}\n"
+}
+
+test "each archive a package states is reached, and each other one is refused" {
+    held.is_held_reported(every_archive_held(checking.carried_library(), walk.start_limit()))
 }

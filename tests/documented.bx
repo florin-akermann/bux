@@ -3,12 +3,13 @@
 //
 // `docs/specs/doc-examples.md` states what an example line is and what running one amounts to, and
 // `docs/specs/testing.md` states a test. The modules are those under `tests/spec`, `library/`,
-// `compiler/`, and `tests/` itself. An example under `tests/spec` that its header says is refused
-// cannot be run, so its lines are not either. The tests of an example under `tests/spec` are left
+// and `compiler/`, because `bin/bux test tests` runs those of `tests/` itself. An example under
+// `tests/spec` that its header says is refused cannot be run, so its lines are not either. The tests of an example under `tests/spec` are left
 // out, because a golden answer of `bux test` holds what is said of them.
 // `docs/implementation.md` section 7 states how the runs share one memo of typed modules, and how
 // each run starts as `bux test` starts it.
 import ast
+import checking
 import command
 import files
 import header
@@ -21,6 +22,22 @@ import parser
 import programs
 import strings
 import walk
+
+/// Every module whose example lines a test runs, one list for each place: those directly in each
+/// of `directories`, then those under `spec` at any depth.
+// example: list.length(module_groups(spec: "no-such-directory", directories: ["no-such-directory"])) == 2
+fn module_groups(spec: String, directories: List<String>) -> List<List<String>> {
+    var groups = []
+    for directory in directories {
+        groups = list.push(groups, walk.files_in(directory, ".bx"))
+    }
+    list.push(groups, walk.every_file(spec, ".bx"))
+}
+
+// example: is_every_line_held([])
+fn is_every_line_held(paths: List<String>) -> Bool {
+    held.is_held_reported(held.together(every_line_held(paths: paths, library: checking.carried_library(), memo: command.no_memo(), limit: walk.start_limit())))
+}
 
 /// Every example line and every test of every module `paths` names, each module typed once, each
 /// run in a JVM of its own: what the example lines held, then how many tests there were.
@@ -42,18 +59,6 @@ fn held_within(paths: List<String>, setting: Setting, memo: command.Memo) -> Lis
     let found = held.added(staging.found, runs_held(staging, setting.limit))
     command.removed_whole(setting.directory)
     [found, held.nothing_failed(staging.tests)]
-}
-
-/// Every module the runner tests, one list for each place: those directly in each of
-/// `directories`, which are the runner, the compiler, and the library, then those under `spec` at
-/// any depth.
-// example: list.length(module_groups(spec: "no-such-directory", directories: ["no-such-directory"])) == 2
-fn module_groups(spec: String, directories: List<String>) -> List<List<String>> {
-    var groups = []
-    for directory in directories {
-        groups = list.push(groups, walk.files_in(directory, ".bx"))
-    }
-    list.push(groups, walk.every_file(spec, ".bx"))
 }
 
 /// The run of every module of `paths` that states example lines, each written into a directory of
@@ -125,7 +130,7 @@ fn run_readied(root: command.Typed, beside: String, typing: Typing) -> Readied {
     }
 }
 
-/// The tests of `program`, the module at `path`, that the runner runs: every one, and none of an
+/// The tests of `program`, the module at `path`, that a test here runs: every one, and none of an
 /// example under `tests/spec`.
 // example: list.length(tests_kept("tests/spec/testing/holds.bx", ok_or(parser.parse("test \"a\" {\n    true\n}\n"), ast.Program { items: [] }))) == 0
 // example: list.length(tests_kept("tests/a.bx", ok_or(parser.parse("test \"a\" {\n    true\n}\n"), ast.Program { items: [] }))) == 1
@@ -197,7 +202,7 @@ fn every_run_held(runs: List<Staged>, java: String, limit: Int) -> held.Held {
 
 /// What the run `staged` found, started as `bux test` starts it, and a line for each failure.
 ///
-/// The JVM starts in the directory of the runner, so a run finds a file where `bux test` finds it.
+/// The JVM starts in the directory of the test, so a run finds a file where `bux test` finds it.
 /// What the JVM writes goes into the directory of the run, which no other run writes into.
 // example: unended_line(walk.NotStarted) == "error: the run of its examples could not be started\n"
 fn run_held(staged: Staged, java: String, limit: Int) -> List<String> {
@@ -360,4 +365,8 @@ type Setting = {
 type Typing = {
     library: ir.Library
     memo: command.Memo
+}
+
+test "every example line of library/ holds" {
+    is_every_line_held(walk.files_in("library", ".bx"))
 }

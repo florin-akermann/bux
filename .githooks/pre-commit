@@ -5,10 +5,10 @@ set -e
 # for byte. `docs/specs/run.md` states the bootstrap.
 bin/bootstrap
 
-# The runner holds the compiler to every example, every example line, every drawn property, and
-# the command line. `docs/implementation.md` section 7 states it. It ends with status 0 only when
-# nothing failed.
-bin/runner
+# The tests of `tests/` hold the compiler to every example, every example line, every drawn
+# property, and the command line. `docs/implementation.md` section 7 states them. The run ends
+# with status 0 only when nothing failed.
+bin/bux test tests
 
 mycs_fail() {
     echo "mycs check failed. Fix the violation; never suppress it without a reason beside it."

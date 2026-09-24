@@ -1,0 +1,13 @@
+// Writes each golden file under `tests/commands` again, each command line with the answer it gets
+// now, and holds nothing.
+//
+// `bin/bux run tests/golden.bx` starts it from the root of the repository. An answer that changes
+// on purpose, such as a message said in other words, is written down so.
+import checking
+import commanded
+import walk
+
+fn main(arguments: List<String>) -> Int {
+    commanded.every_golden_written(checking.carried_library(), walk.start_limit())
+    0
+}

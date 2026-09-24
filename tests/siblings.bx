@@ -4,6 +4,7 @@
 // makes of the example, `.ast` or `.error` what the parser makes of it, `.api` its page, and a
 // `.unformatted` file formats to the example. `docs/specs/lexer.md`, `grammar.md`, `api-surface.md`,
 // and `formatting.md` each state the form of theirs.
+import checking
 import command
 import files
 import held
@@ -174,4 +175,8 @@ type Sibling = {
 type Made = {
     path: String
     source: String
+}
+
+test "every sibling under tests/spec is what its phase makes of the example beside it" {
+    held.is_held_reported(every_sibling_held(checking.carried_library(), "tests/spec"))
 }

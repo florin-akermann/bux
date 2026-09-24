@@ -58,10 +58,11 @@ a line is what `io.println` is for, so the module the run writes reaches `io`; a
 declares `io` of its own leaves the run no room, and `L0604` says so. Only `bux test` is affected,
 because only `bux test` writes a module.
 
-A run in which every example and every test held prints nothing, as every command that found
-nothing to report prints nothing. An example that did not hold is reported as `L0603`, where it is
-written. A test that did not hold is reported on one line with the module, the line of the word
-`test`, and the name:
+Each other line the run writes is passed on to standard output, in the order written, so a test
+can say why it did not hold. A run in which every example and every test held, and nothing wrote
+a line, prints nothing, as every command that found nothing to report prints nothing. An example
+that did not hold is reported as `L0603`, where it is written. A test that did not hold is
+reported on one line with the module, the line of the word `test`, and the name:
 
 ```text
 sums.bx:14: test "a sum does not depend on the order" did not hold

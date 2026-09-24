@@ -11,18 +11,6 @@ import list
 import strings
 import walk
 
-/// Every property of the rendering and the data form over `cases` drawn cases each, in order.
-///
-/// A diagnostic is rendered without the prelude, so no property needs the one it is handed.
-// example: list.length(every_property(1)) == 4
-fn every_property(cases: Int) -> List<held.Held> {
-    var found = []
-    for property in [NamesAPlace, OpensAndEnds, DataIsOneLine, DataReadsBack] {
-        found = list.push(found, held_over(property, cases))
-    }
-    found
-}
-
 /// `property` tried on `cases` cases, each drawn from a seed of its own.
 // example: held.is_held(held_over(NamesAPlace, 2))
 fn held_over(property: Property, cases: Int) -> held.Held {
@@ -332,3 +320,19 @@ type Property =
     | OpensAndEnds
     | DataIsOneLine
     | DataReadsBack
+
+test "a rendering names a line and a column inside the source" {
+    held.is_held_reported(held_over(NamesAPlace, held.drawn_cases()))
+}
+
+test "a rendering opens with the code and ends with a newline" {
+    held.is_held_reported(held_over(OpensAndEnds, held.drawn_cases()))
+}
+
+test "a data form is one line whatever text the diagnostic holds" {
+    held.is_held_reported(held_over(DataIsOneLine, held.drawn_cases()))
+}
+
+test "text a data form writes reads back as the text it was given" {
+    held.is_held_reported(held_over(DataReadsBack, held.drawn_cases()))
+}

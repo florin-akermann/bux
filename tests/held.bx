@@ -1,15 +1,10 @@
-// What one check of the runner found: how many cases it tried, and one line for each that failed.
+// What one check of the compiler found: how many cases it tried, and one line for each that failed.
 //
-// `docs/implementation.md` section 7 states the runner. A check is an example, a sibling file, a
-// command line, or a drawn property, and each gives back a `Held` for the runner to add up.
+// `docs/implementation.md` section 7 states the checks. A check is an example, a sibling file, a
+// command line, or a drawn property, and each gives back a `Held` that a test of `tests/` reports.
+import io
 import list
 import strings
-
-/// A check that tried `cases` cases, every one of which held.
-// example: nothing_failed(3).cases == 3
-fn nothing_failed(cases: Int) -> Held {
-    Held { cases: cases, failures: [], skipped: [] }
-}
 
 /// `found` with one more failure, which names where it is and what went wrong there.
 // example: list.length(with_failure(nothing_failed(1), "a.bx:1: gone").failures) == 1
@@ -17,10 +12,23 @@ fn with_failure(found: Held, line: String) -> Held {
     found { failures: list.push(found.failures, line) }
 }
 
-/// `found` with one more case that could not be tried, and the reason, which the runner prints.
+/// `found` with one more case that could not be tried, and the reason, which its test writes.
 // example: list.length(with_skip(nothing_failed(0), "a.bx: no JDK").skipped) == 1
 fn with_skip(found: Held, line: String) -> Held {
     found { skipped: list.push(found.skipped, line) }
+}
+
+// The lines go to standard output because `bux test` passes that on, and it drops what a test
+// gives back beyond its `Bool`.
+// example: is_held_reported(nothing_failed(1))
+fn is_held_reported(found: Held) -> Bool {
+    for line in found.skipped {
+        io.println("skipped: " + line)
+    }
+    for line in found.failures {
+        io.println(line)
+    }
+    is_held(found)
 }
 
 /// Whether every case of `found` held.
@@ -28,6 +36,26 @@ fn with_skip(found: Held, line: String) -> Held {
 // example: !is_held(with_failure(nothing_failed(1), "a.bx:1: gone"))
 fn is_held(found: Held) -> Bool {
     list.length(found.failures) == 0
+}
+
+// example: drawn_cases() == 100
+fn drawn_cases() -> Int {
+    100
+}
+
+// example: together([nothing_failed(2), nothing_failed(3)]).cases == 5
+fn together(parts: List<Held>) -> Held {
+    var found = nothing_failed(0)
+    for part in parts {
+        found = added(first: found, second: part)
+    }
+    found
+}
+
+/// A check that tried `cases` cases, every one of which held.
+// example: nothing_failed(3).cases == 3
+fn nothing_failed(cases: Int) -> Held {
+    Held { cases: cases, failures: [], skipped: [] }
 }
 
 /// The cases and the failures of both, the failures of `first` before those of `second`.

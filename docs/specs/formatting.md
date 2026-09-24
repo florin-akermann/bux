@@ -228,7 +228,7 @@ It holds the layout to what the printer writes before any item moves, so an orde
 
 ## Properties
 
-These hold and are checked by drawn properties in the runner:
+These hold and are checked by drawn properties, each a test of `tests/`:
 
 1. Formatting is idempotent: `format(format(source))` equals `format(source)`.
 2. Formatted output parses.

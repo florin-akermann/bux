@@ -388,12 +388,12 @@ states that case in an example.
 `start`, `waitFor`, and `next` each give back a `Result`, so each is a guarded method of its own,
 which every `extern` already is.
 
-## What the compiler and the runner stand on
+## What the compiler and its tests stand on
 
 `docs/implementation.md` section 3 has every program reach the platform through the library.
-The compiler and the runner are programs, so each `extern` they call is declared in `library/`.
+The compiler and its tests are programs, so each `extern` they call is declared in `library/`.
 Each is declared once, and a class that two modules reach has one `extern type` in one of them.
-A project check in the runner refuses an `extern` in a file outside `library/` and `tests/spec/`.
+A test of `tests/conventions.bx` refuses an `extern` in a file outside `library/` and `tests/spec/`.
 
 `files` declares what the compiler asks of a path, each a member of `java.io.File`:
 
@@ -409,7 +409,7 @@ files.has_made_all  files.parent_path  files.canonical_path  files.path_separato
 `environment.processors` is `java.lang.Runtime.availableProcessors`, which is never below one.
 `clock.nanoseconds` is `java.lang.System.nanoTime`, whose difference in one run is a time.
 
-`programs` declares what the compiler and the runner do to a program before and after its start:
+`programs` declares what the compiler and its tests do to a program before and after its start:
 
 ```text
 programs.inheriting  programs.within  programs.input_from  programs.output_to
@@ -431,7 +431,7 @@ Its members are `gathered`, `spread`, and `turned`, which `compiler/digest.bx` c
 
 ## Properties
 
-These hold and are checked by drawn properties in the runner:
+These hold and are checked by drawn properties, each a test of `tests/`:
 
 1. A name a module here declares has the type this spec gives it, wherever it is written.
 2. A name a module here does not declare is refused with `L0414`, naming the module and it.

@@ -128,7 +128,7 @@ It gives `L0202` for a name in the wrong case and `L0203` for a name of one lett
 
 ## Properties
 
-These hold and are checked by drawn properties in the runner:
+These hold and are checked by drawn properties, each a test of `tests/`:
 
 1. A name canonical form rewrites is rewritten to one it accepts, so no spelling it advises is
    refused in its turn.

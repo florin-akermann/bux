@@ -11,12 +11,6 @@ import list
 import parser
 import strings
 
-/// Every property of the parser, each tried on `cases` drawn cases, in a fixed order.
-// example: list.length(every_property(1)) == 6
-fn every_property(cases: Int) -> List<held.Held> {
-    [no_extern_declaration_writes_a_body(cases), parsing_is_deterministic(cases), an_error_span_is_not_empty_and_lies_within_the_source(cases), a_well_formed_program_parses(cases), item_spans_are_ordered_and_within_the_source(cases), a_test_inside_a_body_is_refused_at_its_word(cases)]
-}
-
 /// A drawn `extern` declaration parses to no function, and a body written after it is refused.
 // example: held.is_held(no_extern_declaration_writes_a_body(3))
 fn no_extern_declaration_writes_a_body(cases: Int) -> held.Held {
@@ -324,4 +318,28 @@ fn chosen_items(seed: Int) -> List<String> {
 // example: list.length(items()) == 10
 fn items() -> List<String> {
     ["import io", "test \"adds up\" {\n    let total = 1 + 2\n    total == 3\n}", "type UserId = UserId(Int)", "type User = {\n    id: UserId\n}", "type Payment =\n    | Pending\n    | Failed(String)", "fn identity(x) {\n    x\n}", "fn named(a: Int) -> Int {\n    joined(first: a, second: a)\n}", "fn total(users: List<User>) -> Int {\n    var total = 0\n    for user in users {\n        total += 1\n    }\n    total\n}", "fn describe(p: Payment) -> String {\n    match p {\n        Pending =>\n            \"waiting\"\n\n        Failed(reason) =>\n            reason\n    }\n}", "fn pick(a: Int) -> Int {\n    if a > 1 {\n        return a\n    } else {\n        return 0\n    }\n}"]
+}
+
+test "no extern declaration writes a body" {
+    held.is_held_reported(no_extern_declaration_writes_a_body(held.drawn_cases()))
+}
+
+test "parsing is deterministic" {
+    held.is_held_reported(parsing_is_deterministic(held.drawn_cases()))
+}
+
+test "an error span is not empty and lies within the source" {
+    held.is_held_reported(an_error_span_is_not_empty_and_lies_within_the_source(held.drawn_cases()))
+}
+
+test "a well formed program parses" {
+    held.is_held_reported(a_well_formed_program_parses(held.drawn_cases()))
+}
+
+test "item spans are ordered and within the source" {
+    held.is_held_reported(item_spans_are_ordered_and_within_the_source(held.drawn_cases()))
+}
+
+test "a test inside a body is refused at its word" {
+    held.is_held_reported(a_test_inside_a_body_is_refused_at_its_word(held.drawn_cases()))
 }

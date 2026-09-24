@@ -2,7 +2,7 @@
 //
 // `docs/specs/run.md` states the command line and the launcher that starts it, and
 // `docs/specs/diagnostics.md` states how a refusal reads. A command answers with text rather than
-// with a print, so the runner runs many commands in one JVM and holds each to its golden answer.
+// with a print, so a test runs many commands in one JVM and holds each to its golden answer.
 // `main.bx` prints the answer; it is a module of its own because no module imports `main`.
 import archives
 import ast
@@ -653,7 +653,7 @@ fn run_held(found: Option<Run>, root: Typed, typing: Typing) -> Tested {
 
 /// The run that tries the examples `root` states and each of `tests`, where there is one to try.
 ///
-/// `bux test` passes every test of the module. The runner passes none for an example of
+/// `bux test` passes every test of the module. `tests/documented.bx` passes none for an example of
 /// `tests/spec`, because a golden answer holds what `bux test` says of the tests there.
 // example: is_none_run(stated_in(Typed { module: modules.Module { name: "main", path: "main.bx", source: "", program: ast.Program { items: [] } }, inferred: types.checked_of("") }, []))
 fn stated_in(root: Typed, tests: List<ast.TestDeclaration>) -> Result<Option<Run>, List<Diagnostic>> {
@@ -1030,7 +1030,7 @@ fn is_refused_write(answer: Result<String, String>) -> Bool {
 /// not be read.
 ///
 /// A run that did not end with status 0 did not reach the end of what it tries, so what it wrote
-/// on standard error is passed on and the command cannot say whether they hold.
+/// is passed on and the command cannot say whether they hold.
 // example: run_ended(Err("gone"), "java", Run { source: "", stretches: [], examples: [], tests: [], module: lexer.Span { start: 0, length: 0 } }, Typed { module: modules.Module { name: "main", path: "main.bx", source: "", program: ast.Program { items: [] } }, inferred: types.checked_of("") }).said.errors == "error: java: gone\n"
 fn run_ended(completion: Result<programs.Finished, String>, java: String, run: Run, root: Typed) -> Tried {
     match completion {
@@ -1046,7 +1046,7 @@ fn run_ended(completion: Result<programs.Finished, String>, java: String, run: R
 // example: finished_read(programs.Finished { code: 1, output: "", errors: "boom\n" }, Run { source: "", stretches: [], examples: [], tests: [], module: lexer.Span { start: 0, length: 0 } }, Typed { module: modules.Module { name: "main", path: "main.bx", source: "", program: ast.Program { items: [] } }, inferred: types.checked_of("") }).said.errors == "boom\n"
 fn finished_read(finished: programs.Finished, run: Run, root: Typed) -> Tried {
     if finished.code != 0 {
-        return only_said(Said { output: "", errors: finished.errors, status: 2 })
+        return only_said(Said { output: passed_on(finished.output), errors: finished.errors, status: 2 })
     }
     var refusals = []
     var failed = []
@@ -1057,7 +1057,8 @@ fn finished_read(finished: programs.Finished, run: Run, root: Typed) -> Tried {
         }
         failed = all_of(values: failed, more: test_named_in(run, line))
     }
-    let tried = Tried { said: nothing_said(), tests: list.length(run.tests), examples: list.length(run.examples), failed: list.length(refusals) + list.length(failed) }
+    let written = Said { output: passed_on(finished.output), errors: "", status: 0 }
+    let tried = Tried { said: written, tests: list.length(run.tests), examples: list.length(run.examples), failed: list.length(refusals) + list.length(failed) }
     if tried.failed == 0 {
         return tried
     }
@@ -1065,12 +1066,29 @@ fn finished_read(finished: programs.Finished, run: Run, root: Typed) -> Tried {
     for stated in failed {
         lines += test_failed(stated, page_of(root))
     }
-    var said = Said { output: "", errors: lines, status: 1 }
+    var said = written { errors: lines, status: 1 }
     if list.length(refusals) > 0 {
         let refused = refused_each(refusals, page_of(root))
-        said = refused { errors: refused.errors + lines }
+        said = written { errors: refused.errors + lines, status: refused.status }
     }
     tried { said: said }
+}
+
+// example: passed_on("bux: test 0\nskipped: a\n") == "skipped: a\n"
+fn passed_on(output: String) -> String {
+    var passed = ""
+    for line in lines_of(output) {
+        if !is_a_mark(line) {
+            passed += line + "\n"
+        }
+    }
+    passed
+}
+
+// example: is_a_mark("bux: example 2")
+// example: !is_a_mark("skipped: a")
+fn is_a_mark(line: String) -> Bool {
+    or(marked_ordinal(line: line, marker: "bux: example "), -1) >= 0 || or(marked_ordinal(line: line, marker: "bux: test "), -1) >= 0
 }
 
 /// `said`, as a run that tried nothing.
@@ -1248,8 +1266,9 @@ fn checked(path: String, library: ir.Library) -> Result<Checked, NotCompiled> {
 /// The program at `path`, checked as `checked` checks it, with each module typed once.
 ///
 /// A module that `memo` holds is not typed again, and each module typed here is added to it. A
-/// caller that hands the memo on from one call to the next types each module once, and the runner
-/// does so. A command starts with an empty memo, so what it says never depends on one.
+/// caller that hands the memo on from one call to the next types each module once, and
+/// `tests/documented.bx` does so. A command starts with an empty memo, so what it says never
+/// depends on one.
 // example: is_refused(page_said(checked_once("no-such-directory/a.bx", ir.little_library(), no_memo()).found))
 fn checked_once(path: String, library: ir.Library, memo: Memo) -> Memoed<Checked> {
     let found = loaded_checked(path, library, memo)
@@ -1979,9 +1998,9 @@ fn name_declared(item: ast.Item) -> ast.Name {
 /// The module the run is: the imports it reads, `main` trying each example and each test, the
 /// function of each test, then every declaration.
 ///
-/// The run leaves out the module's `main`, and the runner leaves out the tests of an example under
-/// `tests/spec`, so the run imports only each module the rest of it writes before a dot. Every
-/// import of the run is then read, as every import of a module is.
+/// The run leaves out the module's `main`, and `tests/documented.bx` leaves out the tests of an
+/// example under `tests/spec`, so the run imports only each module the rest of it writes before a
+/// dot. Every import of the run is then read, as every import of a module is.
 // example: run_written(Page { source: "", path: "a.bx" }, ast.Program { items: [] }, Trying { examples: [], tests: [] }).source == "\nfn main(arguments: List<String>) -> Int {\n    0\n}\n"
 fn run_written(page: Page, program: ast.Program, stated: Trying) -> Run {
     let body = body_written(page, program, stated)

@@ -9,12 +9,6 @@ import lexer
 import list
 import strings
 
-/// Every property of the lexer, each tried on `cases` drawn cases, in a fixed order.
-// example: list.length(every_property(1)) == 4
-fn every_property(cases: Int) -> List<held.Held> {
-    [lexing_is_deterministic(cases), spans_are_ordered_and_on_character_boundaries(cases), every_code_unit_outside_a_token_is_a_blank(cases), token_texts_joined_by_spaces_lex_back_to_their_kinds(cases)]
-}
-
 /// Lexing a drawn text twice gives the same tokens, and lexing never stops the program.
 // example: held.is_held(lexing_is_deterministic(3))
 fn lexing_is_deterministic(cases: Int) -> held.Held {
@@ -300,4 +294,20 @@ fn every_separable_kind() -> List<lexer.TokenKind> {
 type Place = {
     unit: Int
     byte: Int
+}
+
+test "lexing is deterministic" {
+    held.is_held_reported(lexing_is_deterministic(held.drawn_cases()))
+}
+
+test "spans are ordered and on character boundaries" {
+    held.is_held_reported(spans_are_ordered_and_on_character_boundaries(held.drawn_cases()))
+}
+
+test "every code unit outside a token is a blank" {
+    held.is_held_reported(every_code_unit_outside_a_token_is_a_blank(held.drawn_cases()))
+}
+
+test "token texts joined by spaces lex back to their kinds" {
+    held.is_held_reported(token_texts_joined_by_spaces_lex_back_to_their_kinds(held.drawn_cases()))
 }

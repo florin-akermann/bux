@@ -2,7 +2,7 @@
 //
 // `docs/specs/doc-examples.md` states the properties. Each case draws how many functions a module
 // declares, each of which states one example of itself, and reads the examples out of it with the
-// compiler's own functions in the runner's JVM.
+// compiler's own functions in the JVM of its test.
 import ast
 import command
 import drawn
@@ -11,18 +11,6 @@ import lexer
 import list
 import parser
 import strings
-
-/// Every property of the example lines over `cases` drawn cases each, in a fixed order.
-///
-/// Examples are read without the prelude, so no property needs the one it is handed.
-// example: list.length(every_property(1)) == 4
-fn every_property(cases: Int) -> List<held.Held> {
-    var found = []
-    for property in [EveryOneFound, EveryOneAccepted, TextAfterTheMarker, SpanInTheFile] {
-        found = list.push(found, held_over(property, cases))
-    }
-    found
-}
 
 /// `property` tried on `cases` cases, each drawn from a seed of its own.
 // example: held.is_held(held_over(EveryOneFound, 2))
@@ -150,3 +138,19 @@ type Property =
     | EveryOneAccepted
     | TextAfterTheMarker
     | SpanInTheFile
+
+test "every example a module states is found however many functions it declares" {
+    held.is_held_reported(held_over(EveryOneFound, held.drawn_cases()))
+}
+
+test "a module whose every function states an example is accepted" {
+    held.is_held_reported(held_over(EveryOneAccepted, held.drawn_cases()))
+}
+
+test "the text of an example is the text of its line after the marker" {
+    held.is_held_reported(held_over(TextAfterTheMarker, held.drawn_cases()))
+}
+
+test "a span a run reports is a span of the file the examples were read out of" {
+    held.is_held_reported(held_over(SpanInTheFile, held.drawn_cases()))
+}

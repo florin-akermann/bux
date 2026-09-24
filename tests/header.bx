@@ -2,7 +2,7 @@
 //
 // `docs/specs/executable-examples.md` states the header. An example with none compiles, one headed
 // `// expect-error:` is refused with the code it names, and one headed `// expect-run` runs as the
-// lines under the header state. A header the runner cannot hold an example to is itself a failure.
+// lines under the header state. A header that a test cannot hold an example to is itself a failure.
 import command
 import list
 import strings

@@ -10,12 +10,6 @@ import held
 import ir
 import list
 
-/// One `Held` for each property of where a foreign reference may go, in a fixed order.
-// example: list.length(every_property(0, ir.little_library())) == 2
-fn every_property(cases: Int, library: ir.Library) -> List<held.Held> {
-    [a_foreign_reference_drawn_into_a_place_it_escapes_to_is_refused_naming_that_place(cases, library), a_foreign_reference_reached_bound_and_passed_compiles(cases, library)]
-}
-
 /// A drawn type that is or holds `File`, in a drawn place it would escape to, is `L0435` there.
 // example: a_foreign_reference_drawn_into_a_place_it_escapes_to_is_refused_naming_that_place(2, ir.little_library()).cases == 2
 fn a_foreign_reference_drawn_into_a_place_it_escapes_to_is_refused_naming_that_place(cases: Int, library: ir.Library) -> held.Held {
@@ -109,4 +103,12 @@ type Holding = {
 type Place = {
     source: String
     said: String
+}
+
+test "a foreign reference drawn into a place it escapes to is refused naming that place" {
+    held.is_held_reported(a_foreign_reference_drawn_into_a_place_it_escapes_to_is_refused_naming_that_place(held.drawn_cases(), checking.carried_library()))
+}
+
+test "a foreign reference reached bound and passed compiles" {
+    held.is_held_reported(a_foreign_reference_reached_bound_and_passed_compiles(held.drawn_cases(), checking.carried_library()))
 }
