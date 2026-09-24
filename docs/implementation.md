@@ -17,8 +17,6 @@ Modern JVM features are used freely: invokedynamic, records, sealed classes, val
 A release of the JDK moves the target with it; there is no compatibility matrix and never will be.
 The `jar` line of a manifest, which `docs/specs/packages.md` states, is for the JVM target alone.
 
-The compiler should emit JVM bytecode directly or through a suitable intermediate representation.
-
 Initial pipeline:
 
 ```text
@@ -49,8 +47,6 @@ JVM IR
 JVM Bytecode
 ```
 
-The language's semantics must not be defined in terms of Java's type system.
-
 ---
 
 ## 2. Memory management
@@ -72,8 +68,6 @@ The compiler may optimize representations where possible.
 For example, `type UserId = UserId(Int)` has compile-time semantics distinct from `Int`.
 The compiler may still represent it as a JVM primitive or value type.
 
-Project Valhalla/value types should be considered when targeting modern JVMs.
-
 ---
 
 ## 3. Java interoperability
@@ -81,35 +75,14 @@ Project Valhalla/value types should be considered when targeting modern JVMs.
 Java interoperability is important because the JVM ecosystem is valuable.
 
 However, Java APIs should have a clear boundary.
-
-For example:
-
-```text
-extern java class KafkaProducer<K, V> {
-    ...
-}
-```
+`docs/specs/interop.md` states the `extern` declaration, which names one member of one Java class.
 
 The standard library should provide idiomatic wrappers around common Java APIs.
 Users should not be forced to interact directly with Java's object model.
-
-The goal is:
-
-```text
-http.get(url)
-```
-
-rather than:
-
-```text
-java.net.http.HttpClient
-    .newBuilder()
-    ...
-```
+A program calls `http.get(url)`, and the library holds the `HttpClient` builder under it.
 
 Java interop should be powerful but should not determine the design of the language.
 
----
 
 ## 4. Standard library
 
@@ -585,6 +558,30 @@ Add, once the compiler is Bux:
 
 No version adds a function value or a closure, as `docs/design.md` sections 11 and 14 state.
 
+A type of the language written in the language is of interest for every type, `String` first.
+Today `java.lang.String` carries a `String`, and it is the one Java class under a Bux value.
+The prelude writes `Eq<String>` as Bux code, but the lowering puts `String.equals` under it.
+So that logic lives in the JVM lowering, and a second target writes it again.
+A `bux.String` value class over a `byte[]` moves it into the library, written once in Bux.
+Then a second target lowers a machine word, a truth value, an array, and each `extern`, and no more.
+The same holds for `Int` and `Bool` over the words a target has, and for any type after them.
+The cost is measured first: the intrinsics of `String`, and a conversion at each `extern` with text.
+`docs/design.md` section 3 already holds a prelude type to what a declared type can do.
+So the language changes nothing, and only what carries a value moves.
+
+### A native target
+
+The JVM stays the one target, and a native binary is a question this section records, not a plan.
+`docs/design.md` section 1 lists what the JVM gives: a GC, a JIT, cheap blocking, and platform APIs.
+A native target must supply each of the four, and the runtime is the cost, not the code generator.
+Go as a target supplies all four, but a Go lowering stays for good or goes whole.
+No own code generator can link Go's runtime, so Go is not a step toward an own backend.
+An own backend with an own runtime is the one end state with no foreign runtime, and Go took it.
+Bux makes that cheaper than it sounds: no closure, no identity, and no state two processes share.
+A moving GC is safe, because no program can observe an address.
+Both end states need the same preparation, which Items 126 to 128 file, and each pays on the JVM.
+The decision waits for a requirement, as every mechanism does, and native-image is the cheap answer.
+
 Investigate:
 
 * explicit effects
@@ -592,6 +589,8 @@ Investigate:
 * richer record types
 * anonymous structural records
 * improved Java interop
+* a `String`, and after it every prelude type, written in Bux over what a target has
+* a native target, Go as a permanent backend or an own backend with an own runtime, as stated above
 * compiler optimizations
 * incremental compilation
 * language server

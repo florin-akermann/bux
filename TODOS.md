@@ -125,3 +125,47 @@ The answer must follow what happens to the message, not the time of the test.
 [125][a] - `docs/specs/concurrency.md` states that `ProcessEnded` means no `receive` reads it.
 [125][b] - A process that ends leaves its mailbox in a state `send` can tell from a taken message.
 [125][c] - `tests/spec/concurrency/mailbox_full.bx` holds on every pass of the runner.
+
+## 🔴 Item 126: The lowering names no JVM shape, and `compiler/jvm.bx` spells every one
+`compiler/ir.bx` names a class, a descriptor, a slot, or a `java/` member on about 160 lines.
+It builds the instructions of the JVM, and `compiler/jvm.bx` only writes them as a class file.
+So what a construct means and how the JVM spells it are one text, and each reads harder for it.
+`spawned` in `compiler/ir.bx` writes `startVirtualThread` beside numbered slots and descriptors.
+Item 125 fixes a bug in `offer_within` and `ended_test`, and a named local shows such a bug.
+A lowering that names a local and a call reads as what a `process` means.
+A JVM phase that gives each local a slot and each call a descriptor reads as how the JVM spells it.
+A tree whose types have no field for a JVM name makes a `java/` string in the lowering unwriteable.
+[126][a] - `docs/implementation.md` section 6 states the two phases, and what each one may name.
+[126][b] - `compiler/ir.bx` lowers to a tree whose types have no field for a JVM name or a slot.
+[126][c] - `compiler/jvm.bx` gives a local its slot and a call its descriptor, and writes the class.
+[126][d] - `bin/bootstrap` holds stage 2 equal to stage 1 byte for byte across the change.
+[126][e] - Section 7 records `bux build compiler/main.bx` before and after.
+
+## 🔴 Item 127: `String` is a Bux value over bytes, and `Eq<String>` runs Bux code
+`docs/implementation.md` section 12 states the change and asks for the cost first.
+`java.lang.String` carries a `String`, and it is the one Java class under a Bux value.
+The prelude writes `Eq<String>` as Bux code, but the lowering puts `String.equals` under it.
+So one prelude type has a power a declared type lacks, against `docs/design.md` section 3.
+A `String` over its bytes moves that logic into `library/strings.bx`, written once in Bux.
+`compiler/bytes.bx` already holds a run of bytes as a `List<Int>`, so the bytes need no new type.
+[127][a] - Section 7 prices `==`, `length`, `cut_out`, and `+` over `java.lang.String` and bytes.
+The price is the build of the compiler before and after.
+[127][b] - The item stops at [a], and section 12 records the numbers, when the build is slower.
+[127][c] - `library/strings.bx` declares `String` as a record over bytes, and `Eq<String>` as Bux.
+[127][d] - The lowering puts nothing under `Eq<String>`, and an `extern` with text converts it.
+[127][e] - `bin/bootstrap` gets a new seed, as section 6 reason two states.
+[127][f] - `tests/spec/library/` holds, and a drawn property round trips bytes through `String`.
+
+## 🔴 Item 128: The library declares every `extern`, and the compiler declares none
+98 `extern` declarations exist: 59 in `library/` and 39 in `compiler/`.
+`compiler/command.bx` declares 17, `compiler/archives.bx` 10, and `compiler/modules.bx` 6.
+Three more files declare the six others.
+`java.io.File` is declared three times.
+It is `File` in `library/files.bx` and `compiler/modules.bx`, and `Entry` in `compiler/command.bx`.
+`docs/design.md` section 2 gives one thing one spelling, and three for one class break it.
+`docs/implementation.md` section 3 says a program reaches the platform through the library.
+The compiler is a program, and it is the first one the rule holds to.
+[128][a] - Section 4 lists what the library stands on: files, processes, the clock, and streams.
+[128][b] - Each `extern` of `compiler/` moves to its library module, or one there replaces it.
+[128][c] - A project check refuses an `extern` outside `library/`, and its message names section 3.
+[128][d] - Section 4 records the count of `extern` declarations before and after.
