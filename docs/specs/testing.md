@@ -89,7 +89,8 @@ Thus one run names every module that fails.
 
 ## A package runs on a pool
 
-The modules of a package run at the same time, on one worker for each processor of the JVM.
+The modules of a package run at the same time, on one worker for each two processors of the JVM.
+A JVM with one processor gets one worker.
 A pool, which is a `process`, gives each module to the next worker that is free.
 The pool keeps each answer by the number of its module in the sorted order.
 So the report is in file order, and it is the report of the modules run one after another.

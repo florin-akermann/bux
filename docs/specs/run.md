@@ -185,15 +185,15 @@ reported as 128 plus the number of the signal.
 
 ## The flags of a short run
 
-`bux test` and the runner start the JVM of a run of examples and tests with three more flags.
+`bux test` starts the JVM of a run of examples and tests with three more flags.
 They come after `-Djdk.serialFilter=!*` and before `-cp`, and `bux run` does not add them.
 
 ```text
 -Xmx256m -XX:+UseSerialGC -XX:TieredStopAtLevel=1
 ```
 
-A run of examples ends in a second or less, and a pass of the runner starts hundreds of them.
-Several start at the same time, one for each worker, beside the JVM of the runner itself.
+Most runs end in a second or less, and `bux test tests` starts hundreds of them.
+Several start at the same time, one for each worker, beside the JVM of `bux test` itself.
 Without the flags, the JDK gives each JVM a quarter of the memory and a collector thread per core.
 So each flag makes a short JVM take less of the machine:
 
@@ -213,7 +213,7 @@ No flag of class-data sharing is among them, because the JVM turns it off beside
 The help text is read as a class-path resource: a file in `compiler/help/`.
 
 `bin/bux` is the launcher, a POSIX `sh` script.
-It starts `java --enable-preview -Xmx4g` on the class `main`, with every word it was given.
+It starts `java --enable-preview -Xmx3g` on the class `main`, with every word it was given.
 The heap bound keeps the compiler from the quarter of the memory that the JDK gives it by default.
 The class path is `compiler/target/` alone, which holds the classes and the resources.
 A link to the launcher, as on `PATH`, works: the launcher follows the link to find `compiler/`.

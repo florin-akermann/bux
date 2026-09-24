@@ -428,15 +428,22 @@ fn package_directory_of(path: String) -> String {
 }
 
 /// Runs the examples and the tests of every module of the package in `directory`, on one worker
-/// for each processor, and reports what every module found, in the order `across` takes them.
+/// for each two processors, and reports what every module found, in the order `across` takes them.
 ///
 /// A module that is refused does not stop the run, so one report names every module that fails.
 // example: package_tested("no-such-directory", ir.little_library()).status == 2
 fn package_tested(directory: String, library: ir.Library) -> Said {
     match package_found(directory) {
-        Ok(package) => reported(every_module_tested(package, library, environment.processors()))
+        Ok(package) => reported(every_module_tested(package, library, pool_size()))
         Err(said) => said
     }
+}
+
+// Half the processors, because a pool of one worker for each processor was slower on 2026-09-24.
+// `docs/implementation.md` section 7, "The share of the machine", records the measurement.
+// example: pool_size() > 0
+fn pool_size() -> Int {
+    or((environment.processors() + 1) / 2, 1)
 }
 
 /// The package in `directory` and the entries of that directory, or why there is none to read.
@@ -865,24 +872,19 @@ fn program_line(java: String, classes: List<String>, module: String, arguments: 
     line_of(java: java, flags: [], classes: classes, module: module, arguments: arguments)
 }
 
-/// The line that starts a JVM on the examples and tests of the class `module`.
-///
-/// It is the line of `program_line` with the flags of `short_run_flags`, and no arguments.
 // example: list.length(examples_line(java: "java", classes: ["a"], module: "b")) == 11
 // example: or(list.at(examples_line(java: "java", classes: ["a"], module: "b"), 5), "") == "-Xmx256m"
 fn examples_line(java: String, classes: List<String>, module: String) -> List<String> {
     line_of(java: java, flags: short_run_flags(), classes: classes, module: module, arguments: [])
 }
 
-/// The flags of a JVM that runs for a short time: `docs/specs/run.md` states each one.
-///
-/// A pass of the runner starts hundreds of these JVMs, several at once, so each takes little.
+// `bux test tests` starts hundreds of these JVMs, several at once, so each must take little.
+// `docs/specs/run.md` states each flag, and `docs/implementation.md` section 7 its measurement.
 // example: list.length(short_run_flags()) == 3
 private fn short_run_flags() -> List<String> {
     ["-Xmx256m", "-XX:+UseSerialGC", "-XX:TieredStopAtLevel=1"]
 }
 
-/// The line that starts a JVM on `module` with the guards of every run, then `flags`.
 // example: list.length(line_of(java: "java", flags: ["-Xmx1m"], classes: ["a"], module: "b", arguments: [])) == 9
 private fn line_of(java: String, flags: List<String>, classes: List<String>, module: String, arguments: List<String>) -> List<String> {
     let guarded = all_of(values: [java, "--enable-preview", "--limit-modules", "java.base", "-Djdk.serialFilter=!*"], more: flags)

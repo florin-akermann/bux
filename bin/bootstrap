@@ -36,9 +36,9 @@ if [ ! -f "$root/bin/seed.jar" ]; then
     echo "error: $root/bin/seed.jar: the seed is missing, and the bootstrap starts from it" >&2
     exit 2
 fi
-# The heap bound of each of the two compiles. docs/implementation.md section 7 records the
-# measurement behind it.
-heap=-Xmx1g
+# The heap bound of each of the two compiles. docs/implementation.md section 7, "The share of
+# the machine", records why it is 256 MB.
+heap=-Xmx256m
 cd "$root"
 rm -rf compiler/target
 seed=$(mktemp -d "${TMPDIR:-/tmp}/bux-seed.XXXXXX")
