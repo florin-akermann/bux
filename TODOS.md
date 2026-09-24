@@ -49,6 +49,7 @@ An item whose number is small is removed from `TODOS.md` rather than built.
 
 ## 🔴 Item 112: `bux test` runs the modules of a package on a pool of workers
 **Depends on:** Item 111 — the profile says what a module run spends on typing before it starts.
+Attacks: typing, 2.4 s of the 11.2 s that one job over `compiler/` compiles (section 7).
 `every_module_tested` in `compiler/command.bx` runs the modules of a package one after another.
 `tests/runner.bx` owns a pool of one worker per processor, and only the compiler's tests use it.
 The pool moves into `bux test`, where every package gets it, and the runner keeps working meanwhile.
@@ -93,6 +94,7 @@ A part that started JVMs still does, from inside its test, and the limit of 60 s
 
 ## 🔴 Item 115: The compiler types independent modules at the same time
 **Depends on:** Item 111, Item 112 — the profile prices inference, and 112 holds the pool.
+Attacks: typing, 1.3 s of the 3.5 s of `bux build compiler/main.bx`, 37% (section 7).
 `each_accepted` in `compiler/command.bx` types the modules one after another in load order.
 A module needs only the surface of each module it imports, so modules of one wave are independent.
 The pool of Item 112 types every module whose imports are typed.
@@ -105,6 +107,7 @@ It records `bin/bootstrap` with them.
 
 ## 🔴 Item 116: The lowering lowers the modules of one pass at the same time
 **Depends on:** Item 111, Item 115 — the profile prices lowering, and 115 pools the phases.
+Attacks: lowering, 0.46 s of the 3.5 s of `bux build compiler/main.bx`, 13% (section 7).
 `pass_over` in `compiler/ir.bx` lowers each module in turn.
 The asks of one module reach the next module of the same pass.
 A pass that gives every module the asks known when the pass starts lowers each module alone.
@@ -118,6 +121,7 @@ Item 091 measured the writer at 0.31 s, so it stays on one thread unless the pro
 
 ## 🔴 Item 117: A run of `bux test` writes only the classes its run adds
 **Depends on:** Item 111, Item 114 — the profile says what a run spends on its classes.
+Attacks: the writes to disk, 0.2 s of the 11.2 s that one job over `compiler/` compiles, 2%.
 Each run writes the classes of its whole import closure into a directory of its own.
 A run of a module of `tests/` writes about 900 classes, and 73 modules do so in one suite.
 `docs/implementation.md` section 7 says why one shared build is not correct.
