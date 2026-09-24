@@ -40,25 +40,29 @@ fn stopped_in(directory: String) -> held.Held {
     _ = files.write(modules.joined(directory, "forever.sh"), forever_text())
     let from = command.nanoseconds()
     let completion = walk.completed(["sh", "forever.sh"], directory, 1)
-    let seconds = or((command.nanoseconds() - from) / 1000000000, 0)
+    let milliseconds = or((command.nanoseconds() - from) / 1000000, 0)
     command.removed_whole(directory)
-    stopped_compared(completion, seconds)
+    stopped_compared(completion, milliseconds)
 }
 
-/// One case that held where the program was stopped at its limit of one second, and reported so
-/// within two seconds: the limit, and one more to stop the program.
-// example: stopped_compared(Err(walk.PastLimit(1, "")), 1).failures == []
-// example: stopped_compared(Err(walk.PastLimit(1, "")), 3).failures == ["a program that never ends: seconds until it was reported: expected \"2 or fewer\", found \"3\""]
-// example: stopped_compared(Err(walk.NotStarted), 0).failures == ["a program that never ends: expected \"the program did not end within 1 s, and was stopped\", found \"the program could not be started\""]
-fn stopped_compared(completion: Result<walk.Ended, walk.Unended>, seconds: Int) -> held.Held {
+/// One case that held where the program was stopped at its limit of 1 s, and reported so after
+/// `milliseconds`: not before the limit, and before the 60 s of `start_limit` in `runner.bx`.
+///
+/// The window is wide because a full pool holds back the worker that waits for the program.
+/// `docs/implementation.md` section 7 gives the time measured under such a load.
+// example: stopped_compared(Err(walk.PastLimit(1, "")), 1100).failures == []
+// example: stopped_compared(Err(walk.PastLimit(1, "")), 60000).failures == ["a program that never ends: milliseconds until it was reported: expected \"1000 to 59999\", found \"60000\""]
+// example: stopped_compared(Err(walk.PastLimit(1, "")), 999).failures == ["a program that never ends: milliseconds until it was reported: expected \"1000 to 59999\", found \"999\""]
+// example: stopped_compared(Err(walk.NotStarted), 1100).failures == ["a program that never ends: expected \"the program did not end within 1 s, and was stopped\", found \"the program could not be started\""]
+fn stopped_compared(completion: Result<walk.Ended, walk.Unended>, milliseconds: Int) -> held.Held {
     var found = held.nothing_failed(1)
     let said = ended_said(completion)
     let expected = walk.unended_said(walk.PastLimit(1, ""), "the program")
     if said != expected {
         found = held.with_failure(found, held.failure("a program that never ends", expected, said))
     }
-    if seconds > 2 {
-        found = held.with_failure(found, held.failure("a program that never ends: seconds until it was reported", "2 or fewer", shown(seconds)))
+    if milliseconds < 1000 || milliseconds >= 60000 {
+        found = held.with_failure(found, held.failure("a program that never ends: milliseconds until it was reported", "1000 to 59999", shown(milliseconds)))
     }
     found
 }

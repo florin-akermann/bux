@@ -301,21 +301,30 @@ It holds these parts, each in a module of its own under `tests/`:
 
 The runner splits the parts into jobs, and one pool process hands each job to a worker process.
 There is one worker for each processor that `Runtime.availableProcessors` gives.
-The example lines and the examples are each split into at most one job for each worker.
+The examples are split into at most one job for each worker.
+The example lines are split so for each place: `tests/`, `compiler/`, `library/`, `tests/spec`.
+A module of `tests/` or `compiler/` costs much more than one of `tests/spec`, so no job holds many.
+Before Item 103 one job held most modules of `tests/`, and it took 47 s of the 56 s of wall time.
+On 2026-09-24 the median of three `bin/runner` wall times was 56 s before Item 103 and 43 s after.
+The runs of before and after took turns, under a load of 15 to 22 on 12 cores from other runners.
 Each golden file is one job, and each other check of the command line is one job.
 The properties are one job, and the siblings are one job.
 A worker sends the answer of its job to the pool, which holds each answer by the number of the job.
 When every worker has left, the pool ends, and the runner counts the parts from its last state.
 The runner waits for each worker before the pool, so a JVM error in a worker stops the runner.
-It counts them in the order of the jobs, so no line depends on which worker ended first.
+It counts them in the order of the jobs, so no count depends on which worker ended first.
 
 The runner starts a JVM for an example headed `expect-run` and for a command that runs one.
 It also starts one JVM for each module whose example lines or tests run.
-When the pool has ended, the runner writes one line for each part: the name, the count, and seconds.
+The pool writes one line for each part when that part ends: the name, the count, and seconds.
 The seconds are the sum of the times of the jobs of the part, which can be more than the wall time.
 An example of such a line is `examples: 332 held in 4 s`.
 The parts are examples, siblings, example lines, properties, and command lines, in that order.
-Then it writes one line for each check it skipped and for each failure, then one line of counts.
+A part ends when the pool holds the answer of each of its jobs.
+The pool writes a part only after every part before it, and a part that ends first waits.
+So the lines come in one order in every run, and the first line comes when the first part ends.
+When the pool has ended, the runner writes one line for each skipped check and for each failure.
+Then it writes one line of counts.
 The line of counts also counts the `test` blocks that the jobs of example lines ran.
 It ends with status 0 only when nothing failed.
 
@@ -327,6 +336,9 @@ A command starts with an empty memo, so no answer of the command line depends on
 Each run gets a directory of its own, inside one directory made for the runs of its job.
 Then the job starts each run in a JVM of its own, with the line that `bux test` uses.
 So the class path of a run holds only its own directory, and no two runs share a class.
+One build of a package that all its runs share would not be correct, so each run writes its own.
+A run asks generics for types that no build of the package asks for, such as in an example.
+The lowering writes each such generic into the class of the module that declares it.
 The JVM starts in the root of the repository, so a run finds a file where `bux test` finds it.
 The runner reads what the JVM wrote as `bux test` reads it, so a failure names its module.
 A run that ends with a status other than 0, such as after a stack overflow, is a failure.
@@ -337,7 +349,8 @@ Before Item 084, one JVM ran every run of a job, and `tests/examined.bx` loaded 
 On 2026-09-24 the median of three `bin/runner` wall times was 37 s before Item 084.
 After Item 084, with one JVM for each run, the median of three wall times was 40 s.
 
-`walk.ended` starts each program that the runner starts, and it gives each one a time limit.
+`walk.completed_from` starts each program that the runner starts, and gives each a time limit.
+Each program starts with the environment that `command.cleared` leaves, as a run of `bux test` does.
 `start_limit` in `runner.bx` is the one limit, in seconds, and every started program gets it.
 A program that is still running at the limit is stopped, and it is a failure that names its check.
 The runner then continues with the next check, so one program that never ends cannot stop it.
@@ -348,6 +361,12 @@ The time of a program grows with machine load, and two runners often run at the 
 So a limit near the time of the longest program would stop a correct run.
 Before Item 094, the longest program took 0.14 s, and the limit was 1 s.
 `launched.bx` holds the mechanism: a program that never ends is stopped at a limit of 1 s.
+The check holds that the report comes after 1 s at least, and before the 60 s of `start_limit`.
+Until Item 103 the window was 2 s, and it failed under a full pool.
+A worker process that waits gets a processor back only when another worker lets one go.
+On 2026-09-24 the report came after 1.1 s in six runners at once, with a load of 62 on 12 cores.
+With 12 processes that never let a processor go beside it, the report came after 10.2 s.
+So the window is 60 s wide, and a limit counted in minutes, not seconds, still fails it.
 `bin/runner golden` writes each golden file again, for an answer that changes on purpose.
 It also adds each command line on an example that `fixtures.txt` does not hold.
 On 2026-09-23 `bin/runner` took 182 s before Item 093 and 97 s after it.

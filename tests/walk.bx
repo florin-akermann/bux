@@ -6,6 +6,7 @@ import command
 import files
 import list
 import modules
+import programs
 import strings
 
 /// Every file under `directory` whose name ends in `ending`, at any depth, in the order names sort.
@@ -89,11 +90,12 @@ fn completed(line: List<String>, directory: String, limit: Int) -> Result<Ended,
 /// `written`, and gives back what it wrote and its status.
 ///
 /// Programs that start in one directory at the same time each write into a directory of their own.
+/// Each starts with the environment that `command.cleared` leaves, as a run of `bux test` starts.
 // example: ok_or(completed_from(line: ["no-such-program-at-all"], directory: ".", written: "no-such-directory", limit: 1), Ended { output: "", errors: "", status: 7 }).status == 7
 fn completed_from(line: List<String>, directory: String, written: String, limit: Int) -> Result<Ended, Unended> {
     let output = modules.joined(written, ".output")
     let errors = modules.joined(written, ".errors")
-    let starting = errors_to(output_to(input_from(within(starter(line), place(directory)), place("/dev/null")), place(output)), place(errors))
+    let starting = errors_to(output_to(input_from(within(command.cleared(programs.of_command(line)), place(directory)), place("/dev/null")), place(output)), place(errors))
     match started(starting) {
         Ok(running) => ended_or_stopped(running, limit, Streams { output: output, errors: errors })
         Err(_) => Err(NotStarted)
@@ -131,23 +133,20 @@ fn read_after(status: Int, output: String, errors: String) -> Ended {
     Ended { output: ok_or(files.read(output), ""), errors: ok_or(files.read(errors), ""), status: status }
 }
 
-/// A builder of the program `line` names, given every word after the first.
-extern new starter(line: List<String>) -> Starter
-
 /// The same builder, starting the program in `directory`.
-extern method within(builder: Starter, directory: Place) -> Starter = "directory"
+extern method within(builder: programs.ProcessBuilder, directory: Place) -> programs.ProcessBuilder = "directory"
 
 /// The same builder, with the program reading `file` as its standard input.
-extern method input_from(builder: Starter, file: Place) -> Starter = "redirectInput"
+extern method input_from(builder: programs.ProcessBuilder, file: Place) -> programs.ProcessBuilder = "redirectInput"
 
 /// The same builder, with the program writing its standard output into `file`.
-extern method output_to(builder: Starter, file: Place) -> Starter = "redirectOutput"
+extern method output_to(builder: programs.ProcessBuilder, file: Place) -> programs.ProcessBuilder = "redirectOutput"
 
 /// The same builder, with the program writing its standard error into `file`.
-extern method errors_to(builder: Starter, file: Place) -> Starter = "redirectError"
+extern method errors_to(builder: programs.ProcessBuilder, file: Place) -> programs.ProcessBuilder = "redirectError"
 
 /// The program started, or why it could not be.
-extern method started(builder: Starter) -> Result<Running, String> = "start"
+extern method started(builder: programs.ProcessBuilder) -> Result<Running, String> = "start"
 
 /// The status the program ends with, once it has ended.
 extern method int waited(running: Running) -> Result<Int, String> = "waitFor"
@@ -186,9 +185,6 @@ type Streams = {
 
 /// A unit of time, which a limit is counted in.
 extern type Unit = "java.util.concurrent.TimeUnit"
-
-/// A program to start, with where it starts and what it reads and writes.
-extern type Starter = "java.lang.ProcessBuilder"
 
 /// A program that was started.
 extern type Running = "java.lang.Process"

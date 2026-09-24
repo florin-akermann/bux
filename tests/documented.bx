@@ -44,17 +44,16 @@ fn held_within(paths: List<String>, setting: Setting, memo: command.Memo) -> Lis
     [found, held.nothing_failed(staging.tests)]
 }
 
-/// Every module the runner tests: those under `spec` at any depth, and those directly in each of
-/// `directories`, which are the library, the compiler, and the runner.
-// example: list.length(modules_of(spec: "no-such-directory", directories: ["no-such-directory"])) == 0
-fn modules_of(spec: String, directories: List<String>) -> List<String> {
-    var found = walk.every_file(spec, ".bx")
+/// Every module the runner tests, one list for each place: those directly in each of
+/// `directories`, which are the runner, the compiler, and the library, then those under `spec` at
+/// any depth.
+// example: list.length(module_groups(spec: "no-such-directory", directories: ["no-such-directory"])) == 2
+fn module_groups(spec: String, directories: List<String>) -> List<List<String>> {
+    var groups = []
     for directory in directories {
-        for path in walk.files_in(directory, ".bx") {
-            found = list.push(found, path)
-        }
+        groups = list.push(groups, walk.files_in(directory, ".bx"))
     }
-    found
+    list.push(groups, walk.every_file(spec, ".bx"))
 }
 
 /// The run of every module of `paths` that states example lines, each written into a directory of
