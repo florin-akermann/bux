@@ -558,7 +558,7 @@ fn named_values(named: List<ast.NamedArgument>) -> List<ast.Expr> {
 fn field_values(fields: List<ast.FieldValue>) -> List<ast.Expr> {
     var found = []
     for one in fields {
-        found = list.push(found, one.value)
+        found = list.push(found, ast.field_expression(one))
     }
     found
 }

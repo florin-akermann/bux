@@ -11,9 +11,9 @@ import list
 import strings
 
 /// Every property of the lowering, each checked over `cases` drawn modules, in a fixed order.
-// example: list.length(every_property(0, ir.little_library())) == 8
+// example: list.length(every_property(0, ir.little_library())) == 9
 fn every_property(cases: Int, library: ir.Library) -> List<held.Held> {
-    [lowering_one_module_twice_gives_the_same_classes(cases, library), every_class_a_module_writes_is_named_once(cases, library), every_method_ends_by_leaving_it(cases, library), a_module_has_an_entry_point_exactly_when_it_declares_main(cases, library), no_class_declares_a_method_the_object_model_gives_it(cases, library), the_one_equality_a_module_calls_is_the_one_string_declares(cases, library), a_written_list_stores_each_element_and_builds_one_list(cases, library), as_many_values_stand_for_nothing_as_a_list_writes_units(cases, library)]
+    [lowering_one_module_twice_gives_the_same_classes(cases, library), every_class_a_module_writes_is_named_once(cases, library), every_method_ends_by_leaving_it(cases, library), a_module_has_an_entry_point_exactly_when_it_declares_main(cases, library), no_class_declares_a_method_the_object_model_gives_it(cases, library), the_one_equality_a_module_calls_is_the_one_string_declares(cases, library), a_written_list_stores_each_element_and_builds_one_list(cases, library), as_many_values_stand_for_nothing_as_a_list_writes_units(cases, library), a_bare_field_lowers_as_the_field_written_whole(cases, library)]
 }
 
 /// The same module, lowered twice, gives the same classes, which are written as the same bytes.
@@ -64,6 +64,12 @@ fn as_many_values_stand_for_nothing_as_a_list_writes_units(cases: Int, library: 
     checked(property: Units, cases: cases, library: library)
 }
 
+/// A record literal with a field written bare and one with `name: name` write the same classes.
+// example: held.is_held(a_bare_field_lowers_as_the_field_written_whole(0, ir.little_library()))
+fn a_bare_field_lowers_as_the_field_written_whole(cases: Int, library: ir.Library) -> held.Held {
+    checked(property: BareField, cases: cases, library: library)
+}
+
 /// `property` checked over `cases` drawn modules, each drawn from a seed of its own.
 // example: checked(property: Twice, cases: 0, library: ir.little_library()).cases == 0
 fn checked(property: Property, cases: Int, library: ir.Library) -> held.Held {
@@ -90,6 +96,7 @@ fn drawing(property: Property, draw: drawn.Draw, library: ir.Library) -> Drawing
         StringEquality => string_equality(draw, library)
         ListWritten => list_written(draw, library)
         Units => units(draw, library)
+        BareField => bare_field(draw, library)
     }
 }
 
@@ -105,6 +112,7 @@ fn name_of(property: Property) -> String {
         StringEquality => "the_one_equality_a_module_calls_is_the_one_string_declares"
         ListWritten => "a_written_list_stores_each_element_and_builds_one_list"
         Units => "as_many_values_stand_for_nothing_as_a_list_writes_units"
+        BareField => "a_bare_field_lowers_as_the_field_written_whole"
     }
 }
 
@@ -336,6 +344,49 @@ fn is_new(instruction: ir.Instruction) -> Bool {
     }
 }
 
+/// A record built and updated with each field drawn bare or whole, beside one with none bare.
+///
+/// The two write the same classes as the same bytes, so the two forms type and lower alike.
+// example: bare_field(drawn.seeded(1), ir.little_library()).why == ""
+fn bare_field(draw: drawn.Draw, library: ir.Library) -> Drawing {
+    let many = drawn.picked(draw, [1, 2, 3, 4], 1)
+    var forms = []
+    for number in drawn.numbers(drawn.next(draw), many, 2) {
+        forms = list.push(forms, or(list.at([Whole, Bare], number), Whole))
+    }
+    let source = record_built(many, forms)
+    let whole = record_built(many, [])
+    Drawing { source: source, why: compiled.differing(compiled.written_alone(source, library), compiled.written_alone(whole, library)) }
+}
+
+/// A module that builds a record of `many` fields and updates its first, each field in the form
+/// `forms` holds at its index, and written `name: name` where it holds none.
+// example: record_built(1, [Bare]) == "fn built(first: Int) -> Record {\n    let made = Record { first }\n    made { first }\n}\n\ntype Record = {\n    first: Int\n}\n"
+fn record_built(many: Int, forms: List<FieldForm>) -> String {
+    var parameters = []
+    var given = []
+    var declared = ""
+    for list.length(given) < many {
+        let index = list.length(given)
+        let name = or(list.at(["first", "second", "third", "fourth"], index), "")
+        let field = name + ": " + or(list.at(["Int", "String", "List<Int>", "List<String>"], index), "")
+        parameters = list.push(parameters, field)
+        given = list.push(given, field_given(name, or(list.at(forms, index), Whole)))
+        declared += "    " + field + "\n"
+    }
+    "fn built(" + strings.join(parameters, ", ") + ") -> Record {\n    let made = Record { " + strings.join(given, ", ") + " }\n    made { " + or(list.at(given, 0), "") + " }\n}\n\ntype Record = {\n" + declared + "}\n"
+}
+
+/// The field `name` of a record literal, written in `form`.
+// example: field_given("id", Bare) == "id"
+// example: field_given("id", Whole) == "id: id"
+fn field_given(name: String, form: FieldForm) -> String {
+    match form {
+        Bare => name
+        Whole => name + ": " + name
+    }
+}
+
 /// The modules most properties draw from, each written in one construct or another.
 // example: list.length(sources()) == 10
 fn sources() -> List<String> {
@@ -357,6 +408,11 @@ type Drawing = {
     why: String
 }
 
+/// The form of one field of a drawn record literal: a bare `name`, or `name: name`.
+type FieldForm =
+    | Bare
+    | Whole
+
 /// Each property of the lowering, which names the module it draws and the invariant it holds.
 type Property =
     | Twice
@@ -367,3 +423,4 @@ type Property =
     | StringEquality
     | ListWritten
     | Units
+    | BareField

@@ -1,0 +1,14 @@
+// The formatter keeps the form of each field that the author wrote: a bare `id` stays bare, and
+// `name: name` stays whole. Neither form is rewritten into the other.
+// example: renamed(7, "ada").name == "ada"
+fn renamed(id: Int, name: String) -> User {
+    let user = User { id, name: name }
+    let other = User { id: id, name }
+    let kept = other { id }
+    user { name, id: kept.id }
+}
+
+type User = {
+    id: Int
+    name: String
+}

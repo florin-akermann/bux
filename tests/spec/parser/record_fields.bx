@@ -1,0 +1,13 @@
+// A field of a record literal is written `name: value`, or as a bare `name` that reads the
+// binding of that name. The two are two forms, not one, so the tree keeps the form written.
+// The update form writes its fields by the same rule.
+// example: built(7, "ada").id == 7
+fn built(id: Int, name: String) -> User {
+    let user = User { id, name: name }
+    user { name }
+}
+
+type User = {
+    id: Int
+    name: String
+}
