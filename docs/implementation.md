@@ -391,8 +391,7 @@ The runs of before and after took turns, under a load of 11 to 12 on 12 cores fr
 ### The profile of 2026-09-24
 
 Item 111 profiled an Apple M4 Pro with 12 processors, on JDK 28-ea+16, under a load of 10 to 30.
-Each number is the median of two runs or more; a wall time grows with load, but a share does not.
-A recorded command is the line that `bin/bux` or `bin/runner` starts, with the next flag added.
+Each number is a median of two runs or more of `bin/bux` or `bin/runner`, with this flag added.
 `-XX:StartFlightRecording=filename=build.jfr,settings=profile,jdk.ExecutionSample#period=1ms`.
 `jfr print --json --stack-depth 4096 --events jdk.ExecutionSample build.jfr` gives the samples.
 A script outside the repository gave each sample to its top frame in a module of the compiler.
@@ -401,34 +400,35 @@ Resolving is `resolver`, lowering is `ir`, and class writing is `jvm`, `bytes`, 
 Typing is `declared`, `infer`, `unify`, `types`, `surface`, `exhaustiveness`, and `holes`.
 It is also `escapes`, `carried`, `boundary`, `refusal`, and `processes`.
 The job held the 25 modules of `compiler/`, and it staged 24 runs with the class path of the runner.
-A temporary driver timed `documented.every_run_staged` and then `documented.runs_held`.
 
-| Phase | Build of `compiler/main.bx` | Job over `compiler/` | Runner pass |
-|-------|-----------------------------|----------------------|-------------|
-| Typing | 37%, 1.28 s | 22%, 2.4 s | 22% |
-| Loading | 26%, 0.89 s | 31%, 3.4 s | 28% |
-| Class writing | 16%, 0.54 s | 21%, 2.4 s | 20% |
-| Of it, disk writes | 2% to 4% | 2%, 0.2 s | 4% |
-| Lowering | 13%, 0.46 s | 22%, 2.5 s | 24% |
-| Resolving | 9%, 0.32 s | 4%, 0.5 s | 5% |
-| JVM starts and runs | none | 24 runs, 3.3 s | 401 JVMs |
+| Phase | Build of `compiler/main.bx` | Job over `compiler/` | Runner pass | `bux test tests` |
+|-------|-----------------------------|----------------------|-------------|------------------|
+| Typing | 37%, 1.28 s | 22%, 2.4 s | 22% | 44% |
+| Loading | 26%, 0.89 s | 31%, 3.4 s | 28% | 30% |
+| Class writing | 16%, 0.54 s | 21%, 2.4 s | 20% | 7% |
+| Of it, disk writes | 2% to 4% | 2%, 0.2 s | 4% | 1% |
+| Lowering | 13%, 0.46 s | 22%, 2.5 s | 24% | 10% |
+| Resolving | 9%, 0.32 s | 4%, 0.5 s | 5% | 10% |
+| JVM starts and runs | none | 24 runs, 3.3 s | 401 JVMs | 43 JVMs, 9.9 s |
 
 The seconds of the build are its shares of 3.5 s, the wall time of its least loaded run.
 With JFR the build took 3.5 s, 6.5 s, and 7.4 s, and six builds without it had a median of 5.6 s.
 The seconds of the job are its shares of the 11.2 s it staged, before its 3.3 s of runs.
 With JFR the job took 15.4 s, and without it 19.3 s and 16.0 s; the runner took 79.4 s and 77.9 s.
 The lexer reads each source three times: `parser.over`, `format.printer_of`, `command.commented_of`.
-Each run of a job loads and parses its import closure again, because the memo holds only types.
 `escapes`, reached once for each expression that inference settled, is 11% to 12% of a build.
 A build used 12 s to 17 s of processor time, and 5.9 s, not 14.8 s, with `-XX:TieredStopAtLevel=1`.
 So the C2 JIT uses about 9 s of each build, and a pool of workers shares the processors with it.
 The collector paused a build for 0.1 s and a runner pass for 3.8 s, and used 0.6 s and 27 s.
 A runner pass used 368 s of processor time, of which 275 s were in the JVM of the runner.
-`jdk.ProcessStart` counts the JVMs of one pass: 393 `java`, 6 `jar`, and 2 through `bin/bux`.
-Of the `java` ones, 163 ran example lines, 102 command lines, and 90 examples headed `expect-run`.
-The other 38 are 30 of `started.bx` and 8 of the other parts.
+`jdk.ProcessStart` counts 393 `java`, 6 `jar`, and 2 `bin/bux` JVMs in a pass; 30 ran `started.bx`.
+Of the other `java` ones, 163 ran example lines, 102 command lines, 90 `expect-run`, and 8 the rest.
 A JVM that runs a trivial `main` with the line of `bux test` took 0.064 s, the median of 40 starts.
 It used 0.08 s of processor time, so the 401 starts of a pass cost about 32 s, or 9% of it.
+A build writes 575 specialized bodies of 42 generics, the methods `name$Type` of its classes.
+In one pass, the 533 later copies take 17% of the code bytes, and so 0.17 s of lowering and writing.
+`bux test tests` took 118 s and 110 s; with JFR it took 177 s and waited 9.9 s on its 43 JVMs.
+At 0.064 s their starts cost 2.8 s; Item 123 said 0.12 s, and a start took 0.11 s at a load of 20.
 
 ### Drawn properties
 
