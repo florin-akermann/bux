@@ -349,6 +349,7 @@ So a limit near the time of the longest program would stop a correct run.
 Before Item 094, the longest program took 0.14 s, and the limit was 1 s.
 `launched.bx` holds the mechanism: a program that never ends is stopped at a limit of 1 s.
 `bin/runner golden` writes each golden file again, for an answer that changes on purpose.
+It also adds each command line on an example that `fixtures.txt` does not hold.
 On 2026-09-23 `bin/runner` took 182 s before Item 093 and 97 s after it.
 On 2026-09-23 `bin/runner` took 98 s before Item 094 and 53 s after it.
 Before Item 094 the examples took 5 s, and after it they took 4 s.
