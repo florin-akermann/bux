@@ -228,7 +228,10 @@ That directory is outside the repository, and the script deletes it when it ends
 
 Stage 2 is stage 1 byte for byte.
 Stage 2 has the same class files as stage 1, at the same paths, with the same bytes.
-When they differ, the script names the first class that differs and ends with status 1.
+One `diff -rq` over the two `target/` directories compares the stages.
+When they differ, the script names the first class of that answer and ends with status 1.
+A class or a directory that only one stage holds is a difference too, and the script names it.
+When `diff` cannot compare the stages, the script ends with the status of `diff`, which is 2.
 A difference is a defect in the compiler under `compiler/`, and the fix goes there.
 The script refuses with status `2` when `JAVA_HOME` names no JDK and when the seed is missing.
 
