@@ -242,7 +242,7 @@ fn chosen_tokens(seed: Int) -> List<Int> {
 }
 
 /// The texts of the separable tokens at `chosen`.
-// example: separable_texts([0, 4]) == ["user", "42"]
+// example: separable_texts([0, 6]) == ["user", "42"]
 fn separable_texts(chosen: List<Int>) -> List<String> {
     var texts = []
     for index in chosen {
@@ -252,7 +252,7 @@ fn separable_texts(chosen: List<Int>) -> List<String> {
 }
 
 /// The kinds of the separable tokens at `chosen`.
-// example: separable_kinds([4]) == [lexer.Integer]
+// example: separable_kinds([6]) == [lexer.Integer]
 fn separable_kinds(chosen: List<Int>) -> List<lexer.TokenKind> {
     var kinds = []
     for index in chosen {
@@ -280,21 +280,21 @@ fn drawn_text(seed: Int) -> String {
 
 /// What a drawn text is made of: a piece of every token class, and each character that ends
 /// one, starts one, or takes two bytes or four in UTF-8.
-// example: list.length(pieces()) == 22
+// example: list.length(pieces()) == 24
 fn pieces() -> List<String> {
-    ["fn", "fnord", "_", "x1", "123", "\"", "\\", "//", "+=", ":", "=", "-", ">", "&", "@", " ", "\t", "\r", "\n", "é", "€", "😀"]
+    ["fn", "fnord", "test", "tested", "_", "x1", "123", "\"", "\\", "//", "+=", ":", "=", "-", ">", "&", "@", " ", "\t", "\r", "\n", "é", "€", "😀"]
 }
 
 /// The text of each token class but comments and newlines, which one space cannot keep apart.
 // example: list.length(every_separable_text()) == list.length(every_separable_kind())
 fn every_separable_text() -> List<String> {
-    ["user", "x1", "fn", "match", "42", "\"a b\"", "\"\\\"\"", "+=", "->", "@"]
+    ["user", "x1", "fn", "match", "test", "testing", "42", "\"a b\"", "\"\\\"\"", "+=", "->", "@"]
 }
 
 /// The kind of each text of `every_separable_text`, in the same order.
-// example: list.length(every_separable_kind()) == 10
+// example: list.length(every_separable_kind()) == 12
 fn every_separable_kind() -> List<lexer.TokenKind> {
-    [lexer.Identifier, lexer.Identifier, lexer.Keyword(lexer.Fn), lexer.Keyword(lexer.Match), lexer.Integer, lexer.String, lexer.String, lexer.Punct(lexer.PlusEq), lexer.Punct(lexer.Arrow), lexer.Unknown]
+    [lexer.Identifier, lexer.Identifier, lexer.Keyword(lexer.Fn), lexer.Keyword(lexer.Match), lexer.Keyword(lexer.Test), lexer.Identifier, lexer.Integer, lexer.String, lexer.String, lexer.Punct(lexer.PlusEq), lexer.Punct(lexer.Arrow), lexer.Unknown]
 }
 
 /// Where a walk over a source stands, in UTF-16 code units and in UTF-8 bytes.

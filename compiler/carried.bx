@@ -30,12 +30,16 @@ fn inferred_and_read(inferred: Result<infer.Inference, refusal.TypeError>) -> Re
 
 /// `inference`, or the refusal of the first expression whose type holds `Option<()>`.
 ///
-/// The functions are read in the order the module writes them.
+/// The functions are read in the order the module writes them, and then the tests.
 // example: carried_code("fn is_there() -> Bool {\n    match Some(()) {\n        Some(_) => true\n        None => false\n    }\n}\n") == "L0432 34..42"
 // example: carried_code("fn is_there() -> Bool {\n    match Some(true) {\n        Some(held) => held\n        None => false\n    }\n}\n") == ""
+// example: carried_code("test \"a\" {\n    match Some(()) {\n        Some(_) => true\n        None => false\n    }\n}\n") == "L0432 21..29"
 fn nothing_carried(inference: infer.Inference) -> Result<infer.Inference, refusal.TypeError> {
     for function in infer.functions_of(inference.resolved.program) {
         _ = block_read(inference, function.body)?
+    }
+    for stated in ast.tests_of(inference.resolved.program) {
+        _ = block_read(inference, stated.body)?
     }
     Ok(inference)
 }

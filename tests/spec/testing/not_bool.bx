@@ -1,0 +1,5 @@
+// expect-error: L0400
+// The body of a test is a `Bool`, so a body whose last value is a number is refused.
+test "counts" {
+    1 + 2
+}

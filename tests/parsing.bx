@@ -13,9 +13,9 @@ import parser
 import strings
 
 /// Every property of the parser, each tried on `cases` drawn cases, in a fixed order.
-// example: list.length(every_property(1, ir.little_library())) == 5
+// example: list.length(every_property(1, ir.little_library())) == 6
 fn every_property(cases: Int, library: ir.Library) -> List<held.Held> {
-    [no_extern_declaration_writes_a_body(cases), parsing_is_deterministic(cases), an_error_span_is_not_empty_and_lies_within_the_source(cases), a_well_formed_program_parses(cases), item_spans_are_ordered_and_within_the_source(cases)]
+    [no_extern_declaration_writes_a_body(cases), parsing_is_deterministic(cases), an_error_span_is_not_empty_and_lies_within_the_source(cases), a_well_formed_program_parses(cases), item_spans_are_ordered_and_within_the_source(cases), a_test_inside_a_body_is_refused_at_its_word(cases)]
 }
 
 /// A drawn `extern` declaration parses to no function, and a body written after it is refused.
@@ -224,7 +224,7 @@ fn item_spans_fault(source: String) -> String {
     let length = lexing.byte_length(source)
     var previous_end = 0
     for declared in or_nothing(parser.parse(source)).items {
-        let span = item_span(declared)
+        let span = ast.extent_of(declared)
         let end = span.start + span.length
         if span.start < previous_end || span.length <= 0 || end > length {
             return "the item span " + shown(span) + " does not follow " + shown(previous_end) + " inside " + shown(length) + " bytes"
@@ -243,19 +243,71 @@ fn or_nothing(parsed: Result<ast.Program, parser.ParseError>) -> ast.Program {
     }
 }
 
-/// The span of one top-level declaration.
-// example: item_spans_fault("fn f() {\n}") == ""
-fn item_span(declared: ast.Item) -> lexer.Span {
-    match declared {
-        ast.Import(written) => written.span
-        ast.Type(written) => written.span
-        ast.Trait(written) => written.span
-        ast.Instance(written) => written.span
-        ast.Derive(written) => written.span
-        ast.Function(written) => written.span
-        ast.Extern(written) => written.span
-        ast.Process(written) => written.span
+/// A test written among the statements of a body is refused as `L0110`, at the word `test`,
+/// wherever among them it is written.
+// example: held.is_held(a_test_inside_a_body_is_refused_at_its_word(3))
+fn a_test_inside_a_body_is_refused_at_its_word(cases: Int) -> held.Held {
+    var found = held.nothing_failed(cases)
+    var case = 0
+    for case < cases {
+        let source = body_with_a_test(drawn.seed_of(case))
+        let why = inner_test_fault(source)
+        if why != "" {
+            found = held.with_failure(found, held.drawn_failure("a_test_inside_a_body_is_refused_at_its_word", drawn.seed_of(case), source, why))
+        }
+        case += 1
     }
+    found
+}
+
+/// Why the parse of `source`, whose one test is inside a body, is not the refusal of that test at
+/// its word, and `""` where it is.
+// example: inner_test_fault("fn f() {\n    test \"a\" {\n        true\n    }\n}\n") == ""
+fn inner_test_fault(source: String) -> String {
+    let start = lexing.byte_length(before_the_test(source))
+    let expected = shown(lexer.Span { start: start, length: 4 }) + " a test is written at the top level of a module, and this one is inside a body\nhelp: a test is an item of its own; write it below every declaration of the module\n"
+    let printed = parser.printed(source)
+    if printed != expected {
+        return "the parser says " + held.quoted(printed)
+    }
+    ""
+}
+
+/// The text of `source` before the first `test`.
+// example: before_the_test("ab test") == "ab "
+fn before_the_test(source: String) -> String {
+    var index = 0
+    for index < strings.length(source) && !lexer.has_prefix(lexer.Rest { source: source, start: index }, "test") {
+        index += 1
+    }
+    or(strings.cut(source, 0, index), "")
+}
+
+/// A function of up to 4 statements drawn from `seed`, with a test written among them.
+// example: strings.length(body_with_a_test(1)) > 0
+fn body_with_a_test(seed: Int) -> String {
+    let draw = drawn.seeded(seed)
+    let statements = drawn.numbers(drawn.next(draw), drawn.number(draw, 5), list.length(statement_shapes()))
+    let at = drawn.number(drawn.next(drawn.next(draw)), list.length(statements) + 1)
+    var written = "fn f() {\n"
+    var index = 0
+    for shape in statements {
+        if index == at {
+            written += "    test \"inner\" {\n        true\n    }\n"
+        }
+        written += "    " + or(list.at(statement_shapes(), shape), "") + "\n"
+        index += 1
+    }
+    if at == list.length(statements) {
+        written += "    test \"inner\" {\n        true\n    }\n"
+    }
+    written + "}\n"
+}
+
+/// The statements a drawn body is made of, none of which holds the word `test`.
+// example: list.length(statement_shapes()) == 4
+fn statement_shapes() -> List<String> {
+    ["let total = 1", "var count = 2", "count += 1", "_ = f(x: \"é\")"]
 }
 
 /// Up to 8 well-formed items, drawn from `seed`.
@@ -270,7 +322,7 @@ fn chosen_items(seed: Int) -> List<String> {
 }
 
 /// The item shapes a well-formed program is built from, each in canonical form.
-// example: list.length(items()) == 9
+// example: list.length(items()) == 10
 fn items() -> List<String> {
-    ["import io", "type UserId = UserId(Int)", "type User = {\n    id: UserId\n}", "type Payment =\n    | Pending\n    | Failed(String)", "fn identity(x) {\n    x\n}", "fn named(a: Int) -> Int {\n    joined(first: a, second: a)\n}", "fn total(users: List<User>) -> Int {\n    var total = 0\n    for user in users {\n        total += 1\n    }\n    total\n}", "fn describe(p: Payment) -> String {\n    match p {\n        Pending =>\n            \"waiting\"\n\n        Failed(reason) =>\n            reason\n    }\n}", "fn pick(a: Int) -> Int {\n    if a > 1 {\n        return a\n    } else {\n        return 0\n    }\n}"]
+    ["import io", "test \"adds up\" {\n    let total = 1 + 2\n    total == 3\n}", "type UserId = UserId(Int)", "type User = {\n    id: UserId\n}", "type Payment =\n    | Pending\n    | Failed(String)", "fn identity(x) {\n    x\n}", "fn named(a: Int) -> Int {\n    joined(first: a, second: a)\n}", "fn total(users: List<User>) -> Int {\n    var total = 0\n    for user in users {\n        total += 1\n    }\n    total\n}", "fn describe(p: Payment) -> String {\n    match p {\n        Pending =>\n            \"waiting\"\n\n        Failed(reason) =>\n            reason\n    }\n}", "fn pick(a: Int) -> Int {\n    if a > 1 {\n        return a\n    } else {\n        return 0\n    }\n}"]
 }

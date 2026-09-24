@@ -67,7 +67,7 @@ fn check_code(answer: Result<(), CheckError>) -> String {
 }
 
 /// The code a refusal of the check carries, which `docs/specs/diagnostics.md` lists.
-// example: code_of(OutOfPlace(OutOfOrder { module: "io", against: AfterADeclaration, span: lexer.Span { start: 0, length: 9 } })) == "L0201"
+// example: code_of(OutOfPlace(OutOfOrder { against: ImportAfterADeclaration("io"), span: lexer.Span { start: 0, length: 9 } })) == "L0201"
 fn code_of(refused: CheckError) -> String {
     match refused {
         Unparsed(error) => parser.code_of(error.kind)
@@ -108,7 +108,7 @@ fn deviation_message(deviation: Deviation) -> String {
 }
 
 /// The `help:` line of a refusal of the check, and `""` where a parse error has none.
-// example: help_of(OutOfPlace(OutOfOrder { module: "io", against: AfterADeclaration, span: lexer.Span { start: 0, length: 9 } })) == "imports come first, before every declaration"
+// example: help_of(OutOfPlace(OutOfOrder { against: ImportAfterADeclaration("io"), span: lexer.Span { start: 0, length: 9 } })) == "imports come first, before every declaration"
 fn help_of(refused: CheckError) -> String {
     match refused {
         Unparsed(error) => parser.help_of(error.kind)
@@ -129,7 +129,7 @@ fn deviation_help(deviation: Deviation) -> String {
 }
 
 /// The source a refusal of the check points at.
-// example: shown(span_of(OutOfPlace(OutOfOrder { module: "io", against: AfterADeclaration, span: lexer.Span { start: 2, length: 9 } }))) == "2..11"
+// example: shown(span_of(OutOfPlace(OutOfOrder { against: ImportAfterADeclaration("io"), span: lexer.Span { start: 2, length: 9 } }))) == "2..11"
 fn span_of(refused: CheckError) -> lexer.Span {
     match refused {
         Unparsed(error) => error.span
@@ -222,14 +222,16 @@ fn line_from(text: String, start: Int, end: Int, at: Int) -> WrittenLine {
     WrittenLine { text: cut, span: lexer.Span { start: at, length: lexer.byte_length(lexer.Rest { source: cut, start: 0 }, strings.length(cut)) } }
 }
 
-/// The first import of `parsed` that is out of place, where one is.
+/// The first item of `parsed` that is out of place, where one is.
 ///
-/// Imports come first, sorted by the module they name. The rule is checked and never rewritten:
-/// the compiler says where an import belongs, and the author moves it.
+/// Imports come first, sorted by the module they name, and tests come last, after every
+/// declaration. The rule is checked and never rewritten: the compiler says where an item belongs,
+/// and the author moves it.
 // example: !is_misplaced(out_of_order(ok_or(parser.parse("import files\n\nimport io\n"), ast.Program { items: [] })))
 // example: is_misplaced(out_of_order(ok_or(parser.parse("fn f() {\n}\n\nimport io\n"), ast.Program { items: [] })))
+// example: is_misplaced(out_of_order(ok_or(parser.parse("test \"a\" {\n    true\n}\n\nfn f() {\n}\n"), ast.Program { items: [] })))
 fn out_of_order(parsed: ast.Program) -> Option<OutOfOrder> {
-    var above = Above { declared: false, last: "" }
+    var above = Above { reached: AmongImports, last: "" }
     for written in parsed.items {
         let found = misplaced(written, above)
         if is_misplaced(found) {
@@ -240,7 +242,7 @@ fn out_of_order(parsed: ast.Program) -> Option<OutOfOrder> {
     None
 }
 
-/// Whether an import was found out of place.
+/// Whether an item was found out of place.
 // example: !is_misplaced(None)
 fn is_misplaced(found: Option<OutOfOrder>) -> Bool {
     match found {
@@ -250,51 +252,69 @@ fn is_misplaced(found: Option<OutOfOrder>) -> Bool {
 }
 
 /// Why `written` is out of place below what `above` says is written above it, where it is.
-// example: !is_misplaced(misplaced(ast.Derive(ast.DeriveDeclaration { traits: [], for_type: ast.Name { text: "Box", span: lexer.Span { start: 0, length: 3 } }, span: lexer.Span { start: 0, length: 3 } }), Above { declared: true, last: "" }))
+// example: !is_misplaced(misplaced(ast.Derive(ast.DeriveDeclaration { traits: [], for_type: ast.Name { text: "Box", span: lexer.Span { start: 0, length: 3 } }, span: lexer.Span { start: 0, length: 3 } }), Above { reached: AmongDeclarations, last: "" }))
+// example: is_misplaced(misplaced(ast.Derive(ast.DeriveDeclaration { traits: [], for_type: ast.Name { text: "Box", span: lexer.Span { start: 0, length: 3 } }, span: lexer.Span { start: 0, length: 3 } }), Above { reached: AmongTests, last: "" }))
 fn misplaced(written: ast.Item, above: Above) -> Option<OutOfOrder> {
     match written {
         ast.Import(imported) => import_misplaced(imported, above)
-        _ => None
+        ast.Test(_) => None
+        _ => declaration_misplaced(ast.extent_of(written), above)
     }
 }
 
 /// Why `imported` is out of place, where it is: a declaration above it, or an import sorting after.
-// example: order_message(or(import_misplaced(ast.ImportDeclaration { module: ast.Name { text: "io", span: lexer.Span { start: 7, length: 2 } }, span: lexer.Span { start: 0, length: 9 } }, Above { declared: false, last: "list" }), OutOfOrder { module: "", against: AfterADeclaration, span: lexer.Span { start: 0, length: 0 } })) == "`import io` is written after `import list`"
+// example: order_message(or(import_misplaced(ast.ImportDeclaration { module: ast.Name { text: "io", span: lexer.Span { start: 7, length: 2 } }, span: lexer.Span { start: 0, length: 9 } }, Above { reached: AmongImports, last: "list" }), OutOfOrder { against: DeclarationAfterATest, span: lexer.Span { start: 0, length: 0 } })) == "`import io` is written after `import list`"
 fn import_misplaced(imported: ast.ImportDeclaration, above: Above) -> Option<OutOfOrder> {
     let named = imported.module.text
-    if above.declared {
-        return Some(OutOfOrder { module: named, against: AfterADeclaration, span: imported.span })
+    if above.reached != AmongImports {
+        return Some(OutOfOrder { against: ImportAfterADeclaration(named), span: imported.span })
     }
     if above.last > named {
-        return Some(OutOfOrder { module: named, against: AfterAnImport(above.last), span: imported.span })
+        return Some(OutOfOrder { against: ImportAfterAnImport { module: named, before: above.last }, span: imported.span })
+    }
+    None
+}
+
+/// Why a declaration written at `span` is out of place, where a test is written above it.
+// example: !is_misplaced(declaration_misplaced(lexer.Span { start: 0, length: 1 }, Above { reached: AmongDeclarations, last: "" }))
+fn declaration_misplaced(span: lexer.Span, above: Above) -> Option<OutOfOrder> {
+    if above.reached == AmongTests {
+        return Some(OutOfOrder { against: DeclarationAfterATest, span: span })
     }
     None
 }
 
 /// What is written above the item after `written`, once `written` is.
-// example: after_item(ast.Derive(ast.DeriveDeclaration { traits: [], for_type: ast.Name { text: "Box", span: lexer.Span { start: 0, length: 3 } }, span: lexer.Span { start: 0, length: 3 } }), Above { declared: false, last: "io" }).declared
+///
+/// A declaration below a test is refused before this is asked, so a declaration is never after one.
+// example: after_item(ast.Derive(ast.DeriveDeclaration { traits: [], for_type: ast.Name { text: "Box", span: lexer.Span { start: 0, length: 3 } }, span: lexer.Span { start: 0, length: 3 } }), Above { reached: AmongImports, last: "io" }).reached == AmongDeclarations
 fn after_item(written: ast.Item, above: Above) -> Above {
     match written {
         ast.Import(imported) => above { last: imported.module.text }
-        _ => above { declared: true }
+        ast.Test(_) => above { reached: AmongTests }
+        _ => above { reached: AmongDeclarations }
     }
 }
 
-/// The `error:` line of an import out of place, without its prefix.
-// example: order_message(OutOfOrder { module: "io", against: AfterADeclaration, span: lexer.Span { start: 0, length: 9 } }) == "`import io` is written after a declaration"
+/// The `error:` line of an item out of place, without its prefix.
+// example: order_message(OutOfOrder { against: ImportAfterADeclaration("io"), span: lexer.Span { start: 0, length: 9 } }) == "`import io` is written after a declaration"
+// example: order_message(OutOfOrder { against: DeclarationAfterATest, span: lexer.Span { start: 0, length: 9 } }) == "this declaration is written after a test"
 fn order_message(out: OutOfOrder) -> String {
     match out.against {
-        AfterADeclaration => "`import " + out.module + "` is written after a declaration"
-        AfterAnImport(before) => "`import " + out.module + "` is written after `import " + before + "`"
+        ImportAfterADeclaration(module) => "`import " + module + "` is written after a declaration"
+        ImportAfterAnImport { module, before } => "`import " + module + "` is written after `import " + before + "`"
+        DeclarationAfterATest => "this declaration is written after a test"
     }
 }
 
-/// The `help:` line of an import out of place, which says where it belongs.
-// example: order_help(OutOfOrder { module: "io", against: AfterAnImport("list"), span: lexer.Span { start: 0, length: 9 } }) == "`io` sorts before `list`"
+/// The `help:` line of an item out of place, which says where it belongs.
+// example: order_help(OutOfOrder { against: ImportAfterAnImport { module: "io", before: "list" }, span: lexer.Span { start: 0, length: 9 } }) == "`io` sorts before `list`"
+// example: order_help(OutOfOrder { against: DeclarationAfterATest, span: lexer.Span { start: 0, length: 9 } }) == "tests come last, after every declaration"
 fn order_help(out: OutOfOrder) -> String {
     match out.against {
-        AfterADeclaration => "imports come first, before every declaration"
-        AfterAnImport(before) => "`" + out.module + "` sorts before `" + before + "`"
+        ImportAfterADeclaration(module) => "imports come first, before every declaration"
+        ImportAfterAnImport { module, before } => "`" + module + "` sorts before `" + before + "`"
+        DeclarationAfterATest => "tests come last, after every declaration"
     }
 }
 
@@ -514,6 +534,7 @@ fn item_names(names: List<Declared>, written: ast.Item) -> List<Declared> {
         ast.Function(declaration) => function_names(names, declaration)
         ast.Extern(declaration) => extern_names(names, declaration)
         ast.Process(declaration) => methods_names(list.push(names, Declared { name: declaration.name, kind: ProcessName }), declaration.functions)
+        ast.Test(_) => names
     }
 }
 
@@ -665,7 +686,15 @@ fn item(printer: Printer, declared: ast.Item) -> Printer {
         ast.Function(declaration) => function(printer, declaration, declaration.type_parameters)
         ast.Extern(declaration) => line(printer, declaration.span, extern_text(declaration))
         ast.Process(declaration) => process_declaration(printer, declaration)
+        ast.Test(declaration) => test_declaration(printer, declaration)
     }
+}
+
+/// `test "name" { … }`: the name in quotes, then the body as a function's body is written.
+// example: ok_or(format("test  \"sums\"{\n    true\n}"), "") == "test \"sums\" {\n    true\n}\n"
+fn test_declaration(printer: Printer, declaration: ast.TestDeclaration) -> Printer {
+    let opened = open_line(comments_above(printer, declaration.span))
+    end_line(block(word(opened, "test " + spelled(declaration.name.text)), declaration.body, Closed))
 }
 
 /// `extern static read(path: Path) -> String = "java.nio.file.Files.readString"`, on one line.
@@ -1649,23 +1678,35 @@ type WrittenLine = {
     span: lexer.Span
 }
 
-/// What is written above an item: a declaration or not, and the module the last import names.
+/// What is written above an item: how far down the file it is, and the module the last import names.
 type Above = {
-    declared: Bool
+    reached: Reached
     last: String
 }
 
-/// An import written somewhere canonical form does not put it, and what it is out of place with.
+derive Eq for Reached
+
+/// How far down a file an item is: among the imports, the declarations, or the tests.
+type Reached =
+    | AmongImports
+    | AmongDeclarations
+    | AmongTests
+
+/// An item written somewhere canonical form does not put it, and what it is out of place with.
 type OutOfOrder = {
-    module: String
     against: Against
     span: lexer.Span
 }
 
-/// What an import is out of place with: a declaration above it, or an import that sorts after it.
+/// What an item is out of place with: an import with a declaration above it or with an import
+/// that sorts after it, or a declaration with a test above it.
 type Against =
-    | AfterADeclaration
-    | AfterAnImport(String)
+    | ImportAfterADeclaration(String)
+    | ImportAfterAnImport {
+        module: String
+        before: String
+    }
+    | DeclarationAfterATest
 
 /// A declared name spelled some way other than the one canonical form spells it.
 type Misspelling =

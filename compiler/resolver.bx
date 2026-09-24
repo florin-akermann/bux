@@ -172,10 +172,26 @@ fn module_walked(resolver: Resolver, program: ast.Program) -> Result<Resolver, R
     for declared in program.items {
         walked = declare(walked, declared)?
     }
+    _ = tests_named_once(program)?
     for declared in program.items {
         walked = define(walked, declared)?
     }
     Ok(walked)
+}
+
+/// Nothing where no two tests of `program` share a name, and the second of the first pair that does.
+///
+/// A test is reported by its name, so two tests of one name would be one line of a report.
+// example: printed("test \"a\" {\n    true\n}\n\ntest \"a\" {\n    true\n}\n", prelude_of(ast.Program { items: [] })) == "refused\nL0319 28..31 two tests of this module are named \"a\"\nhelp: a report names a test by its name; rename one of the two\n"
+fn tests_named_once(program: ast.Program) -> Result<(), ResolveError> {
+    var seen = set.empty()
+    for stated in ast.tests_of(program) {
+        if set.has_value(seen, stated.name.text) {
+            return Err(at(stated.name, TestNamedTwice(stated.name.text)))
+        }
+        seen = set.insert(seen, stated.name.text)
+    }
+    Ok(())
 }
 
 /// The names `declared` puts in scope, which an instance and a derive put none of.
@@ -250,6 +266,7 @@ fn define(resolver: Resolver, declared: ast.Item) -> Result<Resolver, ResolveErr
         ast.Function(declaration) => function(resolver, declaration)
         ast.Extern(declaration) => declared_extern(resolver, declaration)
         ast.Process(declaration) => process_declaration(resolver, declaration)
+        ast.Test(declaration) => block(resolver, declaration.body)
     }
 }
 
@@ -1298,6 +1315,7 @@ fn with_placed(placed: List<Placed>, declared: ast.Item) -> List<Placed> {
         ast.Function(declaration) => list.push(placed, Placed { name: declaration.name, written: declaration.name.text, extent: declaration.span })
         ast.Extern(declaration) => list.push(placed, Placed { name: declaration.name, written: declaration.name.text, extent: declaration.span })
         ast.Process(declaration) => list.push(placed, Placed { name: declaration.name, written: declaration.name.text, extent: declaration.span })
+        ast.Test(_) => placed
     }
 }
 
@@ -1337,25 +1355,10 @@ fn resolved_printed(resolved: Resolved) -> String {
 fn end_of_items(program: ast.Program) -> Int {
     var end = 0
     for declared in program.items {
-        let extent = extent_of(declared)
+        let extent = ast.extent_of(declared)
         end = extent.start + extent.length
     }
     end
-}
-
-/// The source an item covers.
-// example: extent_of(ast.Import(ast.ImportDeclaration { module: ast.Name { text: "io", span: lexer.Span { start: 7, length: 2 } }, span: lexer.Span { start: 0, length: 9 } })).length == 9
-fn extent_of(declared: ast.Item) -> lexer.Span {
-    match declared {
-        ast.Import(declaration) => declaration.span
-        ast.Type(declaration) => declaration.span
-        ast.Trait(declaration) => declaration.span
-        ast.Instance(declaration) => declaration.span
-        ast.Derive(declaration) => declaration.span
-        ast.Function(declaration) => declaration.span
-        ast.Extern(declaration) => declaration.span
-        ast.Process(declaration) => declaration.span
-    }
 }
 
 /// The line of the name kept at `key`, and nothing where no name is kept there.
@@ -1448,6 +1451,7 @@ fn code_of(kind: ResolveErrorKind) -> String {
         NotAModule(_) => "L0313"
         BindsInsideOr(_) => "L0314"
         NotATypeParameter(_) => "L0318"
+        TestNamedTwice(_) => "L0319"
         NotAProcess(_) => "L0800"
         NotACall(_) => "L0800"
         NotSpawned(_) => "L0801"
@@ -1477,6 +1481,7 @@ fn message(kind: ResolveErrorKind) -> String {
         NotAModule(text) => "`" + text + "` is a module in neither scope, and a type is reached through one"
         BindsInsideOr(text) => "`" + text + "` binds inside an or-pattern, which binds nothing"
         NotATypeParameter(text) => "`" + text + "` is not a type parameter this instance declares"
+        TestNamedTwice(text) => "two tests of this module are named " + ast.quoted(text)
         NotAProcess(text) => "`spawn` starts a process this module declares, and `" + text + "` is not one"
         NotACall(text) => "`spawn` starts a process with a call, and `" + text + "` is written without one"
         NotSpawned(text) => "`" + text + "` is a process, so `spawn` starts it"
@@ -1506,6 +1511,7 @@ fn help_of(kind: ResolveErrorKind) -> String {
         NotAModule(_) => "a type of another module is reached through the import: write `demo.User`"
         BindsInsideOr(_) => "write one arm for each alternative where one of them binds"
         NotATypeParameter(_) => "an instance answers for every argument of its type: write `instance<T> Eq<Box<T>>`"
+        TestNamedTwice(_) => "a report names a test by its name; rename one of the two"
         NotAProcess(_) => "declare a `process` in this module and name it after `spawn`"
         NotACall(text) => "write the values that `start` takes in parentheses after the name, as in `spawn " + text + "()`"
         NotSpawned(_) => "write `spawn` before the call; a process is never called or held as a value"
@@ -1642,6 +1648,7 @@ type ResolveErrorKind =
     | NotAModule(String)
     | BindsInsideOr(String)
     | NotATypeParameter(String)
+    | TestNamedTwice(String)
     | NotAProcess(String)
     | NotACall(String)
     | NotSpawned(String)

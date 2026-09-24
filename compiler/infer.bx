@@ -118,6 +118,9 @@ fn module_inferred(resolved: resolver.Resolved, imported: surface.Imported, decl
         walking = function_at(walking, written, index)?
         index = index - 1
     }
+    for stated in ast.tests_of(resolved.program) {
+        walking = test_walked(walking, stated)?
+    }
     settle_positional(walking)
 }
 
@@ -245,6 +248,22 @@ fn function_walked(inference: Inference, function: ast.FunctionDeclaration) -> R
     let met = expect(inference: looked, expected: given_back, found: body.found, at: function.body.span)?
     let settled = function_settled(met, function, taken)?
     Ok(generalise(settled { introduced: [] }, key))
+}
+
+/// One test: its body walked as the body of a function that gives back `Bool`, and everything it
+/// waits on settled. A test has no signature, so nothing of it is generalised or named.
+// example: typed_code("test \"a\" {\n    true\n}\n") == ""
+// example: typed_code("test \"a\" {\n    1\n}\n") == "L0400 9..18"
+fn test_walked(inference: Inference, stated: ast.TestDeclaration) -> Result<Inference, refusal.TypeError> {
+    let body = block_walked(inference { promised: [], result: unify.truth() }, stated.body, GivesItsValue)?
+    let looked = look_up_fields(body.inference)?
+    let met = expect(inference: looked, expected: unify.truth(), found: body.found, at: stated.body.span)?
+    let propagated_all = settle_propagations(met)?
+    let literals_settled = settle_literals(propagated_all)?
+    let operators_settled = settle_operators(literals_settled)?
+    let requirements_settled = settle_requirements(operators_settled)?
+    let discards_settled = settle_discards(requirements_settled)?
+    Ok(discards_settled { introduced: [] })
 }
 
 /// The inference with `named` in scope at `declared_one`, where the signature gives it a type.

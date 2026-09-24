@@ -294,6 +294,7 @@ It holds these parts, each in a module of its own under `tests/`:
 - `exemplified.bx`: every example under `tests/spec`, to its header and to canonical form.
 - `siblings.bx`: every sibling file, to the view of its phase: tokens, tree, surface, format.
 - `documented.bx`: every `// example:` line of `tests/spec`, `library/`, `compiler/`, and `tests/`.
+  It also runs every `test` block of those modules, except the tests under `tests/spec/`.
 - The property modules that `every_property_held` in `runner.bx` names, one for each phase.
 - `commanded.bx`: the command line, held to the golden answers under `tests/commands/`.
 - `launched.bx`: the launcher `bin/bux`, and the time limit that a started program has.
@@ -315,6 +316,7 @@ The seconds are the sum of the times of the jobs of the part, which can be more 
 An example of such a line is `examples: 332 held in 4 s`.
 The parts are examples, siblings, example lines, properties, and command lines, in that order.
 Then it writes one line for each check it skipped and for each failure, then one line of counts.
+The line of counts also counts the `test` blocks that the jobs of example lines ran.
 It ends with status 0 only when nothing failed.
 
 Each job of example lines holds one memo of typed modules, `command.Memo`, from call to call.

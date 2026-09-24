@@ -43,7 +43,7 @@ fn program(from: Cursor) -> Result<ast.Program, ParseError> {
 
 /// A top-level declaration, which the keyword it starts with says the kind of.
 // example: position_after(item(over("import io\n"))) == 2
-// example: failed(item(over("x"))) == "0..1 expected an import, a type, a trait, an instance, a derive, a function, an extern, or a process, found `x`\n"
+// example: failed(item(over("x"))) == "0..1 expected an import, a type, a trait, an instance, a derive, a function, an extern, a process, or a test, found `x`\n"
 fn item(cursor: Cursor) -> Result<Parsed<ast.Item>, ParseError> {
     if is_at_keyword(cursor, lexer.Import) {
         return import_item(cursor)
@@ -69,6 +69,9 @@ fn item(cursor: Cursor) -> Result<Parsed<ast.Item>, ParseError> {
     }
     if is_at_keyword(cursor, lexer.Process) {
         return process_item(cursor)
+    }
+    if is_at_keyword(cursor, lexer.Test) {
+        return test_item(cursor)
     }
     Err(error(cursor, ItemWanted))
 }
@@ -461,6 +464,19 @@ fn process_item(cursor: Cursor) -> Result<Parsed<ast.Item>, ParseError> {
     Ok(Parsed { value: ast.Process(declared), cursor: cursor_of(step) })
 }
 
+/// `test "name" { … }`: the name of a test in quotes, and the block whose value says it holds.
+// example: item_printed(test_item(over("test \"sums\" {\n    true\n}"))) == "test \"sums\" 0..24\n  block 12..24\n    bool true 18..22\n"
+// example: failed(test_item(over("test sums {"))) == "5..9 expected the name of the test in quotes, found `sums`\n"
+fn test_item(cursor: Cursor) -> Result<Parsed<ast.Item>, ParseError> {
+    let start = offset(cursor)
+    let past_test = expect_keyword(cursor, lexer.Test)?
+    let token = expect(past_test, lexer.String, TestNameWanted)?
+    let text = decode_string(token.value)?
+    let body = block(token.cursor)?
+    let declared = ast.TestDeclaration { name: ast.Name { text: text, span: token.value.span }, body: body.value, span: span_since(body.cursor, start) }
+    Ok(Parsed { value: ast.Test(declared), cursor: body.cursor })
+}
+
 /// `derive Eq, Ord for User`: the traits the compiler writes, and the type it writes them for.
 // example: item_printed(derive_item(over("derive Eq, Hash for Id"))) == "derive Eq, Hash for Id 0..22\n"
 fn derive_item(cursor: Cursor) -> Result<Parsed<ast.Item>, ParseError> {
@@ -581,6 +597,9 @@ fn statement_kind(cursor: Cursor) -> Result<Parsed<ast.StatementKind>, ParseErro
     }
     if is_at_keyword(cursor, lexer.Underscore) {
         return discard(cursor)
+    }
+    if is_at_keyword(cursor, lexer.Test) {
+        return Err(failure(cursor, TestInABody))
     }
     expression_statement(cursor)
 }
@@ -1904,6 +1923,7 @@ fn help_of(kind: ErrorKind) -> String {
         AssignedToValue => "build the value it becomes: `user { name: \"Bob\" }`"
         PartlyNamedCall => "a call names all of its arguments or none of them"
         ColonEquals(name) => "write `let " + name + " =`"
+        TestInABody => "a test is an item of its own; write it below every declaration of the module"
     }
 }
 
@@ -1930,6 +1950,7 @@ fn code_of(kind: ErrorKind) -> String {
         AssignedToValue => "L0107"
         PartlyNamedCall => "L0108"
         ColonEquals(name) => "L0109"
+        TestInABody => "L0110"
     }
 }
 
@@ -1947,6 +1968,7 @@ fn message(kind: ErrorKind) -> String {
         AssignedToValue => "only a name is assigned to"
         PartlyNamedCall => "this call names some of its arguments and not others"
         ColonEquals(name) => "`:=` does not bind a name"
+        TestInABody => "a test is written at the top level of a module, and this one is inside a body"
     }
 }
 
@@ -1973,8 +1995,9 @@ fn expected_text(expected: Expected) -> String {
         FunctionNameWanted => "a function name"
         ExternKindWanted => "`field`, `static`, `method`, or `new`"
         JavaNameWanted => "a Java name in quotes"
+        TestNameWanted => "the name of the test in quotes"
         TraitWanted => "a trait"
-        ItemWanted => "an import, a type, a trait, an instance, a derive, a function, an extern, or a process"
+        ItemWanted => "an import, a type, a trait, an instance, a derive, a function, an extern, a process, or a test"
         ExpressionWanted => "an expression"
         TypeWanted => "a type"
         PatternWanted => "a pattern"
@@ -2003,6 +2026,7 @@ type ErrorKind =
     | AssignedToValue
     | PartlyNamedCall
     | ColonEquals(String)
+    | TestInABody
 
 /// What the parser was looking for.
 type Expected =
@@ -2012,6 +2036,7 @@ type Expected =
     | FunctionNameWanted
     | ExternKindWanted
     | JavaNameWanted
+    | TestNameWanted
     | TraitWanted
     | ItemWanted
     | ExpressionWanted

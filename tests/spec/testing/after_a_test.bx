@@ -1,0 +1,11 @@
+// expect-error: L0201
+// Tests come last in a module, so a function written below a test is out of place.
+test "adds" {
+    total() == 2
+}
+
+// The number two.
+// example: total() == 2
+fn total() -> Int {
+    2
+}

@@ -15,9 +15,9 @@ import strings
 import walk
 
 /// Every property of the formatter, each tried on `cases` drawn cases, in a fixed order.
-// example: list.length(every_property(1, ir.little_library())) == 6
+// example: list.length(every_property(1, ir.little_library())) == 7
 fn every_property(cases: Int, library: ir.Library) -> List<held.Held> {
-    [every_extern_declaration_round_trips(cases), formatting_is_deterministic_and_idempotent(cases), formatting_keeps_the_tree(cases), every_comment_survives_in_source_order(cases), the_canonical_text_of_a_refusal_is_canonical(cases), every_spelling_canonical_form_advises_is_one_it_accepts(cases)]
+    [every_extern_declaration_round_trips(cases), formatting_is_deterministic_and_idempotent(cases), formatting_keeps_the_tree(cases), every_comment_survives_in_source_order(cases), the_canonical_text_of_a_refusal_is_canonical(cases), every_spelling_canonical_form_advises_is_one_it_accepts(cases), a_declaration_below_a_test_is_out_of_place(cases)]
 }
 
 /// A drawn `extern` declaration is in canonical form: formatting writes it as it is written.
@@ -355,6 +355,56 @@ fn drawn_name(seed: Int) -> String {
     opener + drawn.text_of(stepped(seed: seed, steps: 2), ["a", "b", "U", "I", "_", "2"], count)
 }
 
+/// A test written anywhere among canonical declarations is out of place, as `L0201`, exactly
+/// where a declaration is written below it, and a test written last is in place.
+// example: held.is_held(a_declaration_below_a_test_is_out_of_place(3))
+fn a_declaration_below_a_test_is_out_of_place(cases: Int) -> held.Held {
+    var found = held.nothing_failed(cases)
+    var case = 0
+    for case < cases {
+        let placed = declarations_with_a_test(drawn.seed_of(case))
+        var expected = ""
+        if !placed.is_last {
+            expected = "L0201"
+        }
+        let code = format.check_code(format.check(placed.source))
+        if code != expected {
+            found = held.with_failure(found, held.drawn_failure("a_declaration_below_a_test_is_out_of_place", drawn.seed_of(case), placed.source, "the check gives " + held.quoted(code) + ", not " + held.quoted(expected)))
+        }
+        case += 1
+    }
+    found
+}
+
+/// Up to 6 canonical declarations and a test, drawn from `seed`, and whether the test is last.
+// example: strings.length(declarations_with_a_test(1).source) > 0
+fn declarations_with_a_test(seed: Int) -> Placed {
+    var chosen = []
+    for index in drawn.numbers(stepped(seed: seed, steps: 1), drawn.number(stepped(seed: seed, steps: 0), 7), list.length(canonical_items()) - 1) {
+        chosen = list.push(chosen, or(list.at(canonical_items(), index + 1), ""))
+    }
+    let at = drawn.number(stepped(seed: seed, steps: 2), list.length(chosen) + 1)
+    var written = []
+    var index = 0
+    for item in chosen {
+        if index == at {
+            written = list.push(written, test_item())
+        }
+        written = list.push(written, item)
+        index += 1
+    }
+    if at == list.length(chosen) {
+        written = list.push(written, test_item())
+    }
+    Placed { source: strings.join(written, "\n\n") + "\n", is_last: at == list.length(chosen) }
+}
+
+/// The test a drawn program is written with, already in canonical form.
+// example: parsing.is_parsed(test_item())
+fn test_item() -> String {
+    "test \"adds\" {\n    let total = 1 + 1\n    total == 2\n}"
+}
+
 /// A program of up to 6 canonical items and one function of a drawn expression, drawn from `seed`.
 // example: parsing.is_parsed(drawn_program(1))
 fn drawn_program(seed: Int) -> String {
@@ -416,9 +466,9 @@ fn person_written(seed: Int) -> String {
 }
 
 /// What a person-written file is made of: items out of canonical form, most of which parse.
-// example: list.length(person_items()) == 12
+// example: list.length(person_items()) == 13
 fn person_items() -> List<String> {
-    ["import  io", "// a comment alone   ", "type   Id = Id(Int)", "type Shape = | Dot // a dot\n| Line { length: Int\nwidth:Int }", "type Empty = {}", "extern static read(int at: Int,path:Path)->String = \"a.B.c\"", "derive Eq ,Hash for Id", "trait Named<T> {\n// the name\nfn name(value: T)->String\n}", "fn main( ) -> Int {\n  var total = 0 // start\n   total += -(7.abs())\n\n  total // done\n}", "fn pick(x: Int) -> String {\n match x {\n 1 | 2 => \"few\" // small\n _ => if x > 9 { \"many\" } else if (User {}).on { \"on\" } else { \"some\" }\n }\n}", "fn go<T:Eq<T>>(users: List<T>) {\nfor user in users { _ = f(a: (1 + 2) * 3, b: !(a && b)) }\nfor { break }\n}", "fn broken( {"]
+    ["import  io", "test   \"adds\"{ let total=1+1\n total==2 }", "// a comment alone   ", "type   Id = Id(Int)", "type Shape = | Dot // a dot\n| Line { length: Int\nwidth:Int }", "type Empty = {}", "extern static read(int at: Int,path:Path)->String = \"a.B.c\"", "derive Eq ,Hash for Id", "trait Named<T> {\n// the name\nfn name(value: T)->String\n}", "fn main( ) -> Int {\n  var total = 0 // start\n   total += -(7.abs())\n\n  total // done\n}", "fn pick(x: Int) -> String {\n match x {\n 1 | 2 => \"few\" // small\n _ => if x > 9 { \"many\" } else if (User {}).on { \"on\" } else { \"some\" }\n }\n}", "fn go<T:Eq<T>>(users: List<T>) {\nfor user in users { _ = f(a: (1 + 2) * 3, b: !(a && b)) }\nfor { break }\n}", "fn broken( {"]
 }
 
 /// The draw `steps` steps after the one `seed` starts.
@@ -450,4 +500,10 @@ fn unparsed(source: String) -> String {
         return ""
     }
     "the program " + held.quoted(source) + " does not parse: " + held.quoted(parser.printed(source))
+}
+
+/// A drawn program, and whether the test it holds is its last item.
+type Placed = {
+    source: String
+    is_last: Bool
 }

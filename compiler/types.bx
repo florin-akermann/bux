@@ -53,7 +53,7 @@ fn page_of(checked: infer.Inference) -> String {
     page
 }
 
-/// What one item puts on the page, which is nothing at all for an import.
+/// What one item puts on the page, which is nothing at all for an import or a test.
 // example: stanza_of(checked_of(""), declared.first_item("derive Eq, Ord for Box\n")) == "instance Eq<Box>\ninstance Ord<Box>\n"
 fn stanza_of(checked: infer.Inference, item: ast.Item) -> String {
     match item {
@@ -65,6 +65,7 @@ fn stanza_of(checked: infer.Inference, item: ast.Item) -> String {
         ast.Function(declaration) => signature_of(checked, declaration)
         ast.Extern(declaration) => format.extern_text(declaration) + "\n"
         ast.Process(declaration) => "process " + declaration.name.text + "\n"
+        ast.Test(_) => ""
     }
 }
 

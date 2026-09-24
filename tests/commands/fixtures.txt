@@ -2019,7 +2019,7 @@ status 0
 
 $ check tests/spec/parser/statement_outside_a_function.bx
 status 1
-! error[L0100]: expected an import, a type, a trait, an instance, a derive, a function, an extern, or a process, found `let`
+! error[L0100]: expected an import, a type, a trait, an instance, a derive, a function, an extern, a process, or a test, found `let`
 !   --> tests/spec/parser/statement_outside_a_function.bx:4:1
 !
 !   4 | let total = 1
@@ -2185,6 +2185,58 @@ $ check tests/spec/running/status_low_bits.bx
 status 0
 
 $ check tests/spec/running/strings.bx
+status 0
+
+$ check tests/spec/testing/after_a_test.bx
+status 1
+! error[L0201]: this declaration is written after a test
+!   --> tests/spec/testing/after_a_test.bx:9:1
+!
+!   9 | fn total() -> Int {
+!     | ^^^^^^^^^^^^^^^^^^^ this runs on to line 11
+!
+! help: tests come last, after every declaration
+
+$ check tests/spec/testing/fails.bx
+status 0
+
+$ check tests/spec/testing/holds.bx
+status 0
+
+$ check tests/spec/testing/inside_a_body.bx
+status 1
+! error[L0110]: a test is written at the top level of a module, and this one is inside a body
+!   --> tests/spec/testing/inside_a_body.bx:4:5
+!
+!   4 |     test "adds" {
+!     |     ^^^^
+!
+! help: a test is an item of its own; write it below every declaration of the module
+
+$ check tests/spec/testing/named_twice.bx
+status 1
+! error[L0319]: two tests of this module are named "adds"
+!   --> tests/spec/testing/named_twice.bx:7:6
+!
+!   7 | test "adds" {
+!     |      ^^^^^^
+!
+! help: a report names a test by its name; rename one of the two
+
+$ check tests/spec/testing/not_bool.bx
+status 1
+! error[L0400]: expected `Bool`, found `Int`
+!   --> tests/spec/testing/not_bool.bx:3:15
+!
+!   3 | test "counts" {
+!     |               ^ this runs on to line 5
+!
+! help: one type is not another, however alike they are held
+
+$ check tests/spec/testing/package/doubled.bx
+status 0
+
+$ check tests/spec/testing/package/tripled.bx
 status 0
 
 $ check tests/spec/traits/declared.bx
@@ -3497,7 +3549,7 @@ status 0
 
 $ check --json tests/spec/parser/statement_outside_a_function.bx
 status 1
-> {"file":"tests/spec/parser/statement_outside_a_function.bx","code":"L0100","message":"expected an import, a type, a trait, an instance, a derive, a function, an extern, or a process, found `let`","span":{"start":180,"len":3}}
+> {"file":"tests/spec/parser/statement_outside_a_function.bx","code":"L0100","message":"expected an import, a type, a trait, an instance, a derive, a function, an extern, a process, or a test, found `let`","span":{"start":180,"len":3}}
 
 $ check --json tests/spec/parser/trait_over_two_types.bx
 status 1
@@ -3597,6 +3649,34 @@ $ check --json tests/spec/running/status_low_bits.bx
 status 0
 
 $ check --json tests/spec/running/strings.bx
+status 0
+
+$ check --json tests/spec/testing/after_a_test.bx
+status 1
+> {"file":"tests/spec/testing/after_a_test.bx","code":"L0201","message":"this declaration is written after a test","span":{"start":185,"len":27},"help":"tests come last, after every declaration"}
+
+$ check --json tests/spec/testing/fails.bx
+status 0
+
+$ check --json tests/spec/testing/holds.bx
+status 0
+
+$ check --json tests/spec/testing/inside_a_body.bx
+status 1
+> {"file":"tests/spec/testing/inside_a_body.bx","code":"L0110","message":"a test is written at the top level of a module, and this one is inside a body","span":{"start":128,"len":4},"help":"a test is an item of its own; write it below every declaration of the module"}
+
+$ check --json tests/spec/testing/named_twice.bx
+status 1
+> {"file":"tests/spec/testing/named_twice.bx","code":"L0319","message":"two tests of this module are named \"adds\"","span":{"start":146,"len":6},"help":"a report names a test by its name; rename one of the two"}
+
+$ check --json tests/spec/testing/not_bool.bx
+status 1
+> {"file":"tests/spec/testing/not_bool.bx","code":"L0400","message":"expected `Bool`, found `Int`","span":{"start":123,"len":13},"help":"one type is not another, however alike they are held"}
+
+$ check --json tests/spec/testing/package/doubled.bx
+status 0
+
+$ check --json tests/spec/testing/package/tripled.bx
 status 0
 
 $ check --json tests/spec/traits/declared.bx
@@ -6634,7 +6714,7 @@ status 0
 
 $ api tests/spec/parser/statement_outside_a_function.bx
 status 1
-! error[L0100]: expected an import, a type, a trait, an instance, a derive, a function, an extern, or a process, found `let`
+! error[L0100]: expected an import, a type, a trait, an instance, a derive, a function, an extern, a process, or a test, found `let`
 !   --> tests/spec/parser/statement_outside_a_function.bx:4:1
 !
 !   4 | let total = 1
@@ -6918,6 +6998,62 @@ status 0
 > type Word = {
 >     text: String
 > }
+
+$ api tests/spec/testing/after_a_test.bx
+status 1
+! error[L0201]: this declaration is written after a test
+!   --> tests/spec/testing/after_a_test.bx:9:1
+!
+!   9 | fn total() -> Int {
+!     | ^^^^^^^^^^^^^^^^^^^ this runs on to line 11
+!
+! help: tests come last, after every declaration
+
+$ api tests/spec/testing/fails.bx
+status 0
+> fn halved(number: Int) -> Int
+
+$ api tests/spec/testing/holds.bx
+status 0
+> fn summed(numbers: List<Int>) -> Int
+
+$ api tests/spec/testing/inside_a_body.bx
+status 1
+! error[L0110]: a test is written at the top level of a module, and this one is inside a body
+!   --> tests/spec/testing/inside_a_body.bx:4:5
+!
+!   4 |     test "adds" {
+!     |     ^^^^
+!
+! help: a test is an item of its own; write it below every declaration of the module
+
+$ api tests/spec/testing/named_twice.bx
+status 1
+! error[L0319]: two tests of this module are named "adds"
+!   --> tests/spec/testing/named_twice.bx:7:6
+!
+!   7 | test "adds" {
+!     |      ^^^^^^
+!
+! help: a report names a test by its name; rename one of the two
+
+$ api tests/spec/testing/not_bool.bx
+status 1
+! error[L0400]: expected `Bool`, found `Int`
+!   --> tests/spec/testing/not_bool.bx:3:15
+!
+!   3 | test "counts" {
+!     |               ^ this runs on to line 5
+!
+! help: one type is not another, however alike they are held
+
+$ api tests/spec/testing/package/doubled.bx
+status 0
+> fn doubled(number: Int) -> Int
+
+$ api tests/spec/testing/package/tripled.bx
+status 0
+> fn tripled(number: Int) -> Int
 
 $ api tests/spec/traits/declared.bx
 status 0
@@ -10286,7 +10422,7 @@ status 0
 
 $ test tests/spec/parser/statement_outside_a_function.bx
 status 1
-! error[L0100]: expected an import, a type, a trait, an instance, a derive, a function, an extern, or a process, found `let`
+! error[L0100]: expected an import, a type, a trait, an instance, a derive, a function, an extern, a process, or a test, found `let`
 !   --> tests/spec/parser/statement_outside_a_function.bx:4:1
 !
 !   4 | let total = 1
@@ -10453,6 +10589,62 @@ status 0
 
 $ test tests/spec/running/strings.bx
 status 0
+
+$ test tests/spec/testing/after_a_test.bx
+status 1
+! error[L0201]: this declaration is written after a test
+!   --> tests/spec/testing/after_a_test.bx:9:1
+!
+!   9 | fn total() -> Int {
+!     | ^^^^^^^^^^^^^^^^^^^ this runs on to line 11
+!
+! help: tests come last, after every declaration
+
+$ test tests/spec/testing/fails.bx
+status 1
+! tests/spec/testing/fails.bx:13: test "halves an odd number up" did not hold
+! test: 2 tests, 1 examples; 1 failed
+
+$ test tests/spec/testing/holds.bx
+status 0
+
+$ test tests/spec/testing/inside_a_body.bx
+status 1
+! error[L0110]: a test is written at the top level of a module, and this one is inside a body
+!   --> tests/spec/testing/inside_a_body.bx:4:5
+!
+!   4 |     test "adds" {
+!     |     ^^^^
+!
+! help: a test is an item of its own; write it below every declaration of the module
+
+$ test tests/spec/testing/named_twice.bx
+status 1
+! error[L0319]: two tests of this module are named "adds"
+!   --> tests/spec/testing/named_twice.bx:7:6
+!
+!   7 | test "adds" {
+!     |      ^^^^^^
+!
+! help: a report names a test by its name; rename one of the two
+
+$ test tests/spec/testing/not_bool.bx
+status 1
+! error[L0400]: expected `Bool`, found `Int`
+!   --> tests/spec/testing/not_bool.bx:3:15
+!
+!   3 | test "counts" {
+!     |               ^ this runs on to line 5
+!
+! help: one type is not another, however alike they are held
+
+$ test tests/spec/testing/package/doubled.bx
+status 0
+
+$ test tests/spec/testing/package/tripled.bx
+status 1
+! tests/spec/testing/package/tripled.bx:13: test "triples one" did not hold
+! test: 2 tests, 1 examples; 1 failed
 
 $ test tests/spec/traits/declared.bx
 status 0
@@ -11022,6 +11214,13 @@ $ check tests/spec/running
 status 2
 ! error: tests/spec/running: there is no package here, which is a directory holding `bux.package`
 
+$ check tests/spec/testing
+status 2
+! error: tests/spec/testing: there is no package here, which is a directory holding `bux.package`
+
+$ check tests/spec/testing/package
+status 0
+
 $ check tests/spec/traits
 status 2
 ! error: tests/spec/traits: there is no package here, which is a directory holding `bux.package`
@@ -11208,6 +11407,13 @@ status 2
 $ check --json tests/spec/running
 status 2
 ! error: tests/spec/running: there is no package here, which is a directory holding `bux.package`
+
+$ check --json tests/spec/testing
+status 2
+! error: tests/spec/testing: there is no package here, which is a directory holding `bux.package`
+
+$ check --json tests/spec/testing/package
+status 0
 
 $ check --json tests/spec/traits
 status 2
@@ -11405,6 +11611,14 @@ $ api tests/spec/running
 status 2
 ! error: tests/spec/running: Is a directory (os error 21)
 
+$ api tests/spec/testing
+status 2
+! error: tests/spec/testing: Is a directory (os error 21)
+
+$ api tests/spec/testing/package
+status 2
+! error: tests/spec/testing/package: Is a directory (os error 21)
+
 $ api tests/spec/traits
 status 2
 ! error: tests/spec/traits: Is a directory (os error 21)
@@ -11600,6 +11814,14 @@ status 2
 $ fmt tests/spec/running
 status 2
 ! error: tests/spec/running: Is a directory (os error 21)
+
+$ fmt tests/spec/testing
+status 2
+! error: tests/spec/testing: Is a directory (os error 21)
+
+$ fmt tests/spec/testing/package
+status 2
+! error: tests/spec/testing/package: Is a directory (os error 21)
 
 $ fmt tests/spec/traits
 status 2
@@ -11894,6 +12116,13 @@ $ build tests/spec/running
 status 2
 ! error: tests/spec/running: there is no package here, which is a directory holding `bux.package`
 
+$ build tests/spec/testing
+status 2
+! error: tests/spec/testing: there is no package here, which is a directory holding `bux.package`
+
+$ build tests/spec/testing/package
+status 0
+
 $ build tests/spec/traits
 status 2
 ! error: tests/spec/traits: there is no package here, which is a directory holding `bux.package`
@@ -12008,8 +12237,7 @@ status 2
 ! error: no/such.bx: No such file or directory (os error 2)
 
 $ test compiler/
-status 2
-! error: compiler/: Is a directory (os error 21)
+status 0
 
 $ test compiler/main.bx/
 status 2
@@ -12021,7 +12249,16 @@ status 2
 
 $ test tests
 status 2
-! error: tests: Is a directory (os error 21)
+! error: tests: there is no package here, which is a directory holding `bux.package`
+
+$ test tests/spec/testing
+status 2
+! error: tests/spec/testing: there is no package here, which is a directory holding `bux.package`
+
+$ test tests/spec/testing/package
+status 1
+! tests/spec/testing/package/tripled.bx:13: test "triples one" did not hold
+! test: 3 tests, 2 examples; 1 failed
 
 $ run no/such.bx
 status 2
@@ -13136,7 +13373,7 @@ status 0
 
 $ fmt tests/spec/parser/statement_outside_a_function.bx
 status 1
-! error[L0100]: expected an import, a type, a trait, an instance, a derive, a function, an extern, or a process, found `let`
+! error[L0100]: expected an import, a type, a trait, an instance, a derive, a function, an extern, a process, or a test, found `let`
 !   --> tests/spec/parser/statement_outside_a_function.bx:4:1
 !
 !   4 | let total = 1
@@ -13281,6 +13518,37 @@ $ fmt tests/spec/running/status_low_bits.bx
 status 0
 
 $ fmt tests/spec/running/strings.bx
+status 0
+
+$ fmt tests/spec/testing/after_a_test.bx
+status 0
+
+$ fmt tests/spec/testing/fails.bx
+status 0
+
+$ fmt tests/spec/testing/holds.bx
+status 0
+
+$ fmt tests/spec/testing/inside_a_body.bx
+status 1
+! error[L0110]: a test is written at the top level of a module, and this one is inside a body
+!   --> tests/spec/testing/inside_a_body.bx:4:5
+!
+!   4 |     test "adds" {
+!     |     ^^^^
+!
+! help: a test is an item of its own; write it below every declaration of the module
+
+$ fmt tests/spec/testing/named_twice.bx
+status 0
+
+$ fmt tests/spec/testing/not_bool.bx
+status 0
+
+$ fmt tests/spec/testing/package/doubled.bx
+status 0
+
+$ fmt tests/spec/testing/package/tripled.bx
 status 0
 
 $ fmt tests/spec/traits/declared.bx
@@ -15881,7 +16149,7 @@ status 0
 
 $ build tests/spec/parser/statement_outside_a_function.bx
 status 1
-! error[L0100]: expected an import, a type, a trait, an instance, a derive, a function, an extern, or a process, found `let`
+! error[L0100]: expected an import, a type, a trait, an instance, a derive, a function, an extern, a process, or a test, found `let`
 !   --> tests/spec/parser/statement_outside_a_function.bx:4:1
 !
 !   4 | let total = 1
@@ -16047,6 +16315,58 @@ $ build tests/spec/running/status_low_bits.bx
 status 0
 
 $ build tests/spec/running/strings.bx
+status 0
+
+$ build tests/spec/testing/after_a_test.bx
+status 1
+! error[L0201]: this declaration is written after a test
+!   --> tests/spec/testing/after_a_test.bx:9:1
+!
+!   9 | fn total() -> Int {
+!     | ^^^^^^^^^^^^^^^^^^^ this runs on to line 11
+!
+! help: tests come last, after every declaration
+
+$ build tests/spec/testing/fails.bx
+status 0
+
+$ build tests/spec/testing/holds.bx
+status 0
+
+$ build tests/spec/testing/inside_a_body.bx
+status 1
+! error[L0110]: a test is written at the top level of a module, and this one is inside a body
+!   --> tests/spec/testing/inside_a_body.bx:4:5
+!
+!   4 |     test "adds" {
+!     |     ^^^^
+!
+! help: a test is an item of its own; write it below every declaration of the module
+
+$ build tests/spec/testing/named_twice.bx
+status 1
+! error[L0319]: two tests of this module are named "adds"
+!   --> tests/spec/testing/named_twice.bx:7:6
+!
+!   7 | test "adds" {
+!     |      ^^^^^^
+!
+! help: a report names a test by its name; rename one of the two
+
+$ build tests/spec/testing/not_bool.bx
+status 1
+! error[L0400]: expected `Bool`, found `Int`
+!   --> tests/spec/testing/not_bool.bx:3:15
+!
+!   3 | test "counts" {
+!     |               ^ this runs on to line 5
+!
+! help: one type is not another, however alike they are held
+
+$ build tests/spec/testing/package/doubled.bx
+status 0
+
+$ build tests/spec/testing/package/tripled.bx
 status 0
 
 $ build tests/spec/traits/declared.bx

@@ -155,9 +155,14 @@ Each of them is compiled as the module a command named, so a module several of t
 compiled once for each, and a package is as many compilations as it has modules.
 That is what a package costs until a measurement says the sharing is worth building.
 
-`bux fmt`, `bux run`, `bux test`, and `bux api` each take a file.
-A package has no canonical text of its own, no `main` to run, no examples, and no surface beyond
-its modules'; each of those is a module's and is asked of the module.
+`bux test` takes a package as well as a file, and `docs/specs/testing.md` states the run.
+It runs the examples and the tests of every module the package holds, in the same order.
+It does not stop at the first module that fails, so one report names every module that fails.
+`bux test` with no path runs the package in the current directory.
+
+`bux fmt`, `bux run`, and `bux api` each take a file.
+A package has no canonical text of its own, no `main` to run, and no surface beyond its modules'.
+Each of those is a module's and is asked of the module.
 
 A directory holding no manifest is no package, and a command handed one says so and stops with
 exit code 2, as it does for a directory it cannot list.
