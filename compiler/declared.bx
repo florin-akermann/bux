@@ -363,13 +363,53 @@ fn built_with_of(environment: Environment, named: ast.Name) -> surface.OfferedCo
 /// The type of every function and every `extern` the module declares, which is what it offers.
 // example: list.length(offered_functions(little_environment(), ast.Program { items: [] })) == 0
 fn offered_functions(environment: Environment, program: ast.Program) -> List<surface.OfferedFunction> {
+    offered_by_name(environment, names_in(program, Functions))
+}
+
+/// The type of every process the module declares, as the call `spawn` makes of it.
+// example: list.length(offered_processes(little_environment(), ast.Program { items: [] })) == 0
+fn offered_processes(environment: Environment, program: ast.Program) -> List<surface.OfferedFunction> {
+    offered_by_name(environment, names_in(program, Processes))
+}
+
+/// The type each of `names` is declared with, where it has one.
+// example: list.length(offered_by_name(little_environment(), [])) == 0
+fn offered_by_name(environment: Environment, names: List<ast.Name>) -> List<surface.OfferedFunction> {
     var offered = []
-    for item in program.items {
-        for named in function_name_of(item) {
-            offered = offered_with(offered, named, map.get(environment.values, at_key(named.span.start)))
-        }
+    for named in names {
+        offered = offered_with(offered, named, map.get(environment.values, at_key(named.span.start)))
     }
     offered
+}
+
+/// The name of each item of `program` that is of the kind `offering` wants, in written order.
+// example: list.length(names_in(first_program("fn f() -> Int {\n    1\n}\n"), Processes)) == 0
+fn names_in(program: ast.Program, offering: Offering) -> List<ast.Name> {
+    var names = []
+    for item in program.items {
+        for named in name_offered(item, offering) {
+            names = list.push(names, named)
+        }
+    }
+    names
+}
+
+/// The name `item` declares, as a list of one where it is of the kind `offering` wants, or none.
+// example: list.length(name_offered(first_item("fn f() -> Int {\n    1\n}\n"), Functions)) == 1
+fn name_offered(item: ast.Item, offering: Offering) -> List<ast.Name> {
+    match offering {
+        Functions => function_name_of(item)
+        Processes => process_name_of(item)
+    }
+}
+
+/// The name a process declares, as a list of one, or none.
+// example: list.length(process_name_of(first_item("type Box = Box\n"))) == 0
+fn process_name_of(item: ast.Item) -> List<ast.Name> {
+    match item {
+        ast.Process(declaration) => [declaration.name]
+        _ => []
+    }
 }
 
 /// `offered`, with the function `named` after it where it has a type.
@@ -1646,3 +1686,8 @@ type Walk = {
 type Stage =
     | OnTheWayIn
     | Left
+
+/// Which items a module offers under their names: its functions, or its processes.
+type Offering =
+    | Functions
+    | Processes

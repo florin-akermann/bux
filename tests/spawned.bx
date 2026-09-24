@@ -19,9 +19,9 @@ import strings
 import walk
 
 /// The properties of processes, each tried on `cases` drawn cases.
-// example: list.length(every_property(0, ir.little_library())) == 4
+// example: list.length(every_property(0, ir.little_library())) == 5
 fn every_property(cases: Int, library: ir.Library) -> List<held.Held> {
-    [each_well_formed_process_is_accepted(cases, library), each_break_of_the_shape_is_refused(cases, library), messages_arrive_in_order_and_ended_gives_the_last_state(cases, library), a_mailbox_never_holds_more_than_its_bound(cases, library)]
+    [each_well_formed_process_is_accepted(cases, library), each_break_of_the_shape_is_refused(cases, library), messages_arrive_in_order_and_ended_gives_the_last_state(cases, library), a_mailbox_never_holds_more_than_its_bound(cases, library), no_send_after_the_end_is_delivered(cases, library)]
 }
 
 /// A drawn process of the one shape passes every phase up to inference.
@@ -70,9 +70,9 @@ fn shown_code(code: String) -> String {
 }
 
 /// Each break of the shape a drawn process can be written with.
-// example: list.length(every_break()) == 11
+// example: list.length(every_break()) == 12
 fn every_break() -> List<Break> {
-    [SpawnOfAFunction, CallOfAProcess, StartNotFirst, ReceiveNotSecond, FunctionAfterReceive, GenericStart, UnwrittenParameter, ReceiveOfThreeValues, ReceiveNotAMatch, ArmDoesWork, ReceiveOfAnotherState]
+    [SpawnOfAFunction, CallOfAProcess, StartNotFirst, ReceiveNotSecond, FunctionAfterReceive, GenericStart, UnwrittenParameter, ReceiveOfThreeValues, ReceiveNotAMatch, ArmDoesWork, ReceiveOfAnotherState, MessageHoldsAFile]
 }
 
 /// The code the compiler refuses `broken` with, and `""` for a whole process.
@@ -92,6 +92,7 @@ fn code_of_break(broken: Break) -> String {
         ReceiveNotAMatch => "L0808"
         ArmDoesWork => "L0809"
         ReceiveOfAnotherState => "L0810"
+        MessageHoldsAFile => "L0811"
     }
 }
 
@@ -114,7 +115,7 @@ fn written(drawing: Drawing, broken: Break) -> String {
     let entry = main_written(drawing, broken)
     let functions = start_written(drawing, broken) + "\n" + receive_written(drawing, broken) + extra_written(broken)
     let helper = "fn kept(state: " + drawing.state + ", amount: Int) -> Next<" + drawing.state + "> {\n    Continue(state)\n}\n"
-    entry + "\nprocess " + drawing.named + " {\n" + functions + "}\n\n" + helper + "\n" + message_type(drawing)
+    entry + "\nprocess " + drawing.named + " {\n" + functions + "}\n\n" + helper + "\n" + message_type(drawing, broken) + file_written(broken)
 }
 
 /// `main`, which spawns the process, or breaks the shape where `broken` is a break of `spawn`.
@@ -192,6 +193,9 @@ fn receive_body(drawing: Drawing, broken: Break) -> String {
         arms += "            " + arm_written(kind: kind, broken: broken, place: place) + "\n"
         place += 1
     }
+    if broken == MessageHoldsAFile {
+        arms += "            Opened(_) => Continue(state)\n"
+    }
     "        match message {\n" + arms + "            Stop => Done\n        }\n"
 }
 
@@ -226,14 +230,27 @@ fn extra_written(broken: Break) -> String {
     ""
 }
 
-/// The type of the messages of `drawing`: each kind it draws, and `Stop`.
-// example: message_type(Drawing { named: "Counter", state: "Int", kinds: [Kind { name: "Add", carries: true }] }) == "type Asked =\n    | Add(Int)\n    | Stop\n"
-fn message_type(drawing: Drawing) -> String {
+/// The type of the messages of `drawing`: each kind it draws, `Opened` where `broken` writes it,
+/// and `Stop`.
+// example: message_type(Drawing { named: "Counter", state: "Int", kinds: [Kind { name: "Add", carries: true }] }, Whole) == "type Asked =\n    | Add(Int)\n    | Stop\n"
+fn message_type(drawing: Drawing, broken: Break) -> String {
     var variants = ""
     for kind in drawing.kinds {
         variants += "    | " + variant_of(kind) + "\n"
     }
+    if broken == MessageHoldsAFile {
+        variants += "    | Opened(Handle)\n"
+    }
     "type Asked =\n" + variants + "    | Stop\n"
+}
+
+/// A record that holds a file, which `Opened` carries, where `broken` writes it.
+// example: file_written(Whole) == ""
+fn file_written(broken: Break) -> String {
+    if broken == MessageHoldsAFile {
+        return "\ntype Handle = {\n    file: File\n}\n\nextern type File = \"java.io.File\"\n"
+    }
+    ""
 }
 
 /// The variant of `kind`, which carries an `Int` where the kind carries a number.
@@ -258,6 +275,13 @@ fn messages_arrive_in_order_and_ended_gives_the_last_state(cases: Int, library: 
 // example: held.is_held(a_mailbox_never_holds_more_than_its_bound(0, ir.little_library()))
 fn a_mailbox_never_holds_more_than_its_bound(cases: Int, library: ir.Library) -> held.Held {
     run_held(property: "a_mailbox_never_holds_more_than_its_bound", source: bounded_program(cases), cases: cases, library: library)
+}
+
+/// Drawn sends race the end of a process, and after `ended` gives back, every `send` gives
+/// `ProcessEnded`, whatever it waits.
+// example: held.is_held(no_send_after_the_end_is_delivered(0, ir.little_library()))
+fn no_send_after_the_end_is_delivered(cases: Int, library: ir.Library) -> held.Held {
+    run_held(property: "no_send_after_the_end_is_delivered", source: closed_program(cases), cases: cases, library: library)
 }
 
 /// What `source` writes when it is run beside `tests/drawn.bx`, each line held as one case.
@@ -307,6 +331,16 @@ fn ordered_program(cases: Int) -> String {
     "import drawn\nimport io\nimport list\n\n" + entry + "\n" + recorded + "\n" + recorder + "\ntype Recorded =\n    | Record(Int)\n    | Stop\n"
 }
 
+/// The program that ends each case's process while drawn sends race the end, then sends again.
+// example: strings.length(closed_program(1)) > 0
+fn closed_program(cases: Int) -> String {
+    let entry = "fn main(arguments: List<String>) -> Int {\n    var case = 0\n    for case < " + shown(cases) + " {\n        io.println(closed(drawn.seed_of(case)))\n        case += 1\n    }\n    0\n}\n"
+    let closed = "// example: closed(1) == \"1 held\"\nfn closed(seed: Int) -> String {\n    let draw = drawn.seeded(seed)\n    let racing = drawn.number(draw, 100)\n    let later = drawn.number(drawn.next(draw), 100) + 1\n    let closing = spawn Closer()\n    _ = send(closing, Close, NoLimit)\n    var sent = 0\n    for sent < racing {\n        _ = send(closing, Tick, NoWait)\n        sent += 1\n    }\n    _ = ended(closing)\n    var delivered = 0\n    sent = 0\n    for sent < later {\n        delivered += taken(send(closing, Tick, NoWait)) + taken(send(closing, Tick, Milliseconds(1))) + taken(send(closing, Tick, NoLimit))\n        sent += 1\n    }\n    if delivered == 0 {\n        return shown(seed) + \" held\"\n    }\n    shown(seed) + \" delivered \" + shown(delivered) + \" after the end\"\n}\n"
+    let helpers = "// example: taken(ProcessEnded) == 0\nfn taken(sent: Sent) -> Int {\n    match sent {\n        ProcessEnded => 0\n        _ => 1\n    }\n}\n"
+    let closer = "process Closer {\n    fn start() -> Int {\n        0\n    }\n\n    fn receive(held: Int, message: Closing) -> Next<Int> {\n        match message {\n            Tick => Continue(held)\n            Close => Done\n        }\n    }\n}\n"
+    "import drawn\nimport io\n\n" + entry + "\n" + closed + "\n" + helpers + "\n" + closer + "\ntype Closing =\n    | Tick\n    | Close\n"
+}
+
 /// The program that sends each case a drawn number of messages to a process that takes none.
 ///
 /// `start` of the holder waits for a process that never ends, so the holder never takes one.
@@ -349,3 +383,4 @@ type Break =
     | ReceiveNotAMatch
     | ArmDoesWork
     | ReceiveOfAnotherState
+    | MessageHoldsAFile

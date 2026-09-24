@@ -131,6 +131,12 @@ status 1
 $ check tests/spec/concurrency/counter.bx
 status 0
 
+$ check tests/spec/concurrency/elsewhere/main.bx
+status 0
+
+$ check tests/spec/concurrency/elsewhere/tally.bx
+status 0
+
 $ check tests/spec/concurrency/function_after_receive.bx
 status 1
 ! error[L0804]: `Counter` declares a function after `receive`
@@ -150,6 +156,16 @@ status 1
 !      |        ^^^^^
 !
 ! help: a process has one type of state and one type of message; write them out
+
+$ check tests/spec/concurrency/holds_a_foreign_reference.bx
+status 1
+! error[L0811]: `Reader` holds `File`, and the `extern` type `File` is a foreign reference
+!   --> tests/spec/concurrency/holds_a_foreign_reference.bx:10:14
+!
+!   10 |     fn start(file: File) -> Int {
+!      |              ^^^^^^^^^^
+!
+! help: a process holds values only, and a foreign reference stays with the function that reaches it
 
 $ check tests/spec/concurrency/mailbox_full.bx
 status 0
@@ -206,13 +222,16 @@ status 1
 
 $ check tests/spec/concurrency/spawn_of_a_function.bx
 status 1
-! error[L0800]: `spawn` starts a process this module declares, and `counted` is not one
+! error[L0800]: `spawn` starts a process, and `counted` is not one
 !   --> tests/spec/concurrency/spawn_of_a_function.bx:4:15
 !
 !   4 |     _ = spawn counted()
 !     |               ^^^^^^^
 !
-! help: declare a `process` in this module and name it after `spawn`
+! help: declare a `process`, or import the module that declares one, and name it after `spawn`
+
+$ check tests/spec/concurrency/stack_overflow.bx
+status 0
 
 $ check tests/spec/concurrency/start_not_first.bx
 status 1
@@ -2596,6 +2615,12 @@ status 1
 $ check --json tests/spec/concurrency/counter.bx
 status 0
 
+$ check --json tests/spec/concurrency/elsewhere/main.bx
+status 0
+
+$ check --json tests/spec/concurrency/elsewhere/tally.bx
+status 0
+
 $ check --json tests/spec/concurrency/function_after_receive.bx
 status 1
 > {"file":"tests/spec/concurrency/function_after_receive.bx","code":"L0804","message":"`Counter` declares a function after `receive`","span":{"start":446,"len":5},"help":"a process declares `start`, then `receive`, and nothing else; move the function out"}
@@ -2603,6 +2628,10 @@ status 1
 $ check --json tests/spec/concurrency/generic_start.bx
 status 1
 > {"file":"tests/spec/concurrency/generic_start.bx","code":"L0805","message":"`start` of a process declares a type parameter","span":{"start":251,"len":5},"help":"a process has one type of state and one type of message; write them out"}
+
+$ check --json tests/spec/concurrency/holds_a_foreign_reference.bx
+status 1
+> {"file":"tests/spec/concurrency/holds_a_foreign_reference.bx","code":"L0811","message":"`Reader` holds `File`, and the `extern` type `File` is a foreign reference","span":{"start":260,"len":10},"help":"a process holds values only, and a foreign reference stays with the function that reaches it"}
 
 $ check --json tests/spec/concurrency/mailbox_full.bx
 status 0
@@ -2629,7 +2658,10 @@ status 1
 
 $ check --json tests/spec/concurrency/spawn_of_a_function.bx
 status 1
-> {"file":"tests/spec/concurrency/spawn_of_a_function.bx","code":"L0800","message":"`spawn` starts a process this module declares, and `counted` is not one","span":{"start":135,"len":7},"help":"declare a `process` in this module and name it after `spawn`"}
+> {"file":"tests/spec/concurrency/spawn_of_a_function.bx","code":"L0800","message":"`spawn` starts a process, and `counted` is not one","span":{"start":135,"len":7},"help":"declare a `process`, or import the module that declares one, and name it after `spawn`"}
+
+$ check --json tests/spec/concurrency/stack_overflow.bx
+status 0
 
 $ check --json tests/spec/concurrency/start_not_first.bx
 status 1
@@ -4055,6 +4087,18 @@ status 0
 >     | Add(Int)
 >     | Stop
 
+$ api tests/spec/concurrency/elsewhere/main.bx
+status 0
+> fn main(arguments: List<String>) -> Int
+
+$ api tests/spec/concurrency/elsewhere/tally.bx
+status 0
+> process Tally
+>
+> type Counted =
+>     | Add(Int)
+>     | Stop
+
 $ api tests/spec/concurrency/function_after_receive.bx
 status 1
 ! error[L0804]: `Counter` declares a function after `receive`
@@ -4074,6 +4118,16 @@ status 1
 !      |        ^^^^^
 !
 ! help: a process has one type of state and one type of message; write them out
+
+$ api tests/spec/concurrency/holds_a_foreign_reference.bx
+status 1
+! error[L0811]: `Reader` holds `File`, and the `extern` type `File` is a foreign reference
+!   --> tests/spec/concurrency/holds_a_foreign_reference.bx:10:14
+!
+!   10 |     fn start(file: File) -> Int {
+!      |              ^^^^^^^^^^
+!
+! help: a process holds values only, and a foreign reference stays with the function that reaches it
 
 $ api tests/spec/concurrency/mailbox_full.bx
 status 0
@@ -4143,13 +4197,27 @@ status 1
 
 $ api tests/spec/concurrency/spawn_of_a_function.bx
 status 1
-! error[L0800]: `spawn` starts a process this module declares, and `counted` is not one
+! error[L0800]: `spawn` starts a process, and `counted` is not one
 !   --> tests/spec/concurrency/spawn_of_a_function.bx:4:15
 !
 !   4 |     _ = spawn counted()
 !     |               ^^^^^^^
 !
-! help: declare a `process` in this module and name it after `spawn`
+! help: declare a `process`, or import the module that declares one, and name it after `spawn`
+
+$ api tests/spec/concurrency/stack_overflow.bx
+status 0
+> fn main(arguments: List<String>) -> Int
+>
+> fn is_delivered(answer: Sent) -> Bool
+>
+> fn shown_sent(answer: Sent) -> String
+>
+> process Deep
+>
+> fn depth(level: Int) -> Int
+>
+> type Descended = Descend
 
 $ api tests/spec/concurrency/start_not_first.bx
 status 1
@@ -8154,6 +8222,12 @@ status 1
 $ test tests/spec/concurrency/counter.bx
 status 0
 
+$ test tests/spec/concurrency/elsewhere/main.bx
+status 0
+
+$ test tests/spec/concurrency/elsewhere/tally.bx
+status 0
+
 $ test tests/spec/concurrency/function_after_receive.bx
 status 1
 ! error[L0804]: `Counter` declares a function after `receive`
@@ -8173,6 +8247,16 @@ status 1
 !      |        ^^^^^
 !
 ! help: a process has one type of state and one type of message; write them out
+
+$ test tests/spec/concurrency/holds_a_foreign_reference.bx
+status 1
+! error[L0811]: `Reader` holds `File`, and the `extern` type `File` is a foreign reference
+!   --> tests/spec/concurrency/holds_a_foreign_reference.bx:10:14
+!
+!   10 |     fn start(file: File) -> Int {
+!      |              ^^^^^^^^^^
+!
+! help: a process holds values only, and a foreign reference stays with the function that reaches it
 
 $ test tests/spec/concurrency/mailbox_full.bx
 status 0
@@ -8229,13 +8313,16 @@ status 1
 
 $ test tests/spec/concurrency/spawn_of_a_function.bx
 status 1
-! error[L0800]: `spawn` starts a process this module declares, and `counted` is not one
+! error[L0800]: `spawn` starts a process, and `counted` is not one
 !   --> tests/spec/concurrency/spawn_of_a_function.bx:4:15
 !
 !   4 |     _ = spawn counted()
 !     |               ^^^^^^^
 !
-! help: declare a `process` in this module and name it after `spawn`
+! help: declare a `process`, or import the module that declares one, and name it after `spawn`
+
+$ test tests/spec/concurrency/stack_overflow.bx
+status 0
 
 $ test tests/spec/concurrency/start_not_first.bx
 status 1
@@ -11006,6 +11093,9 @@ $ check tests/spec/concurrency
 status 2
 ! error: tests/spec/concurrency: there is no package here, which is a directory holding `bux.package`
 
+$ check tests/spec/concurrency/elsewhere
+status 0
+
 $ check tests/spec/examples
 status 2
 ! error: tests/spec/examples: there is no package here, which is a directory holding `bux.package`
@@ -11278,6 +11368,9 @@ $ check --json tests/spec/concurrency
 status 2
 ! error: tests/spec/concurrency: there is no package here, which is a directory holding `bux.package`
 
+$ check --json tests/spec/concurrency/elsewhere
+status 0
+
 $ check --json tests/spec/examples
 status 2
 ! error: tests/spec/examples: there is no package here, which is a directory holding `bux.package`
@@ -11471,6 +11564,10 @@ status 2
 $ api tests/spec/concurrency
 status 2
 ! error: tests/spec/concurrency: Is a directory (os error 21)
+
+$ api tests/spec/concurrency/elsewhere
+status 2
+! error: tests/spec/concurrency/elsewhere: Is a directory (os error 21)
 
 $ api tests/spec/examples
 status 2
@@ -11676,6 +11773,10 @@ $ fmt tests/spec/concurrency
 status 2
 ! error: tests/spec/concurrency: Is a directory (os error 21)
 
+$ fmt tests/spec/concurrency/elsewhere
+status 2
+! error: tests/spec/concurrency/elsewhere: Is a directory (os error 21)
+
 $ fmt tests/spec/examples
 status 2
 ! error: tests/spec/examples: Is a directory (os error 21)
@@ -11879,6 +11980,9 @@ status 2
 $ build tests/spec/concurrency
 status 2
 ! error: tests/spec/concurrency: there is no package here, which is a directory holding `bux.package`
+
+$ build tests/spec/concurrency/elsewhere
+status 0
 
 $ build tests/spec/examples
 status 2
@@ -12435,10 +12539,19 @@ status 0
 $ fmt tests/spec/concurrency/counter.bx
 status 0
 
+$ fmt tests/spec/concurrency/elsewhere/main.bx
+status 0
+
+$ fmt tests/spec/concurrency/elsewhere/tally.bx
+status 0
+
 $ fmt tests/spec/concurrency/function_after_receive.bx
 status 0
 
 $ fmt tests/spec/concurrency/generic_start.bx
+status 0
+
+$ fmt tests/spec/concurrency/holds_a_foreign_reference.bx
 status 0
 
 $ fmt tests/spec/concurrency/mailbox_full.bx
@@ -12460,6 +12573,9 @@ $ fmt tests/spec/concurrency/receive_of_one_value.bx
 status 0
 
 $ fmt tests/spec/concurrency/spawn_of_a_function.bx
+status 0
+
+$ fmt tests/spec/concurrency/stack_overflow.bx
 status 0
 
 $ fmt tests/spec/concurrency/start_not_first.bx
@@ -13894,6 +14010,12 @@ status 1
 $ build tests/spec/concurrency/counter.bx
 status 0
 
+$ build tests/spec/concurrency/elsewhere/main.bx
+status 0
+
+$ build tests/spec/concurrency/elsewhere/tally.bx
+status 0
+
 $ build tests/spec/concurrency/function_after_receive.bx
 status 1
 ! error[L0804]: `Counter` declares a function after `receive`
@@ -13913,6 +14035,16 @@ status 1
 !      |        ^^^^^
 !
 ! help: a process has one type of state and one type of message; write them out
+
+$ build tests/spec/concurrency/holds_a_foreign_reference.bx
+status 1
+! error[L0811]: `Reader` holds `File`, and the `extern` type `File` is a foreign reference
+!   --> tests/spec/concurrency/holds_a_foreign_reference.bx:10:14
+!
+!   10 |     fn start(file: File) -> Int {
+!      |              ^^^^^^^^^^
+!
+! help: a process holds values only, and a foreign reference stays with the function that reaches it
 
 $ build tests/spec/concurrency/mailbox_full.bx
 status 0
@@ -13969,13 +14101,16 @@ status 1
 
 $ build tests/spec/concurrency/spawn_of_a_function.bx
 status 1
-! error[L0800]: `spawn` starts a process this module declares, and `counted` is not one
+! error[L0800]: `spawn` starts a process, and `counted` is not one
 !   --> tests/spec/concurrency/spawn_of_a_function.bx:4:15
 !
 !   4 |     _ = spawn counted()
 !     |               ^^^^^^^
 !
-! help: declare a `process` in this module and name it after `spawn`
+! help: declare a `process`, or import the module that declares one, and name it after `spawn`
+
+$ build tests/spec/concurrency/stack_overflow.bx
+status 0
 
 $ build tests/spec/concurrency/start_not_first.bx
 status 1

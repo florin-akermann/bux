@@ -85,6 +85,10 @@ The two channels are compared apart, so a line stated on one and written on the 
 Lines of the two kinds may be written in any order under the header, because each channel is
 compared only against the lines stated for it.
 
+A line of standard error that opens with a tab is one frame of a JVM trace, and is not compared.
+The harness removes each such line before it compares, because the JVM decides how deep a trace is.
+The first line of a trace names the platform error, and an example states that line with `!`.
+
 ### What the program ends with
 
 The status the program ends with is stated with the word `status` and that number:

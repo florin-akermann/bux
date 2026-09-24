@@ -1,8 +1,8 @@
 // What a module offers the modules that import it, and what they offer back.
 //
 // `docs/specs/modules.md` states what that is.
-// A module offers every function and every type it declares, and the instances of the prelude's
-// traits that it gives those types. A module that imports it reaches each of them through the
+// A module offers every function, every process, and every type it declares, and the instances of
+// the prelude's traits that it gives those types. A module that imports it reaches each of them through the
 // module's name, so each type the surface holds is written as `module.Name` once it is offered.
 import ast
 import list
@@ -90,7 +90,7 @@ fn nothing_imported() -> Imported {
 ///
 /// Each type of the module is written through its name, and `list` also offers what the compiler
 /// holds for it, which `docs/specs/library.md` names.
-// example: list.length(every_type(offering(nothing_imported(), "demo", Surface { functions: [], types: [record_of_user()], instances: [] }))) == 1
+// example: list.length(every_type(offering(nothing_imported(), "demo", Surface { functions: [], processes: [], types: [record_of_user()], instances: [] }))) == 1
 fn offering(imported: Imported, module: String, surface: Surface) -> Imported {
     var own = set.empty()
     for offered in surface.types {
@@ -104,6 +104,10 @@ fn offering(imported: Imported, module: String, surface: Surface) -> Imported {
     for held in held_for(module) {
         functions = map.insert(functions, held.name, held.offered)
     }
+    var processes = map.empty()
+    for one in surface.processes {
+        processes = map.insert(processes, one.name, offered_renamed(one.offered, rename))
+    }
     var types = []
     for offered in surface.types {
         types = list.push(types, type_renamed(offered, rename))
@@ -112,7 +116,7 @@ fn offering(imported: Imported, module: String, surface: Surface) -> Imported {
     for given in surface.instances {
         instances = list.push(instances, instance_renamed(given, module))
     }
-    let reached = Reached { functions: functions, types: types, instances: instances }
+    let reached = Reached { functions: functions, processes: processes, types: types, instances: instances }
     Imported { surfaces: map.insert(imported.surfaces, module, reached), modules: list.push(imported.modules, module) }
 }
 
@@ -212,7 +216,7 @@ fn every_instance(imported: Imported) -> List<OfferedInstance> {
 /// A surface that offers nothing.
 // example: list.length(no_surface().types) == 0
 fn no_surface() -> Reached {
-    Reached { functions: map.empty(), types: [], instances: [] }
+    Reached { functions: map.empty(), processes: map.empty(), types: [], instances: [] }
 }
 
 /// What the compiler holds for `module`: `length`, `push`, and `at` for `list`, and nothing else.
@@ -246,9 +250,13 @@ fn at_scheme() -> unify.Scheme {
     unify.Scheme { quantified: [unify.Written(unify.prelude_parameter("T"))], body: unify.Function { parameters: [unify.list_of(element), unify.int()], result: unify.option_of(element) }, required: [] }
 }
 
-/// Every function and every type a module declares, and the instances it gives those types.
+/// Every function, every process, and every type a module declares, and the instances it gives
+/// those types.
+///
+/// A process is offered as the call `spawn` makes of it: what `start` takes, and the handle.
 type Surface = {
     functions: List<OfferedFunction>
+    processes: List<OfferedFunction>
     types: List<OfferedType>
     instances: List<OfferedInstance>
 }
@@ -265,9 +273,11 @@ type Imported = {
     modules: List<String>
 }
 
-/// A surface as a module importing it reaches it, with each function found by its name.
+/// A surface as a module importing it reaches it, with each function and each process found by
+/// its name.
 type Reached = {
     functions: map.Map<String, Offered>
+    processes: map.Map<String, Offered>
     types: List<OfferedType>
     instances: List<OfferedInstance>
 }

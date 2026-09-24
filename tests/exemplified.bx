@@ -12,6 +12,7 @@ import held
 import ir
 import list
 import modules
+import strings
 import walk
 
 /// Every example of `paths`, which are under `directory`, each held to its header and to canonical
@@ -170,10 +171,30 @@ fn compared(path: String, ran: header.Ran, done: walk.Ended) -> held.Held {
     if done.output != ran.output {
         found = held.with_failure(found, held.failure(path + ": standard output", ran.output, done.output))
     }
-    if done.errors != ran.errors {
-        found = held.with_failure(found, held.failure(path + ": standard error", ran.errors, done.errors))
+    let errors = without_frames(done.errors)
+    if errors != ran.errors {
+        found = held.with_failure(found, held.failure(path + ": standard error", ran.errors, errors))
     }
     found
+}
+
+/// `errors` without the frames of a JVM trace, which are the lines that open with a tab.
+///
+/// A trace is as deep as the JVM makes it, so its first line, which names the error, is compared.
+// example: without_frames("java.lang.StackOverflowError\n\tat main.depth(Unknown Source)\n") == "java.lang.StackOverflowError\n"
+// example: without_frames("no break") == "no break"
+fn without_frames(errors: String) -> String {
+    var kept = []
+    for line in walk.lines_of(errors) {
+        if or(strings.at(line, 0), 0) != 9 {
+            kept = list.push(kept, line)
+        }
+    }
+    let joined = strings.join(kept, "\n")
+    if list.length(kept) > 0 && walk.is_ending_in(errors, "\n") {
+        return joined + "\n"
+    }
+    joined
 }
 
 /// The first line of `text`, without its line break.

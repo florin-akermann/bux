@@ -59,6 +59,12 @@ The compiler holds the shape before it infers a type, so each break has its own 
 - `L0808`: the body of `receive` is not one `match` on its message parameter.
 - `L0809`: an arm of that `match` is not one call or one name.
 - `L0810`: `receive` does not take the state `start` gives, or does not give `Next` of it.
+- `L0811`: what `start` takes, the state, or the message is or holds an `extern` type.
+
+A process holds values only, and a value of an `extern` type is a foreign reference.
+A foreign reference has identity and mutation, so it stays with the function that reaches it.
+`L0811` reads what `start` takes on its own, because `start` need not keep it in the state.
+The message names the process and the type, and the check follows each type into what it holds.
 
 Nothing in the source calls `start` or `receive`, so inference has no call to fill a type from.
 Each type is therefore written, and no function of a process is generic.
@@ -76,14 +82,19 @@ The rule forces the work out of the branch, and the name of the work into the so
 let counting = spawn Counter(10)
 ```
 
-`spawn` is followed by a call of a process the module declares.
+`spawn` is followed by a call of a process.
 The arguments are the values `start` takes, and each is passed by value.
 `start` runs on the new process, so `spawn` never waits for it.
 
 The arguments follow the rules of a call to `start`, so they are named where two share a type.
 `spawn` of anything else is refused as `L0800`, and so is a process name with no call after it.
 A process named without `spawn`, as a call or as a value, is refused as `L0801`.
-A process of another module cannot be spawned, and `L0800` says so.
+
+A module offers each process it declares, and a module that imports it reaches one by its name.
+`spawn ticks.Ticker(5)` starts `Ticker` of the module `ticks`, as `ticks.count(5)` calls a function.
+The arguments follow the rules of a call through a module, so they are passed in order.
+`L0800` refuses `spawn ticks.count(5)`, and `L0801` refuses `ticks.Ticker(5)` without `spawn`.
+A process is reached through a module name only, because no value holds a process.
 
 ## The handle
 
@@ -133,7 +144,7 @@ The prelude declares both types.
 `waiting` says how long `send` waits while the mailbox is full.
 `NoWait` does not wait, `Milliseconds(n)` waits `n` milliseconds at most, and `NoLimit` waits.
 
-- `Delivered`: the mailbox took the message.
+- `Delivered`: the mailbox took the message before the process ended.
 - `MailboxFull`: the mailbox was still full when the wait ended.
 - `ProcessEnded`: the process had ended, so no mailbox takes the message.
 
@@ -141,6 +152,8 @@ A `send` to a process that has ended never waits, whatever `waiting` says.
 A `send` with `NoLimit` to a full mailbox waits until there is room or until the process ends.
 A process can end while a message waits in its mailbox, and that message is not read.
 `Delivered` says that the mailbox took the message, and not that `receive` read it.
+`send` looks for the end again after the mailbox takes the message.
+So a message that the mailbox takes after the end gives `ProcessEnded`, and never `Delivered`.
 
 A `send` gives a `Sent`, and a program that does not read it writes `_ =`.
 That is the rule of `docs/specs/discarding.md`, and it applies here as it does everywhere.
@@ -152,10 +165,10 @@ The last state is the state that `receive` took with the message it answered wit
 `ended` on a process that never gets a message that ends it never returns.
 `ended` twice on one handle gives the same state twice.
 
-A JVM error, such as a stack overflow, can stop `start` or `receive` part of the way through.
-Then the process ends, and the error goes to standard error.
-A `send` to it gives `ProcessEnded`, and `ended` on it stops the caller with the same error.
-So no one waits for a process that the error stopped.
+A platform error, such as a stack overflow or an out-of-memory error, can stop `start` or `receive`.
+Then the process ends, and it writes the platform error to standard error before it ends.
+A later `send` to that process gives `ProcessEnded`, and `ended` on it ends the caller the same way.
+So no one waits for a process that a platform error stopped, and no program catches the error.
 
 ## Waking and time
 
@@ -185,5 +198,8 @@ Each writes the same bytes, as each module writes the same class of a list.
 2. The messages one sender sends before the message that ends a process arrive in order.
 3. `ended` gives the state that `receive` held when it gave `Done`.
 4. The shape check accepts every well-formed drawn process, and refuses each drawn break.
+5. After `ended` gives back, every `send` gives `ProcessEnded`, whatever it waits.
 
 `tests/spec/concurrency/` holds a counter, a worker pool, a full mailbox, and each refused shape.
+`tests/spec/concurrency/elsewhere/` spawns a process that another module declares.
+`tests/spec/concurrency/stack_overflow.bx` shows a process that a platform error stops.

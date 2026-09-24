@@ -639,10 +639,11 @@ fn expression(resolver: Resolver, walked: ast.Expr) -> Result<Resolver, ResolveE
 }
 
 /// `spawn Counter(0)`: the process this module declares, then each argument `start` takes.
-// example: printed("fn f() -> Int {\n    spawn f()\n}\n", prelude_of(ast.Program { items: [] })) == "refused\nL0800 26..27 `spawn` starts a process this module declares, and `f` is not one\nhelp: declare a `process` in this module and name it after `spawn`\n"
+// example: printed("fn f() -> Int {\n    spawn f()\n}\n", prelude_of(ast.Program { items: [] })) == "refused\nL0800 26..27 `spawn` starts a process, and `f` is not one\nhelp: declare a `process`, or import the module that declares one, and name it after `spawn`\n"
 fn spawned(resolver: Resolver, started: ast.Expr) -> Result<Resolver, ResolveError> {
     match started.kind {
         ast.Call { callee, arguments } => process_started(resolver, callee, arguments)
+        ast.Field { receiver, name } => uncalled_through(resolver: resolver, started: started, receiver: receiver)
         _ => Err(ResolveError { kind: uncalled(started), span: started.span })
     }
 }
@@ -657,12 +658,48 @@ fn uncalled(started: ast.Expr) -> ResolveErrorKind {
     }
 }
 
-/// The call after `spawn`, whose callee is the bare name of a process.
-// example: printed("fn f() -> Int {\n    spawn io.f()\n}\n", prelude_of(ast.Program { items: [] })) == "refused\nL0800 26..30 `spawn` starts a process this module declares, and `io.f` is not one\nhelp: declare a `process` in this module and name it after `spawn`\n"
+/// Why `spawn` refuses a name after a dot with no call: through a module it lacks the call, and
+/// through anything else it is not a process.
+// example: printed("import demo\n\nfn f() -> Int {\n    spawn demo.Counter\n}\n", prelude_of(ast.Program { items: [] })) == "refused\nL0800 39..51 `spawn` starts a process with a call, and `demo.Counter` is written without one\nhelp: write the values that `start` takes in parentheses after the name, as in `spawn demo.Counter()`\n"
+// example: printed("fn f(held: Int) -> Int {\n    spawn held.count\n}\n", prelude_of(ast.Program { items: [] })) == "refused\nL0800 35..45 `spawn` starts a process, and `held.count` is not one\nhelp: declare a `process`, or import the module that declares one, and name it after `spawn`\n"
+fn uncalled_through(resolver: Resolver, started: ast.Expr, receiver: ast.Expr) -> Result<Resolver, ResolveError> {
+    let walked = in_position(resolver: resolver, walked: receiver, position: Receiver)?
+    if is_module_name(walked, receiver) {
+        return Err(ResolveError { kind: NotACall(written_text(started)), span: started.span })
+    }
+    Err(ResolveError { kind: NotAProcess(written_text(started)), span: started.span })
+}
+
+/// The call after `spawn`, whose callee is the bare name of a process, or a name reached through
+/// a module.
+// example: printed("fn f(held: Int) -> Int {\n    spawn held.f()\n}\n", prelude_of(ast.Program { items: [] })) == "refused\nL0800 35..41 `spawn` starts a process, and `held.f` is not one\nhelp: declare a `process`, or import the module that declares one, and name it after `spawn`\n"
 fn process_started(resolver: Resolver, callee: ast.Expr, arguments: ast.Arguments) -> Result<Resolver, ResolveError> {
     match callee.kind {
         ast.NameExpr(called) => process_named(resolver, called, arguments)
+        ast.Field { receiver, name } => process_reached(resolver: resolver, callee: callee, receiver: receiver, arguments: arguments)
         _ => Err(ResolveError { kind: NotAProcess(written_text(callee)), span: callee.span })
+    }
+}
+
+/// `spawn other.Counter(0)`: the module the process is reached through, then each argument.
+///
+/// Which names a module offers as processes is known to inference, which holds the name after the
+/// dot to one.
+// example: printed("import io\n\nfn f() -> Int {\n    spawn io.Counter()\n}\n", prelude_of(ast.Program { items: [] })) == "resolved\n7..9 value module declared 7..9\n14..15 value function declared 14..15\n21..24 type type prelude\n37..39 value module declared 7..9\n"
+fn process_reached(resolver: Resolver, callee: ast.Expr, receiver: ast.Expr, arguments: ast.Arguments) -> Result<Resolver, ResolveError> {
+    let walked = in_position(resolver: resolver, walked: receiver, position: Receiver)?
+    if !is_module_name(walked, receiver) {
+        return Err(ResolveError { kind: NotAProcess(written_text(callee)), span: callee.span })
+    }
+    passed(walked, arguments)
+}
+
+/// Whether `written` is the bare name of a module.
+// example: !is_module_name(resolver_of(prelude_of(ast.Program { items: [] })), ast.Expr { kind: ast.Unit, span: lexer.Span { start: 0, length: 2 } })
+fn is_module_name(resolver: Resolver, written: ast.Expr) -> Bool {
+    match written.kind {
+        ast.NameExpr(name) => or(look_up(resolver.values, name.text), Definition { kind: Local, origin: InPrelude }).kind == Module
+        _ => false
     }
 }
 
@@ -673,11 +710,7 @@ fn process_named(resolver: Resolver, name: ast.Name, arguments: ast.Arguments) -
     if found.kind != ProcessName {
         return Err(at(name, NotAProcess(name.text)))
     }
-    let walked = with_found(resolver, recorded(resolver.found, ValueNamespace, name.span, found))
-    match arguments {
-        ast.Positional(values) => each_expression(resolver: walked, values: values)
-        ast.Named(values) => named_arguments(resolver: walked, values: values)
-    }
+    passed(with_found(resolver, recorded(resolver.found, ValueNamespace, name.span, found)), arguments)
 }
 
 /// How a refusal names what `spawn` was written before: a name as it is, and any other form as
@@ -702,10 +735,15 @@ fn both(resolver: Resolver, left: ast.Expr, right: ast.Expr) -> Result<Resolver,
 /// A call: what is called, which is where a function name is written, then each argument.
 // example: printed("fn f() -> Int {\n    f(f)\n}\n", prelude_of(ast.Program { items: [] })) == "refused\nL0304 22..23 `f` is a function, so it is written as a call\nhelp: version 0.1 reaches a function by calling it; write the call\n"
 fn call(resolver: Resolver, callee: ast.Expr, arguments: ast.Arguments) -> Result<Resolver, ResolveError> {
-    let walked = in_position(resolver: resolver, walked: callee, position: Callee)?
+    passed(in_position(resolver: resolver, walked: callee, position: Callee)?, arguments)
+}
+
+/// The value of each argument a call passes, in the order it is written.
+// example: printed("fn f(a: Int) -> Int {\n    f(missing)\n}\n", prelude_of(ast.Program { items: [] })) == "refused\nL0300 28..35 there is nothing named `missing`\nhelp: a name is declared in this file, imported, or supplied by the prelude\n"
+fn passed(resolver: Resolver, arguments: ast.Arguments) -> Result<Resolver, ResolveError> {
     match arguments {
-        ast.Positional(values) => each_expression(resolver: walked, values: values)
-        ast.Named(values) => named_arguments(resolver: walked, values: values)
+        ast.Positional(values) => each_expression(resolver: resolver, values: values)
+        ast.Named(values) => named_arguments(resolver: resolver, values: values)
     }
 }
 
@@ -1482,7 +1520,7 @@ fn message(kind: ResolveErrorKind) -> String {
         BindsInsideOr(text) => "`" + text + "` binds inside an or-pattern, which binds nothing"
         NotATypeParameter(text) => "`" + text + "` is not a type parameter this instance declares"
         TestNamedTwice(text) => "two tests of this module are named " + ast.quoted(text)
-        NotAProcess(text) => "`spawn` starts a process this module declares, and `" + text + "` is not one"
+        NotAProcess(text) => "`spawn` starts a process, and `" + text + "` is not one"
         NotACall(text) => "`spawn` starts a process with a call, and `" + text + "` is written without one"
         NotSpawned(text) => "`" + text + "` is a process, so `spawn` starts it"
     }
@@ -1512,7 +1550,7 @@ fn help_of(kind: ResolveErrorKind) -> String {
         BindsInsideOr(_) => "write one arm for each alternative where one of them binds"
         NotATypeParameter(_) => "an instance answers for every argument of its type: write `instance<T> Eq<Box<T>>`"
         TestNamedTwice(_) => "a report names a test by its name; rename one of the two"
-        NotAProcess(_) => "declare a `process` in this module and name it after `spawn`"
+        NotAProcess(_) => "declare a `process`, or import the module that declares one, and name it after `spawn`"
         NotACall(text) => "write the values that `start` takes in parentheses after the name, as in `spawn " + text + "()`"
         NotSpawned(_) => "write `spawn` before the call; a process is never called or held as a value"
     }

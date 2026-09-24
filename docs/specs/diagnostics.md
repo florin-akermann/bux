@@ -207,11 +207,13 @@ class that the writer cannot write:
 - `L0703` — the compiler did not write a function, which is a defect of the compiler.
 
 Name resolution raises the first two of these, in `compiler/resolver.bx`.
+Inference raises the same two for a process reached through a module, whose surface it reads.
 The shape check raises the next eight, in `compiler/processes.bx`, before inference.
-The declarations raise the last one, in `compiler/declared.bx`.
+The declarations raise `L0810`, in `compiler/declared.bx`.
+The process phase raises `L0811` after the declarations, in `compiler/processes.bx`.
 `docs/specs/concurrency.md` states the shape that each one holds.
 
-- `L0800` — `spawn` names no process this module declares, or names one without a call.
+- `L0800` — `spawn` names no process, or names one without a call.
 - `L0801` — a process is called as a function or held as a value, without `spawn`.
 - `L0802` — the first function of a process is not `start`.
 - `L0803` — the second function of a process is not `receive`.
@@ -222,6 +224,7 @@ The declarations raise the last one, in `compiler/declared.bx`.
 - `L0808` — the body of `receive` is not one `match` on the message.
 - `L0809` — an arm of that `match` is not one call or one name.
 - `L0810` — `receive` does not take the state `start` gives and give `Next` of that state.
+- `L0811` — what `start` takes, the state, or the message of a process holds an `extern` type.
 
 ## As data
 
