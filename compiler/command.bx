@@ -833,7 +833,7 @@ fn put_back(refused: Refusal, run: Run, root: Typed) -> Said {
 // example: ran_in(Beside { java: "no-such-java", module: "a", beside: "/dev/null/a", archives: [] }, [], Run { source: "", stretches: [], examples: [], tests: [], module: lexer.Span { start: 0, length: 0 } }, Typed { module: modules.Module { name: "main", path: "main.bx", source: "", program: ast.Program { items: [] } }, inferred: types.checked_of("") }).said.status == 2
 fn ran_in(beside: Beside, classes: List<jvm.ClassFile>, run: Run, root: Typed) -> Tried {
     match written_whole(classes, beside.beside) {
-        Ok(_) => run_ended(program_finished(program_line(java: beside.java, classes: all_of(values: [beside.beside], more: beside.archives), module: beside.module, arguments: [])), beside.java, run, root)
+        Ok(_) => run_ended(program_finished(examples_line(java: beside.java, classes: all_of(values: [beside.beside], more: beside.archives), module: beside.module)), beside.java, run, root)
         Err(said) => only_said(said)
     }
 }
@@ -862,7 +862,31 @@ fn program_finished(line: List<String>) -> Result<programs.Finished, String> {
 // example: or(list.at(program_line(java: "java", classes: ["a"], module: "b", arguments: []), 4), "") == "-Djdk.serialFilter=!*"
 // example: or(list.at(program_line(java: "java", classes: ["target", "x.jar"], module: "b", arguments: []), 6), "") == "target:x.jar"
 fn program_line(java: String, classes: List<String>, module: String, arguments: List<String>) -> List<String> {
-    all_of(values: [java, "--enable-preview", "--limit-modules", "java.base", "-Djdk.serialFilter=!*", "-cp", strings.join(classes, ":"), module], more: arguments)
+    line_of(java: java, flags: [], classes: classes, module: module, arguments: arguments)
+}
+
+/// The line that starts a JVM on the examples and tests of the class `module`.
+///
+/// It is the line of `program_line` with the flags of `short_run_flags`, and no arguments.
+// example: list.length(examples_line(java: "java", classes: ["a"], module: "b")) == 11
+// example: or(list.at(examples_line(java: "java", classes: ["a"], module: "b"), 5), "") == "-Xmx256m"
+fn examples_line(java: String, classes: List<String>, module: String) -> List<String> {
+    line_of(java: java, flags: short_run_flags(), classes: classes, module: module, arguments: [])
+}
+
+/// The flags of a JVM that runs for a short time: `docs/specs/run.md` states each one.
+///
+/// A pass of the runner starts hundreds of these JVMs, several at once, so each takes little.
+// example: list.length(short_run_flags()) == 3
+private fn short_run_flags() -> List<String> {
+    ["-Xmx256m", "-XX:+UseSerialGC", "-XX:TieredStopAtLevel=1"]
+}
+
+/// The line that starts a JVM on `module` with the guards of every run, then `flags`.
+// example: list.length(line_of(java: "java", flags: ["-Xmx1m"], classes: ["a"], module: "b", arguments: [])) == 9
+private fn line_of(java: String, flags: List<String>, classes: List<String>, module: String, arguments: List<String>) -> List<String> {
+    let guarded = all_of(values: [java, "--enable-preview", "--limit-modules", "java.base", "-Djdk.serialFilter=!*"], more: flags)
+    all_of(values: guarded, more: all_of(values: ["-cp", strings.join(classes, ":"), module], more: arguments))
 }
 
 /// Removes from the environment of `builder` each variable that a JVM reads options from.

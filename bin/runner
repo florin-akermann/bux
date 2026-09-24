@@ -16,5 +16,8 @@ done
 root=$(cd "$(dirname "$self")/.." && pwd)
 cd "$root"
 bin/bux build tests/runner.bx
-exec "$JAVA_HOME/bin/java" --enable-preview -Dstdout.encoding=UTF-8 -Dstderr.encoding=UTF-8 \
+# The heap bound keeps the runner from the quarter of the memory that the JDK gives it by default.
+# docs/implementation.md section 7 records the measurement behind it.
+heap=-Xmx4g
+exec "$JAVA_HOME/bin/java" --enable-preview "$heap" -Dstdout.encoding=UTF-8 -Dstderr.encoding=UTF-8 \
     -cp "$root/tests/target" runner "$@"

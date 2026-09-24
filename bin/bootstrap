@@ -36,6 +36,9 @@ if [ ! -f "$root/bin/seed.jar" ]; then
     echo "error: $root/bin/seed.jar: the seed is missing, and the bootstrap starts from it" >&2
     exit 2
 fi
+# The heap bound of each of the two compiles. docs/implementation.md section 7 records the
+# measurement behind it.
+heap=-Xmx1g
 cd "$root"
 rm -rf compiler/target
 seed=$(mktemp -d "${TMPDIR:-/tmp}/bux-seed.XXXXXX")
@@ -44,11 +47,11 @@ trap 'rm -rf "$seed" "$copy"' EXIT
 (cd "$seed" && "$JAVA_HOME/bin/jar" xf "$root/bin/seed.jar")
 rm -rf "$seed/library" "$seed/help" "$seed/explanations"
 cp -R library compiler/help compiler/explanations "$seed"
-"$java" --enable-preview -cp "$seed" main build compiler/main.bx
+"$java" --enable-preview "$heap" -cp "$seed" main build compiler/main.bx
 
 cp -R compiler "$copy/compiler"
 rm -rf "$copy/compiler/target"
-"$java" --enable-preview -cp "$root/compiler/target" main build "$copy/compiler/main.bx"
+"$java" --enable-preview "$heap" -cp "$root/compiler/target" main build "$copy/compiler/main.bx"
 
 # One diff compares the stages. Its first line names the first class that differs, as
 # "Files A and B differ", or the first class or directory that only one stage holds, as
