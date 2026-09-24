@@ -1644,7 +1644,7 @@ fn cursor_of(step: Step) -> Cursor {
 
 /// The step a list takes after one element, and a closed list at the start where it failed.
 // example: !is_open(or_closed(Err(error(over(""), NameWanted))))
-fn or_closed(step: Result<Step, ParseError>) -> Step {
+private fn or_closed(step: Result<Step, ParseError>) -> Step {
     match step {
         Ok(next) => next
         Err(_) => Closed(over(""))
@@ -1699,7 +1699,7 @@ fn can_end_a_line(kind: lexer.TokenKind) -> Bool {
 
 /// The error a step fails with, printed, and `""` where it does not fail.
 // example: failed_step(Ok(Open(over("")))) == ""
-fn failed_step(step: Result<Step, ParseError>) -> String {
+private fn failed_step(step: Result<Step, ParseError>) -> String {
     match step {
         Ok(_) => ""
         Err(why) => error_printed(why)
@@ -1722,7 +1722,7 @@ fn expect_path(cursor: Cursor, expected: Expected) -> Result<Parsed<ast.Path>, P
 
 /// The path a parse gave, and an empty one where it failed.
 // example: ast.path_text(or_path(Err(error(over(""), TypeWanted)))) == ""
-fn or_path(parsed: Result<Parsed<ast.Path>, ParseError>) -> ast.Path {
+private fn or_path(parsed: Result<Parsed<ast.Path>, ParseError>) -> ast.Path {
     match parsed {
         Ok(done) => done.value
         Err(_) => ast.Path { module: None, name: ast.Name { text: "", span: lexer.Span { start: 0, length: 0 } } }
@@ -1915,7 +1915,7 @@ fn token_error(expected: Expected, token: lexer.Token) -> ErrorKind {
 
 /// Where a parse left the cursor, and -1 where it failed, which is what an example reads.
 // example: position_after(Ok(Parsed { value: 0, cursor: advanced(over("a b")) })) == 1
-fn position_after<T>(parsed: Result<Parsed<T>, ParseError>) -> Int {
+private fn position_after<T>(parsed: Result<Parsed<T>, ParseError>) -> Int {
     match parsed {
         Ok(done) => done.cursor.position
         Err(_) => -1
@@ -1924,7 +1924,7 @@ fn position_after<T>(parsed: Result<Parsed<T>, ParseError>) -> Int {
 
 /// The error a parse failed with, printed, and `""` where it did not fail.
 // example: failed(expect_name(over("x"), NameWanted)) == ""
-fn failed<T>(parsed: Result<Parsed<T>, ParseError>) -> String {
+private fn failed<T>(parsed: Result<Parsed<T>, ParseError>) -> String {
     match parsed {
         Ok(_) => ""
         Err(why) => error_printed(why)
@@ -1933,7 +1933,7 @@ fn failed<T>(parsed: Result<Parsed<T>, ParseError>) -> String {
 
 /// The error a result failed with, printed, and `""` where it did not fail.
 // example: failed_with(Ok(1)) == ""
-fn failed_with<T>(result: Result<T, ParseError>) -> String {
+private fn failed_with<T>(result: Result<T, ParseError>) -> String {
     match result {
         Ok(_) => ""
         Err(why) => error_printed(why)
@@ -1942,7 +1942,7 @@ fn failed_with<T>(result: Result<T, ParseError>) -> String {
 
 /// An item a parse gave, printed, or the error it failed with.
 // example: item_printed(item(over("import io"))) == "import io 0..9\n"
-fn item_printed(parsed: Result<Parsed<ast.Item>, ParseError>) -> String {
+private fn item_printed(parsed: Result<Parsed<ast.Item>, ParseError>) -> String {
     match parsed {
         Ok(done) => ast.item_lines(done.value)
         Err(why) => error_printed(why)
@@ -1951,7 +1951,7 @@ fn item_printed(parsed: Result<Parsed<ast.Item>, ParseError>) -> String {
 
 /// An expression a parse gave, printed, or the error it failed with.
 // example: expression_printed(expression(over("x"), Allowed)) == "name x 0..1\n"
-fn expression_printed(parsed: Result<Parsed<ast.Expr>, ParseError>) -> String {
+private fn expression_printed(parsed: Result<Parsed<ast.Expr>, ParseError>) -> String {
     match parsed {
         Ok(done) => ast.expression_lines(done.value, 0)
         Err(why) => error_printed(why)
@@ -1960,7 +1960,7 @@ fn expression_printed(parsed: Result<Parsed<ast.Expr>, ParseError>) -> String {
 
 /// A pattern a parse gave, printed, or the error it failed with.
 // example: pattern_printed(pattern(over("1"))) == "pattern-integer 1 0..1\n"
-fn pattern_printed(parsed: Result<Parsed<ast.Pattern>, ParseError>) -> String {
+private fn pattern_printed(parsed: Result<Parsed<ast.Pattern>, ParseError>) -> String {
     match parsed {
         Ok(done) => ast.pattern_lines(done.value, 0)
         Err(why) => error_printed(why)
@@ -1969,7 +1969,7 @@ fn pattern_printed(parsed: Result<Parsed<ast.Pattern>, ParseError>) -> String {
 
 /// A type a parse gave, printed, or the error it failed with.
 // example: type_printed(type_ref(over("()"))) == "unit-type 0..2\n"
-fn type_printed(parsed: Result<Parsed<ast.TypeRef>, ParseError>) -> String {
+private fn type_printed(parsed: Result<Parsed<ast.TypeRef>, ParseError>) -> String {
     match parsed {
         Ok(done) => ast.type_ref_lines(done.value, 0)
         Err(why) => error_printed(why)

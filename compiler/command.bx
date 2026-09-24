@@ -320,7 +320,7 @@ fn built(path: String, library: ir.Library) -> Result<Built, Said> {
 
 /// Whether a build was refused, which is what the examples of a build that fails read.
 // example: is_refused(Err(nothing_said()))
-fn is_refused<T>(answer: Result<T, Said>) -> Bool {
+private fn is_refused<T>(answer: Result<T, Said>) -> Bool {
     match answer {
         Ok(_) => false
         Err(_) => true
@@ -671,7 +671,7 @@ fn stated_in(root: Typed, tests: List<ast.TestDeclaration>) -> Result<Option<Run
 
 /// Whether reading the examples found no run to start.
 // example: is_none_run(Ok(None))
-fn is_none_run(found: Result<Option<Run>, List<Diagnostic>>) -> Bool {
+private fn is_none_run(found: Result<Option<Run>, List<Diagnostic>>) -> Bool {
     match found {
         Ok(None) => true
         _ => false
@@ -1444,7 +1444,7 @@ fn examples_read(source: String) -> set.Set<String> {
 
 /// The code a refusal carries, and `""` where there is none.
 // example: code_refused(Err(no_diagnostic())) == "L0000"
-fn code_refused<T>(answer: Result<T, Diagnostic>) -> String {
+private fn code_refused<T>(answer: Result<T, Diagnostic>) -> String {
     match answer {
         Ok(_) => ""
         Err(diagnostic) => diagnostic.code
@@ -1510,7 +1510,7 @@ fn check_diagnostic(refused: format.CheckError, source: String) -> Diagnostic {
 
 /// Whether a diagnostic carries an edit.
 // example: !is_fixed(no_diagnostic())
-fn is_fixed(diagnostic: Diagnostic) -> Bool {
+private fn is_fixed(diagnostic: Diagnostic) -> Bool {
     match diagnostic.fix {
         Some(_) => true
         None => false
@@ -1705,7 +1705,7 @@ fn declared_span(one: Typed, named: String) -> lexer.Span {
 
 /// The first diagnostic of `refused`, which a refusal of the writer holds one of.
 // example: first_of(Refusal { diagnostics: [], page: Page { source: "", path: "a.bx" } }).code == ""
-fn first_of(refused: Refusal) -> Diagnostic {
+private fn first_of(refused: Refusal) -> Diagnostic {
     or(list.at(refused.diagnostics, 0), Diagnostic { code: "", message: "", span: lexer.Span { start: 0, length: 0 }, help: None, fix: None })
 }
 
@@ -1824,7 +1824,7 @@ fn with_documented(found: List<ast.FunctionDeclaration>, function: ast.FunctionD
 
 /// The first function `source` declares, which the examples read.
 // example: parsed_function("fn f() -> Int {\n    0\n}\n").name.text == "f"
-fn parsed_function(source: String) -> ast.FunctionDeclaration {
+private fn parsed_function(source: String) -> ast.FunctionDeclaration {
     var first = ast.FunctionDeclaration { name: ast.Name { text: "", span: lexer.Span { start: 0, length: 0 } }, type_parameters: [], parameters: [], result: None, body: ast.Block { statements: [], span: lexer.Span { start: 0, length: 0 } }, span: lexer.Span { start: 0, length: 0 }, visibility: ast.Public }
     for item in ok_or(parser.parse(source), ast.Program { items: [] }).items {
         first = match item {
@@ -1935,7 +1935,7 @@ fn run_of(page: Page, program: ast.Program, stated: Trying) -> Result<Run, Diagn
 
 /// A run's answer as a refusal, which is what the examples of `run_of` read.
 // example: code_refused(result_of_run(Err(no_diagnostic()))) == "L0000"
-fn result_of_run(answer: Result<Run, Diagnostic>) -> Result<(), Diagnostic> {
+private fn result_of_run(answer: Result<Run, Diagnostic>) -> Result<(), Diagnostic> {
     match answer {
         Ok(_) => Ok(())
         Err(diagnostic) => Err(diagnostic)
@@ -2362,7 +2362,7 @@ fn is_white(unit: Int) -> Bool {
 
 /// Whether a line named an example.
 // example: !is_named(None)
-fn is_named(found: Option<Example>) -> Bool {
+private fn is_named(found: Option<Example>) -> Bool {
     match found {
         Some(_) => true
         None => false
@@ -2715,7 +2715,7 @@ fn asked_by(arguments: List<String>) -> Parsed {
 
 /// Whether the words were answered without a command.
 // example: is_told(Told(nothing_said()))
-fn is_told(parsed: Parsed) -> Bool {
+private fn is_told(parsed: Parsed) -> Bool {
     match parsed {
         Told(_) => true
         _ => false

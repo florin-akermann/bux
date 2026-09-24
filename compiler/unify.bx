@@ -94,7 +94,7 @@ fn each_unified(table: Table, theirs: List<Type>, ours: List<Type>) -> Result<Ta
 
 /// Whether unification made the two types one.
 // example: is_unified(Ok(empty_table()))
-fn is_unified(unified: Result<Table, Clash>) -> Bool {
+private fn is_unified(unified: Result<Table, Clash>) -> Bool {
     match unified {
         Ok(_) => true
         Err(_) => false
