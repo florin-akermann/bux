@@ -26,9 +26,12 @@ fn classes_of(path: String, library: ir.Library) -> Result<List<ClassFile>, Stri
 /// variant one module gives back may extend a base that another module declares. Two modules
 /// that write one class, such as the class of a list, write the same bytes, and the file is
 /// written once. Two different classes of one name are refused: two parts of the program have one name.
+/// Two classes whose names differ only in case are refused too, even with the same bytes, because
+/// a disk that ignores case holds them as one file, and a build gives one answer on every disk.
 // example: list.length(ok_or(program_written([]), [ClassFile { path: "", bytes: [] }])) == 0
 // example: list.length(ok_or(program_written([one_class(record_class()), one_class(record_class())]), [])) == 1
 // example: refused_code(program_written([one_class(record_class()), one_class(base_class())])) == "L0702"
+// example: refused_code(program_written([one_class(record_class()), one_class(record_class_named("a/b"))])) == "L0702"
 fn program_written(program: List<ir.Lowered>) -> Result<List<ClassFile>, Unwritten> {
     var every = []
     for module in program {
@@ -41,26 +44,65 @@ fn program_written(program: List<ir.Lowered>) -> Result<List<ClassFile>, Unwritt
     var written = map.empty()
     for class in every {
         let file = ClassFile { path: class.name + ".class", bytes: class_written(class, hierarchy)? }
-        let earlier = map.get(written, file.path)
-        if is_other_than(earlier, file.bytes) {
-            return Err(Unwritten { class: class.name, method: None, why: NamedTwice })
+        let folded = case_folded(file.path)
+        let earlier = map.get(written, folded)
+        let clash = clash_of(earlier, file)
+        if is_held(clash) {
+            return Err(Unwritten { class: class.name, method: None, why: or(clash, NamedTwice) })
         }
         if !is_held(earlier) {
             files = list.push(files, file)
-            written = map.insert(written, file.path, file.bytes)
+            written = map.insert(written, folded, file)
         }
     }
     Ok(files)
 }
 
-/// Whether `earlier` holds bytes, and they are not `written`.
-// example: is_other_than(Some([1]), [2])
-// example: !is_other_than(None, [2])
-fn is_other_than(earlier: Option<List<Int>>, written: List<Int>) -> Bool {
+/// Why `file` is not written, where `earlier` is the file written first under its folded path.
+///
+/// The same path with the same bytes is one class that two modules write, and it is no clash.
+// example: !is_held(clash_of(Some(ClassFile { path: "a/B.class", bytes: [1] }), ClassFile { path: "a/B.class", bytes: [1] }))
+// example: help_of(or(clash_of(Some(ClassFile { path: "a/B.class", bytes: [1] }), ClassFile { path: "a/B.class", bytes: [2] }), TooLarge)) == help_of(NamedTwice)
+// example: help_of(or(clash_of(Some(ClassFile { path: "a/B.class", bytes: [1] }), ClassFile { path: "a/b.class", bytes: [1] }), TooLarge)) == help_of(NamedInCase("a/B"))
+fn clash_of(earlier: Option<ClassFile>, file: ClassFile) -> Option<Why> {
     match earlier {
-        Some(held) => held != written
-        None => false
+        Some(held) => if held.path != file.path {
+            Some(NamedInCase(or(strings.cut(held.path, 0, strings.length(held.path) - 6), held.path)))
+        } else if held.bytes != file.bytes {
+            Some(NamedTwice)
+        } else {
+            None
+        }
+        None => None
     }
+}
+
+/// `path` with each ASCII uppercase letter in lowercase, which is how a disk that ignores case
+/// compares two names.
+///
+/// A class name is spelled in the letters of Java names. Only the 26 ASCII letters are folded
+/// here, and a letter outside ASCII keeps its case.
+// example: case_folded("demo/Box.class") == "demo/box.class"
+// example: case_folded("Ärger/ZZ") == "Ärger/zz"
+fn case_folded(path: String) -> String {
+    var folded = ""
+    var at = 0
+    for at < strings.length(path) {
+        folded += unit_folded(path, at)
+        at += 1
+    }
+    folded
+}
+
+/// The code unit of `path` at `at` as a text, in lowercase where it is an ASCII uppercase letter.
+// example: unit_folded("aB", 1) == "b"
+// example: unit_folded("aB", 0) == "a"
+fn unit_folded(path: String, at: Int) -> String {
+    let unit = or(strings.at(path, at), 0)
+    if unit >= 65 && unit <= 90 {
+        return or(strings.cut("abcdefghijklmnopqrstuvwxyz", unit - 65, unit - 64), "")
+    }
+    or(strings.cut(path, at, at + 1), "")
 }
 
 /// `class` as the bytes a JVM loads, or why it is not written.
@@ -1405,6 +1447,7 @@ fn code_of(why: Why) -> String {
         TooLarge => "L0700"
         TooLong(_) => "L0701"
         NamedTwice => "L0702"
+        NamedInCase(_) => "L0702"
         Defect(_) => "L0703"
     }
 }
@@ -1412,12 +1455,14 @@ fn code_of(why: Why) -> String {
 /// The line a refusal of the writer opens with, which names the function or the type it is in.
 // example: message(Unwritten { class: "demo", method: Some("total$Int"), why: TooLarge }) == "`total` is too large to compile as one function"
 // example: message(Unwritten { class: "demo/Box", method: None, why: TooLong(65536) }) == "a text or a name in `demo/Box` takes 65536 bytes, and one takes 65535 at most"
+// example: message(Unwritten { class: "demo/SetUp", method: None, why: NamedInCase("demo/Setup") }) == "two names in `demo` differ only in case: `demo/SetUp` and `demo/Setup`"
 fn message(unwritten: Unwritten) -> String {
     let named = named_in(unwritten)
     match unwritten.why {
         TooLarge => "`" + named + "` is too large to compile as one function"
         TooLong(length) => "a text or a name in `" + named + "` takes " + shown(length) + " bytes, and one takes 65535 at most"
         NamedTwice => "two parts of this program are both named `" + module_of(unwritten.class) + "`"
+        NamedInCase(earlier) => "two names in `" + module_of(unwritten.class) + "` differ only in case: `" + unwritten.class + "` and `" + earlier + "`"
         Defect(what) => "the compiler did not write `" + named + "`: " + what
     }
 }
@@ -1429,22 +1474,27 @@ fn help_of(why: Why) -> String {
         TooLarge => "split the function into smaller functions"
         TooLong(_) => "split the text into parts joined with `+`, or give the name fewer characters"
         NamedTwice => "rename this module, so that no other part of the program has its name"
+        NamedInCase(_) => "rename one of the two, so that their names differ in more than case"
         Defect(_) => "this is a defect of the compiler; report it with the program that shows it"
     }
 }
 
-/// The module a class belongs to, which is its name up to the first `/`.
+/// The module a class belongs to: `<module>` under `bux/library/`, else its name up to the first `/`.
+///
+/// A class `bux/<Type>` is a type of the prelude, or of a program's module named `bux`. The
+/// prelude is written first, so a class refused there is the program's, and it names `bux`.
 // example: module_of("demo/Box") == "demo"
 // example: module_of("strings") == "strings"
+// example: module_of("bux/library/strings") == "strings"
+// example: module_of("bux/library/lexer/Span") == "lexer"
+// example: module_of("bux/Option") == "bux"
 fn module_of(class: String) -> String {
-    var at = 0
-    for at < strings.length(class) {
-        if or(strings.at(class, at), 0) == 47 {
-            return or(strings.cut(class, 0, at), class)
-        }
-        at += 1
+    let library = "bux/library/"
+    let within = strings.length(library)
+    if or(strings.cut(class, 0, within), "") == library {
+        return up_to(or(strings.cut(class, within, strings.length(class)), class), 47)
     }
-    class
+    up_to(class, 47)
 }
 
 /// The function a refusal is in, which is the method up to its first `$`, or else the class.
@@ -1452,18 +1502,21 @@ fn module_of(class: String) -> String {
 // example: named_in(Unwritten { class: "demo", method: None, why: TooLarge }) == "demo"
 fn named_in(unwritten: Unwritten) -> String {
     match unwritten.method {
-        Some(method) => before_dollar(method)
+        Some(method) => up_to(method, 36)
         None => unwritten.class
     }
 }
 
-/// `name` up to its first `$`, which is the function a specialised or derived method was written for.
-// example: before_dollar("Eq$Box$is_equal") == "Eq"
-// example: before_dollar("total") == "total"
-fn before_dollar(name: String) -> String {
+/// `name` up to the first code unit `unit`, or all of `name` where it holds none.
+///
+/// Up to a `$`, it is the function that a specialised or derived method was written for.
+/// Up to a `/`, it is the package of a class.
+// example: up_to("Eq$Box$is_equal", 36) == "Eq"
+// example: up_to("total", 36) == "total"
+fn up_to(name: String, unit: Int) -> String {
     var at = 0
     for at < strings.length(name) {
-        if or(strings.at(name, at), 0) == 36 {
+        if or(strings.at(name, at), 0) == unit {
             return or(strings.cut(name, 0, at), name)
         }
         at += 1
@@ -1480,7 +1533,13 @@ fn one_class(class: ir.Class) -> ir.Lowered {
 /// The record `a/B`, which holds one whole number, `at`.
 // example: record_class().name == "a/B"
 fn record_class() -> ir.Class {
-    ir.Class { name: "a/B", extends: "java/lang/Object", extending: ir.Never, implements: [], fields: [ir.Field { name: "at", of: ir.Long }], methods: [] }
+    record_class_named("a/B")
+}
+
+/// The record `class`, which holds one whole number, `at`.
+// example: record_class_named("a/b").name == "a/b"
+fn record_class_named(class: String) -> ir.Class {
+    ir.Class { name: class, extends: "java/lang/Object", extending: ir.Never, implements: [], fields: [ir.Field { name: "at", of: ir.Long }], methods: [] }
 }
 
 /// The base `a/B` of a sum type, which holds the tag of its variant.
@@ -1526,10 +1585,13 @@ type Unwritten = {
 /// A method holds 65535 bytes of code, and a branch reaches 32767 bytes either way, and a body
 /// past either is too large. A text of the pool holds 65535 bytes, and one of more is too long.
 /// Two modules of one name write two different classes of one name, and one file holds one.
+/// Two classes whose names differ only in case are one file on a disk that ignores case, and
+/// `NamedInCase` holds the name of the class written first.
 type Why =
     | TooLarge
     | TooLong(Int)
     | NamedTwice
+    | NamedInCase(String)
     | Defect(String)
 
 /// One class, and the path a build writes it to, such as `demo/User.class`.

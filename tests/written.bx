@@ -12,9 +12,9 @@ import reader
 import strings
 
 /// Every property of the class-file writer, each checked over `cases` drawn modules, in order.
-// example: list.length(every_property(0, ir.little_library())) == 15
+// example: list.length(every_property(0, ir.little_library())) == 16
 fn every_property(cases: Int, library: ir.Library) -> List<held.Held> {
-    [compiling_one_source_twice_gives_byte_identical_class_files(cases, library), every_class_a_module_compiles_to_begins_with_the_magic_and_the_current_version(cases, library), every_constant_a_compiled_class_names_is_one_its_own_pool_holds(cases, library), every_descriptor_a_class_asks_to_load_first_names_another_class_the_build_writes(cases, library), writing_a_class_twice_gives_the_same_bytes(cases, library), every_class_written_begins_with_the_magic_and_the_current_version(cases, library), no_method_written_for_a_function_a_module_declares_names_object(cases, library), a_generic_used_at_a_whole_number_is_written_taking_and_giving_back_a_long(cases, library), every_method_a_module_declares_is_written_as_a_method_of_it(cases, library), every_constant_a_class_names_is_one_the_pool_holds(cases, library), every_class_a_drawn_program_compiles_to_reads_back_whole(cases, library), a_branch_past_what_two_bytes_reach_is_refused_as_too_large(cases, library), a_text_past_what_the_pool_holds_is_refused_as_too_long(cases, library), two_modules_that_write_one_class_name_write_it_once_or_are_refused(cases, library), the_deepest_stack_a_method_declares_counts_two_words_for_each_long(cases, library)]
+    [compiling_one_source_twice_gives_byte_identical_class_files(cases, library), every_class_a_module_compiles_to_begins_with_the_magic_and_the_current_version(cases, library), every_constant_a_compiled_class_names_is_one_its_own_pool_holds(cases, library), every_descriptor_a_class_asks_to_load_first_names_another_class_the_build_writes(cases, library), writing_a_class_twice_gives_the_same_bytes(cases, library), every_class_written_begins_with_the_magic_and_the_current_version(cases, library), no_method_written_for_a_function_a_module_declares_names_object(cases, library), a_generic_used_at_a_whole_number_is_written_taking_and_giving_back_a_long(cases, library), every_method_a_module_declares_is_written_as_a_method_of_it(cases, library), every_constant_a_class_names_is_one_the_pool_holds(cases, library), every_class_a_drawn_program_compiles_to_reads_back_whole(cases, library), a_branch_past_what_two_bytes_reach_is_refused_as_too_large(cases, library), a_text_past_what_the_pool_holds_is_refused_as_too_long(cases, library), two_modules_that_write_one_class_name_write_it_once_or_are_refused(cases, library), two_classes_whose_names_differ_only_in_case_are_refused(cases, library), the_deepest_stack_a_method_declares_counts_two_words_for_each_long(cases, library)]
 }
 
 /// One source compiled twice gives the same class files, as the same bytes, in the same order.
@@ -102,6 +102,13 @@ fn two_modules_that_write_one_class_name_write_it_once_or_are_refused(cases: Int
     checked(property: NamedTwice, cases: cases, library: library)
 }
 
+/// Two classes whose names differ only in case are refused, because a disk that ignores case holds
+/// them as one file, and two whose names differ elsewhere are both written.
+// example: held.is_held(two_classes_whose_names_differ_only_in_case_are_refused(0, ir.little_library()))
+fn two_classes_whose_names_differ_only_in_case_are_refused(cases: Int, library: ir.Library) -> held.Held {
+    checked(property: NamedInCase, cases: cases, library: library)
+}
+
 /// A method that calls and constructs with drawn `long` values declares the stack they take.
 // example: held.is_held(the_deepest_stack_a_method_declares_counts_two_words_for_each_long(0, ir.little_library()))
 fn the_deepest_stack_a_method_declares_counts_two_words_for_each_long(cases: Int, library: ir.Library) -> held.Held {
@@ -140,6 +147,7 @@ fn drawing(property: Property, draw: drawn.Draw, library: ir.Library) -> Drawing
         FarBranch => far_branch(draw)
         LongText => long_text(draw)
         NamedTwice => named_twice(draw)
+        NamedInCase => named_in_case(draw)
         LongStack => long_stack(draw)
     }
 }
@@ -162,6 +170,7 @@ fn name_of(property: Property) -> String {
         FarBranch => "a_branch_past_what_two_bytes_reach_is_refused_as_too_large"
         LongText => "a_text_past_what_the_pool_holds_is_refused_as_too_long"
         NamedTwice => "two_modules_that_write_one_class_name_write_it_once_or_are_refused"
+        NamedInCase => "two_classes_whose_names_differ_only_in_case_are_refused"
         LongStack => "the_deepest_stack_a_method_declares_counts_two_words_for_each_long"
     }
 }
@@ -361,10 +370,55 @@ fn named_twice(draw: drawn.Draw) -> Drawing {
     Drawing { source: "two modules write `demo/Box` holding `" + first + "` and `" + second + "`", why: why }
 }
 
+/// Two modules that write `demo/Box` and a drawn second class, which holds the same field.
+///
+/// The second name is drawn from names that differ from `demo/Box` only in case, which are
+/// refused as `L0702`, and names that differ elsewhere, which are written as two classes.
+// example: named_in_case(drawn.seeded(1)).why == ""
+fn named_in_case(draw: drawn.Draw) -> Drawing {
+    let second = drawn.picked(draw, ["demo/box", "Demo/Box", "DEMO/BOX", "demo/Bag", "demo/Box1", "other/Box"], "")
+    let written = jvm.program_written([jvm.one_class(boxed("held")), jvm.one_class(named_box(name: second, field: "held"))])
+    let side = if is_box_in_other_case(second) {
+        Past
+    } else {
+        Within
+    }
+    var why = refusal_why(answer: written, code: "L0702", side: side)
+    if why == "" && side == Within && list.length(ok_or(written, [])) != 2 {
+        why = "the two classes are written as " + shown(list.length(ok_or(written, []))) + " files"
+    }
+    if why == "" && side == Past && !is_refused_in_case(written) {
+        why = "it is refused as two parts of one name, and not as two names that differ in case"
+    }
+    Drawing { source: "two modules write `demo/Box` and `" + second + "`, each holding `held`", why: why }
+}
+
+/// Whether `answer` is refused for two names that differ only in case.
+// example: !is_refused_in_case(Ok([]))
+fn is_refused_in_case(answer: Result<List<jvm.ClassFile>, jvm.Unwritten>) -> Bool {
+    match answer {
+        Ok(_) => false
+        Err(unwritten) => jvm.help_of(unwritten.why) == jvm.help_of(jvm.NamedInCase(""))
+    }
+}
+
+/// Whether `name` is one of the drawn names that differ from `demo/Box` only in case.
+// example: is_box_in_other_case("demo/box")
+// example: !is_box_in_other_case("demo/Bag")
+fn is_box_in_other_case(name: String) -> Bool {
+    list.has_value(["demo/box", "Demo/Box", "DEMO/BOX"], name)
+}
+
 /// The record `demo/Box`, which holds one whole number under the name `field`.
 // example: boxed("held").name == "demo/Box"
 fn boxed(field: String) -> ir.Class {
-    ir.Class { name: "demo/Box", extends: "java/lang/Object", extending: ir.Never, implements: [], fields: [ir.Field { name: field, of: ir.Long }], methods: [] }
+    named_box(name: "demo/Box", field: field)
+}
+
+/// The record `name`, which holds one whole number under the name `field`.
+// example: named_box(name: "demo/box", field: "held").name == "demo/box"
+fn named_box(name: String, field: String) -> ir.Class {
+    ir.Class { name: name, extends: "java/lang/Object", extending: ir.Never, implements: [], fields: [ir.Field { name: field, of: ir.Long }], methods: [] }
 }
 
 /// A method that passes a drawn number of `long` values to a call or a constructor, then adds.
@@ -622,4 +676,5 @@ type Property =
     | FarBranch
     | LongText
     | NamedTwice
+    | NamedInCase
     | LongStack
