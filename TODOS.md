@@ -6,18 +6,6 @@
 
 ## Open
 
-## 🔴 Item 082: `let` makes a name that never changes and `var` a name that can; `:=` is gone
-**Depends on:** Item 081 — this item lands on `.bx` files.
-Today `x := 0` and `var x = 0` make a name with two operators, so a binding has two spellings.
-`let x = 0` and `var x = 0` differ only in the keyword, and the keyword says what the name is.
-A bare `=` then only changes a `var`, so each operator has one job, as in Swift.
-[082][a] - `docs/design.md` binds with `let` in every example, and section 10 states the rule.
-[082][b] - `docs/specs/grammar.md`, `lexer.md`, and `formatting.md` spell `let`; `:=` leaves them.
-[082][c] - The Bux lexer, parser, and formatter accept `let` and drop the `:=` token.
-[082][d] - A program that writes `x := 0` gets a diagnostic that says `write let x = 0`.
-[082][e] - Every source under `compiler/`, `library/`, `example/`, and `tests/` binds with `let`.
-[082][f] - A search for `:=` in sources, docs, and help text finds only the refusal test.
-
 ## 🔴 Item 083: A manifest names each Java archive by path and hash, and a run reaches no other
 A package that reaches the Java ecosystem needs a way to say which archives it uses.
 Nothing is fetched, so an archive is a file already on disk, and its hash pins its content.
