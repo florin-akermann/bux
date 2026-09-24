@@ -31,9 +31,9 @@ That is also what makes every build and every test work with no network and no f
 
 ## How the Bux compiler carries it
 
-The Bux compiler carries the files, in the one copy `library/` holds, as class-path resources.
+The Bux compiler carries the files of `library/` as class-path resources.
 A resource is a file in a directory of the class path the compiler was started with.
-`library/<name>.bx` sits in such a directory, which is the root of the repository now.
+`library/<name>.bx` sits in such a directory: the `target/` that holds the compiler classes.
 Nothing is generated from the files, and nothing is copied into Bux source.
 
 `compiler/modules.bx` reads a library module without a class loader.
@@ -54,8 +54,9 @@ A name the class path holds no resource for is no library module, and the import
 There is no list of library names in Bux, so one more file in `library/` is one more module.
 A refusal about a library module names the resource, `library/list.bx`.
 
-`bin/bux` and `bin/runner` put the repository on the class path, after the `target/` of classes.
-That is the directory that holds `library/`, so the resource names above reach the one copy.
+A build copies `library/` into the `target/` it writes, beside the classes.
+`docs/specs/run.md` states the copy, and how `bin/bootstrap` puts the copy of the checkout there.
+So `bin/bux` and `bin/runner` put only that `target/` on the class path, and it holds `library/`.
 
 ## How it is found
 

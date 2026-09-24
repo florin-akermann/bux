@@ -303,14 +303,12 @@ fn program_said(completion: Result<walk.Ended, walk.Unended>) -> command.Said {
 
 /// The line that starts the command line in a JVM of its own, given `words`.
 ///
-/// The class path names `compiler/target`, which holds the classes, then the compiler and the
-/// directory above it, because the command line reads its help, its explanations, and the library
-/// there as resources. Each is named by its whole path.
+/// The class path is `compiler/target` alone, named by its whole path, as `bin/bux` names it: it
+/// holds the classes, and beside them the help, the explanations, and the library.
 // example: or(list.at(command_line(["a"]), 5), "") == "a"
 fn command_line(words: List<String>) -> List<String> {
     let root = or(property("user.dir"), ".")
-    let compiler = modules.joined(root, "compiler")
-    command.all_of([java(), "--enable-preview", "-cp", modules.joined(compiler, "target") + ":" + compiler + ":" + root, "main"], words)
+    command.all_of([java(), "--enable-preview", "-cp", modules.joined(root, "compiler/target"), "main"], words)
 }
 
 /// The line every refusal of a run where `JAVA_HOME` is not set reads.

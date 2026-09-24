@@ -167,11 +167,12 @@ The compiler lives in `compiler/`, one module for each phase, and the lexer is t
 `compiler/main.bx` is its command line, and `compiler/command.bx` holds every command.
 A build writes every class under `target/`, in the directory of the module it builds.
 So a build of the compiler writes `compiler/target/`, and no class lands beside a source.
-The launcher `bin/bux` starts them with `compiler/target/` on the class path.
-`compiler/` and the directory above it are on the class path too, only for resources.
 `compiler/help/` and `compiler/explanations/` hold the help text and the long form of each code.
-The directory above holds `library/`, and the compiler reads all three as resources.
+`library/` at the root holds the library, and the compiler reads all three as resources.
 A module there has a `.bx` name, and the module loader reads no other extension.
+A build copies the three from its own class path into `target/`, beside the classes it writes.
+The launcher `bin/bux` starts the compiler with `compiler/target/` alone on the class path.
+Run `bin/bootstrap` after a change to a resource, because only it copies those of the checkout.
 
 What remains of the repository is small, and a JDK is the one tool it needs:
 
@@ -188,6 +189,7 @@ docs/       the specification, this document, and the behaviour specs
 
 The bootstrap has a seed and two stages, and `bin/bootstrap` runs them.
 The seed `bin/seed.jar` holds the classes of a compiler that an earlier compiler built.
+The seed runs from one temporary directory: the seed unpacked, with the resources of the checkout.
 The seed builds stage 1, the classes in `compiler/target/`.
 Stage 1 builds stage 2 from a copy of `compiler/` outside the repository.
 Stage 2 must be stage 1 byte for byte, and `docs/specs/run.md` states the script.
@@ -210,6 +212,7 @@ The old seed writes stage 1 where the new `bin/bootstrap` does not read it.
 The item builds stage 1 with the old seed, stage 2 with stage 1, and stage 3 with stage 2.
 Stage 3 must equal stage 2, and the item packs stage 2 as the new seed.
 Item 096 did this when a build moved every class from beside its source to `target/`.
+Item 113 did this when a build first copied the resources into `target/`.
 The fourth reason is that canonical form changed, so the old seed refuses the sources.
 The item changes the printer, and the old seed builds stage 1 from the sources in the old form.
 The `bux fmt` of stage 1 then writes every source in the new form.
@@ -231,6 +234,7 @@ The item packs stage 3 as the new seed.
 Item 082 did this when a name that never changes was first bound with `let`.
 In each case, `bin/bootstrap` must then hold stage 2 equal to stage 1 with the new seed.
 The item says so, and it replaces the seed in its own commit.
+The seed packs `compiler/target/` whole, and `bin/bootstrap` replaces its copies of the resources.
 
 The compiler should itself use strong typed representations for compiler phases.
 
@@ -261,6 +265,7 @@ An example is a `.bx` file under `tests/spec/<area>/`, and an area exists when a
 ### The runner
 
 `tests/runner.bx` is the runner, a Bux program, and `bin/runner` builds it and starts it.
+`bin/runner` starts it with `tests/target/` alone on the class path: classes and resources.
 It starts from the root of the repository and holds the compiler in one JVM.
 It calls the functions of the compiler, so it starts no compiler process for each file.
 It holds these parts, each in a module of its own under `tests/`:
@@ -308,7 +313,7 @@ A command starts with an empty memo, so no answer of the command line depends on
 `documented.bx` writes the run of each module, as `bux test` writes it, into a directory.
 Each run gets a directory of its own, inside one directory made for the runs of its job.
 Then the job starts each run in a JVM of its own, with the line that `bux test` uses.
-So the class path of a run holds only its own directory, and no two runs share a class.
+So the class path of a run is its own directory, with the resources, and no two runs share a class.
 One build of a package that all its runs share would not be correct, so each run writes its own.
 A run asks generics for types that no build of the package asks for, such as in an example.
 The lowering writes each such generic into the class of the module that declares it.
@@ -344,11 +349,7 @@ So the window is 60 s wide, and a limit counted in minutes, not seconds, still f
 It also adds each command line on an example that `fixtures.txt` does not hold.
 On 2026-09-23 `bin/runner` took 182 s before Item 093 and 97 s after it.
 On 2026-09-23 `bin/runner` took 98 s before Item 094 and 53 s after it.
-Before Item 094 the examples took 5 s, and after it they took 4 s.
-Before Item 094 the siblings took 0 s, and after it they took 0 s.
-Before Item 094 the example lines took 78 s, and after it they took 34 s.
-Before Item 094 the properties took 5 s, and after it they took 5 s.
-Before Item 094 the command lines took 8 s, and after it they took 8 s.
+The example lines took 78 s before Item 094 and 34 s after, and no other part changed by over 1 s.
 On 2026-09-24 `bin/runner` took 64 s before Item 091 and 31 s after it.
 On 2026-09-24 `bin/bootstrap` took 5.6 s before Item 091 and 5.8 s after it.
 Item 091 did not put the compiler on processes, because a measurement showed no gain.
