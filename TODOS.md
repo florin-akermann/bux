@@ -81,23 +81,6 @@ It records the wall time, the processor time, and the time the collector paused.
 [131][b] - The item files one item for the largest share, with the requirement and the alternatives.
 It files no item for a share below ten percent, and it changes no library code.
 
-## 🔴 Item 132: `1brc/src/create_measurements.bx` writes the file of one billion rows
-**Depends on:** Item 130 — the program is what reads what this writes.
-The challenge gives a Java generator, and a JDK runs it, so the file exists before this item.
-Dogfooding says Bux writes it, and the generator finds one more gap.
-`files.write` writes a file whole, and 13 GB is no `String`, so a file is written in parts.
-No `for` loop appends to a file, so `files.append` passes question 12 of the principles.
-A draw is a linear congruential generator, as `tests/drawn.bx` writes one.
-The program writes its own, because no program imports a module of `tests/`.
-The generator holds the stations of the challenge and the mean of each in one list literal.
-[132][a] - `docs/specs/io.md` states `files.append(path, text) -> Result<String, String>`.
-It writes `text` after what the file holds, makes the file where there is none, and gives `path`.
-[132][b] - `docs/specs/billion-rows.md` states the command line of the generator.
-It is `bux run 1brc/src/create_measurements.bx <rows> <path>`.
-[132][c] - `1brc/src/create_measurements.bx` writes `rows` lines, in parts of one million lines.
-[132][d] - A test of the module writes a small file, and `1brc/src/main.bx` reads it to its output.
-[132][e] - Section 7 records the wall time of one billion rows written, beside their read time.
-
 ## 🔴 Item 133: The compiler's sources move to `src/`, and its resources sit beside `library/`
 **Depends on:** Item 113, Item 114 — both rewrite the class path in `bin/`, which this item moves.
 Item 134 holds every package to one layout: `src/` modules, `tests/` tests, and `target/` classes.
