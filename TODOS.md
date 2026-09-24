@@ -36,21 +36,6 @@ The price is the build of the compiler before and after.
 [127][e] - `bin/bootstrap` gets a new seed, as section 6 reason two states.
 [127][f] - `tests/spec/library/` holds, and a drawn property round trips bytes through `String`.
 
-## 🔴 Item 131: The profile of `1brc/src/main.bx` says what the next item attacks
-**Depends on:** Item 130 — the program must run over one billion rows before it is profiled.
-Section 7 profiled the compiler, and each item after Item 111 attacked a share the profile priced.
-The program gets the same, and no library change lands before the profile prices it.
-`docs/specs/collections.md` refuses a tuned node until a measurement on a real program asks.
-`map.insert` copies one node of thirty-two children at each level.
-One row is one `get` and one `insert`, so one row copies about a hundred children.
-`strings.at` guards two bounds and one `extern` for each byte.
-`strings.cut` makes one `String` for each line, and `Hash<String>` hashes it once for each row.
-Those are the candidates the reading suggests, and the profile says which one is a cost.
-[131][a] - Section 7 records the profile with JFR over one billion rows, by module and by class.
-It records the wall time, the processor time, and the time the collector paused.
-[131][b] - The item files one item for the largest share, with the requirement and the alternatives.
-It files no item for a share below ten percent, and it changes no library code.
-
 ## 🔴 Item 133: The compiler's sources move to `src/`, and its resources sit beside `library/`
 **Depends on:** Item 113, Item 114 — both rewrite the class path in `bin/`, which this item moves.
 Item 134 holds every package to one layout: `src/` modules, `tests/` tests, and `target/` classes.
@@ -122,3 +107,21 @@ A kept why is rewritten as `//` lines, and `bin/bux check` accepts each file.
 [137][c] - Every `///` line above a declaration in `tests/*.bx` goes the same way.
 [137][d] - Every `///` line above a declaration in `tests/spec/` goes, except where a golden stays.
 [137][e] - `bin/bootstrap` and `bin/runner` pass, and `mycs check` reports no finding.
+
+## 🔴 Item 138: `map.with_child` copies a node without a fresh row of empty children
+**Depends on:** Item 131 — its profile priced `map.insert` at 82% of the billion-row run.
+Section 7 profiled `1brc/src/main.bx`, and `map.insert` is 82% of its samples in two runs.
+Of it, `map.with_child` is 69%: each level of the walk copies a node of 32 children.
+Its `for` loop runs over `no_children()`, a fresh row of 32 empty maps, only to count to 32.
+That row is 26% of the run, and `Map.Empty` is 25% of the allocation pressure.
+The requirement is the processor time of the run, 874 s to 915 s, which the node copy prices.
+The alternatives weighed:
+- `with_child` loops over the `children` it copies, which removes the row and adds nothing.
+- The compressed node of a bitmap, which `docs/specs/collections.md` weighed and refused.
+  It narrows a node to the children it holds, but it adds a bit operation and a population count.
+- A `list` function that puts one element in place of another; a `for` loop writes it.
+- One walk for `get` and `insert` together, which adds a second spelling of an update.
+The first is the smallest and asks for no new concept; the profile after it says if more is needed.
+[138][a] - `map.with_child` copies a node with no call to `no_children`.
+[138][b] - Section 7 records the processor time of the run before and after, at a load below 12.
+[138][c] - The examples of `library/map.bx` and `tests/spec/library/` hold.
