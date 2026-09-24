@@ -35,7 +35,19 @@ fn every_build_held(library: ir.Library) -> held.Held {
     found = held.added(found, refused_build(library))
     found = held.added(found, dotted_build(library))
     found = held.added(found, nothing_beside(library))
+    found = held.added(found, no_stale_resource(library))
     held.added(found, holes_refused(library))
+}
+
+/// `build` leaves no resource in `target/` that its compiler does not read, as after a help topic
+/// is taken out.
+// example: absence(scene: "no-such-directory", at: "target/help/gone.md").expected == "not written"
+fn no_stale_resource(library: ir.Library) -> held.Held {
+    let scene = scene_of([Written { at: "example.bx", text: module_text() }, Written { at: "target/help/gone.md", text: "gone\n" }])
+    let said = said_to(["build", modules.joined(scene, "example.bx")], library)
+    let found = facts_held("build leaves no resource that its compiler does not read", [status_fact(said, 0), absence(scene: scene, at: "target/help/gone.md"), presence_fact(scene: scene, at: "target/help/build.md")])
+    command.removed_whole(scene)
+    found
 }
 
 /// `build` leaves no class beside a source: every class of the program is under `target/`.
@@ -61,13 +73,14 @@ fn classes_outside(paths: List<String>, target: String) -> List<String> {
     found
 }
 
-/// `build` writes one class under `target/` for the module and for each type it declares.
+/// `build` writes one class under `target/` for the module and for each type it declares, and
+/// beside the classes a copy of the library, the help topics, and the explanations.
 // example: presence(scene: "no-such-directory", at: "a.class") == "not written"
 fn classes_written(library: ir.Library) -> held.Held {
     let scene = scene_of([Written { at: "example.bx", text: module_text() }])
     let said = said_to(["build", modules.joined(scene, "example.bx")], library)
-    let written = ["target/example.class", "target/example/User.class", "target/example/Payment.class", "target/example/Payment$Pending.class", "target/example/Payment$Failed.class", "target/bux/Option.class", "target/bux/Result$Ok.class"]
-    let found = facts_held("build writes a class for the module and each type", command.all_of([status_fact(said, 0)], presences(scene: scene, written: written)))
+    let written = ["target/example.class", "target/example/User.class", "target/example/Payment.class", "target/example/Payment$Pending.class", "target/example/Payment$Failed.class", "target/bux/Option.class", "target/bux/Result$Ok.class", "target/library/prelude.bx", "target/help/build.md", "target/explanations/L0100.md"]
+    let found = facts_held("build writes a class for the module and each type, and the resources", command.all_of([status_fact(said, 0)], presences(scene: scene, written: written)))
     command.removed_whole(scene)
     found
 }

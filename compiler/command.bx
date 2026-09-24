@@ -297,7 +297,7 @@ fn built(path: String, library: ir.Library) -> Result<Built, Said> {
     let classes = page_said(written_of(lowered, program))?
     let reached = page_said(archives_of(path))?
     let target = target_of(path)
-    _ = classes_written(classes, target)?
+    _ = written_whole(classes, target)?
     Ok(Built { module: module, target: target, archives: reached, starts: is_a_program(lowered) })
 }
 
@@ -582,20 +582,6 @@ fn is_a_module_name(name: String) -> Bool {
     dot > 0 && or(strings.cut(name, dot + 1, strings.length(name)), "") == "bx"
 }
 
-/// Where the last dot of `name` is, and `-1` where it holds none.
-// example: last_dot("a.b.bx") == 3
-fn last_dot(name: String) -> Int {
-    var found = -1
-    var index = 0
-    for index < strings.length(name) {
-        if or(strings.at(name, index), 0) == 46 {
-            found = index
-        }
-        index += 1
-    }
-    found
-}
-
 /// What the run of the module in `path` found, or the refusal of the module, with each module
 /// typed once: a module that `typing.memo` holds is not typed again.
 // example: module_tested("no-such-directory/a.bx", Typing { library: ir.little_library(), memo: no_memo() }).tried.said.status == 2
@@ -833,9 +819,9 @@ fn put_back(refused: Refusal, run: Run, root: Typed) -> Said {
 }
 
 /// The classes written into `beside.beside`, the run started there, and what it found.
-// example: ran_in(Beside { java: "no-such-java", module: "a", beside: "no-such-directory/a", archives: [] }, [], Run { source: "", stretches: [], examples: [], tests: [], module: lexer.Span { start: 0, length: 0 } }, Typed { module: modules.Module { name: "main", path: "main.bx", source: "", program: ast.Program { items: [] } }, inferred: types.checked_of("") }).said.status == 2
+// example: ran_in(Beside { java: "no-such-java", module: "a", beside: "/dev/null/a", archives: [] }, [], Run { source: "", stretches: [], examples: [], tests: [], module: lexer.Span { start: 0, length: 0 } }, Typed { module: modules.Module { name: "main", path: "main.bx", source: "", program: ast.Program { items: [] } }, inferred: types.checked_of("") }).said.status == 2
 fn ran_in(beside: Beside, classes: List<jvm.ClassFile>, run: Run, root: Typed) -> Tried {
-    match classes_written(classes, beside.beside) {
+    match written_whole(classes, beside.beside) {
         Ok(_) => run_ended(program_finished(program_line(java: beside.java, classes: all_of(values: [beside.beside], more: beside.archives), module: beside.module, arguments: [])), beside.java, run, root)
         Err(said) => only_said(said)
     }
@@ -887,18 +873,135 @@ fn injecting() -> List<String> {
     ["JAVA_TOOL_OPTIONS", "JDK_JAVA_OPTIONS", "_JAVA_OPTIONS"]
 }
 
+/// Writes each class into the directory `into`, and beside the classes each resource the
+/// compiler reads, so a class path that holds the classes holds the resources too.
+///
+/// `docs/specs/run.md` states why: a program that calls the compiler reads its resources there.
+// example: is_refused(written_whole([], "/dev/null/target"))
+fn written_whole(classes: List<jvm.ClassFile>, into: String) -> Result<(), Said> {
+    _ = classes_written(classes, into)?
+    for name in resource_names() {
+        _ = directory_copied(from: resource_found(name)?, into: modules.joined(into, name))?
+    }
+    Ok(())
+}
+
+/// The directories of resources that the compiler reads and a build copies beside its classes.
+// example: resource_names() == ["library", "help", "explanations"]
+fn resource_names() -> List<String> {
+    ["library", "help", "explanations"]
+}
+
+/// The directory `name` that the compiler reads its resources from, or why there is none.
+// example: is_refused(resource_found("no/such/directory"))
+fn resource_found(name: String) -> Result<String, Said> {
+    match modules.resource_directory(name) {
+        Some(directory) => Ok(directory)
+        None => Err(unusable(name + ": no entry of the class path of the compiler holds this directory"))
+    }
+}
+
+/// Makes the directory `into` hold each resource of the directory `from`, with the same name, and
+/// nothing more.
+///
+/// A file that an earlier copy wrote and `from` no longer holds is deleted, so no resource that
+/// the checkout took out stays readable. Where `from` is `into`, it holds the copy already. Only
+/// a resource is copied, so another file there, such as one a file manager wrote, stops no build.
+// example: is_refused(directory_copied(from: "no-such-directory", into: "/dev/null/resources"))
+// example: !is_refused(directory_copied(from: "compiler", into: "compiler/../compiler"))
+fn directory_copied(from: String, into: String) -> Result<(), Said> {
+    let names = listed_or_said(from)?
+    if is_same_place(one: from, other: into) {
+        return Ok(())
+    }
+    removed_whole(into)
+    _ = folder_made(into)?
+    for name in names {
+        if is_resource_name(name) {
+            _ = file_copied(from: modules.joined(from, name), into: modules.joined(into, name))?
+        }
+    }
+    Ok(())
+}
+
+/// Writes the text of the file `from` into the file `into`.
+// example: is_refused(file_copied(from: "no-such-directory/a.md", into: "/dev/null/a.md"))
+fn file_copied(from: String, into: String) -> Result<(), Said> {
+    let text = text_or_said(from)?
+    if is_refused_write(files.write(into, text)) {
+        return Err(unusable(into + ": " + write_refusal(into)))
+    }
+    Ok(())
+}
+
+/// Whether the file called `name` is one the compiler reads as a resource: a module or a page.
+// example: is_resource_name("list.bx")
+// example: is_resource_name("L0100.md")
+// example: !is_resource_name(".DS_Store")
+// example: !is_resource_name("mycs.toml")
+fn is_resource_name(name: String) -> Bool {
+    let dot = last_dot(name)
+    let extension = or(strings.cut(name, dot + 1, strings.length(name)), "")
+    dot > 0 && (extension == "bx" || extension == "md")
+}
+
+/// Where the last dot of `name` is, and `-1` where it holds none.
+// example: last_dot("a.b.bx") == 3
+fn last_dot(name: String) -> Int {
+    var found = -1
+    var index = 0
+    for index < strings.length(name) {
+        if or(strings.at(name, index), 0) == 46 {
+            found = index
+        }
+        index += 1
+    }
+    found
+}
+
+/// Whether the paths `one` and `other` name the same place, however each is spelled.
+// example: is_same_place(one: "compiler", other: "compiler/../compiler")
+// example: !is_same_place(one: "compiler", other: "library")
+fn is_same_place(one: String, other: String) -> Bool {
+    ok_or(modules.canonical_path(modules.file_at(one)), one) == ok_or(modules.canonical_path(modules.file_at(other)), other)
+}
+
+/// The name of each entry of the directory `path`, or why it could not be listed.
+// example: is_refused(listed_or_said("no-such-directory"))
+fn listed_or_said(path: String) -> Result<List<String>, Said> {
+    match files.listed(path) {
+        Ok(names) => Ok(names)
+        Err(why) => Err(unusable(path + ": " + why))
+    }
+}
+
+/// The text of the file at `path`, or why it could not be read.
+// example: is_refused(text_or_said("no-such-directory/a.md"))
+fn text_or_said(path: String) -> Result<String, Said> {
+    match files.read(path) {
+        Ok(text) => Ok(text)
+        Err(why) => Err(unusable(path + ": " + why))
+    }
+}
+
 /// Writes each class into the directory `into`, at the path its name gives it there.
 // example: !is_refused(classes_written([], "no-such-directory"))
 fn classes_written(classes: List<jvm.ClassFile>, into: String) -> Result<(), Said> {
     for class in classes {
         let written = modules.joined(into, class.path)
-        let package = modules.directory_of(written)
-        if !is_folder(place_at(package)) && !has_made_all(place_at(package)) {
-            return Err(unusable(package + ": " + making_refusal(package)))
-        }
+        _ = folder_made(modules.directory_of(written))?
         if is_refused_write(files.write_bytes(written, class.bytes)) {
             return Err(unusable(written + ": " + write_refusal(written)))
         }
+    }
+    Ok(())
+}
+
+/// Makes the directory `path`, and each one above it that is missing, where it is not there.
+// example: !is_refused(folder_made("/"))
+fn folder_made(path: String) -> Result<(), Said> {
+    if !is_folder(place_at(path)) && !has_made_all(place_at(path)) {
+        return Err(unusable(path + ": " + making_refusal(path)))
     }
     Ok(())
 }

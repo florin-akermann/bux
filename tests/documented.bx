@@ -152,11 +152,12 @@ fn lowered_readied(staged: Staged, typing: Typing) -> Readied {
     Readied { found: written_staged(classes.found, staged), memo: classes.memo }
 }
 
-/// `staged`, once the classes `found` holds are written into its directory, or its failures.
+/// `staged`, once the classes `found` holds and the resources are written into its directory, as
+/// `bux test` writes them, or its failures.
 // example: failed_as(command.Said { output: "", errors: "error: gone\n", status: 2 }, "b.bx") == ["b.bx: error: gone"]
 fn written_staged(found: Result<List<jvm.ClassFile>, command.NotCompiled>, staged: Staged) -> Result<Staged, List<String>> {
     match found {
-        Ok(classes) => written_as(command.classes_written(classes, staged.beside), staged)
+        Ok(classes) => written_as(command.written_whole(classes, staged.beside), staged)
         Err(not) => Err(failed_as(command.run_refused(not, staged.run, staged.root), staged.path))
     }
 }
