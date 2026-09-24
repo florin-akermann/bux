@@ -21,22 +21,3 @@ Item 091 measured the writer at 0.31 s, so it stays on one thread unless the pro
 [116][c] - A drawn property holds that a program lowered in a pool gives the classes of one thread.
 [116][d] - Section 7 records `bux build src/main.bx` and `bin/bootstrap` before and after.
 
-## 🔴 Item 137: A comment above a declaration says why, or it is not there
-Nearly every declaration in the Bux sources carries a `///` comment that says what it gives back.
-2372 of the 2460 functions of `src/`, `library/`, and `1brc/` carry one, and `tests/` alike.
-Such a comment restates the signature, and it drifts when the body changes.
-The code and its `// example:` lines carry the what, and a comment is kept only for a why.
-A why is a constraint the types cannot state, a trade-off, a platform fact, or a decision.
-So `every_punctuation` keeps "longest first, so that `==` wins over `=`", and `lex` keeps nothing.
-A kept why is one or two `//` lines above the examples, and no `///` line remains.
-`docs/specs/doc-examples.md` requires the examples, and `bux test` runs them, so each one stays.
-The file header stays, and a comment inside a body stays.
-The `.tokens`, `.ast`, `.error`, and `.api` goldens hold byte offsets, so their `.bx` files stay.
-`tests/spec/format/` shows the formatter moving a `///` line, so that directory stays.
-[137][a] - `AGENTS.md` states the rule: a comment above a declaration says why, or it is not there.
-[137][b] - Every `///` line above a declaration in `src/`, `library/`, and `1brc/` goes.
-A kept why is rewritten as `//` lines, and `bin/bux check` accepts each file.
-[137][c] - Every `///` line above a declaration in `tests/*.bx` goes the same way.
-[137][d] - Every `///` line above a declaration in `tests/spec/` goes, except where a golden stays.
-[137][e] - `bin/bootstrap` and `bin/bux test` pass, and `mycs check` reports no finding.
-
