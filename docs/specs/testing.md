@@ -46,8 +46,8 @@ The help is "a test is an item of its own; write it below every declaration of t
 Tests come last, after every declaration, in the order the author writes them.
 A declaration written below a test is `L0201`, as `docs/specs/formatting.md` states.
 The message is "this declaration is written after a test".
-The help is "tests come last, after every declaration".
-`bux fmt` keeps the tests in the order the author wrote them.
+The help is "tests come last, after every declaration: `bux fmt` moves it above them".
+`bux fmt` moves such a declaration above the tests, and keeps the tests in the order written.
 
 ## The name of a test
 

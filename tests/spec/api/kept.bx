@@ -1,0 +1,20 @@
+// A `private` declaration is not on the page, because no other module reaches its name.
+// An instance of a private type is not on the page either, because no page names that type.
+// example: sized(3) == 6
+fn sized(count: Int) -> Int {
+    measured(Size(count))
+}
+
+private fn measured(size: Size) -> Int {
+    match size {
+        Size(count) => count + count
+    }
+}
+
+derive Eq for Size
+
+private type Size = Size(Int)
+
+type Shape =
+    | Dot
+    | Line(Int)

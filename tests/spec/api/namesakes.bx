@@ -1,0 +1,23 @@
+// An instance of a public type is on the page, although a private constructor has its name.
+// example: sized(size: Large) == 2
+fn sized(size: Box) -> Int {
+    match size {
+        Small => 1
+        Large => 2
+    }
+}
+
+// example: counted(inner: Box(3)) == 3
+private fn counted(inner: Inner) -> Int {
+    match inner {
+        Box(count) => count
+    }
+}
+
+derive Eq for Box
+
+private type Inner = Box(Int)
+
+type Box =
+    | Small
+    | Large

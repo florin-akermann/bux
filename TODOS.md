@@ -6,20 +6,6 @@
 
 ## Open
 
-## 🔴 Item 113: The compiler finds its library, help, and explanations beside its classes
-`modules.resource_text` reads a file under each entry of the class path.
-So `bin/bux`, `bin/bootstrap`, and `bin/runner` add `compiler/` and the root to the class path.
-A run that `bux test` starts has only its own directory on the class path.
-So a test of `tests/` that calls the compiler for `bux help` or `bux explain` finds nothing.
-That is why the runner has a class path of its own, and why it cannot be `bux test tests`.
-A build writes the three resource directories into `target/` beside the classes it writes.
-Then every class path that holds the classes holds the resources, and no script adds an entry.
-[113][a] - `docs/specs/run.md` section "Where a build writes" states what a build writes too.
-[113][b] - `bux build` copies `library/`, `help/`, and `explanations/` into `target/`.
-`bux test` does the same for each run.
-[113][c] - `bin/bux`, `bin/bootstrap`, and `bin/runner` put one directory on the class path.
-[113][d] - `docs/implementation.md` section 6 states the class path, and section 7 the runner's.
-
 ## 🔴 Item 114: The runner's checks become `test` blocks, and `bin/runner` goes
 **Depends on:** Item 112, Item 113 — the pool and the resources must be in `bux test` first.
 `tests/runner.bx` calls six parts, and each part is a function of a module under `tests/`.
@@ -50,21 +36,6 @@ Item 091 measured the writer at 0.31 s, so it stays on one thread unless the pro
 [116][c] - A drawn property holds that a program lowered in a pool gives the classes of one thread.
 [116][d] - Section 7 records `bux build compiler/main.bx` and `bin/bootstrap` before and after.
 
-## 🔴 Item 119: `bux fmt` repairs every order the compiler can compute
-`docs/specs/formatting.md` says that order is checked and never rewritten.
-Import order, the place of a test, and declaration order each have one answer the compiler knows.
-Each refusal costs an agent one round trip: write, build, read the refusal, edit, build again.
-That round trip costs more than the rule saves, so `bux fmt` writes the answer it already knows.
-Naming stays a refusal, because the compiler cannot choose a name.
-Arm order stays a refusal until a case shows that the formatter needs the types.
-[119][a] - `docs/design.md` section 13 and `docs/specs/formatting.md` name each order `fmt` repairs.
-[119][b] - `compiler/format.bx` sorts the imports and moves a declaration written after a test.
-[119][c] - `bux fmt` runs the resolver and moves a declaration below what uses it.
-Two declarations that use each other keep the order the author wrote.
-[119][d] - `L0201` and `L0303` stay for `bux build`, and their help names `bux fmt`.
-[119][e] - `tests/spec/format/` shows each repair.
-A property holds that a repaired file builds, and that `fmt` of a repaired file changes nothing.
-
 ## 🔴 Item 120: A `private` declaration exists, and only a public function carries an example
 Every name a module declares is public, so every helper is API, and every helper pays an example.
 `compiler/exhaustiveness.bx` shows the cost.
@@ -82,18 +53,6 @@ An import that reaches a private name is refused with a code and a help that nam
 [120][e] - `tests/spec/modules/` and `tests/spec/examples/` show the refusal and the exemption.
 [120][f] - The helpers of `compiler/exhaustiveness.bx` named above become `private` or tests.
 
-
-## 🔴 Item 125: `send` says `Delivered` for a message that the process reads
-`tests/spec/concurrency/mailbox_full.bx` sends `Stop` to an `Idle` process and expects `delivered`.
-One runner pass of Item 112 printed `the process has ended` for that line; five printed `delivered`.
-`send` offers the message to the mailbox, and then it tests whether the process has ended.
-`offer_within` and `ended_test` in `compiler/ir.bx` write the two steps.
-`Idle` takes `Stop` and ends between the two steps, so a message it read is reported as never read.
-`docs/specs/concurrency.md` says a message the mailbox takes after the end gives `ProcessEnded`.
-The answer must follow what happens to the message, not the time of the test.
-[125][a] - `docs/specs/concurrency.md` states that `ProcessEnded` means no `receive` reads it.
-[125][b] - A process that ends leaves its mailbox in a state `send` can tell from a taken message.
-[125][c] - `tests/spec/concurrency/mailbox_full.bx` holds on every pass of the runner.
 
 ## 🔴 Item 126: The lowering names no JVM shape, and `compiler/jvm.bx` spells every one
 `compiler/ir.bx` names a class, a descriptor, a slot, or a `java/` member on about 160 lines.
@@ -139,41 +98,15 @@ The compiler is a program, and it is the first one the rule holds to.
 [128][c] - A project check refuses an `extern` outside `library/`, and its message names section 3.
 [128][d] - Section 4 records the count of `extern` declarations before and after.
 
-## 🔴 Item 129: `files` reads a part of a file, and says how long the file is
-`files.read` reads a file whole into one `String`, and a JVM `String` holds 2^31 chars at most.
-A file of one billion rows holds 13 GB, so no program can read it at all.
-A file that fits is held whole, so a program that reads a large file holds it, not its work.
-Item 130 is the program that needs this, and it reads one part of the file in each process.
-No `for` loop reads a byte of a file, so each function here passes question 12 of the principles.
-The read gives ISO-8859-1 text, one char for each byte, as `files.read_bytes` already reads.
-So the length of the text is the count of bytes, and a caller finds a line end by its offset.
-A part cut at any byte can split a UTF-8 sequence, so a decoded read could not say where it ends.
-A name read out of a part is written as the UTF-8 it was, so `strings` gets the one decoding.
-[129][a] - `docs/specs/io.md` states `files.size(path) -> Result<Int, String>`.
-It gives the bytes the file holds.
-[129][b] - It states `files.read_between(path, from, to) -> Result<String, String>`.
-It gives the bytes from `from` up to `to` as ISO-8859-1 text.
-A `to` past the end gives what is there.
-A part longer than one JVM buffer holds is an `Err` that names the length, before the file opens.
-[129][c] - `files` reads the part with a `FileChannel` read at a position into a `ByteBuffer`.
-A `Charset` decodes the buffer, so no array crosses.
-Each step that throws is an `extern` with a `Result`, as `files.listed` walks a stream.
-[129][d] - `docs/specs/library.md` states `strings.from_utf_8(text: String) -> String`.
-It gives the text that the chars of `text` spell as UTF-8 bytes, decoded by a `Charset` of the JVM.
-A malformed sequence becomes the replacement char, as `Charset.decode` gives it, so it is total.
-[129][e] - `tests/spec/io/part_read.bx` writes a file, reads it in parts, and shows the parts.
-A drawn property holds that the parts of a drawn file, joined, are what `files.read_bytes` gives.
-A second holds that `from_utf_8` of the joined parts is `files.read`, for a drawn UTF-8 file.
-
-## 🔴 Item 130: `1brc/main.bx` answers the One Billion Row Challenge
-**Depends on:** Item 129 — a worker reads its part of the file, and a name comes back as UTF-8.
+## 🔴 Item 130: `1brc/src/main.bx` answers the One Billion Row Challenge
+**Depends on:** Item 129, Item 134 — a worker reads part of the file, and 1brc keeps the layout.
 The challenge is a file of one billion `<station>;<temperature>` lines, and one line of output.
 The output is `{Abha=-23.0/18.0/59.2, Abidjan=-16.2/26.3/67.3, ...}`, sorted by station name.
 Each station shows its lowest, mean, and highest reading, each with one decimal.
 A half rounds toward positive infinity, as `Math.round` rounds, which the challenge states.
 A name is UTF-8 of at most 100 bytes, and a reading is `-99.9` to `99.9` with one decimal.
 There are at most 10 000 stations.
-`example/main.bx` is the program a newcomer reads, and `1brc/main.bx` is the program measured.
+`example/src/main.bx` is the program a newcomer reads, and `1brc/src/main.bx` is the one measured.
 It is the second dogfood program, written in Bux over `library/` alone, with no `extern` of its own.
 `main` reads the path from its arguments, and spawns one worker process for each processor.
 Each worker takes one contiguous part of the file, and reads it in slices with `read_between`.
@@ -193,14 +126,14 @@ So that count moves to the library.
 [130][b] - `list.sorted<T: Ord<T>>(values: List<T>) -> List<T>` lands, a merge sort with loops.
 `sorted` and `inserted` in `compiler/command.bx` go, and `command.bx` calls `list.sorted`.
 [130][c] - `environment.processors() -> Int` lands, and `tests/runner.bx` calls it.
-[130][d] - `1brc/main.bx` is the program, and `1brc/samples/` holds small files and their outputs.
+[130][d] - `1brc/src/main.bx` is the program, and `1brc/tests/samples/` holds samples and outputs.
 One sample holds UTF-8 names, one holds a mean that is a negative half, and one holds one station.
-[130][e] - `tests/started.bx` runs `1brc/main.bx` over each sample, as it runs `example/main.bx`.
+[130][e] - `tests/started.bx` runs `1brc/src/main.bx` over each sample, as it runs the example.
 It holds the output to the expected one, and it runs the examples and tests of the module.
 [130][f] - `docs/implementation.md` section 12 names the program as the second dogfood.
 Section 7 records the wall time over one billion rows, on the machine and the JDK it names.
 
-## 🔴 Item 131: The profile of `1brc/main.bx` says what the next item attacks
+## 🔴 Item 131: The profile of `1brc/src/main.bx` says what the next item attacks
 **Depends on:** Item 130 — the program must run over one billion rows before it is profiled.
 Section 7 profiled the compiler, and each item after Item 111 attacked a share the profile priced.
 The program gets the same, and no library change lands before the profile prices it.
@@ -215,7 +148,7 @@ It records the wall time, the processor time, and the time the collector paused.
 [131][b] - The item files one item for the largest share, with the requirement and the alternatives.
 It files no item for a share below ten percent, and it changes no library code.
 
-## 🔴 Item 132: `1brc/create_measurements.bx` writes the file of one billion rows
+## 🔴 Item 132: `1brc/src/create_measurements.bx` writes the file of one billion rows
 **Depends on:** Item 130 — the program is what reads what this writes.
 The challenge gives a Java generator, and a JDK runs it, so the file exists before this item.
 Dogfooding says Bux writes it, and the generator finds one more gap.
@@ -226,7 +159,69 @@ The program writes its own, because no program imports a module of `tests/`.
 The generator holds the stations of the challenge and the mean of each in one list literal.
 [132][a] - `docs/specs/io.md` states `files.append(path, text) -> Result<String, String>`.
 It writes `text` after what the file holds, makes the file where there is none, and gives `path`.
-[132][b] - `docs/specs/billion-rows.md` states `bux run 1brc/create_measurements.bx <rows> <path>`.
-[132][c] - `1brc/create_measurements.bx` writes `rows` lines, in parts of one million lines each.
-[132][d] - A test of the module writes a small file, and `1brc/main.bx` reads it to its output.
+[132][b] - `docs/specs/billion-rows.md` states the command line of the generator.
+It is `bux run 1brc/src/create_measurements.bx <rows> <path>`.
+[132][c] - `1brc/src/create_measurements.bx` writes `rows` lines, in parts of one million lines.
+[132][d] - A test of the module writes a small file, and `1brc/src/main.bx` reads it to its output.
 [132][e] - Section 7 records the wall time of one billion rows written, beside their read time.
+
+## 🔴 Item 133: The compiler's sources move to `src/`, and its resources sit beside `library/`
+**Depends on:** Item 113, Item 114 — both rewrite the class path in `bin/`, which this item moves.
+Item 134 holds every package to one layout: `src/` modules, `tests/` tests, and `target/` classes.
+The compiler is a package, so that rule refuses the compiler until the compiler keeps the layout.
+So the move lands first, whole, with no new rule, and the rule lands on a tree that keeps it.
+`compiler/` holds the modules of the compiler, its manifest, `help/`, and `explanations/`.
+The help text, the explanations, and `library/` are resources of the toolchain, in no package.
+They sit at the root, beside each other, and a build copies the three as Item 113 states.
+A moved source changes no class, so the seed stays, and `bin/bootstrap` shows that nothing changed.
+[133][a] - `compiler/*.bx` and `compiler/bux.package` move to `src/`; the compiler is `src/main.bx`.
+[133][b] - `compiler/help/` and `compiler/explanations/` move to `help/` and `explanations/`.
+[133][c] - `tests/bux.package` depends on `../src`.
+[133][d] - `bin/bux` starts the classes of `src/target/`, and `bin/bootstrap` builds `src/main.bx`.
+[133][e] - Each doc comment, spec, golden, and `docs/implementation.md` names the new path.
+[133][f] - `bin/bootstrap` holds stage 2 equal to stage 1 byte for byte across the move.
+
+## 🔴 Item 134: A package is `src/`, `tests/`, and `target/` under its manifest
+**Depends on:** Item 133 — the compiler is a package, and it moves before the rule can refuse it.
+A package is one flat directory today, a test has no place of its own, and `target/` sits beside it.
+So every project is laid out its own way, and a reader learns each one.
+One layout, which the compiler holds every package to, is one thing to learn and nothing to choose.
+A Go or a Cargo reader expects it: `src/`, `tests/`, and `target/` under the manifest.
+`docs/` is a convention, and the compiler reads nothing under it, so it refuses nothing about it.
+A directory the compiler holds nothing to is a check that protects nothing, and there is none.
+`docs/specs/packages.md` states the rule in a section of its own, and every other page points there.
+A module of a package is a `.bx` file at the top of `src/`.
+A test module is a `.bx` file at the top of `tests/`.
+A test module reaches a module of `src/` by its name, and a module of `src/` reaches no test module.
+A `depends` reaches the `src/` of the dependency, and never its `tests/`.
+A `.bx` file beside the manifest is `L0322`, at the file, and its help names `src/` and `tests/`.
+A manifest inside `src/` or `tests/` of a package is `L0322` too, because a `tests/` is no package.
+A `.bx` file deeper than the top of `tests/` is data, as the spec files under `tests/spec/` are.
+`bux test <dir>` runs the modules of `src/` and then those of `tests/`, each in sorted name order.
+`bux build`, `bux run`, and `bux test` write into `target/` under the manifest of the package.
+A bare module, in no package, is unchanged: it writes `target/` beside itself.
+The `tests/` of the repository becomes the tests of the root package, and `tests/bux.package` goes.
+`example/` becomes a package, so a newcomer reads the layout in the program a newcomer reads.
+No module imports `main`, so the types and functions of the example move to `example/src/orders.bx`.
+`example/tests/orders.bx` holds one `test` block that reaches `orders`, which shows the import rule.
+[134][a] - `docs/design.md` section 16 and `docs/specs/packages.md` state the layout and `L0322`.
+`docs/specs/modules.md`, `run.md`, `testing.md`, and `example-program.md` are rewritten to match.
+[134][b] - The loader answers an import of a test module from `src/`, and never the other way.
+[134][c] - `L0322` refuses a module beside a manifest, and a manifest in `src/` or `tests/`.
+[134][d] - A build writes `target/` under the manifest, and `bux test` runs `src/` then `tests/`.
+[134][e] - `src/bux.package` moves to the root, and `tests/bux.package` goes.
+`bin/bux` starts the classes of `target/`.
+`bin/bootstrap` copies the root package, and it compares `target/` with the `target/` of the copy.
+The pre-commit hook runs `bin/bux test` at the root.
+[134][f] - `example/` holds `bux.package`, `src/main.bx`, `src/orders.bx`, and `tests/orders.bx`.
+The README and `tests/started.bx` run `example/src/main.bx`.
+[134][g] - `tests/spec/packages/` shows each refusal, and a drawn package in the layout loads.
+`tests/commands/fixtures.txt` holds the goldens of each command on a package in the layout.
+
+## 🔴 Item 135: A module that imports itself crashes the compiler
+`import list` inside `library/list.bx` ends `bux build` with a `StackOverflowError`.
+`modules.walk` follows the import into the module it walks, and it never ends.
+The compiler never crashes, so an import of the module itself is a refusal with a code.
+[135][a] - `docs/specs/modules.md` states the refusal, its code, and its message.
+[135][b] - `modules.walk` refuses a self-import before it follows any import.
+[135][c] - `tests/spec/modules/imports_itself.bx` is the example, and the runner holds it.

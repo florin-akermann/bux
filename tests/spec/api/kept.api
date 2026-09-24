@@ -1,0 +1,5 @@
+fn sized(count: Int) -> Int
+
+type Shape =
+    | Dot
+    | Line(Int)

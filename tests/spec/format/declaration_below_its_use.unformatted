@@ -1,0 +1,31 @@
+// `bux fmt` moves a declaration below each declaration that uses it, and moves nothing else.
+// `is_odd` and `is_even` call each other, so they keep the order they are written in.
+fn step() -> Int {
+    1
+}
+
+/// Whether `count` is odd.
+fn is_odd(count: Int) -> Bool {
+    if count == 0 {
+        return false
+    }
+    is_even(count - step())
+}
+
+type Parity =
+    | Even
+    | Odd
+
+fn parity_of(count: Int) -> Parity {
+    if is_even(count) {
+        return Even
+    }
+    Odd
+}
+
+fn is_even(count: Int) -> Bool {
+    if count == 0 {
+        return true
+    }
+    is_odd(count - step())
+}

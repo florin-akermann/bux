@@ -338,8 +338,8 @@ status 0
 > Canonical form is the first thing each module is held to: a file that differs is reported with
 > the line and column it is about, that line under a row of carets, and a `help:` line naming the
 > text canonical form writes there. `bux fmt` is the command that fixes it. An import written
-> after a declaration, or two imports out of sort, is reported here too, and `bux fmt` does not
-> fix that one: where an import belongs is said, never rewritten.
+> after a declaration, two imports out of sort, and a declaration written after a test are
+> reported here too, and `bux fmt` fixes each of them: it sorts the imports and puts the tests last.
 >
 > How a name is spelled is part of canonical form too, and is reported here for the same reason: a
 > name written in neither snake_case nor PascalCase, and a declared name of one character, are each
@@ -350,7 +350,8 @@ status 0
 > Name resolution comes next. A name with no definition, a module that declares one name twice, and
 > a binding that hides a name already in scope are each refused, because in Bux one name has one
 > definition. A declaration written above something that uses it is refused here as well: a file
-> reads top down, so the reader meets the intent before the detail.
+> reads top down, so the reader meets the intent before the detail. `bux fmt` moves such a
+> declaration below what uses it.
 >
 > Type inference comes next. A type written where another is needed, a call with the wrong number
 > of arguments, a field a record does not declare, and a record built without one of its fields are
@@ -414,10 +415,11 @@ status 0
 > all is said on standard error and exits 2, with the flag exactly as without it.
 >
 > Canonical form is the one refusal that carries an edit, because it is the one whose answer the
-> compiler already knows. That edit is the whole file, and it is exactly the text `bux fmt`
-> writes, so a tool applies the compiler's own repair rather than reformatting by hand. Where a
-> declaration belongs, what a name should have been, and which variant a `match` is missing are all
-> the author's to decide, so those carry advice and no edit. Applying the edit answers the refusal it
+> compiler already knows. That edit is the whole file, and it is the text `bux fmt` writes where
+> every item is in place, so a tool applies the compiler's own repair rather than reformatting by
+> hand. What a name should have been and which variant a `match` is missing are the author's to
+> decide, so those carry advice and no edit. Where an item belongs carries advice that names
+> `bux fmt`, which moves it there. Applying the edit answers the refusal it
 > came with and not every refusal the file holds: a file whose imports are also out of order is told
 > about canonical form first, and checking the repaired file then reports that.
 >
@@ -603,14 +605,20 @@ status 0
 > Every comment survives. A comment written at the end of a line moves to a line of its own
 > directly above it; a comment already alone on its line stays where it is.
 >
-> Formatting never changes what a program says: the tree parsed from the canonical text is the
-> tree parsed from the original. That is also why `bux fmt` does not put a file in order.
-> Canonical form covers sequence too — imports come first and sorted, a declaration is written
-> below what uses it, and a `match` lists its arms in the order the type declares its variants —
-> but where a declaration belongs is the author's decision, so `bux check` says where it goes
-> rather than moving it there.
+> Formatting never changes what a program says: each item parsed from the canonical text is the
+> item parsed from the original, and only the order of the items can change.
 >
-> How a name is spelled is fixed the same way and rewritten no more than order is. A function, a
+> Canonical form covers sequence too, and `bux fmt` repairs each order the compiler can compute.
+> It sorts the imports and puts them first. It moves a declaration written after a test above the
+> tests, and the tests keep the order they are written in. It moves a declaration below each
+> declaration that uses it, and two declarations that use each other keep the order they are
+> written in. Each item moves with the comments directly above it, and the comments above the
+> first item stay at the top of the file up to its first `///` or `// example:` line. A file
+> the resolver refuses keeps the order of its declarations, and `bux build` says why. A `match`
+> lists its arms in the order the type declares its variants, and `bux fmt` does not reorder
+> them, because that needs the types.
+>
+> How a name is spelled is fixed the same way, and it is not rewritten. A function, a
 > parameter, a record field, and an imported module are snake_case; a type, a variant, and a type
 > parameter are PascalCase; an acronym is a word, so UserId compiles and UserID does not. A
 > declared name is two characters or more, and a function whose result is Bool begins is_, has_,
@@ -769,9 +777,9 @@ $ help test
 status 0
 > Run the examples and the tests of a module, or of every module of a package.
 >
-> Every function a module declares at the top level states at least one example, and `bux test`
-> runs them. An example is a line of the comment above the function, and it is Bux rather than
-> prose:
+> Every public function a module declares at the top level states at least one example, and
+> `bux test` runs them. A `private` function may state one too. An example is a line of the
+> comment above the function, and it is Bux rather than prose:
 >
 > ```text
 > // Divides `total` among `people`, giving back nothing where there is nobody to divide among.
@@ -868,8 +876,8 @@ status 0
 > Print what a module offers, and nothing else.
 >
 > `bux api` runs the front end over a file and prints one page: every name the file declares at
-> the top level, with the type it has. That is the whole surface, because every top-level
-> declaration is public and there is no private one. Learning a signature is then reading a page
+> the top level and does not declare `private`, with the type it has. That is the whole surface,
+> because another module reaches no other name. Learning a signature is then reading a page
 > rather than reading a file.
 >
 > A function is printed as its signature and nothing after it: one line, and no body under it.
@@ -930,14 +938,20 @@ status 0
 > Every comment survives. A comment written at the end of a line moves to a line of its own
 > directly above it; a comment already alone on its line stays where it is.
 >
-> Formatting never changes what a program says: the tree parsed from the canonical text is the
-> tree parsed from the original. That is also why `bux fmt` does not put a file in order.
-> Canonical form covers sequence too — imports come first and sorted, a declaration is written
-> below what uses it, and a `match` lists its arms in the order the type declares its variants —
-> but where a declaration belongs is the author's decision, so `bux check` says where it goes
-> rather than moving it there.
+> Formatting never changes what a program says: each item parsed from the canonical text is the
+> item parsed from the original, and only the order of the items can change.
 >
-> How a name is spelled is fixed the same way and rewritten no more than order is. A function, a
+> Canonical form covers sequence too, and `bux fmt` repairs each order the compiler can compute.
+> It sorts the imports and puts them first. It moves a declaration written after a test above the
+> tests, and the tests keep the order they are written in. It moves a declaration below each
+> declaration that uses it, and two declarations that use each other keep the order they are
+> written in. Each item moves with the comments directly above it, and the comments above the
+> first item stay at the top of the file up to its first `///` or `// example:` line. A file
+> the resolver refuses keeps the order of its declarations, and `bux build` says why. A `match`
+> lists its arms in the order the type declares its variants, and `bux fmt` does not reorder
+> them, because that needs the types.
+>
+> How a name is spelled is fixed the same way, and it is not rewritten. A function, a
 > parameter, a record field, and an imported module are snake_case; a type, a variant, and a type
 > parameter are PascalCase; an acronym is a word, so UserId compiles and UserID does not. A
 > declared name is two characters or more, and a function whose result is Bool begins is_, has_,
@@ -1805,8 +1819,8 @@ status 0
 > Canonical form is the first thing each module is held to: a file that differs is reported with
 > the line and column it is about, that line under a row of carets, and a `help:` line naming the
 > text canonical form writes there. `bux fmt` is the command that fixes it. An import written
-> after a declaration, or two imports out of sort, is reported here too, and `bux fmt` does not
-> fix that one: where an import belongs is said, never rewritten.
+> after a declaration, two imports out of sort, and a declaration written after a test are
+> reported here too, and `bux fmt` fixes each of them: it sorts the imports and puts the tests last.
 >
 > How a name is spelled is part of canonical form too, and is reported here for the same reason: a
 > name written in neither snake_case nor PascalCase, and a declared name of one character, are each
@@ -1817,7 +1831,8 @@ status 0
 > Name resolution comes next. A name with no definition, a module that declares one name twice, and
 > a binding that hides a name already in scope are each refused, because in Bux one name has one
 > definition. A declaration written above something that uses it is refused here as well: a file
-> reads top down, so the reader meets the intent before the detail.
+> reads top down, so the reader meets the intent before the detail. `bux fmt` moves such a
+> declaration below what uses it.
 >
 > Type inference comes next. A type written where another is needed, a call with the wrong number
 > of arguments, a field a record does not declare, and a record built without one of its fields are
@@ -1881,10 +1896,11 @@ status 0
 > all is said on standard error and exits 2, with the flag exactly as without it.
 >
 > Canonical form is the one refusal that carries an edit, because it is the one whose answer the
-> compiler already knows. That edit is the whole file, and it is exactly the text `bux fmt`
-> writes, so a tool applies the compiler's own repair rather than reformatting by hand. Where a
-> declaration belongs, what a name should have been, and which variant a `match` is missing are all
-> the author's to decide, so those carry advice and no edit. Applying the edit answers the refusal it
+> compiler already knows. That edit is the whole file, and it is the text `bux fmt` writes where
+> every item is in place, so a tool applies the compiler's own repair rather than reformatting by
+> hand. What a name should have been and which variant a `match` is missing are the author's to
+> decide, so those carry advice and no edit. Where an item belongs carries advice that names
+> `bux fmt`, which moves it there. Applying the edit answers the refusal it
 > came with and not every refusal the file holds: a file whose imports are also out of order is told
 > about canonical form first, and checking the repaired file then reports that.
 >

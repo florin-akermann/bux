@@ -1,0 +1,2 @@
+192..200 expected a function, a type, a trait, or a process, found `instance`
+help: `private` keeps a name in its module, and only these four declare a name that another module reaches

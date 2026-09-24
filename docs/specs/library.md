@@ -241,7 +241,7 @@ module read out of a file, so nothing about the order a module is read in change
 
 `io`, `files`, `programs`, and `environment` are written over `extern` declarations, which
 `docs/specs/interop.md` states and `docs/specs/io.md` says what each of the four reaches. Each
-declares those declarations beside its functions, and every top-level name is public, so every one
+declares those declarations beside its functions, and none of them is `private`, so every one
 of those surfaces is wider than the names above; `docs/specs/io.md` names the rest.
 `io.println` writes to standard output and `io.eprintln` writes to standard error, and the two are
 the one `io.put_line` over two streams.
@@ -271,7 +271,7 @@ The one reaches `String.charAt`, declared with a `char` width and a narrowed `in
 other reaches `String.substring`, declared with a narrowed `from` and a narrowed `to`.
 Each of the two declarations gives back `Result<Option<T>, String>`: the `Option` is what
 `docs/specs/interop.md` asks of a declaration that narrows an argument, and the `Result` is what
-keeps the declaration itself total, because every top-level name of a module is public.
+keeps the declaration itself total, because a top-level name that is not `private` is public.
 Every index counts UTF-16 code units, which is what `strings.length` counts.
 
 `strings.from_utf_8(text)` gives the text that the chars of `text` spell as UTF-8 bytes.

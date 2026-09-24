@@ -455,7 +455,7 @@ status 1
 !   7 | import io
 !     | ^^^^^^^^^
 !
-! help: imports come first, before every declaration
+! help: imports come first, before every declaration: `bux fmt` moves it there
 
 $ check tests/spec/format/import_block.bx
 status 0
@@ -478,7 +478,7 @@ status 1
 !   4 | import files
 !     | ^^^^^^^^^^^^
 !
-! help: `files` sorts before `io`
+! help: `files` sorts before `io`: `bux fmt` sorts the imports
 
 $ check tests/spec/format/initial_behind_an_underscore.bx
 status 1
@@ -1240,7 +1240,7 @@ status 1
 !   3 | type UserId = UserId(Int)
 !     |      ^^^^^^
 !
-! help: a file reads top down: move it below what uses it
+! help: a file reads top down: `bux fmt` moves it below what uses it
 
 $ check tests/spec/name_resolution/derive_after_one_derivable.bx
 status 1
@@ -1260,7 +1260,7 @@ status 1
 !   3 | type User = {
 !     |      ^^^^
 !
-! help: a file reads top down: move it below what uses it
+! help: a file reads top down: `bux fmt` moves it below what uses it
 
 $ check tests/spec/name_resolution/derive_beside_an_instance.bx
 status 1
@@ -1313,7 +1313,7 @@ status 1
 !   3 | fn one() -> Int {
 !     |    ^^^
 !
-! help: a file reads top down: move it below what uses it
+! help: a file reads top down: `bux fmt` moves it below what uses it
 
 $ check tests/spec/name_resolution/function_assigned_to.bx
 status 1
@@ -1493,7 +1493,7 @@ status 1
 !   4 | fn helper() -> Int {
 !     |    ^^^^^^
 !
-! help: a file reads top down: move it below what uses it
+! help: a file reads top down: `bux fmt` moves it below what uses it
 
 $ check tests/spec/name_resolution/prelude_method_declared.bx
 status 1
@@ -1576,7 +1576,7 @@ status 1
 !   3 | type UserId = UserId(Int)
 !     |      ^^^^^^
 !
-! help: a file reads top down: move it below what uses it
+! help: a file reads top down: `bux fmt` moves it below what uses it
 
 $ check tests/spec/name_resolution/type_through_a_value.bx
 status 1
@@ -2206,7 +2206,7 @@ status 1
 !   9 | fn total() -> Int {
 !     | ^^^^^^^^^^^^^^^^^^^ this runs on to line 11
 !
-! help: tests come last, after every declaration
+! help: tests come last, after every declaration: `bux fmt` moves it above them
 
 $ check tests/spec/testing/fails.bx
 status 0
@@ -2754,7 +2754,7 @@ status 1
 
 $ check --json tests/spec/format/import_below.bx
 status 1
-> {"file":"tests/spec/format/import_below.bx","code":"L0201","message":"`import io` is written after a declaration","span":{"start":147,"len":9},"help":"imports come first, before every declaration"}
+> {"file":"tests/spec/format/import_below.bx","code":"L0201","message":"`import io` is written after a declaration","span":{"start":147,"len":9},"help":"imports come first, before every declaration: `bux fmt` moves it there"}
 
 $ check --json tests/spec/format/import_block.bx
 status 0
@@ -2765,7 +2765,7 @@ status 1
 
 $ check --json tests/spec/format/import_order.bx
 status 1
-> {"file":"tests/spec/format/import_order.bx","code":"L0201","message":"`import files` is written after `import io`","span":{"start":114,"len":12},"help":"`files` sorts before `io`"}
+> {"file":"tests/spec/format/import_order.bx","code":"L0201","message":"`import files` is written after `import io`","span":{"start":114,"len":12},"help":"`files` sorts before `io`: `bux fmt` sorts the imports"}
 
 $ check --json tests/spec/format/initial_behind_an_underscore.bx
 status 1
@@ -3189,7 +3189,7 @@ status 1
 
 $ check --json tests/spec/name_resolution/definition_before_use.bx
 status 1
-> {"file":"tests/spec/name_resolution/definition_before_use.bx","code":"L0303","message":"`UserId` is written above `wrap`, which uses it","span":{"start":102,"len":6},"help":"a file reads top down: move it below what uses it"}
+> {"file":"tests/spec/name_resolution/definition_before_use.bx","code":"L0303","message":"`UserId` is written above `wrap`, which uses it","span":{"start":102,"len":6},"help":"a file reads top down: `bux fmt` moves it below what uses it"}
 
 $ check --json tests/spec/name_resolution/derive_after_one_derivable.bx
 status 1
@@ -3197,7 +3197,7 @@ status 1
 
 $ check --json tests/spec/name_resolution/derive_below_its_type.bx
 status 1
-> {"file":"tests/spec/name_resolution/derive_below_its_type.bx","code":"L0303","message":"`User` is written above `derive Eq for User`, which uses it","span":{"start":105,"len":4},"help":"a file reads top down: move it below what uses it"}
+> {"file":"tests/spec/name_resolution/derive_below_its_type.bx","code":"L0303","message":"`User` is written above `derive Eq for User`, which uses it","span":{"start":105,"len":4},"help":"a file reads top down: `bux fmt` moves it below what uses it"}
 
 $ check --json tests/spec/name_resolution/derive_beside_an_instance.bx
 status 1
@@ -3220,7 +3220,7 @@ status 0
 
 $ check --json tests/spec/name_resolution/function_above_its_use.bx
 status 1
-> {"file":"tests/spec/name_resolution/function_above_its_use.bx","code":"L0303","message":"`one` is written above `two`, which uses it","span":{"start":111,"len":3},"help":"a file reads top down: move it below what uses it"}
+> {"file":"tests/spec/name_resolution/function_above_its_use.bx","code":"L0303","message":"`one` is written above `two`, which uses it","span":{"start":111,"len":3},"help":"a file reads top down: `bux fmt` moves it below what uses it"}
 
 $ check --json tests/spec/name_resolution/function_assigned_to.bx
 status 1
@@ -3292,7 +3292,7 @@ status 1
 
 $ check --json tests/spec/name_resolution/placed_beside_a_cycle.bx
 status 1
-> {"file":"tests/spec/name_resolution/placed_beside_a_cycle.bx","code":"L0303","message":"`helper` is written above `is_odd`, which uses it","span":{"start":170,"len":6},"help":"a file reads top down: move it below what uses it"}
+> {"file":"tests/spec/name_resolution/placed_beside_a_cycle.bx","code":"L0303","message":"`helper` is written above `is_odd`, which uses it","span":{"start":170,"len":6},"help":"a file reads top down: `bux fmt` moves it below what uses it"}
 
 $ check --json tests/spec/name_resolution/prelude_method_declared.bx
 status 1
@@ -3327,7 +3327,7 @@ status 1
 
 $ check --json tests/spec/name_resolution/type_above_its_holder.bx
 status 1
-> {"file":"tests/spec/name_resolution/type_above_its_holder.bx","code":"L0303","message":"`UserId` is written above `User`, which uses it","span":{"start":79,"len":6},"help":"a file reads top down: move it below what uses it"}
+> {"file":"tests/spec/name_resolution/type_above_its_holder.bx","code":"L0303","message":"`UserId` is written above `User`, which uses it","span":{"start":79,"len":6},"help":"a file reads top down: `bux fmt` moves it below what uses it"}
 
 $ check --json tests/spec/name_resolution/type_through_a_value.bx
 status 1
@@ -3673,7 +3673,7 @@ status 0
 
 $ check --json tests/spec/testing/after_a_test.bx
 status 1
-> {"file":"tests/spec/testing/after_a_test.bx","code":"L0201","message":"this declaration is written after a test","span":{"start":185,"len":27},"help":"tests come last, after every declaration"}
+> {"file":"tests/spec/testing/after_a_test.bx","code":"L0201","message":"this declaration is written after a test","span":{"start":185,"len":27},"help":"tests come last, after every declaration: `bux fmt` moves it above them"}
 
 $ check --json tests/spec/testing/fails.bx
 status 0
@@ -4524,7 +4524,7 @@ status 1
 !   7 | import io
 !     | ^^^^^^^^^
 !
-! help: imports come first, before every declaration
+! help: imports come first, before every declaration: `bux fmt` moves it there
 
 $ api tests/spec/format/import_block.bx
 status 0
@@ -4548,7 +4548,7 @@ status 1
 !   4 | import files
 !     | ^^^^^^^^^^^^
 !
-! help: `files` sorts before `io`
+! help: `files` sorts before `io`: `bux fmt` sorts the imports
 
 $ api tests/spec/format/initial_behind_an_underscore.bx
 status 1
@@ -5771,7 +5771,7 @@ status 1
 !   3 | type UserId = UserId(Int)
 !     |      ^^^^^^
 !
-! help: a file reads top down: move it below what uses it
+! help: a file reads top down: `bux fmt` moves it below what uses it
 
 $ api tests/spec/name_resolution/derive_after_one_derivable.bx
 status 1
@@ -5791,7 +5791,7 @@ status 1
 !   3 | type User = {
 !     |      ^^^^
 !
-! help: a file reads top down: move it below what uses it
+! help: a file reads top down: `bux fmt` moves it below what uses it
 
 $ api tests/spec/name_resolution/derive_beside_an_instance.bx
 status 1
@@ -5864,7 +5864,7 @@ status 1
 !   3 | fn one() -> Int {
 !     |    ^^^
 !
-! help: a file reads top down: move it below what uses it
+! help: a file reads top down: `bux fmt` moves it below what uses it
 
 $ api tests/spec/name_resolution/function_assigned_to.bx
 status 1
@@ -6044,7 +6044,7 @@ status 1
 !   4 | fn helper() -> Int {
 !     |    ^^^^^^
 !
-! help: a file reads top down: move it below what uses it
+! help: a file reads top down: `bux fmt` moves it below what uses it
 
 $ api tests/spec/name_resolution/prelude_method_declared.bx
 status 1
@@ -6147,7 +6147,7 @@ status 1
 !   3 | type UserId = UserId(Int)
 !     |      ^^^^^^
 !
-! help: a file reads top down: move it below what uses it
+! help: a file reads top down: `bux fmt` moves it below what uses it
 
 $ api tests/spec/name_resolution/type_through_a_value.bx
 status 1
@@ -7063,7 +7063,7 @@ status 1
 !   9 | fn total() -> Int {
 !     | ^^^^^^^^^^^^^^^^^^^ this runs on to line 11
 !
-! help: tests come last, after every declaration
+! help: tests come last, after every declaration: `bux fmt` moves it above them
 
 $ api tests/spec/testing/fails.bx
 status 0
@@ -8792,7 +8792,7 @@ status 1
 !   7 | import io
 !     | ^^^^^^^^^
 !
-! help: imports come first, before every declaration
+! help: imports come first, before every declaration: `bux fmt` moves it there
 
 $ test tests/spec/format/import_block.bx
 status 0
@@ -8815,7 +8815,7 @@ status 1
 !   4 | import files
 !     | ^^^^^^^^^^^^
 !
-! help: `files` sorts before `io`
+! help: `files` sorts before `io`: `bux fmt` sorts the imports
 
 $ test tests/spec/format/initial_behind_an_underscore.bx
 status 1
@@ -9716,7 +9716,7 @@ status 1
 !   3 | type UserId = UserId(Int)
 !     |      ^^^^^^
 !
-! help: a file reads top down: move it below what uses it
+! help: a file reads top down: `bux fmt` moves it below what uses it
 
 $ test tests/spec/name_resolution/derive_after_one_derivable.bx
 status 1
@@ -9736,7 +9736,7 @@ status 1
 !   3 | type User = {
 !     |      ^^^^
 !
-! help: a file reads top down: move it below what uses it
+! help: a file reads top down: `bux fmt` moves it below what uses it
 
 $ test tests/spec/name_resolution/derive_beside_an_instance.bx
 status 1
@@ -9789,7 +9789,7 @@ status 1
 !   3 | fn one() -> Int {
 !     |    ^^^
 !
-! help: a file reads top down: move it below what uses it
+! help: a file reads top down: `bux fmt` moves it below what uses it
 
 $ test tests/spec/name_resolution/function_assigned_to.bx
 status 1
@@ -9969,7 +9969,7 @@ status 1
 !   4 | fn helper() -> Int {
 !     |    ^^^^^^
 !
-! help: a file reads top down: move it below what uses it
+! help: a file reads top down: `bux fmt` moves it below what uses it
 
 $ test tests/spec/name_resolution/prelude_method_declared.bx
 status 1
@@ -10083,7 +10083,7 @@ status 1
 !   3 | type UserId = UserId(Int)
 !     |      ^^^^^^
 !
-! help: a file reads top down: move it below what uses it
+! help: a file reads top down: `bux fmt` moves it below what uses it
 
 $ test tests/spec/name_resolution/type_through_a_value.bx
 status 1
@@ -10793,7 +10793,7 @@ status 1
 !   9 | fn total() -> Int {
 !     | ^^^^^^^^^^^^^^^^^^^ this runs on to line 11
 !
-! help: tests come last, after every declaration
+! help: tests come last, after every declaration: `bux fmt` moves it above them
 
 $ test tests/spec/testing/fails.bx
 status 1
@@ -14550,7 +14550,7 @@ status 1
 !   7 | import io
 !     | ^^^^^^^^^
 !
-! help: imports come first, before every declaration
+! help: imports come first, before every declaration: `bux fmt` moves it there
 
 $ build tests/spec/format/import_block.bx
 status 0
@@ -14573,7 +14573,7 @@ status 1
 !   4 | import files
 !     | ^^^^^^^^^^^^
 !
-! help: `files` sorts before `io`
+! help: `files` sorts before `io`: `bux fmt` sorts the imports
 
 $ build tests/spec/format/initial_behind_an_underscore.bx
 status 1
@@ -15481,7 +15481,7 @@ status 1
 !   3 | type UserId = UserId(Int)
 !     |      ^^^^^^
 !
-! help: a file reads top down: move it below what uses it
+! help: a file reads top down: `bux fmt` moves it below what uses it
 
 $ build tests/spec/name_resolution/derive_after_one_derivable.bx
 status 1
@@ -15501,7 +15501,7 @@ status 1
 !   3 | type User = {
 !     |      ^^^^
 !
-! help: a file reads top down: move it below what uses it
+! help: a file reads top down: `bux fmt` moves it below what uses it
 
 $ build tests/spec/name_resolution/derive_beside_an_instance.bx
 status 1
@@ -15554,7 +15554,7 @@ status 1
 !   3 | fn one() -> Int {
 !     |    ^^^
 !
-! help: a file reads top down: move it below what uses it
+! help: a file reads top down: `bux fmt` moves it below what uses it
 
 $ build tests/spec/name_resolution/function_assigned_to.bx
 status 1
@@ -15734,7 +15734,7 @@ status 1
 !   4 | fn helper() -> Int {
 !     |    ^^^^^^
 !
-! help: a file reads top down: move it below what uses it
+! help: a file reads top down: `bux fmt` moves it below what uses it
 
 $ build tests/spec/name_resolution/prelude_method_declared.bx
 status 1
@@ -15848,7 +15848,7 @@ status 1
 !   3 | type UserId = UserId(Int)
 !     |      ^^^^^^
 !
-! help: a file reads top down: move it below what uses it
+! help: a file reads top down: `bux fmt` moves it below what uses it
 
 $ build tests/spec/name_resolution/type_through_a_value.bx
 status 1
@@ -16558,7 +16558,7 @@ status 1
 !   9 | fn total() -> Int {
 !     | ^^^^^^^^^^^^^^^^^^^ this runs on to line 11
 !
-! help: tests come last, after every declaration
+! help: tests come last, after every declaration: `bux fmt` moves it above them
 
 $ build tests/spec/testing/fails.bx
 status 0
@@ -18109,3 +18109,568 @@ status 0
 
 $ build tests/spec/io/part_read.bx
 status 0
+
+$ check tests/spec/format/declaration_below_its_use.bx
+status 0
+
+$ check --json tests/spec/format/declaration_below_its_use.bx
+status 0
+
+$ api tests/spec/format/declaration_below_its_use.bx
+status 0
+> fn is_odd(count: Int) -> Bool
+>
+> fn parity_of(count: Int) -> Parity
+>
+> type Parity =
+>     | Even
+>     | Odd
+>
+> fn is_even(count: Int) -> Bool
+>
+> fn step() -> Int
+
+$ test tests/spec/format/declaration_below_its_use.bx
+status 1
+! error[L0601]: `is_odd` states no example
+!   --> tests/spec/format/declaration_below_its_use.bx:4:4
+!
+!   4 | fn is_odd(count: Int) -> Bool {
+!     |    ^^^^^^
+!
+! help: write `// example: <an expression that is true>` in the comment above it
+!
+! error[L0601]: `parity_of` states no example
+!   --> tests/spec/format/declaration_below_its_use.bx:11:4
+!
+!   11 | fn parity_of(count: Int) -> Parity {
+!      |    ^^^^^^^^^
+!
+! help: write `// example: <an expression that is true>` in the comment above it
+!
+! error[L0601]: `is_even` states no example
+!   --> tests/spec/format/declaration_below_its_use.bx:22:4
+!
+!   22 | fn is_even(count: Int) -> Bool {
+!      |    ^^^^^^^
+!
+! help: write `// example: <an expression that is true>` in the comment above it
+!
+! error[L0601]: `step` states no example
+!   --> tests/spec/format/declaration_below_its_use.bx:29:4
+!
+!   29 | fn step() -> Int {
+!      |    ^^^^
+!
+! help: write `// example: <an expression that is true>` in the comment above it
+
+$ fmt tests/spec/format/declaration_below_its_use.bx
+status 0
+
+$ build tests/spec/format/declaration_below_its_use.bx
+status 1
+! error[L0601]: `is_odd` states no example
+!   --> tests/spec/format/declaration_below_its_use.bx:4:4
+!
+!   4 | fn is_odd(count: Int) -> Bool {
+!     |    ^^^^^^
+!
+! help: write `// example: <an expression that is true>` in the comment above it
+!
+! error[L0601]: `parity_of` states no example
+!   --> tests/spec/format/declaration_below_its_use.bx:11:4
+!
+!   11 | fn parity_of(count: Int) -> Parity {
+!      |    ^^^^^^^^^
+!
+! help: write `// example: <an expression that is true>` in the comment above it
+!
+! error[L0601]: `is_even` states no example
+!   --> tests/spec/format/declaration_below_its_use.bx:22:4
+!
+!   22 | fn is_even(count: Int) -> Bool {
+!      |    ^^^^^^^
+!
+! help: write `// example: <an expression that is true>` in the comment above it
+!
+! error[L0601]: `step` states no example
+!   --> tests/spec/format/declaration_below_its_use.bx:29:4
+!
+!   29 | fn step() -> Int {
+!      |    ^^^^
+!
+! help: write `// example: <an expression that is true>` in the comment above it
+
+$ check tests/spec/format/imports_sorted.bx
+status 0
+
+$ check --json tests/spec/format/imports_sorted.bx
+status 0
+
+$ api tests/spec/format/imports_sorted.bx
+status 0
+> fn spoken(words: List<String>) -> String
+>
+> fn counted(words: List<String>) -> Int
+
+$ test tests/spec/format/imports_sorted.bx
+status 1
+! error[L0601]: `spoken` states no example
+!   --> tests/spec/format/imports_sorted.bx:5:4
+!
+!   5 | fn spoken(words: List<String>) -> String {
+!     |    ^^^^^^
+!
+! help: write `// example: <an expression that is true>` in the comment above it
+!
+! error[L0601]: `counted` states no example
+!   --> tests/spec/format/imports_sorted.bx:9:4
+!
+!   9 | fn counted(words: List<String>) -> Int {
+!     |    ^^^^^^^
+!
+! help: write `// example: <an expression that is true>` in the comment above it
+
+$ fmt tests/spec/format/imports_sorted.bx
+status 0
+
+$ build tests/spec/format/imports_sorted.bx
+status 1
+! error[L0601]: `spoken` states no example
+!   --> tests/spec/format/imports_sorted.bx:5:4
+!
+!   5 | fn spoken(words: List<String>) -> String {
+!     |    ^^^^^^
+!
+! help: write `// example: <an expression that is true>` in the comment above it
+!
+! error[L0601]: `counted` states no example
+!   --> tests/spec/format/imports_sorted.bx:9:4
+!
+!   9 | fn counted(words: List<String>) -> Int {
+!     |    ^^^^^^^
+!
+! help: write `// example: <an expression that is true>` in the comment above it
+
+$ check tests/spec/format/test_moved_last.bx
+status 0
+
+$ check --json tests/spec/format/test_moved_last.bx
+status 0
+
+$ api tests/spec/format/test_moved_last.bx
+status 0
+> fn total() -> Int
+
+$ test tests/spec/format/test_moved_last.bx
+status 1
+! error[L0601]: `total` states no example
+!   --> tests/spec/format/test_moved_last.bx:4:4
+!
+!   4 | fn total() -> Int {
+!     |    ^^^^^
+!
+! help: write `// example: <an expression that is true>` in the comment above it
+
+$ fmt tests/spec/format/test_moved_last.bx
+status 0
+
+$ build tests/spec/format/test_moved_last.bx
+status 1
+! error[L0601]: `total` states no example
+!   --> tests/spec/format/test_moved_last.bx:4:4
+!
+!   4 | fn total() -> Int {
+!     |    ^^^^^
+!
+! help: write `// example: <an expression that is true>` in the comment above it
+
+$ check tests/spec/api/kept.bx
+status 0
+
+$ check --json tests/spec/api/kept.bx
+status 0
+
+$ api tests/spec/api/kept.bx
+status 0
+> fn sized(count: Int) -> Int
+>
+> type Shape =
+>     | Dot
+>     | Line(Int)
+
+$ test tests/spec/api/kept.bx
+status 0
+
+$ fmt tests/spec/api/kept.bx
+status 0
+
+$ build tests/spec/api/kept.bx
+status 0
+
+$ check tests/spec/api/namesakes.bx
+status 0
+
+$ check --json tests/spec/api/namesakes.bx
+status 0
+
+$ api tests/spec/api/namesakes.bx
+status 0
+> fn sized(size: Box) -> Int
+>
+> instance Eq<Box>
+>
+> type Box =
+>     | Small
+>     | Large
+
+$ test tests/spec/api/namesakes.bx
+status 0
+
+$ fmt tests/spec/api/namesakes.bx
+status 0
+
+$ build tests/spec/api/namesakes.bx
+status 0
+
+$ check tests/spec/examples/kept_unstated.bx
+status 0
+
+$ check --json tests/spec/examples/kept_unstated.bx
+status 0
+
+$ api tests/spec/examples/kept_unstated.bx
+status 0
+> fn doubled(count: Int) -> Int
+
+$ test tests/spec/examples/kept_unstated.bx
+status 0
+
+$ fmt tests/spec/examples/kept_unstated.bx
+status 0
+
+$ build tests/spec/examples/kept_unstated.bx
+status 0
+
+$ check tests/spec/format/private.bx
+status 0
+
+$ check --json tests/spec/format/private.bx
+status 0
+
+$ api tests/spec/format/private.bx
+status 0
+> fn shown_twice(count: Int) -> String
+
+$ test tests/spec/format/private.bx
+status 0
+
+$ fmt tests/spec/format/private.bx
+status 0
+
+$ build tests/spec/format/private.bx
+status 0
+
+$ check tests/spec/modules/kept.bx
+status 0
+
+$ check --json tests/spec/modules/kept.bx
+status 0
+
+$ api tests/spec/modules/kept.bx
+status 0
+> fn greeted(name: String) -> String
+>
+> fn said(mood: Mood) -> String
+>
+> fn glad() -> Mood
+
+$ test tests/spec/modules/kept.bx
+status 0
+
+$ fmt tests/spec/modules/kept.bx
+status 0
+
+$ build tests/spec/modules/kept.bx
+status 0
+
+$ check tests/spec/modules/kept_reached.bx
+status 0
+
+$ check --json tests/spec/modules/kept_reached.bx
+status 0
+
+$ api tests/spec/modules/kept_reached.bx
+status 0
+> fn main(arguments: List<String>) -> Int
+
+$ test tests/spec/modules/kept_reached.bx
+status 0
+
+$ fmt tests/spec/modules/kept_reached.bx
+status 0
+
+$ build tests/spec/modules/kept_reached.bx
+status 0
+
+$ check tests/spec/modules/namesakes.bx
+status 0
+
+$ check --json tests/spec/modules/namesakes.bx
+status 0
+
+$ api tests/spec/modules/namesakes.bx
+status 0
+> fn sized(size: Box) -> String
+>
+> fn unpacked(packed: Packed) -> String
+>
+> type Box =
+>     | Small
+>     | Large
+>
+> type Packed = Tray(String)
+
+$ test tests/spec/modules/namesakes.bx
+status 0
+
+$ fmt tests/spec/modules/namesakes.bx
+status 0
+
+$ build tests/spec/modules/namesakes.bx
+status 0
+
+$ check tests/spec/modules/namesakes_reached.bx
+status 0
+
+$ check --json tests/spec/modules/namesakes_reached.bx
+status 0
+
+$ api tests/spec/modules/namesakes_reached.bx
+status 0
+> fn main(arguments: List<String>) -> Int
+>
+> fn largest() -> namesakes.Box
+
+$ test tests/spec/modules/namesakes_reached.bx
+status 0
+
+$ fmt tests/spec/modules/namesakes_reached.bx
+status 0
+
+$ build tests/spec/modules/namesakes_reached.bx
+status 0
+
+$ check tests/spec/modules/private_function_reached.bx
+status 1
+! error[L0322]: `opening` is private to `kept`
+!   --> tests/spec/modules/private_function_reached.bx:7:10
+!
+!   7 |     kept.opening()
+!     |          ^^^^^^^
+!
+! help: a private name is reached only in `kept`, the module that declares it
+
+$ check --json tests/spec/modules/private_function_reached.bx
+status 1
+> {"file":"tests/spec/modules/private_function_reached.bx","code":"L0322","message":"`opening` is private to `kept`","span":{"start":182,"len":7},"help":"a private name is reached only in `kept`, the module that declares it"}
+
+$ api tests/spec/modules/private_function_reached.bx
+status 1
+! error[L0322]: `opening` is private to `kept`
+!   --> tests/spec/modules/private_function_reached.bx:7:10
+!
+!   7 |     kept.opening()
+!     |          ^^^^^^^
+!
+! help: a private name is reached only in `kept`, the module that declares it
+
+$ test tests/spec/modules/private_function_reached.bx
+status 1
+! error[L0322]: `opening` is private to `kept`
+!   --> tests/spec/modules/private_function_reached.bx:7:10
+!
+!   7 |     kept.opening()
+!     |          ^^^^^^^
+!
+! help: a private name is reached only in `kept`, the module that declares it
+
+$ fmt tests/spec/modules/private_function_reached.bx
+status 0
+
+$ build tests/spec/modules/private_function_reached.bx
+status 1
+! error[L0322]: `opening` is private to `kept`
+!   --> tests/spec/modules/private_function_reached.bx:7:10
+!
+!   7 |     kept.opening()
+!     |          ^^^^^^^
+!
+! help: a private name is reached only in `kept`, the module that declares it
+
+$ check tests/spec/modules/private_type_reached.bx
+status 1
+! error[L0322]: `Mood` is private to `kept`
+!   --> tests/spec/modules/private_type_reached.bx:6:21
+!
+!   6 | fn named(mood: kept.Mood) -> String {
+!     |                     ^^^^
+!
+! help: a private name is reached only in `kept`, the module that declares it
+
+$ check --json tests/spec/modules/private_type_reached.bx
+status 1
+> {"file":"tests/spec/modules/private_type_reached.bx","code":"L0322","message":"`Mood` is private to `kept`","span":{"start":182,"len":4},"help":"a private name is reached only in `kept`, the module that declares it"}
+
+$ api tests/spec/modules/private_type_reached.bx
+status 1
+! error[L0322]: `Mood` is private to `kept`
+!   --> tests/spec/modules/private_type_reached.bx:6:21
+!
+!   6 | fn named(mood: kept.Mood) -> String {
+!     |                     ^^^^
+!
+! help: a private name is reached only in `kept`, the module that declares it
+
+$ test tests/spec/modules/private_type_reached.bx
+status 1
+! error[L0322]: `Mood` is private to `kept`
+!   --> tests/spec/modules/private_type_reached.bx:6:21
+!
+!   6 | fn named(mood: kept.Mood) -> String {
+!     |                     ^^^^
+!
+! help: a private name is reached only in `kept`, the module that declares it
+
+$ fmt tests/spec/modules/private_type_reached.bx
+status 0
+
+$ build tests/spec/modules/private_type_reached.bx
+status 1
+! error[L0322]: `Mood` is private to `kept`
+!   --> tests/spec/modules/private_type_reached.bx:6:21
+!
+!   6 | fn named(mood: kept.Mood) -> String {
+!     |                     ^^^^
+!
+! help: a private name is reached only in `kept`, the module that declares it
+
+$ check tests/spec/modules/private_variant_reached.bx
+status 1
+! error[L0322]: `Low` is private to `kept`
+!   --> tests/spec/modules/private_variant_reached.bx:7:20
+!
+!   7 |     kept.said(kept.Low)
+!     |                    ^^^
+!
+! help: a private name is reached only in `kept`, the module that declares it
+
+$ check --json tests/spec/modules/private_variant_reached.bx
+status 1
+> {"file":"tests/spec/modules/private_variant_reached.bx","code":"L0322","message":"`Low` is private to `kept`","span":{"start":199,"len":3},"help":"a private name is reached only in `kept`, the module that declares it"}
+
+$ api tests/spec/modules/private_variant_reached.bx
+status 1
+! error[L0322]: `Low` is private to `kept`
+!   --> tests/spec/modules/private_variant_reached.bx:7:20
+!
+!   7 |     kept.said(kept.Low)
+!     |                    ^^^
+!
+! help: a private name is reached only in `kept`, the module that declares it
+
+$ test tests/spec/modules/private_variant_reached.bx
+status 1
+! error[L0322]: `Low` is private to `kept`
+!   --> tests/spec/modules/private_variant_reached.bx:7:20
+!
+!   7 |     kept.said(kept.Low)
+!     |                    ^^^
+!
+! help: a private name is reached only in `kept`, the module that declares it
+
+$ fmt tests/spec/modules/private_variant_reached.bx
+status 0
+
+$ build tests/spec/modules/private_variant_reached.bx
+status 1
+! error[L0322]: `Low` is private to `kept`
+!   --> tests/spec/modules/private_variant_reached.bx:7:20
+!
+!   7 |     kept.said(kept.Low)
+!     |                    ^^^
+!
+! help: a private name is reached only in `kept`, the module that declares it
+
+$ check tests/spec/parser/private_declarations.bx
+status 0
+
+$ check --json tests/spec/parser/private_declarations.bx
+status 0
+
+$ api tests/spec/parser/private_declarations.bx
+status 0
+> fn count_of(tally: Tally) -> Int
+
+$ test tests/spec/parser/private_declarations.bx
+status 0
+
+$ fmt tests/spec/parser/private_declarations.bx
+status 0
+
+$ build tests/spec/parser/private_declarations.bx
+status 0
+
+$ check tests/spec/parser/private_instance.bx
+status 1
+! error[L0100]: expected a function, a type, a trait, or a process, found `instance`
+!   --> tests/spec/parser/private_instance.bx:4:9
+!
+!   4 | private instance Show<Box> {
+!     |         ^^^^^^^^
+!
+! help: `private` keeps a name in its module, and only these four declare a name that another module reaches
+
+$ check --json tests/spec/parser/private_instance.bx
+status 1
+> {"file":"tests/spec/parser/private_instance.bx","code":"L0100","message":"expected a function, a type, a trait, or a process, found `instance`","span":{"start":192,"len":8},"help":"`private` keeps a name in its module, and only these four declare a name that another module reaches"}
+
+$ api tests/spec/parser/private_instance.bx
+status 1
+! error[L0100]: expected a function, a type, a trait, or a process, found `instance`
+!   --> tests/spec/parser/private_instance.bx:4:9
+!
+!   4 | private instance Show<Box> {
+!     |         ^^^^^^^^
+!
+! help: `private` keeps a name in its module, and only these four declare a name that another module reaches
+
+$ test tests/spec/parser/private_instance.bx
+status 1
+! error[L0100]: expected a function, a type, a trait, or a process, found `instance`
+!   --> tests/spec/parser/private_instance.bx:4:9
+!
+!   4 | private instance Show<Box> {
+!     |         ^^^^^^^^
+!
+! help: `private` keeps a name in its module, and only these four declare a name that another module reaches
+
+$ fmt tests/spec/parser/private_instance.bx
+status 1
+! error[L0100]: expected a function, a type, a trait, or a process, found `instance`
+!   --> tests/spec/parser/private_instance.bx:4:9
+!
+!   4 | private instance Show<Box> {
+!     |         ^^^^^^^^
+!
+! help: `private` keeps a name in its module, and only these four declare a name that another module reaches
+
+$ build tests/spec/parser/private_instance.bx
+status 1
+! error[L0100]: expected a function, a type, a trait, or a process, found `instance`
+!   --> tests/spec/parser/private_instance.bx:4:9
+!
+!   4 | private instance Show<Box> {
+!     |         ^^^^^^^^
+!
+! help: `private` keeps a name in its module, and only these four declare a name that another module reaches

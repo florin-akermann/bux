@@ -52,12 +52,14 @@ fn is_departing(source: String) -> Bool {
     }
 }
 
-/// Whether a header states `L0200` as the refusal, so the example may depart from canonical form.
+/// Whether a header states `L0200` or `L0201` as the refusal, so the example may depart from
+/// canonical form: by its layout, or by where an import or a test is written.
 // example: is_stated_departing(header.Refused("L0200"))
-// example: !is_stated_departing(header.Refused("L0201"))
+// example: is_stated_departing(header.Refused("L0201"))
+// example: !is_stated_departing(header.Refused("L0303"))
 fn is_stated_departing(expected: header.Expectation) -> Bool {
     match expected {
-        header.Refused(code) => code == "L0200"
+        header.Refused(code) => code == "L0200" || code == "L0201"
         _ => false
     }
 }

@@ -1,0 +1,32 @@
+// A `private` declaration keeps its name in this module, so only this module reaches it.
+// `kept_reached.bx` shows what a module that imports this one reaches, and the examples named
+// `private_*_reached.bx` show what it does not.
+// example: greeted(name: "world") == "hello, world"
+fn greeted(name: String) -> String {
+    opening() + name
+}
+
+// example: said(mood: glad()) == "glad"
+fn said(mood: Mood) -> String {
+    match mood {
+        Glad => "glad"
+        Low => "low"
+    }
+}
+
+// A public function can give back a value of a private type: the value reaches further than the
+// name does.
+// example: said(mood: glad()) == "glad"
+fn glad() -> Mood {
+    Glad
+}
+
+// A private function is not refused for stating no example, and an example it states is held.
+// example: opening() == "hello, "
+private fn opening() -> String {
+    "hello, "
+}
+
+private type Mood =
+    | Glad
+    | Low

@@ -717,9 +717,9 @@ So the entry point hands the system the low eight bits of that answer and nothin
 Every `Int` maps to one status that way, so giving back a status is never a partial operation.
 `docs/specs/run.md` states how a run passes the arguments and reads the status.
 
-### Every function carries an example
+### Every public function carries an example
 
-**A function a module declares at the top level states at least one example**, or it is not built.
+**A public function at the top level of a module states at least one example**, or it is not built.
 
 ```text
 // Divides `total` among `people`, giving back nothing where there is nobody to divide among.
@@ -734,6 +734,8 @@ An example is a line of the comment above the function, and it is Bux rather tha
 It is an expression of type `Bool`, and `bux test` runs every one a module states.
 
 `main` is exempt: it is reached by running the module, so running the module is its example.
+A `private` function is exempt too, because only its own module calls it, as section 16 states.
+It may state examples, and `bux test` runs each one it states.
 `bux check` accepts a function that states none.
 A function is written before the example over it can compile.
 `docs/specs/doc-examples.md` is the specification.
@@ -808,7 +810,8 @@ The formatter is therefore part of the compiler front end, and the pretty-printe
 Compilation requires `format(source) == source`, byte for byte.
 
 The printer reads the source and not the tree alone, because comments are not part of the tree.
-Formatting preserves the tree all the same: `parse(format(source))` equals `parse(source)`.
+Formatting keeps each item all the same: `parse(format(source))` holds the items of the source.
+Only the order of the items can change.
 
 The formatter has no options.
 `docs/specs/formatting.md` states the canonical form it writes, construct by construct.
@@ -851,8 +854,14 @@ A test uses the declarations of its module, and nothing uses a test.
 **A `match` lists its arms in the order the type declares its variants**.
 A new variant then has exactly one place to be handled, and no diff is ever reorder-only.
 
-Order is checked and never rewritten.
-`bux fmt` repairs whitespace, and the compiler says where a declaration belongs.
+**`bux fmt` repairs each order the compiler can compute**.
+It sorts the imports, and it moves a declaration written after a test above the tests.
+It moves a declaration below what uses it, as the resolver finds the uses.
+Two declarations that use each other keep the order the author wrote.
+`bux build` and `bux check` still refuse a file out of order, and the help names `bux fmt`.
+
+Arm order is checked and not rewritten, because the formatter does not know the types.
+Naming is not rewritten either, because the compiler cannot choose a name.
 
 ---
 
@@ -1050,7 +1059,26 @@ Each process runs on a JVM virtual thread, and no program can see how.
 ## 16. Modules and names
 
 One file is one module, and the module is named by its file.
-There is no module declaration: the file is the declaration, and every name it declares is public.
+There is no module declaration: the file is the declaration.
+A name the file declares is public, unless the declaration is written `private`.
+
+```text
+// example: greeted("world") == "hello, world"
+fn greeted(name: String) -> String {
+    opening() + name
+}
+
+private fn opening() -> String {
+    "hello, "
+}
+```
+
+`private` comes before `fn`, `type`, `trait`, or `process`, which are the four that declare a name.
+A private name is reached only in its module, and an import that reaches it is refused.
+A variant of a private type is private with the type.
+An instance, a derive, and a test declare no name to reach, so none of them is written `private`.
+A value of a private type still reaches another module, as a value of an unimported module does.
+`bux api` leaves a private declaration off the page, because no other module can write its name.
 
 `import io` brings the module `io` into scope, and its names are reached through it:
 

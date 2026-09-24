@@ -271,7 +271,7 @@ fn process_classes(lowering: Lowering) -> List<Class> {
 
 /// The class a process runs as: what `start` takes, the mailbox, and the end, with the method
 /// `spawn` calls and the method the virtual thread of the process runs.
-// example: process_class(little_lowering(""), ast.ProcessDeclaration { name: infer.no_name(), functions: [], span: infer.no_name().span }).implements == ["java/lang/Runnable"]
+// example: process_class(little_lowering(""), ast.ProcessDeclaration { name: infer.no_name(), functions: [], span: infer.no_name().span, visibility: ast.Public }).implements == ["java/lang/Runnable"]
 fn process_class(lowering: Lowering, declaration: ast.ProcessDeclaration) -> Class {
     let started = signature_of_process(lowering, declaration, 0)
     let received = signature_of_process(lowering, declaration, 1)
@@ -777,7 +777,7 @@ fn first_function_body(source: String) -> ast.Block {
 /// A function of no name, which takes nothing and does nothing.
 // example: no_function().name.text == ""
 fn no_function() -> ast.FunctionDeclaration {
-    ast.FunctionDeclaration { name: infer.no_name(), type_parameters: [], parameters: [], result: None, body: ast.Block { statements: [], span: infer.no_name().span }, span: infer.no_name().span }
+    ast.FunctionDeclaration { name: infer.no_name(), type_parameters: [], parameters: [], result: None, body: ast.Block { statements: [], span: infer.no_name().span }, span: infer.no_name().span, visibility: ast.Public }
 }
 
 /// Whether no span was found.
@@ -1457,7 +1457,7 @@ fn type_declared(program: ast.Program, named: ast.Name) -> ast.TypeDeclaration {
             _ => found
         }
     }
-    or(list.at(found, 0), ast.TypeDeclaration { name: named, parameters: [], definition: ast.Variants([]), span: named.span })
+    or(list.at(found, 0), ast.TypeDeclaration { name: named, parameters: [], definition: ast.Variants([]), span: named.span, visibility: ast.Public })
 }
 
 /// Every instance method this module writes, and the method of each trait a derive names.
@@ -2202,7 +2202,7 @@ fn process_of_this_module(builder: Builder, name: ast.Name) -> SpawnedProcess {
 /// The process declared at `origin`, which the resolver holds `spawn` to.
 // example: spawned_declaration(little_lowering(""), resolver.InPrelude).name.text == ""
 fn spawned_declaration(lowering: Lowering, origin: resolver.Origin) -> ast.ProcessDeclaration {
-    var found = ast.ProcessDeclaration { name: infer.no_name(), functions: [], span: infer.no_name().span }
+    var found = ast.ProcessDeclaration { name: infer.no_name(), functions: [], span: infer.no_name().span, visibility: ast.Public }
     for item in lowering.typed.resolved.program.items {
         found = match item {
             ast.Process(declaration) => if is_declared_at(origin, declaration.name.span) {
@@ -2713,7 +2713,7 @@ fn process_supplied(builder: Builder, name: String, arguments: List<ast.Expr>, w
 }
 
 /// The signature of the function at `index` of a process, which the one shape puts there.
-// example: is_nothing(signature_of_process(little_lowering(""), ast.ProcessDeclaration { name: infer.no_name(), functions: [], span: infer.no_name().span }, 0).result)
+// example: is_nothing(signature_of_process(little_lowering(""), ast.ProcessDeclaration { name: infer.no_name(), functions: [], span: infer.no_name().span, visibility: ast.Public }, 0).result)
 fn signature_of_process(lowering: Lowering, declaration: ast.ProcessDeclaration, index: Int) -> Signature {
     match list.at(declaration.functions, index) {
         Some(function) => signature_of(lowering, function.name.span, whole())

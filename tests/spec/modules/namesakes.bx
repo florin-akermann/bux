@@ -1,0 +1,41 @@
+// A type and a constructor of another type may share a name, because the two are in two namespaces.
+// So a private constructor keeps no public type of the same name in this module, and a private
+// type keeps no public constructor of the same name. `namesakes_reached.bx` reaches both.
+// example: sized(size: Large) == "large"
+fn sized(size: Box) -> String {
+    match size {
+        Small => "small"
+        Large => "large"
+    }
+}
+
+// example: counted(inner: Box("held")) == "held"
+private fn counted(inner: Inner) -> String {
+    match inner {
+        Box(text) => text
+    }
+}
+
+// example: unpacked(packed: Tray("tray")) == "tray"
+fn unpacked(packed: Packed) -> String {
+    match packed {
+        Tray(text) => text
+    }
+}
+
+// example: emptied(tray: Empty) == "empty"
+private fn emptied(tray: Tray) -> String {
+    match tray {
+        Empty => "empty"
+    }
+}
+
+private type Inner = Box(String)
+
+type Box =
+    | Small
+    | Large
+
+type Packed = Tray(String)
+
+private type Tray = Empty

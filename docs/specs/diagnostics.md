@@ -90,8 +90,8 @@ Canonical form raises these, in `compiler/format.bx`:
 
 One code covers all three ways a file departs from whitespace form, because they are one problem
 and `bux fmt` is the one answer to it.
-Order is its own code because `bux fmt` is not the answer to it: where a declaration belongs is
-the author's decision, so the compiler says where rather than moving it.
+Order is its own code because its message names an item and the place it belongs.
+`bux fmt` is the answer to it too, and its help says so.
 
 Naming has two codes for the same reason, and one each because the two have different answers: a
 miscased name has the spelling canonical form gives it, and an initial has a word only the author
@@ -118,6 +118,7 @@ Name resolution raises these, in `compiler/resolver.bx`:
 - `L0319` — two tests of one module have the same name.
 - `L0320` — an import is read by nothing.
 - `L0321` — a binding or a parameter is read by nothing.
+- `L0322` — another module reaches a name that its module declares `private`.
 
 Loading raises these, in `compiler/modules.bx`, before any module is resolved:
 
@@ -166,6 +167,7 @@ Type inference raises these, and `compiler/refusal.bx` words them:
 
 `compiler/escapes.bx` decides `L0435` after inference, because a call is read at its settled type.
 `compiler/types.bx` decides `L0436` after inference, so its help spells the settled signature.
+`compiler/declared.bx` decides `L0322` in inference, where a name of another module is reached.
 
 Exhaustiveness raises these, in `compiler/exhaustiveness.bx`:
 
@@ -178,7 +180,7 @@ Exhaustiveness raises these, in `compiler/exhaustiveness.bx`:
 
 `bux build`, `bux run`, and `bux test` raise these, in `compiler/command.bx`:
 
-- `L0601` — a function a module declares at the top level states no example.
+- `L0601` — a public function a module declares at the top level states no example.
 - `L0602` — an example is written where nothing carries one.
 
 `bux test` raises these alone, in `compiler/command.bx`:
@@ -275,10 +277,11 @@ is what answers the refusal, which is not always the same place.
 
 Canonical form is the one thing the compiler carries an edit for, because it is the one refusal
 whose answer the compiler already knows: `bux fmt` writes exactly that text.
-Where a declaration belongs, what a name should have been, and which variant a `match` is missing
-are all the author's to decide, so those carry a `help` and no `fix`.
+What a name should have been and which variant a `match` is missing are the author's to decide.
+So those carry a `help` and no `fix`.
+Where an item belongs has an answer too, and its refusal carries a `help` that names `bux fmt`.
 
-That edit is the whole file, and it is what `bux fmt` would write.
+That edit is the whole file, and it is what `bux fmt` would write where every item is in place.
 One line at a time would not do: a file with a line too many has every line after it disagreeing,
 and rewriting one of them where it stands leaves text that is no longer a program.
 One edit that replaces the file always lands, and applying it is `bux fmt` by another route.
@@ -286,7 +289,7 @@ One edit that replaces the file always lands, and applying it is `bux fmt` by an
 Applying the edit answers the refusal it came with, not every refusal the file holds.
 A file whose imports are also out of order is told about canonical form first, because the text is
 held to canonical form before the order is looked at; applying the edit and checking again then
-reports `L0201`, which is the author's to answer and carries no edit of its own.
+reports `L0201`, which carries no edit of its own and a help that names `bux fmt`.
 
 ## `bux explain`
 

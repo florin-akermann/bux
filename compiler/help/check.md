@@ -27,8 +27,8 @@ that call settled.
 Canonical form is the first thing each module is held to: a file that differs is reported with
 the line and column it is about, that line under a row of carets, and a `help:` line naming the
 text canonical form writes there. `bux fmt` is the command that fixes it. An import written
-after a declaration, or two imports out of sort, is reported here too, and `bux fmt` does not
-fix that one: where an import belongs is said, never rewritten.
+after a declaration, two imports out of sort, and a declaration written after a test are
+reported here too, and `bux fmt` fixes each of them: it sorts the imports and puts the tests last.
 
 How a name is spelled is part of canonical form too, and is reported here for the same reason: a
 name written in neither snake_case nor PascalCase, and a declared name of one character, are each
@@ -39,7 +39,8 @@ because the result read is the one inference settled.
 Name resolution comes next. A name with no definition, a module that declares one name twice, and
 a binding that hides a name already in scope are each refused, because in Bux one name has one
 definition. A declaration written above something that uses it is refused here as well: a file
-reads top down, so the reader meets the intent before the detail.
+reads top down, so the reader meets the intent before the detail. `bux fmt` moves such a
+declaration below what uses it.
 
 Type inference comes next. A type written where another is needed, a call with the wrong number
 of arguments, a field a record does not declare, and a record built without one of its fields are
@@ -103,10 +104,11 @@ into a tool. A file the compiler accepts writes nothing at all, and a file that 
 all is said on standard error and exits 2, with the flag exactly as without it.
 
 Canonical form is the one refusal that carries an edit, because it is the one whose answer the
-compiler already knows. That edit is the whole file, and it is exactly the text `bux fmt`
-writes, so a tool applies the compiler's own repair rather than reformatting by hand. Where a
-declaration belongs, what a name should have been, and which variant a `match` is missing are all
-the author's to decide, so those carry advice and no edit. Applying the edit answers the refusal it
+compiler already knows. That edit is the whole file, and it is the text `bux fmt` writes where
+every item is in place, so a tool applies the compiler's own repair rather than reformatting by
+hand. What a name should have been and which variant a `match` is missing are the author's to
+decide, so those carry advice and no edit. Where an item belongs carries advice that names
+`bux fmt`, which moves it there. Applying the edit answers the refusal it
 came with and not every refusal the file holds: a file whose imports are also out of order is told
 about canonical form first, and checking the repaired file then reports that.
 

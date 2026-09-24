@@ -16,14 +16,20 @@ out.
 Every comment survives. A comment written at the end of a line moves to a line of its own
 directly above it; a comment already alone on its line stays where it is.
 
-Formatting never changes what a program says: the tree parsed from the canonical text is the
-tree parsed from the original. That is also why `bux fmt` does not put a file in order.
-Canonical form covers sequence too — imports come first and sorted, a declaration is written
-below what uses it, and a `match` lists its arms in the order the type declares its variants —
-but where a declaration belongs is the author's decision, so `bux check` says where it goes
-rather than moving it there.
+Formatting never changes what a program says: each item parsed from the canonical text is the
+item parsed from the original, and only the order of the items can change.
 
-How a name is spelled is fixed the same way and rewritten no more than order is. A function, a
+Canonical form covers sequence too, and `bux fmt` repairs each order the compiler can compute.
+It sorts the imports and puts them first. It moves a declaration written after a test above the
+tests, and the tests keep the order they are written in. It moves a declaration below each
+declaration that uses it, and two declarations that use each other keep the order they are
+written in. Each item moves with the comments directly above it, and the comments above the
+first item stay at the top of the file up to its first `///` or `// example:` line. A file
+the resolver refuses keeps the order of its declarations, and `bux build` says why. A `match`
+lists its arms in the order the type declares its variants, and `bux fmt` does not reorder
+them, because that needs the types.
+
+How a name is spelled is fixed the same way, and it is not rewritten. A function, a
 parameter, a record field, and an imported module are snake_case; a type, a variant, and a type
 parameter are PascalCase; an acronym is a word, so UserId compiles and UserID does not. A
 declared name is two characters or more, and a function whose result is Bool begins is_, has_,

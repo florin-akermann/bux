@@ -160,7 +160,7 @@ fn program_ended(line: List<String>) -> Said {
 // example: command_said(Explain("L9999"), ir.little_library()).errors == "error: there is no diagnostic L9999\n"
 fn command_said(command: Command, library: ir.Library) -> Said {
     match command {
-        Fmt(file) => formatted(file)
+        Fmt(file) => formatted(file, library.prelude.names)
         Check { path, form } => checked_said(Checking { path: path, form: form }, library)
         Build(path) => built_said(path, library)
         Test(file) => tested(file, library)
@@ -170,20 +170,36 @@ fn command_said(command: Command, library: ir.Library) -> Said {
 }
 
 /// Writes the canonical text of `path` back to it, leaving a canonical file untouched.
-// example: formatted("no-such-directory/main.bx").errors == "error: no-such-directory/main.bx: No such file or directory (os error 2)\n"
-fn formatted(path: String) -> Said {
+// example: formatted("no-such-directory/main.bx", ir.little_library().prelude.names).errors == "error: no-such-directory/main.bx: No such file or directory (os error 2)\n"
+fn formatted(path: String, names: resolver.Prelude) -> Said {
     match files.read(path) {
-        Ok(source) => source_formatted(Page { source: source, path: path })
+        Ok(source) => source_formatted(Page { source: source, path: path }, names)
         Err(_) => unusable(path + ": " + read_refusal(path))
     }
 }
 
 /// The canonical text of `page` written back to its file, where it differs from what is there.
-// example: source_formatted(Page { source: "fn (", path: "a.bx" }).status == 1
-fn source_formatted(page: Page) -> Said {
-    match format.format(page.source) {
+// example: source_formatted(Page { source: "fn (", path: "a.bx" }, ir.little_library().prelude.names).status == 1
+fn source_formatted(page: Page, names: resolver.Prelude) -> Said {
+    match repaired(page.source, names) {
         Ok(canonical) => rewritten(page, canonical)
         Err(error) => refused_each([parse_diagnostic(error)], page)
+    }
+}
+
+/// The text `bux fmt` writes for `source`, or the error the parser refuses it with.
+///
+/// The formatter writes canonical form with each import and each test in place. The resolver then
+/// says which declaration uses which, and each declaration moves below what uses it. A module the
+/// resolver refuses keeps the order of its declarations, and `bux build` reports the refusal.
+// example: ok_or(repaired("fn one() -> Int {\n    1\n}\n\nfn two() -> Int {\n    one()\n}\n", ir.little_library().prelude.names), "") == "fn two() -> Int {\n    one()\n}\n\nfn one() -> Int {\n    1\n}\n"
+// example: ok_or(repaired("fn one() -> Int {\n    missing()\n}\n\nfn two() -> Int {\n    one()\n}\n", ir.little_library().prelude.names), "") == "fn one() -> Int {\n    missing()\n}\n\nfn two() -> Int {\n    one()\n}\n"
+fn repaired(source: String, names: resolver.Prelude) -> Result<String, parser.ParseError> {
+    let canonical = format.format(source)?
+    let parsed = parser.parse(canonical)?
+    match resolver.top_down(parsed, names) {
+        Ok(ordered) => Ok(format.reordered(canonical, ordered))
+        Err(_) => Ok(canonical)
     }
 }
 
@@ -1725,8 +1741,10 @@ fn holes_refused(found: List<holes.Hole>) -> List<Diagnostic> {
 
 /// Every example `source` states, or every refusal of how it states them, in the order written.
 ///
-/// `docs/specs/doc-examples.md` states the rules. A function other than `main` whose result is
-/// not `()` states at least one example, and every example is in the comment above a function.
+/// `docs/specs/doc-examples.md` states the rules. A public function other than `main` whose result
+/// is not `()` states at least one example, and every example is in the comment above a function.
+/// A `private` function may state examples, and a run holds them as any other.
+// example: list.length(ok_or(stated_by("private fn f() -> Int {\n    1\n}\n", ok_or(parser.parse("private fn f() -> Int {\n    1\n}\n"), ast.Program { items: [] })), [Example { of: "", expression: "", span: lexer.Span { start: 0, length: 0 } }])) == 0
 // example: list.length(ok_or(stated_by("", ast.Program { items: [] }), [])) == 0
 fn stated_by(source: String, program: ast.Program) -> Result<List<Example>, List<Diagnostic>> {
     let written = commented_of(source)
@@ -1734,7 +1752,7 @@ fn stated_by(source: String, program: ast.Program) -> Result<List<Example>, List
     var refused_none = []
     for function in documented(program) {
         let theirs = examples_of(written, function)
-        if list.length(theirs) == 0 {
+        if list.length(theirs) == 0 && !ast.is_private(function.visibility) {
             refused_none = list.push(refused_none, Diagnostic { code: "L0601", message: "`" + function.name.text + "` states no example", span: function.name.span, help: Some("write `// example: <an expression that is true>` in the comment above it"), fix: None })
         }
         stated = all_of(values: stated, more: theirs)
@@ -1807,7 +1825,7 @@ fn with_documented(found: List<ast.FunctionDeclaration>, function: ast.FunctionD
 /// The first function `source` declares, which the examples read.
 // example: parsed_function("fn f() -> Int {\n    0\n}\n").name.text == "f"
 fn parsed_function(source: String) -> ast.FunctionDeclaration {
-    var first = ast.FunctionDeclaration { name: ast.Name { text: "", span: lexer.Span { start: 0, length: 0 } }, type_parameters: [], parameters: [], result: None, body: ast.Block { statements: [], span: lexer.Span { start: 0, length: 0 } }, span: lexer.Span { start: 0, length: 0 } }
+    var first = ast.FunctionDeclaration { name: ast.Name { text: "", span: lexer.Span { start: 0, length: 0 } }, type_parameters: [], parameters: [], result: None, body: ast.Block { statements: [], span: lexer.Span { start: 0, length: 0 } }, span: lexer.Span { start: 0, length: 0 }, visibility: ast.Public }
     for item in ok_or(parser.parse(source), ast.Program { items: [] }).items {
         first = match item {
             ast.Function(function) => function

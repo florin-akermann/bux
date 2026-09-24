@@ -1,0 +1,14 @@
+// `bux fmt` moves a declaration written after a test above the tests, and keeps the tests in the
+// order written.
+/// The number two.
+fn total() -> Int {
+    2
+}
+
+test "counts" {
+    total() == 2
+}
+
+test "is positive" {
+    total() > 0
+}

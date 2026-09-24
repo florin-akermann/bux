@@ -212,7 +212,7 @@ fn names_of(item: ast.Item) -> List<Declaring> {
 }
 
 /// The trait's own name, then the name of each method it declares.
-// example: list.length(trait_names(ast.TraitDeclaration { name: ast.Name { text: "A", span: stretch(start: 6, length: 1) }, parameter: ast.Name { text: "T", span: stretch(start: 8, length: 1) }, methods: [], span: stretch(start: 0, length: 9) })) == 1
+// example: list.length(trait_names(ast.TraitDeclaration { name: ast.Name { text: "A", span: stretch(start: 6, length: 1) }, parameter: ast.Name { text: "T", span: stretch(start: 8, length: 1) }, methods: [], span: stretch(start: 0, length: 9), visibility: ast.Public })) == 1
 fn trait_names(declaration: ast.TraitDeclaration) -> List<Declaring> {
     var found = [Declaring { namespace: resolver.TypeNamespace, name: declaration.name }]
     for method in declaration.methods {
