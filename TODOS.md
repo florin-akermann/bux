@@ -20,23 +20,6 @@ It settles a `main` that reads no arguments the same way.
 [109][d] - `tests/spec/name_resolution/` shows each refusal.
 A drawn property holds that every name the compiler accepts is read at least once.
 
-## 🔴 Item 112: `bux test` runs the modules of a package on a pool of workers
-**Depends on:** Item 111 — the profile says what a module run spends on typing before it starts.
-Attacks: typing, 2.4 s of the 11.2 s that one job over `compiler/` compiles (section 7).
-Item 123: `bux test tests` waited 9.9 s of 177 s on its 43 JVMs, so 94% is compile work to pool.
-`every_module_tested` in `compiler/command.bx` runs the modules of a package one after another.
-`tests/runner.bx` owns a pool of one worker per processor, and only the compiler's tests use it.
-The pool moves into `bux test`, where every package gets it, and the runner keeps working meanwhile.
-A worker is a process, and its state is where a memo lives across the modules it runs.
-A module of `tests/` imports most of the compiler, so a memo saves about 40 000 lines of typing.
-[112][a] - `docs/specs/testing.md` states that the modules of a package run at the same time.
-It states one worker for each processor, and a report in file order.
-[112][b] - A `process` in `compiler/command.bx` hands each module to a worker.
-It holds each answer by the number of its module, as the pool of `tests/runner.bx` does.
-[112][c] - `Working` holds the memo, and a worker keeps it from one module to the next.
-[112][d] - A drawn property holds that a report on a pool is the report of modules run in turn.
-[112][e] - Section 7 records `bux test compiler` and `bux test tests` before and after.
-
 ## 🔴 Item 113: The compiler finds its library, help, and explanations beside its classes
 `modules.resource_text` reads a file under each entry of the class path.
 So `bin/bux`, `bin/bootstrap`, and `bin/runner` add `compiler/` and the root to the class path.
