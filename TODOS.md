@@ -6,20 +6,6 @@
 
 ## Open
 
-## 🔴 Item 109: An unused import, binding, or parameter is refused
-No spec states what happens to a name that nothing reads.
-An edit that replaces a body leaves the imports and bindings the old body used.
-Nothing reports them.
-A parameter a body never reads is a signature that says more than the function does.
-`_ =` already spells a discard, so the rule adds no spelling, only a refusal.
-[109][a] - `docs/specs/modules.md` refuses an import that no declaration of the module reaches.
-[109][b] - A new spec refuses a `let`, a `var`, a `for` binding, or a pattern binding nothing reads.
-It refuses a parameter the body never reads, and says how a `for` over a count writes its binding.
-[109][c] - The spec settles a parameter an instance method declares but does not read.
-It settles a `main` that reads no arguments the same way.
-[109][d] - `tests/spec/name_resolution/` shows each refusal.
-A drawn property holds that every name the compiler accepts is read at least once.
-
 ## 🔴 Item 113: The compiler finds its library, help, and explanations beside its classes
 `modules.resource_text` reads a file under each entry of the class path.
 So `bin/bux`, `bin/bootstrap`, and `bin/runner` add `compiler/` and the root to the class path.
