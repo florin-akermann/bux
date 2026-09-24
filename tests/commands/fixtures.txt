@@ -7747,7 +7747,15 @@ status 1
 
 $ api library/environment.bx
 status 0
+> fn processors() -> Int
+>
 > extern static read(name: String) -> Option<String> = "java.lang.System.getenv"
+>
+> extern static machine() -> Machine = "java.lang.Runtime.getRuntime"
+>
+> extern method int processors_of(running: Machine) -> Int = "availableProcessors"
+>
+> extern type Machine = "java.lang.Runtime"
 
 $ api library/files.bx
 status 0

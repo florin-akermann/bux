@@ -68,6 +68,7 @@ files.listed(path: String) -> Result<List<String>, String>
 files.made(path: String) -> Result<String, String>
 files.removed(path: String) -> Result<Bool, String>
 environment.read(name: String) -> Option<String>
+environment.processors() -> Int
 ```
 
 `files.write` writes `text` as the whole of the file at `path`, and empties whatever was there.
@@ -75,6 +76,9 @@ environment.read(name: String) -> Option<String>
 `files.made` makes one directory at `path`, and makes no parent of it.
 `files.removed` removes what is at `path`, and gives back whether anything was there to remove.
 `environment.read` gives the variable called `name`, and `None` where nothing set it.
+`environment.processors` gives how many processors the JVM may use, which is never below one.
+The compiler, `tests/runner.bx`, and `1brc/main.bx` each start one worker for each processor.
+So the count is a library function, and no program declares an `extern` of its own for it.
 
 Every failure is an `Err` that holds one line of text, and nothing here throws through a program.
 The line is what the JVM said of itself, except for the two members that say nothing, below.
@@ -146,10 +150,10 @@ variable, and `docs/specs/interop.md` maps that `null` to `None`.
 
 `environment` is a class of its own, as `io` and `files` each are, and a call of
 `environment.read` is a static call of that class.
-The JVM classes these reach are `java.lang.String`, `java.lang.System`, `java.lang.Object`,
-`java.io.PrintWriter`, `java.io.File`, `java.nio.file.Path`, `java.nio.file.Files`,
-`java.nio.charset.Charset`, `java.nio.charset.StandardCharsets`, `java.util.stream.Stream`,
-`java.util.List`, and `java.util.Iterator`.
+The JVM classes these reach are `java.lang.String`, `java.lang.System`, `java.lang.Runtime`,
+`java.lang.Object`, `java.io.PrintWriter`, `java.io.File`, `java.nio.file.Path`,
+`java.nio.file.Files`, `java.nio.charset.Charset`, `java.nio.charset.StandardCharsets`,
+`java.util.stream.Stream`, `java.util.List`, and `java.util.Iterator`.
 A class file is built of three more that no declaration here writes.
 `java.lang.Boolean` is what the `Bool` an `Ok` carries is boxed as.
 `java.lang.Throwable` and `java.lang.AssertionError` are what a guard and an unreachable arm are
@@ -167,7 +171,7 @@ each step written beside these is reachable by name, as `files.read_whole` alrea
 `failed`, `make`, `delete`, `entries`, `in_order`, `all_of`, `one_by_one`, `released`,
 `has_another`, `next_value`, `as_text`, `bare_name`, `Writer`, `Entries`, `Held`, `Walk`, and
 `Anything`.
-`environment` declares `read` and nothing else.
+`environment` adds `machine`, `processors_of`, and `Machine`, which reach `java.lang.Runtime`.
 That is what writing these in Bux costs, and a program that wants a file written writes
 `files.write`.
 

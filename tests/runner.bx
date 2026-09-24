@@ -21,6 +21,7 @@ import crossing
 import deriving
 import documented
 import enacted
+import environment
 import escaping
 import exampled
 import exemplified
@@ -76,9 +77,9 @@ fn main(arguments: List<String>) -> Int {
 ///
 /// The parts are counted from the last state of the pool in the order of the jobs, so no line
 /// depends on which worker ends first.
-// example: command.processors() > 0
+// example: environment.processors() > 0
 fn every_part_held(setting: Setting) -> Counted {
-    let workers = command.processors()
+    let workers = environment.processors()
     let jobs = every_job(chunks: workers, root: ok_or(modules.canonical_path(modules.file_at(".")), "."))
     counted_of(jobs, pooled(jobs, setting, workers).answers)
 }

@@ -1,7 +1,22 @@
-// The variables the process a program runs in was started with.
+// The variables the process a program runs in was started with, and the machine it runs on.
 //
-// `docs/specs/io.md` states what a read gives back. It is one `extern` declaration away from a
-// JVM method, which `docs/specs/interop.md` states, and a variable nothing set is `None` rather
-// than a failure, because a process that was started without one is an ordinary case.
+// `docs/specs/io.md` states what each gives back. Each is written over `extern` declarations,
+// which `docs/specs/interop.md` states, and a variable nothing set is `None` rather than a
+// failure, because a process that was started without one is an ordinary case.
+/// How many processors the JVM may use, which is never fewer than one.
+// example: processors() > 0
+fn processors() -> Int {
+    processors_of(machine())
+}
+
 /// The variable called `name`, and `None` where the process was started without it.
 extern static read(name: String) -> Option<String> = "java.lang.System.getenv"
+
+/// The JVM this program runs on, which says how many processors it may use.
+extern static machine() -> Machine = "java.lang.Runtime.getRuntime"
+
+/// How many processors the JVM may use, which is never fewer than one.
+extern method int processors_of(running: Machine) -> Int = "availableProcessors"
+
+/// The JVM this program runs on.
+extern type Machine = "java.lang.Runtime"

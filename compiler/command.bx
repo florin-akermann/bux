@@ -433,7 +433,7 @@ fn package_directory_of(path: String) -> String {
 // example: package_tested("no-such-directory", ir.little_library()).status == 2
 fn package_tested(directory: String, library: ir.Library) -> Said {
     match package_found(directory) {
-        Ok(package) => reported(every_module_tested(package, library, processors()))
+        Ok(package) => reported(every_module_tested(package, library, environment.processors()))
         Err(said) => said
     }
 }
@@ -582,12 +582,6 @@ fn worked(working: Working, handed: Handed) -> Working {
 fn quit(working: Working) -> Next<Working> {
     _ = send(working.pool, Left, NoLimit)
     Done
-}
-
-/// The processors the JVM may use, which is how many workers a pool has.
-// example: processors() > 0
-fn processors() -> Int {
-    processors_of(machine())
 }
 
 /// Whether a file called `name` is a module: its extension is `bx`, after a dot that opens no name.
@@ -3954,17 +3948,8 @@ extern method held_as_constant(text: String) -> Constant = "describeConstable"
 /// The text that the constant holds, as the `java.lang.Object` that `Map.remove` takes.
 extern method as_object(constant: Constant) -> VariableName = "orElseThrow"
 
-/// The JVM this program runs on, which says how many processors it may use.
-extern static machine() -> Machine = "java.lang.Runtime.getRuntime"
-
-/// How many processors the JVM may use, which is never fewer than one.
-extern method int processors_of(running: Machine) -> Int = "availableProcessors"
-
 /// A file or a directory, named by its path.
 extern type Entry = "java.io.File"
-
-/// The JVM this program runs on.
-extern type Machine = "java.lang.Runtime"
 
 /// The environment of a program not started yet, from the name of a variable to its value.
 extern type interface Variables = "java.util.Map"

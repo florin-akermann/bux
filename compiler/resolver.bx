@@ -51,10 +51,22 @@ fn answer_printed(answer: Result<Resolved, ResolveError>) -> String {
 // example: answer_printed(resolve(ast.Program { items: [] }, "main", prelude_of(ast.Program { items: [] }), set.empty())) == "resolved\n"
 // example: answer_printed(resolve(ok_or(parser.parse("import io\n"), ast.Program { items: [] }), "main", prelude_of(ast.Program { items: [] }), set.insert(set.empty(), "io"))) == "resolved\n7..9 value module declared 7..9\n"
 fn resolve(program: ast.Program, module: String, prelude: Prelude, examples_read: set.Set<String>) -> Result<Resolved, ResolveError> {
-    let walked = module_walked(resolver_of(prelude), program)?
+    let walked = module_walked(resolver_of(scope_of(prelude, module)), program)?
     _ = in_order(program, walked.found)?
     _ = every_name_read(program, Reading { walked: walked, examples_read: examples_read })?
     Ok(Resolved { module: module, program: program, found: walked.found })
+}
+
+/// The prelude, and in the module `list` the three functions the compiler holds for it.
+///
+/// Another module reaches them as `list.push`, and `list` cannot import itself, so it writes them
+/// bare, as the prelude writes `push` and `at`.
+// example: answer_printed(resolve(ok_or(parser.parse("fn f() -> Int {\n    length([1])\n}\n"), ast.Program { items: [] }), "list", prelude_of(ast.Program { items: [] }), set.empty())) == "resolved\n3..4 value function declared 3..4\n10..13 type type prelude\n20..26 value function prelude\n"
+fn scope_of(prelude: Prelude, module: String) -> Prelude {
+    if module != "list" {
+        return prelude
+    }
+    prelude { values: held_as(names: prelude.values, texts: ["length", "push", "at"], kind: Function) }
 }
 
 /// The prelude, resolved, with what the JVM holds in scope and nothing else.
